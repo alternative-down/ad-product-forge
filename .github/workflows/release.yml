@@ -5,12 +5,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  version:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -21,10 +27,12 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Create Version PR (Changesets)
+      - name: Changesets (version PR + tags/releases)
         uses: changesets/action@v1
         with:
           version: npm run version-packages
+          publish: npx changeset tag
+          createGithubReleases: true
           commit: 'chore: version packages'
           title: 'chore: version packages'
         env:
