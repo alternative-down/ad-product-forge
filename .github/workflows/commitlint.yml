@@ -1,0 +1,16 @@
+name: Commitlint
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Commitlint
+        uses: wagoid/commitlint-github-action@v6

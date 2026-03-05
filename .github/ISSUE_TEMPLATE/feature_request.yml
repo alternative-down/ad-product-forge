@@ -1,0 +1,21 @@
+name: Feature request
+description: Sugerir nova funcionalidade
+title: 'feat: '
+labels: [feature]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema/Oportunidade
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impacto esperado

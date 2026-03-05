@@ -1,0 +1,17 @@
+name: Task
+description: Tarefa interna
+title: 'chore: '
+labels: [task]
+body:
+  - type: textarea
+    id: scope
+    attributes:
+      label: Escopo
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Critério de pronto
+    validations:
+      required: true
