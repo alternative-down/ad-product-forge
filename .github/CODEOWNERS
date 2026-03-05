@@ -1,0 +1,8 @@
+# Global default owners
+* @HD220
+
+# CI/workflows
+.github/ @HD220
+
+# Core app
+/apps/core/ @HD220
