@@ -32,3 +32,6 @@ npm run version-packages
 ## Codex review test
 
 Este PR existe para validar gatilho @codex em comentário.
+
+## Codex body trigger test 2
+Teste: trigger apenas no body da PR, sem comentário.
