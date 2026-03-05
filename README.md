@@ -20,4 +20,5 @@ npm run build
 ```
 
 ## Codex review test
+
 Este PR existe para validar gatilho @codex em comentário.

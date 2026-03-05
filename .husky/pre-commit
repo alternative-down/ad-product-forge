@@ -1,0 +1,7 @@
+#!/bin/sh
+. "$(dirname "$0")/_/h"
+
+npm run lint-staged
+npm run lint
+npm run typecheck
+npm run test
