@@ -50,5 +50,9 @@ Se não encaixar no momento:
 - priorização orientada por custo-benefício
 - também considera: menor complexidade, maior rapidez de execução e maior valor potencial
 - a ordenação final usa as métricas numéricas registradas
+
+## Transição de status do problema (uso)
+- quando um problema é selecionado para seguir no pipeline, o registro do problema muda para status de uso (ex.: `working`/`in_progress`)
+- objetivo: marcar que o problema já está sendo trabalhado e evitar reuso indevido na mesma rodada
 ## Objetivo
 Transformar problemas extraídos em propostas de valor acionáveis, mantendo o processo simples e autônomo.
