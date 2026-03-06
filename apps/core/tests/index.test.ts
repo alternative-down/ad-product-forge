@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ValidationError, ingest, validateInput } from '../src/index';
+import { ingest, validateInput } from '../src/index';
 
 describe('validateInput', () => {
   it('accepts a valid contract v1 payload', () => {
@@ -24,7 +24,7 @@ describe('validateInput', () => {
         context: { source: 'community' },
         source_type: 'crawler' as never,
       }),
-    ).toThrow(ValidationError);
+    ).toThrow(/source_type must be one of/);
   });
 
   it('rejects invalid link', () => {
@@ -37,7 +37,7 @@ describe('validateInput', () => {
         link: 'not-a-link',
         source_type: 'manual',
       }),
-    ).toThrow(ValidationError);
+    ).toThrow(/link must be a valid URL/);
   });
 });
 

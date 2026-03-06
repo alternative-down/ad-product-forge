@@ -37,36 +37,35 @@ export interface IngestDependencies {
   persistRawPayload?: (record: RawPayloadRecord) => Promise<void> | void;
 }
 
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
+export function createValidationError(message: string): Error {
+  const error = new Error(message);
+  error.name = 'ValidationError';
+  return error;
 }
 
 export function validateInput(input: PipelineInput): void {
   if (!input.item_id || input.item_id.trim().length === 0) {
-    throw new ValidationError('item_id is required');
+    throw createValidationError('item_id is required');
   }
 
   if (!input.content || input.content.trim().length === 0) {
-    throw new ValidationError('content is required');
+    throw createValidationError('content is required');
   }
 
   if (!(input.context && typeof input.context === 'object' && !Array.isArray(input.context))) {
-    throw new ValidationError('context must be an object');
+    throw createValidationError('context must be an object');
   }
 
   if (!SOURCE_TYPES.includes(input.source_type)) {
-    throw new ValidationError(`source_type must be one of: ${SOURCE_TYPES.join(', ')}`);
+    throw createValidationError(`source_type must be one of: ${SOURCE_TYPES.join(', ')}`);
   }
 
   if (!isValidIsoDate(input.timestamp)) {
-    throw new ValidationError('timestamp must be a valid ISO-8601 date-time');
+    throw createValidationError('timestamp must be a valid ISO-8601 date-time');
   }
 
   if (input.link && !isValidUrl(input.link)) {
-    throw new ValidationError('link must be a valid URL');
+    throw createValidationError('link must be a valid URL');
   }
 }
 
