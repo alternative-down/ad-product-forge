@@ -22,6 +22,7 @@ Isso vale para o ciclo completo:
 - **Revisão contínua**: oportunidades e decisões podem ser reavaliadas por novos sinais.
 - **Estados explícitos**: itens percorrem status claros (priorizar, despriorizar, delayed, descartar, etc.).
 - **Ciclo fechado de aprendizado**: dados de operação dos produtos alimentam novas decisões.
+- **Controle financeiro mínimo**: empresa mantém caixa com visão simples de contas a pagar, contas a receber, custos e fluxo de caixa.
 
 ## Processo 1 (inicial) — Coleta ativa na internet
 - Um agente de coleta (firecrawl) recebe um prompt com:
