@@ -67,6 +67,9 @@ Isso vale para o ciclo completo:
 - Após concluir a rodada, propostas avaliadas são ranqueadas por métricas (custo-benefício, complexidade, rapidez e valor).
 - Problema selecionado é marcado como `working`/`in_progress` e segue para ideação.
 - Etapa de ideação prepara documentação do projeto (overview, briefing, PRD, features, arquitetura/organização) em repositório baseado em template, já clonado e linkado ao remoto.
+- Com documentação pronta, sistema gera plano de desenvolvimento.
+- Cada tarefa do plano vira issue.
+- Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
 - transições de estado com critérios claros
