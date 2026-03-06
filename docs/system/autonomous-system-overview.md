@@ -85,7 +85,7 @@ Observação:
   - valida se o custo é suportável pelo fluxo de caixa
 - Se não encaixar no momento, o problema volta para o final da fila.
 - Após concluir a rodada, propostas avaliadas são ranqueadas por métricas (custo-benefício, complexidade, rapidez e valor).
-- Problema selecionado é marcado como `working`/`in_progress` e segue para ideação.
+- Problema selecionado para seguir no pipeline é marcado como `ideation`.
 - Etapa de ideação prepara documentação do projeto (overview, briefing, PRD, features, arquitetura/organização) em repositório baseado em template, já clonado e linkado ao remoto.
 - Antes do desenvolvimento completo da solução, sistema cria landing page focada na dor para coletar leads.
 - Agentes podem contatar interessados e coletar informações adicionais.

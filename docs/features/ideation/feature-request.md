@@ -9,7 +9,7 @@ Draft inicial
 - contexto enriquecido
 
 ## Pré-condição
-- problema já marcado como em uso (`working`/`in_progress`)
+- problema já marcado como `ideation`
 
 ## Objetivo
 Transformar problema + proposta + contexto em pacote de documentação inicial do projeto.
