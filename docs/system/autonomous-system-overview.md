@@ -76,7 +76,10 @@ Isso vale para o ciclo completo:
 - Após estabilização em staging, sistema promove para produção.
 - Todo app sobe com base padrão de observabilidade (métricas + logs + eventos contextuais) e canais de suporte.
 - Canais de suporte padrão: embutido no app + email.
-- Eventos de runtime e sinais de suporte podem ser analisados por agente LLM, que cria issues automaticamente sobre ocorrências relevantes.
+- Tickets de suporte são atendidos por agentes LLM.
+- Agentes de suporte têm acesso ao repositório e às documentações.
+- Agentes usam busca por embeddings e BM25 para responder e auxiliar usuários.
+- Eventos de runtime e sinais de suporte podem gerar issues automaticamente sobre ocorrências relevantes.
 - Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
