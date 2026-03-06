@@ -34,6 +34,7 @@ Isso vale para o ciclo completo:
   - contexto adicional da coleta
 - Esses dados são registrados localmente.
 - A mesma estrutura também pode chegar por endpoint de ingestão (canal passivo para outras fontes).
+- Endpoint(s) de hooks externos recebem notificações de sistemas terceiros (financeiro, email, etc.).
 - Cada novo insumo registrado dispara 1 job (trigger/bull), processado por agente LLM.
 - Objetivo: ampliar a descoberta de sinais além da lista inicial, com exploração guiada.
 
