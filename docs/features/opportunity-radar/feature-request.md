@@ -38,6 +38,7 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 - Registrar tudo para análise posterior (rastreabilidade)
 - Tratar a coleta como geração contínua de **insumos** por vias diferentes
 - Unificar **coleta ativa** e **coleta passiva** no mesmo ciclo de inteligência
+- Operar de forma **100% autônoma**, sem etapa humana no fluxo
 
 ---
 
