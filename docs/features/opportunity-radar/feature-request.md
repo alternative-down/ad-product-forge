@@ -159,8 +159,12 @@ Objetivo da decisão:
 ## 8.1) Definição fechada nesta rodada
 - Handoff minerador → gerador de propostas será um pacote único por insight com: `insight`, `evidences[]`, `ranking`, `handoff_context`, `ready_for_solution=true`.
 
-## 8.2) Item macro ainda em aberto
-- Definir política de versionamento e retenção do ranking (histórico por rodada diária).
+## 8.2) Definição fechada nesta rodada
+- Fluxo simplificado da feature: **coletas brutas → graph → insights → pontuação**.
+- Insights são criados uma única vez (imutáveis), sem atualização/histórico de versões.
+
+## 8.3) Item macro ainda em aberto
+- Definir os campos mínimos finais do registro de insight imutável.
 
 ---
 

@@ -89,24 +89,19 @@ Campo dinâmico:
 ---
 
 ## 4) Estrutura de saída do minerador (definição atual)
-Em vez de um único objeto “completo”, a saída é separada em 3 artefatos por rodada:
+Saída simplificada em dois blocos:
 
-1. **Inferência**
-   - representa o que foi inferido pelo minerador naquela execução
-   - contém tipo, enunciado, escopo e contexto
+1. **Insight imutável**
+   - criado uma única vez pelo minerador
+   - representa problema/dor/desejo/oportunidade inferido do grafo
+   - não possui versão/histórico de atualização
 
-2. **Evidência**
-   - liga a inferência às referências que a sustentam (grafo + insumos)
-   - permite auditoria e rastreabilidade
-
-3. **Ranking**
-   - guarda score e justificativa da ordenação naquela rodada
-   - versionado por execução para comparação histórica
+2. **Pontuação**
+   - score associado ao insight para ordenação no ranking atual
 
 Objetivo:
-- evitar acoplamento entre inferência e decisão de ranking
-- facilitar reprocessamento sem perda de histórico
-- manter trilha clara para etapa de propostas de solução
+- manter o fluxo simples
+- reduzir complexidade de versionamento/histórico nesta fase
 
 ---
 
@@ -224,8 +219,12 @@ Handoff será um pacote único por insight, contendo:
 - `handoff_context`
 - `ready_for_solution = true`
 
-## 10.2) Aberto (macro)
-- Definir política de versionamento e retenção do ranking (histórico por rodada diária).
+## 10.2) Definições fechadas nesta rodada
+- Fluxo simplificado da feature: **coletas brutas → graph → insights → pontuação**.
+- Insight é criado uma única vez e não sofre atualização/versionamento histórico.
+
+## 10.3) Aberto (macro)
+- Definir os campos mínimos finais do registro de insight imutável.
 
 ---
 
