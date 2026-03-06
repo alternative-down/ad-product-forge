@@ -141,13 +141,8 @@ Objetivo da decisão:
 
 ## 7.2) Camada de qualidade e decisão
 - enriquecimento com papéis distintos de **análise** e **revisão**
-- pontuação em duas lentes:
-  - força da evidência
-  - viabilidade/fit de execução
-- decisão por status:
-  - **priorizar**
-  - **delayed**
-  - **descartar**
+- pontuação desta feature foca só em força do insight (sem viabilidade)
+- viabilidade/fit é tratada na etapa posterior de proposta de solução
 
 ---
 
@@ -194,4 +189,5 @@ Objetivo da decisão:
 - 2026-03-06: fluxo operacional definido como enqueue por novo insumo + processamento sequencial item a item
 - 2026-03-06: schema do minerador mantido por ora em 3 artefatos por rodada (inferência, evidência e ranking versionado)
 - 2026-03-06: handoff para gerador de propostas fechado como pacote único por insight (`insight` + `evidences[]` + `ranking` + `handoff_context` + `ready_for_solution=true`)
+- 2026-03-06: viabilidade removida desta feature; ranking mede apenas força de insight e viabilidade fica para fase de proposta
 

@@ -155,30 +155,23 @@ Objetivo:
 ---
 
 ## 6) Modelo de análise e pontuação (conceitual)
-A pontuação deve ser **determinística** e em duas fases:
+A pontuação desta feature é somente de **força de insight** (sem viabilidade de solução nesta etapa).
 
-### Fase 1 — Score de evidência
-Avalia a força do sinal observado:
-- intensidade da tensão
-- frequência/recorrência
-- abrangência
-- clareza do problema/necessidade
-- confiabilidade da evidência
+### Fórmula base sugerida (V1)
+`rank_score = 0.35*evidence_strength + 0.30*recurrence + 0.20*pain_intensity + 0.15*context_breadth`
 
-### Fase 2 — Score de viabilidade/fit
-Avalia se vale atuar agora:
-- viabilidade de atendimento
-- complexidade relativa
-- aderência ao momento estratégico
-- potencial de valor percebido
+### Dimensões
+- `evidence_strength`: consistência da evidência no grafo
+- `recurrence`: repetição do padrão em múltiplos sinais/fontes
+- `pain_intensity`: intensidade da tensão (dor/desejo/oportunidade)
+- `context_breadth`: abrangência em contextos/atores
 
 ### Resultado final
-- nota consolidada
-- justificativa curta
-- decisão inicial de status:
-  - **Priorizar**
-  - **Delayed** (revisitar depois)
-  - **Descartar**
+- `rank_score` (0–100)
+- `rank_reason` curto e rastreável
+
+Observação:
+- viabilidade/fit fica para a etapa posterior de proposta de solução.
 
 ---
 
