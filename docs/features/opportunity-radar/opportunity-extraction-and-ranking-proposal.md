@@ -211,11 +211,13 @@ A feature é considerada útil quando:
 
 ---
 
-## 10) Perguntas abertas para refinamento
-- Quais categorias funcionais padrão queremos adotar na V1?
-- Como definir limiar de “evidência suficiente” para priorizar?
-- Qual janela de tempo para marcar oportunidade como “stale” e pedir renew?
-- Qual cadência de revisão do ranking?
+## 10) Premissas fechadas nesta rodada
+- Taxonomia fixa de categorias na V1: não obrigatória (emergente pelos agentes).
+- Limiar de entrada: não existe; todo insight extraído entra no ranking.
+- Revisão de ranking: sincronizada com a mineração diária em cascata.
+
+## 10.1) Aberto (macro)
+- Definir contrato de handoff entre minerador e gerador de propostas de solução.
 
 ---
 
@@ -226,3 +228,4 @@ A feature é considerada útil quando:
 - Pontuação definida em duas fases (evidência + viabilidade/fit)
 - Status de decisão explícitos: priorizar, delayed, descartar
 - Dedup definido por hash com merge incremental de metadata e reprocessamento quando necessário
+- Fechado: ranking sem limiar de entrada + taxonomia emergente por agentes

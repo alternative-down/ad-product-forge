@@ -151,12 +151,13 @@ Objetivo da decisão:
 
 ---
 
-## 8) Open Questions
-- Quais categorias padrão queremos consolidar na V1?
-- Qual limiar mínimo para considerar evidência suficiente?
-- Qual janela para marcar oportunidade como stale e pedir renew?
-- Qual cadência ideal de revisão do ranking?
-- Quais critérios mínimos tornam uma oportunidade “pronta para proposta de solução”?
+## 8) Lacunas preenchidas nesta rodada (assumidas)
+- Taxonomia fixa na V1: **não**. Categorias emergem dos agentes.
+- Limiar de entrada no ranking: **não existe**. Todo insight extraído entra no ranking.
+- Revisão de ranking: acompanha a mineração diária em cascata.
+
+## 8.1) Item macro ainda em aberto
+- Contrato final entre saída do minerador e entrada do gerador de propostas de solução (pacote de handoff).
 
 ---
 
