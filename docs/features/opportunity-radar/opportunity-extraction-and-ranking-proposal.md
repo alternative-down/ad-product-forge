@@ -24,31 +24,23 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
 ---
 
 ## 3) Entradas (insumos)
-### Campos fixos mínimos
-- `item_id`
-- `source_type`
-- `source_name`
-- `captured_at`
-- `content_raw`
-- `content_hash`
-- `origin_ref`
-- `processed_flag`
-
-### Campo flexível
-- `metadata_json`
+### Campos mínimos
+- `timestamp`
+- `content`
+- `link` (opcional para entradas passivas)
+- `context`
 
 ### Regras de entrada
 - Armazenar bruto
-- Deduplicar por `content_hash`
-- Em duplicata: merge de `metadata_json`
-- Qualquer alteração em `metadata_json` => `processed_flag = false`
+- Aplicar deduplicação interna
+- Manter ingestão simples com o mínimo de campos
 
 ---
 
 ## 4) Processos
 1. **Base de insumos**
    - recebe ativo + passivo
-   - aplica dedup + merge
+   - aplica deduplicação interna
 
 2. **Enriquecimento no grafo**
    - fila por item

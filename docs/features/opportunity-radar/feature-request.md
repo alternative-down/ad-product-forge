@@ -59,9 +59,7 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 
 ### Regra operacional
 - Registra insumo bruto
-- Dedup por `content_hash`
-- Merge de `metadata_json` em duplicata
-- Qualquer alteração no metadata => `processed_flag = false`
+- Aplica deduplicação interna
 - Enfileira para processamento sequencial item a item
 
 ---
@@ -77,18 +75,11 @@ Ordem de leitura do sinal:
 
 ## 7) Definições consolidadas da feature
 ### 7.1 Schema mínimo do insumo bruto
-Campos fixos:
-- `item_id`
-- `source_type` (`active` | `passive`)
-- `source_name`
-- `captured_at`
-- `content_raw`
-- `content_hash`
-- `origin_ref`
-- `processed_flag` (boolean)
-
-Campo flexível:
-- `metadata_json`
+Campos mínimos:
+- `timestamp`
+- `content`
+- `link` (opcional para entradas passivas)
+- `context`
 
 ### 7.2 Fluxo da feature
 **coletas brutas → graph → insights → pontuação**
@@ -139,7 +130,7 @@ Pacote único por insight:
 - 2026-03-05: foco mudou para Opportunity Radar
 - 2026-03-05: coleta ativa + passiva consolidadas
 - 2026-03-06: operação 100% autônoma consolidada
-- 2026-03-06: dedup por hash + merge de metadata + reprocessamento por mudança
+- 2026-03-06: schema mínimo simplificado para ingestão: `timestamp`, `content`, `link?`, `context`
 - 2026-03-06: fila com processamento sequencial item a item
 - 2026-03-06: ranking sem limiar de entrada
 - 2026-03-06: viabilidade removida desta feature (fica para proposta)
