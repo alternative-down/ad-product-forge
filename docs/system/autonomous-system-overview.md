@@ -71,6 +71,9 @@ Isso vale para o ciclo completo:
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
 - Depois, sistema executa tarefas continuamente (estilo Automaker), item por item da fila.
+- Com tarefas concluídas e validação local finalizada, sistema faz deploy em ambiente de teste (staging).
+- Em staging, agentes testam e corrigem como se fosse produção.
+- Após estabilização em staging, sistema promove para produção.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
 - transições de estado com critérios claros
