@@ -1,79 +1,30 @@
-# Proposta de Feature — Extração, Enriquecimento e Priorização de Oportunidades
+# Proposta de Feature — Extração, Enriquecimento e Ranking de Oportunidades
 
 ## Status
-Draft refinado (estrutura de processos definida)
+Definição funcional fechada (V1)
 
-## 1) Objetivo da feature
-Transformar dados brutos coletados em oportunidades comparáveis e priorizáveis, com contexto suficiente para tomada de decisão.
-
-Esta feature cobre o ciclo:
-1. extrair sinais relevantes (dor/desejo/entretenimento/necessidade latente)
-2. categorizar
-3. enriquecer com metadados de contexto e peso
-4. ranquear
-5. controlar ciclo de vida das oportunidades (usada, não usada, reciclar, renovar)
-
----
-
-## 1.1) Estrutura de processos (definida)
-A proposta foi consolidada em três processos principais e separados:
-
-1. **Processo de Base de Insumos**
-   - recebe coletas ativas e passivas
-   - deduplica entradas repetidas ou redundantes
-   - mantém registro bruto consolidado e rastreável
-
-2. **Processo de Enriquecimento no Grafo (agente item-a-item)**
-   - cada novo item registrado é enviado para fila
-   - processamento sequencial, item a item
-   - cada item passa individualmente por um agente de análise
-   - o agente registra categoria, contexto e relações com itens já existentes
-   - as relações ficam em um memory graph semântico para conectar sinais dispersos
-
-3. **Processo de Mineração Sob Demanda (agente minerador)**
-   - execução diária
-   - acionado por processo posterior em cascata (definição detalhada pendente)
-   - opera em dois modos:
-     - **Exploração livre (bottom-up)**: descobre padrões emergentes
-     - **Investigação guiada por hipótese (top-down)**: busca sinais para contextos/problemas específicos
+## 1) Objetivo
+Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a etapa posterior de propostas de solução.
 
 ---
 
 ## 2) Escopo
 ### Dentro do escopo
-- Processar entradas heterogêneas (estruturadas ou não)
-- Consolidar sinais explícitos e implícitos
-- Gerar objetos de oportunidade padronizados
-- Produzir ranking para priorização
-- Registrar estado e histórico de decisão por oportunidade
+- Ingestão e consolidação de insumos ativos/passivos
+- Enriquecimento semântico no grafo
+- Mineração de insights
+- Pontuação e ranking
+- Handoff estruturado para etapa posterior
 
 ### Fora do escopo
-- Implementação de coleta em fonte específica
-- Desenvolvimento técnico de produto
-- Validação comercial detalhada
-- Definição final de stack (nesta fase apenas opções candidatas)
+- Escolha de stack final
+- Implementação técnica detalhada
+- Viabilidade de solução (fase posterior)
 
 ---
 
-## 3) Entradas (inputs)
-A feature recebe blocos de dados brutos contendo, quando disponível:
-- conteúdo textual (post, comentário, relato, ticket, conversa)
-- origem/fonte
-- momento temporal
-- contexto mínimo da situação
-- sinais de interação (quando houver)
-
-As entradas vêm de dois canais:
-- **Coleta ativa**: exploração deliberada de mercado/comunidades (ex.: firecrawl e outros meios)
-- **Coleta passiva**: endpoint de ingestão que recebe eventos de múltiplas fontes do sistema e dos apps gerados
-
-Regra de entrada:
-- armazenar bruto
-- deduplicar por `content_hash`
-- aplicar apenas estruturação mínima inicial
-- em duplicata, fazer merge de `metadata_json`
-- qualquer alteração após merge volta `processed_flag` para `false`
-Schema mínimo de entrada (fixo):
+## 3) Entradas (insumos)
+### Campos fixos mínimos
 - `item_id`
 - `source_type`
 - `source_name`
@@ -81,171 +32,89 @@ Schema mínimo de entrada (fixo):
 - `content_raw`
 - `content_hash`
 - `origin_ref`
-- `processed_flag` (boolean)
+- `processed_flag`
 
-Campo dinâmico:
-- `metadata_json` (contexto e dados adicionais por fonte/coleta)
+### Campo flexível
+- `metadata_json`
 
----
-
-## 4) Estrutura de saída do minerador (definição atual)
-Saída simplificada em dois blocos:
-
-1. **Insight imutável**
-   - criado uma única vez pelo minerador
-   - representa problema/dor/desejo/oportunidade inferido do grafo
-   - não possui versão/histórico de atualização
-   - campos definidos:
-     - `insight_id`
-     - `insight_type` (`problema` | `dor` | `desejo` | `oportunidade`)
-     - `title`
-     - `summary_inferred`
-     - `source_item_ids`
-     - `graph_evidence_refs`
-     - `context_snapshot`
-     - `desired_outcome`
-     - `current_workaround`
-     - `constraint_signals`
-     - `metadata_json`
-     - `created_at`
-
-2. **Pontuação**
-   - score associado ao insight para ordenação no ranking atual
-   - campos definidos:
-     - `insight_id`
-     - `rank_score`
-     - `rank_reason`
-
-Objetivo:
-- manter o fluxo simples
-- reduzir complexidade de versionamento/histórico nesta fase
+### Regras de entrada
+- Armazenar bruto
+- Deduplicar por `content_hash`
+- Em duplicata: merge de `metadata_json`
+- Qualquer alteração em `metadata_json` => `processed_flag = false`
 
 ---
 
-## 5) Processamento conceitual
-### Etapa A — Entrada e consolidação de insumos
-- receber dados ativos e passivos
-- deduplicar e consolidar no repositório de insumos
-- manter histórico de origem
+## 4) Processos
+1. **Base de insumos**
+   - recebe ativo + passivo
+   - aplica dedup + merge
 
-### Etapa B — Enriquecimento semântico no grafo
-- processar novos itens individualmente
-- extrair sinais explícitos e implícitos
-- classificar por tipo de tensão (dor/desejo/entretenimento/latente)
-- conectar com contexto, rotina e registros relacionados
+2. **Enriquecimento no grafo**
+   - fila por item
+   - processamento sequencial
+   - agente analisa e conecta contexto/rotina/tensão
+   - agente revisor valida consistência
 
-### Etapa C — Validação de qualidade do enriquecimento (duplo-agente)
-- **Agente Analista** propõe categoria, relações e contexto
-- **Agente Revisor** valida/ajusta inconsistências antes de consolidar
-- saída consolidada entra no grafo como “registro validado”
+3. **Mineração de insights**
+   - execução diária
+   - acionamento em cascata por processo posterior
+   - modos: bottom-up e top-down
 
-### Etapa D — Mineração sob demanda
-- executar consultas exploratórias (bottom-up)
-- executar consultas orientadas por hipótese (top-down)
-- extrair padrões, lacunas e oportunidades complementares
-
-### Etapa E — Consolidação de oportunidades
-- unir sinais convergentes
-- formar oportunidades únicas e comparáveis
-
-### Etapa F — Pontuação e priorização
-- aplicar pontuação determinística
-- gerar ranking e status de decisão
+4. **Pontuação e ranking**
+   - ranking de força de insight (sem viabilidade)
 
 ---
 
-## 6) Modelo de análise e pontuação (conceitual)
-A pontuação desta feature é somente de **força de insight** (sem viabilidade de solução nesta etapa).
+## 5) Saída do minerador
+## 5.1 Insight imutável
+- `insight_id`
+- `insight_type` (`problema` | `dor` | `desejo` | `oportunidade`)
+- `title`
+- `summary_inferred`
+- `source_item_ids`
+- `graph_evidence_refs`
+- `context_snapshot`
+- `desired_outcome`
+- `current_workaround`
+- `constraint_signals`
+- `metadata_json`
+- `created_at`
 
-### Fórmula base sugerida (V1)
+## 5.2 Pontuação
+- `insight_id`
+- `rank_score`
+- `rank_reason`
+
+---
+
+## 6) Fórmula de pontuação (V1)
 `rank_score = 0.35*evidence_strength + 0.30*recurrence + 0.20*pain_intensity + 0.15*context_breadth`
 
-### Dimensões
-- `evidence_strength`: consistência da evidência no grafo
-- `recurrence`: repetição do padrão em múltiplos sinais/fontes
-- `pain_intensity`: intensidade da tensão (dor/desejo/oportunidade)
-- `context_breadth`: abrangência em contextos/atores
+Escala:
+- todos os critérios em 0–100 antes da ponderação
 
-Escala padrão definida para V1:
-- todos os critérios em **0–100** antes da ponderação
-
-### Resultado final
-- `rank_score` (0–100)
-- `rank_reason` curto e rastreável
-
-Observação:
-- viabilidade/fit fica para a etapa posterior de proposta de solução.
+### Definições operacionais dos critérios
+- `evidence_strength`: força combinada de evidências ligadas ao insight no grafo (consistência + convergência)
+- `recurrence`: recorrência do padrão em insumos distintos conectados ao insight
+- `pain_intensity`: intensidade de tensão inferida (dor/desejo/oportunidade)
+- `context_breadth`: diversidade de contextos/atores onde o mesmo padrão aparece
 
 ---
 
-## 7) Controle de ciclo de vida das oportunidades
-Cada oportunidade precisa de estado e histórico.
-
-### Estados sugeridos
-- **Novo**
-- **Em análise**
-- **Priorizado**
-- **Em uso** (entrou em iniciativa/projeto)
-- **Delayed**
-- **Descartado**
-- **Arquivado**
-- **Reciclar/Reavaliar**
-- **Renew/Recarregar evidência** (coletar sinais novos para atualizar confiança)
-
-### Regras de controle
-- toda mudança de estado deve ter motivo registrado
-- oportunidades antigas sem evidência recente entram em revisão (renew)
-- oportunidades rejeitadas podem voltar via reciclagem quando surgirem novos sinais
-
----
-
-## 8) Saídas de gestão
-A feature deve produzir visões objetivas para decisão:
-1. Top oportunidades atuais
-2. Oportunidades emergentes (subindo rápido)
-3. Oportunidades estagnadas (sem evidência nova)
-4. Oportunidades já usadas vs não usadas
-5. Fila de reciclagem/renew
-
----
-
-## 9) Critérios de qualidade da feature
-A feature é considerada útil quando:
-- reduz ruído e aumenta clareza das oportunidades
-- permite comparar oportunidades de forma consistente
-- mantém rastreabilidade da evidência
-- evita perder oportunidades boas por falta de acompanhamento
-- facilita decidir o que entra na próxima iniciativa
-
----
-
-## 10) Premissas fechadas nesta rodada
-- Taxonomia fixa de categorias na V1: não obrigatória (emergente pelos agentes).
-- Limiar de entrada: não existe; todo insight extraído entra no ranking.
-- Revisão de ranking: sincronizada com a mineração diária em cascata.
-
-## 10.1) Definição fechada — handoff para gerador de propostas
-Handoff será um pacote único por insight, contendo:
+## 7) Handoff para proposta de solução
+Pacote único por insight:
 - `insight`
 - `evidences[]`
 - `ranking`
 - `handoff_context`
 - `ready_for_solution = true`
 
-## 10.2) Definições fechadas nesta rodada
-- Fluxo simplificado da feature: **coletas brutas → graph → insights → pontuação**.
-- Insight é criado uma única vez e não sofre atualização/versionamento histórico.
-
-## 10.3) Aberto (macro)
-- Definir os campos mínimos finais do registro de insight imutável.
-
 ---
 
-## 11) Atualizações desta rodada
-- Processo dividido em base de insumos + enriquecimento no grafo + mineração sob demanda
-- Enriquecimento com modelo de duplo-agente (analista e revisor)
-- Mineração com dois modos: exploração livre e investigação guiada por hipótese
-- Pontuação definida em duas fases (evidência + viabilidade/fit)
-- Status de decisão explícitos: priorizar, delayed, descartar
-- Dedup definido por hash com merge incremental de metadata e reprocessamento quando necessário
-- Fechado: ranking sem limiar de entrada + taxonomia emergente por agentes
+## 8) Premissas finais desta feature
+- Sem taxonomia fixa na V1 (emergente por agentes)
+- Sem limiar de entrada no ranking
+- Insight é criado uma vez (imutável)
+- Sem versionamento histórico nesta fase
+- Viabilidade fica para fase posterior
