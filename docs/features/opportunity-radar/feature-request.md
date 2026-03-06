@@ -49,6 +49,8 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
   - link do conteúdo
   - conteúdo bruto
   - contexto adicional da coleta
+- Registro local desses itens coletados
+- Mesma estrutura aceita por endpoint de ingestão (entrada passiva de outras fontes)
 - Comunidades, reviews, reclamações, benchmarking e inspiração/opinião
 
 ### Coleta passiva

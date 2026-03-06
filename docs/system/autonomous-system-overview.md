@@ -31,6 +31,8 @@ Isso vale para o ciclo completo:
   - link do conteúdo
   - conteúdo bruto
   - contexto adicional da coleta
+- Esses dados são registrados localmente.
+- A mesma estrutura também pode chegar por endpoint de ingestão (canal passivo para outras fontes).
 - Objetivo: ampliar a descoberta de sinais além da lista inicial, com exploração guiada.
 
 ## Papel dos agentes LLM no sistema
