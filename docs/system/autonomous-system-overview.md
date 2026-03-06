@@ -54,6 +54,14 @@ Cada agente do sistema possui:
 - agentes podem se comunicar diretamente entre si
 - comunicação direta é parte nativa da coordenação autônoma do sistema
 
+## Modelo de thread por agente
+- cada agente possui uma única thread de mensagens
+- tudo que acontece com o agente roda nessa thread
+- a thread é o canal principal de contexto e continuidade do agente
+
+Observação:
+- referência conceitual inspirada em abordagens recentes de memória/thread (ex.: ecossistema Mastra), com adaptação própria do projeto.
+
 ## Papel dos agentes LLM no sistema
 - agentes de coleta/interpretação
 - agentes de enriquecimento e relacionamento semântico
