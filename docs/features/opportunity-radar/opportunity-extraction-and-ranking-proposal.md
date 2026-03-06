@@ -1,7 +1,7 @@
 # Proposta de Feature — Extração, Enriquecimento e Priorização de Oportunidades
 
 ## Status
-Draft
+Draft refinado (estrutura de processos definida)
 
 ## 1) Objetivo da feature
 Transformar dados brutos coletados em oportunidades comparáveis e priorizáveis, com contexto suficiente para tomada de decisão.
@@ -12,6 +12,27 @@ Esta feature cobre o ciclo:
 3. enriquecer com metadados de contexto e peso
 4. ranquear
 5. controlar ciclo de vida das oportunidades (usada, não usada, reciclar, renovar)
+
+---
+
+## 1.1) Estrutura de processos (definida)
+A proposta foi consolidada em três processos principais e separados:
+
+1. **Processo de Base de Insumos**
+   - recebe coletas ativas e passivas
+   - deduplica entradas repetidas ou redundantes
+   - mantém registro bruto consolidado e rastreável
+
+2. **Processo de Enriquecimento no Grafo (agente item-a-item)**
+   - cada novo item da base passa individualmente por um agente de análise
+   - o agente registra categoria, contexto e relações com itens já existentes
+   - as relações ficam em um memory graph semântico para conectar sinais dispersos
+
+3. **Processo de Mineração Sob Demanda (agente minerador)**
+   - acionado quando queremos extrair oportunidades do conjunto atual
+   - opera em dois modos:
+     - **Exploração livre (bottom-up)**: descobre padrões emergentes
+     - **Investigação guiada por hipótese (top-down)**: busca sinais para contextos/problemas específicos
 
 ---
 
@@ -58,47 +79,62 @@ Cada oportunidade deve sair com, no mínimo:
 ---
 
 ## 5) Processamento conceitual
-### Etapa A — Triagem
-- separar ruído de material potencialmente útil
-- agrupar conteúdos relacionados
+### Etapa A — Entrada e consolidação de insumos
+- receber dados ativos e passivos
+- deduplicar e consolidar no repositório de insumos
+- manter histórico de origem
 
-### Etapa B — Extração
-- identificar sinais explícitos e implícitos
-- detectar padrões de rotina/comportamento quando houver
-
-### Etapa C — Categorização
+### Etapa B — Enriquecimento semântico no grafo
+- processar novos itens individualmente
+- extrair sinais explícitos e implícitos
 - classificar por tipo de tensão (dor/desejo/entretenimento/latente)
-- classificar por domínio/contexto
+- conectar com contexto, rotina e registros relacionados
 
-### Etapa D — Enriquecimento por metadados
-Adicionar metadados para interpretação e peso, como:
-- força do sinal
-- repetição/recorrência
-- clareza de contexto
-- potencial de ação
-- grau de incerteza
+### Etapa C — Validação de qualidade do enriquecimento (duplo-agente)
+- **Agente Analista** propõe categoria, relações e contexto
+- **Agente Revisor** valida/ajusta inconsistências antes de consolidar
+- saída consolidada entra no grafo como “registro validado”
 
-### Etapa E — Consolidação
-- unir sinais duplicados/semelhantes
-- consolidar em oportunidades únicas e comparáveis
+### Etapa D — Mineração sob demanda
+- executar consultas exploratórias (bottom-up)
+- executar consultas orientadas por hipótese (top-down)
+- extrair padrões, lacunas e oportunidades complementares
 
-### Etapa F — Priorização
-- aplicar critério de pontuação
-- gerar ranking
+### Etapa E — Consolidação de oportunidades
+- unir sinais convergentes
+- formar oportunidades únicas e comparáveis
+
+### Etapa F — Pontuação e priorização
+- aplicar pontuação determinística
+- gerar ranking e status de decisão
 
 ---
 
 ## 6) Modelo de análise e pontuação (conceitual)
-A prioridade de uma oportunidade deve refletir combinação de dimensões como:
-- **intensidade da tensão** (quão forte é)
-- **frequência** (quão recorrente é)
-- **abrangência** (quantos contextos/pessoas afeta)
-- **clareza do problema/necessidade**
-- **potencial de execução**
-- **potencial de valor percebido**
-- **confiabilidade da evidência**
+A pontuação deve ser **determinística** e em duas fases:
 
-> Resultado: uma nota final + justificativa textual curta por oportunidade.
+### Fase 1 — Score de evidência
+Avalia a força do sinal observado:
+- intensidade da tensão
+- frequência/recorrência
+- abrangência
+- clareza do problema/necessidade
+- confiabilidade da evidência
+
+### Fase 2 — Score de viabilidade/fit
+Avalia se vale atuar agora:
+- viabilidade de atendimento
+- complexidade relativa
+- aderência ao momento estratégico
+- potencial de valor percebido
+
+### Resultado final
+- nota consolidada
+- justificativa curta
+- decisão inicial de status:
+  - **Priorizar**
+  - **Delayed** (revisitar depois)
+  - **Descartar**
 
 ---
 
@@ -110,7 +146,8 @@ Cada oportunidade precisa de estado e histórico.
 - **Em análise**
 - **Priorizado**
 - **Em uso** (entrou em iniciativa/projeto)
-- **Não usado (por enquanto)**
+- **Delayed**
+- **Descartado**
 - **Arquivado**
 - **Reciclar/Reavaliar**
 - **Renew/Recarregar evidência** (coletar sinais novos para atualizar confiança)
@@ -147,3 +184,12 @@ A feature é considerada útil quando:
 - Como definir limiar de “evidência suficiente” para priorizar?
 - Qual janela de tempo para marcar oportunidade como “stale” e pedir renew?
 - Qual cadência de revisão do ranking?
+
+---
+
+## 11) Atualizações desta rodada
+- Processo dividido em base de insumos + enriquecimento no grafo + mineração sob demanda
+- Enriquecimento com modelo de duplo-agente (analista e revisor)
+- Mineração com dois modos: exploração livre e investigação guiada por hipótese
+- Pontuação definida em duas fases (evidência + viabilidade/fit)
+- Status de decisão explícitos: priorizar, delayed, descartar
