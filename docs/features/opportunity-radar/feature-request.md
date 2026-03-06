@@ -44,6 +44,7 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 
 ## 5) Frentes de descoberta consideradas
 ### Coleta ativa (mercado/exploração)
+- Processos de busca ativa em múltiplas fontes (ex.: firecrawl e outros meios)
 - Mineração de dores em comunidades (Discord, Reddit, etc.)
 - Extração de pedidos/reclamações em produtos SaaS existentes
 - Reclamações públicas (ex.: plataformas de reclamação)
@@ -52,13 +53,15 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 - Uso de contas dedicadas para navegação/avaliação em fluxos reais
 - Fontes de inspiração/opinião e análise crítica de narrativas de mercado
 
-### Coleta passiva (operação dos produtos)
-- Atendimentos e tickets
-- Solicitações de funcionalidades
-- Comentários/reações em redes sociais
-- Problemas recorrentes e erros operacionais
-- Casos em que a IA precisou agir e não teve capacidade/ferramenta para concluir
-- Sinais de uso real pós-lançamento para retroalimentar o radar
+### Coleta passiva (operação dos produtos e integrações)
+- Entrada via endpoint único de ingestão
+- Recebe eventos de diferentes fontes do sistema e dos apps gerados
+- Fontes crescem ao longo do desenvolvimento
+- Registro em formato bruto, com deduplicação e estruturação mínima
+
+### Observação de fluxo
+- A base de insumos consolida dados ativos e passivos
+- O processamento semântico por agente ocorre depois, em janelas periódicas sobre novos itens
 
 ---
 

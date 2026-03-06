@@ -24,6 +24,7 @@ A proposta foi consolidada em três processos principais e separados:
    - mantém registro bruto consolidado e rastreável
 
 2. **Processo de Enriquecimento no Grafo (agente item-a-item)**
+   - executa em ciclos periódicos
    - cada novo item da base passa individualmente por um agente de análise
    - o agente registra categoria, contexto e relações com itens já existentes
    - as relações ficam em um memory graph semântico para conectar sinais dispersos
@@ -59,9 +60,14 @@ A feature recebe blocos de dados brutos contendo, quando disponível:
 - contexto mínimo da situação
 - sinais de interação (quando houver)
 
-As entradas podem vir de:
-- coleta ativa (exploração de mercado, comunidades, reviews, benchmark)
-- coleta passiva (atendimento, solicitações, social, erros e limitações observadas em operação)
+As entradas vêm de dois canais:
+- **Coleta ativa**: exploração deliberada de mercado/comunidades (ex.: firecrawl e outros meios)
+- **Coleta passiva**: endpoint de ingestão que recebe eventos de múltiplas fontes do sistema e dos apps gerados
+
+Regra de entrada:
+- armazenar bruto
+- deduplicar
+- aplicar apenas estruturação mínima inicial
 
 ---
 
