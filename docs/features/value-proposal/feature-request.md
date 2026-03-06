@@ -10,6 +10,7 @@ Executa quando:
 
 ## Lote mínimo por rodada
 - analisar no mínimo 3 problemas por rodada
+- se houver menos de 3 disponíveis, analisar todos os disponíveis
 
 ## Entrada
 - lista consolidada de problemas extraídos

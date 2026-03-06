@@ -73,7 +73,7 @@ Observação:
 ## Processo posterior (quando operação estiver estável)
 - Condição: sem novo sistema em construção e apps em produção estáveis.
 - O agente percorre a fila de problemas extraídos (FIFO).
-- Rodada mínima: 3 problemas analisados.
+- Rodada mínima: 3 problemas analisados (ou todos os disponíveis, se houver menos de 3).
 - Para cada problema:
   - usa o `context` do item
   - pode consultar o grafo para relações e sinais complementares
