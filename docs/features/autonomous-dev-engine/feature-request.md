@@ -7,8 +7,9 @@ Draft inicial
 Executar desenvolvimento e resolução de issues de forma autônoma, integrado ao pipeline da empresa.
 
 ## Direção proposta
-- V1: usar uma versão modificada/melhorada do Automaker integrada ao pipeline
-- alternativa futura: extrair o núcleo/"core" desejado do Automaker e implementar com base em Mastra
+- V1: basear o motor em Mastra
+- fazer pick apenas do que for necessário do Automaker
+- evitar carregar partes inchadas/desnecessárias do Automaker
 
 ## Escopo funcional
 - consumir issues da esteira
@@ -17,5 +18,4 @@ Executar desenvolvimento e resolução de issues de forma autônoma, integrado a
 - devolver saída para validação, staging e produção
 
 ## Observação
-Decisão atual para execução: seguir com Automaker modificado na V1.
-Mastra fica como caminho de evolução futura.
+Decisão atual para execução: seguir com Mastra + picks pontuais do Automaker (somente o necessário).

@@ -95,8 +95,8 @@ Observação:
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
 - Depois, sistema executa tarefas continuamente por motor de desenvolvimento autônomo, item por item da fila.
-- Direção atual de execução: versão modificada/melhorada do Automaker integrada ao pipeline (V1).
-- Mastra fica como caminho de evolução futura (V2).
+- Direção atual de execução: Mastra como base do motor autônomo.
+- Automaker entra apenas por picks pontuais do que for útil/necessário.
 - Com tarefas concluídas e validação local finalizada, sistema faz deploy em ambiente de teste (staging).
 - Em staging, agentes testam e corrigem como se fosse produção.
 - Após estabilização em staging, sistema promove para produção.
