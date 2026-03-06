@@ -152,7 +152,7 @@ Observação:
 - Nova rodada de produto inicia automaticamente quando:
   - fluxo de caixa operacional 30d >= 0
   - runway projetado >= 3 meses
-  - produção sem issue crítica aberta por 7 dias
+  - apps em produção estáveis (menos de 10 issues/semana)
   - MRR atual >= 1.15x média dos 2 meses anteriores
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
