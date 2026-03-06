@@ -50,6 +50,10 @@ Cada agente do sistema possui:
 - email
 - papel
 
+## Comunicação entre agentes
+- agentes podem se comunicar diretamente entre si
+- comunicação direta é parte nativa da coordenação autônoma do sistema
+
 ## Papel dos agentes LLM no sistema
 - agentes de coleta/interpretação
 - agentes de enriquecimento e relacionamento semântico
