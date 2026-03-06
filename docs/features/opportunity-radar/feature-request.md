@@ -181,3 +181,5 @@ Objetivo da decisão:
 - 2026-03-06: schema bruto ajustado para `processed_flag` boolean (sem máquina de estados na camada de insumos)
 - 2026-03-06: dedup definido por `content_hash`; duplicatas fazem merge de `metadata_json` e sempre reabrem processamento (`processed_flag = false`) quando houver qualquer mudança no metadata
 - 2026-03-06: fluxo operacional definido como enqueue por novo insumo + processamento sequencial item a item
+- 2026-03-06: schema do minerador mantido por ora em 3 artefatos por rodada (inferência, evidência e ranking versionado)
+

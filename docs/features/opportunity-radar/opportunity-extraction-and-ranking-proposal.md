@@ -88,16 +88,25 @@ Campo dinâmico:
 
 ---
 
-## 4) Estrutura de saída (unidade de oportunidade)
-Cada oportunidade deve sair com, no mínimo:
-- **resumo da oportunidade**
-- **tipo principal de tensão**: dor, desejo, entretenimento, necessidade latente
-- **categoria funcional** (ex.: onboarding, automação, suporte, conteúdo, etc.)
-- **contexto de uso** (quem, quando, em que cenário)
-- **evidências associadas** (trechos/fontes que sustentam)
-- **metadados de peso**
-- **pontuação final de prioridade**
-- **status no ciclo de vida**
+## 4) Estrutura de saída do minerador (definição atual)
+Em vez de um único objeto “completo”, a saída é separada em 3 artefatos por rodada:
+
+1. **Inferência**
+   - representa o que foi inferido pelo minerador naquela execução
+   - contém tipo, enunciado, escopo e contexto
+
+2. **Evidência**
+   - liga a inferência às referências que a sustentam (grafo + insumos)
+   - permite auditoria e rastreabilidade
+
+3. **Ranking**
+   - guarda score e justificativa da ordenação naquela rodada
+   - versionado por execução para comparação histórica
+
+Objetivo:
+- evitar acoplamento entre inferência e decisão de ranking
+- facilitar reprocessamento sem perda de histórico
+- manter trilha clara para etapa de propostas de solução
 
 ---
 
