@@ -23,6 +23,12 @@ Isso vale para o ciclo completo:
 - **Estados explícitos**: itens percorrem status claros (priorizar, despriorizar, delayed, descartar, etc.).
 - **Ciclo fechado de aprendizado**: dados de operação dos produtos alimentam novas decisões.
 
+## Processo 1 (inicial) — Coleta ativa na internet
+- Um agente de coleta (firecrawl) recebe um prompt com:
+  - locais iniciais sugeridos
+  - instrução para explorar também novos lugares relacionados
+- Objetivo: ampliar a descoberta de sinais além da lista inicial, com exploração guiada.
+
 ## Papel dos agentes LLM no sistema
 - agentes de coleta/interpretação
 - agentes de enriquecimento e relacionamento semântico

@@ -43,7 +43,8 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 
 ## 5) Frentes de descoberta
 ### Coleta ativa
-- Busca em múltiplas fontes (ex.: firecrawl e similares)
+- Processo inicial com agente firecrawl orientado por prompt
+- Prompt inclui locais iniciais + instrução para explorar fontes relacionadas
 - Comunidades, reviews, reclamações, benchmarking e inspiração/opinião
 
 ### Coleta passiva
