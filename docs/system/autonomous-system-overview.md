@@ -91,6 +91,7 @@ Observação:
 - Agentes podem contatar interessados e coletar informações adicionais.
 - Sistema também pode enviar status reports e outras notificações para esses interessados.
 - Interessados podem ser usados como beta testers com incentivos (desconto, créditos ou uso gratuito por período).
+- Sistema executa marketing social e distribuição (fóruns/comunidades/redes) para aquisição e validação contínua.
 - Com documentação pronta, sistema gera plano de desenvolvimento.
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
@@ -110,6 +111,7 @@ Observação:
 - Problemas identificados no atendimento podem virar issue mesmo sem erro explícito em log.
 - O criador de issues coleta contexto adicional antes da abertura.
 - Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
+- Respostas e sinais vindos de marketing social também podem alimentar leads, problemas e novas issues.
 - Nova rodada de produto inicia automaticamente quando:
   - fluxo de caixa operacional 30d >= 0
   - runway projetado >= 3 meses
