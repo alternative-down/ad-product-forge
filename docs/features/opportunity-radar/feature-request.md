@@ -163,8 +163,11 @@ Objetivo da decisão:
 - Fluxo simplificado da feature: **coletas brutas → graph → insights → pontuação**.
 - Insights são criados uma única vez (imutáveis), sem atualização/histórico de versões.
 
-## 8.3) Item macro ainda em aberto
-- Definir os campos mínimos finais do registro de insight imutável.
+## 8.3) Definição fechada nesta rodada
+- Campos do insight imutável mantidos conforme definição anterior:
+  - `insight_id`, `insight_type`, `title`, `summary_inferred`, `source_item_ids`, `graph_evidence_refs`, `context_snapshot`, `desired_outcome`, `current_workaround`, `constraint_signals`, `metadata_json`, `created_at`
+- Campos de pontuação associados:
+  - `insight_id`, `rank_score`, `rank_reason`
 
 ---
 

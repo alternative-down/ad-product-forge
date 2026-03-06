@@ -95,9 +95,26 @@ Saída simplificada em dois blocos:
    - criado uma única vez pelo minerador
    - representa problema/dor/desejo/oportunidade inferido do grafo
    - não possui versão/histórico de atualização
+   - campos definidos:
+     - `insight_id`
+     - `insight_type` (`problema` | `dor` | `desejo` | `oportunidade`)
+     - `title`
+     - `summary_inferred`
+     - `source_item_ids`
+     - `graph_evidence_refs`
+     - `context_snapshot`
+     - `desired_outcome`
+     - `current_workaround`
+     - `constraint_signals`
+     - `metadata_json`
+     - `created_at`
 
 2. **Pontuação**
    - score associado ao insight para ordenação no ranking atual
+   - campos definidos:
+     - `insight_id`
+     - `rank_score`
+     - `rank_reason`
 
 Objetivo:
 - manter o fluxo simples
