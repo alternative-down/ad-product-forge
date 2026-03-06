@@ -104,6 +104,7 @@ Observação:
 - Problemas identificados no atendimento podem virar issue mesmo sem erro explícito em log.
 - O criador de issues coleta contexto adicional antes da abertura.
 - Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
+- Quando fluxo de caixa estabiliza e valor ganho aumenta, o sistema inicia nova rodada de produto automaticamente.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
 - transições de estado com critérios claros
