@@ -74,8 +74,9 @@ Isso vale para o ciclo completo:
 - Com tarefas concluídas e validação local finalizada, sistema faz deploy em ambiente de teste (staging).
 - Em staging, agentes testam e corrigem como se fosse produção.
 - Após estabilização em staging, sistema promove para produção.
-- Todo app sobe com base padrão de observabilidade (métricas + logs + eventos contextuais).
-- Eventos de runtime podem ser analisados por agente LLM, que cria issues automaticamente sobre ocorrências relevantes.
+- Todo app sobe com base padrão de observabilidade (métricas + logs + eventos contextuais) e canais de suporte.
+- Canais de suporte padrão: embutido no app + email.
+- Eventos de runtime e sinais de suporte podem ser analisados por agente LLM, que cria issues automaticamente sobre ocorrências relevantes.
 - Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
