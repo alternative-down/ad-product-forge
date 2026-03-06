@@ -45,6 +45,14 @@ Ordem importante:
 ## Fila por agente
 - cada agente possui sua própria fila de eventos/jobs
 - jobs alimentam as execuções e suas ramificações
+- mensagens entre agentes são eventos enviados para a fila do agente destino
+
+## Comunicação assíncrona entre agentes
+- envio de mensagem: assíncrono
+- janela de espera por reply: até 5 minutos (configurável)
+- se não houver reply no prazo, chamada retorna indisponibilidade temporária
+- entre steps da execução, runtime verifica fila de entrada/replies
+- reply recebido é injetado no contexto/mensagens da execução
 
 ## Objetivo
 Manter continuidade de contexto com thread única, evitando inchaço de histórico e preservando só o essencial por execução.

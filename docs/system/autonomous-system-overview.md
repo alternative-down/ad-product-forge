@@ -56,8 +56,12 @@ Cada agente do sistema possui:
 - tools/skills iniciais são definidos conforme papel/cargo/função do agente
 
 ## Comunicação entre agentes
-- agentes podem se comunicar diretamente entre si
-- comunicação direta é parte nativa da coordenação autônoma do sistema
+- agentes se comunicam por eventos assíncronos (fila de jobs/eventos de outro agente)
+- envio de mensagem entre agentes é assíncrono
+- pode haver janela de espera para resposta (ex.: até 5 minutos)
+- se não houver resposta no tempo, retorno informa indisponibilidade temporária do outro agente
+- durante execução, o runtime verifica replies pendentes entre steps
+- quando reply chega, ele é injetado na lista de mensagens da execução/thread
 
 ## Modelo de thread por agente
 - cada agente possui uma única thread de mensagens
