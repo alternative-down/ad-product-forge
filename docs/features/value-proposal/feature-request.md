@@ -25,6 +25,11 @@ Para cada problema da lista:
 - proposta de valor por problema
 - análise do que é necessário para atendimento de cada proposta
 - estimativa de custo e esforço para atendimento
+- métricas numéricas por proposta, incluindo:
+  - complexidade
+  - quantidade de features
+  - custo estimado
+  - potencial de receita (MMR)
 
 ## Objetivo
 Transformar problemas extraídos em propostas de valor acionáveis, mantendo o processo simples e autônomo.
