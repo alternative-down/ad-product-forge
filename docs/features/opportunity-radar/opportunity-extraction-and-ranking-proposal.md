@@ -32,7 +32,7 @@ A proposta foi consolidada em três processos principais e separados:
 
 3. **Processo de Mineração Sob Demanda (agente minerador)**
    - execução diária
-   - acionado por processo anterior em cascata (definição detalhada pendente)
+   - acionado por processo posterior em cascata (definição detalhada pendente)
    - opera em dois modos:
      - **Exploração livre (bottom-up)**: descobre padrões emergentes
      - **Investigação guiada por hipótese (top-down)**: busca sinais para contextos/problemas específicos

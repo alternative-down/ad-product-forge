@@ -136,8 +136,8 @@ Objetivo da decisão:
 
 ### Gatilho da mineração (definido)
 - execução diária
-- acionamento por processo anterior (cascata)
-- o processo upstream será detalhado posteriormente
+- acionamento por processo posterior (cascata)
+- o processo downstream será detalhado posteriormente
 
 ## 7.2) Camada de qualidade e decisão
 - enriquecimento com papéis distintos de **análise** e **revisão**
