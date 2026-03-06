@@ -47,12 +47,26 @@ Se não encaixar no momento:
 
 ## Ranqueamento final da rodada
 - após avaliar e pontuar todos os itens da rodada, o agente ranqueia as propostas
-- priorização orientada por custo-benefício
-- também considera: menor complexidade, maior rapidez de execução e maior valor potencial
-- a ordenação final usa as métricas numéricas registradas
+- score da proposta (0–100):
+  - `proposal_score = 0.35*valor_potencial + 0.25*rapidez + 0.20*(100-complexidade) + 0.20*(100-custo)`
+- priorização orientada por custo-benefício usando as métricas numéricas registradas
+
+### Critério de desempate
+1. menor complexidade
+2. menor custo
+3. menor tempo estimado
+4. ordem FIFO (mais antigo primeiro)
 
 ## Transição de status do problema (uso)
-- quando um problema é selecionado para seguir no pipeline, o registro do problema muda para status de uso (ex.: `working`/`in_progress`)
-- objetivo: marcar que o problema já está sendo trabalhado e evitar reuso indevido na mesma rodada
+Status e transições:
+- `new` -> `queued`
+- `queued` -> `working` (quando entra em análise da rodada)
+- `working` -> `proposed` (quando proposta foi gerada)
+- `working` -> `parked` (não encaixa no momento; volta para fila)
+- `proposed` -> `ideation` (quando selecionado para seguir)
+- `proposed` -> `parked` (se perder prioridade)
+- `parked` -> `queued` (quando retornar para nova rodada)
+
+Objetivo: evitar reuso indevido e manter rastreio simples do ciclo do problema.
 ## Objetivo
 Transformar problemas extraídos em propostas de valor acionáveis, mantendo o processo simples e autônomo.

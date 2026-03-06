@@ -4,9 +4,11 @@
 Draft inicial
 
 ## Regra de gatilho
-Quando:
-- fluxo de caixa estabiliza
-- valor ganho aumenta (acima do patamar atual)
+Quando (todos verdadeiros):
+- fluxo de caixa operacional dos últimos 30 dias >= 0
+- runway projetado >= 3 meses
+- apps em produção sem issue crítica aberta nos últimos 7 dias
+- valor ganho (MRR) do mês atual >= 1.15x média dos 2 meses anteriores
 
 ## Ação
 - iniciar nova rodada de criação de produto

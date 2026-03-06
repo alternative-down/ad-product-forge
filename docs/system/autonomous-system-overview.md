@@ -90,13 +90,13 @@ Observação:
 - Antes do desenvolvimento completo da solução, sistema cria landing page focada na dor para coletar leads.
 - Agentes podem contatar interessados e coletar informações adicionais.
 - Sistema também pode enviar status reports e outras notificações para esses interessados.
-- Interessados podem ser usados como beta testers com incentivos (desconto, créditos ou uso gratuito por período).- Com documentação pronta, sistema gera plano de desenvolvimento.
+- Interessados podem ser usados como beta testers com incentivos (desconto, créditos ou uso gratuito por período).
+- Com documentação pronta, sistema gera plano de desenvolvimento.
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
 - Depois, sistema executa tarefas continuamente por motor de desenvolvimento autônomo, item por item da fila.
-- Direções possíveis:
-  - versão modificada/melhorada do Automaker integrada ao pipeline
-  - extração do core desejado e implementação com base em Mastra
+- Direção atual de execução: versão modificada/melhorada do Automaker integrada ao pipeline (V1).
+- Mastra fica como caminho de evolução futura (V2).
 - Com tarefas concluídas e validação local finalizada, sistema faz deploy em ambiente de teste (staging).
 - Em staging, agentes testam e corrigem como se fosse produção.
 - Após estabilização em staging, sistema promove para produção.
@@ -110,7 +110,11 @@ Observação:
 - Problemas identificados no atendimento podem virar issue mesmo sem erro explícito em log.
 - O criador de issues coleta contexto adicional antes da abertura.
 - Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
-- Quando fluxo de caixa estabiliza e valor ganho aumenta, o sistema inicia nova rodada de produto automaticamente.
+- Nova rodada de produto inicia automaticamente quando:
+  - fluxo de caixa operacional 30d >= 0
+  - runway projetado >= 3 meses
+  - produção sem issue crítica aberta por 7 dias
+  - MRR atual >= 1.15x média dos 2 meses anteriores
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
 - transições de estado com critérios claros
