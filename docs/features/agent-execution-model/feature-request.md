@@ -32,7 +32,9 @@ Ordem importante:
 - em compactação durante execução: criar/atualizar memória antes de compactar o contexto.
 
 ## Estratégia de compactação de contexto
-- compactação não precisa considerar toda a thread desde o início
+- regra de "mensagens do meio" vale para compactação da execução (run)
+- compactação da memória primária segue fluxo normal
+- na execução, compactação não precisa considerar toda a thread desde o início
 - prioridade para compactar mensagens intermediárias (do meio), preservando bordas relevantes do contexto
 
 ## Estratégia de implementação sugerida (conceitual)
