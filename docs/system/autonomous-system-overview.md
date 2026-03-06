@@ -93,7 +93,10 @@ Observação:
 - Interessados podem ser usados como beta testers com incentivos (desconto, créditos ou uso gratuito por período).- Com documentação pronta, sistema gera plano de desenvolvimento.
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
-- Depois, sistema executa tarefas continuamente (estilo Automaker), item por item da fila.
+- Depois, sistema executa tarefas continuamente por motor de desenvolvimento autônomo, item por item da fila.
+- Direções possíveis:
+  - versão modificada/melhorada do Automaker integrada ao pipeline
+  - extração do core desejado e implementação com base em Mastra
 - Com tarefas concluídas e validação local finalizada, sistema faz deploy em ambiente de teste (staging).
 - Em staging, agentes testam e corrigem como se fosse produção.
 - Após estabilização em staging, sistema promove para produção.
