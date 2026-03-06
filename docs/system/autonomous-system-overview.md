@@ -52,7 +52,8 @@ Isso vale para o ciclo completo:
 
 ## Processo posterior (quando operação estiver estável)
 - Condição: sem novo sistema em construção e apps em produção estáveis.
-- O agente percorre a lista consolidada de problemas extraídos.
+- O agente percorre a fila de problemas extraídos (FIFO).
+- Rodada mínima: 3 problemas analisados.
 - Para cada problema:
   - usa o `context` do item
   - pode consultar o grafo para relações e sinais complementares
@@ -60,6 +61,9 @@ Isso vale para o ciclo completo:
   - analisa o que precisa ser feito para atender a proposta
   - estima custo e esforço para atendimento
   - registra métricas numéricas (complexidade, features, custo, potencial de receita/MMR)
+  - valida fit com as restrições da plataforma (web, micro-SaaS, recorrência/crédito/one-time)
+  - valida se o custo é suportável pelo fluxo de caixa
+- Se não encaixar no momento, o problema volta para o final da fila.
 
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
