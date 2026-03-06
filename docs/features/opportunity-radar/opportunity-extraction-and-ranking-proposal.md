@@ -59,13 +59,16 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
    - execução diária
    - acionamento em cascata por processo posterior
    - modos: bottom-up e top-down
-
+   - foco da extração: dores/problemas/desejos/oportunidades
+   - não gera ideias de produto nessa fase
 4. **Pontuação e ranking**
    - ranking de força de insight (sem viabilidade)
 
 ---
 
 ## 5) Saída do minerador
+A saída desta fase são insights de tensão de usuário/mercado (não ideias de produto).
+
 ## 5.1 Insight imutável
 - `insight_id`
 - `insight_type` (`problema` | `dor` | `desejo` | `oportunidade`)

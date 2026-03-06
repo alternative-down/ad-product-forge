@@ -90,7 +90,8 @@ Campos mínimos:
 - Execução diária
 - Acionamento em cascata por processo posterior
 - Modos: bottom-up e top-down
-
+- O agente minerador extrai dores/problemas/desejos/oportunidades da base de conhecimento
+- Não extrai ideias de produto nesta etapa
 ### 7.3.1 Base de grafo para enriquecimento/mineração
 - Neo4j como grafo de trabalho
 - Nós e arestas com embeddings
