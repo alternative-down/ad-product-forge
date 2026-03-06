@@ -51,6 +51,10 @@ Cada agente do sistema possui:
 - email
 - papel
 
+## Modelo organizacional
+- agentes são tratados como funcionários da empresa digital
+- tools/skills iniciais são definidos conforme papel/cargo/função do agente
+
 ## Comunicação entre agentes
 - agentes podem se comunicar diretamente entre si
 - comunicação direta é parte nativa da coordenação autônoma do sistema
@@ -64,6 +68,11 @@ Cada agente do sistema possui:
 - cada agente terá memória própria e isolada
 - memória combina abordagem atual do OpenClaw + padrão observacional semelhante ao Mastra (referência)
 - gestão de memória/contexto e execução será específica deste projeto (modelo próprio)
+
+## Agendamento por agente
+- agentes podem criar crons para tarefas recorrentes
+- agentes também podem usar heartbeat para manutenção/checagens periódicas
+- ideia funcional inspirada na abordagem já usada no OpenClaw
 
 Observação:
 - referência conceitual inspirada em abordagens recentes de memória/thread (ex.: ecossistema Mastra), com adaptação própria do projeto.

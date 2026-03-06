@@ -9,6 +9,7 @@ Cada agente possui sua própria memória isolada.
 ## Direção funcional
 - memória combina abordagem do OpenClaw com padrão observacional semelhante ao Mastra
 - modelo de gestão de memória/contexto será próprio do projeto
+- agentes terão agendamento próprio (crons) e heartbeat para rotinas recorrentes
 
 ## Opções de base para memória e busca
 - Neo4j
