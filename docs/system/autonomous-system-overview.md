@@ -58,6 +58,7 @@ Isso vale para o ciclo completo:
   - pode consultar o grafo para relações e sinais complementares
   - produz uma proposta de valor
   - analisa o que precisa ser feito para atender a proposta
+  - estima custo e esforço para atendimento
 
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
