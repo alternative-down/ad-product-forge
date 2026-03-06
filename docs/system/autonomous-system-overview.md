@@ -64,7 +64,7 @@ Isso vale para o ciclo completo:
   - valida fit com as restrições da plataforma (web, micro-SaaS, recorrência/crédito/one-time)
   - valida se o custo é suportável pelo fluxo de caixa
 - Se não encaixar no momento, o problema volta para o final da fila.
-
+- Após concluir a rodada, propostas avaliadas são ranqueadas por métricas (custo-benefício, complexidade, rapidez e valor).
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
 - transições de estado com critérios claros

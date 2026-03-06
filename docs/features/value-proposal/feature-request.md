@@ -45,5 +45,10 @@ Se não encaixar no momento:
   - custo estimado
   - potencial de receita (MMR)
 
+## Ranqueamento final da rodada
+- após avaliar e pontuar todos os itens da rodada, o agente ranqueia as propostas
+- priorização orientada por custo-benefício
+- também considera: menor complexidade, maior rapidez de execução e maior valor potencial
+- a ordenação final usa as métricas numéricas registradas
 ## Objetivo
 Transformar problemas extraídos em propostas de valor acionáveis, mantendo o processo simples e autônomo.
