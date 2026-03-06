@@ -47,8 +47,17 @@ Isso vale para o ciclo completo:
 - agentes de coleta/interpretação
 - agentes de enriquecimento e relacionamento semântico
 - agentes mineradores (exploração livre e guiada)
+- agentes de categorização e proposta de valor
 - agentes de análise de viabilidade
-- agentes de geração de proposta
+
+## Processo posterior (quando operação estiver estável)
+- Condição: sem novo sistema em construção e apps em produção estáveis.
+- O agente percorre a lista consolidada de problemas extraídos.
+- Para cada problema:
+  - usa o `context` do item
+  - pode consultar o grafo para relações e sinais complementares
+  - produz uma proposta de valor
+  - analisa o que precisa ser feito para atender a proposta
 
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
