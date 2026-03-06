@@ -70,6 +70,7 @@ Isso vale para o ciclo completo:
 - Com documentação pronta, sistema gera plano de desenvolvimento.
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
+- Depois, sistema executa tarefas continuamente (estilo Automaker), item por item da fila.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
 - transições de estado com critérios claros
