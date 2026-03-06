@@ -18,7 +18,9 @@ Transformar problema + proposta + contexto em pacote de documentação inicial d
 1. Receber item selecionado do ranking
 2. Consolidar problema, proposta e contexto em base única
 3. Gerar documentação inicial do projeto
-4. Materializar essa documentação em repositório de projeto
+4. Criar landing pré-solução focada na dor e iniciar coleta de leads
+5. Coletar feedback adicional dos interessados (agentes em contato)
+6. Materializar documentação e insumos no repositório de projeto
 
 ## Saída (documentos)
 - Overview
