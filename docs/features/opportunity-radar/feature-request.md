@@ -105,18 +105,15 @@ Campos mínimos:
 - Todo insight extraído entra no ranking (sem limiar de entrada)
 - Escala 0–100 para critérios antes de ponderação
 
-### 7.6 Insight imutável (campos)
-- `insight_id`
-- `insight_type` (`problema` | `dor` | `desejo` | `oportunidade`)
-- `problem_statement`
+### 7.6 Lista consolidada de problemas extraídos (saída)
+Cada item da lista contém apenas:
+- `problem`
 - `context`
-- `created_at`
-- `graph_node_ref` (opcional)
+- `graph_node_ref` (link/referência para o nó no grafo)
 
 Observação:
-- nesta fase, saída externa do minerador fica em problema + contexto.
-- insights extraídos são mesclados na lista consolidada de problemas extraídos.
-- opcionalmente, incluir referência ao nó consolidado no grafo (`graph_node_ref`).
+- saída externa do minerador é somente essa lista consolidada.
+- não há estrutura adicional nesta fase.
 ### 7.7 Pontuação (campos)
 - `insight_id`
 - `rank_score`
