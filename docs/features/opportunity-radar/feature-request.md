@@ -92,22 +92,39 @@ Ordem para entender oportunidade com mais profundidade:
 
 ---
 
-## 7.1) Pipeline conceitual (balaio → inteligência)
-1. Ingestão bruta (fontes variadas, estruturadas ou não)
-2. Normalização mínima
-3. Mineração (sinais explícitos e implícitos)
-4. Categorização
-5. Pontuação/reflexão
-6. Rankeamento
-7. Saída acionável (itens prontos para proposta de app)
+## 7.1) Macroprocesso conceitual (balaio → inteligência)
+1. **Base de insumos**
+   - recebe entradas ativas e passivas
+   - deduplica e consolida registros brutos
+2. **Enriquecimento semântico**
+   - cada novo item é analisado e conectado a contexto/rotina/tensão
+   - categorização e relacionamento com registros já existentes
+3. **Mineração sob demanda**
+   - exploração livre (bottom-up)
+   - investigação guiada por hipótese (top-down)
+4. **Decisão determinística**
+   - pontuação
+   - rankeamento
+   - saída acionável (itens prontos para proposta de app)
+
+## 7.2) Camada de qualidade e decisão
+- enriquecimento com papéis distintos de **análise** e **revisão**
+- pontuação em duas lentes:
+  - força da evidência
+  - viabilidade/fit de execução
+- decisão por status:
+  - **priorizar**
+  - **delayed**
+  - **descartar**
 
 ---
 
 ## 8) Open Questions
-- Qual profundidade de coleta por fonte na V1?
-- Qual equilíbrio entre coleta automática vs revisão humana?
-- Como evitar excesso de ruído sem perder sinais fracos relevantes?
-- Quais critérios determinam “oportunidade pronta para virar proposta de produto”?
+- Quais categorias padrão queremos consolidar na V1?
+- Qual limiar mínimo para considerar evidência suficiente?
+- Qual janela para marcar oportunidade como stale e pedir renew?
+- Qual cadência ideal de revisão do ranking?
+- Quais critérios mínimos tornam uma oportunidade “pronta para proposta de solução”?
 
 ---
 
@@ -126,3 +143,5 @@ Ordem para entender oportunidade com mais profundidade:
 - 2026-03-05: reforçado que oportunidade pode nascer de dor, desejo ou entretenimento
 - 2026-03-05: incluída necessidade latente (dor não explícita) via leitura de contexto/rotina/entrelinhas
 - 2026-03-05: consolidado fluxo “balaio” com ingestão ampla + pipeline único (minerar, categorizar, pontuar, ranquear)
+- 2026-03-06: refinado para macroprocessos separados (base de insumos, enriquecimento semântico e mineração sob demanda)
+- 2026-03-06: adicionada camada de qualidade com papéis de análise/revisão e decisão determinística por status (priorizar/delayed/descartar)
