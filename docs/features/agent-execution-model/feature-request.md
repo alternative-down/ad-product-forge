@@ -8,6 +8,13 @@ Draft inicial
 - cada job dispara um run
 - durante o run, mensagens da execução são empilhadas normalmente na thread de execução
 
+## Modelo de execução por step
+Durante o run:
+1. executar step atual
+2. consultar memória do agente (semântica + fulltext/BM25)
+3. injetar contexto recuperado no próximo step
+4. repetir até finalizar o run
+
 ## Modelo de fechamento do run
 Ao concluir um run:
 1. agente gera resumo executivo da execução
