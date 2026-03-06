@@ -110,7 +110,7 @@ Ordem para entender oportunidade com mais profundidade:
 ### Regra conceitual de deduplicação (definida)
 - deduplicação primária por `content_hash`
 - quando chega novo evento do mesmo item, faz **merge de `metadata_json`**
-- se o merge adicionar/alterar informação relevante, marcar `processed_flag = false` para reprocessamento
+- qualquer alteração em `metadata_json` marca `processed_flag = false` para reprocessamento
 
 Objetivo da decisão:
 - manter a base simples para dedup e controle de processamento
@@ -172,4 +172,4 @@ Objetivo da decisão:
 - 2026-03-06: refinado para macroprocessos separados (base de insumos, enriquecimento semântico e mineração sob demanda)
 - 2026-03-06: adicionada camada de qualidade com papéis de análise/revisão e decisão determinística por status (priorizar/delayed/descartar)
 - 2026-03-06: schema bruto ajustado para `processed_flag` boolean (sem máquina de estados na camada de insumos)
-- 2026-03-06: dedup definido por `content_hash`; duplicatas fazem merge de `metadata_json` e podem reabrir processamento (`processed_flag = false`) quando houver novo contexto relevante
+- 2026-03-06: dedup definido por `content_hash`; duplicatas fazem merge de `metadata_json` e sempre reabrem processamento (`processed_flag = false`) quando houver qualquer mudança no metadata
