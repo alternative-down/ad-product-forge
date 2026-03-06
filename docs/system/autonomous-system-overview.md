@@ -92,6 +92,7 @@ Observação:
 - Sistema também pode enviar status reports e outras notificações para esses interessados.
 - Interessados podem ser usados como beta testers com incentivos (desconto, créditos ou uso gratuito por período).
 - Sistema executa marketing social e distribuição (fóruns/comunidades/redes) para aquisição e validação contínua.
+- Integrações candidatas para publicação/distribuição: APIs Hub, diretas/PKD, Buffer (decisão técnica posterior).
 - Com documentação pronta, sistema gera plano de desenvolvimento.
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.

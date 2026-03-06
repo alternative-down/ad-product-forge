@@ -12,6 +12,12 @@ Publicar e distribuir produtos/conteúdos em fóruns, comunidades e redes para g
 - variações de mensagem por canal/contexto
 - acompanhamento de resposta/engajamento
 
+## Integrações candidatas (opções)
+- APIs Hub
+- integrações diretas/PKD
+- Buffer
+- outras integrações equivalentes
+
 ## Processo
 1. Definir mensagem base por produto/campanha
 2. Adaptar formato para cada canal/comunidade
