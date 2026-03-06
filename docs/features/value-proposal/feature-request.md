@@ -6,7 +6,7 @@ Draft inicial
 ## Gatilho de execução
 Executa quando:
 - não há novo sistema sendo construído
-- apps em produção estão estáveis
+- apps em produção estão estáveis (menos de 10 issues/semana)
 
 ## Lote mínimo por rodada
 - analisar no mínimo 3 problemas por rodada

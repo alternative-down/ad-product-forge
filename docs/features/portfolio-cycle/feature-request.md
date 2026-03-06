@@ -7,7 +7,7 @@ Draft inicial
 Quando (todos verdadeiros):
 - fluxo de caixa operacional dos últimos 30 dias >= 0
 - runway projetado >= 3 meses
-- apps em produção sem issue crítica aberta nos últimos 7 dias
+- apps em produção estáveis (menos de 10 issues/semana)
 - valor ganho (MRR) do mês atual >= 1.15x média dos 2 meses anteriores
 
 ## Ação
