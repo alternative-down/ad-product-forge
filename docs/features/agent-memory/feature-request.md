@@ -19,6 +19,8 @@ Cada agente possui sua própria memória isolada.
 ## Momento de criação de memória
 - ao finalizar o run, antes de devolver o resumo executivo para a thread primária
 - nesse ponto, runtime consolida e grava memórias da execução recém-concluída
+- também pode ocorrer durante o run quando houver necessidade de compactação de contexto
+- regra: antes de compactar, construir/atualizar memória; depois executar a compactação
 
 ## Opções de base para memória e busca
 - Neo4j

@@ -29,6 +29,11 @@ Ao concluir um run:
 
 Ordem importante:
 - criação de memória acontece antes da devolução do resumo executivo para a thread primária.
+- em compactação durante execução: criar/atualizar memória antes de compactar o contexto.
+
+## Estratégia de compactação de contexto
+- compactação não precisa considerar toda a thread desde o início
+- prioridade para compactar mensagens intermediárias (do meio), preservando bordas relevantes do contexto
 
 ## Estratégia de implementação sugerida (conceitual)
 - clonar a thread principal para execução isolada

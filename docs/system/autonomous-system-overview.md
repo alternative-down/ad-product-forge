@@ -81,6 +81,8 @@ Cada agente do sistema possui:
 - memória não é acionada por tool manual do agente
 - durante um run, runtime recupera memória por step (semântica + fulltext/BM25) e injeta no contexto como mensagem da thread (ex.: `<memory>`)
 - criação/atualização de memória ocorre no fim da execução, antes do resumo executivo ser devolvido para a thread primária
+- se houver compactação durante o run, memória é construída antes da compactação
+- estratégia de compactação prioriza mensagens intermediárias (do meio), não necessariamente toda a thread desde o início
 
 ## Agendamento por agente
 - agentes podem criar crons para tarefas recorrentes
