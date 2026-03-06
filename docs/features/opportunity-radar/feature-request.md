@@ -102,7 +102,7 @@ Ordem para entender oportunidade com mais profundidade:
 - `content_raw`
 - `content_hash` (deduplicação)
 - `origin_ref`
-- `processing_status`
+- `processed_flag` (boolean)
 
 ### Campo flexível
 - `metadata_json` para contexto e dados adicionais da coleta
@@ -166,3 +166,4 @@ Objetivo da decisão:
 - 2026-03-05: consolidado fluxo “balaio” com ingestão ampla + pipeline único (minerar, categorizar, pontuar, ranquear)
 - 2026-03-06: refinado para macroprocessos separados (base de insumos, enriquecimento semântico e mineração sob demanda)
 - 2026-03-06: adicionada camada de qualidade com papéis de análise/revisão e decisão determinística por status (priorizar/delayed/descartar)
+- 2026-03-06: schema bruto ajustado para `processed_flag` boolean (sem máquina de estados na camada de insumos)

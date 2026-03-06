@@ -77,7 +77,7 @@ Schema mínimo de entrada (fixo):
 - `content_raw`
 - `content_hash`
 - `origin_ref`
-- `processing_status`
+- `processed_flag` (boolean)
 
 Campo dinâmico:
 - `metadata_json` (contexto e dados adicionais por fonte/coleta)
