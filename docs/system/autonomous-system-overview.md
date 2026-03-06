@@ -43,6 +43,13 @@ Isso vale para o ciclo completo:
 - Busca fulltext com BM25
 - Grafo de conhecimento construído continuamente pelos agentes (relações, categorização, evidências)
 
+## Identidade dos agentes
+Cada agente do sistema possui:
+- persona
+- nome
+- email
+- papel
+
 ## Papel dos agentes LLM no sistema
 - agentes de coleta/interpretação
 - agentes de enriquecimento e relacionamento semântico
