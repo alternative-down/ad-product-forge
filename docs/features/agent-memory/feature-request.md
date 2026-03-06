@@ -13,10 +13,12 @@ Cada agente possui sua própria memória isolada.
 
 ## Modelo de uso durante execução (step-by-step)
 - agentes não acionam memória por tool explícita
-- memória é criada e recuperada automaticamente pelo runtime
-- em cada step, runtime faz recuperação semântica + fulltext (BM25) da memória isolada do agente
-- memória recuperada é injetada no contexto como mensagem da thread (ex.: bloco `<memory>`)
-- abordagem inspirada na ideia de memória observacional, com fluxo automático de injeção por step adaptado ao projeto
+- durante o run, runtime recupera memória existente (semântica + fulltext/BM25) e injeta no contexto como mensagem da thread (ex.: `<memory>`)
+- criação/atualização de memória ocorre no fechamento da execução
+
+## Momento de criação de memória
+- ao finalizar o run, antes de devolver o resumo executivo para a thread primária
+- nesse ponto, runtime consolida e grava memórias da execução recém-concluída
 
 ## Opções de base para memória e busca
 - Neo4j

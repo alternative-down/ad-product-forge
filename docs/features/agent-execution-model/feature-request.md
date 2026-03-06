@@ -20,11 +20,15 @@ Observação:
 
 ## Modelo de fechamento do run
 Ao concluir um run:
-1. agente gera resumo executivo da execução
-2. histórico detalhado do run é compactado/substituído
-3. persistem apenas:
+1. runtime cria/atualiza memórias da execução
+2. agente gera resumo executivo da execução
+3. histórico detalhado do run é compactado/substituído
+4. persistem apenas:
    - prompt inicial da execução
    - resumo executivo do run
+
+Ordem importante:
+- criação de memória acontece antes da devolução do resumo executivo para a thread primária.
 
 ## Estratégia de implementação sugerida (conceitual)
 - clonar a thread principal para execução isolada

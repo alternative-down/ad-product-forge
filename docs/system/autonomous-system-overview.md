@@ -80,6 +80,7 @@ Cada agente do sistema possui:
 - gestão de memória/contexto e execução será específica deste projeto (modelo próprio)
 - memória não é acionada por tool manual do agente
 - durante um run, runtime recupera memória por step (semântica + fulltext/BM25) e injeta no contexto como mensagem da thread (ex.: `<memory>`)
+- criação/atualização de memória ocorre no fim da execução, antes do resumo executivo ser devolvido para a thread primária
 
 ## Agendamento por agente
 - agentes podem criar crons para tarefas recorrentes
