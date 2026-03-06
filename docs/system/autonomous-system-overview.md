@@ -27,6 +27,10 @@ Isso vale para o ciclo completo:
 - Um agente de coleta (firecrawl) recebe um prompt com:
   - locais iniciais sugeridos
   - instrução para explorar também novos lugares relacionados
+- Retorno esperado da coleta ativa:
+  - link do conteúdo
+  - conteúdo bruto
+  - contexto adicional da coleta
 - Objetivo: ampliar a descoberta de sinais além da lista inicial, com exploração guiada.
 
 ## Papel dos agentes LLM no sistema

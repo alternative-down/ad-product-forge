@@ -45,6 +45,10 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 ### Coleta ativa
 - Processo inicial com agente firecrawl orientado por prompt
 - Prompt inclui locais iniciais + instrução para explorar fontes relacionadas
+- Retorno esperado por item coletado:
+  - link do conteúdo
+  - conteúdo bruto
+  - contexto adicional da coleta
 - Comunidades, reviews, reclamações, benchmarking e inspiração/opinião
 
 ### Coleta passiva
