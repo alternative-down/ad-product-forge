@@ -76,6 +76,7 @@ Isso vale para o ciclo completo:
 - Após estabilização em staging, sistema promove para produção.
 - Todo app sobe com base padrão de observabilidade (métricas + logs + eventos contextuais).
 - Eventos de runtime podem ser analisados por agente LLM, que cria issues automaticamente sobre ocorrências relevantes.
+- Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
 - transições de estado com critérios claros

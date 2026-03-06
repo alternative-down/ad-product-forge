@@ -16,6 +16,7 @@ Todo app novo nasce com uma base padrão já incluída.
 2. eventos chegam com contexto adicional suficiente para diagnóstico
 3. agente LLM consulta os dados necessários
 4. agente cria issues sobre os acontecimentos relevantes
+5. issues entram na esteira padrão de desenvolvimento e CI/CD
 
 ## Objetivo
 Padronizar visibilidade operacional e transformar automaticamente sinais de runtime em backlog acionável.
