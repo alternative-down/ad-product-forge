@@ -7,7 +7,7 @@ Draft inicial
 Executar desenvolvimento e resolução de issues de forma autônoma, integrado ao pipeline da empresa.
 
 ## Direção proposta
-- V1: basear o motor em Mastra
+- agentes criados usando Mastra
 - fazer pick apenas do que for necessário do Automaker
 - evitar carregar partes inchadas/desnecessárias do Automaker
 

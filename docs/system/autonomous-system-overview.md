@@ -98,7 +98,7 @@ Observação:
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
 - Depois, sistema executa tarefas continuamente por motor de desenvolvimento autônomo, item por item da fila.
-- Direção atual de execução: Mastra como base do motor autônomo.
+- Agentes serão criados usando Mastra.
 - Automaker entra apenas por picks pontuais do que for útil/necessário.
 - Com tarefas concluídas e validação local finalizada, sistema faz deploy em ambiente de teste (staging).
 - Em staging, agentes testam e corrigem como se fosse produção.
