@@ -166,6 +166,9 @@ A pontuação desta feature é somente de **força de insight** (sem viabilidade
 - `pain_intensity`: intensidade da tensão (dor/desejo/oportunidade)
 - `context_breadth`: abrangência em contextos/atores
 
+Escala padrão definida para V1:
+- todos os critérios em **0–100** antes da ponderação
+
 ### Resultado final
 - `rank_score` (0–100)
 - `rank_reason` curto e rastreável

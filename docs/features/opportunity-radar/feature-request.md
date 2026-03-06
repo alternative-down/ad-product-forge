@@ -190,4 +190,5 @@ Objetivo da decisão:
 - 2026-03-06: schema do minerador mantido por ora em 3 artefatos por rodada (inferência, evidência e ranking versionado)
 - 2026-03-06: handoff para gerador de propostas fechado como pacote único por insight (`insight` + `evidences[]` + `ranking` + `handoff_context` + `ready_for_solution=true`)
 - 2026-03-06: viabilidade removida desta feature; ranking mede apenas força de insight e viabilidade fica para fase de proposta
+- 2026-03-06: escala de pontuação confirmada para V1: critérios em 0–100 antes da ponderação
 
