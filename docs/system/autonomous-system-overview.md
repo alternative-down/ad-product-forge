@@ -60,6 +60,11 @@ Cada agente do sistema possui:
 - tudo que acontece com o agente roda nessa thread
 - a thread é o canal principal de contexto e continuidade do agente
 
+## Memória por agente
+- cada agente terá memória própria e isolada
+- memória combina abordagem atual do OpenClaw + padrão observacional semelhante ao Mastra (referência)
+- gestão de memória/contexto e execução será específica deste projeto (modelo próprio)
+
 Observação:
 - referência conceitual inspirada em abordagens recentes de memória/thread (ex.: ecossistema Mastra), com adaptação própria do projeto.
 
