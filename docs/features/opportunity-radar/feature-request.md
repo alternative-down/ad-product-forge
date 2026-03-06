@@ -61,8 +61,8 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 - Registra insumo bruto
 - Aplica deduplicação interna
 - Enfileira para processamento item a item
-- Cada novo insumo dispara um job (trigger/bull)
-- O processador do job é agente LLM que manipula o grafo no Neo4j
+- Cada novo insumo dispara um job na fila (trigger/bull)
+- O processador do job é um agente LLM que manipula o grafo no Neo4j
 
 ---
 
