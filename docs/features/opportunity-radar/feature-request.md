@@ -60,7 +60,9 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 ### Regra operacional
 - Registra insumo bruto
 - Aplica deduplicação interna
-- Enfileira para processamento sequencial item a item
+- Enfileira para processamento item a item
+- Cada novo insumo dispara um job (trigger/bull)
+- O processador do job é agente LLM que manipula o grafo no Neo4j
 
 ---
 
@@ -88,6 +90,11 @@ Campos mínimos:
 - Execução diária
 - Acionamento em cascata por processo posterior
 - Modos: bottom-up e top-down
+
+### 7.3.1 Base de grafo para enriquecimento/mineração
+- Neo4j como grafo de trabalho
+- Nós e arestas com embeddings
+- Índice fulltext com BM25
 
 ### 7.4 Taxonomia
 - Sem taxonomia fixa na V1

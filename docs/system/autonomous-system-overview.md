@@ -33,7 +33,13 @@ Isso vale para o ciclo completo:
   - contexto adicional da coleta
 - Esses dados são registrados localmente.
 - A mesma estrutura também pode chegar por endpoint de ingestão (canal passivo para outras fontes).
+- Cada novo insumo registrado dispara 1 job (trigger/bull), processado por agente LLM.
 - Objetivo: ampliar a descoberta de sinais além da lista inicial, com exploração guiada.
+
+## Base semântica do sistema
+- Grafo em Neo4j
+- Embeddings em nós e arestas
+- Busca fulltext com BM25
 
 ## Papel dos agentes LLM no sistema
 - agentes de coleta/interpretação
