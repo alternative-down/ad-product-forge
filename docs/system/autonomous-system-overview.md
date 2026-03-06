@@ -78,7 +78,8 @@ Cada agente do sistema possui:
 - cada agente terá memória própria e isolada
 - memória combina abordagem atual do OpenClaw + padrão observacional semelhante ao Mastra (referência)
 - gestão de memória/contexto e execução será específica deste projeto (modelo próprio)
-- durante um run, cada step consulta memória (semântica + fulltext/BM25) e injeta contexto antes do próximo step
+- memória não é acionada por tool manual do agente
+- durante um run, runtime recupera memória por step (semântica + fulltext/BM25) e injeta no contexto como mensagem da thread (ex.: `<memory>`)
 
 ## Agendamento por agente
 - agentes podem criar crons para tarefas recorrentes

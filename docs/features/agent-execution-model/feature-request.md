@@ -11,9 +11,12 @@ Draft inicial
 ## Modelo de execução por step
 Durante o run:
 1. executar step atual
-2. consultar memória do agente (semântica + fulltext/BM25)
-3. injetar contexto recuperado no próximo step
+2. runtime recupera memória do agente (semântica + fulltext/BM25)
+3. runtime injeta memória recuperada como mensagem da thread (ex.: `<memory>`)
 4. repetir até finalizar o run
+
+Observação:
+- não existe tool de memória acionada manualmente pelo agente.
 
 ## Modelo de fechamento do run
 Ao concluir um run:
