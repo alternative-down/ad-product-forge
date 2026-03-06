@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ad Product Forge Pipeline Contract v1",
+  "type": "object",
+  "definitions": {
+    "input": {
+      "type": "object",
+      "required": ["item_id", "timestamp", "content", "context", "source_type"],
+      "properties": {
+        "item_id": { "type": "string", "minLength": 1 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "content": { "type": "string", "minLength": 1 },
+        "context": { "type": "object" },
+        "link": { "type": "string", "format": "uri" },
+        "source_type": { "enum": ["coleta", "manual", "webhook"] }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "required": ["item_id", "job_id", "status", "processed_at"],
+      "properties": {
+        "item_id": { "type": "string", "minLength": 1 },
+        "job_id": { "type": "string", "minLength": 1 },
+        "parent_job_id": { "type": ["string", "null"] },
+        "status": { "enum": ["ok", "retry", "error"] },
+        "score": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "artifacts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "processed_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "orchestration": {
+    "next_action_mapping": {
+      "ok": "forward",
+      "retry": "retry",
+      "error": "drop"
+    }
+  }
+}
