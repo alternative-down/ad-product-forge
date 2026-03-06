@@ -73,6 +73,7 @@ Cada agente do sistema possui:
 - cada agente possui sua própria fila de eventos/jobs
 - cada job dispara um run
 - fila alimenta as execuções do agente e suas ramificações
+- retry/backoff pode ser tratado nativamente pelo orquestrador de jobs (BullMQ/Trigger), com backoff exponencial por job
 
 ## Memória por agente
 - cada agente terá memória própria e isolada
