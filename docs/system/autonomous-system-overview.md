@@ -81,6 +81,8 @@ Isso vale para o ciclo completo:
 - Agentes usam busca por embeddings e BM25 para responder e auxiliar usuários.
 - Eventos de runtime podem acionar o criador de issues automaticamente.
 - Agentes de suporte também podem acionar esse mesmo criador de issues quando identificarem problema acionável.
+- Problemas identificados no atendimento podem virar issue mesmo sem erro explícito em log.
+- O criador de issues coleta contexto adicional antes da abertura.
 - Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente

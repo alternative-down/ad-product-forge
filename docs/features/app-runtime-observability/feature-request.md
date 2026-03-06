@@ -24,6 +24,8 @@ Todo app novo nasce com uma base padrão já incluída.
 8. agentes usam busca semântica (embeddings) e fulltext (BM25) para auxiliar usuários
 9. quando ticket vira problema acionável, entra na mesma esteira de desenvolvimento/CI-CD
 10. agentes de suporte também podem acionar o criador de issues (mesmo mecanismo usado por eventos de runtime)
+11. issues também podem surgir de atendimento (mesmo sem log explícito de erro)
+12. criador de issues coleta contexto adicional antes de abrir a issue
 
 ## Objetivo
 Padronizar visibilidade operacional e transformar automaticamente sinais de runtime em backlog acionável.
