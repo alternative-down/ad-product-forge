@@ -66,9 +66,10 @@ As entradas vêm de dois canais:
 
 Regra de entrada:
 - armazenar bruto
-- deduplicar
+- deduplicar por `content_hash`
 - aplicar apenas estruturação mínima inicial
-
+- em duplicata, fazer merge de `metadata_json`
+- se houver alteração relevante após merge, voltar `processed_flag` para `false`
 Schema mínimo de entrada (fixo):
 - `item_id`
 - `source_type`
@@ -212,3 +213,4 @@ A feature é considerada útil quando:
 - Mineração com dois modos: exploração livre e investigação guiada por hipótese
 - Pontuação definida em duas fases (evidência + viabilidade/fit)
 - Status de decisão explícitos: priorizar, delayed, descartar
+- Dedup definido por hash com merge incremental de metadata e reprocessamento quando necessário
