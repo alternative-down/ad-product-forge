@@ -106,7 +106,8 @@ Campos mínimos:
 - Escala 0–100 para critérios antes de ponderação
 
 ### 7.6 Lista consolidada de problemas extraídos (saída)
-Cada item da lista contém apenas:
+Cada item da lista contém:
+- `problem_id`
 - `problem`
 - `context`
 - `graph_node_ref` (link/referência para o nó no grafo)
@@ -115,13 +116,16 @@ Observação:
 - saída externa do minerador é somente essa lista consolidada.
 - não há estrutura adicional nesta fase.
 ### 7.7 Pontuação (campos)
-- `insight_id`
+- `problem_id`
 - `rank_score`
 - `rank_reason`
 
 ### 7.8 Handoff para etapa posterior
-Pacote único por insight:
-- `insight` (problema + contexto)
+Pacote por problema:
+- `problem_id`
+- `problem`
+- `context`
+- `graph_node_ref`
 - `ranking`
 - `handoff_context`
 - `ready_for_solution = true`

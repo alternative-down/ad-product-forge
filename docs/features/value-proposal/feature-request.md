@@ -13,7 +13,7 @@ Executa quando:
 
 ## Entrada
 - lista consolidada de problemas extraídos
-- para cada item: `problem`, `context`, `graph_node_ref`
+- para cada item: `problem_id`, `problem`, `context`, `graph_node_ref`
 
 ## Guias de fit (restrições)
 A proposta precisa estar alinhada com:
