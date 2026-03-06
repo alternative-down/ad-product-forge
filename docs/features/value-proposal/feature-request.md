@@ -7,6 +7,7 @@ Draft inicial
 Executa quando:
 - não há novo sistema sendo construído
 - apps em produção estão estáveis (menos de 10 issues/semana)
+- item chega com `ready_for_solution = true`
 
 ## Lote mínimo por rodada
 - analisar no mínimo 3 problemas por rodada
@@ -14,7 +15,7 @@ Executa quando:
 
 ## Entrada
 - lista consolidada de problemas extraídos
-- para cada item: `problem_id`, `problem`, `context`, `graph_node_ref`
+- para cada item: `problem_id`, `problem`, `context`, `graph_node_ref`, `ranking`, `handoff_context`
 
 ## Guias de fit (restrições)
 A proposta precisa estar alinhada com:
