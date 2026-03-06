@@ -89,7 +89,8 @@ Observação:
 - Etapa de ideação prepara documentação do projeto (overview, briefing, PRD, features, arquitetura/organização) em repositório baseado em template, já clonado e linkado ao remoto.
 - Antes do desenvolvimento completo da solução, sistema cria landing page focada na dor para coletar leads.
 - Agentes podem contatar interessados e coletar informações adicionais.
-- Sistema também pode enviar status reports e outras notificações para esses interessados.- Com documentação pronta, sistema gera plano de desenvolvimento.
+- Sistema também pode enviar status reports e outras notificações para esses interessados.
+- Interessados podem ser usados como beta testers com incentivos (desconto, créditos ou uso gratuito por período).- Com documentação pronta, sistema gera plano de desenvolvimento.
 - Cada tarefa do plano vira issue.
 - Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
 - Depois, sistema executa tarefas continuamente (estilo Automaker), item por item da fila.

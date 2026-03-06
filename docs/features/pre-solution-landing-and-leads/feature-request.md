@@ -12,6 +12,8 @@ Validar interesse antes de desenvolver a solução completa.
 3. Agentes entram em contato com interessados
 4. Coletar informações adicionais para enriquecer entendimento da dor e demanda
 5. Enviar status reports e notificações para interessados conforme evolução
+6. Convidar interessados para beta testing quando fizer sentido
+7. Aplicar incentivos de entrada quando aplicável (desconto, crédito ou período gratuito)
 
 ## Saída
 - base de leads por problema/proposta
