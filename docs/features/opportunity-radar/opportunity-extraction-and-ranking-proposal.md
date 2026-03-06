@@ -225,7 +225,7 @@ Handoff será um pacote único por insight, contendo:
 - `ready_for_solution = true`
 
 ## 10.2) Aberto (macro)
-- Definir gatilho de execução do gerador de propostas a partir dos handoffs prontos.
+- Definir política de versionamento e retenção do ranking (histórico por rodada diária).
 
 ---
 

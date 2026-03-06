@@ -160,7 +160,7 @@ Objetivo da decisão:
 - Handoff minerador → gerador de propostas será um pacote único por insight com: `insight`, `evidences[]`, `ranking`, `handoff_context`, `ready_for_solution=true`.
 
 ## 8.2) Item macro ainda em aberto
-- Definir gatilho de execução do gerador de propostas a partir dos handoffs prontos.
+- Definir política de versionamento e retenção do ranking (histórico por rodada diária).
 
 ---
 
