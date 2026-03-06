@@ -24,8 +24,9 @@ A proposta foi consolidada em três processos principais e separados:
    - mantém registro bruto consolidado e rastreável
 
 2. **Processo de Enriquecimento no Grafo (agente item-a-item)**
-   - executa em ciclos periódicos
-   - cada novo item da base passa individualmente por um agente de análise
+   - cada novo item registrado é enviado para fila
+   - processamento sequencial, item a item
+   - cada item passa individualmente por um agente de análise
    - o agente registra categoria, contexto e relações com itens já existentes
    - as relações ficam em um memory graph semântico para conectar sinais dispersos
 

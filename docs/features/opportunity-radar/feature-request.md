@@ -61,7 +61,8 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 
 ### Observação de fluxo
 - A base de insumos consolida dados ativos e passivos
-- O processamento semântico por agente ocorre depois, em janelas periódicas sobre novos itens
+- Cada novo insumo é enviado para fila após registro
+- Processamento ocorre item a item, de forma sequencial
 
 ---
 
@@ -174,3 +175,4 @@ Objetivo da decisão:
 - 2026-03-06: adicionada camada de qualidade com papéis de análise/revisão e decisão determinística por status (priorizar/delayed/descartar)
 - 2026-03-06: schema bruto ajustado para `processed_flag` boolean (sem máquina de estados na camada de insumos)
 - 2026-03-06: dedup definido por `content_hash`; duplicatas fazem merge de `metadata_json` e sempre reabrem processamento (`processed_flag = false`) quando houver qualquer mudança no metadata
+- 2026-03-06: fluxo operacional definido como enqueue por novo insumo + processamento sequencial item a item
