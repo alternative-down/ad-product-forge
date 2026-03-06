@@ -89,10 +89,27 @@ Ordem para entender oportunidade com mais profundidade:
 
 ## 7) O que precisamos definir na sequência
 1. Escopo da V1 do radar
-2. Formato mínimo de registro bruto
-3. Critérios de qualidade do sinal
-4. Critérios de priorização da oportunidade
-5. Frequência/cadência de operação
+2. Critérios de qualidade do sinal
+3. Critérios de priorização da oportunidade
+4. Frequência/cadência de operação
+
+## 7.0) Decisão registrada — schema mínimo de insumo bruto
+### Campos fixos mínimos
+- `item_id`
+- `source_type` (`active` | `passive`)
+- `source_name`
+- `captured_at`
+- `content_raw`
+- `content_hash` (deduplicação)
+- `origin_ref`
+- `processing_status`
+
+### Campo flexível
+- `metadata_json` para contexto e dados adicionais da coleta
+
+Objetivo da decisão:
+- manter a base simples para dedup e controle de processamento
+- concentrar variações de contexto/coleta em campo dinâmico único
 
 ---
 

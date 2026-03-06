@@ -69,6 +69,19 @@ Regra de entrada:
 - deduplicar
 - aplicar apenas estruturação mínima inicial
 
+Schema mínimo de entrada (fixo):
+- `item_id`
+- `source_type`
+- `source_name`
+- `captured_at`
+- `content_raw`
+- `content_hash`
+- `origin_ref`
+- `processing_status`
+
+Campo dinâmico:
+- `metadata_json` (contexto e dados adicionais por fonte/coleta)
+
 ---
 
 ## 4) Estrutura de saída (unidade de oportunidade)
