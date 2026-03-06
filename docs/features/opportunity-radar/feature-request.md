@@ -108,17 +108,13 @@ Campos mínimos:
 ### 7.6 Insight imutável (campos)
 - `insight_id`
 - `insight_type` (`problema` | `dor` | `desejo` | `oportunidade`)
-- `title`
-- `summary_inferred`
-- `source_item_ids`
-- `graph_evidence_refs`
-- `context_snapshot`
-- `desired_outcome`
-- `current_workaround`
-- `constraint_signals`
-- `metadata_json`
+- `problem_statement`
+- `context`
 - `created_at`
 
+Observação:
+- nesta fase, saída externa do minerador fica só em problema + contexto.
+- opcionalmente, o agente pode criar nós consolidados de problema no próprio grafo com marcação distinta e links internos.
 ### 7.7 Pontuação (campos)
 - `insight_id`
 - `rank_score`
@@ -126,8 +122,7 @@ Campos mínimos:
 
 ### 7.8 Handoff para etapa posterior
 Pacote único por insight:
-- `insight`
-- `evidences[]`
+- `insight` (problema + contexto)
 - `ranking`
 - `handoff_context`
 - `ready_for_solution = true`

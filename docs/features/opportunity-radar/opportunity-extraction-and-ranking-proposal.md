@@ -69,19 +69,16 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
 ## 5) Saída do minerador
 A saída desta fase são insights de tensão de usuário/mercado (não ideias de produto).
 
-## 5.1 Insight imutável
+## 5.1 Insight imutável (saída mínima)
 - `insight_id`
 - `insight_type` (`problema` | `dor` | `desejo` | `oportunidade`)
-- `title`
-- `summary_inferred`
-- `source_item_ids`
-- `graph_evidence_refs`
-- `context_snapshot`
-- `desired_outcome`
-- `current_workaround`
-- `constraint_signals`
-- `metadata_json`
+- `problem_statement`
+- `context`
 - `created_at`
+
+Observação:
+- saída externa mínima não precisa carregar referência explícita de nós/dados brutos.
+- opcionalmente, o agente pode criar nós consolidados de problema com marcação distinta no próprio grafo e manter links internos.
 
 ## 5.2 Pontuação
 - `insight_id`
@@ -106,8 +103,7 @@ Escala:
 
 ## 7) Handoff para proposta de solução
 Pacote único por insight:
-- `insight`
-- `evidences[]`
+- `insight` (problema + contexto)
 - `ranking`
 - `handoff_context`
 - `ready_for_solution = true`
