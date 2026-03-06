@@ -35,5 +35,10 @@ Isso vale para o ciclo completo:
 - transições de estado com critérios claros
 - redução de variabilidade entre execuções
 
+## Diretriz de definição de stack
+- Não definir stack antecipadamente durante a fase de planejamento funcional/conceitual.
+- Toda tecnologia (fila, orquestrador, banco, framework, etc.) deve ficar registrada como **opção a avaliar**.
+- A escolha oficial de stack ocorre apenas na etapa de documentação técnica/arquitetural.
+
 ## Observação
 Esta premissa (100% autônomo) deve ser aplicada como base em todas as features do sistema.

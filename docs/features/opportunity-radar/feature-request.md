@@ -157,6 +157,7 @@ Objetivo da decisão:
 ## 9) Decisões já tomadas
 - Enquadramento principal: **Opportunity Radar**
 - Vamos discutir e refinar por partes antes de implementação técnica
+- Definições de stack ficam em aberto nesta fase (registrar opções, sem escolha antecipada)
 
 ---
 

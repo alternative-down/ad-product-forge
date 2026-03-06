@@ -49,6 +49,7 @@ A proposta foi consolidada em três processos principais e separados:
 - Implementação de coleta em fonte específica
 - Desenvolvimento técnico de produto
 - Validação comercial detalhada
+- Definição final de stack (nesta fase apenas opções candidatas)
 
 ---
 
