@@ -156,8 +156,11 @@ Objetivo da decisão:
 - Limiar de entrada no ranking: **não existe**. Todo insight extraído entra no ranking.
 - Revisão de ranking: acompanha a mineração diária em cascata.
 
-## 8.1) Item macro ainda em aberto
-- Contrato final entre saída do minerador e entrada do gerador de propostas de solução (pacote de handoff).
+## 8.1) Definição fechada nesta rodada
+- Handoff minerador → gerador de propostas será um pacote único por insight com: `insight`, `evidences[]`, `ranking`, `handoff_context`, `ready_for_solution=true`.
+
+## 8.2) Item macro ainda em aberto
+- Definir gatilho de execução do gerador de propostas a partir dos handoffs prontos.
 
 ---
 
@@ -183,4 +186,5 @@ Objetivo da decisão:
 - 2026-03-06: dedup definido por `content_hash`; duplicatas fazem merge de `metadata_json` e sempre reabrem processamento (`processed_flag = false`) quando houver qualquer mudança no metadata
 - 2026-03-06: fluxo operacional definido como enqueue por novo insumo + processamento sequencial item a item
 - 2026-03-06: schema do minerador mantido por ora em 3 artefatos por rodada (inferência, evidência e ranking versionado)
+- 2026-03-06: handoff para gerador de propostas fechado como pacote único por insight (`insight` + `evidences[]` + `ranking` + `handoff_context` + `ready_for_solution=true`)
 

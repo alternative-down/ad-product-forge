@@ -216,8 +216,16 @@ A feature é considerada útil quando:
 - Limiar de entrada: não existe; todo insight extraído entra no ranking.
 - Revisão de ranking: sincronizada com a mineração diária em cascata.
 
-## 10.1) Aberto (macro)
-- Definir contrato de handoff entre minerador e gerador de propostas de solução.
+## 10.1) Definição fechada — handoff para gerador de propostas
+Handoff será um pacote único por insight, contendo:
+- `insight`
+- `evidences[]`
+- `ranking`
+- `handoff_context`
+- `ready_for_solution = true`
+
+## 10.2) Aberto (macro)
+- Definir gatilho de execução do gerador de propostas a partir dos handoffs prontos.
 
 ---
 
