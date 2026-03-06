@@ -63,10 +63,15 @@ Cada agente do sistema possui:
 - cada agente possui uma única thread de mensagens
 - tudo que acontece com o agente roda nessa thread
 - a thread é o canal principal de contexto e continuidade do agente
-- execuções do agente podem criar ramificações por execução dentro da thread
+- execuções do agente podem criar ramificações por execução
+- ao fim de cada run, o histórico detalhado é compactado para manter só:
+  - prompt inicial da execução
+  - resumo executivo do run
+- abordagem operacional possível: executar em thread clonada e retornar somente o resultado compacto para a thread principal
 
 ## Fila de jobs por agente
 - cada agente possui sua própria fila de eventos/jobs
+- cada job dispara um run
 - fila alimenta as execuções do agente e suas ramificações
 
 ## Memória por agente
