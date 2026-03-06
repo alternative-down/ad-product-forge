@@ -134,6 +134,11 @@ Objetivo da decisão:
    - rankeamento
    - saída acionável (itens prontos para proposta de app)
 
+### Gatilho da mineração (definido)
+- execução diária
+- acionamento por processo anterior (cascata)
+- o processo upstream será detalhado posteriormente
+
 ## 7.2) Camada de qualidade e decisão
 - enriquecimento com papéis distintos de **análise** e **revisão**
 - pontuação em duas lentes:

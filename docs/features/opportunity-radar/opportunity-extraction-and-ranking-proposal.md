@@ -31,7 +31,8 @@ A proposta foi consolidada em três processos principais e separados:
    - as relações ficam em um memory graph semântico para conectar sinais dispersos
 
 3. **Processo de Mineração Sob Demanda (agente minerador)**
-   - acionado quando queremos extrair oportunidades do conjunto atual
+   - execução diária
+   - acionado por processo anterior em cascata (definição detalhada pendente)
    - opera em dois modos:
      - **Exploração livre (bottom-up)**: descobre padrões emergentes
      - **Investigação guiada por hipótese (top-down)**: busca sinais para contextos/problemas específicos
