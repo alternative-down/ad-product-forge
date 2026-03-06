@@ -4,7 +4,7 @@
 Draft
 
 ## Premissa global
-Todo o sistema opera sem intervenção humana.
+Criar uma empresa digital operada por agentes LLMs, sem intervenção humana, funcionando de forma automática e coordenada.
 
 Isso vale para o ciclo completo:
 1. coleta de dados
