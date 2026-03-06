@@ -80,7 +80,7 @@ Observação:
   - produz uma proposta de valor
   - analisa o que precisa ser feito para atender a proposta
   - estima custo e esforço para atendimento
-  - registra métricas numéricas (complexidade, features, custo, potencial de receita/MMR)
+  - registra métricas numéricas (complexidade, features, custo, potencial de receita/MRR)
   - valida fit com as restrições da plataforma (web, micro-SaaS, recorrência/crédito/one-time)
   - valida se o custo é suportável pelo fluxo de caixa
 - Se não encaixar no momento, o problema volta para o final da fila.

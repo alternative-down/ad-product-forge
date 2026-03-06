@@ -43,7 +43,7 @@ Se não encaixar no momento:
   - complexidade
   - quantidade de features
   - custo estimado
-  - potencial de receita (MMR)
+  - potencial de receita (MRR)
 
 ## Ranqueamento final da rodada
 - após avaliar e pontuar todos os itens da rodada, o agente ranqueia as propostas
