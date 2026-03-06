@@ -125,3 +125,6 @@ function isValidUrl(value: string): boolean {
 
 export { createArtifactStore } from './pipeline/graph/artifact-store';
 export { buildGraphEdges, buildGraphNodes, runGraphStage } from './pipeline/graph/graph-transformer';
+export { buildInsights, runInsightStage } from './pipeline/insight/insight-engine';
+export { createInsightStore } from './pipeline/insight/insight-store';
+export { computeWeightedScore, createScoreStore, runScoreStage } from './pipeline/score/score-engine';
