@@ -40,6 +40,7 @@ Isso vale para o ciclo completo:
 - Grafo em Neo4j
 - Embeddings em nós e arestas
 - Busca fulltext com BM25
+- Grafo de conhecimento construído continuamente pelos agentes (relações, categorização, evidências)
 
 ## Papel dos agentes LLM no sistema
 - agentes de coleta/interpretação

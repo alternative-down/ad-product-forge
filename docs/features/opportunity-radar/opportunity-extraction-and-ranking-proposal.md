@@ -49,6 +49,11 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
    - agente analisa e conecta contexto/rotina/tensão
    - agente revisor valida consistência
    - manipulação do grafo em Neo4j (com embeddings em nós/arestas + fulltext BM25)
+   - construção contínua de grafo de conhecimento com:
+     - relações semânticas
+     - categorização
+     - evidências vinculadas
+   - estrutura definida pelos agentes (sem schema semântico rígido nesta fase)
 
 3. **Mineração de insights**
    - execução diária

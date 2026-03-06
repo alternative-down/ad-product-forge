@@ -96,9 +96,9 @@ Campos mínimos:
 - Nós e arestas com embeddings
 - Índice fulltext com BM25
 
-### 7.4 Taxonomia
-- Sem taxonomia fixa na V1
-- Categorias emergem dos agentes
+### 7.4 Estrutura semântica
+- Sem taxonomia/ontologia fixa na V1
+- Estrutura do grafo (categorias, relações, evidências) emerge da atuação dos agentes
 
 ### 7.5 Ranking
 - Todo insight extraído entra no ranking (sem limiar de entrada)
@@ -142,3 +142,4 @@ Pacote único por insight:
 - 2026-03-06: ranking sem limiar de entrada
 - 2026-03-06: viabilidade removida desta feature (fica para proposta)
 - 2026-03-06: insight definido como imutável e handoff fechado
+- 2026-03-06: grafo de conhecimento passa a ser construído continuamente pelos agentes, incluindo relações/categorização/evidências com estrutura emergente
