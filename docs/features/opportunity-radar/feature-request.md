@@ -111,10 +111,12 @@ Campos mínimos:
 - `problem_statement`
 - `context`
 - `created_at`
+- `graph_node_ref` (opcional)
 
 Observação:
-- nesta fase, saída externa do minerador fica só em problema + contexto.
-- opcionalmente, o agente pode criar nós consolidados de problema no próprio grafo com marcação distinta e links internos.
+- nesta fase, saída externa do minerador fica em problema + contexto.
+- insights extraídos são mesclados na lista consolidada de problemas extraídos.
+- opcionalmente, incluir referência ao nó consolidado no grafo (`graph_node_ref`).
 ### 7.7 Pontuação (campos)
 - `insight_id`
 - `rank_score`

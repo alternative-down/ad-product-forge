@@ -75,11 +75,11 @@ A saída desta fase são insights de tensão de usuário/mercado (não ideias de
 - `problem_statement`
 - `context`
 - `created_at`
+- `graph_node_ref` (opcional)
 
 Observação:
-- saída externa mínima não precisa carregar referência explícita de nós/dados brutos.
-- opcionalmente, o agente pode criar nós consolidados de problema com marcação distinta no próprio grafo e manter links internos.
-
+- insights novos são mesclados na lista consolidada de problemas extraídos.
+- opcionalmente, a saída pode carregar referência ao nó consolidado no grafo (`graph_node_ref`).
 ## 5.2 Pontuação
 - `insight_id`
 - `rank_score`
@@ -103,7 +103,7 @@ Escala:
 
 ## 7) Handoff para proposta de solução
 Pacote único por insight:
-- `insight` (problema + contexto)
+- `insight` (problema + contexto + `graph_node_ref?`)
 - `ranking`
 - `handoff_context`
 - `ready_for_solution = true`
