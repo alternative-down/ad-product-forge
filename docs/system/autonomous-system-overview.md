@@ -79,7 +79,8 @@ Isso vale para o ciclo completo:
 - Tickets de suporte são atendidos por agentes LLM.
 - Agentes de suporte têm acesso ao repositório e às documentações.
 - Agentes usam busca por embeddings e BM25 para responder e auxiliar usuários.
-- Eventos de runtime e sinais de suporte podem gerar issues automaticamente sobre ocorrências relevantes.
+- Eventos de runtime podem acionar o criador de issues automaticamente.
+- Agentes de suporte também podem acionar esse mesmo criador de issues quando identificarem problema acionável.
 - Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
 ## Papel das regras determinísticas
 - pontuação/ranking consistente
