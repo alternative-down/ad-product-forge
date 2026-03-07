@@ -17,30 +17,37 @@ interface FirecrawlAgentResponse {
   creditsUsed?: number;
 }
 
+const SignalSchema = z.object({
+  title: z.string().describe('Title or headline of the signal'),
+  description: z.string().describe('Description of the problem, pain point, or opportunity'),
+  source: z.string().describe('Where was this signal found (website, forum, etc)'),
+  type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']).describe('Type of signal'),
+  severity: z.enum(['low', 'medium', 'high']).describe('How urgent or severe is this signal'),
+});
+
+const MarketResearchOutputSchema = z.object({
+  success: z.boolean(),
+  signals: z.array(SignalSchema).optional(),
+  creditsUsed: z.number().optional(),
+  status: z.string().optional(),
+  error: z.string().optional(),
+});
+
 export const marketResearchTool = createTool({
   id: 'market_research',
   description: 'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
   inputSchema: z.object({
     customPrompt: z.string().optional().describe('Custom research prompt to override the default market research strategy'),
   }),
-  outputSchema: z.object({
-    signals: z.array(
-      z.object({
-        title: z.string().describe('Title or headline of the signal'),
-        description: z.string().describe('Description of the problem, pain point, or opportunity'),
-        source: z.string().describe('Where was this signal found (website, forum, etc)'),
-        type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']).describe('Type of signal'),
-        severity: z.enum(['low', 'medium', 'high']).describe('How urgent or severe is this signal'),
-      })
-    ),
-    creditsUsed: z.number().optional(),
-    status: z.string().optional(),
-  }),
+  outputSchema: MarketResearchOutputSchema,
   execute: async (input) => {
     const API_KEY = process.env.FIRECRAWL_API_KEY;
 
     if (!API_KEY) {
-      throw new Error('FIRECRAWL_API_KEY environment variable is not set');
+      return {
+        success: false,
+        error: 'FIRECRAWL_API_KEY environment variable is not set',
+      };
     }
 
     const firecrawl = new Firecrawl({ apiKey: API_KEY });
@@ -76,29 +83,42 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
 
     const prompt = input.customPrompt || defaultPrompt;
 
-    const response = (await firecrawl.agent({
-      prompt,
-      schema: z.object({
-        signals: z.array(
-          z.object({
-            title: z.string(),
-            description: z.string(),
-            source: z.string(),
-            type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']),
-            severity: z.enum(['low', 'medium', 'high']),
-          })
-        ),
-      }),
-    })) as unknown as FirecrawlAgentResponse;
+    try {
+      const response = (await firecrawl.agent({
+        prompt,
+        schema: z.object({
+          signals: z.array(
+            z.object({
+              title: z.string(),
+              description: z.string(),
+              source: z.string(),
+              type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']),
+              severity: z.enum(['low', 'medium', 'high']),
+            })
+          ),
+        }),
+      })) as unknown as FirecrawlAgentResponse;
 
-    if (!response.success && response.status !== 'completed') {
-      throw new Error(`Firecrawl agent failed with status: ${response.status}`);
+      if (!response.success) {
+        return {
+          success: false,
+          status: response.status,
+          error: `Firecrawl agent failed with status: ${response.status}`,
+        };
+      }
+
+      return {
+        success: true,
+        signals: response.data?.signals || [],
+        creditsUsed: response.creditsUsed,
+        status: response.status,
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
-
-    return {
-      signals: response.data?.signals || [],
-      creditsUsed: response.creditsUsed,
-      status: response.status,
-    };
   },
 });
