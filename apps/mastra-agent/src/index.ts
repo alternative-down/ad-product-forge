@@ -13,6 +13,13 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
 const workspaceDataPath = path.join(process.cwd(), 'workspace_data');
 
+const modelConfig = {
+  providerId: 'openai',
+  modelId: 'arcee-ai/trinity-large-preview:free',
+  url: 'https://openrouter.ai/api/v1',
+  apiKey: OPENROUTER_API_KEY,
+};
+
 // Configurando o Workspace Local com busca híbrida
 const workspace = new Workspace({
   filesystem: new LocalFilesystem({
@@ -27,17 +34,29 @@ const workspace = new Workspace({
     url: 'file:libsql-workspace.db',
   }),
   embedder: fastembed,
+  skills: ['/skills'],
   tools: {
     enabled: true,
     requireApproval: false,
-    [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { name: 'view' },
+    // Renomeando TODAS as tools injetadas para remover o prefixo mastra_
+    [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { name: 'read_file' },
+    [WORKSPACE_TOOLS.FILESYSTEM.WRITE_FILE]: { name: 'write_file' },
+    [WORKSPACE_TOOLS.FILESYSTEM.EDIT_FILE]: { name: 'edit_file' },
+    [WORKSPACE_TOOLS.FILESYSTEM.LIST_FILES]: { name: 'list_files' },
+    [WORKSPACE_TOOLS.FILESYSTEM.DELETE]: { name: 'delete_file' },
+    [WORKSPACE_TOOLS.FILESYSTEM.FILE_STAT]: { name: 'file_stat' },
+    [WORKSPACE_TOOLS.FILESYSTEM.MKDIR]: { name: 'make_directory' },
     [WORKSPACE_TOOLS.FILESYSTEM.GREP]: { name: 'search_content' },
-    [WORKSPACE_TOOLS.FILESYSTEM.LIST_FILES]: { name: 'find_files' },
+    [WORKSPACE_TOOLS.FILESYSTEM.AST_EDIT]: { name: 'ast_edit' },
     [WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND]: { name: 'execute_command' },
+    [WORKSPACE_TOOLS.SANDBOX.GET_PROCESS_OUTPUT]: { name: 'get_process_output' },
+    [WORKSPACE_TOOLS.SANDBOX.KILL_PROCESS]: { name: 'kill_process' },
+    [WORKSPACE_TOOLS.SEARCH.SEARCH]: { name: 'search_workspace' },
+    [WORKSPACE_TOOLS.SEARCH.INDEX]: { name: 'index_workspace' },
   },
 });
 
-// Configurando Memória com LibSQL + FastEmbed
+// Configurando Memória com LibSQL + FastEmbed + Observational Memory
 const memory = new Memory({
   storage: new LibSQLStore({
     id: 'libsql-agent-storage',
@@ -57,6 +76,10 @@ const memory = new Memory({
     workingMemory: {
       enabled: true,
     },
+    observationalMemory: {
+      enabled: true,
+      model: modelConfig as any,
+    },
   },
 });
 
@@ -64,14 +87,12 @@ const agent = new Agent({
   id: 'simple-agent',
   name: 'Simple Agent',
   instructions: 'You are a helpful assistant.',
-  model: {
-    providerId: 'openai',
-    modelId: 'arcee-ai/trinity-large-preview:free',
-    url: 'https://openrouter.ai/api/v1',
-    apiKey: OPENROUTER_API_KEY,
-  },
+  model: modelConfig as any,
   workspace: workspace,
   memory: memory,
+  defaultOptions: {
+    maxSteps: 1000,
+  },
 });
 
 async function main() {
@@ -92,10 +113,10 @@ async function main() {
   console.log('🚀 Sending test message to Simple Agent...');
   try {
     const result = await agent.generate('Hello! Briefly introduce yourself and tell me if you remember our last interaction.', {
-        memory: {
-            resource: 'mastra-agent',
-            thread: 'test-thread-1'
-        }
+      memory: {
+        resource: 'mastra-agent',
+        thread: 'test-thread-1'
+      }
     });
     console.log('🤖 Agent response:');
     console.log(result.text);
