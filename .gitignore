@@ -7,3 +7,10 @@ coverage
 .DS_Store
 
 artifacts
+
+# Mastra
+workspace/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
