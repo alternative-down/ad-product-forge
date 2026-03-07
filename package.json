@@ -37,5 +37,8 @@
     "*.{js,jsx,ts,tsx,json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "@mastra/core": "^1.10.0"
   }
 }
