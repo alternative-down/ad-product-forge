@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeToPipelineInput } from './normalizer';
+import { normalizeToPipelineInput } from './normalizer.js';
 
 describe('ingress normalizer', () => {
   it('normalizes coleta payload to pipeline input', () => {

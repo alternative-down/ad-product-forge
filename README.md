@@ -23,6 +23,19 @@ npm run changeset
 npm run version-packages
 ```
 
+## API de produção (v1)
+
+```bash
+# build geral
+npm run build
+
+# subir API (porta 3000 por padrão)
+npm run start --workspace @ad-product-forge/api
+
+# smoke
+curl http://127.0.0.1:3000/health
+```
+
 ## Commit e versionamento
 
 - `pre-commit` (Husky): format (staged), lint, typecheck, test

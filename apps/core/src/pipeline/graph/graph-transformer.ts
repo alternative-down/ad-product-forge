@@ -1,5 +1,5 @@
-import type { PipelineInput, PipelineOutput } from '../../index';
-import { createArtifactStore, type ArtifactStore, type GraphArtifact, type GraphEdge, type GraphNode } from './artifact-store';
+import type { PipelineInput, PipelineOutput } from '../../index.js';
+import { createArtifactStore, type ArtifactStore, type GraphArtifact, type GraphEdge, type GraphNode } from './artifact-store.js';
 
 export interface GraphTransformDeps {
   now?: () => Date;

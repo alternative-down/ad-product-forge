@@ -1,6 +1,6 @@
-import { type SourceType } from '../index';
-import { normalizeToPipelineInput, type SourcePayload } from '../ingress/normalizer';
-import { runPipelineV1, type PipelineOrchestratorDeps, type PipelineRunResult } from './orchestrator';
+import { type SourceType } from '../index.js';
+import { normalizeToPipelineInput, type SourcePayload } from '../ingress/normalizer.js';
+import { runPipelineV1, type PipelineOrchestratorDeps, type PipelineRunResult } from './orchestrator.js';
 
 export interface SourceRunRequest {
   sourceType: SourceType;

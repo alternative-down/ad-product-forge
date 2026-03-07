@@ -2,9 +2,9 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { PipelineOutput } from '../../index';
-import { createInsightStore } from '../insight/insight-store';
-import { computeWeightedScore, runScoreStage } from './score-engine';
+import type { PipelineOutput } from '../../index.js';
+import { createInsightStore } from '../insight/insight-store.js';
+import { computeWeightedScore, runScoreStage } from './score-engine.js';
 
 describe('score-engine', () => {
   it('computes weighted score using v1 formula', () => {

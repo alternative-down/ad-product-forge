@@ -2,9 +2,9 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { PipelineInput, PipelineOutput } from '../../index';
-import { buildInsights, runInsightStage } from './insight-engine';
-import { createInsightStore } from './insight-store';
+import type { PipelineInput, PipelineOutput } from '../../index.js';
+import { buildInsights, runInsightStage } from './insight-engine.js';
+import { createInsightStore } from './insight-store.js';
 
 describe('insight-engine', () => {
   it('builds structured insights from input content and context', () => {
