@@ -99,7 +99,6 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
       prompt,
       schema: SignalSchema,
       model: "spark-1-mini",
-      maxCredits: 500,
     });
 
     console.log("✅ Agent execution completed");
