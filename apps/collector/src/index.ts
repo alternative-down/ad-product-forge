@@ -1,4 +1,5 @@
-import FirecrawlApp from "@firecrawl/sdk";
+import Firecrawl from "@mendable/firecrawl-js";
+import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
 import * as dotenv from "dotenv";
@@ -13,109 +14,132 @@ if (!API_KEY) {
   process.exit(1);
 }
 
+// Define schema for structured extraction of market signals
+const SignalSchema = z.object({
+  signals: z
+    .array(
+      z.object({
+        title: z.string().describe("Title or headline of the signal"),
+        description: z
+          .string()
+          .describe("Description of the problem, pain point, or opportunity"),
+        source: z
+          .string()
+          .describe("Where was this signal found (website, forum, etc)"),
+        type: z
+          .enum(["pain_point", "feature_request", "trend", "opportunity"])
+          .describe("Type of signal"),
+        severity: z
+          .enum(["low", "medium", "high"])
+          .describe("How urgent or severe is this signal"),
+      })
+    )
+    .describe("List of market signals discovered"),
+});
+
+type SignalType = z.infer<typeof SignalSchema>;
+
 interface CollectionResult {
   timestamp: string;
   execution_id: string;
-  initial_sources: string[];
   prompt: string;
-  signals: Signal[];
+  model: string;
+  signals: SignalType["signals"];
   total_signals: number;
-}
-
-interface Signal {
-  url: string;
-  raw_content: string;
-  context: {
-    source_domain: string;
-    discovered_at: string;
-  };
+  credits_used: number | null;
 }
 
 async function runCollectionAgent(): Promise<void> {
-  const app = new FirecrawlApp({ apiKey: API_KEY });
+  const firecrawl = new Firecrawl({ apiKey: API_KEY });
 
   const executionId = Date.now().toString();
   const timestamp = new Date().toISOString();
 
-  // Initial sources to explore
-  const initialSources = [
-    "https://news.ycombinator.com/newest",
-    "https://www.producthunt.com/products",
-    "https://github.com/trending",
-  ];
+  // Refined prompt for Phase 1 market signal discovery
+  const prompt = `You are a market research agent specialized in discovering product opportunities.
 
-  // Basic prompt for the agent
-  const prompt = `
-You are a market research agent. Your task is to discover signals about:
-1. User pain points and problems
-2. Desired features in existing tools
-3. Emerging market trends
-4. Opportunities for SaaS solutions
+Your task is to search the web for market signals about:
+1. User pain points and problems (what frustrates users?)
+2. Desired features (what do users wish existed?)
+3. Emerging market trends (what's new and gaining traction?)
+4. Market gaps and opportunities (where are problems not being solved?)
 
-Instructions:
-- Start from the initial sources provided
-- Explore related pages and discussions
-- Look for keywords: "pain point", "wish there was", "need", "frustrated", "missing feature", "would be great if"
-- Collect raw content and the source URL
-- Discover at least 5 unique signals before stopping
-- Provide context about where each signal came from
+Search strategy:
+- Look for discussions in forums, communities, and social platforms
+- Find feature requests on existing products
+- Discover emerging technologies and their use cases
+- Identify recurring complaints and frustrations
 
-Return a structured list of discovered signals with URL and raw content.
-  `;
+Specific keywords to search for:
+- "pain point", "frustrated with", "wish there was", "need a tool for"
+- "missing feature", "would be great if", "can't find a solution for"
+- "alternative to", "better than", "integration needed"
+- "spending too much time on", "manual process", "workflow bottleneck"
+
+Extract at least 8-10 unique signals. For each signal:
+- Provide a clear title/headline
+- Describe the problem/pain/opportunity
+- Identify the source/context where you found it
+- Classify the type (pain_point, feature_request, trend, opportunity)
+- Assess severity (low, medium, high)
+
+Focus on authentic signals from real users, not marketing hype. Prioritize signals that suggest real market demand.`;
 
   console.log("🚀 Starting Firecrawl Agent...");
   console.log(`📍 Execution ID: ${executionId}`);
   console.log(`📅 Timestamp: ${timestamp}`);
-  console.log(`🔗 Initial sources: ${initialSources.length}`);
+  console.log(`🔍 Using model: spark-1-mini`);
+  console.log("");
+  console.log("🔎 Searching for market signals...");
   console.log("");
 
   try {
-    // Call Firecrawl Agent API
-    const response = await app.runAgent(prompt, {
-      urls: initialSources,
+    // Call Firecrawl Agent API with structured schema
+    const response = await firecrawl.agent({
+      prompt,
+      schema: SignalSchema,
+      model: "spark-1-mini",
+      maxCredits: 500,
     });
 
     console.log("✅ Agent execution completed");
-    console.log(`📊 Response status:`, response.success);
+    console.log(`📊 Status: ${response.status}`);
+    console.log(`💳 Credits used: ${response.creditsUsed || "N/A"}`);
 
     // Extract signals from response
-    const signals: Signal[] = [];
+    let signals: SignalType["signals"] = [];
 
-    // Parse agent output (response format depends on Firecrawl implementation)
-    // For now, we'll structure the response data
-    if (response && response.data) {
-      const responseData = response.data as Record<string, unknown>;
-      const crawledData = responseData.crawledData || responseData;
-
-      // Extract signals from crawled data
-      if (Array.isArray(crawledData)) {
-        for (const item of crawledData) {
-          const itemData = item as Record<string, unknown>;
-          signals.push({
-            url: (itemData.url as string) || "unknown",
-            raw_content: (itemData.markdown as string) || (itemData.content as string) || "",
-            context: {
-              source_domain: extractDomain((itemData.url as string) || ""),
-              discovered_at: timestamp,
-            },
-          });
-        }
-      }
+    if (response.status === "completed" && response.data) {
+      const data = response.data as SignalType;
+      signals = data.signals || [];
+      console.log(`📈 Signals extracted: ${signals.length}`);
+    } else {
+      console.warn(
+        `⚠️  Agent status: ${response.status}. No data available.`
+      );
     }
 
     // Create result object
     const result: CollectionResult = {
       timestamp,
       execution_id: executionId,
-      initial_sources: initialSources,
       prompt,
+      model: "spark-1-mini",
       signals,
       total_signals: signals.length,
+      credits_used: response.creditsUsed || null,
     };
 
     // Save to file with timestamp in name
-    const dateStr = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
-    const timeStr = new Date().toISOString().split("T")[1].replace(/[:.]/g, "-").split("Z")[0];
+    const dateStr = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .split("T")[0];
+    const timeStr = new Date()
+      .toISOString()
+      .split("T")[1]
+      .replace(/[:.]/g, "-")
+      .split("Z")[0];
     const filename = `collection_${dateStr}_${timeStr}_${executionId}.json`;
     const filepath = path.join(OUTPUT_DIR, filename);
 
@@ -128,10 +152,31 @@ Return a structured list of discovered signals with URL and raw content.
     fs.writeFileSync(filepath, JSON.stringify(result, null, 2));
 
     console.log("");
-    console.log("📁 Results saved to:", filepath);
-    console.log(`📊 Total signals collected: ${result.total_signals}`);
+    console.log("✅ Results saved!");
+    console.log(`📁 File: ${filepath}`);
+    console.log(`📊 Total signals: ${result.total_signals}`);
     console.log("");
-    console.log("✨ Collection phase validated successfully!");
+
+    // Display summary of signals
+    if (signals.length > 0) {
+      console.log("📋 Signal Summary:");
+      console.log("---");
+      signals.slice(0, 5).forEach((signal, idx) => {
+        console.log(
+          `${idx + 1}. [${signal.type.toUpperCase()}] ${signal.title}`
+        );
+        console.log(`   Severity: ${signal.severity} | Source: ${signal.source}`);
+      });
+      if (signals.length > 5) {
+        console.log(
+          `... and ${signals.length - 5} more signals in the results file`
+        );
+      }
+    }
+
+    console.log("");
+    console.log("✨ Phase 1 Validation successful!");
+    console.log("");
   } catch (error) {
     if (error instanceof Error) {
       console.error("❌ Error running agent:", error.message);
@@ -139,16 +184,6 @@ Return a structured list of discovered signals with URL and raw content.
       console.error("❌ Unknown error:", error);
     }
     process.exit(1);
-  }
-}
-
-// Helper function to extract domain from URL
-function extractDomain(url: string): string {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.hostname;
-  } catch {
-    return "unknown";
   }
 }
 
