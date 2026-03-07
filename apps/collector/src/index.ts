@@ -6,26 +6,21 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const API_KEY = process.env.FIRECRAWL_API_KEY;
+// Envs não são obrigatórias em build time
+const API_KEY = process.env.FIRECRAWL_API_KEY || "";
 const OUTPUT_DIR = process.env.OUTPUT_DIR || "./results";
-
-if (!API_KEY) {
-  console.error("❌ FIRECRAWL_API_KEY environment variable is not set");
-  process.exit(1);
-}
 
 // Define schema for structured extraction of market signals
 const SignalSchema = z.object({
-  signals: z
-    .array(
-      z.object({
-        title: z.string(),
-        description: z.string(),
-        source: z.string(),
-        type: z.enum(["pain_point", "feature_request", "trend", "opportunity"]),
-        severity: z.enum(["low", "medium", "high"]),
-      })
-    ),
+  signals: z.array(
+    z.object({
+      title: z.string(),
+      description: z.string(),
+      source: z.string(),
+      type: z.enum(["pain_point", "feature_request", "trend", "opportunity"]),
+      severity: z.enum(["low", "medium", "high"]),
+    })
+  ),
 });
 
 type Signal = z.infer<typeof SignalSchema>["signals"][number];
@@ -40,6 +35,16 @@ interface CollectionResult {
 }
 
 async function runCollectionAgent(): Promise<void> {
+  // Verificação obrigatória apenas em tempo de execução
+  if (!API_KEY && process.env.NODE_ENV === "production") {
+    throw new Error("❌ FIRECRAWL_API_KEY environment variable is required in production");
+  }
+
+  if (!API_KEY) {
+    console.log("⚠️ Skipping collection agent because FIRECRAWL_API_KEY is missing.");
+    return;
+  }
+
   const firecrawl = new Firecrawl({ apiKey: API_KEY });
 
   const executionId = Date.now().toString();
@@ -55,10 +60,10 @@ async function runCollectionAgent(): Promise<void> {
   console.log("");
 
   try {
-    const response = await firecrawl.agent({
+    const response = (await firecrawl.agent({
       prompt,
       schema: SignalSchema,
-    });
+    })) as any;
 
     console.log("✅ Agent execution completed");
     console.log(`📊 Status: ${response.status}`);
@@ -130,9 +135,7 @@ function extractSignals(response: { status: string; data?: unknown }): Signal[] 
     return parsed.signals ?? [];
   }
 
-  console.warn(
-    `⚠️  Agent status: ${response.status}. No data available.`
-  );
+  console.warn(`⚠️  Agent status: ${response.status}. No data available.`);
   return [];
 }
 
@@ -154,10 +157,7 @@ function createResult(
 }
 
 function saveResults(result: CollectionResult): void {
-  const dateStr = new Date()
-    .toISOString()
-    .replace(/[:.]/g, "-")
-    .split("T")[0];
+  const dateStr = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
   const timeStr = new Date()
     .toISOString()
     .split("T")[1]
@@ -185,17 +185,16 @@ function displaySummary(signals: Signal[]): void {
   console.log("📋 Signal Summary:");
   console.log("---");
   signals.slice(0, 5).forEach((signal, idx) => {
-    console.log(
-      `${idx + 1}. [${signal.type.toUpperCase()}] ${signal.title}`
-    );
+    console.log(`${idx + 1}. [${signal.type.toUpperCase()}] ${signal.title}`);
     console.log(`   Severity: ${signal.severity} | Source: ${signal.source}`);
   });
 
   if (signals.length > 5) {
-    console.log(
-      `... and ${signals.length - 5} more signals in the results file`
-    );
+    console.log(`... and ${signals.length - 5} more signals in the results file`);
   }
 }
 
-runCollectionAgent();
+// Em ambiente de build ou se importado como módulo, não executa o agent automaticamente
+if (process.env.NODE_ENV !== "build") {
+  runCollectionAgent();
+}
