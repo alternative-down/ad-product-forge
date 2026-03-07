@@ -13,12 +13,8 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
 const workspaceDataPath = path.join(process.cwd(), 'workspace_data');
 
-const modelConfig = {
-  providerId: 'openai',
-  modelId: 'arcee-ai/trinity-large-preview:free',
-  url: 'https://openrouter.ai/api/v1',
-  apiKey: OPENROUTER_API_KEY,
-};
+// Modelo simplificado usando string (Model Router format)
+const modelString = 'openrouter/arcee-ai/trinity-large-preview:free';
 
 // Configurando o Workspace Local com busca híbrida
 const workspace = new Workspace({
@@ -78,7 +74,7 @@ const memory = new Memory({
     },
     observationalMemory: {
       enabled: true,
-      model: modelConfig as any,
+      model: modelString,
     },
   },
 });
@@ -87,7 +83,7 @@ const agent = new Agent({
   id: 'simple-agent',
   name: 'Simple Agent',
   instructions: 'You are a helpful assistant.',
-  model: modelConfig as any,
+  model: modelString,
   workspace: workspace,
   memory: memory,
   defaultOptions: {
