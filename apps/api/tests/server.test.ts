@@ -65,6 +65,43 @@ describe('api server', () => {
     expect(typeof body.output.score).toBe('number');
   });
 
+  it('requires api key when configured', async () => {
+    const { url } = await start({ apiKey: 'secret-key' });
+
+    const unauthorized = await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sourceType: 'manual',
+        payload: {
+          item_id: 'api-1',
+          timestamp: '2026-03-07T00:00:00.000Z',
+          note: 'test',
+        },
+      }),
+    });
+
+    expect(unauthorized.status).toBe(401);
+
+    const authorized = await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': 'secret-key',
+      },
+      body: JSON.stringify({
+        sourceType: 'manual',
+        payload: {
+          item_id: 'api-2',
+          timestamp: '2026-03-07T00:00:00.000Z',
+          note: 'authorized test',
+        },
+      }),
+    });
+
+    expect(authorized.status).toBe(200);
+  });
+
   it('returns 415 on non-json content type', async () => {
     const { url } = await start();
 
@@ -116,8 +153,11 @@ describe('api server', () => {
   });
 });
 
-async function start(opts: { maxBodyBytes?: number } = {}): Promise<{ url: string }> {
-  const server = createApiServer({ maxBodyBytes: opts.maxBodyBytes });
+async function start(opts: { maxBodyBytes?: number; apiKey?: string } = {}): Promise<{ url: string }> {
+  const server = createApiServer({
+    maxBodyBytes: opts.maxBodyBytes,
+    apiKey: opts.apiKey,
+  });
   await new Promise<void>((resolve) => server.listen(0, resolve));
 
   servers.push({ close: () => server.close() });
