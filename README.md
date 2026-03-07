@@ -80,6 +80,12 @@ curl -X POST http://127.0.0.1:3000/v1/pipeline/run \
 
 Se `PIPELINE_API_KEY` estiver definida, o endpoint `/v1/pipeline/run` exige header `x-api-key`.
 
+### Observabilidade básica (API)
+
+- `x-request-id`: se enviado no request, retorna no response; se não, a API gera automaticamente.
+- Logs estruturados em JSON por evento (`pipeline_run_success`, erros e warnings).
+- Endpoint `GET /metrics` com contadores simples e latência média.
+
 ```bash
 curl -X POST http://127.0.0.1:3000/v1/pipeline/run \
   -H 'content-type: application/json' \
