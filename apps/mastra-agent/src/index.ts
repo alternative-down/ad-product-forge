@@ -13,7 +13,7 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
 const workspaceDataPath = path.join(process.cwd(), 'workspace_data');
 
-// Configurando o Workspace Local
+// Configurando o Workspace Local com busca híbrida
 const workspace = new Workspace({
   filesystem: new LocalFilesystem({
     basePath: workspaceDataPath,
@@ -21,11 +21,19 @@ const workspace = new Workspace({
   sandbox: new LocalSandbox({
     workingDirectory: workspaceDataPath,
   }),
+  bm25: true,
+  vectorStore: new LibSQLVector({
+    id: 'libsql-workspace-vector',
+    url: 'file:libsql-workspace.db',
+  }),
+  embedder: fastembed,
   tools: {
-    [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { enabled: true, requireApproval: false, name: 'view' },
-    [WORKSPACE_TOOLS.FILESYSTEM.GREP]: { enabled: true, requireApproval: false, name: 'search_content' },
-    [WORKSPACE_TOOLS.FILESYSTEM.LIST_FILES]: { enabled: true, requireApproval: false, name: 'find_files' },
-    [WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND]: { enabled: true, requireApproval: false, name: 'execute_command' },
+    enabled: true,
+    requireApproval: false,
+    [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { name: 'view' },
+    [WORKSPACE_TOOLS.FILESYSTEM.GREP]: { name: 'search_content' },
+    [WORKSPACE_TOOLS.FILESYSTEM.LIST_FILES]: { name: 'find_files' },
+    [WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND]: { name: 'execute_command' },
   },
 });
 
