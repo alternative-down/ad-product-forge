@@ -128,3 +128,4 @@ export { buildGraphEdges, buildGraphNodes, runGraphStage } from './pipeline/grap
 export { buildInsights, runInsightStage } from './pipeline/insight/insight-engine';
 export { createInsightStore } from './pipeline/insight/insight-store';
 export { computeWeightedScore, createScoreStore, runScoreStage } from './pipeline/score/score-engine';
+export { runPipelineV1, type PipelineRunResult, type PipelineOrchestratorDeps, type NextAction } from './pipeline/orchestrator';
