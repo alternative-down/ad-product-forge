@@ -129,4 +129,11 @@ export { buildInsights, runInsightStage } from './pipeline/insight/insight-engin
 export { createInsightStore } from './pipeline/insight/insight-store';
 export { computeWeightedScore, createScoreStore, runScoreStage } from './pipeline/score/score-engine';
 export { runPipelineV1, type PipelineRunResult, type PipelineOrchestratorDeps, type NextAction } from './pipeline/orchestrator';
-export { normalizeToPipelineInput, type ColetaPayload, type ManualPayload, type WebhookPayload } from './ingress/normalizer';
+export {
+  normalizeToPipelineInput,
+  type ColetaPayload,
+  type ManualPayload,
+  type WebhookPayload,
+  type SourcePayload,
+} from './ingress/normalizer';
+export { runPipelineFromSource, type SourceRunRequest } from './pipeline/source-runner';
