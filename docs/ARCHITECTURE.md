@@ -34,7 +34,9 @@
 
 ## Camada de produção API (status atual)
 
-- Endpoint: `POST /v1/pipeline/run`.
+- Endpoints principais:
+  - `POST /v1/pipeline/run`
+  - `POST /v1/hooks/external` (ingestão de eventos externos)
 - Endpoints de suporte: `GET /health`, `GET /ready`.
 - Segurança incremental:
   - `PIPELINE_API_KEY` (opcional) + header `x-api-key`.
