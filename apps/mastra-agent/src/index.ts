@@ -1,15 +1,15 @@
 import { Agent } from '@mastra/core/agent';
 import { Workspace, LocalFilesystem, LocalSandbox, WORKSPACE_TOOLS } from '@mastra/core/workspace';
+import { Memory } from '@mastra/memory';
+import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
+import { fastembed } from '@mastra/fastembed';
 import dotenv from 'dotenv';
 import path from 'path';
 
 dotenv.config();
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
-if (!OPENROUTER_API_KEY) {
-  console.warn('⚠️ OPENROUTER_API_KEY not set. Run with the key provided by Nicolas.');
-}
+// Envs não são obrigatórias em build time, apenas em runtime
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
 const workspaceDataPath = path.join(process.cwd(), 'workspace_data');
 
@@ -19,13 +19,36 @@ const workspace = new Workspace({
     basePath: workspaceDataPath,
   }),
   sandbox: new LocalSandbox({
-    workingDirectory: workspaceDataPath, // Define o diretório de trabalho do sandbox
+    workingDirectory: workspaceDataPath,
   }),
   tools: {
     [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { enabled: true, requireApproval: false, name: 'view' },
     [WORKSPACE_TOOLS.FILESYSTEM.GREP]: { enabled: true, requireApproval: false, name: 'search_content' },
     [WORKSPACE_TOOLS.FILESYSTEM.LIST_FILES]: { enabled: true, requireApproval: false, name: 'find_files' },
     [WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND]: { enabled: true, requireApproval: false, name: 'execute_command' },
+  },
+});
+
+// Configurando Memória com LibSQL + FastEmbed
+const memory = new Memory({
+  storage: new LibSQLStore({
+    id: 'libsql-agent-storage',
+    url: 'file:libsql-agent.db',
+  }),
+  vector: new LibSQLVector({
+    id: 'libsql-agent-vector',
+    url: 'file:libsql-agent.db',
+  }),
+  embedder: fastembed,
+  options: {
+    lastMessages: 10,
+    semanticRecall: {
+      topK: 3,
+      messageRange: 2,
+    },
+    workingMemory: {
+      enabled: true,
+    },
   },
 });
 
@@ -40,21 +63,32 @@ const agent = new Agent({
     apiKey: OPENROUTER_API_KEY,
   },
   workspace: workspace,
+  memory: memory,
 });
 
 async function main() {
+  // Verificação obrigatória apenas em tempo de execução
+  if (!OPENROUTER_API_KEY && process.env.NODE_ENV === 'production') {
+    throw new Error('❌ OPENROUTER_API_KEY is required in production');
+  }
+
   if (!OPENROUTER_API_KEY) {
-    console.log('Skipping message test because API key is missing.');
+    console.log('⚠️ Skipping message test because OPENROUTER_API_KEY is missing.');
     return;
   }
 
-  // Inicializa o workspace (cria pastas, prepara sandbox)
+  // Inicializa o workspace
   console.log('📦 Initializing workspace...');
   await workspace.init();
 
   console.log('🚀 Sending test message to Simple Agent...');
   try {
-    const result = await agent.generate('Hello! What is your model name and who created you?');
+    const result = await agent.generate('Hello! Briefly introduce yourself and tell me if you remember our last interaction.', {
+        memory: {
+            resource: 'mastra-agent',
+            thread: 'test-thread-1'
+        }
+    });
     console.log('🤖 Agent response:');
     console.log(result.text);
   } catch (error) {
