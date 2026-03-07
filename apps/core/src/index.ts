@@ -123,17 +123,17 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-export { createArtifactStore } from './pipeline/graph/artifact-store';
-export { buildGraphEdges, buildGraphNodes, runGraphStage } from './pipeline/graph/graph-transformer';
-export { buildInsights, runInsightStage } from './pipeline/insight/insight-engine';
-export { createInsightStore } from './pipeline/insight/insight-store';
-export { computeWeightedScore, createScoreStore, runScoreStage } from './pipeline/score/score-engine';
-export { runPipelineV1, type PipelineRunResult, type PipelineOrchestratorDeps, type NextAction } from './pipeline/orchestrator';
+export { createArtifactStore } from './pipeline/graph/artifact-store.js';
+export { buildGraphEdges, buildGraphNodes, runGraphStage } from './pipeline/graph/graph-transformer.js';
+export { buildInsights, runInsightStage } from './pipeline/insight/insight-engine.js';
+export { createInsightStore } from './pipeline/insight/insight-store.js';
+export { computeWeightedScore, createScoreStore, runScoreStage } from './pipeline/score/score-engine.js';
+export { runPipelineV1, type PipelineRunResult, type PipelineOrchestratorDeps, type NextAction } from './pipeline/orchestrator.js';
 export {
   normalizeToPipelineInput,
   type ColetaPayload,
   type ManualPayload,
   type WebhookPayload,
   type SourcePayload,
-} from './ingress/normalizer';
-export { runPipelineFromSource, type SourceRunRequest } from './pipeline/source-runner';
+} from './ingress/normalizer.js';
+export { runPipelineFromSource, type SourceRunRequest } from './pipeline/source-runner.js';

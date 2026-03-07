@@ -2,8 +2,8 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { PipelineInput } from '../index';
-import { runPipelineV1 } from './orchestrator';
+import type { PipelineInput } from '../index.js';
+import { runPipelineV1 } from './orchestrator.js';
 
 describe('pipeline orchestrator', () => {
   it('runs full pipeline and maps nextAction=forward on happy path', async () => {

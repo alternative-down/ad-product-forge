@@ -2,9 +2,9 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { PipelineInput, PipelineOutput } from '../../index';
-import { createArtifactStore } from './artifact-store';
-import { buildGraphEdges, buildGraphNodes, runGraphStage } from './graph-transformer';
+import type { PipelineInput, PipelineOutput } from '../../index.js';
+import { createArtifactStore } from './artifact-store.js';
+import { buildGraphEdges, buildGraphNodes, runGraphStage } from './graph-transformer.js';
 
 describe('graph-transformer', () => {
   it('builds nodes from content, context and optional link', () => {
