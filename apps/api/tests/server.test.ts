@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createApiServer } from '../src/server';
+import { createApiServer } from '../src/server.js';
 
 const servers: Array<{ close: () => void }> = [];
 
@@ -19,6 +19,17 @@ describe('api server', () => {
 
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
+  });
+
+  it('responds ready check', async () => {
+    const { url } = await start();
+
+    const response = await fetch(`${url}/ready`);
+    const body = (await response.json()) as { ok: boolean; ready: boolean };
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.ready).toBe(true);
   });
 
   it('runs pipeline from source payload', async () => {
@@ -54,6 +65,18 @@ describe('api server', () => {
     expect(typeof body.output.score).toBe('number');
   });
 
+  it('returns 415 on non-json content type', async () => {
+    const { url } = await start();
+
+    const response = await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: 'plain text',
+    });
+
+    expect(response.status).toBe(415);
+  });
+
   it('returns 400 on invalid payload', async () => {
     const { url } = await start();
 
@@ -72,10 +95,29 @@ describe('api server', () => {
 
     expect(response.status).toBe(400);
   });
+
+  it('returns 413 when payload is too large', async () => {
+    const { url } = await start({ maxBodyBytes: 50 });
+
+    const response = await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sourceType: 'manual',
+        payload: {
+          item_id: 'api-1',
+          timestamp: '2026-03-07T00:00:00.000Z',
+          note: 'x'.repeat(500),
+        },
+      }),
+    });
+
+    expect(response.status).toBe(413);
+  });
 });
 
-async function start(): Promise<{ url: string }> {
-  const server = createApiServer();
+async function start(opts: { maxBodyBytes?: number } = {}): Promise<{ url: string }> {
+  const server = createApiServer({ maxBodyBytes: opts.maxBodyBytes });
   await new Promise<void>((resolve) => server.listen(0, resolve));
 
   servers.push({ close: () => server.close() });
