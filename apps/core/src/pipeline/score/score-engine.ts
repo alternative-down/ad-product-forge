@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { PipelineOutput } from '../../index';
-import type { InsightArtifact, InsightStore } from '../insight/insight-store';
+import type { PipelineOutput } from '../../index.js';
+import type { InsightArtifact, InsightStore } from '../insight/insight-store.js';
 
 export interface ScoreArtifact {
   id: string;

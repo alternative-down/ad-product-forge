@@ -3,12 +3,12 @@ import {
   type PipelineInput,
   type PipelineOutput,
   ingest,
-} from '../index';
-import { createArtifactStore, type ArtifactStore } from './graph/artifact-store';
-import { runGraphStage } from './graph/graph-transformer';
-import { createInsightStore, type InsightStore } from './insight/insight-store';
-import { runInsightStage } from './insight/insight-engine';
-import { createScoreStore, type ScoreStore, runScoreStage } from './score/score-engine';
+} from '../index.js';
+import { createArtifactStore, type ArtifactStore } from './graph/artifact-store.js';
+import { runGraphStage } from './graph/graph-transformer.js';
+import { createInsightStore, type InsightStore } from './insight/insight-store.js';
+import { runInsightStage } from './insight/insight-engine.js';
+import { createScoreStore, type ScoreStore, runScoreStage } from './score/score-engine.js';
 
 export type NextAction = 'forward' | 'retry' | 'drop';
 

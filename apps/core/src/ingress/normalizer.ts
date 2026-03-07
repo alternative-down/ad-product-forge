@@ -1,4 +1,4 @@
-import { type PipelineInput, SOURCE_TYPES, type SourceType, createValidationError, validateInput } from '../index';
+import { type PipelineInput, SOURCE_TYPES, type SourceType, createValidationError, validateInput } from '../index.js';
 
 export interface ColetaPayload {
   item_id: string;

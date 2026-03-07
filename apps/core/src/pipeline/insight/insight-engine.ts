@@ -1,5 +1,5 @@
-import type { PipelineInput, PipelineOutput } from '../../index';
-import { createInsightStore, type Insight, type InsightArtifact, type InsightStore } from './insight-store';
+import type { PipelineInput, PipelineOutput } from '../../index.js';
+import { createInsightStore, type Insight, type InsightArtifact, type InsightStore } from './insight-store.js';
 
 export interface InsightDeps {
   now?: () => Date;

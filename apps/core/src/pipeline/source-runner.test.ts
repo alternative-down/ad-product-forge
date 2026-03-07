@@ -2,7 +2,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runPipelineFromSource } from './source-runner';
+import { runPipelineFromSource } from './source-runner.js';
 
 describe('source runner', () => {
   const now = () => new Date('2026-03-07T00:30:00.000Z');
