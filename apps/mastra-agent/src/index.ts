@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { Workspace, LocalFilesystem, LocalSandbox } from '@mastra/core/workspace';
+import { Workspace, LocalFilesystem, LocalSandbox, WORKSPACE_TOOLS } from '@mastra/core/workspace';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -11,13 +11,22 @@ if (!OPENROUTER_API_KEY) {
   console.warn('⚠️ OPENROUTER_API_KEY not set. Run with the key provided by Nicolas.');
 }
 
+const workspaceDataPath = path.join(process.cwd(), 'workspace_data');
+
 // Configurando o Workspace Local
 const workspace = new Workspace({
   filesystem: new LocalFilesystem({
-    // Cria uma pasta 'workspace_data' na raiz do app
-    basePath: path.join(process.cwd(), 'workspace_data'),
+    basePath: workspaceDataPath,
   }),
-  sandbox: new LocalSandbox(), // Sandbox local para execução
+  sandbox: new LocalSandbox({
+    workingDirectory: workspaceDataPath, // Define o diretório de trabalho do sandbox
+  }),
+  tools: {
+    [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { enabled: true, requireApproval: false, name: 'view' },
+    [WORKSPACE_TOOLS.FILESYSTEM.GREP]: { enabled: true, requireApproval: false, name: 'search_content' },
+    [WORKSPACE_TOOLS.FILESYSTEM.LIST_FILES]: { enabled: true, requireApproval: false, name: 'find_files' },
+    [WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND]: { enabled: true, requireApproval: false, name: 'execute_command' },
+  },
 });
 
 const agent = new Agent({
@@ -30,7 +39,7 @@ const agent = new Agent({
     url: 'https://openrouter.ai/api/v1',
     apiKey: OPENROUTER_API_KEY,
   },
-  workspace: workspace, // Injetando o workspace no agente
+  workspace: workspace,
 });
 
 async function main() {
