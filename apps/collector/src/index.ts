@@ -19,26 +19,16 @@ const SignalSchema = z.object({
   signals: z
     .array(
       z.object({
-        title: z.string().describe("Title or headline of the signal"),
-        description: z
-          .string()
-          .describe("Description of the problem, pain point, or opportunity"),
-        source: z
-          .string()
-          .describe("Where was this signal found (website, forum, etc)"),
-        type: z
-          .enum(["pain_point", "feature_request", "trend", "opportunity"])
-          .describe("Type of signal"),
-        severity: z
-          .enum(["low", "medium", "high"])
-          .describe("How urgent or severe is this signal"),
+        title: z.string(),
+        description: z.string(),
+        source: z.string(),
+        type: z.enum(["pain_point", "feature_request", "trend", "opportunity"]),
+        severity: z.enum(["low", "medium", "high"]),
       })
-    )
-    .describe("List of market signals discovered"),
+    ),
 });
 
 type Signal = z.infer<typeof SignalSchema>["signals"][number];
-type SignalResponse = z.infer<typeof SignalSchema>;
 
 interface CollectionResult {
   timestamp: string;
@@ -50,33 +40,28 @@ interface CollectionResult {
 }
 
 async function runCollectionAgent(): Promise<void> {
-  const firecrawl = new Firecrawl({ apiKey: API_KEY as string });
+  const firecrawl = new Firecrawl({ apiKey: API_KEY });
 
   const executionId = Date.now().toString();
   const timestamp = new Date().toISOString();
 
   const prompt = buildMarketResearchPrompt();
 
-  console.log("🚀 Starting Firecrawl Agent (Market Research)...");
+  console.log("🚀 Starting Firecrawl Agent...");
   console.log(`📍 Execution ID: ${executionId}`);
   console.log(`📅 Timestamp: ${timestamp}`);
   console.log("");
-  console.log("🔎 Searching for and analyzing market signals...");
+  console.log("🔎 Searching for market signals...");
   console.log("");
 
   try {
     const response = await firecrawl.agent({
       prompt,
       schema: SignalSchema,
-      model: "spark-1-mini",
     });
 
-    if (!response.success) {
-      throw new Error("Firecrawl agent request failed");
-    }
-
-    console.log("✅ Firecrawl Agent execution completed");
-    console.log(`📊 Status: ${response.status ?? "unknown"}`);
+    console.log("✅ Agent execution completed");
+    console.log(`📊 Status: ${response.status}`);
     console.log(`💳 Credits used: ${response.creditsUsed ?? "N/A"}`);
 
     const signals = extractSignals(response);
@@ -97,7 +82,7 @@ async function runCollectionAgent(): Promise<void> {
     console.log("");
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("❌ Error running Firecrawl agent:", errorMessage);
+    console.error("❌ Error running agent:", errorMessage);
     process.exit(1);
   }
 }
@@ -123,6 +108,12 @@ Specific keywords to search for:
 - "alternative to", "better than", "integration needed"
 - "spending too much time on", "manual process", "workflow bottleneck"
 
+IMPORTANT ACCESS POLICY:
+- Do NOT attempt to bypass, circumvent, or work around access restrictions on websites
+- Do NOT try multiple techniques to access restricted content (VPN, proxies, headers, etc)
+- If a website blocks your access, STOP immediately and move to the next source
+- Maximum 2 attempts per website/source - if access fails twice, move on
+
 Extract at least 8-10 unique signals from accessible sources. For each signal:
 - Provide a clear title/headline
 - Describe the problem/pain/opportunity
@@ -133,13 +124,15 @@ Extract at least 8-10 unique signals from accessible sources. For each signal:
 Focus on authentic signals from real users, not marketing hype. Prioritize signals that suggest real market demand.`;
 }
 
-function extractSignals(response: any): Signal[] {
+function extractSignals(response: { status: string; data?: unknown }): Signal[] {
   if (response.status === "completed" && response.data) {
-    const parsed = response.data as SignalResponse;
+    const parsed = response.data as z.infer<typeof SignalSchema>;
     return parsed.signals ?? [];
   }
 
-  console.warn(`⚠️  Research status: ${response.status}. No data available.`);
+  console.warn(
+    `⚠️  Agent status: ${response.status}. No data available.`
+  );
   return [];
 }
 
@@ -192,7 +185,9 @@ function displaySummary(signals: Signal[]): void {
   console.log("📋 Signal Summary:");
   console.log("---");
   signals.slice(0, 5).forEach((signal, idx) => {
-    console.log(`${idx + 1}. [${signal.type.toUpperCase()}] ${signal.title}`);
+    console.log(
+      `${idx + 1}. [${signal.type.toUpperCase()}] ${signal.title}`
+    );
     console.log(`   Severity: ${signal.severity} | Source: ${signal.source}`);
   });
 
@@ -203,5 +198,4 @@ function displaySummary(signals: Signal[]): void {
   }
 }
 
-// Run the agent
 runCollectionAgent();
