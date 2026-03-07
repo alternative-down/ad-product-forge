@@ -11,7 +11,7 @@ dotenv.config();
 // Envs não são obrigatórias em build time, apenas em runtime
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
-const workspaceDataPath = path.join(process.cwd(), 'workspace_data');
+const workspaceDataPath = path.join(process.cwd(), 'workspace');
 
 // Modelo simplificado usando string (Model Router format)
 const modelString = 'openrouter/arcee-ai/trinity-large-preview:free';
@@ -92,7 +92,6 @@ const agent = new Agent({
 });
 
 async function main() {
-  // Verificação obrigatória apenas em tempo de execução
   if (!OPENROUTER_API_KEY && process.env.NODE_ENV === 'production') {
     throw new Error('❌ OPENROUTER_API_KEY is required in production');
   }
@@ -102,23 +101,34 @@ async function main() {
     return;
   }
 
-  // Inicializa o workspace
-  console.log('📦 Initializing workspace...');
   await workspace.init();
 
-  console.log('🚀 Sending test message to Simple Agent...');
-  try {
-    const result = await agent.generate('Hello! Briefly introduce yourself and tell me if you remember our last interaction.', {
-      memory: {
-        resource: 'mastra-agent',
-        thread: 'test-thread-1'
-      }
-    });
-    console.log('🤖 Agent response:');
-    console.log(result.text);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Error testing agent:', errorMessage);
+  const threadId = `test-thread-${Date.now()}`;
+  const resourceId = 'mastra-agent-test';
+
+  const questions = [
+    "Olá! Meu nome é Nicolas e estou testando o Mastra.",
+    "Qual é o meu nome?",
+    "Crie um arquivo chamado 'hello.txt' com o texto 'Mastra is awesome!' no workspace.",
+    "Agora verifique se o arquivo existe e me diga o conteúdo dele."
+  ];
+
+  console.log(`🚀 Starting conversation test on thread: ${threadId}`);
+
+  for (const q of questions) {
+    console.log(`\n👤 User: ${q}`);
+    try {
+      const result = await agent.generate(q, {
+        memory: {
+          resource: resourceId,
+          thread: threadId
+        }
+      });
+      console.log(`🤖 Agent: ${result.text}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Error during conversation step:', errorMessage);
+    }
   }
 }
 
