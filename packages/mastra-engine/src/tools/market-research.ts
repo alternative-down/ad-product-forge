@@ -2,27 +2,23 @@ import { createTool } from '@mastra/core/tools';
 import Firecrawl from '@mendable/firecrawl-js';
 import { z } from 'zod';
 
-interface FirecrawlAgentResponse {
-  success: boolean;
-  status: string;
-  data?: {
-    signals: Array<{
-      title: string;
-      description: string;
-      source: string;
-      type: 'pain_point' | 'feature_request' | 'trend' | 'opportunity';
-      severity: 'low' | 'medium' | 'high';
-    }>;
-  };
-  creditsUsed?: number;
-}
-
 const SignalSchema = z.object({
   title: z.string().describe('Title or headline of the signal'),
   description: z.string().describe('Description of the problem, pain point, or opportunity'),
   source: z.string().describe('Where was this signal found (website, forum, etc)'),
   type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']).describe('Type of signal'),
   severity: z.enum(['low', 'medium', 'high']).describe('How urgent or severe is this signal'),
+});
+
+const FirecrawlAgentResponseSchema = z.object({
+  success: z.boolean(),
+  status: z.string(),
+  data: z
+    .object({
+      signals: z.array(SignalSchema),
+    })
+    .optional(),
+  creditsUsed: z.number().optional(),
 });
 
 const MarketResearchOutputSchema = z.object({
@@ -84,7 +80,7 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
     const prompt = input.customPrompt || defaultPrompt;
 
     try {
-      const response = (await firecrawl.agent({
+      const rawResponse = await firecrawl.agent({
         prompt,
         schema: z.object({
           signals: z.array(
@@ -97,7 +93,18 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
             })
           ),
         }),
-      })) as unknown as FirecrawlAgentResponse;
+      });
+
+      const result = FirecrawlAgentResponseSchema.safeParse(rawResponse);
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: `Invalid response from Firecrawl agent: ${result.error.message}`,
+        };
+      }
+
+      const { data: response } = result;
 
       if (!response.success) {
         return {
