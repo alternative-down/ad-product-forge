@@ -32,6 +32,17 @@ describe('api server', () => {
     expect(body.ready).toBe(true);
   });
 
+  it('propagates x-request-id in response header', async () => {
+    const { url } = await start();
+
+    const response = await fetch(`${url}/health`, {
+      headers: { 'x-request-id': 'rid-123' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('x-request-id')).toBe('rid-123');
+  });
+
   it('runs pipeline from source payload', async () => {
     const { url } = await start();
 
@@ -209,6 +220,36 @@ describe('api server', () => {
     });
 
     expect(response.status).toBe(400);
+  });
+
+  it('exposes simple metrics endpoint', async () => {
+    const { url } = await start();
+
+    await fetch(`${url}/health`);
+    await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sourceType: 'manual',
+        payload: {
+          item_id: 'm-1',
+          timestamp: '2026-03-07T00:00:00.000Z',
+          note: 'metrics test',
+        },
+      }),
+    });
+
+    const metricsRes = await fetch(`${url}/metrics`);
+    const body = (await metricsRes.json()) as {
+      ok: boolean;
+      metrics: { totalRequests: number; pipelineRequests: number; pipelineSuccess: number };
+    };
+
+    expect(metricsRes.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.metrics.totalRequests).toBeGreaterThanOrEqual(2);
+    expect(body.metrics.pipelineRequests).toBeGreaterThanOrEqual(1);
+    expect(body.metrics.pipelineSuccess).toBeGreaterThanOrEqual(1);
   });
 
   it('returns 413 when payload is too large', async () => {

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import {
   runPipelineFromSource,
@@ -31,6 +32,15 @@ interface InFlightRecord {
   promise: Promise<RunSuccessResponse>;
 }
 
+interface ApiMetrics {
+  totalRequests: number;
+  pipelineRequests: number;
+  pipelineSuccess: number;
+  pipelineErrors: number;
+  totalLatencyMs: number;
+  avgLatencyMs: number;
+}
+
 export interface ApiServerOptions {
   deps?: PipelineOrchestratorDeps;
   maxBodyBytes?: number;
@@ -49,9 +59,24 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
 
   const completedByKey = new Map<string, IdempotencyRecord>();
   const inFlightByKey = new Map<string, InFlightRecord>();
+  const metrics: ApiMetrics = {
+    totalRequests: 0,
+    pipelineRequests: 0,
+    pipelineSuccess: 0,
+    pipelineErrors: 0,
+    totalLatencyMs: 0,
+    avgLatencyMs: 0,
+  };
 
   return createServer(async (req, res) => {
+    const requestId = getHeaderValue(req.headers['x-request-id']) ?? randomUUID();
+    const startedAt = Date.now();
+
+    metrics.totalRequests += 1;
+    res.setHeader('x-request-id', requestId);
+
     if (!req.url || !req.method) {
+      logEvent('warn', requestId, 'invalid_request', { method: req.method, url: req.url });
       json(res, 404, { error: 'not_found' });
       return;
     }
@@ -66,13 +91,29 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
       return;
     }
 
+    if (req.method === 'GET' && req.url === '/metrics') {
+      json(res, 200, {
+        ok: true,
+        metrics,
+      });
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/v1/pipeline/run') {
+      metrics.pipelineRequests += 1;
+
       if (apiKey && req.headers['x-api-key'] !== apiKey) {
+        metrics.pipelineErrors += 1;
+        updateLatency(metrics, startedAt);
+        logEvent('warn', requestId, 'unauthorized', { route: '/v1/pipeline/run' });
         json(res, 401, { ok: false, error: 'unauthorized' });
         return;
       }
 
       if (!isJsonContentType(req.headers['content-type'])) {
+        metrics.pipelineErrors += 1;
+        updateLatency(metrics, startedAt);
+        logEvent('warn', requestId, 'invalid_content_type', { route: '/v1/pipeline/run' });
         json(res, 415, { ok: false, error: 'content_type_must_be_application_json' });
         return;
       }
@@ -88,10 +129,16 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
           const completed = completedByKey.get(idempotencyKey);
           if (completed) {
             if (completed.fingerprint !== fingerprint) {
+              metrics.pipelineErrors += 1;
+              updateLatency(metrics, startedAt);
+              logEvent('warn', requestId, 'idempotency_key_payload_mismatch', { idempotencyKey });
               json(res, 409, { ok: false, error: 'idempotency_key_payload_mismatch' });
               return;
             }
 
+            metrics.pipelineSuccess += 1;
+            updateLatency(metrics, startedAt);
+            logEvent('info', requestId, 'idempotent_replay', { idempotencyKey });
             json(res, 200, {
               ...completed.response,
               idempotentReplay: true,
@@ -102,11 +149,17 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
           const inFlight = inFlightByKey.get(idempotencyKey);
           if (inFlight) {
             if (inFlight.fingerprint !== fingerprint) {
+              metrics.pipelineErrors += 1;
+              updateLatency(metrics, startedAt);
+              logEvent('warn', requestId, 'idempotency_key_payload_mismatch', { idempotencyKey });
               json(res, 409, { ok: false, error: 'idempotency_key_payload_mismatch' });
               return;
             }
 
             const replay = await inFlight.promise;
+            metrics.pipelineSuccess += 1;
+            updateLatency(metrics, startedAt);
+            logEvent('info', requestId, 'inflight_replay', { idempotencyKey });
             json(res, 200, {
               ...replay,
               idempotentReplay: true,
@@ -149,19 +202,35 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
           });
         }
 
+        metrics.pipelineSuccess += 1;
+        updateLatency(metrics, startedAt);
+        logEvent('info', requestId, 'pipeline_run_success', {
+          route: '/v1/pipeline/run',
+          stage: success.stage,
+          nextAction: success.nextAction,
+        });
         json(res, 200, success);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown_error';
+        metrics.pipelineErrors += 1;
+        updateLatency(metrics, startedAt);
+
         if (message === 'payload_too_large') {
+          logEvent('warn', requestId, 'payload_too_large', { route: '/v1/pipeline/run' });
           json(res, 413, { ok: false, error: message });
           return;
         }
 
+        logEvent('error', requestId, 'pipeline_run_failed', {
+          route: '/v1/pipeline/run',
+          error: message,
+        });
         json(res, 400, { ok: false, error: message });
       }
       return;
     }
 
+    logEvent('warn', requestId, 'route_not_found', { method: req.method, url: req.url });
     json(res, 404, { error: 'not_found' });
   });
 }
@@ -234,4 +303,23 @@ function pruneExpired(store: Map<string, IdempotencyRecord>): void {
       store.delete(key);
     }
   }
+}
+
+function updateLatency(metrics: ApiMetrics, startedAt: number): void {
+  const latency = Date.now() - startedAt;
+  metrics.totalLatencyMs += latency;
+  metrics.avgLatencyMs = metrics.pipelineRequests === 0 ? 0 : Math.round(metrics.totalLatencyMs / metrics.pipelineRequests);
+}
+
+function logEvent(level: 'info' | 'warn' | 'error', requestId: string, event: string, extra: Record<string, unknown>): void {
+  // eslint-disable-next-line no-console
+  console.log(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level,
+      requestId,
+      event,
+      ...extra,
+    }),
+  );
 }

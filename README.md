@@ -12,17 +12,17 @@ Monorepo TypeScript com npm workspaces + turborepo.
 
 ## Sequência do pipeline (código atual)
 
-`Ingest -> Graph -> Insight+Score -> Orchestrator -> Ingress Adapters -> Source Runner`
+`Ingest (D1) -> Graph (D2) -> Insight+Score (D3) -> Orchestrator (D4) -> Ingress Adapters (D5) -> Source Runner (D6)`
 
 Owners lógicos:
-- `ingest logic`
-- `graph-transformer`
-- `insight+score logic`
-- `runner`
-- `adapter logic`
-- `CLI/API entry`
+- `ingest logic` (D1)
+- `graph-transformer` (D2)
+- `insight+score logic` (D3)
+- `runner` (D4)
+- `adapter logic` (D5)
+- `CLI/API entry` (D6)
 
-Detalhes completos: `docs/ARCHITECTURE.md`.
+Detalhes completos em: `docs/ARCHITECTURE.md`.
 
 ## Scripts
 
