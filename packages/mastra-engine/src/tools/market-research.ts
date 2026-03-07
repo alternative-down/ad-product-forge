@@ -21,7 +21,7 @@ export const marketResearchTool = createTool({
     creditsUsed: z.number().optional(),
     status: z.string().optional(),
   }),
-  execute: async ({ input }) => {
+  execute: async (input) => {
     const API_KEY = process.env.FIRECRAWL_API_KEY;
 
     if (!API_KEY) {

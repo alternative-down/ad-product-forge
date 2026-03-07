@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { createAgent } from '../src';
+import { createAgent, marketResearchTool } from '../src';
 
 dotenv.config();
 
@@ -17,22 +17,25 @@ async function main() {
 
   const modelString = 'openrouter/arcee-ai/trinity-large-preview:free';
 
-  // Usando a Factory do pacote para criar o agente
+  // Usando a Factory do pacote para criar o agente com a nova tool de Firecrawl
   const agent = await createAgent({
-    id: 'example-agent',
-    name: 'Example Agent',
-    instructions: 'You are a helpful assistant.',
+    id: 'research-agent',
+    name: 'Research Agent',
+    instructions: 'You are a market research specialist. Use the market_research tool to find opportunities.',
     model: modelString,
-    workspacePath: 'workspace_example',
+    workspacePath: 'workspace_research',
+    tools: {
+      market_research: marketResearchTool,
+    },
   });
 
-  const threadId = `example-thread-${Date.now()}`;
-  const resourceId = 'example-resource';
+  const threadId = `research-thread-${Date.now()}`;
+  const resourceId = 'research-resource';
 
-  console.log(`🚀 Starting example conversation on thread: ${threadId}`);
+  console.log(`🚀 Starting research conversation on thread: ${threadId}`);
 
   try {
-    const result = await agent.generate('Hello! Tell me a fun fact about Mastra.', {
+    const result = await agent.generate('Please search for 3 market signals about AI in healthcare.', {
       memory: {
         resource: resourceId,
         thread: threadId
