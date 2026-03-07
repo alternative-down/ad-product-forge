@@ -102,6 +102,84 @@ describe('api server', () => {
     expect(authorized.status).toBe(200);
   });
 
+  it('replays same idempotency key for same payload', async () => {
+    const { url } = await start();
+
+    const payload = {
+      sourceType: 'manual',
+      payload: {
+        item_id: 'idem-1',
+        timestamp: '2026-03-07T00:00:00.000Z',
+        note: 'idempotent test',
+      },
+    };
+
+    const first = await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-idempotency-key': 'key-1',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const second = await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-idempotency-key': 'key-1',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const firstBody = (await first.json()) as { output: { job_id: string } };
+    const secondBody = (await second.json()) as { output: { job_id: string }; idempotentReplay?: boolean };
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(secondBody.idempotentReplay).toBe(true);
+    expect(secondBody.output.job_id).toBe(firstBody.output.job_id);
+  });
+
+  it('returns 409 when same idempotency key is reused with different payload', async () => {
+    const { url } = await start();
+
+    const first = await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-idempotency-key': 'key-2',
+      },
+      body: JSON.stringify({
+        sourceType: 'manual',
+        payload: {
+          item_id: 'idem-a',
+          timestamp: '2026-03-07T00:00:00.000Z',
+          note: 'a',
+        },
+      }),
+    });
+
+    const second = await fetch(`${url}/v1/pipeline/run`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-idempotency-key': 'key-2',
+      },
+      body: JSON.stringify({
+        sourceType: 'manual',
+        payload: {
+          item_id: 'idem-b',
+          timestamp: '2026-03-07T00:00:00.000Z',
+          note: 'b',
+        },
+      }),
+    });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(409);
+  });
+
   it('returns 415 on non-json content type', async () => {
     const { url } = await start();
 
