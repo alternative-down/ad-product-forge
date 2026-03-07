@@ -76,6 +76,22 @@ curl -X POST http://127.0.0.1:3000/v1/pipeline/run \
   }'
 ```
 
+### Ingestão de hooks externos
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/hooks/external \
+  -H 'content-type: application/json' \
+  -d '{
+    "source": "billing",
+    "eventType": "invoice.payment_failed",
+    "occurredAt": "2026-03-07T00:00:00.000Z",
+    "externalId": "evt-1",
+    "content": "Customer payment failed for plan Pro",
+    "link": "https://billing.example/events/evt-1",
+    "context": {"provider": "stripe"}
+  }'
+```
+
 ### Autenticação opcional por chave
 
 Se `PIPELINE_API_KEY` estiver definida, o endpoint `/v1/pipeline/run` exige header `x-api-key`.

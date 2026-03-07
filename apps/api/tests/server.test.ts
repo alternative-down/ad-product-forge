@@ -180,6 +180,54 @@ describe('api server', () => {
     expect(second.status).toBe(409);
   });
 
+  it('ingests external hook and forwards to pipeline', async () => {
+    const { url } = await start();
+
+    const response = await fetch(`${url}/v1/hooks/external`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        source: 'billing',
+        eventType: 'invoice.payment_failed',
+        occurredAt: '2026-03-07T00:00:00.000Z',
+        externalId: 'evt-1',
+        content: 'Customer payment failed for plan Pro',
+        link: 'https://billing.example/events/evt-1',
+        context: { provider: 'stripe' },
+      }),
+    });
+
+    const body = (await response.json()) as {
+      ok: boolean;
+      source: string;
+      eventType: string;
+      output: { status: string; item_id: string };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.source).toBe('billing');
+    expect(body.eventType).toBe('invoice.payment_failed');
+    expect(body.output.status).toBe('ok');
+    expect(body.output.item_id).toBe('evt-1');
+  });
+
+  it('requires api key on external hook endpoint when configured', async () => {
+    const { url } = await start({ apiKey: 'secret-key' });
+
+    const unauthorized = await fetch(`${url}/v1/hooks/external`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        source: 'billing',
+        eventType: 'invoice.payment_failed',
+        content: 'x',
+      }),
+    });
+
+    expect(unauthorized.status).toBe(401);
+  });
+
   it('returns 415 on non-json content type', async () => {
     const { url } = await start();
 

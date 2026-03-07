@@ -12,6 +12,16 @@ interface RunRequestBody {
   parentJobId?: string | null;
 }
 
+interface ExternalHookRequestBody {
+  source: string;
+  eventType: string;
+  occurredAt?: string;
+  externalId?: string;
+  content: string;
+  link?: string;
+  context?: Record<string, unknown>;
+}
+
 interface RunSuccessResponse {
   ok: true;
   stage: string;
@@ -63,6 +73,52 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
 
     if (req.method === 'GET' && req.url === '/ready') {
       json(res, 200, { ok: true, ready: true });
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/v1/hooks/external') {
+      if (apiKey && req.headers['x-api-key'] !== apiKey) {
+        json(res, 401, { ok: false, error: 'unauthorized' });
+        return;
+      }
+
+      if (!isJsonContentType(req.headers['content-type'])) {
+        json(res, 415, { ok: false, error: 'content_type_must_be_application_json' });
+        return;
+      }
+
+      try {
+        const body = (await readJson(req, maxBodyBytes)) as ExternalHookRequestBody;
+        const normalized = normalizeExternalHook(body);
+
+        const result = await runPipelineFromSource(
+          {
+            sourceType: 'webhook',
+            payload: normalized,
+          },
+          {
+            ...deps,
+            parentJobId: null,
+          },
+        );
+
+        json(res, 200, {
+          ok: true,
+          source: body.source,
+          eventType: body.eventType,
+          stage: result.stage,
+          nextAction: result.nextAction,
+          output: result.finalOutput,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'unknown_error';
+        if (message === 'payload_too_large') {
+          json(res, 413, { ok: false, error: message });
+          return;
+        }
+
+        json(res, 400, { ok: false, error: message });
+      }
       return;
     }
 
@@ -234,4 +290,25 @@ function pruneExpired(store: Map<string, IdempotencyRecord>): void {
       store.delete(key);
     }
   }
+}
+
+function normalizeExternalHook(body: ExternalHookRequestBody): SourcePayload {
+  if (!body.source || !body.eventType || !body.content) {
+    throw new Error('source,eventType,content are required');
+  }
+
+  const occurredAt = body.occurredAt ?? new Date().toISOString();
+  const externalId = body.externalId ?? `${body.source}:${body.eventType}:${occurredAt}`;
+
+  return {
+    id: externalId,
+    occurred_at: occurredAt,
+    body: body.content,
+    url: body.link,
+    meta: {
+      source: body.source,
+      event_type: body.eventType,
+      ...(body.context ?? {}),
+    },
+  };
 }
