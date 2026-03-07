@@ -62,6 +62,17 @@ curl -X POST http://127.0.0.1:3000/v1/pipeline/run \
   }'
 ```
 
+### Autenticação opcional por chave
+
+Se `PIPELINE_API_KEY` estiver definida, o endpoint `/v1/pipeline/run` exige header `x-api-key`.
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/pipeline/run \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: sua-chave' \
+  -d '{"sourceType":"manual","payload":{"item_id":"example-2","timestamp":"2026-03-07T00:00:00.000Z","note":"teste"}}'
+```
+
 ## Commit e versionamento
 
 - `pre-commit` (Husky): format (staged), lint, typecheck, test

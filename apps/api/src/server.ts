@@ -15,6 +15,7 @@ interface RunRequestBody {
 export interface ApiServerOptions {
   deps?: PipelineOrchestratorDeps;
   maxBodyBytes?: number;
+  apiKey?: string;
 }
 
 const DEFAULT_MAX_BODY_BYTES = 1024 * 1024; // 1MB
@@ -22,6 +23,7 @@ const DEFAULT_MAX_BODY_BYTES = 1024 * 1024; // 1MB
 export function createApiServer(options: ApiServerOptions = {}): Server {
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   const deps = options.deps ?? {};
+  const apiKey = options.apiKey;
 
   return createServer(async (req, res) => {
     if (!req.url || !req.method) {
@@ -40,6 +42,11 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
     }
 
     if (req.method === 'POST' && req.url === '/v1/pipeline/run') {
+      if (apiKey && req.headers['x-api-key'] !== apiKey) {
+        json(res, 401, { ok: false, error: 'unauthorized' });
+        return;
+      }
+
       if (!isJsonContentType(req.headers['content-type'])) {
         json(res, 415, { ok: false, error: 'content_type_must_be_application_json' });
         return;
@@ -83,11 +90,13 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
 
 export async function startApiServer(port = Number(process.env.PORT ?? 3000)): Promise<Server> {
   const artifactBaseDir = process.env.ARTIFACTS_DIR;
+  const apiKey = process.env.PIPELINE_API_KEY;
 
   const server = createApiServer({
     deps: {
       artifactBaseDir,
     },
+    apiKey,
   });
 
   await new Promise<void>((resolve) => server.listen(port, resolve));
