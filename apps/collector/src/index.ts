@@ -50,31 +50,45 @@ interface CollectionResult {
 }
 
 async function runCollectionAgent(): Promise<void> {
-  const firecrawl = new Firecrawl({ apiKey: API_KEY });
+  const firecrawl = new Firecrawl({ apiKey: API_KEY as string });
 
   const executionId = Date.now().toString();
   const timestamp = new Date().toISOString();
 
   const prompt = buildMarketResearchPrompt();
 
-  console.log("🚀 Starting Firecrawl Deep Research...");
+  console.log("🚀 Starting Firecrawl Agent (Market Research)...");
   console.log(`📍 Execution ID: ${executionId}`);
   console.log(`📅 Timestamp: ${timestamp}`);
   console.log("");
-  console.log("🔎 Searching for market signals...");
+  console.log("🔎 Searching for and analyzing market signals...");
   console.log("");
 
   try {
-    const response = await (firecrawl as any).deepResearch(prompt);
+    const response = await firecrawl.agent({
+      prompt,
+      schema: SignalSchema,
+      model: "spark-1-mini",
+    });
 
-    console.log("✅ Deep research execution completed");
+    if (!response.success) {
+      throw new Error("Firecrawl agent request failed");
+    }
+
+    console.log("✅ Firecrawl Agent execution completed");
     console.log(`📊 Status: ${response.status ?? "unknown"}`);
     console.log(`💳 Credits used: ${response.creditsUsed ?? "N/A"}`);
 
     const signals = extractSignals(response);
     console.log(`📈 Signals extracted: ${signals.length}`);
 
-    const result = createResult(executionId, timestamp, prompt, signals, response.creditsUsed);
+    const result = createResult(
+      executionId,
+      timestamp,
+      prompt,
+      signals,
+      response.creditsUsed
+    );
     saveResults(result);
     displaySummary(signals);
 
@@ -83,7 +97,7 @@ async function runCollectionAgent(): Promise<void> {
     console.log("");
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("❌ Error running deep research:", errorMessage);
+    console.error("❌ Error running Firecrawl agent:", errorMessage);
     process.exit(1);
   }
 }
@@ -109,14 +123,6 @@ Specific keywords to search for:
 - "alternative to", "better than", "integration needed"
 - "spending too much time on", "manual process", "workflow bottleneck"
 
-IMPORTANT ACCESS POLICY:
-- Do NOT attempt to bypass, circumvent, or work around access restrictions on websites
-- Do NOT try multiple techniques to access restricted content (VPN, proxies, headers, etc)
-- If a website blocks your access, STOP immediately and move to the next source
-- Maximum 2 attempts per website/source - if access fails twice, move on
-- Respect all robots.txt, rate limits, and access policies
-- Focus on publicly accessible content only
-
 Extract at least 8-10 unique signals from accessible sources. For each signal:
 - Provide a clear title/headline
 - Describe the problem/pain/opportunity
@@ -133,9 +139,7 @@ function extractSignals(response: any): Signal[] {
     return parsed.signals ?? [];
   }
 
-  console.warn(
-    `⚠️  Research status: ${response.status}. No data available.`
-  );
+  console.warn(`⚠️  Research status: ${response.status}. No data available.`);
   return [];
 }
 
@@ -188,9 +192,7 @@ function displaySummary(signals: Signal[]): void {
   console.log("📋 Signal Summary:");
   console.log("---");
   signals.slice(0, 5).forEach((signal, idx) => {
-    console.log(
-      `${idx + 1}. [${signal.type.toUpperCase()}] ${signal.title}`
-    );
+    console.log(`${idx + 1}. [${signal.type.toUpperCase()}] ${signal.title}`);
     console.log(`   Severity: ${signal.severity} | Source: ${signal.source}`);
   });
 
