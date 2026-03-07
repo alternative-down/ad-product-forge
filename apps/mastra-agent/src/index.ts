@@ -15,7 +15,7 @@ const agent = new Agent({
   instructions: 'You are a helpful assistant.',
   model: {
     providerId: 'openai',
-    modelId: 'anthropic/claude-3.5-sonnet',
+    modelId: 'arcee-ai/trinity-large-preview:free',
     url: 'https://openrouter.ai/api/v1',
     apiKey: OPENROUTER_API_KEY,
   },
