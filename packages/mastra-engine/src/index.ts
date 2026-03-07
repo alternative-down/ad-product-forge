@@ -127,3 +127,5 @@ export async function createAgent({
 
   return agent;
 }
+
+export * from './tools/market-research';
