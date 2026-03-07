@@ -10,6 +10,20 @@ Monorepo TypeScript com npm workspaces + turborepo.
 - Vitest
 - GitHub Actions (lint, typecheck, test, build)
 
+## Sequência do pipeline (código atual)
+
+`Ingest -> Graph -> Insight+Score -> Orchestrator -> Ingress Adapters -> Source Runner`
+
+Owners lógicos:
+- `ingest logic`
+- `graph-transformer`
+- `insight+score logic`
+- `runner`
+- `adapter logic`
+- `CLI/API entry`
+
+Detalhes completos: `docs/ARCHITECTURE.md`.
+
 ## Scripts
 
 ```bash

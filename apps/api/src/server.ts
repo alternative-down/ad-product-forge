@@ -12,18 +12,43 @@ interface RunRequestBody {
   parentJobId?: string | null;
 }
 
+interface RunSuccessResponse {
+  ok: true;
+  stage: string;
+  nextAction: string;
+  output: Record<string, unknown>;
+  idempotentReplay?: boolean;
+}
+
+interface IdempotencyRecord {
+  fingerprint: string;
+  response: RunSuccessResponse;
+  expiresAt: number;
+}
+
+interface InFlightRecord {
+  fingerprint: string;
+  promise: Promise<RunSuccessResponse>;
+}
+
 export interface ApiServerOptions {
   deps?: PipelineOrchestratorDeps;
   maxBodyBytes?: number;
   apiKey?: string;
+  idempotencyTtlMs?: number;
 }
 
 const DEFAULT_MAX_BODY_BYTES = 1024 * 1024; // 1MB
+const DEFAULT_IDEMPOTENCY_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 export function createApiServer(options: ApiServerOptions = {}): Server {
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   const deps = options.deps ?? {};
   const apiKey = options.apiKey;
+  const idempotencyTtlMs = options.idempotencyTtlMs ?? DEFAULT_IDEMPOTENCY_TTL_MS;
+
+  const completedByKey = new Map<string, IdempotencyRecord>();
+  const inFlightByKey = new Map<string, InFlightRecord>();
 
   return createServer(async (req, res) => {
     if (!req.url || !req.method) {
@@ -53,9 +78,44 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
       }
 
       try {
-        const body = (await readJson(req, maxBodyBytes)) as RunRequestBody;
+        pruneExpired(completedByKey);
 
-        const result = await runPipelineFromSource(
+        const body = (await readJson(req, maxBodyBytes)) as RunRequestBody;
+        const idempotencyKey = getHeaderValue(req.headers['x-idempotency-key']);
+        const fingerprint = JSON.stringify(body);
+
+        if (idempotencyKey) {
+          const completed = completedByKey.get(idempotencyKey);
+          if (completed) {
+            if (completed.fingerprint !== fingerprint) {
+              json(res, 409, { ok: false, error: 'idempotency_key_payload_mismatch' });
+              return;
+            }
+
+            json(res, 200, {
+              ...completed.response,
+              idempotentReplay: true,
+            });
+            return;
+          }
+
+          const inFlight = inFlightByKey.get(idempotencyKey);
+          if (inFlight) {
+            if (inFlight.fingerprint !== fingerprint) {
+              json(res, 409, { ok: false, error: 'idempotency_key_payload_mismatch' });
+              return;
+            }
+
+            const replay = await inFlight.promise;
+            json(res, 200, {
+              ...replay,
+              idempotentReplay: true,
+            });
+            return;
+          }
+        }
+
+        const runPromise = runPipelineFromSource(
           {
             sourceType: body.sourceType,
             payload: body.payload,
@@ -64,14 +124,32 @@ export function createApiServer(options: ApiServerOptions = {}): Server {
             ...deps,
             parentJobId: body.parentJobId ?? null,
           },
-        );
-
-        json(res, 200, {
+        ).then((result): RunSuccessResponse => ({
           ok: true,
           stage: result.stage,
           nextAction: result.nextAction,
-          output: result.finalOutput,
-        });
+          output: result.finalOutput as unknown as Record<string, unknown>,
+        }));
+
+        if (idempotencyKey) {
+          inFlightByKey.set(idempotencyKey, {
+            fingerprint,
+            promise: runPromise,
+          });
+        }
+
+        const success = await runPromise;
+
+        if (idempotencyKey) {
+          inFlightByKey.delete(idempotencyKey);
+          completedByKey.set(idempotencyKey, {
+            fingerprint,
+            response: success,
+            expiresAt: Date.now() + idempotencyTtlMs,
+          });
+        }
+
+        json(res, 200, success);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown_error';
         if (message === 'payload_too_large') {
@@ -126,7 +204,7 @@ async function readJson(req: IncomingMessage, maxBodyBytes: number): Promise<unk
   return JSON.parse(raw);
 }
 
-function json(res: ServerResponse, statusCode: number, payload: Record<string, unknown>): void {
+function json(res: ServerResponse, statusCode: number, payload: unknown): void {
   res.statusCode = statusCode;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(payload));
@@ -139,4 +217,21 @@ function isJsonContentType(header: string | string[] | undefined): boolean {
 
   const value = Array.isArray(header) ? header.join(';') : header;
   return value.toLowerCase().includes('application/json');
+}
+
+function getHeaderValue(header: string | string[] | undefined): string | undefined {
+  if (!header) {
+    return undefined;
+  }
+
+  return Array.isArray(header) ? header[0] : header;
+}
+
+function pruneExpired(store: Map<string, IdempotencyRecord>): void {
+  const now = Date.now();
+  for (const [key, record] of store.entries()) {
+    if (record.expiresAt <= now) {
+      store.delete(key);
+    }
+  }
 }
