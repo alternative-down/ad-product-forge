@@ -2,6 +2,21 @@ import { createTool } from '@mastra/core/tools';
 import Firecrawl from '@mendable/firecrawl-js';
 import { z } from 'zod';
 
+interface FirecrawlAgentResponse {
+  success: boolean;
+  status: string;
+  data?: {
+    signals: Array<{
+      title: string;
+      description: string;
+      source: string;
+      type: 'pain_point' | 'feature_request' | 'trend' | 'opportunity';
+      severity: 'low' | 'medium' | 'high';
+    }>;
+  };
+  creditsUsed?: number;
+}
+
 export const marketResearchTool = createTool({
   id: 'market_research',
   description: 'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
@@ -74,7 +89,7 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
           })
         ),
       }),
-    })) as any;
+    })) as unknown as FirecrawlAgentResponse;
 
     if (!response.success && response.status !== 'completed') {
       throw new Error(`Firecrawl agent failed with status: ${response.status}`);

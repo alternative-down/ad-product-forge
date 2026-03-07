@@ -1,23 +1,24 @@
-import { Agent } from '@mastra/core/agent';
+import { Agent, ToolsInput } from '@mastra/core/agent';
+import { AgentConfig } from '@mastra/core/agent';
 import { Workspace, LocalFilesystem, LocalSandbox, WORKSPACE_TOOLS } from '@mastra/core/workspace';
 import { Memory } from '@mastra/memory';
+import { SharedMemoryConfig } from '@mastra/core/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
 import path from 'path';
-import { ToolsInput } from '@mastra/core/agent';
 
 export interface CreateAgentParams {
   id: string;
   name: string;
   instructions: string;
-  model: string | any;
+  model: AgentConfig['model'];
   workspacePath?: string;
   tools?: ToolsInput;
   agents?: Record<string, Agent>;
   // Overrides opcionais
   memory?: Memory;
   workspace?: Workspace;
-  embedder?: any;
+  embedder?: SharedMemoryConfig['embedder'];
   maxSteps?: number;
 }
 
@@ -104,7 +105,7 @@ export async function createAgent({
         },
         observationalMemory: {
           enabled: true,
-          model: typeof model === 'string' ? model : model.modelId,
+          model: model, // Pass model directly as it matches AgentConfig['model']
         },
       },
     });
