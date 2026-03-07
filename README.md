@@ -25,6 +25,8 @@ npm run version-packages
 
 ## API de produção (v1)
 
+### Local (node)
+
 ```bash
 # build geral
 npm run build
@@ -34,6 +36,30 @@ npm run start --workspace @ad-product-forge/api
 
 # smoke
 curl http://127.0.0.1:3000/health
+```
+
+### Container (docker compose)
+
+```bash
+docker compose up --build -d
+curl http://127.0.0.1:3000/health
+```
+
+### Executar pipeline via HTTP
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/pipeline/run \
+  -H 'content-type: application/json' \
+  -d '{
+    "sourceType": "manual",
+    "payload": {
+      "item_id": "example-1",
+      "timestamp": "2026-03-07T00:00:00.000Z",
+      "note": "erro recorrente em onboarding",
+      "author": "ops",
+      "context": {"channel": "support"}
+    }
+  }'
 ```
 
 ## Commit e versionamento
