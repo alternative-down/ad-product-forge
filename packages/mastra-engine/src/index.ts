@@ -10,6 +10,9 @@ import { fastembed } from '@mastra/fastembed';
 import path from 'path';
 import fs from 'fs';
 
+// Processadores Customizados
+import { HybridRecallProcessor } from './processors/hybrid-recall';
+
 export interface CreateAgentParams {
   id: string;
   name: string;
@@ -249,7 +252,13 @@ export async function createAgent({
     });
   }
 
-  // 4. Criação do EngineAgent
+  // 4. Configuração do Hybrid Recall Processor
+  const hybridRecall = new HybridRecallProcessor({
+    memory: finalMemory,
+    workspace: finalWorkspace
+  });
+
+  // 5. Criação do EngineAgent
   const agent = new EngineAgent({
     id,
     name,
@@ -261,7 +270,7 @@ export async function createAgent({
     omProcessor: omProcessor,
     tools: additionalTools,
     agents,
-    inputProcessors: [omProcessor],
+    inputProcessors: [omProcessor, hybridRecall], // Adicionado Hybrid Recall
     outputProcessors: [omProcessor],
     defaultOptions: {
       maxSteps,
@@ -272,3 +281,4 @@ export async function createAgent({
 }
 
 export * from './tools/market-research';
+export * from './processors/hybrid-recall';
