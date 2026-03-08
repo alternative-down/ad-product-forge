@@ -147,7 +147,7 @@ export interface ExecuteCycleParams {
 
 /**
  * Executa um ciclo autônomo garantindo que apenas o par Request/Response
- * seja persistido na Thread Primária, evitando poluição de logs de iteração.
+ * seja persistido na Thread Primária, enquanto a execução real ocorre em uma thread isolada (clonada).
  */
 export async function executeAutonomousCycle({
   agent,
@@ -155,49 +155,83 @@ export async function executeAutonomousCycle({
   userPrompt,
   resourceId = 'default-resource',
 }: ExecuteCycleParams) {
-  // Para a Fase 1, usamos uma thread temporária para a execução das ferramentas
-  // Assim a Primary Thread não recebe as tool-calls/results automaticamente
-  const tempThreadId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const memory = await agent.getMemory();
+  if (!memory) {
+    throw new Error('Agent memory is not initialized');
+  }
 
+  // Ensure the primary thread exists before cloning
+  const existingThread = await memory.getThreadById({ threadId: primaryThreadId });
+  if (!existingThread) {
+    await memory.saveThread({
+      thread: {
+        id: primaryThreadId,
+        title: 'Primary Thread', // Title is mandatory in LibSQL store
+        resourceId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: {},
+      }
+    });
+  }
+
+  // 1. Setup do Nível 2 (Transient)
+  // Criamos uma thread de execução isolada (Nível 2) clonando o estado atual da thread primária.
+  // Isso herda todo o histórico comprimido (OM) e o estado atual do Working Memory.
+  const tempThreadId = `exec-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const { thread: execThread } = await memory.cloneThread({
+    sourceThreadId: primaryThreadId,
+    newThreadId: tempThreadId,
+    resourceId,
+    title: `Execution Thread: ${primaryThreadId}`,
+  });
+
+  console.log(`[Engine] Created execution thread: ${execThread.id} (Cloned from ${primaryThreadId})`);
+
+  // 2. Execução da Tarefa no Nível 2
   const result = await agent.generate(userPrompt, {
     memory: {
       resource: resourceId,
-      thread: tempThreadId,
+      thread: execThread.id,
     },
   });
 
-  // Consolidação na Thread Primária
-  const memory = await agent.getMemory();
-  if (memory) {
-    const messages: MastraDBMessage[] = [
-      {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        content: {
-          format: 2, // V2 format required by MastraDBMessage
-          parts: [{ type: 'text', text: userPrompt }],
-        },
-        threadId: primaryThreadId,
-        resourceId,
-        createdAt: new Date(),
-        type: 'text',
+  // 3. Consolidação no Nível 1 (Primary)
+  // Salvamos apenas o par Request (User) e Response (Final Assistant) na thread principal.
+  const consolidatedMessages: MastraDBMessage[] = [
+    {
+      id: `user-${Date.now()}-cons`,
+      role: 'user',
+      content: {
+        format: 2,
+        parts: [{ type: 'text', text: userPrompt }],
       },
-      {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: {
-          format: 2,
-          parts: [{ type: 'text', text: result.text }],
-        },
-        threadId: primaryThreadId,
-        resourceId,
-        createdAt: new Date(),
-        type: 'text',
+      threadId: primaryThreadId,
+      resourceId,
+      createdAt: new Date(),
+      type: 'text',
+    },
+    {
+      id: `assistant-${Date.now()}-cons`,
+      role: 'assistant',
+      content: {
+        format: 2,
+        parts: [{ type: 'text', text: result.text }],
       },
-    ];
+      threadId: primaryThreadId,
+      resourceId,
+      createdAt: new Date(),
+      type: 'text',
+    },
+  ];
 
-    await memory.saveMessages({ messages });
-  }
+  await memory.saveMessages({ messages: consolidatedMessages });
+  console.log(`[Engine] Consolidated Request/Response to primary thread: ${primaryThreadId}`);
+
+  // 4. Cleanup (Remover Thread Transiente)
+  // Deletamos a thread de execução para não poluir o banco de dados com tool-calls e iterações.
+  await memory.deleteThread(execThread.id);
+  console.log(`[Engine] Cleaned up execution thread: ${execThread.id}`);
 
   return result;
 }

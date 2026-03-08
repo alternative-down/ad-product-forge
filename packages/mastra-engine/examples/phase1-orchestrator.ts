@@ -1,13 +1,17 @@
-const { createAgent, executeAutonomousCycle } = require('./dist/index');
-const dotenv = require('dotenv');
+import dotenv from 'dotenv';
+import { createAgent, executeAutonomousCycle } from '../src';
 
 dotenv.config();
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
 async function main() {
+  if (!OPENROUTER_API_KEY && process.env.NODE_ENV === 'production') {
+    throw new Error('❌ OPENROUTER_API_KEY is required in production');
+  }
+
   if (!OPENROUTER_API_KEY) {
-    console.log('⚠️ OPENROUTER_API_KEY missing.');
+    console.log('⚠️ Skipping message test because OPENROUTER_API_KEY is missing.');
     return;
   }
 
@@ -23,7 +27,7 @@ async function main() {
 
   const primaryThreadId = `test-primary-${Date.now()}`;
 
-  console.log(`🚀 Running Phase 1 Test...`);
+  console.log(`🚀 Running Phase 1 Orchestrator Test...`);
 
   const result = await executeAutonomousCycle({
     agent,
@@ -31,7 +35,7 @@ async function main() {
     userPrompt: "Olá! Grave o texto 'Fase 1 OK' num arquivo chamado 'status.txt'.",
   });
 
-  console.log(`🤖 Agent: ${result.text}`);
+  console.log(`🤖 Agent response: ${result.text}`);
 
   const result2 = await executeAutonomousCycle({
     agent,
@@ -39,7 +43,7 @@ async function main() {
     userPrompt: "O que você gravou no arquivo?",
   });
 
-  console.log(`🤖 Agent: ${result2.text}`);
+  console.log(`🤖 Agent response: ${result2.text}`);
 }
 
-main();
+main().catch(console.error);
