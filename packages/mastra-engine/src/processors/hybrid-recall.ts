@@ -1,4 +1,3 @@
-import { createTool } from '@mastra/core/tools';
 import { createGraphRAGTool } from '@mastra/rag';
 import { MastraDBMessage, MastraMessagePart } from '@mastra/core/agent';
 import { ProcessInputStepArgs, Processor } from '@mastra/core/processors';
@@ -91,6 +90,8 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
     const threadId = messageList.serialize().memoryInfo?.threadId;
     const resourceId = messageList.serialize().memoryInfo?.resourceId;
 
+    console.log(`[HybridRecall] 🔍 Querying context for step (role=${lastMessage.role}): "${queryText.slice(0, 50)}..."`);
+
     // 1. Semantic Message Recall
     let messageContext = '';
     try {
@@ -105,9 +106,10 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
         messageContext = recallResult.messages
           .map(m => `[${m.role}]: ${this.extractText(m.content.parts || [])}`)
           .join('\n');
+        console.log(`[HybridRecall] ✅ Found ${recallResult.messages.length} past messages.`);
       }
     } catch (e) {
-      console.error('[HybridRecall] Message recall failed:', e);
+      console.error('[HybridRecall] ❌ Message recall failed:', e);
     }
 
     // 2. Workspace Search
@@ -122,19 +124,20 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
         workspaceContext = searchResults
           .map(r => `File: ${r.id} (Score: ${r.score.toFixed(2)})\nContent: ${r.content}`)
           .join('\n---\n');
+        console.log(`[HybridRecall] ✅ Found ${searchResults.length} workspace files.`);
       }
     } catch (e) {
-      console.warn('[HybridRecall] Workspace search failed:', e);
+      console.warn('[HybridRecall] ℹ️ Workspace search yielded no results.');
     }
 
-    // 3. GraphRAG Recall (Fase 6)
+    // 3. GraphRAG Recall
     let graphContext = '';
     if (this.memoryInstance.vector) {
         try {
             const graphTool = createGraphRAGTool({
                 vectorStore: this.memoryInstance.vector,
                 indexName: 'knowledge_index',
-                // @ts-ignore - Compatibility with internal embedder
+                // @ts-ignore
                 model: (this.memoryInstance as any).embedder,
                 graphOptions: {
                     threshold: 0.7,
@@ -143,11 +146,12 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
             });
 
             const result = await (graphTool as any).execute({ queryText });
-            if (result && result.text) {
+            if (result && result.text && result.text !== 'No context found.') {
                 graphContext = result.text;
+                console.log(`[HybridRecall] ✅ GraphRAG found contextual relations.`);
             }
         } catch (e) {
-            console.error('[HybridRecall] GraphRAG recall failed:', e);
+            console.error('[HybridRecall] ❌ GraphRAG recall failed:', e);
         }
     }
 
@@ -178,6 +182,8 @@ ${graphContext || 'No semantic relations found.'}
         parts: [{ type: 'text', text: memoryBlock }]
       }
     };
+
+    console.log(`[HybridRecall] 💉 Injected context block into step.`);
 
     const newMessages = [...allMessages];
     newMessages.splice(newMessages.length - 1, 0, systemInjection);

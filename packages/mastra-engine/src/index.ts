@@ -1,4 +1,5 @@
-import { Agent, AgentConfig, ToolsInput, MastraDBMessage, AgentExecutionOptions, AgentExecutionOptionsBase, StructuredOutputOptions } from '@mastra/core/agent';
+import { Agent, ToolsInput, MastraDBMessage, AgentExecutionOptions, AgentExecutionOptionsBase, StructuredOutputOptions } from '@mastra/core/agent';
+import { AgentConfig } from '@mastra/core/agent';
 import { MessageListInput } from '@mastra/core/agent/message-list';
 import { FullOutput } from '@mastra/core/stream';
 import { Workspace, LocalFilesystem, LocalSandbox, WORKSPACE_TOOLS } from '@mastra/core/workspace';
@@ -7,6 +8,7 @@ import { ObservationalMemory } from '@mastra/memory/processors';
 import { SharedMemoryConfig } from '@mastra/core/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
+import { TokenLimiterProcessor } from '@mastra/core/processors';
 import { GraphIntegrator } from './graph/integrator';
 import path from 'path';
 import fs from 'fs';
@@ -27,6 +29,8 @@ export interface CreateAgentParams {
   workspace?: Workspace;
   embedder?: SharedMemoryConfig['embedder'];
   maxSteps?: number;
+  tokenLimit?: number;
+  lastMessages?: number; // Adicionado para controle de contexto
 }
 
 /**
@@ -53,25 +57,18 @@ class EngineAgent<
     
     this.integrator = new GraphIntegrator({
       vectorStore: this.memoryInstance.vector as any,
-      // Usamos o fastembed importado diretamente para garantir que o método .doEmbed exista
       embedder: fastembed,
     });
   }
 
-  // Sobrecarga 1: Assinatura padrão
   override generate(messages: MessageListInput, options?: AgentExecutionOptions<TOutput>): Promise<FullOutput<TOutput>>;
-  
-  // Sobrecarga 2: Structured Output (OUTPUT extends {})
   override generate<OUTPUT extends {}>(messages: MessageListInput, options: AgentExecutionOptionsBase<OUTPUT> & {
       structuredOutput: StructuredOutputOptions<OUTPUT>;
   }): Promise<FullOutput<OUTPUT>>;
-  
-  // Sobrecarga 3: Genérica
   override generate<OUTPUT>(messages: MessageListInput, options?: AgentExecutionOptionsBase<any> & {
       structuredOutput?: StructuredOutputOptions<any>;
   }): Promise<FullOutput<OUTPUT>>;
 
-  // Implementação única que lida com todas as sobrecargas
   override async generate(
     messages: MessageListInput,
     options?: any
@@ -97,7 +94,7 @@ class EngineAgent<
       title: `Execution: ${JSON.stringify(messages).slice(0, 30)}...`,
     });
 
-    // 3. Execução Real (Chama o generate original na thread clonada)
+    // 3. Execução Real na thread clonada
     const result = await super.generate(messages, {
       ...options,
       memory: {
@@ -152,15 +149,12 @@ class EngineAgent<
       });
     }
 
-    // 6. Ingestão de Conhecimento no GraphRAG (Fase 6)
-    
-    // Ingestão 6.1: Observações da Thread de Execução
+    // 6. Ingestão de Conhecimento no GraphRAG
     const execObs = await this.omProcessor.getObservations(execThread.id, resourceId);
     if (execObs) {
       await this.integrator.ingestText(execObs, { source: 'execution_reflection', threadId: execThread.id });
     }
 
-    // Ingestão 6.2: Manutenção e Observações da Thread Primária
     await this.omProcessor.observe({
       threadId: this.primaryThreadId,
       resourceId,
@@ -171,7 +165,6 @@ class EngineAgent<
       await this.integrator.ingestText(primaryObs, { source: 'primary_reflection', threadId: this.primaryThreadId });
     }
 
-    // Ingestão 6.3: O par final consolidado
     await this.integrator.ingestText(`User Request: ${userPrompt}\nAgent Response: ${result.text}`, { 
       source: 'consolidated_interaction',
       threadId: this.primaryThreadId 
@@ -183,7 +176,6 @@ class EngineAgent<
 
 /**
  * Factory para criar um agente Mastra com arquitetura de dois níveis de contexto.
- * Retorna uma instância do tipo Agent (Mastra) com comportamento de EngineAgent.
  */
 export async function createAgent({
   id,
@@ -197,6 +189,8 @@ export async function createAgent({
   workspace: workspaceOverride,
   embedder = fastembed,
   maxSteps = 1000,
+  tokenLimit = 100000,
+  lastMessages = Number.MAX_SAFE_INTEGER,
 }: CreateAgentParams): Promise<Agent> {
   const baseDir = workspacePath || `workspace_${id}`;
   const absolutePath = path.isAbsolute(baseDir) ? baseDir : path.join(process.cwd(), baseDir);
@@ -224,7 +218,12 @@ export async function createAgent({
     }
   });
 
-  // 2. Configuração do Workspace
+  // 2. Token Limiter
+  const tokenLimiter = new TokenLimiterProcessor({
+    limit: tokenLimit,
+  });
+
+  // 3. Configuração do Workspace
   let finalWorkspace = workspaceOverride;
   if (!finalWorkspace) {
     const workspaceEmbedder = async (text: string): Promise<number[]> => {
@@ -264,7 +263,7 @@ export async function createAgent({
     await finalWorkspace.init();
   }
 
-  // 3. Configuração da Memória
+  // 4. Configuração da Memória
   let finalMemory = memoryOverride;
   if (!finalMemory) {
     finalMemory = new Memory({
@@ -272,27 +271,27 @@ export async function createAgent({
       vector: new LibSQLVector({ id: `${id}-vector`, url: dbUrl }),
       embedder: embedder as any,
       options: {
-        lastMessages: Number.MAX_SAFE_INTEGER,
+        lastMessages: lastMessages,
         semanticRecall: { topK: 3, messageRange: 2 },
         workingMemory: { enabled: true, scope: 'thread' },
       },
     });
   }
 
-  // 4. Ingestão Inicial do Workspace no Grafo
+  // 5. Ingestão Inicial
   const initialIntegrator = new GraphIntegrator({
     vectorStore: finalMemory.vector as any,
     embedder: fastembed,
   });
   await initialIntegrator.ingestWorkspace(finalWorkspace);
 
-  // 5. Configuração do Hybrid Recall Processor
+  // 6. Hybrid Recall
   const hybridRecall = new HybridRecallProcessor({
     memory: finalMemory,
     workspace: finalWorkspace
   });
 
-  // 6. Criação do EngineAgent
+  // 7. Criação do EngineAgent
   const agent = new EngineAgent({
     id,
     name,
@@ -304,8 +303,8 @@ export async function createAgent({
     omProcessor: omProcessor,
     tools: additionalTools,
     agents,
-    inputProcessors: [omProcessor, hybridRecall],
-    outputProcessors: [omProcessor],
+    inputProcessors: [omProcessor, tokenLimiter, hybridRecall],
+    outputProcessors: [omProcessor, tokenLimiter],
     defaultOptions: {
       maxSteps,
     },
