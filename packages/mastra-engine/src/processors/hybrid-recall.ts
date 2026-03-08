@@ -8,6 +8,18 @@ interface TextPart {
   text: string;
 }
 
+interface ToolCallPart {
+  type: 'tool-call';
+  toolName: string;
+  args: any;
+}
+
+interface ToolResultPart {
+  type: 'tool-result';
+  toolName: string;
+  result: any;
+}
+
 export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
   readonly id = 'hybrid-recall';
   readonly name = 'Hybrid Recall Processor';
@@ -19,6 +31,39 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
   constructor({ memory, workspace }: { memory: Memory; workspace: Workspace }) {
     this.memoryInstance = memory;
     this.workspace = workspace;
+  }
+
+  private extractQueryContext(message: MastraDBMessage): string {
+    if (typeof message.content === 'string') {
+      return message.content;
+    }
+
+    const parts = message.content.parts || [];
+    let query = '';
+
+    // Prioridade 1: Conteúdo de Texto (User ou Assistant reasoning)
+    const textParts = parts.filter((p): p is TextPart => p.type === 'text');
+    if (textParts.length > 0) {
+      query += textParts.map(p => p.text).join(' ');
+    }
+
+    // Prioridade 2: Argumentos de Tool Calls (Assistant chamando ferramenta)
+    const toolCallParts = parts.filter((p): p is ToolCallPart => p.type === 'tool-call');
+    if (toolCallParts.length > 0) {
+      query += ' ' + toolCallParts.map(p => 
+        `${p.toolName} ${JSON.stringify(p.args)}`
+      ).join(' ');
+    }
+
+    // Prioridade 3: Resultados de Ferramentas (Role tool)
+    const toolResultParts = parts.filter((p): p is ToolResultPart => p.type === 'tool-result');
+    if (toolResultParts.length > 0) {
+      query += ' ' + toolResultParts.map(p => 
+        `${p.toolName} result: ${JSON.stringify(p.result)}`
+      ).join(' ');
+    }
+
+    return query.trim();
   }
 
   private extractText(parts: MastraMessagePart[]): string {
@@ -34,14 +79,12 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
     const allMessages = messageList.get.all.db();
     const lastMessage = allMessages[allMessages.length - 1];
     
-    // Só processamos se houver uma mensagem de usuário para usar como query
-    if (!lastMessage || lastMessage.role !== 'user') {
+    if (!lastMessage) {
       return allMessages;
     }
 
-    const queryText = typeof lastMessage.content === 'string' 
-      ? lastMessage.content 
-      : this.extractText(lastMessage.content.parts || []);
+    // Agora extraímos contexto de QUALQUER tipo de mensagem (User, Assistant/ToolCall, ToolResult)
+    const queryText = this.extractQueryContext(lastMessage);
 
     if (!queryText) {
       return allMessages;
@@ -50,7 +93,7 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
     const threadId = messageList.serialize().memoryInfo?.threadId;
     const resourceId = messageList.serialize().memoryInfo?.resourceId;
 
-    console.log(`[HybridRecall] Querying context for: "${queryText.slice(0, 50)}..."`);
+    console.log(`[HybridRecall] Querying context for step (role=${lastMessage.role}): "${queryText.slice(0, 50)}..."`);
 
     // 1. Semantic Message Recall (Mensagens Passadas)
     let messageContext = '';
@@ -94,6 +137,10 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
     // 4. Injeção do Bloco de Memória
     const memoryBlock = `
 <context_injection>
+  <step_context role="${lastMessage.role}" type="${lastMessage.type}">
+    Query derived from: ${queryText.slice(0, 100)}...
+  </step_context>
+
   <past_conversations_recall>
 ${messageContext || 'No relevant past messages found.'}
   </past_conversations_recall>
@@ -120,7 +167,7 @@ ${graphContext}
       }
     };
 
-    // Injetamos a memória antes da última mensagem do usuário para dar contexto ao LLM
+    // Injetamos a memória antes da última mensagem para dar contexto ao LLM sobre o passo atual
     const newMessages = [...allMessages];
     newMessages.splice(newMessages.length - 1, 0, systemInjection);
 
