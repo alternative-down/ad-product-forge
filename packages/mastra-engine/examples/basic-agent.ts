@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { createAgent, marketResearchTool } from '../src';
+import { createAgent, executeAutonomousCycle } from '../src';
 
 dotenv.config();
 
@@ -17,34 +17,44 @@ async function main() {
 
   const modelString = 'openrouter/arcee-ai/trinity-large-preview:free';
 
-  // Usando a Factory do pacote para criar o agente com a nova tool de Firecrawl
+  // Usando a Factory do pacote para criar o agente
   const agent = await createAgent({
-    id: 'research-agent',
-    name: 'Research Agent',
-    instructions: 'You are a market research specialist. Use the market_research tool to find opportunities.',
+    id: 'example-agent',
+    name: 'Example Agent',
+    instructions: 'You are a helpful assistant.',
     model: modelString,
-    workspacePath: 'workspace_research',
-    tools: {
-      market_research: marketResearchTool,
-    },
+    workspacePath: 'workspace_example',
   });
 
-  const threadId = `research-thread-${Date.now()}`;
-  const resourceId = 'research-resource';
+  const primaryThreadId = `primary-thread-${Date.now()}`;
+  const resourceId = 'example-resource';
 
-  console.log(`🚀 Starting research conversation on thread: ${threadId}`);
+  console.log(`🚀 Starting Autonomous Cycle Test on primary thread: ${primaryThreadId}`);
 
   try {
-    const result = await agent.generate('Please search for 3 market signals about AI in healthcare.', {
-      memory: {
-        resource: resourceId,
-        thread: threadId
-      }
+    const result = await executeAutonomousCycle({
+      agent,
+      primaryThreadId,
+      userPrompt: "Olá! Meu nome é Nicolas. Crie um arquivo 'test.txt' no workspace.",
+      resourceId
     });
-    console.log(`🤖 Agent: ${result.text}`);
+    
+    console.log(`🤖 Agent final response: ${result.text}`);
+    
+    // Teste de continuidade na Primary Thread
+    console.log("\n--- Second turn test ---");
+    const result2 = await executeAutonomousCycle({
+      agent,
+      primaryThreadId,
+      userPrompt: "Qual é o meu nome? E o arquivo foi criado?",
+      resourceId
+    });
+    
+    console.log(`🤖 Agent final response: ${result2.text}`);
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Error during example execution:', errorMessage);
+    console.error('❌ Error during autonomous cycle execution:', errorMessage);
   }
 }
 

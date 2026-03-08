@@ -1,4 +1,4 @@
-import { Agent, ToolsInput } from '@mastra/core/agent';
+import { Agent, ToolsInput, MastraDBMessage } from '@mastra/core/agent';
 import { AgentConfig } from '@mastra/core/agent';
 import { Workspace, LocalFilesystem, LocalSandbox, WORKSPACE_TOOLS } from '@mastra/core/workspace';
 import { Memory } from '@mastra/memory';
@@ -6,6 +6,7 @@ import { SharedMemoryConfig } from '@mastra/core/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
 import path from 'path';
+import fs from 'fs';
 
 export interface CreateAgentParams {
   id: string;
@@ -37,6 +38,14 @@ export async function createAgent({
 }: CreateAgentParams): Promise<Agent> {
   const finalEmbedder = embedder;
   const dbPath = workspacePath ? `file:${path.join(workspacePath, 'agent.db')}` : 'file:agent.db';
+
+  // Ensure workspace directory exists if provided
+  if (workspacePath) {
+    const absolutePath = path.isAbsolute(workspacePath) ? workspacePath : path.join(process.cwd(), workspacePath);
+    if (!fs.existsSync(absolutePath)) {
+      fs.mkdirSync(absolutePath, { recursive: true });
+    }
+  }
 
   // 1. Configuração do Workspace (se houver path ou override)
   let finalWorkspace = workspaceOverride;
@@ -77,7 +86,7 @@ export async function createAgent({
         [WORKSPACE_TOOLS.SEARCH.INDEX]: { name: 'index_workspace' },
       },
     });
-    
+
     await finalWorkspace.init();
   }
 
@@ -95,7 +104,7 @@ export async function createAgent({
       }),
       embedder: finalEmbedder,
       options: {
-        lastMessages: 10,
+        lastMessages: Number.MAX_SAFE_INTEGER, // Mantém todo o histórico até que o OM comprima
         semanticRecall: {
           topK: 3,
           messageRange: 2,
@@ -105,7 +114,7 @@ export async function createAgent({
         },
         observationalMemory: {
           enabled: true,
-          model: model, // Pass model directly as it matches AgentConfig['model']
+          model: model,
         },
       },
     });
@@ -127,6 +136,70 @@ export async function createAgent({
   });
 
   return agent;
+}
+
+export interface ExecuteCycleParams {
+  agent: Agent;
+  primaryThreadId: string;
+  userPrompt: string;
+  resourceId?: string;
+}
+
+/**
+ * Executa um ciclo autônomo garantindo que apenas o par Request/Response
+ * seja persistido na Thread Primária, evitando poluição de logs de iteração.
+ */
+export async function executeAutonomousCycle({
+  agent,
+  primaryThreadId,
+  userPrompt,
+  resourceId = 'default-resource',
+}: ExecuteCycleParams) {
+  // Para a Fase 1, usamos uma thread temporária para a execução das ferramentas
+  // Assim a Primary Thread não recebe as tool-calls/results automaticamente
+  const tempThreadId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  const result = await agent.generate(userPrompt, {
+    memory: {
+      resource: resourceId,
+      thread: tempThreadId,
+    },
+  });
+
+  // Consolidação na Thread Primária
+  const memory = await agent.getMemory();
+  if (memory) {
+    const messages: MastraDBMessage[] = [
+      {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: {
+          format: 2, // V2 format required by MastraDBMessage
+          parts: [{ type: 'text', text: userPrompt }],
+        },
+        threadId: primaryThreadId,
+        resourceId,
+        createdAt: new Date(),
+        type: 'text',
+      },
+      {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: {
+          format: 2,
+          parts: [{ type: 'text', text: result.text }],
+        },
+        threadId: primaryThreadId,
+        resourceId,
+        createdAt: new Date(),
+        type: 'text',
+      },
+    ];
+
+    await memory.saveMessages({ messages });
+  }
+
+  return result;
 }
 
 export * from './tools/market-research';

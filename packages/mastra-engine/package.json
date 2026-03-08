@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "example:basic": "ts-node examples/basic-agent.ts"
+    "example:basic": "tsx examples/basic-agent.ts"
   },
   "dependencies": {
     "@mastra/core": "^1.10.0",
