@@ -1,3 +1,5 @@
+import { createTool } from '@mastra/core/tools';
+import { createGraphRAGTool } from '@mastra/rag';
 import { MastraDBMessage, MastraMessagePart } from '@mastra/core/agent';
 import { ProcessInputStepArgs, Processor } from '@mastra/core/processors';
 import { Workspace } from '@mastra/core/workspace';
@@ -41,13 +43,11 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
     const parts = message.content.parts || [];
     let query = '';
 
-    // Prioridade 1: Conteúdo de Texto (User ou Assistant reasoning)
     const textParts = parts.filter((p): p is TextPart => p.type === 'text');
     if (textParts.length > 0) {
       query += textParts.map(p => p.text).join(' ');
     }
 
-    // Prioridade 2: Argumentos de Tool Calls (Assistant chamando ferramenta)
     const toolCallParts = parts.filter((p): p is ToolCallPart => p.type === 'tool-call');
     if (toolCallParts.length > 0) {
       query += ' ' + toolCallParts.map(p => 
@@ -55,7 +55,6 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
       ).join(' ');
     }
 
-    // Prioridade 3: Resultados de Ferramentas (Role tool)
     const toolResultParts = parts.filter((p): p is ToolResultPart => p.type === 'tool-result');
     if (toolResultParts.length > 0) {
       query += ' ' + toolResultParts.map(p => 
@@ -83,7 +82,6 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
       return allMessages;
     }
 
-    // Agora extraímos contexto de QUALQUER tipo de mensagem (User, Assistant/ToolCall, ToolResult)
     const queryText = this.extractQueryContext(lastMessage);
 
     if (!queryText) {
@@ -93,16 +91,14 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
     const threadId = messageList.serialize().memoryInfo?.threadId;
     const resourceId = messageList.serialize().memoryInfo?.resourceId;
 
-    console.log(`[HybridRecall] Querying context for step (role=${lastMessage.role}): "${queryText.slice(0, 50)}..."`);
-
-    // 1. Semantic Message Recall (Mensagens Passadas)
+    // 1. Semantic Message Recall
     let messageContext = '';
     try {
       const recallResult = await this.memoryInstance.recall({
         threadId: threadId || '',
         resourceId,
         vectorSearchString: queryText,
-        perPage: 3, // Pegamos os 3 trechos mais relevantes
+        perPage: 3,
       });
       
       if (recallResult.messages.length > 0) {
@@ -114,7 +110,7 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
       console.error('[HybridRecall] Message recall failed:', e);
     }
 
-    // 2. Workspace Search (Arquivos Locais)
+    // 2. Workspace Search
     let workspaceContext = '';
     try {
       const searchResults = await this.workspace.search(queryText, {
@@ -128,19 +124,36 @@ export class HybridRecallProcessor implements Processor<'hybrid-recall'> {
           .join('\n---\n');
       }
     } catch (e) {
-      console.warn('[HybridRecall] Workspace search failed (index might be empty):', e);
+      console.warn('[HybridRecall] Workspace search failed:', e);
     }
 
-    // 3. GraphRAG Facts (Placeholder para Fase 6)
-    const graphContext = 'No semantic relations found in graph yet (Phase 6 pending).';
+    // 3. GraphRAG Recall (Fase 6)
+    let graphContext = '';
+    if (this.memoryInstance.vector) {
+        try {
+            const graphTool = createGraphRAGTool({
+                vectorStore: this.memoryInstance.vector,
+                indexName: 'knowledge_index',
+                // @ts-ignore - Compatibility with internal embedder
+                model: (this.memoryInstance as any).embedder,
+                graphOptions: {
+                    threshold: 0.7,
+                    randomWalkSteps: 50
+                }
+            });
+
+            const result = await (graphTool as any).execute({ queryText });
+            if (result && result.text) {
+                graphContext = result.text;
+            }
+        } catch (e) {
+            console.error('[HybridRecall] GraphRAG recall failed:', e);
+        }
+    }
 
     // 4. Injeção do Bloco de Memória
     const memoryBlock = `
 <context_injection>
-  <step_context role="${lastMessage.role}" type="${lastMessage.type}">
-    Query derived from: ${queryText.slice(0, 100)}...
-  </step_context>
-
   <past_conversations_recall>
 ${messageContext || 'No relevant past messages found.'}
   </past_conversations_recall>
@@ -150,11 +163,10 @@ ${workspaceContext || 'No relevant workspace files found.'}
   </workspace_files_search>
   
   <graph_semantic_relations>
-${graphContext}
+${graphContext || 'No semantic relations found.'}
   </graph_semantic_relations>
 </context_injection>`;
 
-    // Criamos a mensagem de sistema para injeção
     const systemInjection: MastraDBMessage = {
       id: `recall-${Date.now()}`,
       role: 'system',
@@ -167,7 +179,6 @@ ${graphContext}
       }
     };
 
-    // Injetamos a memória antes da última mensagem para dar contexto ao LLM sobre o passo atual
     const newMessages = [...allMessages];
     newMessages.splice(newMessages.length - 1, 0, systemInjection);
 

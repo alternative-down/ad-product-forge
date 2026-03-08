@@ -7,6 +7,7 @@ import { ObservationalMemory } from '@mastra/memory/processors';
 import { SharedMemoryConfig } from '@mastra/core/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
+import { GraphIntegrator } from './graph/integrator';
 import path from 'path';
 import fs from 'fs';
 
@@ -150,6 +151,22 @@ class EngineAgent<
       resourceId,
     });
 
+    // Ingestão no GraphRAG (Fase 6)
+    const observations = await this.omProcessor.getObservations(this.primaryThreadId, resourceId);
+    if (observations && this.memoryInstance.vector) {
+      const graphIntegrator = new GraphIntegrator({
+        vectorStore: this.memoryInstance.vector,
+        // @ts-ignore - Accessing protected embedder or ensuring compatibility
+        embedder: (this.memoryInstance as any).embedder,
+      });
+      
+      await graphIntegrator.ingestReflection(observations, {
+        threadId: this.primaryThreadId,
+        type: 'observational_memory',
+        updatedAt: new Date().toISOString()
+      });
+    }
+
     return result;
   }
 }
@@ -270,7 +287,7 @@ export async function createAgent({
     omProcessor: omProcessor,
     tools: additionalTools,
     agents,
-    inputProcessors: [omProcessor, hybridRecall], // Adicionado Hybrid Recall
+    inputProcessors: [omProcessor, hybridRecall],
     outputProcessors: [omProcessor],
     defaultOptions: {
       maxSteps,
@@ -281,4 +298,5 @@ export async function createAgent({
 }
 
 export * from './tools/market-research';
+export * from './graph/integrator';
 export * from './processors/hybrid-recall';
