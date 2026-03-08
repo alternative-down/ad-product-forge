@@ -1,63 +1,74 @@
-# Design de Contexto: Memória de Dois Níveis (V3 - Detalhado)
+# Design de Contexto: Memória de Dois Níveis (V4 - GraphRAG Ingestion)
 
-Este documento descreve a especificação técnica da gestão de contexto no motor **Mastra Engine**, focada em isolamento de execução, persistência estruturada e integração com GraphRAG.
+Este documento detalha como o **Mastra Engine** popula o GraphRAG com dados provenientes de múltiplas fontes (OM, Workspace e Mensagens).
 
-## 1. Arquitetura de Contexto (O Modelo Mental)
+## 1. Estratégia de Ingestão Unificada
 
-O sistema opera com uma separação clara entre a **Identidade** (História Consolidada) e a **Execução** (Trabalho Transiente).
+O GraphRAG nativo do Mastra requer um índice vetorial rico para construir as relações. Utilizaremos o índice `knowledge_index` no `LibSQLVector` como a base de conhecimento central ("Cérebro") do agente.
 
-### Nível 1: Thread Primária (Log de Eventos Limpo)
-- **ID:** `primary_${agent.id}`
-- **Papel:** Representa a memória de longo prazo e a continuidade da personalidade do agente.
-- **Estrutura:** Mantém apenas o par inicial `User Request` e a resposta final `Agent Result`.
-- **Mecânica de Memória:** O **Observational Memory (OM)** atua aqui. Ele observa as mensagens salvas e as substitui por resumos densos (Observações e Reflexões) assim que os limites de tokens são atingidos.
+### 1.1 Fontes de Dados
 
-### Nível 2: Thread de Execução (Transient Runtime)
-- **ID:** `exec_${agent.id}_${Date.now()}`
-- **Papel:** Workspace volátil onde o agente "pensa", chama ferramentas e comete erros.
-- **Herança:** Criada via `cloneThread()` a partir da Thread Primária no início de cada ciclo. Isso garante que o agente comece a tarefa sabendo tudo o que foi consolidado anteriormente (via herança de OM e WM).
-- **Mecânica de Memória:** 
-    - **Working Memory (WM):** Estado mutável para guiar a tarefa atual. É copiado durante a clonagem.
-    - **Hybrid Recall Processor:** Injeta contexto dinâmico a cada passo do loop (`processInputStep`).
+| Fonte | Momento da Ingestão | Descrição |
+| :--- | :--- | :--- |
+| **OM Reflections** | Pós-Ciclo de Geração | Toda reflexão gerada pelo OM (seja na Primary ou na ExecThread) é capturada, chunkada e indexada. |
+| **Workspace Files** | Inicialização / Update | Arquivos do diretório `./workspace` são processados pelo `MDocument` e enviados ao `knowledge_index`. |
+| **Consolidated Messages** | Pós-Ciclo de Geração | O par Request/Response final da Thread Primária é indexado para recall semântico imediato via grafo. |
 
 ---
 
-## 2. Implementação Técnica
+## 2. Fluxo de Reflexões (As duas Threads?)
 
-### 2.1 Orquestrador (`executeAutonomousCycle`)
-A função gerencia a transição e sincronização entre os níveis:
+**Sim.** Embora a Thread Primária seja o log oficial, tarefas muito longas podem disparar reflexões (compressão) dentro da Thread de Execução (Nível 2).
 
-1.  **Clone:** `memory.cloneThread({ source: primaryId, newId: execId })`. Herda observações e o estado atual do WM.
-2.  **Generate:** `agent.generate()` na `execId`. O agente trabalha livremente com ferramentas.
-3.  **Consolidação:** Após o sucesso, salvamos manualmente o par Request/Response na `primaryId` via `memory.saveMessages()`.
-4.  **Sync WM:** Extraímos o WM final da `execId` (`memory.getWorkingMemory`) e atualizamos a `primaryId` (`memory.updateWorkingMemory`). Isso garante que aprendizados estruturados ("O usuário prefere X") persistam.
-5.  **Manutenção OM:** Disparamos `om.observe({ threadId: primaryId })`. O OM processará as novas mensagens e comprimirá o histórico se necessário.
+- **Thread de Execução:** Captura o "como" a tarefa foi feita (detalhes técnicos, erros superados).
+- **Thread Primária:** Captura o "o que" foi feito (resultado final e intenção do usuário).
 
-### 2.2 Hybrid Recall Processor
-Ativo apenas no Nível 2, este processador consulta:
-- `memory.recall()`: Busca semântica em mensagens passadas.
-- **Neo4j (GraphRAG):** Recupera fatos e relações do grafo de conhecimento.
-- **Workspace Search:** Busca híbrida nos arquivos locais.
-
-### 2.3 Integração GraphRAG (Neo4j)
-O grafo é alimentado pelas **Reflexões** geradas pelo OM na Thread Primária.
-- **Hook:** Usaremos o hook `onReflectionEnd` no `ObservationalMemory`.
-- **Fluxo:** Reflection Gerada -> Agente Extrator -> Ingestão Neo4j (Entidades/Relações).
+O orquestrador agora verifica e ingere observações de **ambas** as threads ao final de cada ciclo.
 
 ---
 
-## 3. Configuração de Identificadores
+## 3. Implementação Técnica da Ingestão
 
-Tudo é centralizado no `agent.id`:
-- **DB:** `agent_${agent.id}.db`
-- **Threads:** `primary_${agent.id}` e `exec_${agent.id}_...`
-- **Workspace:** `workspace_${agent.id}/`
+### 3.1 Componente `GraphIntegrator`
+O integrador agora possui métodos para diferentes tipos de dados:
 
-## 4. Estado da Implementação
+```typescript
+export class GraphIntegrator {
+  // Ingestão de blocos de texto (Reflexões/Mensagens)
+  async ingestText(text: string, metadata: any);
+  
+  // Ingestão recursiva de arquivos do Workspace
+  async ingestWorkspace(workspace: Workspace);
+}
+```
 
-- [x] **Fase 1:** Fundação do orquestrador básica.
-- [x] **Fase 2:** Ciclo transiente com clonagem (`cloneThread`) e persistência de threads de execução.
-- [x] **Fase 3:** Sincronização manual de Working Memory entre threads.
-- [x] **Fase 4:** Manutenção programática do OM (`om.observe`) integrada ao orquestrador.
-- [ ] **Fase 5:** Implementação do `HybridRecallProcessor` (Mensagens + Workspace + GraphRAG).
-- [ ] **Fase 6:** Conexão Neo4j e hook de ingestão automática via OM.
+### 3.2 Ciclo de Vida no `EngineAgent`
+
+```typescript
+override async generate(...) {
+  // ... execução ...
+  
+  // 1. Ingestão da Thread de Execução (Transient Knowledge)
+  const execObs = await this.omProcessor.getObservations(execThreadId);
+  await this.integrator.ingestText(execObs, { scope: 'execution' });
+
+  // 2. Consolidação e Ingestão da Primary Thread (Identity Knowledge)
+  await this.omProcessor.observe({ threadId: primaryId });
+  const primaryObs = await this.omProcessor.getObservations(primaryId);
+  await this.integrator.ingestText(primaryObs, { scope: 'primary' });
+}
+```
+
+---
+
+## 4. Diferença entre Store e Graph
+
+- **Store (LibSQL DB):** Armazena as mensagens brutas para o `lastMessages` e o estado exato do `WorkingMemory`.
+- **Graph Index (LibSQL Vector):** Armazena as "partículas" de conhecimento (chunks) que o Mastra conecta via similaridade para o GraphRAG.
+
+A busca híbrida no `HybridRecallProcessor` agora consulta o `knowledge_index` usando a ferramenta de GraphRAG, permitindo que o agente "navegue" entre uma reflexão de 3 dias atrás e um arquivo de configuração recém-criado.
+
+## 5. Próximos Passos
+- [ ] Atualizar `GraphIntegrator` com suporte a Workspace e Dedeplicação básica.
+- [ ] Implementar ingestão dupla (Primary + Exec) no `EngineAgent`.
+- [ ] Validar se o `HybridRecallProcessor` consegue relacionar dados das duas fontes.

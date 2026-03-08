@@ -43,12 +43,19 @@ class EngineAgent<
   private memoryInstance: Memory;
   private omProcessor: ObservationalMemory;
   private primaryThreadId: string;
+  private integrator: GraphIntegrator;
 
   constructor(config: AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & { memoryInstance: Memory; omProcessor: ObservationalMemory }) {
     super(config);
     this.memoryInstance = config.memoryInstance;
     this.omProcessor = config.omProcessor;
     this.primaryThreadId = `primary_${this.id}`;
+    
+    this.integrator = new GraphIntegrator({
+      vectorStore: this.memoryInstance.vector as any,
+      // Usamos o fastembed importado diretamente para garantir que o método .doEmbed exista
+      embedder: fastembed,
+    });
   }
 
   // Sobrecarga 1: Assinatura padrão
@@ -90,7 +97,7 @@ class EngineAgent<
       title: `Execution: ${JSON.stringify(messages).slice(0, 30)}...`,
     });
 
-    // 3. Execução Real na thread clonada
+    // 3. Execução Real (Chama o generate original na thread clonada)
     const result = await super.generate(messages, {
       ...options,
       memory: {
@@ -145,27 +152,30 @@ class EngineAgent<
       });
     }
 
-    // 6. Manutenção Manual do OM na Thread Primária
+    // 6. Ingestão de Conhecimento no GraphRAG (Fase 6)
+    
+    // Ingestão 6.1: Observações da Thread de Execução
+    const execObs = await this.omProcessor.getObservations(execThread.id, resourceId);
+    if (execObs) {
+      await this.integrator.ingestText(execObs, { source: 'execution_reflection', threadId: execThread.id });
+    }
+
+    // Ingestão 6.2: Manutenção e Observações da Thread Primária
     await this.omProcessor.observe({
       threadId: this.primaryThreadId,
       resourceId,
     });
 
-    // Ingestão no GraphRAG (Fase 6)
-    const observations = await this.omProcessor.getObservations(this.primaryThreadId, resourceId);
-    if (observations && this.memoryInstance.vector) {
-      const graphIntegrator = new GraphIntegrator({
-        vectorStore: this.memoryInstance.vector,
-        // @ts-ignore - Accessing protected embedder or ensuring compatibility
-        embedder: (this.memoryInstance as any).embedder,
-      });
-      
-      await graphIntegrator.ingestReflection(observations, {
-        threadId: this.primaryThreadId,
-        type: 'observational_memory',
-        updatedAt: new Date().toISOString()
-      });
+    const primaryObs = await this.omProcessor.getObservations(this.primaryThreadId, resourceId);
+    if (primaryObs) {
+      await this.integrator.ingestText(primaryObs, { source: 'primary_reflection', threadId: this.primaryThreadId });
     }
+
+    // Ingestão 6.3: O par final consolidado
+    await this.integrator.ingestText(`User Request: ${userPrompt}\nAgent Response: ${result.text}`, { 
+      source: 'consolidated_interaction',
+      threadId: this.primaryThreadId 
+    });
 
     return result;
   }
@@ -204,7 +214,7 @@ export async function createAgent({
 
   const omProcessor = new ObservationalMemory({
     storage: storage.stores.memory,
-    model: model as any,
+    model: model,
     scope: 'thread',
     observation: {
       messageTokens: 500,
@@ -218,7 +228,7 @@ export async function createAgent({
   let finalWorkspace = workspaceOverride;
   if (!finalWorkspace) {
     const workspaceEmbedder = async (text: string): Promise<number[]> => {
-      const result = await fastembed.embed({ values: [text] });
+      const result = await (fastembed as any).doEmbed({ values: [text] });
       return result.embeddings[0] || [];
     };
 
@@ -269,13 +279,20 @@ export async function createAgent({
     });
   }
 
-  // 4. Configuração do Hybrid Recall Processor
+  // 4. Ingestão Inicial do Workspace no Grafo
+  const initialIntegrator = new GraphIntegrator({
+    vectorStore: finalMemory.vector as any,
+    embedder: fastembed,
+  });
+  await initialIntegrator.ingestWorkspace(finalWorkspace);
+
+  // 5. Configuração do Hybrid Recall Processor
   const hybridRecall = new HybridRecallProcessor({
     memory: finalMemory,
     workspace: finalWorkspace
   });
 
-  // 5. Criação do EngineAgent
+  // 6. Criação do EngineAgent
   const agent = new EngineAgent({
     id,
     name,
