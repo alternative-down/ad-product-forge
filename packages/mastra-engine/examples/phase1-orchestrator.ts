@@ -17,33 +17,37 @@ async function main() {
 
   const modelString = 'openrouter/arcee-ai/trinity-large-preview:free';
 
+  // O Agente agora centraliza os identificadores através do seu ID
   const agent = await createAgent({
-    id: 'test-agent',
-    name: 'Test Agent',
+    id: 'orion',
+    name: 'Orion Agent',
     instructions: 'You are a helpful assistant.',
     model: modelString,
-    workspacePath: 'test_workspace',
+    workspacePath: 'workspace_orion', // Opcional, mas mantido para organização local
   });
 
-  const primaryThreadId = `test-primary-${Date.now()}`;
+  console.log(`🚀 Starting Autonomous Cycle Test for Agent: ${agent.id}`);
 
-  console.log(`🚀 Running Phase 1 Orchestrator Test...`);
+  try {
+    const result = await executeAutonomousCycle({
+      agent,
+      userPrompt: "Olá! Grave o texto 'Identificadores Derivados' num arquivo chamado 'ids.txt'.",
+    });
+    
+    console.log(`🤖 Agent response: ${result.text}`);
+    
+    console.log("\n--- Second turn test ---");
+    const result2 = await executeAutonomousCycle({
+      agent,
+      userPrompt: "O que você acabou de fazer?",
+    });
+    
+    console.log(`🤖 Agent response: ${result2.text}`);
 
-  const result = await executeAutonomousCycle({
-    agent,
-    primaryThreadId,
-    userPrompt: "Olá! Grave o texto 'Fase 1 OK' num arquivo chamado 'status.txt'.",
-  });
-
-  console.log(`🤖 Agent response: ${result.text}`);
-
-  const result2 = await executeAutonomousCycle({
-    agent,
-    primaryThreadId,
-    userPrompt: "O que você gravou no arquivo?",
-  });
-
-  console.log(`🤖 Agent response: ${result2.text}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error during autonomous cycle execution:', errorMessage);
+  }
 }
 
 main().catch(console.error);

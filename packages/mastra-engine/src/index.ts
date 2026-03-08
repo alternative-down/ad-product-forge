@@ -37,21 +37,20 @@ export async function createAgent({
   maxSteps = 1000,
 }: CreateAgentParams): Promise<Agent> {
   const finalEmbedder = embedder;
-  const dbPath = workspacePath ? `file:${path.join(workspacePath, 'agent.db')}` : 'file:agent.db';
+  
+  // Derivando caminhos e nomes do Agent ID
+  const baseDir = workspacePath || `workspace_${id}`;
+  const absolutePath = path.isAbsolute(baseDir) ? baseDir : path.join(process.cwd(), baseDir);
+  const dbUrl = `file:${path.join(absolutePath, `agent_${id}.db`)}`;
 
-  // Ensure workspace directory exists if provided
-  if (workspacePath) {
-    const absolutePath = path.isAbsolute(workspacePath) ? workspacePath : path.join(process.cwd(), workspacePath);
-    if (!fs.existsSync(absolutePath)) {
-      fs.mkdirSync(absolutePath, { recursive: true });
-    }
+  // Ensure workspace directory exists
+  if (!fs.existsSync(absolutePath)) {
+    fs.mkdirSync(absolutePath, { recursive: true });
   }
 
   // 1. Configuração do Workspace (se houver path ou override)
   let finalWorkspace = workspaceOverride;
-  if (!finalWorkspace && workspacePath) {
-    const absolutePath = path.isAbsolute(workspacePath) ? workspacePath : path.join(process.cwd(), workspacePath);
-
+  if (!finalWorkspace) {
     finalWorkspace = new Workspace({
       filesystem: new LocalFilesystem({
         basePath: absolutePath,
@@ -62,7 +61,7 @@ export async function createAgent({
       bm25: true,
       vectorStore: new LibSQLVector({
         id: `${id}-workspace-vector`,
-        url: `file:${path.join(absolutePath, 'workspace.db')}`,
+        url: `file:${path.join(absolutePath, `workspace_${id}.db`)}`,
       }),
       embedder: finalEmbedder,
       skills: ['/skills'],
@@ -96,15 +95,15 @@ export async function createAgent({
     finalMemory = new Memory({
       storage: new LibSQLStore({
         id: `${id}-storage`,
-        url: dbPath,
+        url: dbUrl,
       }),
       vector: new LibSQLVector({
         id: `${id}-vector`,
-        url: dbPath,
+        url: dbUrl,
       }),
       embedder: finalEmbedder,
       options: {
-        lastMessages: Number.MAX_SAFE_INTEGER, // Mantém todo o histórico até que o OM comprima
+        lastMessages: Number.MAX_SAFE_INTEGER,
         semanticRecall: {
           topK: 3,
           messageRange: 2,
@@ -140,7 +139,6 @@ export async function createAgent({
 
 export interface ExecuteCycleParams {
   agent: Agent;
-  primaryThreadId: string;
   userPrompt: string;
   resourceId?: string;
 }
@@ -151,7 +149,6 @@ export interface ExecuteCycleParams {
  */
 export async function executeAutonomousCycle({
   agent,
-  primaryThreadId,
   userPrompt,
   resourceId = 'default-resource',
 }: ExecuteCycleParams) {
@@ -160,33 +157,31 @@ export async function executeAutonomousCycle({
     throw new Error('Agent memory is not initialized');
   }
 
+  // Identificadores derivados do Agent ID
+  const primaryThreadId = `primary_${agent.id}`;
+
   // Ensure the primary thread exists before cloning
   const existingThread = await memory.getThreadById({ threadId: primaryThreadId });
   if (!existingThread) {
-    await memory.saveThread({
-      thread: {
-        id: primaryThreadId,
-        title: 'Primary Thread', // Title is mandatory in LibSQL store
-        resourceId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        metadata: {},
-      }
+    await memory.createThread({
+      threadId: primaryThreadId,
+      resourceId,
+      title: `Primary Thread for ${agent.name}`,
     });
   }
 
   // 1. Setup do Nível 2 (Transient)
-  // Criamos uma thread de execução isolada (Nível 2) clonando o estado atual da thread primária.
-  // Isso herda todo o histórico comprimido (OM) e o estado atual do Working Memory.
-  const tempThreadId = `exec-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  // ID da thread de execução baseado no Agent ID e timestamp
+  const tempThreadId = `exec_${agent.id}_${Date.now()}`;
+  
   const { thread: execThread } = await memory.cloneThread({
     sourceThreadId: primaryThreadId,
     newThreadId: tempThreadId,
     resourceId,
-    title: `Execution Thread: ${primaryThreadId}`,
+    title: `Execution: ${userPrompt.slice(0, 30)}...`,
   });
 
-  console.log(`[Engine] Created execution thread: ${execThread.id} (Cloned from ${primaryThreadId})`);
+  console.log(`[Engine] Running execution on thread: ${execThread.id}`);
 
   // 2. Execução da Tarefa no Nível 2
   const result = await agent.generate(userPrompt, {
@@ -197,10 +192,9 @@ export async function executeAutonomousCycle({
   });
 
   // 3. Consolidação no Nível 1 (Primary)
-  // Salvamos apenas o par Request (User) e Response (Final Assistant) na thread principal.
   const consolidatedMessages: MastraDBMessage[] = [
     {
-      id: `user-${Date.now()}-cons`,
+      id: `user_${Date.now()}`,
       role: 'user',
       content: {
         format: 2,
@@ -212,7 +206,7 @@ export async function executeAutonomousCycle({
       type: 'text',
     },
     {
-      id: `assistant-${Date.now()}-cons`,
+      id: `assistant_${Date.now()}`,
       role: 'assistant',
       content: {
         format: 2,
@@ -226,12 +220,9 @@ export async function executeAutonomousCycle({
   ];
 
   await memory.saveMessages({ messages: consolidatedMessages });
-  console.log(`[Engine] Consolidated Request/Response to primary thread: ${primaryThreadId}`);
+  console.log(`[Engine] Interaction consolidated to: ${primaryThreadId}`);
 
-  // 4. Cleanup (Remover Thread Transiente)
-  // Deletamos a thread de execução para não poluir o banco de dados com tool-calls e iterações.
-  await memory.deleteThread(execThread.id);
-  console.log(`[Engine] Cleaned up execution thread: ${execThread.id}`);
+  // Não deletamos a Thread 2 (conforme solicitado), mantendo o histórico de execução no DB.
 
   return result;
 }
