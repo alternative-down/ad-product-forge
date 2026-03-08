@@ -110,6 +110,7 @@ export async function createAgent({
         },
         workingMemory: {
           enabled: true,
+          scope: 'thread', // Isolado por thread para permitir a sincronização manual entre elas
         },
         observationalMemory: {
           enabled: true,
@@ -146,6 +147,7 @@ export interface ExecuteCycleParams {
 /**
  * Executa um ciclo autônomo garantindo que apenas o par Request/Response
  * seja persistido na Thread Primária, enquanto a execução real ocorre em uma thread isolada (clonada).
+ * Sincroniza o Working Memory final da execução de volta para a Thread Primária.
  */
 export async function executeAutonomousCycle({
   agent,
@@ -171,7 +173,6 @@ export async function executeAutonomousCycle({
   }
 
   // 1. Setup do Nível 2 (Transient)
-  // ID da thread de execução baseado no Agent ID e timestamp
   const tempThreadId = `exec_${agent.id}_${Date.now()}`;
   
   const { thread: execThread } = await memory.cloneThread({
@@ -220,9 +221,24 @@ export async function executeAutonomousCycle({
   ];
 
   await memory.saveMessages({ messages: consolidatedMessages });
-  console.log(`[Engine] Interaction consolidated to: ${primaryThreadId}`);
+  
+  // 4. Sincronização de Estado (Working Memory)
+  // Extraímos o WM final da thread de execução e atualizamos a thread primária
+  const finalWM = await memory.getWorkingMemory({ 
+    threadId: execThread.id,
+    resourceId
+  });
 
-  // Não deletamos a Thread 2 (conforme solicitado), mantendo o histórico de execução no DB.
+  if (finalWM) {
+    await memory.updateWorkingMemory({
+      threadId: primaryThreadId,
+      resourceId,
+      workingMemory: finalWM
+    });
+    console.log(`[Engine] Working Memory synchronized to primary thread.`);
+  }
+
+  console.log(`[Engine] Interaction consolidated to: ${primaryThreadId}`);
 
   return result;
 }
