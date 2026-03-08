@@ -24,6 +24,113 @@ export interface CreateAgentParams {
   maxSteps?: number;
 }
 
+/**
+ * Agente customizado que implementa a arquitetura de dois níveis de contexto.
+ * Sobrescreve o método generate para gerenciar automaticamente a clonagem, 
+ * consolidação e manutenção da memória de longo prazo.
+ */
+export class EngineAgent extends Agent {
+  private memoryInstance: Memory;
+  private omProcessor: ObservationalMemory;
+  private primaryThreadId: string;
+
+  constructor(config: AgentConfig & { memoryInstance: Memory; omProcessor: ObservationalMemory }) {
+    super(config);
+    this.memoryInstance = config.memoryInstance;
+    this.omProcessor = config.omProcessor;
+    this.primaryThreadId = `primary_${this.id}`;
+  }
+
+  // Usamos as assinaturas reais da classe base via casting interno para evitar conflitos de exportação de tipos
+  override async generate(
+    messages: any,
+    options?: any
+  ): Promise<any> {
+    const resourceId = (options?.memory as any)?.resource || 'default-resource';
+    
+    // 1. Garantir que a Thread Primária existe
+    const existingThread = await this.memoryInstance.getThreadById({ threadId: this.primaryThreadId });
+    if (!existingThread) {
+      await this.memoryInstance.createThread({
+        threadId: this.primaryThreadId,
+        resourceId,
+        title: `Primary Thread for ${this.name}`,
+      });
+    }
+
+    // 2. Setup do Nível 2 (Transient) via Clonagem
+    const execThreadId = `exec_${this.id}_${Date.now()}`;
+    const { thread: execThread } = await this.memoryInstance.cloneThread({
+      sourceThreadId: this.primaryThreadId,
+      newThreadId: execThreadId,
+      resourceId,
+      title: `Execution: ${JSON.stringify(messages).slice(0, 30)}...`,
+    });
+
+    // 3. Execução Real (Chama o generate original na thread clonada)
+    const result = await super.generate(messages, {
+      ...options,
+      memory: {
+        resource: resourceId,
+        thread: execThread.id,
+      }
+    });
+
+    // 4. Consolidação na Thread Primária (Request/Response apenas)
+    const userPrompt = typeof messages === 'string' ? messages : JSON.stringify(messages);
+    const consolidatedMessages: MastraDBMessage[] = [
+      {
+        id: `user-${Date.now()}-cons`,
+        role: 'user',
+        content: {
+          format: 2,
+          parts: [{ type: 'text', text: userPrompt }],
+        },
+        threadId: this.primaryThreadId,
+        resourceId,
+        createdAt: new Date(),
+        type: 'text',
+      },
+      {
+        id: `assistant-${Date.now()}-cons`,
+        role: 'assistant',
+        content: {
+          format: 2,
+          parts: [{ type: 'text', text: result.text }],
+        },
+        threadId: this.primaryThreadId,
+        resourceId,
+        createdAt: new Date(),
+        type: 'text',
+      },
+    ];
+
+    await this.memoryInstance.saveMessages({ messages: consolidatedMessages });
+
+    // 5. Sincronização de Working Memory
+    const finalWM = await this.memoryInstance.getWorkingMemory({ 
+      threadId: execThread.id,
+      resourceId
+    });
+
+    if (finalWM) {
+      await this.memoryInstance.updateWorkingMemory({
+        threadId: this.primaryThreadId,
+        resourceId,
+        workingMemory: finalWM
+      });
+    }
+
+    // 6. Manutenção Manual do OM na Thread Primária
+    await this.omProcessor.observe({
+      threadId: this.primaryThreadId,
+      resourceId,
+    });
+
+    return result;
+  }
+}
+
 export async function createAgent({
   id,
   name,
@@ -36,7 +143,7 @@ export async function createAgent({
   workspace: workspaceOverride,
   embedder = fastembed,
   maxSteps = 1000,
-}: CreateAgentParams): Promise<Agent> {
+}: CreateAgentParams): Promise<EngineAgent> {
   const finalEmbedder = embedder;
   
   // Derivando caminhos e nomes do Agent ID
@@ -44,29 +151,39 @@ export async function createAgent({
   const absolutePath = path.isAbsolute(baseDir) ? baseDir : path.join(process.cwd(), baseDir);
   const dbUrl = `file:${path.join(absolutePath, `agent_${id}.db`)}`;
 
-  // Ensure workspace directory exists
   if (!fs.existsSync(absolutePath)) {
     fs.mkdirSync(absolutePath, { recursive: true });
   }
 
-  // 1. Configuração do Workspace (se houver path ou override)
+  // 1. Configuração de Storage e OM explicitamente
+  const storage = new LibSQLStore({
+    id: `${id}-storage`,
+    url: dbUrl,
+  });
+
+  const omProcessor = new ObservationalMemory({
+    storage: storage.stores.memory,
+    model: model as any,
+    scope: 'thread',
+    observation: {
+      messageTokens: 500,
+    },
+    reflection: {
+      observationTokens: 1000,
+    }
+  });
+
+  // 2. Configuração do Workspace
   let finalWorkspace = workspaceOverride;
   if (!finalWorkspace) {
-    // O Workspace do Mastra exige que o embedder seja uma função (text: string) => Promise<number[]>
-    // O objeto 'fastembed' do pacote @mastra/fastembed implementa a interface EmbeddingModelV3.
-    // Encapsulamos para satisfazer o tipo Embedder sem usar 'any'.
     const workspaceEmbedder = async (text: string): Promise<number[]> => {
       const result = await fastembed.embed({ values: [text] });
       return result.embeddings[0] || [];
     };
 
     finalWorkspace = new Workspace({
-      filesystem: new LocalFilesystem({
-        basePath: absolutePath,
-      }),
-      sandbox: new LocalSandbox({
-        workingDirectory: absolutePath,
-      }),
+      filesystem: new LocalFilesystem({ basePath: absolutePath }),
+      sandbox: new LocalSandbox({ workingDirectory: absolutePath }),
       bm25: true,
       vectorStore: new LibSQLVector({
         id: `${id}-workspace-vector`,
@@ -77,7 +194,6 @@ export async function createAgent({
       tools: {
         enabled: true,
         requireApproval: false,
-        // Padronização de nomes sem o prefixo mastra_
         [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { name: 'read_file' },
         [WORKSPACE_TOOLS.FILESYSTEM.WRITE_FILE]: { name: 'write_file' },
         [WORKSPACE_TOOLS.FILESYSTEM.EDIT_FILE]: { name: 'edit_file' },
@@ -94,177 +210,44 @@ export async function createAgent({
         [WORKSPACE_TOOLS.SEARCH.INDEX]: { name: 'index_workspace' },
       },
     });
-
     await finalWorkspace.init();
   }
 
-  // 2. Configuração da Memória (se não houver override)
+  // 3. Configuração da Memória
   let finalMemory = memoryOverride;
   if (!finalMemory) {
     finalMemory = new Memory({
-      storage: new LibSQLStore({
-        id: `${id}-storage`,
-        url: dbUrl,
-      }),
-      vector: new LibSQLVector({
-        id: `${id}-vector`,
-        url: dbUrl,
-      }),
-      embedder: finalEmbedder,
+      storage,
+      vector: new LibSQLVector({ id: `${id}-vector`, url: dbUrl }),
+      embedder: embedder as any,
       options: {
         lastMessages: Number.MAX_SAFE_INTEGER,
-        semanticRecall: {
-          topK: 3,
-          messageRange: 2,
-        },
-        workingMemory: {
-          enabled: true,
-          scope: 'thread',
-        },
-        observationalMemory: {
-          enabled: true,
-          model: model,
-          observation: {
-            messageTokens: 500,
-          },
-          reflection: {
-            observationTokens: 1000,
-          }
-        },
+        semanticRecall: { topK: 3, messageRange: 2 },
+        workingMemory: { enabled: true, scope: 'thread' },
       },
     });
   }
 
-  // 3. Instanciação do Agente
-  const agent = new Agent({
+  // 4. Criação do EngineAgent
+  const agent = new EngineAgent({
     id,
     name,
     instructions,
     model,
     workspace: finalWorkspace,
     memory: finalMemory,
+    memoryInstance: finalMemory,
+    omProcessor: omProcessor,
     tools: additionalTools,
     agents,
+    inputProcessors: [omProcessor],
+    outputProcessors: [omProcessor],
     defaultOptions: {
       maxSteps,
     },
   });
 
   return agent;
-}
-
-export interface ExecuteCycleParams {
-  agent: Agent;
-  userPrompt: string;
-  resourceId?: string;
-}
-
-/**
- * Executa um ciclo autônomo garantindo que apenas o par Request/Response
- * seja persistido na Thread Primária, enquanto a execução real ocorre em uma thread isolada (clonada).
- * Sincroniza o Working Memory final e dispara a manutenção do Observational Memory.
- */
-export async function executeAutonomousCycle({
-  agent,
-  userPrompt,
-  resourceId = 'default-resource',
-}: ExecuteCycleParams) {
-  const memory = await agent.getMemory();
-  if (!memory) {
-    throw new Error('Agent memory is not initialized');
-  }
-
-  // Identificadores derivados do Agent ID
-  const primaryThreadId = `primary_${agent.id}`;
-
-  // Ensure the primary thread exists before cloning
-  const existingThread = await memory.getThreadById({ threadId: primaryThreadId });
-  if (!existingThread) {
-    await memory.createThread({
-      threadId: primaryThreadId,
-      resourceId,
-      title: `Primary Thread for ${agent.name}`,
-    });
-  }
-
-  // 1. Setup do Nível 2 (Transient)
-  const tempThreadId = `exec_${agent.id}_${Date.now()}`;
-  
-  const { thread: execThread } = await memory.cloneThread({
-    sourceThreadId: primaryThreadId,
-    newThreadId: tempThreadId,
-    resourceId,
-    title: `Execution: ${userPrompt.slice(0, 30)}...`,
-  });
-
-  console.log(`[Engine] Running execution on thread: ${execThread.id}`);
-
-  // 2. Execução da Tarefa no Nível 2
-  const result = await agent.generate(userPrompt, {
-    memory: {
-      resource: resourceId,
-      thread: execThread.id,
-    },
-  });
-
-  // 3. Consolidação no Nível 1 (Primary)
-  const consolidatedMessages: MastraDBMessage[] = [
-    {
-      id: `user-${Date.now()}-cons`,
-      role: 'user',
-      content: {
-        format: 2,
-        parts: [{ type: 'text', text: userPrompt }],
-      },
-      threadId: primaryThreadId,
-      resourceId,
-      createdAt: new Date(),
-      type: 'text',
-    },
-    {
-      id: `assistant-${Date.now()}-cons`,
-      role: 'assistant',
-      content: {
-        format: 2,
-        parts: [{ type: 'text', text: result.text }],
-      },
-      threadId: primaryThreadId,
-      resourceId,
-      createdAt: new Date(),
-      type: 'text',
-    },
-  ];
-
-  await memory.saveMessages({ messages: consolidatedMessages });
-  
-  // 4. Sincronização de Estado (Working Memory)
-  const finalWM = await memory.getWorkingMemory({ 
-    threadId: execThread.id,
-    resourceId
-  });
-
-  if (finalWM) {
-    await memory.updateWorkingMemory({
-      threadId: primaryThreadId,
-      resourceId,
-      workingMemory: finalWM
-    });
-    console.log(`[Engine] Working Memory synchronized to primary thread.`);
-  }
-
-  // 5. Manutenção Programática (Observational Memory)
-  const omProcessor = await agent.resolveProcessorById('observational-memory');
-  if (omProcessor instanceof ObservationalMemory) {
-    console.log(`[Engine] Triggering manual OM maintenance on primary thread...`);
-    await omProcessor.observe({
-      threadId: primaryThreadId,
-      resourceId,
-    });
-  }
-
-  console.log(`[Engine] Interaction consolidated to: ${primaryThreadId}`);
-
-  return result;
 }
 
 export * from './tools/market-research';
