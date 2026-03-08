@@ -1,5 +1,6 @@
-import { Agent, ToolsInput, MastraDBMessage } from '@mastra/core/agent';
-import { AgentConfig } from '@mastra/core/agent';
+import { Agent, AgentConfig, ToolsInput, MastraDBMessage, AgentExecutionOptions, AgentExecutionOptionsBase, StructuredOutputOptions } from '@mastra/core/agent';
+import { MessageListInput } from '@mastra/core/agent/message-list';
+import { FullOutput } from '@mastra/core/stream';
 import { Workspace, LocalFilesystem, LocalSandbox, WORKSPACE_TOOLS } from '@mastra/core/workspace';
 import { Memory } from '@mastra/memory';
 import { ObservationalMemory } from '@mastra/memory/processors';
@@ -29,24 +30,42 @@ export interface CreateAgentParams {
  * Sobrescreve o método generate para gerenciar automaticamente a clonagem, 
  * consolidação e manutenção da memória de longo prazo.
  */
-export class EngineAgent extends Agent {
+class EngineAgent<
+  TAgentId extends string = string,
+  TTools extends ToolsInput = ToolsInput,
+  TOutput = undefined,
+  TRequestContext extends Record<string, any> | unknown = unknown,
+> extends Agent<TAgentId, TTools, TOutput, TRequestContext> {
   private memoryInstance: Memory;
   private omProcessor: ObservationalMemory;
   private primaryThreadId: string;
 
-  constructor(config: AgentConfig & { memoryInstance: Memory; omProcessor: ObservationalMemory }) {
+  constructor(config: AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & { memoryInstance: Memory; omProcessor: ObservationalMemory }) {
     super(config);
     this.memoryInstance = config.memoryInstance;
     this.omProcessor = config.omProcessor;
     this.primaryThreadId = `primary_${this.id}`;
   }
 
-  // Usamos as assinaturas reais da classe base via casting interno para evitar conflitos de exportação de tipos
+  // Sobrecarga 1: Assinatura padrão
+  override generate(messages: MessageListInput, options?: AgentExecutionOptions<TOutput>): Promise<FullOutput<TOutput>>;
+  
+  // Sobrecarga 2: Structured Output (OUTPUT extends {})
+  override generate<OUTPUT extends {}>(messages: MessageListInput, options: AgentExecutionOptionsBase<OUTPUT> & {
+      structuredOutput: StructuredOutputOptions<OUTPUT>;
+  }): Promise<FullOutput<OUTPUT>>;
+  
+  // Sobrecarga 3: Genérica
+  override generate<OUTPUT>(messages: MessageListInput, options?: AgentExecutionOptionsBase<any> & {
+      structuredOutput?: StructuredOutputOptions<any>;
+  }): Promise<FullOutput<OUTPUT>>;
+
+  // Implementação única que lida com todas as sobrecargas
   override async generate(
-    messages: any,
+    messages: MessageListInput,
     options?: any
   ): Promise<any> {
-    const resourceId = (options?.memory as any)?.resource || 'default-resource';
+    const resourceId = options?.memory?.resource || 'default-resource';
     
     // 1. Garantir que a Thread Primária existe
     const existingThread = await this.memoryInstance.getThreadById({ threadId: this.primaryThreadId });
@@ -67,10 +86,11 @@ export class EngineAgent extends Agent {
       title: `Execution: ${JSON.stringify(messages).slice(0, 30)}...`,
     });
 
-    // 3. Execução Real (Chama o generate original na thread clonada)
+    // 3. Execução Real na thread clonada
     const result = await super.generate(messages, {
       ...options,
       memory: {
+        ...options?.memory,
         resource: resourceId,
         thread: execThread.id,
       }
@@ -131,6 +151,10 @@ export class EngineAgent extends Agent {
   }
 }
 
+/**
+ * Factory para criar um agente Mastra com arquitetura de dois níveis de contexto.
+ * Retorna uma instância do tipo Agent (Mastra) com comportamento de EngineAgent.
+ */
 export async function createAgent({
   id,
   name,
@@ -143,10 +167,7 @@ export async function createAgent({
   workspace: workspaceOverride,
   embedder = fastembed,
   maxSteps = 1000,
-}: CreateAgentParams): Promise<EngineAgent> {
-  const finalEmbedder = embedder;
-  
-  // Derivando caminhos e nomes do Agent ID
+}: CreateAgentParams): Promise<Agent> {
   const baseDir = workspacePath || `workspace_${id}`;
   const absolutePath = path.isAbsolute(baseDir) ? baseDir : path.join(process.cwd(), baseDir);
   const dbUrl = `file:${path.join(absolutePath, `agent_${id}.db`)}`;
@@ -155,7 +176,7 @@ export async function createAgent({
     fs.mkdirSync(absolutePath, { recursive: true });
   }
 
-  // 1. Configuração de Storage e OM explicitamente
+  // 1. Configuração de Storage e OM
   const storage = new LibSQLStore({
     id: `${id}-storage`,
     url: dbUrl,
@@ -247,7 +268,7 @@ export async function createAgent({
     },
   });
 
-  return agent;
+  return agent as Agent;
 }
 
 export * from './tools/market-research';
