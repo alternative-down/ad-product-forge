@@ -52,10 +52,12 @@ export async function createAgent({
   // 1. Configuração do Workspace (se houver path ou override)
   let finalWorkspace = workspaceOverride;
   if (!finalWorkspace) {
-    // Para o Workspace, o embedder precisa ser uma função (text) => Promise<number[]>
-    const workspaceEmbedder = async (text: string) => {
-      const { embeddings } = await (fastembed as any).embed({ values: [text] });
-      return embeddings[0];
+    // O Workspace do Mastra exige que o embedder seja uma função (text: string) => Promise<number[]>
+    // O objeto 'fastembed' do pacote @mastra/fastembed implementa a interface EmbeddingModelV3.
+    // Encapsulamos para satisfazer o tipo Embedder sem usar 'any'.
+    const workspaceEmbedder = async (text: string): Promise<number[]> => {
+      const result = await fastembed.embed({ values: [text] });
+      return result.embeddings[0] || [];
     };
 
     finalWorkspace = new Workspace({
@@ -70,7 +72,7 @@ export async function createAgent({
         id: `${id}-workspace-vector`,
         url: `file:${path.join(absolutePath, `workspace_${id}.db`)}`,
       }),
-      embedder: workspaceEmbedder as any,
+      embedder: workspaceEmbedder,
       skills: ['/skills'],
       tools: {
         enabled: true,
@@ -251,8 +253,8 @@ export async function executeAutonomousCycle({
   }
 
   // 5. Manutenção Programática (Observational Memory)
-  const omProcessor = (await agent.resolveProcessorById('observational-memory')) as ObservationalMemory;
-  if (omProcessor && typeof omProcessor.observe === 'function') {
+  const omProcessor = await agent.resolveProcessorById('observational-memory');
+  if (omProcessor instanceof ObservationalMemory) {
     console.log(`[Engine] Triggering manual OM maintenance on primary thread...`);
     await omProcessor.observe({
       threadId: primaryThreadId,
