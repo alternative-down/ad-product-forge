@@ -2,6 +2,7 @@ import { Agent, ToolsInput, MastraDBMessage } from '@mastra/core/agent';
 import { AgentConfig } from '@mastra/core/agent';
 import { Workspace, LocalFilesystem, LocalSandbox, WORKSPACE_TOOLS } from '@mastra/core/workspace';
 import { Memory } from '@mastra/memory';
+import { ObservationalMemory } from '@mastra/memory/processors';
 import { SharedMemoryConfig } from '@mastra/core/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
@@ -51,6 +52,12 @@ export async function createAgent({
   // 1. Configuração do Workspace (se houver path ou override)
   let finalWorkspace = workspaceOverride;
   if (!finalWorkspace) {
+    // Para o Workspace, o embedder precisa ser uma função (text) => Promise<number[]>
+    const workspaceEmbedder = async (text: string) => {
+      const { embeddings } = await (fastembed as any).embed({ values: [text] });
+      return embeddings[0];
+    };
+
     finalWorkspace = new Workspace({
       filesystem: new LocalFilesystem({
         basePath: absolutePath,
@@ -63,7 +70,7 @@ export async function createAgent({
         id: `${id}-workspace-vector`,
         url: `file:${path.join(absolutePath, `workspace_${id}.db`)}`,
       }),
-      embedder: finalEmbedder,
+      embedder: workspaceEmbedder as any,
       skills: ['/skills'],
       tools: {
         enabled: true,
@@ -110,11 +117,17 @@ export async function createAgent({
         },
         workingMemory: {
           enabled: true,
-          scope: 'thread', // Isolado por thread para permitir a sincronização manual entre elas
+          scope: 'thread',
         },
         observationalMemory: {
           enabled: true,
           model: model,
+          observation: {
+            messageTokens: 500,
+          },
+          reflection: {
+            observationTokens: 1000,
+          }
         },
       },
     });
@@ -147,7 +160,7 @@ export interface ExecuteCycleParams {
 /**
  * Executa um ciclo autônomo garantindo que apenas o par Request/Response
  * seja persistido na Thread Primária, enquanto a execução real ocorre em uma thread isolada (clonada).
- * Sincroniza o Working Memory final da execução de volta para a Thread Primária.
+ * Sincroniza o Working Memory final e dispara a manutenção do Observational Memory.
  */
 export async function executeAutonomousCycle({
   agent,
@@ -195,7 +208,7 @@ export async function executeAutonomousCycle({
   // 3. Consolidação no Nível 1 (Primary)
   const consolidatedMessages: MastraDBMessage[] = [
     {
-      id: `user_${Date.now()}`,
+      id: `user-${Date.now()}-cons`,
       role: 'user',
       content: {
         format: 2,
@@ -207,7 +220,7 @@ export async function executeAutonomousCycle({
       type: 'text',
     },
     {
-      id: `assistant_${Date.now()}`,
+      id: `assistant-${Date.now()}-cons`,
       role: 'assistant',
       content: {
         format: 2,
@@ -223,7 +236,6 @@ export async function executeAutonomousCycle({
   await memory.saveMessages({ messages: consolidatedMessages });
   
   // 4. Sincronização de Estado (Working Memory)
-  // Extraímos o WM final da thread de execução e atualizamos a thread primária
   const finalWM = await memory.getWorkingMemory({ 
     threadId: execThread.id,
     resourceId
@@ -236,6 +248,16 @@ export async function executeAutonomousCycle({
       workingMemory: finalWM
     });
     console.log(`[Engine] Working Memory synchronized to primary thread.`);
+  }
+
+  // 5. Manutenção Programática (Observational Memory)
+  const omProcessor = (await agent.resolveProcessorById('observational-memory')) as ObservationalMemory;
+  if (omProcessor && typeof omProcessor.observe === 'function') {
+    console.log(`[Engine] Triggering manual OM maintenance on primary thread...`);
+    await omProcessor.observe({
+      threadId: primaryThreadId,
+      resourceId,
+    });
   }
 
   console.log(`[Engine] Interaction consolidated to: ${primaryThreadId}`);
