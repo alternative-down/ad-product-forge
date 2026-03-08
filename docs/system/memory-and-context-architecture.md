@@ -1,101 +1,93 @@
-# Design de Contexto: Memória de Dois Níveis (Primary vs. Execution)
+# Design de Contexto: Memória de Dois Níveis (V2)
 
-Este documento descreve a arquitetura técnica para gestão de contexto de longo prazo e execução transiente utilizando o framework Mastra.ai.
+Esta é a especificação técnica detalhada para a gestão de contexto utilizando o framework Mastra.ai, focada em threads únicas por agente e separação de preocupações entre logs de longo prazo e execução transiente.
 
-## 1. Visão Geral dos Níveis
+## 1. Arquitetura de Contexto
 
-Para manter o agente eficiente e com memória infinita, separamos o contexto em duas esferas:
+### Nível 1: Thread Primária (Log de Eventos Consolidado)
+- **Papel:** Identidade única e persistente do agente.
+- **Estrutura:** 
+    - `User Request` inicial da tarefa.
+    - `Final Agent Response` após a conclusão.
+    - **Observational Memory (OM):** Ativo para comprimir esse histórico em observações e reflexões.
+- **Funcionamento:** Esta thread não executa iterações de ferramentas. Ela serve apenas como o "diário" do agente. Novas interações são salvas manualmente no fim de cada ciclo de execução.
 
-### Nível 1: Thread Primária (Long-term Identity)
-*   **Papel:** Representa a identidade única do agente e sua história consolidada.
-*   **Conteúdo:** Apenas o par `User Request` <-> `Final Response`.
-*   **Gestão de Contexto:** **Observational Memory (OM)** ativo.
-*   **Funcionamento:** O OM observa as mensagens e, ao atingir o limite de tokens, substitui o histórico bruto por **Observações** e **Reflexões** densas. As mensagens originais permanecem no banco de dados, mas são filtradas pelo processador durante a injeção de contexto.
-
-### Nível 2: Thread de Execução (Transient Task)
-*   **Papel:** Ambiente de trabalho "sujo" onde o agente executa múltiplas iterações, tool-calls e raciocínio intermediário.
-*   **Conteúdo:** Histórico completo da tarefa, logs de ferramentas e erros.
-*   **Herança:** Criada via `cloneThread()` a partir da Primária.
-*   **Recall:** **Hybrid Recall Processor** ativo por passo (`processInputStep`), injetando dados de:
-    *   Mensagens passadas (Semantic Recall).
-    *   Base de Conhecimento (GraphRAG alimentado pelo OM).
-    *   Workspace Filesystem (Busca Híbrida).
-
----
-
-## 2. Descobertas Técnicas (Investigação do Source)
-
-Após investigar o código fonte do Mastra (`@mastra/memory`), confirmamos os seguintes comportamentos:
-
-1.  **OM e Clonagem:** O método `cloneThread()` do Mastra possui lógica explícita para clonar registros de Observational Memory. Ele usa `remapObservationalMemoryRecord` para mapear IDs de mensagens e threads antigas para os novos clones. Portanto, **o contexto do OM é preservado na thread de execução.**
-2.  **Working Memory:** O WM é persistente e é copiado durante a clonagem. Se o agente atualizar o WM na thread de execução, precisaremos sincronizar esse valor de volta para a Primária se quisermos que a mudança seja permanente.
-3.  **Gatilho do OM:** O OM é acionado principalmente pelos hooks `processInput` e `processOutputResult` dos agentes. Para que ele rode na Thread Primária (que não executa ferramentas), podemos disparar uma chamada de "manutenção" (generate de resumo) ou chamar o método de observação da memória diretamente via código.
+### Nível 2: Thread de Execução (Transient Task Runtime)
+- **Papel:** Workspace volátil para o cumprimento da tarefa.
+- **Conteúdo:** Histórico bruto da execução atual (`tool-calls`, `tool-results`, erros, raciocínios intermediários).
+- **Mecânica:** Criada via `cloneThread()` a partir da Primária.
+- **Recursos Ativos:**
+    - **Working Memory (WM):** Estado mutável para guiar a tarefa.
+    - **Hybrid Recall Processor:** Injeção de contexto por passo (`processInputStep`).
 
 ---
 
-## 3. Fluxo de Execução (Pseudo-código Válido)
+## 2. Investigação Técnica (Comportamentos do Mastra)
 
-Abaixo, a estrutura de como o orquestrador (ou Workflow) deve gerenciar esse ciclo:
+Baseado na análise do código fonte (`@mastra/memory` e `@mastra/core`):
+
+1.  **Clonagem de OM:** O método `cloneThread()` do Mastra **clona explicitamente** os registros de Observational Memory. Ele mapeia os IDs das mensagens observadas para a nova thread. Portanto, o Nível 2 herda todo o conhecimento comprimido do Nível 1.
+2.  **Working Memory:** O WM é persistente no storage. Durante a clonagem, o estado atual do WM é associado à nova thread. Alterações no WM durante a execução do Nível 2 precisam ser sincronizadas de volta para a Thread Primária no encerramento do ciclo.
+3.  **Gatilho programático do OM:** O OM pode ser acionado sem um `agent.generate`. A classe `ObservationalMemory` possui um método público `observe()`. Isso permite que a manutenção da Thread Primária seja feita de forma limpa, apenas "notificando" a memória sobre as novas mensagens salvas.
+
+---
+
+## 3. Implementação da Estratégia
+
+### A. Sincronização de Working Memory
+Como o WM é persistente, mas a thread de execução é deletada ao fim, a sincronização deve ocorrer no orquestrador:
 
 ```typescript
-async function runAutonomousTask(agent, primaryThreadId, userPrompt) {
-  const memory = await agent.getMemory();
-
-  // 1. Setup do Nível 2 (Transient)
-  // Clona a thread primária (herda OM e mensagens filtradas)
-  const { thread: execThread } = await memory.cloneThread({
-    sourceThreadId: primaryThreadId,
-    newThreadId: `exec-${Date.now()}`,
-  });
-
-  // 2. Execução com Recall Híbrido e WM
-  // O agente terá acesso ao Workspace e GraphRAG a cada passo
-  const runResult = await agent.generate(userPrompt, {
-    threadId: execThread.id,
-    memory: {
-      options: {
-        workingMemory: { enabled: true },
-        semanticRecall: true, // Para buscar mensagens no histórico da thread de execução
-      }
-    },
-    // Injeta conhecimento externo (GraphRAG + FS) por passo
-    inputProcessors: [new HybridRecallProcessor()] 
-  });
-
-  // 3. Consolidação no Nível 1 (Primary)
-  // Salvamos apenas o Input e o Output final
-  await memory.saveMessages({
-    messages: [
-      { role: 'user', content: userPrompt, threadId: primaryThreadId },
-      { role: 'assistant', content: runResult.text, threadId: primaryThreadId }
-    ]
-  });
-
-  // 4. Manutenção de Memória (Trigger OM)
-  // Fazemos uma chamada leve na Primary para forçar o OM a observar o novo par
-  // Isso gera as observações que alimentarão o GraphRAG
-  await agent.generate("Summarize latest interaction for your long-term memory.", {
+// No fim da execução:
+const finalWM = await memory.getWorkingMemory({ threadId: execThread.id });
+if (finalWM) {
+  await memory.updateWorkingMemory({
     threadId: primaryThreadId,
-    memory: { options: { observationalMemory: true } },
-    maxSteps: 1 // Execução mínima
+    workingMemory: finalWM
   });
-
-  // 5. Cleanup
-  await memory.deleteThread(execThread.id);
-
-  return runResult.text;
 }
 ```
 
+### B. Manutenção da Thread Primária (OM Manual)
+Em vez de um `generate` extra, usamos o método `observe` para processar o novo par de mensagens:
+
+```typescript
+// Após salvar as mensagens na Primary Thread:
+const omProcessor = await agent.resolveProcessorById('observational-memory');
+if (omProcessor) {
+  await omProcessor.observe({
+    threadId: primaryThreadId,
+    // Isso forçará a compressão se o limite de tokens for atingido
+  });
+}
+```
+
+### C. Hybrid Recall Processor (Mensagens + GraphRAG + FS)
+Este processador atua em cada passo do loop no Nível 2:
+
+1.  **Semantic Recall:** Busca mensagens relevantes no histórico (via `memory.recall`).
+2.  **GraphRAG Ingestion:** As **Reflexões** geradas pelo OM na Thread Primária são enviadas para o Neo4j.
+3.  **GraphRAG Query:** O processador consulta o Neo4j usando o embedding da última mensagem do usuário para recuperar relações semânticas.
+4.  **Injeção:** Consolida tudo em um bloco `<memory>` injetado no `processInputStep`.
+
 ---
 
-## 4. Integração GraphRAG
+## 4. Fluxo do Orquestrador (Pseudo-código)
 
-O **GraphRAG** será alimentado de forma assíncrona:
-*   Sempre que o OM gerar uma nova **Reflexão (Reflection)** na Thread Primária, o conteúdo dessa reflexão é enviado para o grafo Neo4j.
-*   Isso transforma o log linear de observações em uma rede de relacionamentos semânticos que o `HybridRecallProcessor` consulta a cada passo da execução.
+O fluxo ideal para garantir a separação de níveis:
 
-## 5. Próximos Passos de Implementação
-1.  Desenvolver o `HybridRecallProcessor` no pacote `@mastra-engine/core`.
-2.  Implementar a lógica de sincronização do `WorkingMemory` entre threads.
-3.  Criar o wrapper de orquestração que automatiza o ciclo `Clone -> Exec -> Sync -> OM Trigger`.
+1.  **Identificar Thread Primária** (Única por Agente).
+2.  **Clonar para Execução:** `memory.cloneThread({ source: primaryId })`.
+3.  **Rodar Tarefa (Nível 2):** `agent.generate(...)` com `HybridRecallProcessor`.
+4.  **Consolidar Resposta:** Salvar Request/Response na `primaryId`.
+5.  **Sincronizar WM:** Copiar estado final do WM da `execId` para `primaryId`.
+6.  **Manutenção OM:** Chamar `om.observe({ threadId: primaryId })`.
+7.  **Alimentar Grafo:** Se o OM gerou reflexão, indexar no Neo4j.
+8.  **Cleanup:** Deletar `execId`.
+
+---
+
+## 5. Próximos Passos
+- Implementar o `createAgent` na factory já configurando o `HybridRecallProcessor`.
+- Criar a função `executeAutonomousCycle` que encapsula a lógica de orquestração acima.
+- Integrar o driver Neo4j para o componente de GraphRAG.
