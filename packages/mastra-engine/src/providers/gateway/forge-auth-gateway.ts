@@ -1,0 +1,375 @@
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenAI } from '@ai-sdk/openai';
+import { wrapLanguageModel } from 'ai';
+import type { LanguageModelMiddleware } from 'ai';
+import { MastraModelGateway } from '@mastra/core/llm';
+import type { GatewayLanguageModel } from '@mastra/core/llm';
+
+import { forgeDebug } from '../../debug';
+import { CLAUDE_MAX_MODELS, OPENAI_CODEX_MODELS } from './model-ids';
+import { resolveAnthropicCredential, resolveOpenAICodexCredential } from '../credentials/oauth-auth';
+
+const CLAUDE_CODE_IDENTITY = "You are Claude Code, Anthropic's official CLI for Claude.";
+
+const ANTHROPIC_BETA_HEADER = [
+  'oauth-2025-04-20',
+  'claude-code-20250219',
+  'interleaved-thinking-2025-05-14',
+  'fine-grained-tool-streaming-2025-05-14',
+].join(',');
+
+const FORGE_AUTH_GATEWAY_ID = 'forge-auth';
+
+type OpenAICodexGatewayOptions = {
+  cliAuthFilePath?: string;
+  storePath?: string;
+};
+
+type ClaudeMaxGatewayOptions = {
+  authFilePath?: string;
+  setupTokenFilePath?: string;
+  storePath?: string;
+};
+
+export type ForgeAuthGatewayOptions = {
+  openaiCodex?: OpenAICodexGatewayOptions;
+  claudeMax?: ClaudeMaxGatewayOptions;
+};
+
+const codexStreamMiddleware: LanguageModelMiddleware = {
+  specificationVersion: 'v3',
+  transformParams: async ({ params }) => {
+    const existingOpenAIOptions = params.providerOptions?.openai ?? {};
+    const derivedInstructions = params.prompt
+      .filter(message => message.role === 'system')
+      .map(message => message.content.trim())
+      .filter(Boolean)
+      .join('\n\n');
+
+    return {
+      ...params,
+      providerOptions: {
+        ...params.providerOptions,
+          openai: {
+            ...existingOpenAIOptions,
+            store: existingOpenAIOptions.store ?? false,
+            instructions:
+              existingOpenAIOptions.instructions ?? (derivedInstructions || undefined),
+          },
+        },
+      };
+  },
+  wrapGenerate: async ({ doGenerate, doStream }) => {
+    const { request, response: initialResponse, stream } = await doStream();
+    type GenerateResult = Awaited<ReturnType<typeof doGenerate>>;
+    type StreamPart = Awaited<
+      ReturnType<typeof doStream>
+    >['stream'] extends ReadableStream<infer PART>
+      ? PART
+      : never;
+    type FinishPart = Extract<StreamPart, { type: 'finish' }>;
+    type StreamStartPart = Extract<StreamPart, { type: 'stream-start' }>;
+    type ContentPart = GenerateResult['content'][number];
+    type TextContentPart = Extract<ContentPart, { type: 'text' }>;
+    type ReasoningContentPart = Extract<ContentPart, { type: 'reasoning' }>;
+
+    let warnings: StreamStartPart['warnings'] = [];
+    let finishPart: FinishPart | undefined;
+    let response = initialResponse;
+    const content: GenerateResult['content'] = [];
+    const textParts = new Map<string, TextContentPart>();
+    const reasoningParts = new Map<string, ReasoningContentPart>();
+
+    for await (const part of stream) {
+      switch (part.type) {
+        case 'stream-start':
+          warnings = part.warnings;
+          break;
+        case 'response-metadata':
+          response = { ...response, ...part };
+          break;
+        case 'text-start': {
+          const textPart: TextContentPart = {
+            type: 'text',
+            text: '',
+            ...(part.providerMetadata != null ? { providerMetadata: part.providerMetadata } : {}),
+          };
+          textParts.set(part.id, textPart);
+          content.push(textPart);
+          break;
+        }
+        case 'reasoning-start': {
+          const reasoningPart: ReasoningContentPart = {
+            type: 'reasoning',
+            text: '',
+            ...(part.providerMetadata != null ? { providerMetadata: part.providerMetadata } : {}),
+          };
+          reasoningParts.set(part.id, reasoningPart);
+          content.push(reasoningPart);
+          break;
+        }
+        case 'text-end':
+        case 'reasoning-end':
+        case 'tool-input-start':
+        case 'tool-input-delta':
+        case 'tool-input-end':
+        case 'raw':
+          break;
+        case 'text-delta': {
+          const textPart = textParts.get(part.id);
+          if (!textPart) {
+            throw new Error(`Missing text part for stream id "${part.id}"`);
+          }
+          textPart.text += part.delta;
+          break;
+        }
+        case 'reasoning-delta': {
+          const reasoningPart = reasoningParts.get(part.id);
+          if (!reasoningPart) {
+            throw new Error(`Missing reasoning part for stream id "${part.id}"`);
+          }
+          reasoningPart.text += part.delta;
+          break;
+        }
+        case 'tool-call':
+        case 'tool-result':
+        case 'source':
+        case 'file':
+          content.push(part);
+          break;
+        case 'error':
+          throw part.error instanceof Error ? part.error : new Error(String(part.error));
+        case 'finish':
+          finishPart = part;
+          break;
+      }
+    }
+
+    if (!finishPart) {
+      throw new Error('OpenAI Codex stream ended without a finish part');
+    }
+
+    return {
+      request,
+      response,
+      warnings,
+      finishReason: finishPart.finishReason,
+      usage: finishPart.usage,
+      providerMetadata: finishPart.providerMetadata,
+      content,
+    };
+  },
+};
+
+const claudeCodeMiddleware: LanguageModelMiddleware = {
+  specificationVersion: 'v3',
+  transformParams: async ({ params }) => {
+    const systemMessage = {
+      role: 'system' as const,
+      content: CLAUDE_CODE_IDENTITY,
+    };
+
+    if (params.temperature) {
+      delete params.topP;
+    }
+
+    return {
+      ...params,
+      prompt: [systemMessage, ...params.prompt],
+    };
+  },
+};
+
+const promptCacheMiddleware: LanguageModelMiddleware = {
+  specificationVersion: 'v3',
+  transformParams: async ({ params }) => {
+    const prompt = [...params.prompt];
+    const cacheControl = { type: 'ephemeral' as const, ttl: '1h' as const };
+
+    const addCacheToMessage = (message: any) => {
+      if (typeof message.content === 'string') {
+        return {
+          ...message,
+          providerOptions: {
+            ...message.providerOptions,
+            anthropic: { ...message.providerOptions?.anthropic, cacheControl },
+          },
+        };
+      }
+
+      if (Array.isArray(message.content) && message.content.length > 0) {
+        const content = [...message.content];
+        const lastPart = content[content.length - 1];
+        content[content.length - 1] = {
+          ...lastPart,
+          providerOptions: {
+            ...lastPart.providerOptions,
+            anthropic: { ...lastPart.providerOptions?.anthropic, cacheControl },
+          },
+        };
+
+        return { ...message, content };
+      }
+
+      return message;
+    };
+
+    let lastSystemIndex = -1;
+    for (let index = prompt.length - 1; index >= 0; index--) {
+      if ((prompt[index] as any).role === 'system') {
+        lastSystemIndex = index;
+        break;
+      }
+    }
+
+    if (lastSystemIndex >= 0) {
+      prompt[lastSystemIndex] = addCacheToMessage(prompt[lastSystemIndex]);
+    }
+
+    const lastIndex = prompt.length - 1;
+    if (lastIndex >= 0 && lastIndex !== lastSystemIndex) {
+      prompt[lastIndex] = addCacheToMessage(prompt[lastIndex]);
+    }
+
+    return { ...params, prompt };
+  },
+};
+
+export class ForgeAuthGateway extends MastraModelGateway {
+  readonly id = FORGE_AUTH_GATEWAY_ID;
+  readonly name = 'forge-auth';
+
+  constructor(private readonly options: ForgeAuthGatewayOptions = {}) {
+    super();
+  }
+
+  async fetchProviders() {
+    return {
+      'openai-codex': {
+        name: 'OpenAI Codex OAuth',
+        models: [...OPENAI_CODEX_MODELS],
+        apiKeyEnvVar: 'FORGE_AUTH_UNUSED',
+        gateway: this.name,
+      },
+      'claude-max': {
+        name: 'Claude Max OAuth',
+        models: [...CLAUDE_MAX_MODELS],
+        apiKeyEnvVar: 'FORGE_AUTH_UNUSED',
+        gateway: this.name,
+      },
+    };
+  }
+
+  async buildUrl(routerId: string): Promise<string | undefined> {
+    if (routerId.startsWith(`${this.id}/openai-codex/`)) {
+      return 'https://chatgpt.com/backend-api/codex';
+    }
+
+    if (routerId.startsWith(`${this.id}/claude-max/`)) {
+      return 'https://api.anthropic.com/v1';
+    }
+
+    return undefined;
+  }
+
+  async getApiKey(): Promise<string> {
+    return 'oauth-placeholder';
+  }
+
+  async resolveLanguageModel({
+    modelId,
+    providerId,
+  }: {
+    modelId: string;
+    providerId: string;
+    apiKey: string;
+    headers?: Record<string, string>;
+  }): Promise<GatewayLanguageModel> {
+    switch (providerId) {
+      case 'openai-codex': {
+        const openai = createOpenAI({
+          apiKey: 'oauth-placeholder',
+          baseURL: 'https://chatgpt.com/backend-api/codex',
+          fetch: async (url, init) => {
+            const credential = await resolveOpenAICodexCredential(this.options.openaiCodex);
+            const headers = new Headers(init?.headers);
+            headers.delete('authorization');
+            headers.set('Authorization', `Bearer ${credential.access}`);
+
+            if (credential.accountId) {
+              headers.set('ChatGPT-Account-Id', credential.accountId);
+            }
+
+            forgeDebug('provider:openai-codex', 'request', {
+              url: String(url),
+              hasAccountId: Boolean(credential.accountId),
+            });
+
+            const response = await fetch(url, {
+              ...init,
+              headers,
+            });
+
+            forgeDebug('provider:openai-codex', 'response', {
+              url: String(url),
+              status: response.status,
+              ok: response.ok,
+            });
+
+            return response;
+          },
+        });
+
+        return wrapLanguageModel({
+          model: openai.responses(modelId),
+          middleware: codexStreamMiddleware,
+        });
+      }
+
+      case 'claude-max': {
+        const anthropic = createAnthropic({
+          apiKey: 'oauth-placeholder',
+          fetch: async (url, init) => {
+            const credential = await resolveAnthropicCredential(this.options.claudeMax);
+            const headers = new Headers(init?.headers);
+
+            headers.delete('x-api-key');
+            headers.delete('authorization');
+            headers.set('Authorization', `Bearer ${credential.access}`);
+            headers.set('anthropic-beta', ANTHROPIC_BETA_HEADER);
+            headers.set('anthropic-version', '2023-06-01');
+
+            forgeDebug('provider:claude-max', 'request', {
+              url: String(url),
+            });
+
+            const response = await fetch(url, {
+              ...init,
+              headers,
+            });
+
+            forgeDebug('provider:claude-max', 'response', {
+              url: String(url),
+              status: response.status,
+              ok: response.ok,
+            });
+
+            return response;
+          },
+        });
+
+        return wrapLanguageModel({
+          model: anthropic(modelId),
+          middleware: [claudeCodeMiddleware, promptCacheMiddleware],
+        });
+      }
+
+      default:
+        throw new Error(`Unsupported forge-auth provider: ${providerId}`);
+    }
+  }
+}
+
+export function buildForgeAuthRouterId(providerId: 'openai-codex' | 'claude-max', modelId: string) {
+  return `${FORGE_AUTH_GATEWAY_ID}/${providerId}/${modelId}` as const;
+}

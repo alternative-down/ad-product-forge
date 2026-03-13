@@ -10,14 +10,18 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "example:basic": "tsx examples/basic-agent.ts"
+    "example:basic": "tsx examples/basic-agent.ts",
+    "example:discord": "tsx examples/discord-bot.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.58",
+    "@ai-sdk/openai": "^3.0.41",
     "@mastra/core": "^1.11.0",
     "@mastra/fastembed": "^1.0.0",
     "@mastra/libsql": "^1.7.0",
     "@mastra/memory": "^1.6.2",
     "@mendable/firecrawl-js": "^4.15.4",
+    "discord.js": "^14.24.2",
     "dotenv": "^17.2.3",
     "zod": "^4.3.6"
   },
