@@ -15,7 +15,7 @@
   "dependencies": {
     "@mastra/core": "^1.11.0",
     "@mastra/fastembed": "^1.0.0",
-    "@mastra/libsql": "^1.6.4",
+    "@mastra/libsql": "^1.7.0",
     "@mastra/memory": "^1.6.2",
     "@mendable/firecrawl-js": "^4.15.4",
     "dotenv": "^17.2.3",
