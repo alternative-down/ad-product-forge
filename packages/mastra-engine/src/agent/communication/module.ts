@@ -5,8 +5,8 @@ import type {
   CommunicationProvider,
 } from './provider-types';
 
-export function createCommunicationModule(config: { agentId: string; wakeUp(): void }) {
-  const store = createCommunicationStore(config.agentId);
+export function createCommunicationModule(config: { agentId: string; dbUrl: string; wakeUp(): void }) {
+  const store = createCommunicationStore(config.agentId, config.dbUrl);
   const providers = new Map<string, CommunicationProvider>();
 
   async function syncProviderContacts(provider: CommunicationProvider) {
@@ -23,6 +23,48 @@ export function createCommunicationModule(config: { agentId: string; wakeUp(): v
         username: contact.username,
       });
     }
+  }
+
+  async function syncInboundContact(input: {
+    provider: string;
+    authorExternalId?: string;
+    authorDisplayName?: string;
+    authorUsername?: string;
+  }) {
+    if (!input.authorExternalId && !input.authorUsername && !input.authorDisplayName) {
+      return null;
+    }
+
+    const existingContact = await store.findContactByIdentity(
+      input.provider,
+      input.authorExternalId,
+      input.authorUsername,
+    );
+
+    if (existingContact) {
+      if (!input.authorDisplayName) {
+        return existingContact;
+      }
+
+      return store.upsertContact({
+        slug: existingContact.slug,
+        displayName: input.authorDisplayName,
+        description: existingContact.description,
+        provider: input.provider,
+        externalUserId: input.authorExternalId,
+        username: input.authorUsername,
+      });
+    }
+
+    const slug = input.authorUsername || input.authorDisplayName || input.authorExternalId || 'contact';
+
+    return store.upsertContact({
+      slug,
+      displayName: input.authorDisplayName || input.authorUsername || input.authorExternalId || slug,
+      provider: input.provider,
+      externalUserId: input.authorExternalId,
+      username: input.authorUsername,
+    });
   }
 
   async function connectProvider(provider: CommunicationProvider) {
@@ -43,11 +85,19 @@ export function createCommunicationModule(config: { agentId: string; wakeUp(): v
     }
 
     await provider.onMessage(async (message) => {
+      const contact = await syncInboundContact({
+        provider: provider.id,
+        authorExternalId: message.authorExternalId,
+        authorDisplayName: message.authorDisplayName,
+        authorUsername: message.authorUsername,
+      });
+
       await store.saveInboundMessage({
         provider: provider.id,
         providerConversationKey: message.providerConversationKey,
         providerMessageId: message.providerMessageId,
         conversationName: message.conversationName,
+        contactSlug: contact?.slug,
         authorExternalId: message.authorExternalId,
         authorDisplayName: message.authorDisplayName,
         authorUsername: message.authorUsername,
@@ -56,6 +106,7 @@ export function createCommunicationModule(config: { agentId: string; wakeUp(): v
         createdAt: message.createdAt,
         metadata: message.metadata,
       });
+
       config.wakeUp();
     });
   }
@@ -78,29 +129,53 @@ export function createCommunicationModule(config: { agentId: string; wakeUp(): v
   }
 
   async function getContactExternalId(provider: CommunicationProvider, providerId: string, contactSlug: string) {
-    const currentContact = await store.getContact(contactSlug);
-    const currentIdentity = currentContact?.accounts.find((account) => account.provider === providerId);
-
-    if (!currentIdentity) {
-      await syncProviderContacts(provider);
-    }
-
     const contact = await store.getContact(contactSlug);
     const identity = contact?.accounts.find((account) => account.provider === providerId);
 
-    return identity?.externalUserId || identity?.username || null;
+    if (identity) {
+      return identity.externalUserId || identity.username || null;
+    }
+
+    await syncProviderContacts(provider);
+
+    const syncedContact = await store.getContact(contactSlug);
+    const syncedIdentity = syncedContact?.accounts.find((account) => account.provider === providerId);
+
+    return syncedIdentity?.externalUserId || syncedIdentity?.username || null;
   }
 
   async function listContacts() {
-    return store.listContacts();
+    const contacts = await store.listContacts();
+
+    return contacts.map((contact) => ({
+      slug: contact.slug,
+      displayName: contact.displayName,
+      description: contact.description,
+    }));
   }
 
   async function getContact(slug: string) {
-    return store.getContact(slug);
+    const contact = await store.getContact(slug);
+
+    if (!contact) {
+      return null;
+    }
+
+    return {
+      slug: contact.slug,
+      displayName: contact.displayName,
+      description: contact.description,
+    };
   }
 
   async function upsertContact(input: { slug: string; displayName: string; description?: string }) {
-    return store.upsertContact(input);
+    const contact = await store.upsertContact(input);
+
+    return {
+      slug: contact.slug,
+      displayName: contact.displayName,
+      description: contact.description,
+    };
   }
 
   async function listConversations(input: {
@@ -109,14 +184,54 @@ export function createCommunicationModule(config: { agentId: string; wakeUp(): v
     unread?: boolean;
     limit: number;
   }): Promise<CommunicationConversationView[]> {
-    return store.listConversations(input);
+    const conversations = await store.listConversations(input);
+    const contacts = await store.listContacts();
+
+    return conversations.map((conversation) => ({
+      conversationId: conversation.conversationId,
+      provider: conversation.provider,
+      latestMessageAt: conversation.latestMessageAt,
+      unreadCount: conversation.unreadCount,
+      name: conversation.name,
+      contactSlug: conversation.contactSlug,
+      contactDisplayName: contacts.find((contact) => contact.slug === conversation.contactSlug)?.displayName,
+      messages: conversation.messages.map((message) => ({
+        messageId: message.messageId,
+        conversationId: message.conversationId,
+        provider: message.provider,
+        direction: message.direction,
+        content: message.content,
+        attachments: message.attachments,
+        unread: message.unread,
+        createdAt: message.createdAt,
+        authorDisplayName: message.authorDisplayName,
+        contactSlug: conversation.contactSlug,
+        contactDisplayName: contacts.find((contact) => contact.slug === conversation.contactSlug)?.displayName,
+      })),
+    }));
   }
 
   async function getMessages(input: {
     conversationId: string;
     limit: number;
   }): Promise<CommunicationMessageView[]> {
-    return store.getMessages(input.conversationId, input.limit);
+    const conversation = await store.getConversation(input.conversationId);
+    const messages = await store.getMessages(input.conversationId, input.limit);
+    const contact = conversation?.contactSlug ? await store.getContact(conversation.contactSlug) : null;
+
+    return messages.map((message) => ({
+      messageId: message.messageId,
+      conversationId: message.conversationId,
+      provider: message.provider,
+      direction: message.direction,
+      content: message.content,
+      attachments: message.attachments,
+      unread: message.unread,
+      createdAt: message.createdAt,
+      authorDisplayName: message.authorDisplayName,
+      contactSlug: conversation?.contactSlug,
+      contactDisplayName: contact?.displayName,
+    }));
   }
 
   async function sendMessage(input: {

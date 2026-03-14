@@ -31,10 +31,11 @@ export async function createForgeAgent<
     'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'workspace' | 'agents' | 'omModel' | 'providers'
   >,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
-  const { storage, vector } = createAgentStorage(config.id);
+  const { dbUrl, storage, vector } = createAgentStorage(config.id);
   let wakeQueue: ReturnType<typeof createAgentWakeQueue> | null = null;
   const communication = createCommunicationModule({
     agentId: config.id,
+    dbUrl,
     wakeUp() {
       if (!wakeQueue) {
         throw new Error(`Wake queue not ready for agent: ${config.id}`);

@@ -16,6 +16,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
     "@ai-sdk/openai": "^3.0.41",
+    "@libsql/client": "^0.15.15",
     "@mastra/core": "^1.11.0",
     "@mastra/fastembed": "^1.0.0",
     "@mastra/libsql": "^1.7.0",

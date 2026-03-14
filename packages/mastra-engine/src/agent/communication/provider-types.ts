@@ -61,10 +61,7 @@ export type CommunicationMessageView = {
   attachments: Attachment[];
   unread: boolean;
   createdAt: string;
-  metadata?: Record<string, unknown>;
-  authorExternalId?: string;
   authorDisplayName?: string;
-  authorUsername?: string;
   contactSlug?: string;
   contactDisplayName?: string;
 };

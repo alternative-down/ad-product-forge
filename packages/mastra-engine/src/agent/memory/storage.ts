@@ -7,6 +7,7 @@ export function createAgentStorage(agentId: string) {
   const dbUrl = `file:${dbPath}`;
 
   return {
+    dbUrl,
     storage: new LibSQLStore({ id: `${agentId}-storage`, url: dbUrl }),
     vector: new LibSQLVector({ id: `${agentId}-vector`, url: dbUrl }),
   };

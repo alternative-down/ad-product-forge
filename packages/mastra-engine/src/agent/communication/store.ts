@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 
+import { createClient } from '@libsql/client';
 import { z } from 'zod';
 
 const accountSchema = z.object({
@@ -72,8 +71,8 @@ type Conversation = z.infer<typeof conversationSchema>;
 type MessageRecord = z.infer<typeof messageSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
 
-export function createCommunicationStore(agentId: string) {
-  const statePath = path.resolve(process.cwd(), '.forge-state', 'communication', `${agentId}.json`);
+export function createCommunicationStore(agentId: string, dbUrl: string) {
+  const client = createClient({ url: dbUrl });
   let currentState: z.infer<typeof stateSchema> | null = null;
 
   function slugify(value: string) {
@@ -93,12 +92,25 @@ export function createCommunicationStore(agentId: string) {
       return currentState;
     }
 
-    try {
-      const content = await readFile(statePath, 'utf8');
-      currentState = stateSchema.parse(JSON.parse(content));
-    } catch {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS forge_communication_state (
+        agent_id TEXT PRIMARY KEY,
+        state TEXT NOT NULL
+      )
+    `);
+
+    const result = await client.execute({
+      sql: 'SELECT state FROM forge_communication_state WHERE agent_id = ?',
+      args: [agentId],
+    });
+
+    if (!result.rows[0]?.state || typeof result.rows[0].state !== 'string') {
       currentState = stateSchema.parse({});
+      await saveState();
+      return currentState;
     }
+
+    currentState = stateSchema.parse(JSON.parse(result.rows[0].state));
 
     return currentState;
   }
@@ -108,8 +120,14 @@ export function createCommunicationStore(agentId: string) {
       return;
     }
 
-    await mkdir(path.dirname(statePath), { recursive: true });
-    await writeFile(statePath, JSON.stringify(currentState, null, 2), 'utf8');
+    await client.execute({
+      sql: `
+        INSERT INTO forge_communication_state (agent_id, state)
+        VALUES (?, ?)
+        ON CONFLICT(agent_id) DO UPDATE SET state = excluded.state
+      `,
+      args: [agentId, JSON.stringify(currentState)],
+    });
   }
 
   async function ensureAccount(input: {
@@ -238,52 +256,6 @@ export function createCommunicationStore(agentId: string) {
     return contact;
   }
 
-  async function syncInboundContact(input: {
-    provider: string;
-    authorExternalId?: string;
-    authorDisplayName?: string;
-    authorUsername?: string;
-  }) {
-    if (!input.authorExternalId && !input.authorUsername && !input.authorDisplayName) {
-      return null;
-    }
-
-    let contact = await findContactByIdentity(input.provider, input.authorExternalId, input.authorUsername);
-
-    if (contact) {
-      if (input.authorDisplayName) {
-        contact = await upsertContact({
-          slug: contact.slug,
-          displayName: input.authorDisplayName,
-          description: contact.description,
-          provider: input.provider,
-          externalUserId: input.authorExternalId,
-          username: input.authorUsername,
-        });
-      }
-
-      return contact;
-    }
-
-    const state = await readState();
-    const baseSlug = slugify(input.authorUsername || input.authorDisplayName || input.authorExternalId || 'contact');
-    let slug = baseSlug;
-    let suffix = 2;
-
-    while (state.contacts.some((current) => current.slug === slug)) {
-      slug = `${baseSlug}-${suffix}`;
-      suffix += 1;
-    }
-
-    return upsertContact({
-      slug,
-      displayName: input.authorDisplayName || input.authorUsername || input.authorExternalId || slug,
-      provider: input.provider,
-      externalUserId: input.authorExternalId,
-      username: input.authorUsername,
-    });
-  }
-
   async function ensureConversation(input: {
     provider: string;
     providerConversationKey: string;
@@ -343,6 +315,7 @@ export function createCommunicationStore(agentId: string) {
     providerConversationKey: string;
     providerMessageId: string;
     conversationName?: string;
+    contactSlug?: string;
     authorExternalId?: string;
     authorDisplayName?: string;
     authorUsername?: string;
@@ -360,17 +333,11 @@ export function createCommunicationStore(agentId: string) {
       return existing;
     }
 
-    const contact = await syncInboundContact({
-      provider: input.provider,
-      authorExternalId: input.authorExternalId,
-      authorDisplayName: input.authorDisplayName,
-      authorUsername: input.authorUsername,
-    });
     const conversation = await ensureConversation({
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
       name: input.conversationName,
-      contactSlug: contact?.slug,
+      contactSlug: input.contactSlug,
       createdAt: input.createdAt,
     });
     const message = {
@@ -524,7 +491,6 @@ export function createCommunicationStore(agentId: string) {
     getContact,
     findContactByIdentity,
     upsertContact,
-    syncInboundContact,
     ensureConversation,
     getConversation,
     findConversationByProvider,

@@ -10,8 +10,7 @@ const getContactInputSchema = z.object({
 export function createGetContactTool(communication: ReturnType<typeof createCommunicationModule>) {
   return createTool({
     id: 'get_contact',
-    description:
-      'Get a registered contact by slug, including all known identities across providers.',
+    description: 'Get a registered contact by slug.',
     inputSchema: getContactInputSchema,
     execute: async (input) => ({
       contact: await communication.getContact(input.slug),
