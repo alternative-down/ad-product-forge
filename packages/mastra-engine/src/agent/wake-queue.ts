@@ -5,16 +5,9 @@ export type AgentWakeQueue = {
   notifyExternalEvent(): void;
 };
 
-export function createAgentWakeQueue(config: {
-  run(): Promise<unknown>;
-  onWakeStarted?: () => void;
-  onWakeFinished?: () => void;
-  onWakeError?: (error: unknown) => void;
-}): AgentWakeQueue {
-  let pending = false;
-  let running = false;
-  let firstPendingAt: number | null = null;
+export function createAgentWakeQueue(config: { run(): Promise<unknown> }): AgentWakeQueue {
   let timer: NodeJS.Timeout | null = null;
+  let firstPendingAt: number | null = null;
 
   function clearTimer() {
     if (!timer) {
@@ -25,54 +18,25 @@ export function createAgentWakeQueue(config: {
     timer = null;
   }
 
-  async function runWake() {
+  function trigger() {
     clearTimer();
-
-    if (running || !pending) {
-      return;
-    }
-
-    running = true;
-    pending = false;
     firstPendingAt = null;
-    config.onWakeStarted?.();
-
-    try {
-      await config.run();
-      config.onWakeFinished?.();
-    } catch (error) {
-      config.onWakeError?.(error);
-    } finally {
-      running = false;
-
-      if (!pending) {
-        return;
-      }
-
-      timer = setTimeout(() => {
-        void runWake();
-      }, 0);
-    }
+    void config.run();
   }
 
   return {
     notifyExternalEvent() {
-      pending = true;
+      const now = Date.now();
 
-      if (running) {
+      firstPendingAt ??= now;
+
+      if (now - firstPendingAt >= WAKE_MAX_DELAY_MS) {
+        trigger();
         return;
       }
 
-      const now = Date.now();
-      firstPendingAt ??= now;
-
-      const elapsed = now - firstPendingAt;
-      const delay = Math.max(0, Math.min(WAKE_DEBOUNCE_MS, WAKE_MAX_DELAY_MS - elapsed));
-
       clearTimer();
-      timer = setTimeout(() => {
-        void runWake();
-      }, delay);
+      timer = setTimeout(trigger, WAKE_DEBOUNCE_MS);
     },
   };
 }
