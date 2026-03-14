@@ -276,10 +276,12 @@ Bad:
 
 ### Keep state handling obvious
 When using file-backed state:
-- load once lazily
-- keep it in memory
-- mutate it directly
+- load once lazily when the store is first used
+- keep the state in memory for the lifetime of that store instance
+- mutate the in-memory state directly
 - save after mutation
+
+Do not reload the file inside every update if the store instance already owns the state in memory.
 
 Do not build write queues or concurrency machinery unless a real, observed problem requires it.
 
@@ -296,16 +298,27 @@ function createMessageState() {
     return currentState;
   }
 
-  async function update(handler: (state: State) => Promise<void> | void) {
-    const state = await load();
-    await handler(state);
-    await save(state);
+  async function saveCurrentState() {
+    if (!currentState) {
+      return;
+    }
+
+    await save(currentState);
+  }
+
+  async function updateMessage(message: StoredMessage) {
+    if (!currentState) {
+      currentState = await readStateFile();
+    }
+
+    currentState.messages.push(message);
+    await saveCurrentState();
   }
 }
 ```
 
 Bad:
-- loading from disk on every read without reason
+- loading from disk on every update even though the store already owns the state
 - queueing writes to solve unconfirmed contention
 - introducing locks before there is a demonstrated race
 
@@ -381,9 +394,19 @@ Do not do these things unless there is a confirmed reason:
 ### Example: good direct flow
 ```ts
 export function createMessageStore() {
+  let state: State | null = null;
+
+  async function ensureLoaded() {
+    if (!state) {
+      state = await readStateFile();
+    }
+
+    return state;
+  }
+
   async function saveMessage(input: SaveMessageInput) {
-    const state = await loadState();
-    const alreadyExists = state.messages.some(
+    const currentState = await ensureLoaded();
+    const alreadyExists = currentState.messages.some(
       (current) => current.accountId === input.accountId && current.messageId === input.messageId,
     );
 
@@ -391,7 +414,7 @@ export function createMessageStore() {
       return;
     }
 
-    state.messages.push({
+    currentState.messages.push({
       messageId: input.messageId,
       accountId: input.accountId,
       content: input.content,
@@ -399,12 +422,12 @@ export function createMessageStore() {
       createdAt: input.createdAt,
     });
 
-    await saveState(state);
+    await saveStateFile(currentState);
   }
 
   async function listMessages(accountId: string) {
-    const state = await loadState();
-    return state.messages.filter((message) => message.accountId === accountId);
+    const currentState = await ensureLoaded();
+    return currentState.messages.filter((message) => message.accountId === accountId);
   }
 
   return { saveMessage, listMessages };
