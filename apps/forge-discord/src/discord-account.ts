@@ -2,10 +2,7 @@ import { ChannelType, Client, Events, GatewayIntentBits, Message, Partials } fro
 
 import type { CommunicationProvider } from '@mastra-engine/core';
 
-import { createDiscordMessageStore } from './discord-message-store.js';
-
 export function createDiscordProvider(config: {
-  agentId: string;
   token: string;
   allowedChannelIds?: string[];
   respondToMentionsOnly?: boolean;
@@ -21,10 +18,6 @@ export function createDiscordProvider(config: {
   });
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
-  const messages = createDiscordMessageStore({
-    agentId: config.agentId,
-    provider: 'discord',
-  });
   let started = false;
 
   async function ensureClient() {
@@ -73,7 +66,7 @@ export function createDiscordProvider(config: {
           return;
         }
 
-        const authorName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
+        const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
         const content = message.content
           .replaceAll(`<@${user.id}>`, '')
           .replaceAll(`<@!${user.id}>`, '')
@@ -87,13 +80,13 @@ export function createDiscordProvider(config: {
           description: attachment.description ?? undefined,
         }));
 
-        await messages.saveInboundMessage({
-          messageId: message.id,
-          channelId: message.channelId,
-          channelName: message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
-          authorId: message.author.id,
-          authorName,
-          username: message.author.username,
+        await onInbound({
+          providerConversationKey: message.channelId,
+          providerMessageId: message.id,
+          conversationName: message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
+          authorExternalId: message.author.id,
+          authorDisplayName,
+          authorUsername: message.author.username,
           content: content || '[no text content]',
           attachments,
           createdAt: new Date(message.createdTimestamp).toISOString(),
@@ -101,96 +94,57 @@ export function createDiscordProvider(config: {
             serverName: message.guild?.name ?? 'direct-message',
           },
         });
-
-        await onInbound({
-          authorId: message.author.id,
-          authorName,
-          username: message.author.username,
-        });
       });
 
       started = true;
       console.log(`[discord] logged in as ${user.tag}`);
     },
-    listConversations: ({ contactSlug, unread, limit }) =>
-      messages.listConversations({
-        contactSlug,
-        unread,
-        limit,
-      }),
-    getMessages: ({ conversationId, limit }) =>
-      messages.getMessages({
-        conversationId,
-        limit,
-      }),
-    findMessage: (messageId) => messages.findMessage(messageId),
     async sendMessage(input) {
       const user = await ensureClient();
 
-      if (!input.target || !/^\d+$/.test(input.target)) {
-        throw new Error(`Unsupported Discord target: ${input.target}`);
-      }
-
-      if (input.contactSlug && !input.replyToMessageId) {
-        const targetUser = await client.users.fetch(input.target);
+      if (input.contactExternalId && !input.providerConversationKey) {
+        const targetUser = await client.users.fetch(input.contactExternalId);
         const channel = await targetUser.createDM();
         await channel.sendTyping();
         const sent = await channel.send(input.content);
 
-        await messages.saveOutboundMessage({
-          messageId: sent.id,
-          channelId: sent.channel.id,
-          channelName: 'direct-message',
-          content: input.content,
-          metadata: {
-            contactSlug: input.contactSlug,
-            replyToMessageId: input.replyToMessageId,
-          },
-        });
-
-        return { messageId: sent.id, channelId: sent.channel.id };
+        return {
+          providerConversationKey: channel.id,
+          providerMessageId: sent.id,
+          conversationName: 'direct-message',
+        };
       }
 
-      const channel = await client.channels.fetch(input.target);
+      if (!input.providerConversationKey || !/^\d+$/.test(input.providerConversationKey)) {
+        throw new Error(`Unsupported Discord conversation: ${input.providerConversationKey}`);
+      }
+
+      const channel = await client.channels.fetch(input.providerConversationKey);
 
       if (!channel?.isSendable()) {
-        throw new Error(`Discord target is not sendable: ${input.target}`);
+        throw new Error(`Discord target is not sendable: ${input.providerConversationKey}`);
       }
 
       await channel.sendTyping();
 
-      if (input.replyToMessageId) {
-        const replyTarget = await channel.messages.fetch(input.replyToMessageId);
+      if (input.replyToProviderMessageId) {
+        const replyTarget = await channel.messages.fetch(input.replyToProviderMessageId);
         const sent = await replyTarget.reply(input.content);
 
-        await messages.saveOutboundMessage({
-          messageId: sent.id,
-          channelId: sent.channelId,
-          channelName: 'name' in channel ? channel.name ?? undefined : undefined,
-          content: input.content,
-          metadata: {
-            contactSlug: input.contactSlug,
-            replyToMessageId: input.replyToMessageId,
-          },
-        });
-
-        return { messageId: sent.id, channelId: sent.channelId };
+        return {
+          providerConversationKey: sent.channelId,
+          providerMessageId: sent.id,
+          conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
+        };
       }
 
       const sent = await channel.send(input.content);
 
-      await messages.saveOutboundMessage({
-        messageId: sent.id,
-        channelId: sent.channelId,
-        channelName: 'name' in channel ? channel.name ?? undefined : undefined,
-        content: input.content,
-        metadata: {
-          contactSlug: input.contactSlug,
-          replyToMessageId: input.replyToMessageId,
-        },
-      });
-
-      return { messageId: sent.id, channelId: sent.channelId };
+      return {
+        providerConversationKey: sent.channelId,
+        providerMessageId: sent.id,
+        conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
+      };
     },
   };
 }

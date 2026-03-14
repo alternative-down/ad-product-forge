@@ -6,7 +6,7 @@ import type { createCommunicationModule } from '../module';
 const sendMessageInputSchema = z
   .object({
     provider: z.string(),
-    target: z.string().optional().describe('Send to a channel, thread, or conversation directly.'),
+    conversationId: z.string().optional().describe('Send inside an existing conversation by its internal conversation id.'),
     contactSlug: z
       .string()
       .optional()
@@ -21,8 +21,8 @@ const sendMessageInputSchema = z
         'Optional message id to reply to. Use only a recent messageId from the same conversation. If unsure, omit it and send without reply.',
       ),
   })
-  .refine((input) => Number(Boolean(input.target)) + Number(Boolean(input.contactSlug)) === 1, {
-    message: 'Provide exactly one of target or contactSlug.',
+  .refine((input) => Number(Boolean(input.conversationId)) + Number(Boolean(input.contactSlug)) === 1, {
+    message: 'Provide exactly one of conversationId or contactSlug.',
   });
 
 export function createSendMessageTool(communication: ReturnType<typeof createCommunicationModule>) {
@@ -33,7 +33,7 @@ export function createSendMessageTool(communication: ReturnType<typeof createCom
     execute: async (input) =>
       communication.sendMessage({
         provider: input.provider,
-        target: input.target,
+        conversationId: input.conversationId,
         contactSlug: input.contactSlug,
         content: input.content,
         replyToMessageId: input.replyToMessageId,

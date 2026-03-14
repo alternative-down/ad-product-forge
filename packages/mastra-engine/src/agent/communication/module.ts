@@ -1,55 +1,13 @@
-import { z } from 'zod';
-
-import { agentAccounts } from './agent-accounts';
-import { agentContacts } from './agent-contacts';
-import type { ProviderConversationView, ProviderMessageView } from './provider-types';
+import { createCommunicationStore } from './store';
+import type {
+  CommunicationConversationView,
+  CommunicationMessageView,
+  CommunicationProvider,
+} from './provider-types';
 import type { AgentWakeQueue } from '../wake-queue';
 
-const inboundContactSchema = z.object({
-  authorId: z.string().optional(),
-  authorName: z.string().optional(),
-  username: z.string().optional(),
-});
-
-const providerContactSchema = z.object({
-  slug: z.string(),
-  displayName: z.string(),
-  provider: z.string(),
-  externalUserId: z.string().optional(),
-  username: z.string().optional(),
-});
-
-export type CommunicationProvider = {
-  id: string;
-  getAccount(): Promise<{
-    externalAccountId: string;
-    displayName?: string;
-    metadata?: Record<string, unknown>;
-  }>;
-  start?(input: {
-    onInbound(input: z.input<typeof inboundContactSchema>): Promise<void>;
-    upsertContact(input: z.input<typeof providerContactSchema>): Promise<void>;
-  }): Promise<void> | void;
-  stop?(): Promise<void> | void;
-  listConversations(input: {
-    contactSlug?: string;
-    unread?: boolean;
-    limit: number;
-  }): Promise<ProviderConversationView[]>;
-  getMessages(input: {
-    conversationId: string;
-    limit: number;
-  }): Promise<ProviderMessageView[]>;
-  findMessage(messageId: string): Promise<{ messageId: string; channelId?: string } | null>;
-  sendMessage(input: {
-    target: string;
-    content: string;
-    replyToMessageId?: string;
-    contactSlug?: string;
-  }): Promise<{ messageId?: string; channelId?: string }>;
-};
-
 export function createCommunicationModule(config: { agentId: string }) {
+  const store = createCommunicationStore(config.agentId);
   const providers = new Map<string, CommunicationProvider>();
   let wakeQueue: AgentWakeQueue | null = null;
 
@@ -57,50 +15,10 @@ export function createCommunicationModule(config: { agentId: string }) {
     wakeQueue = nextWakeQueue;
   }
 
-  function getProvider(providerId: string) {
-    return providers.get(providerId) ?? null;
-  }
-
-  async function handleInboundMessage(providerId: string, rawInput: unknown) {
-    const input = inboundContactSchema.parse(rawInput);
-
-    await agentContacts.syncInboundContact({
-      agentId: config.agentId,
-      provider: providerId,
-      authorId: input.authorId,
-      authorName: input.authorName,
-      username: input.username,
-    });
-
-    if (!wakeQueue) {
-      throw new Error(`Wake queue not attached for agent: ${config.agentId}`);
-    }
-
-    wakeQueue.notifyExternalEvent();
-  }
-
-  async function upsertProviderContact(rawInput: unknown) {
-    const input = providerContactSchema.parse(rawInput);
-
-    await agentContacts.upsertAgentContact({
-      agentId: config.agentId,
-      slug: input.slug,
-      displayName: input.displayName,
-      accounts: [
-        {
-          provider: input.provider,
-          externalUserId: input.externalUserId,
-          username: input.username,
-        },
-      ],
-    });
-  }
-
   async function connectProvider(provider: CommunicationProvider) {
     const account = await provider.getAccount();
 
-    await agentAccounts.ensureAccount({
-      agentId: config.agentId,
+    await store.ensureAccount({
       provider: provider.id,
       externalAccountId: account.externalAccountId,
       displayName: account.displayName,
@@ -114,13 +32,40 @@ export function createCommunicationModule(config: { agentId: string }) {
     }
 
     await provider.start({
-      onInbound: (input) => handleInboundMessage(provider.id, input),
-      upsertContact: upsertProviderContact,
+      onInbound: async (message) => {
+        await store.saveInboundMessage({
+          provider: provider.id,
+          providerConversationKey: message.providerConversationKey,
+          providerMessageId: message.providerMessageId,
+          conversationName: message.conversationName,
+          authorExternalId: message.authorExternalId,
+          authorDisplayName: message.authorDisplayName,
+          authorUsername: message.authorUsername,
+          content: message.content,
+          attachments: message.attachments,
+          createdAt: message.createdAt,
+          metadata: message.metadata,
+        });
+
+        if (!wakeQueue) {
+          throw new Error(`Wake queue not attached for agent: ${config.agentId}`);
+        }
+
+        wakeQueue.notifyExternalEvent();
+      },
+      upsertContact: (input) =>
+        store.upsertContact({
+          slug: input.slug,
+          displayName: input.displayName,
+          provider: input.provider,
+          externalUserId: input.externalUserId,
+          username: input.username,
+        }).then(() => undefined),
     });
   }
 
   async function disconnectProvider(providerId: string) {
-    const provider = getProvider(providerId);
+    const provider = providers.get(providerId);
 
     if (!provider) {
       return;
@@ -134,20 +79,15 @@ export function createCommunicationModule(config: { agentId: string }) {
   }
 
   async function listContacts() {
-    return agentContacts.listAgentContacts(config.agentId);
+    return store.listContacts();
   }
 
   async function getContact(slug: string) {
-    return agentContacts.getAgentContact(config.agentId, slug);
+    return store.getContact(slug);
   }
 
   async function upsertContact(input: { slug: string; displayName: string; description?: string }) {
-    return agentContacts.upsertAgentContact({
-      agentId: config.agentId,
-      slug: input.slug,
-      displayName: input.displayName,
-      description: input.description,
-    });
+    return store.upsertContact(input);
   }
 
   async function listConversations(input: {
@@ -155,72 +95,52 @@ export function createCommunicationModule(config: { agentId: string }) {
     contactSlug?: string;
     unread?: boolean;
     limit: number;
-  }) {
-    if (input.provider) {
-      const provider = getProvider(input.provider);
-
-      if (!provider) {
-        return [];
-      }
-
-      return provider.listConversations({
-        contactSlug: input.contactSlug,
-        unread: input.unread,
-        limit: input.limit,
-      });
-    }
-
-    const conversations = await Promise.all(
-      Array.from(providers.values()).map((provider) =>
-        provider.listConversations({
-          contactSlug: input.contactSlug,
-          unread: input.unread,
-          limit: input.limit,
-        }),
-      ),
-    );
-
-    return conversations
-      .flat()
-      .sort((left, right) => new Date(right.latestMessageAt).getTime() - new Date(left.latestMessageAt).getTime())
-      .slice(0, input.limit);
+  }): Promise<CommunicationConversationView[]> {
+    return store.listConversations(input);
   }
 
-  async function getMessages(input: { conversationId: string; limit: number }) {
-    const providerId = input.conversationId.split(':', 1)[0];
-
-    if (!providerId) {
-      throw new Error(`Could not resolve provider from conversation: ${input.conversationId}`);
-    }
-
-    const provider = getProvider(providerId);
-
-    if (!provider) {
-      throw new Error(`Provider not registered for conversation: ${providerId}`);
-    }
-
-    return provider.getMessages({ conversationId: input.conversationId, limit: input.limit });
+  async function getMessages(input: {
+    conversationId: string;
+    limit: number;
+  }): Promise<CommunicationMessageView[]> {
+    return store.getMessages(input.conversationId, input.limit);
   }
 
   async function sendMessage(input: {
     provider: string;
-    target?: string;
+    conversationId?: string;
     contactSlug?: string;
     content: string;
     replyToMessageId?: string;
   }) {
-    const provider = getProvider(input.provider);
+    const provider = providers.get(input.provider);
 
     if (!provider) {
       throw new Error(`Provider not registered for agent: ${input.provider}`);
     }
 
-    const replyToMessageId = input.replyToMessageId?.trim() || undefined;
-    const repliedMessage = replyToMessageId ? await provider.findMessage(replyToMessageId) : null;
-    let target = input.target;
+    const replyMessage = input.replyToMessageId ? await store.getMessage(input.replyToMessageId) : null;
+    let providerConversationKey: string | undefined;
+    let contactExternalId: string | undefined;
+    let contactSlug = input.contactSlug;
 
-    if (input.contactSlug) {
-      const contact = await agentContacts.getAgentContact(config.agentId, input.contactSlug);
+    if (input.conversationId) {
+      const conversation = await store.getConversation(input.conversationId);
+
+      if (!conversation) {
+        throw new Error(`Conversation not found: ${input.conversationId}`);
+      }
+
+      if (conversation.provider !== input.provider) {
+        throw new Error(`Conversation ${input.conversationId} does not belong to provider ${input.provider}`);
+      }
+
+      providerConversationKey = conversation.providerConversationKey;
+      contactSlug = conversation.contactSlug;
+    }
+
+    if (input.contactSlug && !providerConversationKey) {
+      const contact = await store.getContact(input.contactSlug);
 
       if (!contact) {
         throw new Error(`Contact not found: ${input.contactSlug}`);
@@ -232,50 +152,50 @@ export function createCommunicationModule(config: { agentId: string }) {
         throw new Error(`No ${input.provider} identity found for contact: ${input.contactSlug}`);
       }
 
-      if (replyToMessageId) {
-        target = repliedMessage?.channelId;
+      contactExternalId = identity.externalUserId || identity.username;
 
-        if (!target) {
-          throw new Error(`No message context found for reply: ${replyToMessageId}`);
-        }
-      } else {
-        target = identity.externalUserId || identity.username;
-
-        if (!target) {
-          throw new Error(`No direct identity found for contact: ${input.contactSlug}`);
-        }
+      if (!contactExternalId) {
+        throw new Error(`No direct identity found for contact: ${input.contactSlug}`);
       }
     }
 
-    if (!target) {
-      throw new Error(`Target not resolved for provider: ${input.provider}`);
-    }
+    if (input.replyToMessageId) {
+      if (!replyMessage) {
+        throw new Error(`Message not found: ${input.replyToMessageId}`);
+      }
 
-    if (input.provider === 'internal-chat' && replyToMessageId && !repliedMessage) {
-      throw new Error(`Unknown internal-chat replyToMessageId: ${replyToMessageId}`);
-    }
+      if (replyMessage.provider !== input.provider) {
+        throw new Error(`Message ${input.replyToMessageId} does not belong to provider ${input.provider}`);
+      }
 
-    if (
-      input.provider === 'internal-chat' &&
-      replyToMessageId &&
-      repliedMessage?.channelId &&
-      repliedMessage.channelId !== target
-    ) {
-      throw new Error(
-        `replyToMessageId ${replyToMessageId} belongs to channel ${repliedMessage.channelId}, but target ${target} was requested.`,
-      );
+      const replyConversation = await store.getConversation(replyMessage.conversationId);
+
+      if (!replyConversation) {
+        throw new Error(`Conversation not found for message: ${input.replyToMessageId}`);
+      }
+
+      providerConversationKey = replyConversation.providerConversationKey;
     }
 
     const sent = await provider.sendMessage({
-      target,
-      contactSlug: input.contactSlug,
+      providerConversationKey,
+      contactExternalId,
       content: input.content,
-      replyToMessageId,
+      replyToProviderMessageId: replyMessage?.providerMessageId,
+    });
+    const message = await store.saveOutboundMessage({
+      provider: input.provider,
+      providerConversationKey: sent.providerConversationKey,
+      providerMessageId: sent.providerMessageId,
+      conversationName: sent.conversationName,
+      contactSlug,
+      content: input.content,
     });
 
     return {
       success: true,
-      messageId: sent.messageId || `out:${Date.now()}`,
+      messageId: message.messageId,
+      conversationId: message.conversationId,
     };
   }
 

@@ -1,6 +1,7 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 
-import { createCommunicationModule, type CommunicationProvider } from './agent/communication/module';
+import { createCommunicationModule } from './agent/communication/module';
+import type { CommunicationProvider } from './agent/communication/provider-types';
 import { createExternalAccountTools } from './agent/communication/tools';
 import { LongTermMemory } from './agent/memory/long-term-memory';
 import { createAgentMemory } from './agent/memory/memory';

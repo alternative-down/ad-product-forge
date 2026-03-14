@@ -70,7 +70,6 @@ export async function main() {
     providers: [
       internalChat.createProvider({ id: env.FORGE_AGENT_ID, displayName: env.FORGE_AGENT_NAME }),
       createDiscordProvider({
-        agentId: env.FORGE_AGENT_ID,
         token: env.DISCORD_BOT_TOKEN,
         allowedChannelIds: (env.DISCORD_ALLOWED_CHANNEL_IDS ?? '')
           .split(',')

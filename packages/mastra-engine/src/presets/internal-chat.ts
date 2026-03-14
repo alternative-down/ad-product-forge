@@ -1,13 +1,22 @@
 import crypto from 'node:crypto';
 
-import { createInternalChatMessageStore } from './internal-chat-message-store';
-import type { CommunicationProvider } from '../agent/communication/module';
+import type { CommunicationProvider } from '../agent/communication/provider-types';
 
 type RegisteredAgent = {
   id: string;
   displayName: string;
-  messages: ReturnType<typeof createInternalChatMessageStore>;
-  onInbound(input: { authorId?: string; authorName?: string; username?: string }): Promise<void>;
+  onInbound(message: {
+    providerConversationKey: string;
+    providerMessageId: string;
+    conversationName?: string;
+    authorExternalId?: string;
+    authorDisplayName?: string;
+    authorUsername?: string;
+    content: string;
+    attachments?: [];
+    createdAt: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void>;
   upsertContact(input: {
     slug: string;
     displayName: string;
@@ -40,8 +49,6 @@ export function createInternalChatPreset() {
 
   return {
     createProvider(config: { id: string; displayName: string }): CommunicationProvider {
-      const messages = createInternalChatMessageStore({ agentId: config.id });
-
       return {
         id: 'internal-chat',
         async getAccount() {
@@ -54,7 +61,6 @@ export function createInternalChatPreset() {
           agents.set(config.id, {
             id: config.id,
             displayName: config.displayName,
-            messages,
             onInbound,
             upsertContact,
           });
@@ -63,63 +69,35 @@ export function createInternalChatPreset() {
         async stop() {
           agents.delete(config.id);
         },
-        listConversations: ({ contactSlug, unread, limit }) =>
-          messages.listConversations({
-            contactSlug,
-            unread,
-            limit,
-          }),
-        getMessages: ({ conversationId, limit }) =>
-          messages.getMessages({
-            conversationId,
-            limit,
-          }),
-        findMessage: (messageId) => messages.findMessage(messageId),
         async sendMessage(input) {
-          const recipient = agents.get(input.target);
+          const recipientId = input.providerConversationKey ?? input.contactExternalId;
+          const recipient = recipientId ? agents.get(recipientId) : null;
 
           if (!recipient) {
-            throw new Error(`Internal chat target not found: ${input.target}`);
+            throw new Error(`Internal chat target not found: ${recipientId}`);
           }
 
-          const messageId = `internal:${crypto.randomUUID()}`;
+          const providerMessageId = `internal:${crypto.randomUUID()}`;
 
-          await recipient.messages.saveInboundMessage({
-            messageId,
-            channelId: config.id,
-            channelName: config.displayName,
-            authorId: config.id,
-            authorName: config.displayName,
-            username: config.id,
+          await recipient.onInbound({
+            providerConversationKey: config.id,
+            providerMessageId,
+            conversationName: config.displayName,
+            authorExternalId: config.id,
+            authorDisplayName: config.displayName,
+            authorUsername: config.id,
             content: input.content,
             attachments: [],
             createdAt: new Date().toISOString(),
             metadata: {
-              provider: 'internal-chat',
-              replyToMessageId: input.replyToMessageId,
-            },
-          });
-
-          await recipient.onInbound({
-            authorId: config.id,
-            authorName: config.displayName,
-            username: config.id,
-          });
-
-          await messages.saveOutboundMessage({
-            messageId,
-            channelId: config.id,
-            channelName: config.displayName,
-            content: input.content,
-            metadata: {
-              contactSlug: input.contactSlug,
-              replyToMessageId: input.replyToMessageId,
+              replyToProviderMessageId: input.replyToProviderMessageId,
             },
           });
 
           return {
-            messageId,
-            channelId: config.id,
+            providerConversationKey: config.id,
+            providerMessageId,
+            conversationName: config.displayName,
           };
         },
       };

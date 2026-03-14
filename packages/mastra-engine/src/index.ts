@@ -10,5 +10,4 @@ export * from './agent/communication/tools';
 export * from './agent/wake-queue';
 export * from './agent/tools/market-research';
 export * from './agent/communication/provider-types';
-export * from './agent/communication/agent-contacts';
-export type { Attachment } from './agent/communication/communication-state';
+export type { Attachment } from './agent/communication/store';

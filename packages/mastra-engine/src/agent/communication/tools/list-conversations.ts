@@ -16,36 +16,13 @@ export function createListConversationsTool(communication: ReturnType<typeof cre
     description:
       'List message conversations from the agent inbox. If unread preview messages are returned, they are automatically marked as read.',
     inputSchema: listConversationsInputSchema,
-    execute: async (input) => {
-      const conversations = await communication.listConversations({
+    execute: async (input) => ({
+      conversations: await communication.listConversations({
         provider: input.provider,
         contactSlug: input.contactSlug,
         unread: input.unread,
         limit: input.limit ?? 20,
-      });
-
-      return {
-        conversations: conversations.map((conversation) => ({
-          conversationId: conversation.conversationId,
-          provider: conversation.provider,
-          channelId: conversation.channelId,
-          channelName: conversation.channelName,
-          contactSlug: conversation.contactSlug,
-          contactDisplayName: conversation.contactDisplayName,
-          latestMessageAt: conversation.latestMessageAt,
-          unreadCount: conversation.unreadCount,
-          messages: conversation.messages.map((message) => ({
-            messageId: message.messageId,
-            provider: message.provider,
-            channelId: message.channelId,
-            channelName: message.channelName,
-            contactSlug: message.contactSlug,
-            contactDisplayName: message.contactDisplayName,
-            content: message.content,
-            createdAt: message.createdAt,
-          })),
-        })),
-      };
-    },
+      }),
+    }),
   });
 }
