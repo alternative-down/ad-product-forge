@@ -77,8 +77,8 @@ export async function main() {
   });
   const wakeQueues = createWakeQueueRegistry();
   const internalChat = createInternalChatRouter();
-  const agentWakeQueue = wakeQueues.get({ agent, agentId: env.FORGE_AGENT_ID });
-  const helperWakeQueue = wakeQueues.get({ agent: helperAgent, agentId: helperAgentId });
+  const agentWakeQueue = wakeQueues.getQueue({ agent, agentId: env.FORGE_AGENT_ID });
+  const helperWakeQueue = wakeQueues.getQueue({ agent: helperAgent, agentId: helperAgentId });
 
   new Mastra({
     agents: {

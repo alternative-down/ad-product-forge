@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import { z } from 'zod';
 
-import { oauthStore, type OAuthCredential } from './oauth-store';
+import { oauthStore, type OAuthCredential } from './store';
 
 const ANTHROPIC_CLIENT_ID = Buffer.from('OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl', 'base64').toString('utf8');
 const ANTHROPIC_TOKEN_URL = 'https://console.anthropic.com/v1/oauth/token';

@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod';
 
-import { oauthStore, type OAuthCredential } from './oauth-store';
+import { oauthStore, type OAuthCredential } from './store';
 
 const OPENAI_CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const OPENAI_CODEX_TOKEN_URL = 'https://auth.openai.com/oauth/token';

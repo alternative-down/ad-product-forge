@@ -30,7 +30,7 @@ export function createWakeQueueRegistry() {
   const queues = new Map<string, AgentWakeQueue>();
 
   return {
-    get(config: WakeQueueConfig) {
+    getQueue(config: WakeQueueConfig) {
       const existing = queues.get(config.agentId);
       if (existing) {
         return existing;

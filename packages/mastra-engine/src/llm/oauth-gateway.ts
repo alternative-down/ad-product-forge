@@ -6,9 +6,9 @@ import { wrapLanguageModel } from 'ai';
 import type { LanguageModelMiddleware } from 'ai';
 
 import { forgeDebug } from '../debug';
-import { resolveAnthropicCredential } from './anthropic-auth';
+import { resolveAnthropicCredential } from './auth/anthropic';
 import { CLAUDE_MAX_MODELS, OPENAI_CODEX_MODELS } from './model-ids';
-import { resolveOpenAICodexCredential } from './openai-codex-auth';
+import { resolveOpenAICodexCredential } from './auth/openai-codex';
 
 const OPENAI_CODEX_URL = 'https://chatgpt.com/backend-api/codex';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1';
