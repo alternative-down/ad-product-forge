@@ -4,16 +4,10 @@ import type {
   CommunicationMessageView,
   CommunicationProvider,
 } from './provider-types';
-import type { AgentWakeQueue } from '../wake-queue';
 
-export function createCommunicationModule(config: { agentId: string }) {
+export function createCommunicationModule(config: { agentId: string; wakeUp(): void }) {
   const store = createCommunicationStore(config.agentId);
   const providers = new Map<string, CommunicationProvider>();
-  let wakeQueue: AgentWakeQueue | null = null;
-
-  function attachWakeQueue(nextWakeQueue: AgentWakeQueue) {
-    wakeQueue = nextWakeQueue;
-  }
 
   async function connectProvider(provider: CommunicationProvider) {
     const account = await provider.getAccount();
@@ -47,11 +41,7 @@ export function createCommunicationModule(config: { agentId: string }) {
           metadata: message.metadata,
         });
 
-        if (!wakeQueue) {
-          throw new Error(`Wake queue not attached for agent: ${config.agentId}`);
-        }
-
-        wakeQueue.notifyExternalEvent();
+        config.wakeUp();
       },
       upsertContact: (input) =>
         store.upsertContact({
@@ -200,7 +190,6 @@ export function createCommunicationModule(config: { agentId: string }) {
   }
 
   return {
-    attachWakeQueue,
     connectProvider,
     disconnectProvider,
     listContacts,

@@ -1,28 +1,12 @@
 const WAKE_DEBOUNCE_MS = 1000;
 const WAKE_MAX_DELAY_MS = 10000;
-const DEFAULT_WAKE_PROMPT = [
-  'Pending external activity detected.',
-  'Check your messages, inspect what is pending, and process what matters.',
-].join('\n\n');
 
 export type AgentWakeQueue = {
   notifyExternalEvent(): void;
 };
 
 export function createAgentWakeQueue(config: {
-  agent: {
-    generate(
-      prompt: string,
-      options: {
-        memory: {
-          thread: string;
-          resource: string;
-        };
-        maxSteps: number;
-      },
-    ): Promise<unknown>;
-  };
-  agentId: string;
+  run(): Promise<unknown>;
   onWakeStarted?: () => void;
   onWakeFinished?: () => void;
   onWakeError?: (error: unknown) => void;
@@ -54,13 +38,7 @@ export function createAgentWakeQueue(config: {
     config.onWakeStarted?.();
 
     try {
-      await config.agent.generate(DEFAULT_WAKE_PROMPT, {
-        memory: {
-          thread: config.agentId,
-          resource: config.agentId,
-        },
-        maxSteps: 1000,
-      });
+      await config.run();
       config.onWakeFinished?.();
     } catch (error) {
       config.onWakeError?.(error);
