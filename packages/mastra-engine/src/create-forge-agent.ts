@@ -8,26 +8,22 @@ import { Memory } from '@mastra/memory';
 import { ObservationalMemory } from '@mastra/memory/processors';
 
 import { forgeDebug } from './debug';
+import { embedTextWithFastembed } from './agent/embedder';
 import { ensureWorkspaceVectorIndex, LongTermMemory } from './agent/long-term-memory';
 import {
-  OBSERVATIONAL_MEMORY_CONFIG,
   WORKING_MEMORY_TEMPLATE,
   appendWorkingMemoryInstructions,
-  bindDefaultAgentRuntime,
 } from './agent/working-memory';
+import { OBSERVATIONAL_MEMORY_CONFIG } from './agent/observational-memory';
+import { bindDefaultAgentRuntime } from './agent/runtime-defaults';
 
 const MEMORY_WORKSPACE_ROOT = '.forge-memory';
-
-async function embedTextWithFastembed(text: string): Promise<number[]> {
-  const result = await fastembed.doEmbed({ values: [text] });
-  return result.embeddings[0] ?? [];
-}
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
-  TRequestContext extends Record<string, any> | unknown = unknown,
+  TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
   omModel?: AgentConfig['model'];
 };
@@ -36,7 +32,7 @@ export async function createForgeAgent<
   TAgentId extends string = string,
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
-  TRequestContext extends Record<string, any> | unknown = unknown,
+  TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
   config: Pick<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,

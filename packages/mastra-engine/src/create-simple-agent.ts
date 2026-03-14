@@ -5,17 +5,17 @@ import { Memory } from '@mastra/memory';
 import { ObservationalMemory } from '@mastra/memory/processors';
 
 import {
-  OBSERVATIONAL_MEMORY_CONFIG,
   WORKING_MEMORY_TEMPLATE,
   appendWorkingMemoryInstructions,
-  bindDefaultAgentRuntime,
 } from './agent/working-memory';
+import { OBSERVATIONAL_MEMORY_CONFIG } from './agent/observational-memory';
+import { bindDefaultAgentRuntime } from './agent/runtime-defaults';
 
 export type CreateSimpleAgentConfig<
   TAgentId extends string = string,
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
-  TRequestContext extends Record<string, any> | unknown = unknown,
+  TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
   omModel?: AgentConfig['model'];
 };
@@ -24,7 +24,7 @@ export async function createSimpleAgent<
   TAgentId extends string = string,
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
-  TRequestContext extends Record<string, any> | unknown = unknown,
+  TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
   config: Pick<
     CreateSimpleAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,

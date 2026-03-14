@@ -13,6 +13,7 @@ import {
   createForgeAgent,
   createInternalChatRouter,
   createSimpleAgent,
+  createWakeQueueRegistry,
   openaiCodexProvider,
   type ClaudeMaxModelId,
   type OpenAICodexModelId,
@@ -107,12 +108,17 @@ async function main() {
     }),
   });
 
+  const wakeQueues = createWakeQueueRegistry();
+  const agentWakeQueue = wakeQueues.get({ agent, agentId });
+  const helperWakeQueue = wakeQueues.get({ agent: helperAgent, agentId: helperAgentId });
+
   const internalChat = createInternalChatRouter();
-  await internalChat.registerAgent({ agent });
-  await internalChat.registerAgent({ agent: helperAgent });
+  await internalChat.registerAgent({ agent, wakeQueue: agentWakeQueue });
+  await internalChat.registerAgent({ agent: helperAgent, wakeQueue: helperWakeQueue });
 
   await createDiscordAgentClient({
     agent,
+    wakeQueue: agentWakeQueue,
     token: discordBotToken,
     allowedChannelIds: (process.env.DISCORD_ALLOWED_CHANNEL_IDS ?? '')
       .split(',')

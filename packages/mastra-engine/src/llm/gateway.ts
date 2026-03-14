@@ -178,10 +178,16 @@ const claudeCodeMiddleware: LanguageModelMiddleware = {
 const promptCacheMiddleware: LanguageModelMiddleware = {
   specificationVersion: 'v3',
   transformParams: async ({ params }) => {
-    const prompt = [...params.prompt];
+    type PromptRecord = Record<string, unknown> & {
+      role?: unknown;
+      content?: unknown;
+      providerOptions?: Record<string, Record<string, unknown>>;
+    };
+
+    const prompt = [...params.prompt] as PromptRecord[];
     const cacheControl = { type: 'ephemeral' as const, ttl: '1h' as const };
 
-    const addCacheToMessage = (message: any) => {
+    const addCacheToMessage = (message: PromptRecord): PromptRecord => {
       if (typeof message.content === 'string') {
         return {
           ...message,
@@ -195,6 +201,10 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
       if (Array.isArray(message.content) && message.content.length > 0) {
         const content = [...message.content];
         const lastPart = content[content.length - 1];
+        if (typeof lastPart === 'string') {
+          return message;
+        }
+
         content[content.length - 1] = {
           ...lastPart,
           providerOptions: {
@@ -203,7 +213,7 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
           },
         };
 
-        return { ...message, content };
+        return { ...message, content: content as typeof message.content };
       }
 
       return message;
@@ -211,7 +221,7 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
 
     let lastSystemIndex = -1;
     for (let index = prompt.length - 1; index >= 0; index--) {
-      if ((prompt[index] as any).role === 'system') {
+      if (prompt[index]?.role === 'system') {
         lastSystemIndex = index;
         break;
       }
@@ -226,7 +236,7 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
       prompt[lastIndex] = addCacheToMessage(prompt[lastIndex]);
     }
 
-    return { ...params, prompt };
+    return { ...params, prompt: prompt as typeof params.prompt };
   },
 };
 

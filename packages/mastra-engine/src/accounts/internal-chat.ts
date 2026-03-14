@@ -5,13 +5,13 @@ import type { Agent } from '@mastra/core/agent';
 import {
   messageStore,
 } from '../agent/message-store';
-import { getAgentWakeQueue } from '../agent/wake-queue';
+import type { AgentWakeQueue } from '../agent/wake-queue';
 
 type RegisteredInternalAgent = {
   agentId: string;
   accountId: string;
   displayName: string;
-  wakeQueue: ReturnType<typeof getAgentWakeQueue>;
+  wakeQueue: AgentWakeQueue;
 };
 
 export function createInternalChatRouter() {
@@ -20,6 +20,7 @@ export function createInternalChatRouter() {
   return {
     async registerAgent(config: {
       agent: Agent;
+      wakeQueue: AgentWakeQueue;
       agentId?: string;
       displayName?: string;
     }) {
@@ -32,16 +33,11 @@ export function createInternalChatRouter() {
         displayName,
       });
 
-      const wakeQueue = getAgentWakeQueue({
-        agentId,
-        agent: config.agent,
-      });
-
       agents.set(agentId, {
         agentId,
         accountId,
         displayName,
-        wakeQueue,
+        wakeQueue: config.wakeQueue,
       });
 
       for (const current of agents.values()) {

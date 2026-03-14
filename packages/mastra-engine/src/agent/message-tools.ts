@@ -1,4 +1,4 @@
-import { createTool } from '@mastra/core/tools';
+import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
 import { messageStore } from './message-store';
@@ -49,11 +49,26 @@ const sendMessageInputSchema = z
   .refine((input) => Number(Boolean(input.target)) + Number(Boolean(input.contactSlug)) === 1, {
     message: 'Provide exactly one of target or contactSlug.',
   });
+type ToolMap = {
+  list_contacts: Tool;
+  get_contact: Tool;
+  upsert_contact: Tool;
+  list_conversations: Tool;
+  get_messages: Tool;
+  send_message: Tool;
+};
 
-const tool = createTool as any;
+type SimpleTool<TInput> = {
+  id: string;
+  description: string;
+  inputSchema: z.ZodType<TInput>;
+  execute: (input: TInput) => Promise<unknown> | unknown;
+};
 
-export function createExternalAccountTools(agentId: string) {
-  const listContacts = tool({
+const createMessageTool = createTool as unknown as <TInput>(tool: SimpleTool<TInput>) => Tool;
+
+export function createExternalAccountTools(agentId: string): ToolMap {
+  const listContacts = createMessageTool({
     id: 'list_contacts',
     description: 'List the known contacts registered by this agent.',
     inputSchema: z.object({}),
@@ -69,7 +84,7 @@ export function createExternalAccountTools(agentId: string) {
     },
   });
 
-  const getContact = tool({
+  const getContact = createMessageTool({
     id: 'get_contact',
     description: 'Get a registered contact by slug, including all known identities across providers.',
     inputSchema: z.object({
@@ -80,11 +95,11 @@ export function createExternalAccountTools(agentId: string) {
     }),
   });
 
-  const upsertContact = tool({
+  const upsertContact = createMessageTool({
     id: 'upsert_contact',
     description: 'Create or update a contact with a stable slug, free-form description, and known accounts.',
     inputSchema: upsertContactInputSchema,
-    execute: async (input: any) => {
+    execute: async (input: z.infer<typeof upsertContactInputSchema>) => {
       const contact = await messageStore.upsertAgentContact({
         agentId,
         slug: input.slug,
@@ -101,12 +116,12 @@ export function createExternalAccountTools(agentId: string) {
     },
   });
 
-  const listConversations = tool({
+  const listConversations = createMessageTool({
     id: 'list_conversations',
     description:
       'List message conversations from the agent inbox. If unread preview messages are returned, they are automatically marked as read.',
     inputSchema: listConversationsInputSchema,
-    execute: async (input: any) => {
+    execute: async (input: z.infer<typeof listConversationsInputSchema>) => {
       const conversations = await messageStore.listMessageConversations({
         agentId,
         provider: input.provider,
@@ -140,13 +155,13 @@ export function createExternalAccountTools(agentId: string) {
     },
   });
 
-  const getMessagesTool = tool({
+  const getMessagesTool = createMessageTool({
     id: 'get_messages',
     description: 'Read the messages from a single conversation. Returned unread messages are automatically marked as read.',
     // TODO: consider also returning a formatted text view for conversation reads, e.g.:
     // [${createdAt}][${provider}] ${contactDisplayName} (${contactSlug}): ${content}
     inputSchema: getMessagesInputSchema,
-    execute: async (input: any) => {
+    execute: async (input: z.infer<typeof getMessagesInputSchema>) => {
       const messages = await messageStore.getMessages({
         agentId,
         conversationId: input.conversationId,
@@ -168,11 +183,11 @@ export function createExternalAccountTools(agentId: string) {
     },
   });
 
-  const sendMessage = tool({
+  const sendMessage = createMessageTool({
     id: 'send_message',
     description: 'Send a message through one of the external providers owned by this agent.',
     inputSchema: sendMessageInputSchema,
-    execute: async (input: any) =>
+    execute: async (input: z.infer<typeof sendMessageInputSchema>) =>
       messageStore.sendAccountMessage({
         agentId,
         provider: input.provider,
@@ -190,5 +205,5 @@ export function createExternalAccountTools(agentId: string) {
     list_conversations: listConversations,
     get_messages: getMessagesTool,
     send_message: sendMessage,
-  } as Record<string, any>;
+  };
 }

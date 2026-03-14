@@ -1,8 +1,15 @@
-import { createTool } from '@mastra/core/tools';
+import { createTool, type Tool } from '@mastra/core/tools';
 import Firecrawl from '@mendable/firecrawl-js';
 import { z } from 'zod';
 
-const tool = createTool as any;
+type SimpleTool<TInput> = {
+  id: string;
+  description: string;
+  inputSchema: z.ZodType<TInput>;
+  execute: (input: TInput) => Promise<unknown> | unknown;
+};
+
+const createMarketTool = createTool as unknown as <TInput>(tool: SimpleTool<TInput>) => Tool;
 
 const SignalSchema = z.object({
   title: z.string().describe('Title or headline of the signal'),
@@ -23,25 +30,36 @@ const FirecrawlAgentResponseSchema = z.object({
   creditsUsed: z.number().optional(),
 });
 
-const firecrawlSignalsSchema = z.object({
-  signals: z.array(
-    z.object({
-      title: z.string(),
-      description: z.string(),
-      source: z.string(),
-      type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']),
-      severity: z.enum(['low', 'medium', 'high']),
-    }),
-  ),
+const marketResearchInputSchema = z.object({
+  customPrompt: z.string().optional().describe('Custom research prompt to override the default market research strategy'),
 });
 
-export const marketResearchTool = tool({
+const firecrawlSignalsSchema = {
+  type: 'object',
+  properties: {
+    signals: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          source: { type: 'string' },
+          type: { type: 'string', enum: ['pain_point', 'feature_request', 'trend', 'opportunity'] },
+          severity: { type: 'string', enum: ['low', 'medium', 'high'] },
+        },
+        required: ['title', 'description', 'source', 'type', 'severity'],
+      },
+    },
+  },
+  required: ['signals'],
+} satisfies Record<string, unknown>;
+
+export const marketResearchTool: Tool = createMarketTool({
   id: 'market_research',
   description: 'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
-  inputSchema: z.object({
-    customPrompt: z.string().optional().describe('Custom research prompt to override the default market research strategy'),
-  }),
-  execute: async (input: any) => {
+  inputSchema: marketResearchInputSchema,
+  execute: async (input: z.infer<typeof marketResearchInputSchema>) => {
     const API_KEY = process.env.FIRECRAWL_API_KEY;
 
     if (!API_KEY) {
@@ -87,7 +105,7 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
     try {
       const rawResponse = await firecrawl.agent({
         prompt,
-        schema: firecrawlSignalsSchema as any,
+        schema: firecrawlSignalsSchema,
       });
 
       const result = FirecrawlAgentResponseSchema.safeParse(rawResponse);

@@ -7,6 +7,10 @@ const DEFAULT_WAKE_PROMPT = [
   'Check your messages, inspect what is pending, and process what matters.',
 ].join('\n\n');
 
+export type AgentWakeQueue = {
+  notifyExternalEvent(): void;
+};
+
 type WakeState = {
   pending: boolean;
   running: boolean;
@@ -14,85 +18,92 @@ type WakeState = {
   timer: NodeJS.Timeout | null;
 };
 
-const wakeStates = new Map<string, WakeState>();
-
-function getWakeState(agentId: string): WakeState {
-  let state = wakeStates.get(agentId);
-  if (!state) {
-    state = {
-      pending: false,
-      running: false,
-      firstPendingAt: null,
-      timer: null,
-    };
-    wakeStates.set(agentId, state);
-  }
-  return state;
-}
-
-function clearWakeTimer(state: WakeState) {
-  if (state.timer) {
-    clearTimeout(state.timer);
-    state.timer = null;
-  }
-}
-
-export function getAgentWakeQueue(config: {
-  agentId: string;
+type WakeQueueConfig = {
   agent: Agent;
+  agentId: string;
   onWakeStarted?: () => void;
   onWakeFinished?: () => void;
   onWakeError?: (error: unknown) => void;
-}) {
-  const state = getWakeState(config.agentId);
+};
 
-  const runWake = async () => {
-    clearWakeTimer(state);
-    if (state.running || !state.pending) {
-      return;
-    }
-
-    state.running = true;
-    state.pending = false;
-    state.firstPendingAt = null;
-    config.onWakeStarted?.();
-
-    try {
-      await config.agent.generate(DEFAULT_WAKE_PROMPT);
-      config.onWakeFinished?.();
-    } catch (error) {
-      config.onWakeError?.(error);
-    } finally {
-      state.running = false;
-
-      if (state.pending) {
-        state.timer = setTimeout(() => {
-          void runWake();
-        }, 0);
-      }
-    }
-  };
-
-  const scheduleWake = () => {
-    if (state.running) {
-      return;
-    }
-
-    const now = Date.now();
-    state.firstPendingAt ??= now;
-    const elapsed = now - state.firstPendingAt;
-    const delay = Math.max(0, Math.min(WAKE_DEBOUNCE_MS, WAKE_MAX_DELAY_MS - elapsed));
-
-    clearWakeTimer(state);
-    state.timer = setTimeout(() => {
-      void runWake();
-    }, delay);
-  };
+export function createWakeQueueRegistry() {
+  const queues = new Map<string, AgentWakeQueue>();
 
   return {
-    notifyExternalEvent() {
-      state.pending = true;
-      scheduleWake();
+    get(config: WakeQueueConfig) {
+      const existing = queues.get(config.agentId);
+      if (existing) {
+        return existing;
+      }
+
+      const state: WakeState = {
+        pending: false,
+        running: false,
+        firstPendingAt: null,
+        timer: null,
+      };
+
+      const clearTimer = () => {
+        if (!state.timer) {
+          return;
+        }
+
+        clearTimeout(state.timer);
+        state.timer = null;
+      };
+
+      const runWake = async () => {
+        clearTimer();
+        if (state.running || !state.pending) {
+          return;
+        }
+
+        state.running = true;
+        state.pending = false;
+        state.firstPendingAt = null;
+        config.onWakeStarted?.();
+
+        try {
+          await config.agent.generate(DEFAULT_WAKE_PROMPT);
+          config.onWakeFinished?.();
+        } catch (error) {
+          config.onWakeError?.(error);
+        } finally {
+          state.running = false;
+
+          if (!state.pending) {
+            return;
+          }
+
+          state.timer = setTimeout(() => {
+            void runWake();
+          }, 0);
+        }
+      };
+
+      const queue: AgentWakeQueue = {
+        notifyExternalEvent() {
+          state.pending = true;
+
+          if (state.running) {
+            return;
+          }
+
+          const now = Date.now();
+          state.firstPendingAt ??= now;
+
+          const elapsed = now - state.firstPendingAt;
+          const delay = Math.max(0, Math.min(WAKE_DEBOUNCE_MS, WAKE_MAX_DELAY_MS - elapsed));
+
+          clearTimer();
+          state.timer = setTimeout(() => {
+            void runWake();
+          }, delay);
+        },
+      };
+
+      queues.set(config.agentId, queue);
+      return queue;
     },
   };
 }

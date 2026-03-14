@@ -13,11 +13,12 @@ import {
   messageStore,
 } from '../agent/message-store';
 import { forgeDebug } from '../debug';
-import { getAgentWakeQueue } from '../agent/wake-queue';
+import type { AgentWakeQueue } from '../agent/wake-queue';
 
 export type DiscordAgentClientConfig = {
   agent: Agent;
   token: string;
+  wakeQueue: AgentWakeQueue;
   allowedChannelIds?: string[];
   respondToMentionsOnly?: boolean;
   agentId?: string;
@@ -49,20 +50,6 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
   const ready = new Promise<string>((resolve) => {
     resolveReady = resolve;
   });
-  const wakeQueue = getAgentWakeQueue({
-    agentId,
-    agent: config.agent,
-    onWakeStarted: () => {
-      forgeDebug('discord', 'agent wake started', { agentId });
-    },
-    onWakeFinished: () => {
-      forgeDebug('discord', 'agent wake finished', { agentId });
-    },
-    onWakeError: (error) => {
-      console.error('[forge:discord] agent wake failed', error);
-    },
-  });
-
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -175,7 +162,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
         agentId,
       });
 
-      wakeQueue.notifyExternalEvent();
+      config.wakeQueue.notifyExternalEvent();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('[forge:discord] agent execution failed', error);
