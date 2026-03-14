@@ -6,7 +6,9 @@ This document defines how the communication module should be rebuilt.
 
 The main correction is this:
 
-- communication owns the flow
+- the communication module defines the contracts
+- the communication module orchestrates the flow
+- providers implement those contracts
 - providers do not own the flow
 
 That is the architectural center.
@@ -20,9 +22,10 @@ That makes the system feel inverted and scattered.
 
 The target architecture is:
 - the agent registers providers when it is created
-- the communication module uses those providers
+- the communication module receives those registered providers
+- the communication module calls them through its own contracts
 - the communication module decides the flow
-- providers only handle transport concerns
+- providers only implement transport concerns and provider-local state
 
 
 ## What the communication module is
@@ -82,9 +85,10 @@ The module should be built around these concepts.
 
 ### 1. Communication module
 
-This is the orchestrator.
+This is the orchestrator and contract owner.
 
 It owns:
+- provider contracts
 - registration of providers for an agent
 - inbound entrypoints
 - outbound entrypoints
@@ -204,6 +208,7 @@ Those are adapter concerns.
 
 The communication module should own:
 
+- the provider contracts
 - provider registration for the agent
 - a unified API for inbound and outbound actions
 - contact resolution
@@ -225,7 +230,7 @@ That means the agent should end up with something like:
 - Discord provider registered
 - internal chat provider registered
 
-Then the communication module uses those registered providers.
+Then the communication module uses those registered providers through its own contracts.
 
 This is better because:
 - the communication module becomes the center
@@ -283,7 +288,7 @@ But these should only exist if they still belong to the communication module and
 This should be the inbound flow.
 
 1. provider is registered by the communication module
-2. communication module subscribes to provider inbound events
+2. communication module subscribes to provider inbound events through the provider contract
 3. provider emits an inbound event to the communication module
 4. communication module:
    - identifies the provider
@@ -306,7 +311,7 @@ This should be the outbound flow.
    - which provider to use
    - which contact or channel to use
    - whether this is a direct send or a reply
-3. communication module calls the chosen provider
+3. communication module calls the chosen provider through the provider contract
 4. provider performs the real send
 5. provider records its own local message state if needed
 
@@ -395,7 +400,9 @@ The rebuild should start with the smallest valid slice.
 
 Implement the provider contract.
 
-Each provider should support:
+Each provider should support the contract defined by the communication module.
+
+Minimum likely contract:
 - subscribe to inbound
 - send outbound
 
@@ -483,7 +490,7 @@ Recommended answer:
 The final system should be explainable like this:
 
 "Providers are registered into the communication module.
-Providers only handle transport and provider-local state.
-The communication module orchestrates inbound and outbound flow for the agent.
+The communication module defines the provider contracts and orchestrates inbound and outbound flow for the agent.
+Providers only implement transport and provider-local state.
 Contacts live in the communication module.
 Wake happens after communication handles inbound events."

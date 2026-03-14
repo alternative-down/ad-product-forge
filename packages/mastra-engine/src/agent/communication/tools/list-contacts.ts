@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { agentContacts } from '../agent-contacts';
+import { communicationModule } from '../module';
 
 const listContactsInputSchema = z.object({});
 
@@ -11,7 +11,7 @@ export function createListContactsTool(agentId: string) {
     description: 'List the known contacts registered by this agent.',
     inputSchema: listContactsInputSchema,
     execute: async () => {
-      const contacts = await agentContacts.listAgentContacts(agentId);
+      const contacts = await communicationModule.listContacts(agentId);
 
       return {
         contacts: contacts.map((contact) => ({

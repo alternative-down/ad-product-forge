@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { messageStore } from '../message-store';
+import { communicationModule } from '../module';
 
 const listConversationsInputSchema = z.object({
   provider: z.string().optional(),
@@ -17,12 +17,12 @@ export function createListConversationsTool(agentId: string) {
       'List message conversations from the agent inbox. If unread preview messages are returned, they are automatically marked as read.',
     inputSchema: listConversationsInputSchema,
     execute: async (input) => {
-      const conversations = await messageStore.listMessageConversations({
+      const conversations = await communicationModule.listConversations({
         agentId,
         provider: input.provider,
         contactSlug: input.contactSlug,
         unread: input.unread,
-        limit: input.limit,
+        limit: input.limit ?? 20,
       });
 
       return {

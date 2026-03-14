@@ -2,9 +2,9 @@ import crypto from 'node:crypto';
 
 import type { Agent } from '@mastra/core/agent';
 
-import { accountDeliveries } from '../agent/communication/account-deliveries';
 import { agentAccounts } from '../agent/communication/agent-accounts';
 import { agentContacts } from '../agent/communication/agent-contacts';
+import { communicationModule } from '../agent/communication/module';
 import { messageStore } from '../agent/communication/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 
@@ -63,41 +63,56 @@ export function createInternalChatRouter() {
     agents.set(agentId, registeredAgent);
     await syncAgentContacts();
 
-    accountDeliveries.register(accountId, async (input) => {
-      const recipient = agents.get(input.target);
+    communicationModule.registerProvider({
+      agentId,
+      wakeQueue: config.wakeQueue,
+      provider: {
+        id: 'internal-chat',
+        accountId,
+        listConversations: ({ agentId, contactSlug, unread, limit }) =>
+          messageStore.listMessageConversations({
+            agentId,
+            provider: 'internal-chat',
+            contactSlug,
+            unread,
+            limit,
+          }),
+        getMessages: ({ agentId, conversationId, limit }) =>
+          messageStore.getMessages({
+            agentId,
+            conversationId,
+            limit,
+          }),
+        sendMessage: async (input) => {
+          const recipient = agents.get(input.target);
 
-      if (!recipient) {
-        throw new Error(`Internal chat target not found: ${input.target}`);
-      }
+          if (!recipient) {
+            throw new Error(`Internal chat target not found: ${input.target}`);
+          }
 
-      const messageId = `internal:${crypto.randomUUID()}`;
-      await agentContacts.syncInboundContact({
-        agentId: recipient.agentId,
-        provider: 'internal-chat',
-        authorId: registeredAgent.agentId,
-        authorName: registeredAgent.displayName,
-        username: registeredAgent.agentId,
-      });
-      await messageStore.saveInboundMessage({
-        agentId: recipient.agentId,
-        accountId: recipient.accountId,
-        messageId,
-        channelId: registeredAgent.agentId,
-        channelName: registeredAgent.displayName,
-        authorId: registeredAgent.agentId,
-        authorName: registeredAgent.displayName,
-        username: registeredAgent.agentId,
-        content: input.content,
-        attachments: [],
-        createdAt: new Date().toISOString(),
-        metadata: {
-          provider: 'internal-chat',
-          replyToMessageId: input.replyToMessageId,
+          const messageId = `internal:${crypto.randomUUID()}`;
+          await communicationModule.receiveInboundMessage({
+            agentId: recipient.agentId,
+            provider: 'internal-chat',
+            accountId: recipient.accountId,
+            messageId,
+            channelId: registeredAgent.agentId,
+            channelName: registeredAgent.displayName,
+            authorId: registeredAgent.agentId,
+            authorName: registeredAgent.displayName,
+            username: registeredAgent.agentId,
+            content: input.content,
+            attachments: [],
+            createdAt: new Date().toISOString(),
+            metadata: {
+              provider: 'internal-chat',
+              replyToMessageId: input.replyToMessageId,
+            },
+          });
+
+          return { messageId, channelId: registeredAgent.agentId };
         },
-      });
-
-      recipient.wakeQueue.notifyExternalEvent();
-      return { messageId, channelId: registeredAgent.agentId };
+      },
     });
   }
 
@@ -108,7 +123,7 @@ export function createInternalChatRouter() {
       return;
     }
 
-    accountDeliveries.unregister(registeredAgent.accountId);
+    communicationModule.unregisterProvider(agentId, 'internal-chat');
     agents.delete(agentId);
   }
 

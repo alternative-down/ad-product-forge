@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { messageStore } from '../message-store';
+import { communicationModule } from '../module';
 
 const getMessagesInputSchema = z.object({
   conversationId: z.string(),
@@ -15,10 +15,10 @@ export function createGetMessagesTool(agentId: string) {
       'Read the messages from a single conversation. Returned unread messages are automatically marked as read.',
     inputSchema: getMessagesInputSchema,
     execute: async (input) => {
-      const messages = await messageStore.getMessages({
+      const messages = await communicationModule.getMessages({
         agentId,
         conversationId: input.conversationId,
-        limit: input.limit,
+        limit: input.limit ?? 100,
       });
 
       return {
