@@ -72,7 +72,6 @@ export type Attachment = z.infer<typeof attachmentSchema>;
 
 export function createCommunicationStore(agentId: string, dbUrl: string) {
   const client = createClient({ url: dbUrl });
-  let currentState: z.infer<typeof stateSchema> | null = null;
 
   function slugify(value: string) {
     return (
@@ -87,10 +86,6 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
   }
 
   async function readState() {
-    if (currentState) {
-      return currentState;
-    }
-
     await client.execute(`
       CREATE TABLE IF NOT EXISTS forge_communication_state (
         agent_id TEXT PRIMARY KEY,
@@ -104,28 +99,22 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     });
 
     if (!result.rows[0]?.state || typeof result.rows[0].state !== 'string') {
-      currentState = stateSchema.parse({});
-      await saveState();
-      return currentState;
+      const state = stateSchema.parse({});
+      await saveState(state);
+      return state;
     }
 
-    currentState = stateSchema.parse(JSON.parse(result.rows[0].state));
-
-    return currentState;
+    return stateSchema.parse(JSON.parse(result.rows[0].state));
   }
 
-  async function saveState() {
-    if (!currentState) {
-      return;
-    }
-
+  async function saveState(state: z.infer<typeof stateSchema>) {
     await client.execute({
       sql: `
         INSERT INTO forge_communication_state (agent_id, state)
         VALUES (?, ?)
         ON CONFLICT(agent_id) DO UPDATE SET state = excluded.state
       `,
-      args: [agentId, JSON.stringify(currentState)],
+      args: [agentId, JSON.stringify(state)],
     });
   }
 
@@ -156,7 +145,7 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
       account.metadata = input.metadata;
     }
 
-    await saveState();
+    await saveState(state);
     return account;
   }
 
@@ -251,7 +240,7 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
       }
     }
 
-    await saveState();
+    await saveState(state);
     return contact;
   }
 
@@ -279,7 +268,7 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
         updatedAt: now,
       };
       state.conversations.push(conversation);
-      await saveState();
+      await saveState(state);
       return conversation;
     }
 
@@ -292,7 +281,7 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     }
 
     conversation.updatedAt = now;
-    await saveState();
+    await saveState(state);
     return conversation;
   }
 
@@ -355,7 +344,7 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     };
 
     state.messages.push(message);
-    await saveState();
+    await saveState(state);
     return message;
   }
 
@@ -390,7 +379,7 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     };
 
     state.messages.push(message);
-    await saveState();
+    await saveState(state);
     return message;
   }
 
@@ -414,7 +403,7 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     }
 
     if (changed) {
-      await saveState();
+      await saveState(state);
     }
   }
 
