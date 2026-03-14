@@ -7,4 +7,4 @@ export * from './llm/openai-codex';
 export * from './llm/claude-max';
 export * from './agent/message-tools';
 export * from './agent/wake-queue';
-export * from './tools/market-research';
+export * from './agent/tools/market-research';

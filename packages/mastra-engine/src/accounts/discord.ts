@@ -28,53 +28,50 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
   const agentId = config.agentId ?? config.agent.id;
-  let resolveReady: (accountId: string) => void = () => {};
   const ready = new Promise<string>((resolve) => {
-    resolveReady = resolve;
-  });
+    client.once(Events.ClientReady, async (readyClient) => {
+      const accountId = await messageStore.ensureAccount({
+        agentId,
+        provider: 'discord',
+        externalAccountId: readyClient.user.id,
+        displayName: readyClient.user.tag,
+      });
 
-  client.once(Events.ClientReady, async (readyClient) => {
-    const accountId = await messageStore.ensureAccount({
-      agentId,
-      provider: 'discord',
-      externalAccountId: readyClient.user.id,
-      displayName: readyClient.user.tag,
-    });
+      messageRouter.registerSender(accountId, async (input) => {
+        if (!input.target || !/^\d+$/.test(input.target)) {
+          throw new Error(`Unsupported Discord target: ${input.target}`);
+        }
 
-    messageRouter.registerSender(accountId, async (input) => {
-      if (!input.target || !/^\d+$/.test(input.target)) {
-        throw new Error(`Unsupported Discord target: ${input.target}`);
-      }
+        if (input.contactSlug && !input.replyToMessageId) {
+          const user = await client.users.fetch(input.target);
+          const channel = await user.createDM();
+          await channel.sendTyping();
+          await new Promise((done) => setTimeout(done, 700));
+          const sent = await channel.send(input.content);
+          return { messageId: sent.id, channelId: channel.id };
+        }
 
-      if (input.contactSlug && !input.replyToMessageId) {
-        const user = await client.users.fetch(input.target);
-        const channel = await user.createDM();
+        const channel = await client.channels.fetch(input.target);
+        if (!channel?.isSendable()) {
+          throw new Error(`Discord target is not sendable: ${input.target}`);
+        }
+
         await channel.sendTyping();
-        await new Promise((resolve) => setTimeout(resolve, 700));
+        await new Promise((done) => setTimeout(done, 700));
+
+        if (input.replyToMessageId && 'messages' in channel) {
+          const replyTarget = await channel.messages.fetch(input.replyToMessageId);
+          const sent = await replyTarget.reply(input.content);
+          return { messageId: sent.id, channelId: sent.channelId };
+        }
+
         const sent = await channel.send(input.content);
-        return { messageId: sent.id, channelId: channel.id };
-      }
-
-      const channel = await client.channels.fetch(input.target);
-      if (!channel?.isSendable()) {
-        throw new Error(`Discord target is not sendable: ${input.target}`);
-      }
-
-      await channel.sendTyping();
-      await new Promise((resolve) => setTimeout(resolve, 700));
-
-      if (input.replyToMessageId && 'messages' in channel) {
-        const replyTarget = await channel.messages.fetch(input.replyToMessageId);
-        const sent = await replyTarget.reply(input.content);
         return { messageId: sent.id, channelId: sent.channelId };
-      }
+      });
 
-      const sent = await channel.send(input.content);
-      return { messageId: sent.id, channelId: sent.channelId };
+      console.log(`[discord] logged in as ${readyClient.user.tag}`);
+      resolve(accountId);
     });
-
-    console.log(`[discord] logged in as ${readyClient.user.tag}`);
-    resolveReady(accountId);
   });
 
   client.on(Events.MessageCreate, async (message) => {

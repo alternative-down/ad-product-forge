@@ -1,6 +1,7 @@
+import { Mastra } from '@mastra/core';
 import { Agent } from '@mastra/core/agent';
 
-import { openaiCodexProvider } from '../src/llm/openai-codex';
+import { createOpenAICodexGateway, openaiCodexProvider } from '../src/llm/openai-codex';
 
 async function main() {
   const agent = new Agent({
@@ -16,12 +17,14 @@ async function main() {
         },
       },
     },
-    model: openaiCodexProvider('gpt-5.4', {
-      // thinkingLevel: 'low',
-    }),
+    model: openaiCodexProvider('gpt-5.4'),
+  });
+  const mastra = new Mastra({
+    agents: { [String(agent.id)]: agent },
+    gateways: { openaiCodexOauth: createOpenAICodexGateway() },
   });
 
-  const result = await agent.generate('Responda exatamente com: ok', {
+  const result = await mastra.getAgent(String(agent.id))!.generate('Responda exatamente com: ok', {
     providerOptions: {
       openai: {
         instructions: 'Responda de forma curta e direta.',
