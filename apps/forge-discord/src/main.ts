@@ -9,12 +9,11 @@ import { LocalFilesystem, LocalSandbox, Workspace } from '@mastra/core/workspace
 import {
   CLAUDE_MAX_MODELS,
   OPENAI_CODEX_MODELS,
-  claudeMaxProvider,
   createForgeAgent,
   createInternalChatPreset,
   createOAuthGateway,
   createSimpleAgent,
-  openaiCodexProvider,
+  OAUTH_GATEWAY_ID,
 } from '@mastra-engine/core';
 
 import { createDiscordProvider } from './discord-account.js';
@@ -58,8 +57,8 @@ export async function main() {
 
   const model =
     env.FORGE_MODEL_PROVIDER === 'openai-codex'
-      ? openaiCodexProvider(z.enum(OPENAI_CODEX_MODELS).parse(env.FORGE_MODEL_ID))
-      : claudeMaxProvider(z.enum(CLAUDE_MAX_MODELS).parse(env.FORGE_MODEL_ID));
+      ? `${OAUTH_GATEWAY_ID}/openai-codex/${z.enum(OPENAI_CODEX_MODELS).parse(env.FORGE_MODEL_ID)}`
+      : `${OAUTH_GATEWAY_ID}/claude-max/${z.enum(CLAUDE_MAX_MODELS).parse(env.FORGE_MODEL_ID)}`;
 
   const agent = await createForgeAgent({
     id: env.FORGE_AGENT_ID,

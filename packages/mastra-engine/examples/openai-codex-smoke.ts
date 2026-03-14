@@ -1,8 +1,8 @@
 import { Mastra } from '@mastra/core';
 import { Agent } from '@mastra/core/agent';
 
-import { openaiCodexProvider } from '../src/llm/openai-codex';
-import { createOAuthGateway } from '../src/llm/oauth-gateway';
+import { OPENAI_CODEX_MODELS } from '../src/llm/model-ids';
+import { createOAuthGateway, OAUTH_GATEWAY_ID } from '../src/llm/oauth-gateway';
 
 async function main() {
   const agent = new Agent({
@@ -18,7 +18,7 @@ async function main() {
         },
       },
     },
-    model: openaiCodexProvider('gpt-5.4'),
+    model: `${OAUTH_GATEWAY_ID}/openai-codex/${OPENAI_CODEX_MODELS[0]}`,
   });
   const mastra = new Mastra({
     agents: { [String(agent.id)]: agent },

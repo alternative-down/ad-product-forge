@@ -1,15 +1,15 @@
 import { Mastra } from '@mastra/core';
 import { Agent } from '@mastra/core/agent';
 
-import { claudeMaxProvider } from '../src/llm/claude-max';
-import { createOAuthGateway } from '../src/llm/oauth-gateway';
+import { CLAUDE_MAX_MODELS } from '../src/llm/model-ids';
+import { createOAuthGateway, OAUTH_GATEWAY_ID } from '../src/llm/oauth-gateway';
 
 async function main() {
   const agent = new Agent({
     id: 'claude-max-smoke',
     name: 'Claude Max Smoke',
     instructions: 'Responda de forma curta e direta.',
-    model: claudeMaxProvider('claude-3-5-haiku-latest'),
+    model: `${OAUTH_GATEWAY_ID}/claude-max/${CLAUDE_MAX_MODELS[0]}`,
   });
   const mastra = new Mastra({
     agents: { [String(agent.id)]: agent },
