@@ -56,7 +56,6 @@ export type CommunicationMessageView = {
   messageId: string;
   conversationId: string;
   provider: string;
-  direction: 'inbound' | 'outbound';
   content: string;
   attachments: Attachment[];
   unread: boolean;
