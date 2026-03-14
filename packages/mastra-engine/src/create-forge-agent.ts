@@ -1,10 +1,13 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 
+import { createCommunicationModule, type CommunicationProvider } from './agent/communication/module';
+import { createExternalAccountTools } from './agent/communication/tools';
 import { LongTermMemory } from './agent/memory/long-term-memory';
 import { createAgentMemory } from './agent/memory/memory';
 import { createObservationalMemory } from './agent/memory/observational-memory';
 import { createAgentStorage } from './agent/memory/storage';
 import { appendWorkingMemoryInstructions } from './agent/memory/working-memory';
+import { createAgentWakeQueue } from './agent/wake-queue';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -13,6 +16,7 @@ export type CreateForgeAgentConfig<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
   omModel?: AgentConfig['model'];
+  providers?: CommunicationProvider[];
 };
 
 export async function createForgeAgent<
@@ -23,10 +27,15 @@ export async function createForgeAgent<
 >(
   config: Pick<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'workspace' | 'agents' | 'omModel'
+    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'workspace' | 'agents' | 'omModel' | 'providers'
   >,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const { storage, vector } = createAgentStorage(config.id);
+  const communication = createCommunicationModule({ agentId: config.id });
+  const tools = {
+    ...createExternalAccountTools(communication),
+    ...(config.tools ?? {}),
+  } as TTools;
   const memory = createAgentMemory({ storage, vector });
   const om = createObservationalMemory({
     storage,
@@ -36,14 +45,13 @@ export async function createForgeAgent<
     agentId: config.id,
     om,
   });
-
-  return new Agent<TAgentId, TTools, TOutput, TRequestContext>({
+  const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({
     id: config.id,
     name: config.name,
     description: config.description,
     instructions: appendWorkingMemoryInstructions(config.instructions),
     model: config.model,
-    tools: config.tools,
+    tools,
     workflows: config.workflows,
     workspace: config.workspace,
     agents: config.agents,
@@ -51,4 +59,13 @@ export async function createForgeAgent<
     inputProcessors: [om, longTermMemory],
     outputProcessors: [om, longTermMemory],
   });
+  const wakeQueue = createAgentWakeQueue({ agent, agentId: config.id });
+
+  communication.attachWakeQueue(wakeQueue);
+
+  for (const provider of config.providers ?? []) {
+    await communication.connectProvider(provider);
+  }
+
+  return agent;
 }

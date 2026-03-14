@@ -10,16 +10,14 @@ import {
   CLAUDE_MAX_MODELS,
   OPENAI_CODEX_MODELS,
   claudeMaxProvider,
-  createExternalAccountTools,
   createForgeAgent,
-  createInternalChatRouter,
+  createInternalChatPreset,
   createOAuthGateway,
   createSimpleAgent,
-  createWakeQueueRegistry,
   openaiCodexProvider,
 } from '@mastra-engine/core';
 
-import { createDiscordAgentClient } from './discord-account.js';
+import { createDiscordProvider } from './discord-account.js';
 import { z } from 'zod';
 
 const envSchema = z.object({
@@ -56,6 +54,8 @@ export async function main() {
 
   await workspace.init();
 
+  const internalChat = createInternalChatPreset();
+
   const model =
     env.FORGE_MODEL_PROVIDER === 'openai-codex'
       ? openaiCodexProvider(z.enum(OPENAI_CODEX_MODELS).parse(env.FORGE_MODEL_ID))
@@ -66,21 +66,27 @@ export async function main() {
     name: env.FORGE_AGENT_NAME,
     instructions: systemPrompt,
     model,
-    tools: createExternalAccountTools(env.FORGE_AGENT_ID),
     workspace,
+    providers: [
+      internalChat.createProvider({ id: env.FORGE_AGENT_ID, displayName: env.FORGE_AGENT_NAME }),
+      createDiscordProvider({
+        agentId: env.FORGE_AGENT_ID,
+        token: env.DISCORD_BOT_TOKEN,
+        allowedChannelIds: (env.DISCORD_ALLOWED_CHANNEL_IDS ?? '')
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
+        respondToMentionsOnly: env.DISCORD_RESPOND_TO_MENTIONS_ONLY !== 'false',
+      }),
+    ],
   });
   const helperAgent = await createSimpleAgent({
     id: helperAgentId,
     name: helperAgentName,
     instructions: helperInstructions,
     model,
-    tools: createExternalAccountTools(helperAgentId),
+    providers: [internalChat.createProvider({ id: helperAgentId, displayName: helperAgentName })],
   });
-  const wakeQueues = createWakeQueueRegistry();
-  const internalChat = createInternalChatRouter();
-  const agentWakeQueue = wakeQueues.getQueue({ agent, agentId: env.FORGE_AGENT_ID });
-  const helperWakeQueue = wakeQueues.getQueue({ agent: helperAgent, agentId: helperAgentId });
-
   new Mastra({
     agents: {
       [String(agent.id)]: agent,
@@ -95,18 +101,6 @@ export async function main() {
     }),
   });
 
-  await internalChat.registerAgent({ agent, wakeQueue: agentWakeQueue });
-  await internalChat.registerAgent({ agent: helperAgent, wakeQueue: helperWakeQueue });
-  await createDiscordAgentClient({
-    agent,
-    wakeQueue: agentWakeQueue,
-    token: env.DISCORD_BOT_TOKEN,
-    allowedChannelIds: (env.DISCORD_ALLOWED_CHANNEL_IDS ?? '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean),
-    respondToMentionsOnly: env.DISCORD_RESPOND_TO_MENTIONS_ONLY !== 'false',
-  });
 }
 
 main().catch((error) => {

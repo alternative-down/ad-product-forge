@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { communicationModule } from '../module';
+import type { createCommunicationModule } from '../module';
 
 const listConversationsInputSchema = z.object({
   provider: z.string().optional(),
@@ -10,15 +10,14 @@ const listConversationsInputSchema = z.object({
   limit: z.number().int().positive().max(100).default(20),
 });
 
-export function createListConversationsTool(agentId: string) {
+export function createListConversationsTool(communication: ReturnType<typeof createCommunicationModule>) {
   return createTool({
     id: 'list_conversations',
     description:
       'List message conversations from the agent inbox. If unread preview messages are returned, they are automatically marked as read.',
     inputSchema: listConversationsInputSchema,
     execute: async (input) => {
-      const conversations = await communicationModule.listConversations({
-        agentId,
+      const conversations = await communication.listConversations({
         provider: input.provider,
         contactSlug: input.contactSlug,
         unread: input.unread,

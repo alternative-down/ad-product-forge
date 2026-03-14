@@ -1,81 +1,81 @@
 import crypto from 'node:crypto';
 
-import type { Agent } from '@mastra/core/agent';
-
-import { agentContacts } from '../agent/communication/agent-contacts';
-import { communicationModule } from '../agent/communication/module';
-import type { AgentWakeQueue } from '../agent/wake-queue';
 import { createInternalChatMessageStore } from './internal-chat-message-store';
+import type { CommunicationProvider } from '../agent/communication/module';
 
 type RegisteredAgent = {
-  agentId: string;
+  id: string;
   displayName: string;
-  wakeQueue: AgentWakeQueue;
   messages: ReturnType<typeof createInternalChatMessageStore>;
+  onInbound(input: { authorId?: string; authorName?: string; username?: string }): Promise<void>;
+  upsertContact(input: {
+    slug: string;
+    displayName: string;
+    provider: string;
+    externalUserId?: string;
+    username?: string;
+  }): Promise<void>;
 };
 
-export function createInternalChatRouter() {
+export function createInternalChatPreset() {
   const agents = new Map<string, RegisteredAgent>();
 
-  async function syncAgentContacts() {
-    for (const sourceAgent of agents.values()) {
-      for (const targetAgent of agents.values()) {
-        if (sourceAgent.agentId === targetAgent.agentId) {
+  async function syncContacts() {
+    for (const source of agents.values()) {
+      for (const target of agents.values()) {
+        if (source.id === target.id) {
           continue;
         }
 
-        await agentContacts.upsertAgentContact({
-          agentId: sourceAgent.agentId,
-          slug: targetAgent.agentId,
-          displayName: targetAgent.displayName,
-          accounts: [
-            {
-              provider: 'internal-chat',
-              externalUserId: targetAgent.agentId,
-              username: targetAgent.agentId,
-            },
-          ],
+        await source.upsertContact({
+          slug: target.id,
+          displayName: target.displayName,
+          provider: 'internal-chat',
+          externalUserId: target.id,
+          username: target.id,
         });
       }
     }
   }
 
-  async function registerAgent(config: {
-    agent: Agent;
-    wakeQueue: AgentWakeQueue;
-  }) {
-    const agentId = config.agent.id;
-    const displayName = config.agent.name;
-    const registeredAgent = {
-      agentId,
-      displayName,
-      wakeQueue: config.wakeQueue,
-      messages: createInternalChatMessageStore({ agentId }),
-    };
+  return {
+    createProvider(config: { id: string; displayName: string }): CommunicationProvider {
+      const messages = createInternalChatMessageStore({ agentId: config.id });
 
-    agents.set(agentId, registeredAgent);
-    await syncAgentContacts();
-
-    await communicationModule.registerProvider({
-      agentId,
-      externalAccountId: agentId,
-      displayName,
-      wakeQueue: config.wakeQueue,
-      provider: {
+      return {
         id: 'internal-chat',
+        async getAccount() {
+          return {
+            externalAccountId: config.id,
+            displayName: config.displayName,
+          };
+        },
+        async start({ onInbound, upsertContact }) {
+          agents.set(config.id, {
+            id: config.id,
+            displayName: config.displayName,
+            messages,
+            onInbound,
+            upsertContact,
+          });
+          await syncContacts();
+        },
+        async stop() {
+          agents.delete(config.id);
+        },
         listConversations: ({ contactSlug, unread, limit }) =>
-          registeredAgent.messages.listConversations({
+          messages.listConversations({
             contactSlug,
             unread,
             limit,
           }),
         getMessages: ({ conversationId, limit }) =>
-          registeredAgent.messages.getMessages({
+          messages.getMessages({
             conversationId,
             limit,
           }),
-        findMessage: (messageId) => registeredAgent.messages.findMessage(messageId),
-        sendMessage: async (input) => {
+        findMessage: (messageId) => messages.findMessage(messageId),
+        async sendMessage(input) {
           const recipient = agents.get(input.target);
 
           if (!recipient) {
@@ -83,13 +83,14 @@ export function createInternalChatRouter() {
           }
 
           const messageId = `internal:${crypto.randomUUID()}`;
+
           await recipient.messages.saveInboundMessage({
             messageId,
-            channelId: registeredAgent.agentId,
-            channelName: registeredAgent.displayName,
-            authorId: registeredAgent.agentId,
-            authorName: registeredAgent.displayName,
-            username: registeredAgent.agentId,
+            channelId: config.id,
+            channelName: config.displayName,
+            authorId: config.id,
+            authorName: config.displayName,
+            username: config.id,
             content: input.content,
             attachments: [],
             createdAt: new Date().toISOString(),
@@ -98,17 +99,17 @@ export function createInternalChatRouter() {
               replyToMessageId: input.replyToMessageId,
             },
           });
-          await communicationModule.receiveInboundMessage({
-            agentId: recipient.agentId,
-            provider: 'internal-chat',
-            authorId: registeredAgent.agentId,
-            authorName: registeredAgent.displayName,
-            username: registeredAgent.agentId,
+
+          await recipient.onInbound({
+            authorId: config.id,
+            authorName: config.displayName,
+            username: config.id,
           });
-          await registeredAgent.messages.saveOutboundMessage({
+
+          await messages.saveOutboundMessage({
             messageId,
-            channelId: registeredAgent.agentId,
-            channelName: registeredAgent.displayName,
+            channelId: config.id,
+            channelName: config.displayName,
             content: input.content,
             metadata: {
               contactSlug: input.contactSlug,
@@ -116,25 +117,12 @@ export function createInternalChatRouter() {
             },
           });
 
-          return { messageId, channelId: registeredAgent.agentId };
+          return {
+            messageId,
+            channelId: config.id,
+          };
         },
-      },
-    });
-  }
-
-  function unregisterAgent(agentId: string) {
-    const registeredAgent = agents.get(agentId);
-
-    if (!registeredAgent) {
-      return;
-    }
-
-    communicationModule.unregisterProvider(agentId, 'internal-chat');
-    agents.delete(agentId);
-  }
-
-  return {
-    registerAgent,
-    unregisterAgent,
+      };
+    },
   };
 }
