@@ -26,6 +26,8 @@ export function createAgentWakeQueue(config: { run(): Promise<unknown> }): Agent
 
   return {
     notifyExternalEvent() {
+      clearTimer();
+
       const now = Date.now();
 
       firstPendingAt ??= now;
@@ -35,7 +37,6 @@ export function createAgentWakeQueue(config: { run(): Promise<unknown> }): Agent
         return;
       }
 
-      clearTimer();
       timer = setTimeout(trigger, WAKE_DEBOUNCE_MS);
     },
   };
