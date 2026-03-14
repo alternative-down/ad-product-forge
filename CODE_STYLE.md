@@ -15,6 +15,61 @@ The main criteria are:
 
 If code respects these four things, the rest becomes much easier.
 
+
+## Guiding references
+
+These references are useful, but they are not the primary source of truth.
+The primary source of truth is what has already been agreed in this repository.
+If there is any conflict, the repository rules and prior agreements win.
+
+### Clean Code, adapted to this repository
+Use Clean Code ideas where they help readability and separation of concerns.
+But do not apply them mechanically.
+
+What to keep from Clean Code:
+- clear naming
+- clear separation of concepts
+- clear responsibilities and concerns
+- consistent level of abstraction inside a flow
+- code that is easy to read and reason about
+
+What not to over-apply from Clean Code here:
+- splitting everything into micro functions
+- fragmenting the main flow just to make functions shorter
+- forcing immutability everywhere when a contained mutable closure is the clearer design
+
+In this repository, readability of the real flow matters more than chasing tiny functions.
+A longer file can be better than a fragmented file if it keeps one concept coherent and readable.
+
+### Ultra KISS / YAGNI
+Prefer the simplest code that fits the current problem.
+Do not build for possible future needs.
+Do not add structure because it might be useful later.
+
+That means:
+- no speculative optimization
+- no speculative safety layers
+- no speculative abstractions
+- no speculative extensibility work
+
+If a real need appears later, solve that exact need then.
+
+### DRY, but only when the repetition is real
+Avoid real duplication.
+But do not destroy readability just to deduplicate two short blocks.
+
+In this repository, DRY is constrained by clarity.
+If removing duplication makes the code harder to follow, the code got worse.
+
+One strong practical rule that supports this is:
+- if a file has a function in module scope, it should normally have only one top-level function
+
+That rule pushes duplication pressure in a good direction:
+- if code is truly reusable, move it into a concept that deserves its own file
+- if code is not truly reusable, keep it local and direct
+
+This helps avoid the common failure mode where DRY turns into a pile of generic helper functions with no clear owner.
+
 ## 1. Organize by concept
 A file should exist because it owns a real concept in the system.
 
