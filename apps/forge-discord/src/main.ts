@@ -7,6 +7,8 @@ import { Mastra } from '@mastra/core';
 import { ConsoleLogger } from '@mastra/core/logger';
 import { LocalFilesystem, LocalSandbox, Workspace } from '@mastra/core/workspace';
 import {
+  CLAUDE_MAX_MODELS,
+  OPENAI_CODEX_MODELS,
   claudeMaxProvider,
   createDiscordAgentClient,
   createExternalAccountTools,
@@ -15,57 +17,34 @@ import {
   createSimpleAgent,
   createWakeQueueRegistry,
   openaiCodexProvider,
-  type ClaudeMaxModelId,
-  type OpenAICodexModelId,
 } from '@mastra-engine/core';
+import { z } from 'zod';
 
-function resolveModel() {
-  const provider = process.env.FORGE_MODEL_PROVIDER?.trim();
-  const modelId = process.env.FORGE_MODEL_ID?.trim();
+const envSchema = z.object({
+  FORGE_MODEL_PROVIDER: z.enum(['openai-codex', 'claude-max']),
+  FORGE_MODEL_ID: z.string().min(1),
+  FORGE_AGENT_ID: z.string().min(1),
+  FORGE_AGENT_NAME: z.string().min(1),
+  DISCORD_BOT_TOKEN: z.string().min(1),
+  FORGE_HELPER_AGENT_ID: z.string().optional(),
+  FORGE_HELPER_AGENT_NAME: z.string().optional(),
+  DISCORD_ALLOWED_CHANNEL_IDS: z.string().optional(),
+  DISCORD_RESPOND_TO_MENTIONS_ONLY: z.string().optional(),
+  FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+});
 
-  if (!provider) {
-    throw new Error('Missing required env var: FORGE_MODEL_PROVIDER');
-  }
-
-  if (!modelId) {
-    throw new Error('Missing required env var: FORGE_MODEL_ID');
-  }
-
-  if (provider === 'openai-codex') {
-    return openaiCodexProvider(modelId as OpenAICodexModelId);
-  }
-
-  if (provider === 'claude-max') {
-    return claudeMaxProvider(modelId as ClaudeMaxModelId);
-  }
-
-  throw new Error(
-    `Unsupported FORGE_MODEL_PROVIDER: ${provider}. Use "openai-codex" or "claude-max".`,
-  );
-}
-
-async function main() {
+export async function main() {
+  const env = envSchema.parse(process.env);
   const systemPromptPath = path.resolve(import.meta.dirname, './forge-system.md');
   const systemPrompt = await readFile(systemPromptPath, 'utf8');
-  const model = resolveModel();
-  const agentId = process.env.FORGE_AGENT_ID?.trim();
-  const agentName = process.env.FORGE_AGENT_NAME?.trim();
-  const discordBotToken = process.env.DISCORD_BOT_TOKEN?.trim();
-
-  if (!agentId) {
-    throw new Error('Missing required env var: FORGE_AGENT_ID');
-  }
-
-  if (!agentName) {
-    throw new Error('Missing required env var: FORGE_AGENT_NAME');
-  }
-
-  if (!discordBotToken) {
-    throw new Error('Missing required env var: DISCORD_BOT_TOKEN');
-  }
-
-  const helperAgentId = process.env.FORGE_HELPER_AGENT_ID?.trim() || 'forge-helper';
-  const helperAgentName = process.env.FORGE_HELPER_AGENT_NAME?.trim() || 'Forge Helper';
+  const workspace = new Workspace({
+    autoSync: true,
+    bm25: true,
+    filesystem: new LocalFilesystem({ basePath: './workspace-discord' }),
+    sandbox: new LocalSandbox({ workingDirectory: './workspace-discord' }),
+  });
+  const helperAgentId = env.FORGE_HELPER_AGENT_ID?.trim() || 'forge-helper';
+  const helperAgentName = env.FORGE_HELPER_AGENT_NAME?.trim() || 'Forge Helper';
   const helperInstructions = [
     systemPrompt,
     'You are the helper agent for the main Forge agent.',
@@ -74,23 +53,21 @@ async function main() {
     'Reply through internal-chat when appropriate.',
   ].join('\n\n');
 
-  const workspace = new Workspace({
-    autoSync: true,
-    bm25: true,
-    filesystem: new LocalFilesystem({ basePath: './workspace-discord' }),
-    sandbox: new LocalSandbox({ workingDirectory: './workspace-discord' }),
-  });
   await workspace.init();
 
+  const model =
+    env.FORGE_MODEL_PROVIDER === 'openai-codex'
+      ? openaiCodexProvider(z.enum(OPENAI_CODEX_MODELS).parse(env.FORGE_MODEL_ID))
+      : claudeMaxProvider(z.enum(CLAUDE_MAX_MODELS).parse(env.FORGE_MODEL_ID));
+
   const agent = await createForgeAgent({
-    id: agentId,
-    name: agentName,
+    id: env.FORGE_AGENT_ID,
+    name: env.FORGE_AGENT_NAME,
     instructions: systemPrompt,
     model,
-    tools: createExternalAccountTools(agentId),
+    tools: createExternalAccountTools(env.FORGE_AGENT_ID),
     workspace,
   });
-
   const helperAgent = await createSimpleAgent({
     id: helperAgentId,
     name: helperAgentName,
@@ -98,6 +75,10 @@ async function main() {
     model,
     tools: createExternalAccountTools(helperAgentId),
   });
+  const wakeQueues = createWakeQueueRegistry();
+  const internalChat = createInternalChatRouter();
+  const agentWakeQueue = wakeQueues.get({ agent, agentId: env.FORGE_AGENT_ID });
+  const helperWakeQueue = wakeQueues.get({ agent: helperAgent, agentId: helperAgentId });
 
   new Mastra({
     agents: {
@@ -106,27 +87,21 @@ async function main() {
     },
     logger: new ConsoleLogger({
       name: 'forge-app',
-      level: (process.env.FORGE_LOG_LEVEL?.trim() || 'warn') as 'debug' | 'info' | 'warn' | 'error',
+      level: env.FORGE_LOG_LEVEL ?? 'warn',
     }),
   });
 
-  const wakeQueues = createWakeQueueRegistry();
-  const agentWakeQueue = wakeQueues.get({ agent, agentId });
-  const helperWakeQueue = wakeQueues.get({ agent: helperAgent, agentId: helperAgentId });
-
-  const internalChat = createInternalChatRouter();
   await internalChat.registerAgent({ agent, wakeQueue: agentWakeQueue });
   await internalChat.registerAgent({ agent: helperAgent, wakeQueue: helperWakeQueue });
-
   await createDiscordAgentClient({
     agent,
     wakeQueue: agentWakeQueue,
-    token: discordBotToken,
-    allowedChannelIds: (process.env.DISCORD_ALLOWED_CHANNEL_IDS ?? '')
+    token: env.DISCORD_BOT_TOKEN,
+    allowedChannelIds: (env.DISCORD_ALLOWED_CHANNEL_IDS ?? '')
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean),
-    respondToMentionsOnly: process.env.DISCORD_RESPOND_TO_MENTIONS_ONLY !== 'false',
+    respondToMentionsOnly: env.DISCORD_RESPOND_TO_MENTIONS_ONLY !== 'false',
   });
 }
 

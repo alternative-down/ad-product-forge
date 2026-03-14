@@ -9,13 +9,12 @@ import { ObservationalMemory } from '@mastra/memory/processors';
 
 import { forgeDebug } from './debug';
 import { embedTextWithFastembed } from './agent/embedder';
-import { ensureWorkspaceVectorIndex, LongTermMemory } from './agent/long-term-memory';
+import { LongTermMemory } from './agent/long-term-memory';
 import {
   WORKING_MEMORY_TEMPLATE,
   appendWorkingMemoryInstructions,
 } from './agent/working-memory';
 import { OBSERVATIONAL_MEMORY_CONFIG } from './agent/observational-memory';
-import { bindDefaultAgentRuntime } from './agent/runtime-defaults';
 
 const MEMORY_WORKSPACE_ROOT = '.forge-memory';
 
@@ -78,7 +77,16 @@ export async function createForgeAgent<
   });
 
   await memoryWorkspace.init();
-  await ensureWorkspaceVectorIndex(memoryWorkspaceVector, memoryWorkspaceIndexName);
+  try {
+    await memoryWorkspaceVector.describeIndex({ indexName: memoryWorkspaceIndexName });
+  } catch {
+    const sampleEmbedding = await embedTextWithFastembed('forge-memory-bootstrap');
+    await memoryWorkspaceVector.createIndex({
+      indexName: memoryWorkspaceIndexName,
+      dimension: sampleEmbedding.length,
+      metric: 'cosine',
+    });
+  }
   forgeDebug('agent', 'memory workspace initialized', {
     path: memoryWorkspacePath,
     indexName: memoryWorkspaceIndexName,
@@ -126,5 +134,5 @@ export async function createForgeAgent<
     id: String(id),
   });
 
-  return bindDefaultAgentRuntime(agent, String(id));
+  return agent;
 }

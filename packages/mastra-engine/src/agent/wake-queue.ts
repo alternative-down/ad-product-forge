@@ -1,4 +1,5 @@
 import type { Agent } from '@mastra/core/agent';
+import { getDefaultAgentRunOptions } from './runtime-defaults';
 
 const WAKE_DEBOUNCE_MS = 1000;
 const WAKE_MAX_DELAY_MS = 10000;
@@ -64,7 +65,7 @@ export function createWakeQueueRegistry() {
         config.onWakeStarted?.();
 
         try {
-          await config.agent.generate(DEFAULT_WAKE_PROMPT);
+          await config.agent.generate(DEFAULT_WAKE_PROMPT, getDefaultAgentRunOptions(config.agentId));
           config.onWakeFinished?.();
         } catch (error) {
           config.onWakeError?.(error);
