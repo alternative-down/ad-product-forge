@@ -48,6 +48,17 @@ Bad examples:
 - one file mixing file I/O, contact logic, message listing, sender routing, and provider-specific reply rules
 - one file that is just a pile of unrelated helpers
 
+The concept should be the real concept of the system, not just a verb.
+
+Good:
+- a message store file that owns message persistence and message queries
+- a Discord account file that owns Discord wiring
+- a wake queue file that owns wake scheduling
+
+Bad:
+- a file called `message-ingest` if ingestion is not actually a primary domain concept
+- splitting one store into `message-ingest`, `message-read`, and `message-write` just because those are verbs
+
 ### 4. Prefer linear code
 Code should read in the same order that the runtime behaves.
 
@@ -304,6 +315,31 @@ Bad:
 `packages/mastra-engine` should contain reusable Mastra-based runtime pieces.
 Application assembly should live in `apps/`.
 
+### Separate storage from intake
+Store is not the same thing as ingest.
+
+Store is responsible for:
+- reading state
+- writing state
+- querying state
+- updating persisted domain data
+
+Ingest or intake is responsible for:
+- receiving external input
+- validating it at the boundary
+- translating it into domain operations
+- calling the store or domain service underneath
+
+Good:
+- Discord receives a message
+- Discord normalizes the inbound event
+- Discord or an intake service calls the store with the data it needs to persist
+
+Bad:
+- the store is responsible for understanding Discord events
+- the store owns external event normalization
+- provider adapters and storage logic are mixed in the same concept
+
 ### Keep provider-specific behavior at the edge
 Discord-specific behavior belongs in the Discord account module.
 Internal-chat-specific behavior belongs in the internal-chat module.
@@ -312,10 +348,9 @@ Do not leak provider-specific rules into generic message code unless the generic
 ### Keep the core explicit
 Core agent modules should be easy to follow:
 - message state
+- message store
 - contact book
 - account registry
-- message ingest
-- message read model
 - message delivery
 - wake queue
 
@@ -345,65 +380,64 @@ Do not do these things unless there is a confirmed reason:
 
 ### Example: good direct flow
 ```ts
-export function createMessageIngest() {
-  async function ingestInboundMessage(rawInput: unknown) {
-    const input = inboundMessageInputSchema.parse(rawInput);
+export function createMessageStore() {
+  async function saveMessage(input: SaveMessageInput) {
+    const state = await loadState();
+    const alreadyExists = state.messages.some(
+      (current) => current.accountId === input.accountId && current.messageId === input.messageId,
+    );
 
-    await messageState.update((state) => {
-      const account = state.accounts.find((current) => current.accountId === input.accountId);
+    if (alreadyExists) {
+      return;
+    }
 
-      if (!account) {
-        throw new Error(`Account not found for inbound message: ${input.accountId}`);
-      }
-
-      const alreadyExists = state.messages.some(
-        (current) => current.accountId === input.accountId && current.messageId === input.messageId,
-      );
-
-      if (alreadyExists) {
-        return;
-      }
-
-      state.messages.push({
-        ...
-      });
+    state.messages.push({
+      messageId: input.messageId,
+      accountId: input.accountId,
+      content: input.content,
+      unread: input.unread,
+      createdAt: input.createdAt,
     });
+
+    await saveState(state);
   }
 
-  return { ingestInboundMessage };
+  async function listMessages(accountId: string) {
+    const state = await loadState();
+    return state.messages.filter((message) => message.accountId === accountId);
+  }
+
+  return { saveMessage, listMessages };
 }
 ```
 
 Why this is good:
 - one file, one concept
-- parse at the boundary
+- the concept is the store itself
 - straight-line flow
 - no defensive helper maze
 - no speculative infrastructure
 
 ### Example: bad indirect flow
 ```ts
-export async function ingest(rawInput: unknown) {
-  const input = normalizeInput(rawInput);
-  const state = await loadWithLock();
-  const account = getAccountOrNull(state, input.accountId);
-  const contact = maybeCreateContact(state, input, account);
-  const message = toStoredMessage(input, contact);
-  const deduped = dedupeMessage(state, message);
-
-  if (!deduped) {
-    return;
+export function createMessageIngest() {
+  async function ingestInboundMessage(rawInput: unknown) {
+    const input = inboundMessageInputSchema.parse(rawInput);
+    const account = await messageStore.findAccount(input.accountId);
+    const contact = await messageStore.ensureContactFromInbound(input, account);
+    const message = toStoredMessage(input, contact);
+    await messageStore.saveMessage(message);
   }
 
-  await enqueueWrite(state);
+  return { ingestInboundMessage };
 }
 ```
 
 Why this is bad:
-- hides the real flow
-- too many helper jumps
-- normalizes instead of validating
-- adds lock/queue complexity before it is needed
+- it pretends ingest is the main concept
+- it spreads one message concept across fake sub-concepts
+- it makes the store depend on a separate action layer without need
+- it weakens the file boundary instead of clarifying it
 
 ## Final rule
 
