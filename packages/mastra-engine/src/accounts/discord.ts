@@ -28,59 +28,54 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
   const agentId = config.agentId ?? config.agent.id;
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
-  const readyAccountId = new Promise<string>((resolve) => {
-    client.once(Events.ClientReady, async (readyClient) => {
-      const accountId = await messageStore.ensureAccount({
-        agentId,
-        provider: 'discord',
-        externalAccountId: readyClient.user.id,
-        displayName: readyClient.user.tag,
-      });
 
-      messageRouter.registerSender(accountId, async (input) => {
-        if (!input.target || !/^\d+$/.test(input.target)) {
-          throw new Error(`Unsupported Discord target: ${input.target}`);
-        }
+  await client.login(config.token);
 
-        if (input.contactSlug && !input.replyToMessageId) {
-          const user = await client.users.fetch(input.target);
-          const channel = await user.createDM();
-          await channel.sendTyping();
-          await new Promise((done) => setTimeout(done, 700));
-          const sent = await channel.send(input.content);
-          return { messageId: sent.id, channelId: channel.id };
-        }
+  if (!client.user) {
+    throw new Error('Discord client did not become ready after login');
+  }
 
-        const channel = await client.channels.fetch(input.target);
-        if (!channel?.isSendable()) {
-          throw new Error(`Discord target is not sendable: ${input.target}`);
-        }
+  const botUserId = client.user.id;
+  const accountId = await messageStore.ensureAccount({
+    agentId,
+    provider: 'discord',
+    externalAccountId: botUserId,
+    displayName: client.user.tag,
+  });
 
-        await channel.sendTyping();
-        await new Promise((done) => setTimeout(done, 700));
+  messageRouter.registerSender(accountId, async (input) => {
+    if (!input.target || !/^\d+$/.test(input.target)) {
+      throw new Error(`Unsupported Discord target: ${input.target}`);
+    }
 
-        if (input.replyToMessageId && 'messages' in channel) {
-          const replyTarget = await channel.messages.fetch(input.replyToMessageId);
-          const sent = await replyTarget.reply(input.content);
-          return { messageId: sent.id, channelId: sent.channelId };
-        }
+    if (input.contactSlug && !input.replyToMessageId) {
+      const user = await client.users.fetch(input.target);
+      const channel = await user.createDM();
+      await channel.sendTyping();
+      await new Promise((done) => setTimeout(done, 700));
+      const sent = await channel.send(input.content);
+      return { messageId: sent.id, channelId: channel.id };
+    }
 
-        const sent = await channel.send(input.content);
-        return { messageId: sent.id, channelId: sent.channelId };
-      });
+    const channel = await client.channels.fetch(input.target);
+    if (!channel?.isSendable()) {
+      throw new Error(`Discord target is not sendable: ${input.target}`);
+    }
 
-      console.log(`[discord] logged in as ${readyClient.user.tag}`);
-      resolve(accountId);
-    });
+    await channel.sendTyping();
+    await new Promise((done) => setTimeout(done, 700));
+
+    if (input.replyToMessageId && 'messages' in channel) {
+      const replyTarget = await channel.messages.fetch(input.replyToMessageId);
+      const sent = await replyTarget.reply(input.content);
+      return { messageId: sent.id, channelId: sent.channelId };
+    }
+
+    const sent = await channel.send(input.content);
+    return { messageId: sent.id, channelId: sent.channelId };
   });
 
   client.on(Events.MessageCreate, async (message) => {
-    const botUserId = client.user?.id;
-
-    if (!botUserId) {
-      return;
-    }
-
     if (message.author.bot) {
       forgeDebug('discord', 'message ignored', {
         channelId: message.channelId,
@@ -109,7 +104,6 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     }
 
     try {
-      const accountId = await readyAccountId;
       const content = message.content
         .replaceAll(`<@${botUserId}>`, '')
         .replaceAll(`<@!${botUserId}>`, '')
@@ -153,6 +147,6 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     }
   });
 
-  await client.login(config.token);
+  console.log(`[discord] logged in as ${client.user.tag}`);
   return client;
 }
