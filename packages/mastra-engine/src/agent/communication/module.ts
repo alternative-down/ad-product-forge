@@ -4,6 +4,7 @@ import type {
   ProviderConversationView,
   ProviderMessageView,
 } from '../../accounts/provider-message-store';
+import { agentAccounts } from './agent-accounts';
 import { agentContacts } from './agent-contacts';
 import type { AgentWakeQueue } from '../wake-queue';
 
@@ -52,11 +53,22 @@ export function createCommunicationModule() {
     return providersByAgentId.get(agentId)?.get(providerId) ?? null;
   }
 
-  function registerProvider(input: {
+  async function registerProvider(input: {
     agentId: string;
+    externalAccountId: string;
+    displayName?: string;
+    metadata?: Record<string, unknown>;
     provider: CommunicationProvider;
     wakeQueue: AgentWakeQueue;
   }) {
+    await agentAccounts.ensureAccount({
+      agentId: input.agentId,
+      provider: input.provider.id,
+      externalAccountId: input.externalAccountId,
+      displayName: input.displayName,
+      metadata: input.metadata,
+    });
+
     const providers = providersByAgentId.get(input.agentId) ?? new Map<string, RegisteredProvider>();
     providers.set(input.provider.id, {
       provider: input.provider,

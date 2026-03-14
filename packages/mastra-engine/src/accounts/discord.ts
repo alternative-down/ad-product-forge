@@ -1,7 +1,6 @@
 import type { Agent } from '@mastra/core/agent';
 import { ChannelType, Client, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
 
-import { agentAccounts } from '../agent/communication/agent-accounts';
 import { communicationModule } from '../agent/communication/module';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 import { forgeDebug } from '../debug';
@@ -36,12 +35,6 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
   }
 
   const discordUserId = client.user.id;
-  const discordAccountId = await agentAccounts.ensureAccount({
-    agentId,
-    provider: 'discord',
-    externalAccountId: discordUserId,
-    displayName: client.user.tag,
-  });
   const messages = createProviderMessageStore({
     agentId,
     provider: 'discord',
@@ -112,8 +105,10 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     return { messageId: sent.id, channelId: sent.channelId };
   }
 
-  communicationModule.registerProvider({
+  await communicationModule.registerProvider({
     agentId,
+    externalAccountId: discordUserId,
+    displayName: client.user.tag,
     wakeQueue: config.wakeQueue,
     provider: {
       id: 'discord',

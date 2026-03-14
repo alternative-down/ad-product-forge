@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 
 import type { Agent } from '@mastra/core/agent';
 
-import { agentAccounts } from '../agent/communication/agent-accounts';
 import { agentContacts } from '../agent/communication/agent-contacts';
 import { communicationModule } from '../agent/communication/module';
 import type { AgentWakeQueue } from '../agent/wake-queue';
@@ -10,7 +9,6 @@ import { createProviderMessageStore } from './provider-message-store';
 
 type RegisteredAgent = {
   agentId: string;
-  accountId: string;
   displayName: string;
   wakeQueue: AgentWakeQueue;
   messages: ReturnType<typeof createProviderMessageStore>;
@@ -48,15 +46,8 @@ export function createInternalChatRouter() {
   }) {
     const agentId = config.agent.id;
     const displayName = config.agent.name;
-    const accountId = await agentAccounts.ensureAccount({
-      agentId,
-      provider: 'internal-chat',
-      externalAccountId: agentId,
-      displayName,
-    });
     const registeredAgent = {
       agentId,
-      accountId,
       displayName,
       wakeQueue: config.wakeQueue,
       messages: createProviderMessageStore({
@@ -68,8 +59,10 @@ export function createInternalChatRouter() {
     agents.set(agentId, registeredAgent);
     await syncAgentContacts();
 
-    communicationModule.registerProvider({
+    await communicationModule.registerProvider({
       agentId,
+      externalAccountId: agentId,
+      displayName,
       wakeQueue: config.wakeQueue,
       provider: {
         id: 'internal-chat',
