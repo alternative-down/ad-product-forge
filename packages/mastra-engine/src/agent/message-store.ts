@@ -498,17 +498,22 @@ async function listMessageConversations(input: z.input<typeof listConversationsI
   const parsed = listConversationsInputSchema.parse(input);
   const state = await loadState();
   const accountIds = getAgentAccountIds(state, parsed.agentId, parsed.provider);
-
-  const messages = state.messages
-    .filter((message) => accountIds.has(message.accountId))
-    .filter((message) => (parsed.unread === undefined ? true : message.unread === parsed.unread))
-    .map((message) => toMessageView(state, parsed.agentId, message))
-    .filter((message) => (parsed.contactSlug ? message.contactSlug === parsed.contactSlug : true))
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
   const conversations = new Map<string, ConversationView>();
 
-  for (const message of messages) {
+  for (const storedMessage of state.messages) {
+    if (!accountIds.has(storedMessage.accountId)) {
+      continue;
+    }
+
+    if (parsed.unread !== undefined && storedMessage.unread !== parsed.unread) {
+      continue;
+    }
+
+    const message = toMessageView(state, parsed.agentId, storedMessage);
+    if (parsed.contactSlug && message.contactSlug !== parsed.contactSlug) {
+      continue;
+    }
+
     let conversation = conversations.get(message.conversationId);
 
     if (!conversation) {
@@ -538,7 +543,9 @@ async function listMessageConversations(input: z.input<typeof listConversationsI
     .slice(0, parsed.limit)
     .map((conversation) => ({
       ...conversation,
-      messages: conversation.messages.slice(-5),
+      messages: conversation.messages
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .slice(-5),
     }));
 
   const messagesToMarkAsRead = result.flatMap((conversation) => conversation.messages).filter((message) => message.unread);
@@ -556,15 +563,25 @@ async function getMessages(input: z.input<typeof getMessagesInputSchema>) {
   const parsed = getMessagesInputSchema.parse(input);
   const state = await loadState();
   const accountIds = getAgentAccountIds(state, parsed.agentId);
+  const messages: MessageView[] = [];
 
-  const messages = state.messages
-    .filter((message) => accountIds.has(message.accountId))
-    .map((message) => toMessageView(state, parsed.agentId, message))
-    .filter((message) => message.conversationId === parsed.conversationId)
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    .slice(-parsed.limit);
+  for (const storedMessage of state.messages) {
+    if (!accountIds.has(storedMessage.accountId)) {
+      continue;
+    }
 
-  const messagesToMarkAsRead = messages.filter((message) => message.unread);
+    const message = toMessageView(state, parsed.agentId, storedMessage);
+    if (message.conversationId !== parsed.conversationId) {
+      continue;
+    }
+
+    messages.push(message);
+  }
+
+  messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const result = messages.slice(-parsed.limit);
+
+  const messagesToMarkAsRead = result.filter((message) => message.unread);
 
   if (messagesToMarkAsRead.length > 0) {
     await updateState((latestState) => {
@@ -572,7 +589,7 @@ async function getMessages(input: z.input<typeof getMessagesInputSchema>) {
     });
   }
 
-  return messages;
+  return result;
 }
 
 async function sendAccountMessage(input: z.input<typeof sendMessageInputSchema>) {
@@ -588,7 +605,6 @@ async function sendAccountMessage(input: z.input<typeof sendMessageInputSchema>)
   const repliedMessage = replyToMessageId
     ? state.messages.find((message) => message.accountId === account.accountId && message.messageId === replyToMessageId)
     : undefined;
-
   let target = parsed.target;
 
   if (parsed.contactSlug) {
@@ -639,15 +655,15 @@ async function sendAccountMessage(input: z.input<typeof sendMessageInputSchema>)
     throw new Error(`No active sender registered for provider: ${parsed.provider}`);
   }
 
-  const result = await sender({
+  const sentMessage = await sender({
     target,
     contactSlug: parsed.contactSlug,
     content: parsed.content,
     replyToMessageId,
   });
 
-  const messageId = result.messageId || `out:${Date.now()}`;
-  const channelId = result.channelId || target;
+  const messageId = sentMessage.messageId || `out:${Date.now()}`;
+  const channelId = sentMessage.channelId || target;
 
   await updateState((latestState) => {
     latestState.messages.push({

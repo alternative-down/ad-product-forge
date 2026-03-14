@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { z } from 'zod';
 
 const OPENAI_CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const OPENAI_CODEX_TOKEN_URL = 'https://auth.openai.com/oauth/token';
@@ -18,14 +19,22 @@ export type OAuthCredential = {
 };
 
 type AuthStoreData = Partial<Record<ProviderId, OAuthCredential>>;
+const oauthCredentialSchema = z.object({
+  access: z.string(),
+  refresh: z.string().optional(),
+  expires: z.number().optional(),
+  accountId: z.string().optional(),
+});
 
-type OpenAICliAuthFile = {
-  tokens?: {
-    access_token?: string;
-    refresh_token?: string;
-    account_id?: string;
-  };
-};
+const openAICliAuthSchema = z.object({
+  tokens: z
+    .object({
+      access_token: z.string().optional(),
+      refresh_token: z.string().optional(),
+      account_id: z.string().optional(),
+    })
+    .optional(),
+});
 
 function defaultStorePath() {
   return path.join(os.homedir(), '.mastra-engine', 'oauth.json');
@@ -35,9 +44,9 @@ function ensureParentDir(filePath: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
 }
 
-function readJsonFile<T>(filePath: string): T | null {
+function readJsonFile(filePath: string) {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch {
     return null;
   }
@@ -72,7 +81,12 @@ function isExpired(credential: OAuthCredential, skewMs = 60_000) {
 }
 
 function readStore(storePath = defaultStorePath()): AuthStoreData {
-  return readJsonFile<AuthStoreData>(storePath) ?? {};
+  const store = readJsonFile(storePath);
+  if (!store || typeof store !== 'object') {
+    return {};
+  }
+
+  return store as AuthStoreData;
 }
 
 function writeStore(provider: ProviderId, credential: OAuthCredential, storePath = defaultStorePath()) {
@@ -157,7 +171,7 @@ async function refreshAnthropicCredential(credential: OAuthCredential): Promise<
 }
 
 export function readCodexCliAuth(authFilePath = path.join(os.homedir(), '.codex', 'auth.json')): OAuthCredential {
-  const auth = readJsonFile<OpenAICliAuthFile>(authFilePath);
+  const auth = openAICliAuthSchema.parse(readJsonFile(authFilePath) ?? {});
   const access = auth?.tokens?.access_token;
 
   if (!access) {
@@ -185,11 +199,7 @@ export function readOAuthCredentialFile(filePath: string): OAuthCredential {
   const raw = fs.readFileSync(filePath, 'utf8').trim();
 
   if (raw.startsWith('{')) {
-    const credential = JSON.parse(raw) as OAuthCredential;
-    if (!credential.access) {
-      throw new Error(`OAuth credential file ${filePath} is missing "access".`);
-    }
-    return credential;
+    return oauthCredentialSchema.parse(JSON.parse(raw));
   }
 
   return { access: raw };

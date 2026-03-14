@@ -45,9 +45,13 @@ export function bindDefaultAgentRuntime<TAgent extends Agent<any, any, any, any>
     thread: agentId,
     resource: agentId,
   };
+  type AgentRunOptions = {
+    memory?: typeof defaultMemory;
+    maxSteps?: number;
+  } & Record<string, unknown>;
 
   const generate = agent.generate.bind(agent) as any;
-  agent.generate = ((messages: unknown, options?: Record<string, any>) =>
+  agent.generate = ((messages: unknown, options?: AgentRunOptions) =>
     generate(messages, {
       ...(options ?? {}),
       memory: options?.memory || defaultMemory,
@@ -55,7 +59,7 @@ export function bindDefaultAgentRuntime<TAgent extends Agent<any, any, any, any>
     })) as typeof agent.generate;
 
   const stream = agent.stream.bind(agent) as any;
-  agent.stream = ((messages: unknown, options?: Record<string, any>) =>
+  agent.stream = ((messages: unknown, options?: AgentRunOptions) =>
     stream(messages, {
       ...(options ?? {}),
       memory: options?.memory || defaultMemory,

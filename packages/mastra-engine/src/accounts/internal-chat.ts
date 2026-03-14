@@ -49,30 +49,33 @@ export function createInternalChatRouter() {
           continue;
         }
 
+        const currentIdentity = [
+          {
+            provider: 'internal-chat',
+            externalUserId: current.agentId,
+            username: current.agentId,
+          },
+        ];
+        const agentIdentity = [
+          {
+            provider: 'internal-chat',
+            externalUserId: agentId,
+            username: agentId,
+          },
+        ];
+
         await messageStore.upsertAgentContact({
           agentId,
           slug: current.agentId,
           displayName: current.displayName,
-          accounts: [
-            {
-              provider: 'internal-chat',
-              externalUserId: current.agentId,
-              username: current.agentId,
-            },
-          ],
+          accounts: currentIdentity,
         });
 
         await messageStore.upsertAgentContact({
           agentId: current.agentId,
           slug: agentId,
           displayName,
-          accounts: [
-            {
-              provider: 'internal-chat',
-              externalUserId: agentId,
-              username: agentId,
-            },
-          ],
+          accounts: agentIdentity,
         });
       }
 
@@ -111,7 +114,6 @@ export function createInternalChatRouter() {
         recipient.wakeQueue.notifyExternalEvent();
         return { messageId };
       });
-
     },
 
     unregisterAgent(agentId: string) {
