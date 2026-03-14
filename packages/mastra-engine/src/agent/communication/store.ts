@@ -73,7 +73,7 @@ type MessageRecord = z.infer<typeof messageSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
 
 export function createCommunicationStore(agentId: string) {
-  const statePath = path.resolve('.forge-state', 'communication', `${agentId}.json`);
+  const statePath = path.resolve(process.cwd(), '.forge-state', 'communication', `${agentId}.json`);
   let currentState: z.infer<typeof stateSchema> | null = null;
 
   function slugify(value: string) {

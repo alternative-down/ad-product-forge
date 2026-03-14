@@ -39,8 +39,8 @@ export async function main() {
   const workspace = new Workspace({
     autoSync: true,
     bm25: true,
-    filesystem: new LocalFilesystem({ basePath: './workspace-discord' }),
-    sandbox: new LocalSandbox({ workingDirectory: './workspace-discord' }),
+    filesystem: new LocalFilesystem({ basePath: path.resolve(process.cwd(), 'workspace-discord') }),
+    sandbox: new LocalSandbox({ workingDirectory: path.resolve(process.cwd(), 'workspace-discord') }),
   });
   const helperAgentId = env.FORGE_HELPER_AGENT_ID?.trim() || 'forge-helper';
   const helperAgentName = env.FORGE_HELPER_AGENT_NAME?.trim() || 'Forge Helper';

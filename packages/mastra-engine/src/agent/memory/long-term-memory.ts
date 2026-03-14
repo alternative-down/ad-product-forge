@@ -51,7 +51,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const indexName = `${config.agentId}_memory_search`.replace(/[^a-zA-Z0-9_]/g, '_');
     const vectorStore = new LibSQLVector({
       id: `${config.agentId}-memory-workspace-vector`,
-      url: `file:./${config.agentId}-memory-workspace.db`,
+      url: `file:${path.resolve(process.cwd(), `${config.agentId}-memory-workspace.db`)}`,
     });
     const workspace = new WorkspaceRuntime({
       bm25: true,
