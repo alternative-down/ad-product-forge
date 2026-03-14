@@ -1,17 +1,10 @@
 import type { Agent } from '@mastra/core/agent';
-import {
-  ChannelType,
-  Client,
-  Events,
-  GatewayIntentBits,
-  Partials,
-  type Message,
-  type SendableChannels,
-} from 'discord.js';
+import { ChannelType, Client, Events, GatewayIntentBits, Partials } from 'discord.js';
 
+import { messageRouter } from '../agent/message-router';
 import { messageStore } from '../agent/message-store';
-import { forgeDebug } from '../debug';
 import type { AgentWakeQueue } from '../agent/wake-queue';
+import { forgeDebug } from '../debug';
 
 export type DiscordAgentClientConfig = {
   agent: Agent;
@@ -22,32 +15,7 @@ export type DiscordAgentClientConfig = {
   agentId?: string;
 };
 
-function shouldRespond(
-  message: Message<boolean>,
-  botUserId: string,
-  allowedChannelIds: Set<string>,
-  respondToMentionsOnly: boolean,
-): boolean {
-  if (message.author.bot) return false;
-  if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) return false;
-  if (message.channel.type === ChannelType.DM) return true;
-  if (respondToMentionsOnly) return message.mentions.users.has(botUserId);
-  return true;
-}
-
-async function sendDiscordTyping(channel: SendableChannels) {
-  await channel.sendTyping();
-  await new Promise((resolve) => setTimeout(resolve, 700));
-}
-
 export async function createDiscordAgentClient(config: DiscordAgentClientConfig) {
-  const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
-  const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
-  const agentId = config.agentId ?? config.agent.id;
-  let resolveReady!: (accountId: string) => void;
-  const ready = new Promise<string>((resolve) => {
-    resolveReady = resolve;
-  });
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -57,10 +25,15 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     ],
     partials: [Partials.Channel],
   });
+  const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
+  const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
+  const agentId = config.agentId ?? config.agent.id;
+  let resolveReady: (accountId: string) => void = () => {};
+  const ready = new Promise<string>((resolve) => {
+    resolveReady = resolve;
+  });
 
   client.once(Events.ClientReady, async (readyClient) => {
-    console.log(`[discord] logged in as ${readyClient.user.tag}`);
-
     const accountId = await messageStore.ensureAccount({
       agentId,
       provider: 'discord',
@@ -68,48 +41,76 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       displayName: readyClient.user.tag,
     });
 
-    messageStore.registerAccountSender(accountId, async (input) => {
-      const target = input.target;
-      if (!target || !/^\d+$/.test(target)) {
-        throw new Error(`Unsupported Discord target: ${target}`);
+    messageRouter.registerSender(accountId, async (input) => {
+      if (!input.target || !/^\d+$/.test(input.target)) {
+        throw new Error(`Unsupported Discord target: ${input.target}`);
       }
 
       if (input.contactSlug && !input.replyToMessageId) {
-        const user = await client.users.fetch(target);
-        const dmChannel = await user.createDM();
-        await sendDiscordTyping(dmChannel);
-        const sent = await dmChannel.send(input.content);
-        return { messageId: sent.id, channelId: dmChannel.id };
+        const user = await client.users.fetch(input.target);
+        const channel = await user.createDM();
+        await channel.sendTyping();
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        const sent = await channel.send(input.content);
+        return { messageId: sent.id, channelId: channel.id };
       }
 
-      const targetChannel = await client.channels.fetch(target);
-      if (!targetChannel?.isSendable()) {
-        throw new Error(`Discord target is not sendable: ${target}`);
+      const channel = await client.channels.fetch(input.target);
+      if (!channel?.isSendable()) {
+        throw new Error(`Discord target is not sendable: ${input.target}`);
       }
 
-      await sendDiscordTyping(targetChannel);
+      await channel.sendTyping();
+      await new Promise((resolve) => setTimeout(resolve, 700));
 
-      if (input.replyToMessageId && 'messages' in targetChannel) {
-        const replyTarget = await targetChannel.messages.fetch(input.replyToMessageId);
+      if (input.replyToMessageId && 'messages' in channel) {
+        const replyTarget = await channel.messages.fetch(input.replyToMessageId);
         const sent = await replyTarget.reply(input.content);
         return { messageId: sent.id, channelId: sent.channelId };
       }
 
-      const sent = await targetChannel.send(input.content);
+      const sent = await channel.send(input.content);
       return { messageId: sent.id, channelId: sent.channelId };
     });
 
+    console.log(`[discord] logged in as ${readyClient.user.tag}`);
     resolveReady(accountId);
   });
 
   client.on(Events.MessageCreate, async (message) => {
     const botUserId = client.user?.id;
-    if (!botUserId) return;
-    if (!shouldRespond(message, botUserId, allowedChannelIds, respondToMentionsOnly)) {
+
+    if (!botUserId) {
+      return;
+    }
+
+    if (message.author.bot) {
       forgeDebug('discord', 'message ignored', {
         channelId: message.channelId,
         authorId: message.author.id,
-        isBot: message.author.bot,
+        isBot: true,
+      });
+      return;
+    }
+
+    if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
+      forgeDebug('discord', 'message ignored', {
+        channelId: message.channelId,
+        authorId: message.author.id,
+        reason: 'channel not allowed',
+      });
+      return;
+    }
+
+    if (
+      message.channel.type !== ChannelType.DM &&
+      respondToMentionsOnly &&
+      !message.mentions.users.has(botUserId)
+    ) {
+      forgeDebug('discord', 'message ignored', {
+        channelId: message.channelId,
+        authorId: message.author.id,
+        reason: 'mention required',
       });
       return;
     }
@@ -131,18 +132,9 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       const authorName =
         message.member?.displayName ?? message.author.globalName ?? message.author.username;
       const channelName =
-        message.channel.type === ChannelType.DM
-          ? 'direct-message'
-          : (message.channel.name ?? 'unknown-channel');
+        message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel';
 
-      forgeDebug('discord', 'message accepted', {
-        channelId: message.channelId,
-        authorId: message.author.id,
-        authorName,
-        agentId,
-      });
-
-      await messageStore.ingestInboundMessage({
+      await messageStore.saveInboundMessage({
         agentId,
         accountId,
         messageId: message.id,
@@ -158,10 +150,11 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
           serverName: message.guild?.name ?? 'direct-message',
         },
       });
+
       forgeDebug('discord', 'message registered', {
+        agentId,
         channelId: message.channelId,
         messageId: message.id,
-        agentId,
       });
 
       config.wakeQueue.notifyExternalEvent();

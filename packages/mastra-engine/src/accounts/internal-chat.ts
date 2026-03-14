@@ -2,12 +2,11 @@ import { randomUUID } from 'node:crypto';
 
 import type { Agent } from '@mastra/core/agent';
 
-import {
-  messageStore,
-} from '../agent/message-store';
+import { messageRouter } from '../agent/message-router';
+import { messageStore } from '../agent/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 
-type RegisteredInternalAgent = {
+type RegisteredAgent = {
   agentId: string;
   accountId: string;
   displayName: string;
@@ -15,7 +14,7 @@ type RegisteredInternalAgent = {
 };
 
 export function createInternalChatRouter() {
-  const agents = new Map<string, RegisteredInternalAgent>();
+  const agents = new Map<string, RegisteredAgent>();
 
   return {
     async registerAgent(config: {
@@ -45,51 +44,42 @@ export function createInternalChatRouter() {
           continue;
         }
 
-        const currentIdentity = [
-          {
-            provider: 'internal-chat',
-            externalUserId: current.agentId,
-            username: current.agentId,
-          },
-        ];
-        const agentIdentity = [
-          {
-            provider: 'internal-chat',
-            externalUserId: agentId,
-            username: agentId,
-          },
-        ];
-
         await messageStore.upsertAgentContact({
           agentId,
           slug: current.agentId,
           displayName: current.displayName,
-          accounts: currentIdentity,
+          accounts: [
+            {
+              provider: 'internal-chat',
+              externalUserId: current.agentId,
+              username: current.agentId,
+            },
+          ],
         });
 
         await messageStore.upsertAgentContact({
           agentId: current.agentId,
           slug: agentId,
           displayName,
-          accounts: agentIdentity,
+          accounts: [
+            {
+              provider: 'internal-chat',
+              externalUserId: agentId,
+              username: agentId,
+            },
+          ],
         });
       }
 
-      messageStore.registerAccountSender(accountId, async (input) => {
-        const target = input.target;
-        if (!target) {
-          throw new Error('Internal chat target is required');
-        }
+      messageRouter.registerSender(accountId, async (input) => {
+        const recipient = input.target ? agents.get(input.target) : null;
 
-        const recipient = agents.get(target);
         if (!recipient) {
-          throw new Error(`Internal chat target not found: ${target}`);
+          throw new Error(`Internal chat target not found: ${input.target}`);
         }
 
-        const createdAt = new Date().toISOString();
         const messageId = `internal:${randomUUID()}`;
-
-        await messageStore.ingestInboundMessage({
+        await messageStore.saveInboundMessage({
           agentId: recipient.agentId,
           accountId: recipient.accountId,
           messageId,
@@ -100,7 +90,7 @@ export function createInternalChatRouter() {
           username: agentId,
           content: input.content,
           attachments: [],
-          createdAt,
+          createdAt: new Date().toISOString(),
           metadata: {
             provider: 'internal-chat',
             replyToMessageId: input.replyToMessageId,
@@ -114,11 +104,12 @@ export function createInternalChatRouter() {
 
     unregisterAgent(agentId: string) {
       const agent = agents.get(agentId);
+
       if (!agent) {
         return;
       }
 
-      messageStore.unregisterAccountSender(agent.accountId);
+      messageRouter.unregisterSender(agent.accountId);
       agents.delete(agentId);
     },
   };

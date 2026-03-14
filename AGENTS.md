@@ -1,6 +1,7 @@
 # AGENTS.md
 
 ## Code Style
+- Follow [CODE_STYLE.md](./CODE_STYLE.md) as the primary detailed style guide for this repository.
 - Each file should own one main concept or responsibility.
 - Prefer linear code that reads top to bottom.
 - Prefer early returns over nested conditionals.
