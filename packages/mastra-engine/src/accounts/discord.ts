@@ -25,10 +25,10 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     ],
     partials: [Partials.Channel],
   });
+  const agentId = config.agentId ?? config.agent.id;
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
-  const agentId = config.agentId ?? config.agent.id;
-  const ready = new Promise<string>((resolve) => {
+  const readyAccountId = new Promise<string>((resolve) => {
     client.once(Events.ClientReady, async (readyClient) => {
       const accountId = await messageStore.ensureAccount({
         agentId,
@@ -99,11 +99,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       return;
     }
 
-    if (
-      message.channel.type !== ChannelType.DM &&
-      respondToMentionsOnly &&
-      !message.mentions.users.has(botUserId)
-    ) {
+    if (message.channel.type !== ChannelType.DM && respondToMentionsOnly && !message.mentions.users.has(botUserId)) {
       forgeDebug('discord', 'message ignored', {
         channelId: message.channelId,
         authorId: message.author.id,
@@ -113,35 +109,30 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     }
 
     try {
-      const accountId = await ready;
+      const accountId = await readyAccountId;
       const content = message.content
         .replaceAll(`<@${botUserId}>`, '')
         .replaceAll(`<@!${botUserId}>`, '')
         .trim();
-      const attachments = Array.from(message.attachments.values()).map((attachment) => ({
-        id: attachment.id,
-        name: attachment.name ?? undefined,
-        url: attachment.url,
-        contentType: attachment.contentType ?? undefined,
-        sizeBytes: attachment.size,
-        description: attachment.description ?? undefined,
-      }));
-      const authorName =
-        message.member?.displayName ?? message.author.globalName ?? message.author.username;
-      const channelName =
-        message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel';
 
       await messageStore.saveInboundMessage({
         agentId,
         accountId,
         messageId: message.id,
         channelId: message.channelId,
-        channelName,
+        channelName: message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
         authorId: message.author.id,
-        authorName,
+        authorName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
         username: message.author.username,
         content: content || '[no text content]',
-        attachments,
+        attachments: Array.from(message.attachments.values()).map((attachment) => ({
+          id: attachment.id,
+          name: attachment.name ?? undefined,
+          url: attachment.url,
+          contentType: attachment.contentType ?? undefined,
+          sizeBytes: attachment.size,
+          description: attachment.description ?? undefined,
+        })),
         createdAt: new Date(message.createdTimestamp).toISOString(),
         metadata: {
           serverName: message.guild?.name ?? 'direct-message',
