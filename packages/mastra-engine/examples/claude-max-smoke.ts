@@ -1,7 +1,8 @@
 import { Mastra } from '@mastra/core';
 import { Agent } from '@mastra/core/agent';
 
-import { claudeMaxProvider, createClaudeMaxGateway } from '../src/llm/claude-max';
+import { claudeMaxProvider } from '../src/llm/claude-max';
+import { createOAuthGateway } from '../src/llm/oauth-gateway';
 
 async function main() {
   const agent = new Agent({
@@ -12,7 +13,7 @@ async function main() {
   });
   const mastra = new Mastra({
     agents: { [String(agent.id)]: agent },
-    gateways: { claudeMaxOauth: createClaudeMaxGateway() },
+    gateways: { oauth: createOAuthGateway() },
   });
 
   const result = await mastra.getAgent(String(agent.id))!.generate('Responda exatamente com: ok');

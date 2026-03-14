@@ -3,6 +3,7 @@ export * from './create-simple-agent';
 export * from './accounts/discord';
 export * from './accounts/internal-chat';
 export * from './llm/model-ids';
+export * from './llm/oauth-gateway';
 export * from './llm/openai-codex';
 export * from './llm/claude-max';
 export * from './agent/message-tools';

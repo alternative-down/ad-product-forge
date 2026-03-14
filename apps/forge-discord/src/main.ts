@@ -10,12 +10,11 @@ import {
   CLAUDE_MAX_MODELS,
   OPENAI_CODEX_MODELS,
   claudeMaxProvider,
-  createClaudeMaxGateway,
   createDiscordAgentClient,
   createExternalAccountTools,
   createForgeAgent,
-  createOpenAICodexGateway,
   createInternalChatRouter,
+  createOAuthGateway,
   createSimpleAgent,
   createWakeQueueRegistry,
   openaiCodexProvider,
@@ -87,8 +86,7 @@ export async function main() {
       [String(helperAgent.id)]: helperAgent,
     },
     gateways: {
-      openaiCodexOauth: createOpenAICodexGateway(),
-      claudeMaxOauth: createClaudeMaxGateway(),
+      oauth: createOAuthGateway(),
     },
     logger: new ConsoleLogger({
       name: 'forge-app',
