@@ -32,6 +32,24 @@ export function createDiscordProvider(config: {
     return client.user;
   }
 
+  async function withTyping<T extends { sendTyping(): Promise<unknown> }>(channel: T, run: () => Promise<{
+    providerConversationKey: string;
+    providerMessageId?: string;
+    conversationName?: string;
+  }>) {
+    await channel.sendTyping();
+
+    const typingTimer = setInterval(() => {
+      void channel.sendTyping();
+    }, 8_000);
+
+    try {
+      return await run();
+    } finally {
+      clearInterval(typingTimer);
+    }
+  }
+
   return {
     id: 'discord',
     async getAccount() {
@@ -106,14 +124,16 @@ export function createDiscordProvider(config: {
       if (input.contactExternalId && !input.providerConversationKey) {
         const targetUser = await client.users.fetch(input.contactExternalId);
         const channel = await targetUser.createDM();
-        await channel.sendTyping();
-        const sent = await channel.send(input.content);
 
-        return {
-          providerConversationKey: channel.id,
-          providerMessageId: sent.id,
-          conversationName: 'direct-message',
-        };
+        return withTyping(channel, async () => {
+          const sent = await channel.send(input.content);
+
+          return {
+            providerConversationKey: channel.id,
+            providerMessageId: sent.id,
+            conversationName: 'direct-message',
+          };
+        });
       }
 
       if (!input.providerConversationKey || !/^\d+$/.test(input.providerConversationKey)) {
@@ -126,26 +146,26 @@ export function createDiscordProvider(config: {
         throw new Error(`Discord target is not sendable: ${input.providerConversationKey}`);
       }
 
-      await channel.sendTyping();
+      return withTyping(channel, async () => {
+        if (input.replyToProviderMessageId) {
+          const replyTarget = await channel.messages.fetch(input.replyToProviderMessageId);
+          const sent = await replyTarget.reply(input.content);
 
-      if (input.replyToProviderMessageId) {
-        const replyTarget = await channel.messages.fetch(input.replyToProviderMessageId);
-        const sent = await replyTarget.reply(input.content);
+          return {
+            providerConversationKey: sent.channelId,
+            providerMessageId: sent.id,
+            conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
+          };
+        }
+
+        const sent = await channel.send(input.content);
 
         return {
           providerConversationKey: sent.channelId,
           providerMessageId: sent.id,
           conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
         };
-      }
-
-      const sent = await channel.send(input.content);
-
-      return {
-        providerConversationKey: sent.channelId,
-        providerMessageId: sent.id,
-        conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
-      };
+      });
     },
   };
 }
