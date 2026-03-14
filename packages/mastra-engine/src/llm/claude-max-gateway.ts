@@ -2,7 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { wrapLanguageModel } from 'ai';
 import type { LanguageModelMiddleware } from 'ai';
 import { MastraModelGateway } from '@mastra/core/llm';
-import type { GatewayLanguageModel } from '@mastra/core/llm';
+import type { GatewayLanguageModel, ProviderConfig } from '@mastra/core/llm';
 
 import { forgeDebug } from '../debug';
 import { resolveAnthropicCredential } from './anthropic-auth';
@@ -23,8 +23,8 @@ export type ClaudeMaxGatewayOptions = {
 };
 
 export class ClaudeMaxGateway extends MastraModelGateway {
-  readonly id = 'oauth-gateway';
-  readonly name = 'oauth-gateway';
+  readonly id = 'claude-max-oauth';
+  readonly name = 'Claude Max OAuth';
   private readonly claudeCodeMiddleware: LanguageModelMiddleware = {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
@@ -105,42 +105,46 @@ export class ClaudeMaxGateway extends MastraModelGateway {
     super();
   }
 
-  async fetchProviders() {
+  async fetchProviders(): Promise<Record<string, ProviderConfig>> {
     return {
       'claude-max': {
         name: 'Claude Max OAuth',
         models: [...CLAUDE_MAX_MODELS],
         apiKeyEnvVar: 'FORGE_AUTH_UNUSED',
-        gateway: this.name,
+        gateway: this.id,
+        url: 'https://api.anthropic.com/v1',
       },
     };
   }
 
-  async buildUrl(routerId: string) {
-    if (routerId.startsWith(`${this.id}/claude-max/`)) {
-      return 'https://api.anthropic.com/v1';
+  buildUrl(modelId: string) {
+    if (!modelId.startsWith(`${this.id}/claude-max/`)) {
+      return undefined;
     }
 
-    return undefined;
+    return 'https://api.anthropic.com/v1';
   }
 
   async getApiKey() {
-    return 'oauth-placeholder';
+    const credential = await resolveAnthropicCredential(this.options);
+    return credential.access;
   }
 
-  async resolveLanguageModel({ modelId, providerId }: { modelId: string; providerId: string; apiKey: string; headers?: Record<string, string>; }): Promise<GatewayLanguageModel> {
-    if (providerId !== 'claude-max') {
-      throw new Error(`Unsupported oauth gateway provider: ${providerId}`);
+  async resolveLanguageModel({ modelId, providerId, apiKey }: { modelId: string; providerId: string; apiKey: string; headers?: Record<string, string>; }): Promise<GatewayLanguageModel> {
+    const baseURL = this.buildUrl(`${this.id}/${providerId}/${modelId}`);
+
+    if (!baseURL || providerId !== 'claude-max') {
+      throw new Error(`Unsupported gateway model: ${providerId}/${modelId}`);
     }
 
     const anthropic = createAnthropic({
-      apiKey: 'oauth-placeholder',
+      apiKey,
+      baseURL,
       fetch: async (url, init) => {
-        const credential = await resolveAnthropicCredential(this.options);
         const headers = new Headers(init?.headers);
         headers.delete('x-api-key');
         headers.delete('authorization');
-        headers.set('Authorization', `Bearer ${credential.access}`);
+        headers.set('Authorization', `Bearer ${apiKey}`);
         headers.set('anthropic-beta', ANTHROPIC_BETA_HEADER);
         headers.set('anthropic-version', '2023-06-01');
 

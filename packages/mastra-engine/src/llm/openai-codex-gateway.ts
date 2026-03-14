@@ -2,7 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { wrapLanguageModel } from 'ai';
 import type { LanguageModelMiddleware } from 'ai';
 import { MastraModelGateway } from '@mastra/core/llm';
-import type { GatewayLanguageModel } from '@mastra/core/llm';
+import type { GatewayLanguageModel, ProviderConfig } from '@mastra/core/llm';
 
 import { forgeDebug } from '../debug';
 import { OPENAI_CODEX_MODELS } from './model-ids';
@@ -14,8 +14,8 @@ export type OpenAICodexGatewayOptions = {
 };
 
 export class OpenAICodexGateway extends MastraModelGateway {
-  readonly id = 'oauth-gateway';
-  readonly name = 'oauth-gateway';
+  readonly id = 'openai-codex-oauth';
+  readonly name = 'OpenAI Codex OAuth';
   private readonly middleware: LanguageModelMiddleware = {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
@@ -138,42 +138,46 @@ export class OpenAICodexGateway extends MastraModelGateway {
     super();
   }
 
-  async fetchProviders() {
+  async fetchProviders(): Promise<Record<string, ProviderConfig>> {
     return {
       'openai-codex': {
         name: 'OpenAI Codex OAuth',
         models: [...OPENAI_CODEX_MODELS],
         apiKeyEnvVar: 'FORGE_AUTH_UNUSED',
-        gateway: this.name,
+        gateway: this.id,
+        url: 'https://chatgpt.com/backend-api/codex',
       },
     };
   }
 
-  async buildUrl(routerId: string) {
-    if (routerId.startsWith(`${this.id}/openai-codex/`)) {
-      return 'https://chatgpt.com/backend-api/codex';
+  buildUrl(modelId: string) {
+    if (!modelId.startsWith(`${this.id}/openai-codex/`)) {
+      return undefined;
     }
 
-    return undefined;
+    return 'https://chatgpt.com/backend-api/codex';
   }
 
   async getApiKey() {
-    return 'oauth-placeholder';
+    const credential = await resolveOpenAICodexCredential(this.options);
+    return credential.access;
   }
 
-  async resolveLanguageModel({ modelId, providerId }: { modelId: string; providerId: string; apiKey: string; headers?: Record<string, string>; }): Promise<GatewayLanguageModel> {
-    if (providerId !== 'openai-codex') {
-      throw new Error(`Unsupported oauth gateway provider: ${providerId}`);
+  async resolveLanguageModel({ modelId, providerId, apiKey }: { modelId: string; providerId: string; apiKey: string; headers?: Record<string, string>; }): Promise<GatewayLanguageModel> {
+    const baseURL = this.buildUrl(`${this.id}/${providerId}/${modelId}`);
+
+    if (!baseURL || providerId !== 'openai-codex') {
+      throw new Error(`Unsupported gateway model: ${providerId}/${modelId}`);
     }
 
     const openai = createOpenAI({
-      apiKey: 'oauth-placeholder',
-      baseURL: 'https://chatgpt.com/backend-api/codex',
+      apiKey,
+      baseURL,
       fetch: async (url, init) => {
         const credential = await resolveOpenAICodexCredential(this.options);
         const headers = new Headers(init?.headers);
         headers.delete('authorization');
-        headers.set('Authorization', `Bearer ${credential.access}`);
+        headers.set('Authorization', `Bearer ${apiKey}`);
 
         if (credential.accountId) {
           headers.set('ChatGPT-Account-Id', credential.accountId);
