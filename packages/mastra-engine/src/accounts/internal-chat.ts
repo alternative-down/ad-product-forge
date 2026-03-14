@@ -14,7 +14,7 @@ type RegisteredAgent = {
 };
 
 export function createInternalChatRouter() {
-  const agents = new Map<string, RegisteredAgent>();
+  const agentsById = new Map<string, RegisteredAgent>();
 
   return {
     async registerAgent(config: {
@@ -38,23 +38,22 @@ export function createInternalChatRouter() {
         wakeQueue: config.wakeQueue,
       };
 
-      for (const current of agents.values()) {
-
+      for (const currentAgent of agentsById.values()) {
         await messageStore.upsertAgentContact({
           agentId,
-          slug: current.agentId,
-          displayName: current.displayName,
+          slug: currentAgent.agentId,
+          displayName: currentAgent.displayName,
           accounts: [
             {
               provider: 'internal-chat',
-              externalUserId: current.agentId,
-              username: current.agentId,
+              externalUserId: currentAgent.agentId,
+              username: currentAgent.agentId,
             },
           ],
         });
 
         await messageStore.upsertAgentContact({
-          agentId: current.agentId,
+          agentId: currentAgent.agentId,
           slug: agentId,
           displayName,
           accounts: [
@@ -67,10 +66,10 @@ export function createInternalChatRouter() {
         });
       }
 
-      agents.set(agentId, registeredAgent);
+      agentsById.set(agentId, registeredAgent);
 
       messageRouter.registerSender(accountId, async (input) => {
-        const recipient = input.target ? agents.get(input.target) : null;
+        const recipient = agentsById.get(input.target);
 
         if (!recipient) {
           throw new Error(`Internal chat target not found: ${input.target}`);
@@ -81,11 +80,11 @@ export function createInternalChatRouter() {
           agentId: recipient.agentId,
           accountId: recipient.accountId,
           messageId,
-          channelId: agentId,
-          channelName: displayName,
-          authorId: agentId,
-          authorName: displayName,
-          username: agentId,
+          channelId: registeredAgent.agentId,
+          channelName: registeredAgent.displayName,
+          authorId: registeredAgent.agentId,
+          authorName: registeredAgent.displayName,
+          username: registeredAgent.agentId,
           content: input.content,
           attachments: [],
           createdAt: new Date().toISOString(),
@@ -96,19 +95,23 @@ export function createInternalChatRouter() {
         });
 
         recipient.wakeQueue.notifyExternalEvent();
-        return { messageId };
+
+        return {
+          messageId,
+          channelId: registeredAgent.agentId,
+        };
       });
     },
 
     unregisterAgent(agentId: string) {
-      const agent = agents.get(agentId);
+      const registeredAgent = agentsById.get(agentId);
 
-      if (!agent) {
+      if (!registeredAgent) {
         return;
       }
 
-      messageRouter.unregisterSender(agent.accountId);
-      agents.delete(agentId);
+      messageRouter.unregisterSender(registeredAgent.accountId);
+      agentsById.delete(agentId);
     },
   };
 }
