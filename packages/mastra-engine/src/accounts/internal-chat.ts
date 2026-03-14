@@ -2,6 +2,9 @@ import crypto from 'node:crypto';
 
 import type { Agent } from '@mastra/core/agent';
 
+import { accountRegistry } from '../agent/account-registry';
+import { contactBook } from '../agent/contact-book';
+import { deliveryRegistry } from '../agent/delivery-registry';
 import { messageStore } from '../agent/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 
@@ -22,7 +25,7 @@ export function createInternalChatRouter() {
           continue;
         }
 
-        await messageStore.upsertAgentContact({
+        await contactBook.upsertAgentContact({
           agentId: sourceAgent.agentId,
           slug: targetAgent.agentId,
           displayName: targetAgent.displayName,
@@ -46,7 +49,7 @@ export function createInternalChatRouter() {
   }) {
     const agentId = config.agentId ?? config.agent.id;
     const displayName = config.displayName ?? config.agent.name;
-    const accountId = await messageStore.ensureAccount({
+    const accountId = await accountRegistry.ensureAccount({
       agentId,
       provider: 'internal-chat',
       externalAccountId: agentId,
@@ -62,7 +65,7 @@ export function createInternalChatRouter() {
     agentsById.set(agentId, registeredAgent);
     await syncContacts();
 
-    messageStore.registerSender(accountId, async (input) => {
+    deliveryRegistry.register(accountId, async (input) => {
       const recipient = agentsById.get(input.target);
 
       if (!recipient) {
@@ -70,6 +73,13 @@ export function createInternalChatRouter() {
       }
 
       const messageId = `internal:${crypto.randomUUID()}`;
+      await contactBook.syncInboundContact({
+        agentId: recipient.agentId,
+        provider: 'internal-chat',
+        authorId: registeredAgent.agentId,
+        authorName: registeredAgent.displayName,
+        username: registeredAgent.agentId,
+      });
       await messageStore.saveInboundMessage({
         agentId: recipient.agentId,
         accountId: recipient.accountId,
@@ -100,7 +110,7 @@ export function createInternalChatRouter() {
       return;
     }
 
-      messageStore.unregisterSender(registeredAgent.accountId);
+    deliveryRegistry.unregister(registeredAgent.accountId);
     agentsById.delete(agentId);
   }
 

@@ -1,6 +1,9 @@
 import type { Agent } from '@mastra/core/agent';
 import { ChannelType, Client, Events, GatewayIntentBits, Partials } from 'discord.js';
 
+import { accountRegistry } from '../agent/account-registry';
+import { contactBook } from '../agent/contact-book';
+import { deliveryRegistry } from '../agent/delivery-registry';
 import { messageStore } from '../agent/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 import { forgeDebug } from '../debug';
@@ -34,14 +37,14 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
   }
 
   const discordUserId = client.user.id;
-  const discordAccountId = await messageStore.ensureAccount({
+  const discordAccountId = await accountRegistry.ensureAccount({
     agentId: internalAgentId,
     provider: 'discord',
     externalAccountId: discordUserId,
     displayName: client.user.tag,
   });
 
-  messageStore.registerSender(discordAccountId, async (input) => {
+  deliveryRegistry.register(discordAccountId, async (input) => {
     if (!input.target || !/^\d+$/.test(input.target)) {
       throw new Error(`Unsupported Discord target: ${input.target}`);
     }
@@ -108,6 +111,13 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
         .replaceAll(`<@${discordUserId}>`, '')
         .replaceAll(`<@!${discordUserId}>`, '')
         .trim();
+      await contactBook.syncInboundContact({
+        agentId: internalAgentId,
+        provider: 'discord',
+        authorId: message.author.id,
+        authorName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
+        username: message.author.username,
+      });
 
       await messageStore.saveInboundMessage({
         agentId: internalAgentId,

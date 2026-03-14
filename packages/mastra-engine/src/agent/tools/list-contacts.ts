@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { messageStore } from '../message-store';
+import { contactBook } from '../contact-book';
 
 const listContactsInputSchema = z.object({});
 
@@ -11,7 +11,7 @@ export function createListContactsTool(agentId: string) {
     description: 'List the known contacts registered by this agent.',
     inputSchema: listContactsInputSchema,
     execute: async () => {
-      const contacts = await messageStore.listAgentContacts(agentId);
+      const contacts = await contactBook.listAgentContacts(agentId);
 
       return {
         contacts: contacts.map((contact) => ({

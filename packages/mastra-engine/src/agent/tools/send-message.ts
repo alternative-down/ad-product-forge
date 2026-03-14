@@ -1,6 +1,9 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
+import { accountRegistry } from '../account-registry';
+import { contactBook } from '../contact-book';
+import { deliveryRegistry } from '../delivery-registry';
 import { messageStore } from '../message-store';
 
 const sendMessageInputSchema = z
@@ -30,14 +33,89 @@ export function createSendMessageTool(agentId: string) {
     id: 'send_message',
     description: 'Send a message through one of the external providers owned by this agent.',
     inputSchema: sendMessageInputSchema,
-    execute: async (input) =>
-      messageStore.sendMessage({
-        agentId,
-        provider: input.provider,
-        target: input.target,
+    execute: async (input) => {
+      const account = await accountRegistry.getAgentProviderAccount(agentId, input.provider);
+
+      if (!account) {
+        throw new Error(`Provider not found for agent: ${input.provider}`);
+      }
+
+      const replyToMessageId = input.replyToMessageId?.trim() || undefined;
+      const repliedMessage = replyToMessageId
+        ? await messageStore.findMessage(account.accountId, replyToMessageId)
+        : null;
+      let target = input.target;
+
+      if (input.contactSlug) {
+        const contact = await contactBook.getAgentContact(agentId, input.contactSlug);
+        if (!contact) {
+          throw new Error(`Contact not found: ${input.contactSlug}`);
+        }
+
+        const identity = contact.accounts.find((current) => current.provider === input.provider);
+        if (!identity) {
+          throw new Error(`No ${input.provider} identity found for contact: ${input.contactSlug}`);
+        }
+
+        if (replyToMessageId) {
+          target = repliedMessage?.channelId;
+          if (!target) {
+            throw new Error(`No message context found for reply: ${replyToMessageId}`);
+          }
+        } else {
+          target = identity.externalUserId || identity.username;
+          if (!target) {
+            throw new Error(`No direct identity found for contact: ${input.contactSlug}`);
+          }
+        }
+      }
+
+      if (!target) {
+        throw new Error(`Target not resolved for provider: ${input.provider}`);
+      }
+
+      if (input.provider === 'internal-chat' && replyToMessageId && !repliedMessage) {
+        throw new Error(`Unknown internal-chat replyToMessageId: ${replyToMessageId}`);
+      }
+
+      if (
+        input.provider === 'internal-chat' &&
+        replyToMessageId &&
+        repliedMessage?.channelId &&
+        repliedMessage.channelId !== target
+      ) {
+        throw new Error(
+          `replyToMessageId ${replyToMessageId} belongs to channel ${repliedMessage.channelId}, but target ${target} was requested.`,
+        );
+      }
+
+      const delivery = deliveryRegistry.get(account.accountId);
+      if (!delivery) {
+        throw new Error(`No active delivery registered for provider: ${input.provider}`);
+      }
+
+      const sent = await delivery({
+        target,
         contactSlug: input.contactSlug,
         content: input.content,
-        replyToMessageId: input.replyToMessageId,
-      }),
+        replyToMessageId,
+      });
+      const messageId = sent.messageId || `out:${Date.now()}`;
+
+      await messageStore.saveOutboundMessage({
+        accountId: account.accountId,
+        provider: input.provider,
+        messageId,
+        channelId: sent.channelId || target,
+        content: input.content,
+        contactSlug: input.contactSlug,
+        replyToMessageId,
+      });
+
+      return {
+        success: true,
+        messageId,
+      };
+    },
   });
 }

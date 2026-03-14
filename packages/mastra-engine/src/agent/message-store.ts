@@ -1,61 +1,7 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-
 import { z } from 'zod';
 
-const accountSchema = z.object({
-  accountId: z.string(),
-  agentId: z.string(),
-  provider: z.string(),
-  externalAccountId: z.string(),
-  displayName: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
-const contactIdentitySchema = z.object({
-  provider: z.string(),
-  externalUserId: z.string().optional(),
-  username: z.string().optional(),
-});
-
-const contactSchema = z.object({
-  agentId: z.string(),
-  slug: z.string(),
-  displayName: z.string(),
-  description: z.string().optional(),
-  accounts: z.array(contactIdentitySchema).default([]),
-});
-
-const attachmentSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().optional(),
-  url: z.string(),
-  contentType: z.string().optional(),
-  sizeBytes: z.number().optional(),
-  description: z.string().optional(),
-});
-
-const storedMessageSchema = z.object({
-  messageId: z.string(),
-  accountId: z.string(),
-  direction: z.enum(['inbound', 'outbound']),
-  channelId: z.string().optional(),
-  channelName: z.string().optional(),
-  authorId: z.string().optional(),
-  authorName: z.string().optional(),
-  username: z.string().optional(),
-  content: z.string(),
-  attachments: z.array(attachmentSchema).default([]),
-  unread: z.boolean(),
-  createdAt: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
-const stateSchema = z.object({
-  accounts: z.array(accountSchema).default([]),
-  contacts: z.array(contactSchema).default([]),
-  messages: z.array(storedMessageSchema).default([]),
-});
+import { contactBook } from './contact-book';
+import { agentState, type Attachment, type StoredMessage } from './state';
 
 const inboundMessageSchema = z.object({
   agentId: z.string(),
@@ -67,7 +13,18 @@ const inboundMessageSchema = z.object({
   authorName: z.string().optional(),
   username: z.string().optional(),
   content: z.string(),
-  attachments: z.array(attachmentSchema).default([]),
+  attachments: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string().optional(),
+        url: z.string(),
+        contentType: z.string().optional(),
+        sizeBytes: z.number().optional(),
+        description: z.string().optional(),
+      }),
+    )
+    .default([]),
   createdAt: z.string(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -80,14 +37,6 @@ const outboundMessageSchema = z.object({
   content: z.string(),
   contactSlug: z.string().optional(),
   replyToMessageId: z.string().optional(),
-});
-
-const upsertContactSchema = z.object({
-  agentId: z.string(),
-  slug: z.string(),
-  displayName: z.string(),
-  description: z.string().optional(),
-  accounts: z.array(contactIdentitySchema).default([]),
 });
 
 const listConversationsSchema = z.object({
@@ -103,35 +52,7 @@ const getMessagesSchema = z.object({
   conversationId: z.string(),
   limit: z.number().int().positive().max(200).default(100),
 });
-const sendMessageSchema = z
-  .object({
-    agentId: z.string(),
-    provider: z.string(),
-    target: z.string().optional(),
-    contactSlug: z.string().optional(),
-    content: z.string().min(1),
-    replyToMessageId: z.string().optional(),
-  })
-  .refine((input) => Number(Boolean(input.target)) + Number(Boolean(input.contactSlug)) === 1, {
-    message: 'Provide exactly one of target or contactSlug',
-  });
 
-type Account = z.infer<typeof accountSchema>;
-export type ContactIdentity = z.infer<typeof contactIdentitySchema>;
-type Contact = z.infer<typeof contactSchema>;
-type Attachment = z.infer<typeof attachmentSchema>;
-type StoredMessage = z.infer<typeof storedMessageSchema>;
-type State = z.infer<typeof stateSchema>;
-type SenderInput = {
-  target: string;
-  contactSlug?: string;
-  content: string;
-  replyToMessageId?: string;
-};
-type SenderResult = {
-  messageId?: string;
-  channelId?: string;
-};
 export type MessageView = {
   messageId: string;
   accountId: string;
@@ -151,6 +72,7 @@ export type MessageView = {
   contactDisplayName?: string;
   conversationId: string;
 };
+
 export type ConversationView = {
   conversationId: string;
   provider: string;
@@ -164,218 +86,15 @@ export type ConversationView = {
 };
 
 export function createMessageStore() {
-  const statePath = path.resolve('.forge-state', 'accounts.json');
-  let currentState: State | null = null;
-  const senders = new Map<string, (input: SenderInput) => Promise<SenderResult>>();
-
-  async function ensureState() {
-    if (currentState) {
-      return currentState;
-    }
-
-    try {
-      const content = await readFile(statePath, 'utf8');
-      currentState = stateSchema.parse(JSON.parse(content));
-    } catch {
-      currentState = stateSchema.parse({});
-    }
-
-    return currentState;
-  }
-
-  async function saveState() {
-    if (!currentState) {
-      return;
-    }
-
-    await mkdir(path.dirname(statePath), { recursive: true });
-    await writeFile(statePath, JSON.stringify(currentState, null, 2), 'utf8');
-  }
-
-  function slugify(value: string) {
-    return (
-      value
-        .toLowerCase()
-        .normalize('NFKD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-') || 'contact'
-    );
-  }
-
-  function findContactBySlug(state: State, agentId: string, slug: string) {
-    return state.contacts.find((contact) => contact.agentId === agentId && contact.slug === slug) ?? null;
-  }
-
-  function findContactByIdentity(
-    state: State,
-    agentId: string,
-    provider: string,
-    externalUserId?: string,
-    username?: string,
-  ) {
-    return (
-      state.contacts.find((contact) => {
-        if (contact.agentId !== agentId) return false;
-
-        return contact.accounts.some((account) => {
-          if (account.provider !== provider) return false;
-          if (externalUserId && account.externalUserId === externalUserId) return true;
-          if (username && account.username === username) return true;
-          return false;
-        });
-      }) ?? null
-    );
-  }
-
-  function getMessageConversationId(state: State, agentId: string, account: Account, message: StoredMessage) {
-    const contact = findContactByIdentity(
-      state,
-      agentId,
-      account.provider,
-      message.authorId,
-      message.username,
-    );
-
-    return `${account.provider}:${message.channelId || contact?.slug || message.authorId || message.messageId}`;
-  }
-
-  function toMessageView(state: State, agentId: string, message: StoredMessage): MessageView {
-    const account = state.accounts.find((current) => current.accountId === message.accountId);
-
-    if (!account) {
-      throw new Error(`Account not found for message: ${message.accountId}`);
-    }
-
-    const contact = findContactByIdentity(
-      state,
-      agentId,
-      account.provider,
-      message.authorId,
-      message.username,
-    );
-
-    return {
-      messageId: message.messageId,
-      accountId: message.accountId,
-      direction: message.direction,
-      provider: account.provider,
-      channelId: message.channelId,
-      channelName: message.channelName,
-      authorId: message.authorId,
-      authorName: message.authorName,
-      username: message.username,
-      content: message.content,
-      attachments: message.attachments,
-      unread: message.unread,
-      createdAt: message.createdAt,
-      metadata: message.metadata,
-      contactSlug: contact?.slug,
-      contactDisplayName: contact?.displayName,
-      conversationId: getMessageConversationId(state, agentId, account, message),
-    };
-  }
-
-  async function ensureAccount(input: {
-    agentId: string;
-    provider: string;
-    externalAccountId: string;
-    displayName?: string;
-    metadata?: Record<string, unknown>;
-  }) {
-    const state = await ensureState();
-    const accountId = `${input.agentId}:${input.provider}:${input.externalAccountId}`;
-    let account = state.accounts.find((current) => current.accountId === accountId);
-
-    if (!account) {
-      account = {
-        accountId,
-        agentId: input.agentId,
-        provider: input.provider,
-        externalAccountId: input.externalAccountId,
-      };
-      state.accounts.push(account);
-    }
-
-    if (input.displayName !== undefined) {
-      account.displayName = input.displayName;
-    }
-
-    if (input.metadata !== undefined) {
-      account.metadata = input.metadata;
-    }
-
-    await saveState();
-    return accountId;
-  }
-
-  function registerSender(accountId: string, sender: (input: SenderInput) => Promise<SenderResult>) {
-    senders.set(accountId, sender);
-  }
-
-  function unregisterSender(accountId: string) {
-    senders.delete(accountId);
-  }
-
   async function saveInboundMessage(rawInput: unknown) {
     const input = inboundMessageSchema.parse(rawInput);
-    const state = await ensureState();
-    const account = state.accounts.find((current) => current.accountId === input.accountId);
-
-    if (!account) {
-      throw new Error(`Account not found for inbound message: ${input.accountId}`);
-    }
-
+    const state = await agentState.read();
     const alreadyExists = state.messages.some(
       (message) => message.accountId === input.accountId && message.messageId === input.messageId,
     );
 
     if (alreadyExists) {
       return;
-    }
-
-    if (input.authorId || input.username || input.authorName) {
-      let contact = findContactByIdentity(state, input.agentId, account.provider, input.authorId, input.username);
-
-      if (!contact) {
-        const baseSlug = slugify(input.username || input.authorName || input.authorId || 'contact');
-        let slug = baseSlug;
-        let suffix = 2;
-
-        while (findContactBySlug(state, input.agentId, slug)) {
-          slug = `${baseSlug}-${suffix}`;
-          suffix += 1;
-        }
-
-        contact = {
-          agentId: input.agentId,
-          slug,
-          displayName: input.authorName || input.username || input.authorId || slug,
-          accounts: [],
-        };
-        state.contacts.push(contact);
-      }
-
-      let identity = contact.accounts.find((current) => {
-        if (current.provider !== account.provider) return false;
-        if (input.authorId && current.externalUserId === input.authorId) return true;
-        if (input.username && current.username === input.username) return true;
-        return false;
-      });
-
-      if (!identity) {
-        identity = {
-          provider: account.provider,
-          externalUserId: input.authorId,
-          username: input.username,
-        };
-        contact.accounts.push(identity);
-      }
-
-      if (input.authorId) identity.externalUserId = input.authorId;
-      if (input.username) identity.username = input.username;
-      if (input.authorName) contact.displayName = input.authorName;
     }
 
     state.messages.push({
@@ -394,12 +113,12 @@ export function createMessageStore() {
       metadata: input.metadata,
     });
 
-    await saveState();
+    await agentState.save();
   }
 
   async function saveOutboundMessage(rawInput: unknown) {
     const input = outboundMessageSchema.parse(rawInput);
-    const state = await ensureState();
+    const state = await agentState.read();
 
     state.messages.push({
       messageId: input.messageId,
@@ -417,66 +136,54 @@ export function createMessageStore() {
       },
     });
 
-    await saveState();
+    await agentState.save();
   }
 
-  async function listAgentContacts(agentId: string) {
-    const state = await ensureState();
-    return state.contacts.filter((contact) => contact.agentId === agentId);
+  async function findMessage(accountId: string, messageId: string) {
+    const state = await agentState.read();
+    return state.messages.find((message) => message.accountId === accountId && message.messageId === messageId) ?? null;
   }
 
-  async function getAgentContact(agentId: string, slug: string) {
-    const state = await ensureState();
-    return findContactBySlug(state, agentId, slug);
-  }
+  async function toMessageView(agentId: string, message: StoredMessage) {
+    const state = await agentState.read();
+    const account = state.accounts.find((current) => current.accountId === message.accountId);
 
-  async function upsertAgentContact(rawInput: unknown) {
-    const input = upsertContactSchema.parse(rawInput);
-    const state = await ensureState();
-    const slug = slugify(input.slug);
-    let contact = findContactBySlug(state, input.agentId, slug);
-
-    if (!contact) {
-      contact = {
-        agentId: input.agentId,
-        slug,
-        displayName: input.displayName,
-        accounts: [],
-      };
-      state.contacts.push(contact);
+    if (!account) {
+      throw new Error(`Account not found for message: ${message.accountId}`);
     }
 
-    contact.displayName = input.displayName;
-    contact.description = input.description;
+    const contact = await contactBook.findContactByIdentity(
+      agentId,
+      account.provider,
+      message.authorId,
+      message.username,
+    );
+    const conversationId = `${account.provider}:${message.channelId || contact?.slug || message.authorId || message.messageId}`;
 
-    for (const nextIdentity of input.accounts) {
-      let identity = contact.accounts.find((current) => {
-        if (current.provider !== nextIdentity.provider) return false;
-        if (nextIdentity.externalUserId && current.externalUserId === nextIdentity.externalUserId) return true;
-        if (nextIdentity.username && current.username === nextIdentity.username) return true;
-        return false;
-      });
-
-      if (!identity) {
-        identity = {
-          provider: nextIdentity.provider,
-          externalUserId: nextIdentity.externalUserId,
-          username: nextIdentity.username,
-        };
-        contact.accounts.push(identity);
-      }
-
-      if (nextIdentity.externalUserId) identity.externalUserId = nextIdentity.externalUserId;
-      if (nextIdentity.username) identity.username = nextIdentity.username;
-    }
-
-    await saveState();
-    return contact;
+    return {
+      messageId: message.messageId,
+      accountId: message.accountId,
+      direction: message.direction,
+      provider: account.provider,
+      channelId: message.channelId,
+      channelName: message.channelName,
+      authorId: message.authorId,
+      authorName: message.authorName,
+      username: message.username,
+      content: message.content,
+      attachments: message.attachments,
+      unread: message.unread,
+      createdAt: message.createdAt,
+      metadata: message.metadata,
+      contactSlug: contact?.slug,
+      contactDisplayName: contact?.displayName,
+      conversationId,
+    } satisfies MessageView;
   }
 
   async function listMessageConversations(rawInput: unknown) {
     const input = listConversationsSchema.parse(rawInput);
-    const state = await ensureState();
+    const state = await agentState.read();
     const accountIds = new Set(
       state.accounts
         .filter((account) => account.agentId === input.agentId)
@@ -486,11 +193,18 @@ export function createMessageStore() {
     const conversations = new Map<string, ConversationView>();
 
     for (const message of state.messages) {
-      if (!accountIds.has(message.accountId)) continue;
-      if (input.unread !== undefined && message.unread !== input.unread) continue;
+      if (!accountIds.has(message.accountId)) {
+        continue;
+      }
 
-      const view = toMessageView(state, input.agentId, message);
-      if (input.contactSlug && view.contactSlug !== input.contactSlug) continue;
+      if (input.unread !== undefined && message.unread !== input.unread) {
+        continue;
+      }
+
+      const view = await toMessageView(input.agentId, message);
+      if (input.contactSlug && view.contactSlug !== input.contactSlug) {
+        continue;
+      }
 
       let conversation = conversations.get(view.conversationId);
 
@@ -511,7 +225,9 @@ export function createMessageStore() {
 
       conversation.messages.push(view);
       conversation.latestMessageAt = view.createdAt;
-      if (view.unread) conversation.unreadCount += 1;
+      if (view.unread) {
+        conversation.unreadCount += 1;
+      }
     }
 
     const result = Array.from(conversations.values())
@@ -532,13 +248,22 @@ export function createMessageStore() {
 
     if (unreadKeys.size > 0) {
       for (const message of state.messages) {
-        if (!accountIds.has(message.accountId)) continue;
-        if (!unreadKeys.has(`${message.accountId}:${message.messageId}`)) continue;
-        if (!message.unread) continue;
+        if (!accountIds.has(message.accountId)) {
+          continue;
+        }
+
+        if (!unreadKeys.has(`${message.accountId}:${message.messageId}`)) {
+          continue;
+        }
+
+        if (!message.unread) {
+          continue;
+        }
+
         message.unread = false;
       }
 
-      await saveState();
+      await agentState.save();
     }
 
     return result;
@@ -546,152 +271,62 @@ export function createMessageStore() {
 
   async function getMessages(rawInput: unknown) {
     const input = getMessagesSchema.parse(rawInput);
-    const state = await ensureState();
+    const state = await agentState.read();
     const accountIds = new Set(
       state.accounts
         .filter((account) => account.agentId === input.agentId)
         .map((account) => account.accountId),
     );
-    const result = state.messages
-      .filter((message) => accountIds.has(message.accountId))
-      .map((message) => toMessageView(state, input.agentId, message))
-      .filter((message) => message.conversationId === input.conversationId)
-      .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
-      .slice(-input.limit);
+    const result: MessageView[] = [];
+
+    for (const message of state.messages) {
+      if (!accountIds.has(message.accountId)) {
+        continue;
+      }
+
+      const view = await toMessageView(input.agentId, message);
+      if (view.conversationId !== input.conversationId) {
+        continue;
+      }
+
+      result.push(view);
+    }
+
+    result.sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+    const messages = result.slice(-input.limit);
     const unreadKeys = new Set(
-      result
-        .filter((message) => message.unread)
-        .map((message) => `${message.accountId}:${message.messageId}`),
+      messages.filter((message) => message.unread).map((message) => `${message.accountId}:${message.messageId}`),
     );
 
     if (unreadKeys.size > 0) {
       for (const message of state.messages) {
-        if (!accountIds.has(message.accountId)) continue;
-        if (!unreadKeys.has(`${message.accountId}:${message.messageId}`)) continue;
-        if (!message.unread) continue;
+        if (!accountIds.has(message.accountId)) {
+          continue;
+        }
+
+        if (!unreadKeys.has(`${message.accountId}:${message.messageId}`)) {
+          continue;
+        }
+
+        if (!message.unread) {
+          continue;
+        }
+
         message.unread = false;
       }
 
-      await saveState();
+      await agentState.save();
     }
 
-    return result;
-  }
-
-  async function getAgentProviderAccount(agentId: string, provider: string) {
-    const state = await ensureState();
-    return state.accounts.find((account) => account.agentId === agentId && account.provider === provider) ?? null;
-  }
-
-  async function findMessage(accountId: string, messageId: string) {
-    const state = await ensureState();
-    return state.messages.find((message) => message.accountId === accountId && message.messageId === messageId) ?? null;
-  }
-
-  async function findContact(agentId: string, slug: string) {
-    const state = await ensureState();
-    return findContactBySlug(state, agentId, slug);
-  }
-
-  async function sendMessage(rawInput: unknown) {
-    const input = sendMessageSchema.parse(rawInput);
-    const account = await getAgentProviderAccount(input.agentId, input.provider);
-
-    if (!account) {
-      throw new Error(`Provider not found for agent: ${input.provider}`);
-    }
-
-    const replyToMessageId = input.replyToMessageId?.trim() || undefined;
-    const repliedMessage = replyToMessageId ? await findMessage(account.accountId, replyToMessageId) : null;
-    let target = input.target;
-
-    if (input.contactSlug) {
-      const contact = await findContact(input.agentId, input.contactSlug);
-      if (!contact) {
-        throw new Error(`Contact not found: ${input.contactSlug}`);
-      }
-
-      const identity = contact.accounts.find((current) => current.provider === input.provider);
-      if (!identity) {
-        throw new Error(`No ${input.provider} identity found for contact: ${input.contactSlug}`);
-      }
-
-      if (replyToMessageId) {
-        target = repliedMessage?.channelId;
-        if (!target) {
-          throw new Error(`No message context found for reply: ${replyToMessageId}`);
-        }
-      } else {
-        target = identity.externalUserId || identity.username;
-        if (!target) {
-          throw new Error(`No direct identity found for contact: ${input.contactSlug}`);
-        }
-      }
-    }
-
-    if (!target) {
-      throw new Error(`Target not resolved for provider: ${input.provider}`);
-    }
-
-    if (input.provider === 'internal-chat' && replyToMessageId && !repliedMessage) {
-      throw new Error(`Unknown internal-chat replyToMessageId: ${replyToMessageId}`);
-    }
-
-    if (
-      input.provider === 'internal-chat' &&
-      replyToMessageId &&
-      repliedMessage?.channelId &&
-      repliedMessage.channelId !== target
-    ) {
-      throw new Error(
-        `replyToMessageId ${replyToMessageId} belongs to channel ${repliedMessage.channelId}, but target ${target} was requested.`,
-      );
-    }
-
-    const sender = senders.get(account.accountId);
-    if (!sender) {
-      throw new Error(`No active sender registered for provider: ${input.provider}`);
-    }
-
-    const sent = await sender({
-      target,
-      contactSlug: input.contactSlug,
-      content: input.content,
-      replyToMessageId,
-    });
-    const messageId = sent.messageId || `out:${Date.now()}`;
-
-    await saveOutboundMessage({
-      accountId: account.accountId,
-      provider: input.provider,
-      messageId,
-      channelId: sent.channelId || target,
-      content: input.content,
-      contactSlug: input.contactSlug,
-      replyToMessageId,
-    });
-
-    return {
-      success: true,
-      messageId,
-    };
+    return messages;
   }
 
   return {
-    ensureAccount,
-    registerSender,
-    unregisterSender,
     saveInboundMessage,
     saveOutboundMessage,
-    listAgentContacts,
-    getAgentContact,
-    upsertAgentContact,
+    findMessage,
     listMessageConversations,
     getMessages,
-    getAgentProviderAccount,
-    findMessage,
-    findContact,
-    sendMessage,
   };
 }
 

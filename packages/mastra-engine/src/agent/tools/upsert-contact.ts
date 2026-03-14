@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { messageStore } from '../message-store';
+import { contactBook } from '../contact-book';
 
 const upsertContactInputSchema = z.object({
   slug: z.string(),
@@ -25,7 +25,7 @@ export function createUpsertContactTool(agentId: string) {
       'Create or update a contact with a stable slug, free-form description, and known accounts.',
     inputSchema: upsertContactInputSchema,
     execute: async (input) => {
-      const contact = await messageStore.upsertAgentContact({
+      const contact = await contactBook.upsertAgentContact({
         agentId,
         slug: input.slug,
         displayName: input.displayName,
