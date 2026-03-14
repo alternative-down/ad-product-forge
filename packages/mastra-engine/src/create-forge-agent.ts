@@ -43,11 +43,7 @@ export async function createForgeAgent<
     });
   }
 
-  const wakeQueue = createAgentWakeQueue({ run: runAgent });
-  const communication = await createCommunicationModule({
-    client,
-    wakeUp: () => wakeQueue.notifyExternalEvent(),
-  });
+  const communication = await createCommunicationModule({ client });
   const tools = {
     ...createExternalAccountTools(communication),
     ...(config.tools ?? {}),
@@ -75,10 +71,12 @@ export async function createForgeAgent<
     inputProcessors: [om, longTermMemory],
     outputProcessors: [om, longTermMemory],
   });
+  const wakeQueue = createAgentWakeQueue({ run: runAgent });
 
-  for (const provider of config.providers ?? []) {
-    await communication.connectProvider(provider);
-  }
+  await communication.start({
+    providers: config.providers ?? [],
+    wakeUp: () => wakeQueue.notifyExternalEvent(),
+  });
 
   return agent;
 }

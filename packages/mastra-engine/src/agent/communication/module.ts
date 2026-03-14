@@ -7,7 +7,7 @@ import type {
   CommunicationProvider,
 } from './provider-types';
 
-export async function createCommunicationModule(config: { client: Client; wakeUp(): void }) {
+export async function createCommunicationModule(config: { client: Client }) {
   const store = await createCommunicationStore(config.client);
   const providers = new Map<string, CommunicationProvider>();
 
@@ -60,48 +60,50 @@ export async function createCommunicationModule(config: { client: Client; wakeUp
     });
   }
 
-  async function connectProvider(provider: CommunicationProvider) {
-    const account = await provider.getAccount();
+  async function start(config: { providers: CommunicationProvider[]; wakeUp(): void }) {
+    for (const provider of config.providers) {
+      const account = await provider.getAccount();
 
-    await store.ensureAccount({
-      provider: provider.id,
-      externalAccountId: account.externalAccountId,
-      displayName: account.displayName,
-      metadata: account.metadata,
-    });
+      await store.ensureAccount({
+        provider: provider.id,
+        externalAccountId: account.externalAccountId,
+        displayName: account.displayName,
+        metadata: account.metadata,
+      });
 
-    providers.set(provider.id, provider);
-    await syncProviderContacts(provider);
+      providers.set(provider.id, provider);
+      await syncProviderContacts(provider);
 
-    if (!provider.onMessage) {
-      return;
+      if (!provider.onMessage) {
+        continue;
+      }
+
+      await provider.onMessage(async (message) => {
+        const contact = await syncInboundContact({
+          provider: provider.id,
+          authorExternalId: message.authorExternalId,
+          authorDisplayName: message.authorDisplayName,
+          authorUsername: message.authorUsername,
+        });
+
+        await store.saveInboundMessage({
+          provider: provider.id,
+          providerConversationKey: message.providerConversationKey,
+          providerMessageId: message.providerMessageId,
+          conversationName: message.conversationName,
+          contactSlug: contact?.slug,
+          authorExternalId: message.authorExternalId,
+          authorDisplayName: message.authorDisplayName,
+          authorUsername: message.authorUsername,
+          content: message.content,
+          attachments: message.attachments,
+          createdAt: message.createdAt,
+          metadata: message.metadata,
+        });
+
+        config.wakeUp();
+      });
     }
-
-    await provider.onMessage(async (message) => {
-      const contact = await syncInboundContact({
-        provider: provider.id,
-        authorExternalId: message.authorExternalId,
-        authorDisplayName: message.authorDisplayName,
-        authorUsername: message.authorUsername,
-      });
-
-      await store.saveInboundMessage({
-        provider: provider.id,
-        providerConversationKey: message.providerConversationKey,
-        providerMessageId: message.providerMessageId,
-        conversationName: message.conversationName,
-        contactSlug: contact?.slug,
-        authorExternalId: message.authorExternalId,
-        authorDisplayName: message.authorDisplayName,
-        authorUsername: message.authorUsername,
-        content: message.content,
-        attachments: message.attachments,
-        createdAt: message.createdAt,
-        metadata: message.metadata,
-      });
-
-      config.wakeUp();
-    });
   }
 
   async function saveSentMessage(input: {
@@ -306,7 +308,7 @@ export async function createCommunicationModule(config: { client: Client; wakeUp
   }
 
   return {
-    connectProvider,
+    start,
     listContacts,
     getContact,
     upsertContact,
