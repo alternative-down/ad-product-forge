@@ -23,10 +23,12 @@ export const WORKING_MEMORY_TEMPLATE = [
   '-',
 ].join('\n');
 
-export function appendWorkingMemoryInstructions<T>(instructions: T): T {
+export function appendWorkingMemoryInstructions(instructions: string): string;
+export function appendWorkingMemoryInstructions<T>(instructions: T): T;
+export function appendWorkingMemoryInstructions(instructions: unknown) {
   if (typeof instructions !== 'string') {
     return instructions;
   }
 
-  return `${instructions}\n\n${WORKING_MEMORY_INSTRUCTIONS}` as T;
+  return `${instructions}\n\n${WORKING_MEMORY_INSTRUCTIONS}`;
 }

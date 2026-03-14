@@ -9,6 +9,7 @@ import {
   appendWorkingMemoryInstructions,
 } from './agent/working-memory';
 import { OBSERVATIONAL_MEMORY_CONFIG } from './agent/observational-memory';
+import { bindDefaultAgentRuntime } from './agent/runtime-defaults';
 
 export type CreateSimpleAgentConfig<
   TAgentId extends string = string,
@@ -66,5 +67,5 @@ export async function createSimpleAgent<
     outputProcessors: [om],
   });
 
-  return agent;
+  return bindDefaultAgentRuntime(agent, String(id));
 }
