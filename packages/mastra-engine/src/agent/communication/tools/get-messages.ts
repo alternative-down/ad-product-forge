@@ -1,14 +1,14 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { createCommunicationModule } from '../module';
+import type { CommunicationModule } from '../module';
 
 const getMessagesInputSchema = z.object({
   conversationId: z.string(),
   limit: z.number().int().positive().max(200).default(100),
 });
 
-export function createGetMessagesTool(communication: ReturnType<typeof createCommunicationModule>) {
+export function createGetMessagesTool(communication: CommunicationModule) {
   return createTool({
     id: 'get_messages',
     description:

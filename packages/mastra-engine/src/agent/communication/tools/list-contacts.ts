@@ -1,11 +1,11 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { createCommunicationModule } from '../module';
+import type { CommunicationModule } from '../module';
 
 const listContactsInputSchema = z.object({});
 
-export function createListContactsTool(communication: ReturnType<typeof createCommunicationModule>) {
+export function createListContactsTool(communication: CommunicationModule) {
   return createTool({
     id: 'list_contacts',
     description: 'List the known contacts registered by this agent.',

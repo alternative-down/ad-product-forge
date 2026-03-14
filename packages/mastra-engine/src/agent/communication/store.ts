@@ -55,9 +55,7 @@ type Conversation = z.infer<typeof conversationSchema>;
 type MessageRecord = z.infer<typeof messageSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
 
-export function createCommunicationStore(client: Client) {
-  let initPromise: Promise<void> | null = null;
-
+export async function createCommunicationStore(client: Client) {
   function slugify(value: string) {
     return (
       value
@@ -70,71 +68,61 @@ export function createCommunicationStore(client: Client) {
     );
   }
 
-  async function ensureTables() {
-    if (!initPromise) {
-      initPromise = (async () => {
-        await client.execute(`
-          CREATE TABLE IF NOT EXISTS forge_communication_accounts (
-            account_id TEXT PRIMARY KEY,
-            provider TEXT NOT NULL,
-            external_account_id TEXT NOT NULL,
-            display_name TEXT,
-            metadata_json TEXT
-          )
-        `);
-        await client.execute(`
-          CREATE TABLE IF NOT EXISTS forge_communication_contacts (
-            slug TEXT PRIMARY KEY,
-            display_name TEXT NOT NULL,
-            description TEXT
-          )
-        `);
-        await client.execute(`
-          CREATE TABLE IF NOT EXISTS forge_communication_contact_accounts (
-            slug TEXT NOT NULL,
-            provider TEXT NOT NULL,
-            external_user_id TEXT,
-            username TEXT,
-            UNIQUE (slug, provider, external_user_id, username)
-          )
-        `);
-        await client.execute(`
-          CREATE TABLE IF NOT EXISTS forge_communication_conversations (
-            conversation_id TEXT PRIMARY KEY,
-            provider TEXT NOT NULL,
-            provider_conversation_key TEXT NOT NULL,
-            name TEXT,
-            contact_slug TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            UNIQUE (provider, provider_conversation_key)
-          )
-        `);
-        await client.execute(`
-          CREATE TABLE IF NOT EXISTS forge_communication_messages (
-            message_id TEXT PRIMARY KEY,
-            conversation_id TEXT NOT NULL,
-            provider TEXT NOT NULL,
-            provider_message_id TEXT,
-            author_external_id TEXT,
-            author_display_name TEXT,
-            author_username TEXT,
-            content TEXT NOT NULL,
-            attachments_json TEXT NOT NULL,
-            unread INTEGER NOT NULL,
-            created_at TEXT NOT NULL,
-            metadata_json TEXT
-          )
-        `);
-      })();
-    }
-
-    await initPromise;
-  }
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS forge_communication_accounts (
+      account_id TEXT PRIMARY KEY,
+      provider TEXT NOT NULL,
+      external_account_id TEXT NOT NULL,
+      display_name TEXT,
+      metadata_json TEXT
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS forge_communication_contacts (
+      slug TEXT PRIMARY KEY,
+      display_name TEXT NOT NULL,
+      description TEXT
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS forge_communication_contact_accounts (
+      slug TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      external_user_id TEXT,
+      username TEXT,
+      UNIQUE (slug, provider, external_user_id, username)
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS forge_communication_conversations (
+      conversation_id TEXT PRIMARY KEY,
+      provider TEXT NOT NULL,
+      provider_conversation_key TEXT NOT NULL,
+      name TEXT,
+      contact_slug TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (provider, provider_conversation_key)
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS forge_communication_messages (
+      message_id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      provider_message_id TEXT,
+      author_external_id TEXT,
+      author_display_name TEXT,
+      author_username TEXT,
+      content TEXT NOT NULL,
+      attachments_json TEXT NOT NULL,
+      unread INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      metadata_json TEXT
+    )
+  `);
 
   async function loadContact(slug: string) {
-    await ensureTables();
-
     const contactResult = await client.execute({
       sql: `
         SELECT slug, display_name, description
@@ -171,8 +159,6 @@ export function createCommunicationStore(client: Client) {
   }
 
   async function loadConversation(conversationId: string) {
-    await ensureTables();
-
     const result = await client.execute({
       sql: `
         SELECT conversation_id, provider, provider_conversation_key, name, contact_slug, created_at, updated_at
@@ -198,8 +184,6 @@ export function createCommunicationStore(client: Client) {
   }
 
   async function loadMessage(messageId: string) {
-    await ensureTables();
-
     const result = await client.execute({
       sql: `
         SELECT
@@ -254,8 +238,6 @@ export function createCommunicationStore(client: Client) {
     displayName?: string;
     metadata?: Record<string, unknown>;
   }) {
-    await ensureTables();
-
     const accountId = `${input.provider}:${input.externalAccountId}`;
 
     await client.execute({
@@ -290,8 +272,6 @@ export function createCommunicationStore(client: Client) {
   }
 
   async function listContacts() {
-    await ensureTables();
-
     const result = await client.execute(`
       SELECT slug
       FROM forge_communication_contacts
@@ -308,8 +288,6 @@ export function createCommunicationStore(client: Client) {
   }
 
   async function findContactByIdentity(provider: string, externalUserId?: string, username?: string) {
-    await ensureTables();
-
     if (!externalUserId && !username) {
       return null;
     }
@@ -343,8 +321,6 @@ export function createCommunicationStore(client: Client) {
     externalUserId?: string;
     username?: string;
   }) {
-    await ensureTables();
-
     const slug = slugify(input.slug);
 
     await client.execute({
@@ -383,8 +359,6 @@ export function createCommunicationStore(client: Client) {
     contactSlug?: string;
     createdAt?: string;
   }) {
-    await ensureTables();
-
     const now = input.createdAt ?? new Date().toISOString();
     const existingResult = await client.execute({
       sql: `
@@ -460,8 +434,6 @@ export function createCommunicationStore(client: Client) {
     createdAt: string;
     metadata?: Record<string, unknown>;
   }) {
-    await ensureTables();
-
     const existingResult = await client.execute({
       sql: `
         SELECT message_id
@@ -536,8 +508,6 @@ export function createCommunicationStore(client: Client) {
     createdAt?: string;
     metadata?: Record<string, unknown>;
   }) {
-    await ensureTables();
-
     const conversation = await ensureConversation({
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
@@ -587,8 +557,6 @@ export function createCommunicationStore(client: Client) {
   }
 
   async function markMessagesRead(messageIds: string[]) {
-    await ensureTables();
-
     if (messageIds.length === 0) {
       return;
     }
@@ -606,8 +574,6 @@ export function createCommunicationStore(client: Client) {
   }
 
   async function listConversations(options: { provider?: string; contactSlug?: string; unread?: boolean; limit: number }) {
-    await ensureTables();
-
     const conversationResult = await client.execute(`
       SELECT conversation_id
       FROM forge_communication_conversations
@@ -663,8 +629,6 @@ export function createCommunicationStore(client: Client) {
   }
 
   async function getMessages(conversationId: string, limit: number) {
-    await ensureTables();
-
     const result = await client.execute({
       sql: `
         SELECT message_id

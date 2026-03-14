@@ -7,8 +7,8 @@ import type {
   CommunicationProvider,
 } from './provider-types';
 
-export function createCommunicationModule(config: { client: Client; wakeUp(): void }) {
-  const store = createCommunicationStore(config.client);
+export async function createCommunicationModule(config: { client: Client; wakeUp(): void }) {
+  const store = await createCommunicationStore(config.client);
   const providers = new Map<string, CommunicationProvider>();
 
   async function syncProviderContacts(provider: CommunicationProvider) {
@@ -324,3 +324,5 @@ export function createCommunicationModule(config: { client: Client; wakeUp(): vo
     sendMessage,
   };
 }
+
+export type CommunicationModule = Awaited<ReturnType<typeof createCommunicationModule>>;

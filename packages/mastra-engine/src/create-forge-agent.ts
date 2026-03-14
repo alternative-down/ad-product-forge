@@ -33,7 +33,7 @@ export async function createForgeAgent<
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const { client, storage, vector } = createAgentStorage(config.id);
   let wakeQueue: ReturnType<typeof createAgentWakeQueue> | null = null;
-  const communication = createCommunicationModule({
+  const communication = await createCommunicationModule({
     client,
     wakeUp() {
       if (!wakeQueue) {

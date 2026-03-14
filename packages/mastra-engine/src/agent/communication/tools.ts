@@ -1,4 +1,4 @@
-import type { createCommunicationModule } from './module';
+import type { CommunicationModule } from './module';
 
 import { createGetContactTool } from './tools/get-contact';
 import { createGetMessagesTool } from './tools/get-messages';
@@ -7,7 +7,7 @@ import { createListConversationsTool } from './tools/list-conversations';
 import { createSendMessageTool } from './tools/send-message';
 import { createUpsertContactTool } from './tools/upsert-contact';
 
-export function createExternalAccountTools(communication: ReturnType<typeof createCommunicationModule>) {
+export function createExternalAccountTools(communication: CommunicationModule) {
   return {
     list_contacts: createListContactsTool(communication),
     get_contact: createGetContactTool(communication),

@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { createCommunicationModule } from '../module';
+import type { CommunicationModule } from '../module';
 
 const sendMessageInputSchema = z
   .object({
@@ -25,7 +25,7 @@ const sendMessageInputSchema = z
     message: 'Provide exactly one of conversationId or contactSlug.',
   });
 
-export function createSendMessageTool(communication: ReturnType<typeof createCommunicationModule>) {
+export function createSendMessageTool(communication: CommunicationModule) {
   return createTool({
     id: 'send_message',
     description: 'Send a message through one of the external providers owned by this agent.',

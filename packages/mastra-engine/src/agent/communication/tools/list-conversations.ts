@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { createCommunicationModule } from '../module';
+import type { CommunicationModule } from '../module';
 
 const listConversationsInputSchema = z.object({
   provider: z.string().optional(),
@@ -10,7 +10,7 @@ const listConversationsInputSchema = z.object({
   limit: z.number().int().positive().max(100).default(20),
 });
 
-export function createListConversationsTool(communication: ReturnType<typeof createCommunicationModule>) {
+export function createListConversationsTool(communication: CommunicationModule) {
   return createTool({
     id: 'list_conversations',
     description:

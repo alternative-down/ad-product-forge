@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { createCommunicationModule } from '../module';
+import type { CommunicationModule } from '../module';
 
 const upsertContactInputSchema = z.object({
   slug: z.string(),
@@ -9,7 +9,7 @@ const upsertContactInputSchema = z.object({
   description: z.string().optional(),
 });
 
-export function createUpsertContactTool(communication: ReturnType<typeof createCommunicationModule>) {
+export function createUpsertContactTool(communication: CommunicationModule) {
   return createTool({
     id: 'upsert_contact',
     description:
