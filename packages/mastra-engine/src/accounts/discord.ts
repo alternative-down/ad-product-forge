@@ -107,15 +107,28 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     }
 
     try {
+      const authorName =
+        message.member?.displayName ?? message.author.globalName ?? message.author.username;
       const content = message.content
         .replaceAll(`<@${discordUserId}>`, '')
         .replaceAll(`<@!${discordUserId}>`, '')
         .trim();
+      const channelName =
+        message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel';
+      const attachments = Array.from(message.attachments.values()).map((attachment) => ({
+        id: attachment.id,
+        name: attachment.name ?? undefined,
+        url: attachment.url,
+        contentType: attachment.contentType ?? undefined,
+        sizeBytes: attachment.size,
+        description: attachment.description ?? undefined,
+      }));
+
       await agentContacts.syncInboundContact({
         agentId,
         provider: 'discord',
         authorId: message.author.id,
-        authorName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
+        authorName,
         username: message.author.username,
       });
 
@@ -124,21 +137,12 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
         accountId: discordAccountId,
         messageId: message.id,
         channelId: message.channelId,
-        channelName:
-          message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
+        channelName,
         authorId: message.author.id,
-        authorName:
-          message.member?.displayName ?? message.author.globalName ?? message.author.username,
+        authorName,
         username: message.author.username,
         content: content || '[no text content]',
-        attachments: Array.from(message.attachments.values()).map((attachment) => ({
-          id: attachment.id,
-          name: attachment.name ?? undefined,
-          url: attachment.url,
-          contentType: attachment.contentType ?? undefined,
-          sizeBytes: attachment.size,
-          description: attachment.description ?? undefined,
-        })),
+        attachments,
         createdAt: new Date(message.createdTimestamp).toISOString(),
         metadata: {
           serverName: message.guild?.name ?? 'direct-message',

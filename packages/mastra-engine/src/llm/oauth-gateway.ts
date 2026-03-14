@@ -283,85 +283,92 @@ export class OAuthGateway extends MastraModelGateway {
     apiKey: string;
     headers?: Record<string, string>;
   }): Promise<GatewayLanguageModel> {
-    if (args.providerId === 'openai-codex') {
-      const baseURL = this.buildUrl(`${this.id}/${args.providerId}/${args.modelId}`);
+    switch (args.providerId) {
+      case 'openai-codex':
+        return this.resolveOpenAICodexModel(args.modelId, args.apiKey);
+      case 'claude-max':
+        return this.resolveClaudeMaxModel(args.modelId, args.apiKey);
+      default:
+        throw new Error(`Unsupported gateway provider: ${args.providerId}`);
+    }
+  }
 
-      if (!baseURL) {
-        throw new Error(`Unsupported gateway model: ${args.providerId}/${args.modelId}`);
-      }
+  private async resolveOpenAICodexModel(modelId: string, apiKey: string) {
+    const baseURL = this.buildUrl(`${this.id}/openai-codex/${modelId}`);
 
-      const openai = createOpenAI({
-        apiKey: args.apiKey,
-        baseURL,
-        fetch: async (url, init) => {
-          const credential = await resolveOpenAICodexCredential(this.options.openaiCodex);
-          const headers = new Headers(init?.headers);
-          headers.delete('authorization');
-          headers.set('Authorization', `Bearer ${args.apiKey}`);
-
-          if (credential.accountId) {
-            headers.set('ChatGPT-Account-Id', credential.accountId);
-          }
-
-          forgeDebug('provider:openai-codex', 'request', {
-            url: String(url),
-            hasAccountId: Boolean(credential.accountId),
-          });
-
-          const response = await fetch(url, { ...init, headers });
-
-          forgeDebug('provider:openai-codex', 'response', {
-            url: String(url),
-            status: response.status,
-            ok: response.ok,
-          });
-
-          return response;
-        },
-      });
-
-      return wrapLanguageModel({
-        model: openai.responses(args.modelId),
-        middleware: this.openAIMiddleware,
-      });
+    if (!baseURL) {
+      throw new Error(`Unsupported gateway model: openai-codex/${modelId}`);
     }
 
-    if (args.providerId === 'claude-max') {
-      const baseURL = this.buildUrl(`${this.id}/${args.providerId}/${args.modelId}`);
+    const openai = createOpenAI({
+      apiKey,
+      baseURL,
+      fetch: async (url, init) => {
+        const credential = await resolveOpenAICodexCredential(this.options.openaiCodex);
+        const headers = new Headers(init?.headers);
+        headers.delete('authorization');
+        headers.set('Authorization', `Bearer ${apiKey}`);
 
-      if (!baseURL) {
-        throw new Error(`Unsupported gateway model: ${args.providerId}/${args.modelId}`);
-      }
+        if (credential.accountId) {
+          headers.set('ChatGPT-Account-Id', credential.accountId);
+        }
 
-      const anthropic = createAnthropic({
-        apiKey: args.apiKey,
-        baseURL,
-        fetch: async (url, init) => {
-          const headers = new Headers(init?.headers);
-          headers.delete('x-api-key');
-          headers.delete('authorization');
-          headers.set('Authorization', `Bearer ${args.apiKey}`);
-          headers.set('anthropic-beta', ANTHROPIC_BETA_HEADER);
-          headers.set('anthropic-version', '2023-06-01');
+        forgeDebug('provider:openai-codex', 'request', {
+          url: String(url),
+          hasAccountId: Boolean(credential.accountId),
+        });
 
-          forgeDebug('provider:claude-max', 'request', { url: String(url) });
-          const response = await fetch(url, { ...init, headers });
-          forgeDebug('provider:claude-max', 'response', {
-            url: String(url),
-            status: response.status,
-            ok: response.ok,
-          });
-          return response;
-        },
-      });
+        const response = await fetch(url, { ...init, headers });
 
-      return wrapLanguageModel({
-        model: anthropic(args.modelId),
-        middleware: [this.claudeCodeMiddleware, this.promptCacheMiddleware],
-      });
+        forgeDebug('provider:openai-codex', 'response', {
+          url: String(url),
+          status: response.status,
+          ok: response.ok,
+        });
+
+        return response;
+      },
+    });
+
+    return wrapLanguageModel({
+      model: openai.responses(modelId),
+      middleware: this.openAIMiddleware,
+    });
+  }
+
+  private resolveClaudeMaxModel(modelId: string, apiKey: string) {
+    const baseURL = this.buildUrl(`${this.id}/claude-max/${modelId}`);
+
+    if (!baseURL) {
+      throw new Error(`Unsupported gateway model: claude-max/${modelId}`);
     }
 
-    throw new Error(`Unsupported gateway provider: ${args.providerId}`);
+    const anthropic = createAnthropic({
+      apiKey,
+      baseURL,
+      fetch: async (url, init) => {
+        const headers = new Headers(init?.headers);
+        headers.delete('x-api-key');
+        headers.delete('authorization');
+        headers.set('Authorization', `Bearer ${apiKey}`);
+        headers.set('anthropic-beta', ANTHROPIC_BETA_HEADER);
+        headers.set('anthropic-version', '2023-06-01');
+
+        forgeDebug('provider:claude-max', 'request', { url: String(url) });
+        const response = await fetch(url, { ...init, headers });
+        forgeDebug('provider:claude-max', 'response', {
+          url: String(url),
+          status: response.status,
+          ok: response.ok,
+        });
+        return response;
+      },
+    });
+
+    return wrapLanguageModel({
+      model: anthropic(modelId),
+      middleware: [this.claudeCodeMiddleware, this.promptCacheMiddleware],
+    });
   }
 }
 
