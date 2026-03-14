@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 
 import type { Agent } from '@mastra/core/agent';
 
-import { messageRouter } from '../agent/message-router';
 import { messageStore } from '../agent/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 
@@ -63,7 +62,7 @@ export function createInternalChatRouter() {
     agentsById.set(agentId, registeredAgent);
     await syncContacts();
 
-    messageRouter.registerSender(accountId, async (input) => {
+    messageStore.registerSender(accountId, async (input) => {
       const recipient = agentsById.get(input.target);
 
       if (!recipient) {
@@ -101,7 +100,7 @@ export function createInternalChatRouter() {
       return;
     }
 
-    messageRouter.unregisterSender(registeredAgent.accountId);
+      messageStore.unregisterSender(registeredAgent.accountId);
     agentsById.delete(agentId);
   }
 

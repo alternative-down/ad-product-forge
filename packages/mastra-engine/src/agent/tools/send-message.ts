@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { messageRouter } from '../message-router';
+import { messageStore } from '../message-store';
 
 const sendMessageInputSchema = z
   .object({
@@ -31,7 +31,7 @@ export function createSendMessageTool(agentId: string) {
     description: 'Send a message through one of the external providers owned by this agent.',
     inputSchema: sendMessageInputSchema,
     execute: async (input) =>
-      messageRouter.sendMessage({
+      messageStore.sendMessage({
         agentId,
         provider: input.provider,
         target: input.target,

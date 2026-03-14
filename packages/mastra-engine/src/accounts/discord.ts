@@ -1,7 +1,6 @@
 import type { Agent } from '@mastra/core/agent';
 import { ChannelType, Client, Events, GatewayIntentBits, Partials } from 'discord.js';
 
-import { messageRouter } from '../agent/message-router';
 import { messageStore } from '../agent/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 import { forgeDebug } from '../debug';
@@ -42,7 +41,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     displayName: client.user.tag,
   });
 
-  messageRouter.registerSender(discordAccountId, async (input) => {
+  messageStore.registerSender(discordAccountId, async (input) => {
     if (!input.target || !/^\d+$/.test(input.target)) {
       throw new Error(`Unsupported Discord target: ${input.target}`);
     }

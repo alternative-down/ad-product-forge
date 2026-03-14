@@ -103,6 +103,18 @@ const getMessagesSchema = z.object({
   conversationId: z.string(),
   limit: z.number().int().positive().max(200).default(100),
 });
+const sendMessageSchema = z
+  .object({
+    agentId: z.string(),
+    provider: z.string(),
+    target: z.string().optional(),
+    contactSlug: z.string().optional(),
+    content: z.string().min(1),
+    replyToMessageId: z.string().optional(),
+  })
+  .refine((input) => Number(Boolean(input.target)) + Number(Boolean(input.contactSlug)) === 1, {
+    message: 'Provide exactly one of target or contactSlug',
+  });
 
 type Account = z.infer<typeof accountSchema>;
 export type ContactIdentity = z.infer<typeof contactIdentitySchema>;
@@ -110,6 +122,16 @@ type Contact = z.infer<typeof contactSchema>;
 type Attachment = z.infer<typeof attachmentSchema>;
 type StoredMessage = z.infer<typeof storedMessageSchema>;
 type State = z.infer<typeof stateSchema>;
+type SenderInput = {
+  target: string;
+  contactSlug?: string;
+  content: string;
+  replyToMessageId?: string;
+};
+type SenderResult = {
+  messageId?: string;
+  channelId?: string;
+};
 export type MessageView = {
   messageId: string;
   accountId: string;
@@ -144,6 +166,7 @@ export type ConversationView = {
 export function createMessageStore() {
   const statePath = path.resolve('.forge-state', 'accounts.json');
   let currentState: State | null = null;
+  const senders = new Map<string, (input: SenderInput) => Promise<SenderResult>>();
 
   async function ensureState() {
     if (currentState) {
@@ -285,6 +308,14 @@ export function createMessageStore() {
 
     await saveState();
     return accountId;
+  }
+
+  function registerSender(accountId: string, sender: (input: SenderInput) => Promise<SenderResult>) {
+    senders.set(accountId, sender);
+  }
+
+  function unregisterSender(accountId: string) {
+    senders.delete(accountId);
   }
 
   async function saveInboundMessage(rawInput: unknown) {
@@ -562,8 +593,94 @@ export function createMessageStore() {
     return findContactBySlug(state, agentId, slug);
   }
 
+  async function sendMessage(rawInput: unknown) {
+    const input = sendMessageSchema.parse(rawInput);
+    const account = await getAgentProviderAccount(input.agentId, input.provider);
+
+    if (!account) {
+      throw new Error(`Provider not found for agent: ${input.provider}`);
+    }
+
+    const replyToMessageId = input.replyToMessageId?.trim() || undefined;
+    const repliedMessage = replyToMessageId ? await findMessage(account.accountId, replyToMessageId) : null;
+    let target = input.target;
+
+    if (input.contactSlug) {
+      const contact = await findContact(input.agentId, input.contactSlug);
+      if (!contact) {
+        throw new Error(`Contact not found: ${input.contactSlug}`);
+      }
+
+      const identity = contact.accounts.find((current) => current.provider === input.provider);
+      if (!identity) {
+        throw new Error(`No ${input.provider} identity found for contact: ${input.contactSlug}`);
+      }
+
+      if (replyToMessageId) {
+        target = repliedMessage?.channelId;
+        if (!target) {
+          throw new Error(`No message context found for reply: ${replyToMessageId}`);
+        }
+      } else {
+        target = identity.externalUserId || identity.username;
+        if (!target) {
+          throw new Error(`No direct identity found for contact: ${input.contactSlug}`);
+        }
+      }
+    }
+
+    if (!target) {
+      throw new Error(`Target not resolved for provider: ${input.provider}`);
+    }
+
+    if (input.provider === 'internal-chat' && replyToMessageId && !repliedMessage) {
+      throw new Error(`Unknown internal-chat replyToMessageId: ${replyToMessageId}`);
+    }
+
+    if (
+      input.provider === 'internal-chat' &&
+      replyToMessageId &&
+      repliedMessage?.channelId &&
+      repliedMessage.channelId !== target
+    ) {
+      throw new Error(
+        `replyToMessageId ${replyToMessageId} belongs to channel ${repliedMessage.channelId}, but target ${target} was requested.`,
+      );
+    }
+
+    const sender = senders.get(account.accountId);
+    if (!sender) {
+      throw new Error(`No active sender registered for provider: ${input.provider}`);
+    }
+
+    const sent = await sender({
+      target,
+      contactSlug: input.contactSlug,
+      content: input.content,
+      replyToMessageId,
+    });
+    const messageId = sent.messageId || `out:${Date.now()}`;
+
+    await saveOutboundMessage({
+      accountId: account.accountId,
+      provider: input.provider,
+      messageId,
+      channelId: sent.channelId || target,
+      content: input.content,
+      contactSlug: input.contactSlug,
+      replyToMessageId,
+    });
+
+    return {
+      success: true,
+      messageId,
+    };
+  }
+
   return {
     ensureAccount,
+    registerSender,
+    unregisterSender,
     saveInboundMessage,
     saveOutboundMessage,
     listAgentContacts,
@@ -574,6 +691,7 @@ export function createMessageStore() {
     getAgentProviderAccount,
     findMessage,
     findContact,
+    sendMessage,
   };
 }
 
