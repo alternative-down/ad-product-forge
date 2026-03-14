@@ -2,83 +2,209 @@
 
 This document defines how code should be written in this repository.
 
-The goal is not academic purity.
-The goal is code that is easy to read, easy to change, and easy to trust.
+The priority is not cleverness.
+The priority is code that is easy to find, easy to read, and easy to change.
 
-## Core principles
+## What matters most
 
-### 1. Prefer simple code over defensive code
-Do not preemptively build machinery for problems that have not been observed.
+The main criteria are:
+- concept
+- responsibility / concern
+- boundary
+- readable flow
 
-Do not add:
-- queues to avoid possible future contention
-- caches to solve performance that was not measured
-- retry systems for hypothetical failures
-- normalization layers because input might maybe be wrong
-- wrapper abstractions just to make code look generic
+If code respects these four things, the rest becomes much easier.
 
-Write the direct version first.
-If a real problem appears, fix that exact problem with a targeted change.
+## 1. Organize by concept
+A file should exist because it owns a real concept in the system.
 
-### 2. Optimize for readability first
-A reader should be able to open a file and understand the flow from top to bottom.
+Examples of concepts:
+- message store
+- discord client
+- wake queue
+- contact book
+- oauth store
+- model provider
 
-Prefer:
-- direct names
-- direct data flow
-- short jumps between concepts
-- local reasoning
+Examples of things that are not necessarily concepts by themselves:
+- `save`
+- `ingest`
+- `normalize`
+- `update`
+- `parse`
 
-Avoid:
-- indirect control flow
-- too many helper functions
-- fragmented logic spread across many tiny files without reason
-- abstractions that hide the real work
-
-### 3. Each file should own one concept
-A file should represent one main responsibility.
-
-Good examples:
-- one file for message state persistence
-- one file for Discord account wiring
-- one file for contact registration
-- one file for one tool
-
-Bad examples:
-- one file mixing file I/O, contact logic, message listing, sender routing, and provider-specific reply rules
-- one file that is just a pile of unrelated helpers
-
-The concept should be the real concept of the system, not just a verb.
+Those are often actions inside a concept, not the concept itself.
 
 Good:
-- a message store file that owns message persistence and message queries
-- a Discord account file that owns Discord wiring
-- a wake queue file that owns wake scheduling
+- a `message-store` file that owns message persistence and message queries
+- a `discord` file that owns Discord-specific inbound and outbound wiring
+- a `wake-queue` file that owns wake scheduling
 
 Bad:
-- a file called `message-ingest` if ingestion is not actually a primary domain concept
-- splitting one store into `message-ingest`, `message-read`, and `message-write` just because those are verbs
+- splitting one real concept into arbitrary verb files just because the code got long
+- putting unrelated concepts together because they happen in the same flow
 
-### 4. Prefer linear code
-Code should read in the same order that the runtime behaves.
+## 2. Separate responsibilities and concerns
+Each part of the code should do one kind of job.
+
+Examples:
+- a store should persist and retrieve state
+- a client adapter should handle external events and provider-specific transport
+- a use case / entrypoint should orchestrate a flow
+- a provider module should talk to the external provider
+
+Do not make one part of the code own concerns from another layer.
+
+Example:
+- if Discord receives an inbound message, the Discord side can validate it, translate it, and call the internal code
+- that does not mean the message store should understand Discord events
+
+The problem is not that multiple steps exist.
+The problem is when one module starts owning concerns that belong somewhere else.
+
+## 3. Respect boundaries
+Boundaries are where one part of the system hands off to another.
+
+Typical boundaries:
+- external input -> internal input
+- provider-specific code -> generic runtime code
+- app assembly -> reusable package code
+- persistence -> orchestration
+
+Code should make those handoffs visible.
 
 Good:
-1. parse input
-2. load state
-3. find account
-4. perform action
-5. persist result
-6. return response
+- external input is parsed at the boundary
+- provider-specific logic stays at the provider boundary
+- stores do storage work
+- use cases compose actions across concepts
 
 Bad:
-- jump into helper A
-- helper A calls helper B
-- helper B normalizes helper C output
-- helper C reads hidden module state
+- external provider details leaking into generic storage code
+- app-specific assembly mixed into reusable package code
+- stores owning client/event logic
 
-### 5. Use early returns
-Prefer exiting early over nesting branches.
+## 4. Keep flow local and readable
+A reader should be able to follow the main path of the code from top to bottom.
 
+Good flow:
+1. validate input at the boundary
+2. load or access the needed domain object
+3. perform the action
+4. persist if needed
+5. return the result
+
+Bad flow:
+- bouncing through many tiny helpers for trivial things
+- hiding the main path behind indirection
+- forcing the reader to jump across many files to understand one simple action
+
+## 5. One file, one main idea
+A file should have one main idea.
+
+That does not mean the file can only contain one method.
+It means everything in the file should belong to the same concept.
+
+Examples:
+- a store file can expose multiple actions of that store
+- a client file can contain the inbound and outbound behavior of that client
+- a use-case file can coordinate several actions in one flow
+
+What should be avoided:
+- one file becoming a bag of helpers for unrelated concerns
+- one file mixing provider logic, persistence logic, and app bootstrap logic
+
+## 6. One top-level function in files that need one
+If a file needs a top-level function, prefer one top-level function only.
+
+That one function may expose actions for the concept it owns.
+
+Examples:
+- `createMessageStore()`
+- `createWakeQueueRegistry()`
+- `createDiscordAgentClient()`
+- `resolveOpenAICodexCredential()`
+
+Inner functions are fine when they belong directly to that concept.
+What should be avoided is many unrelated top-level helpers in the same file.
+
+## 7. Entry points / use cases are valid concepts
+A file that orchestrates a flow can be correct if that orchestration is the real concern of the file.
+
+This is valid:
+
+```ts
+async function ingestInboundMessage(rawInput: unknown) {
+  const input = inboundMessageInputSchema.parse(rawInput);
+  const account = await messageStore.findAccount(input.accountId);
+  const contact = await messageStore.ensureContactFromInbound(input, account);
+  const message = toStoredMessage(input, contact);
+  await messageStore.saveMessage(message);
+}
+```
+
+Why this can be correct:
+- it is an entrypoint / use case
+- it coordinates a flow
+- it does not pretend to be a store
+- it makes the sequence visible
+
+What would be wrong is putting this same orchestration inside the store if the store is supposed to only own storage concerns.
+
+## 8. Validate at boundaries
+Validate unknown input where it enters the system.
+Prefer Zod for this.
+
+Good:
+```ts
+const input = inputSchema.parse(rawInput);
+```
+
+Bad:
+```ts
+if (!rawInput || typeof rawInput !== 'object') {
+  throw new Error('Invalid input');
+}
+```
+repeated in the middle of the codebase.
+
+The middle of the flow should operate on already-valid data.
+
+## 9. Avoid defensive programming in the middle of the flow
+Do not build for hypothetical problems.
+Do not add machinery because a problem might exist someday.
+
+Examples of what to avoid unless there is a confirmed need:
+- queues for possible contention
+- retry logic for speculative failure paths
+- extra caching without measured need
+- normalization layers in the middle of business logic
+- complicated fallback paths “just in case”
+
+First write the code that matches the current reality.
+If a real problem appears later, fix that exact problem.
+
+## 10. Prefer `const`, use `let` only when the value really changes
+`const` is the default.
+Use `let` only when mutation is part of the design.
+
+Good:
+```ts
+const account = state.accounts.find(...);
+```
+
+Also good when mutation is real:
+```ts
+let currentState: State | null = null;
+```
+if the object is intentionally lazily loaded and then retained by the store instance.
+
+Bad:
+- using `let` by habit
+- mutating values without need
+- carrying mutable variables farther than necessary
+
+## 11. Prefer early returns over nested conditionals
 Good:
 ```ts
 if (!account) {
@@ -94,382 +220,96 @@ Bad:
 ```ts
 if (account) {
   if (!alreadyExists) {
-    // actual work
+    // real work
   }
 }
 ```
 
-### 6. Validate at the boundary
-When input comes from the outside, validate it at the boundary with Zod.
-Do not spread manual type checks through the middle of the flow.
+## 12. Do not fight TypeScript
+TypeScript should reflect the design, not be overridden to accept a bad design.
+
+Avoid:
+- `any`
+- local redefinitions of library types just to make things compile
+- casts used as a design escape hatch
+- workarounds that hide a structural problem
+
+If types are hard to express, first ask:
+- is this file doing too much?
+- is this concept mixed with another one?
+- is the boundary unclear?
+- is the API shape wrong?
+
+If the answer is yes, fix the design first.
+If the typing problem is still real after that, stop and discuss it instead of forcing a workaround.
+
+## 13. Do not add abstraction for its own sake
+Abstraction is not bad by itself.
+It is only bad when it makes concepts, responsibilities, or boundaries less clear.
+
+Good abstraction:
+- makes ownership clearer
+- reduces real duplication
+- keeps the main flow readable
+- matches a real concept in the system
+
+Bad abstraction:
+- exists only to be generic
+- hides where the work really happens
+- makes navigation harder
+- mixes concerns instead of separating them
+
+## 14. Use closures and factories only when they match the concept
+Closures are useful when a runtime object owns state.
+Factories are useful when an object is being created.
+But they should not be used by default.
 
 Good:
-```ts
-const inputSchema = z.object({
-  slug: z.string(),
-  limit: z.number().int().positive().default(20),
-});
-
-const input = inputSchema.parse(rawInput);
-```
+- a store closure that owns in-memory state
+- a wake-queue registry that owns queue instances
+- a client creator that wires one client instance
 
 Bad:
-```ts
-if (!rawInput || typeof rawInput !== 'object') {
-  throw new Error('Invalid input');
-}
+- a factory just to wrap one direct call
+- a closure that exists only to hide simple data flow
 
-const slug = typeof rawInput.slug === 'string' ? rawInput.slug : '';
-const limit = typeof rawInput.limit === 'number' ? rawInput.limit : 20;
-```
-
-### 7. Do not fight TypeScript
-TypeScript is not the enemy.
-If the type system is hard to satisfy, the design is often the problem.
-
-Do not:
-- cast away type errors as a workaround
-- redefine library signatures locally
-- build local type facades to silence inference problems
-- use `any`
-
-Instead:
-- simplify the module
-- split a large file
-- reduce generic coupling
-- give values explicit shapes where the boundary is real
-
-If a library typing becomes a real blocker and the right solution is not obvious, stop and discuss before forcing it.
-
-### 8. Avoid module-scope mutable state
-Do not keep mutable runtime state in module scope unless there is a very strong reason.
-
-Bad:
-```ts
-const queue = new Map();
-let currentState = {};
-```
-
-If state must live across calls, prefer to contain it inside a single explicit runtime object.
+## 15. Reusable package code vs app assembly
+Reusable package code should stay reusable.
+Application assembly should stay in the app.
 
 Good:
-```ts
-export function createWakeQueueRegistry() {
-  const queues = new Map();
-  return { ... };
-}
-```
-
-Or, when simpler:
-- load once lazily into a local closure
-- mutate in memory
-- write back directly
-
-### 9. Use closures sparingly
-Closures are useful for local state, but they are not a default style.
-Use them when they make ownership obvious.
-Avoid them when plain direct functions are clearer.
-
-### 10. Avoid builders and factories unless they are actually buying clarity
-Do not introduce builders just because configuration is large.
-A direct function call is often clearer.
+- reusable runtime pieces in `packages/mastra-engine`
+- concrete bootstrapping in `apps/...`
 
 Bad:
-```ts
-const tool = createCustomToolBuilder()
-  .withName('send_message')
-  .withSchema(schema)
-  .withHandler(handler)
-  .build();
-```
+- app-specific assembly mixed into reusable runtime code
 
-Good:
-```ts
-export function createSendMessageTool(agentId: string) {
-  return createTool({
-    id: 'send_message',
-    inputSchema,
-    execute: async (input) => {
-      return messageStore.sendAccountMessage({ ...input, agentId });
-    },
-  });
-}
-```
+## 16. State ownership should be explicit
+If something is a store, it should clearly own its state.
 
-## File-level rules
+If a store keeps state in memory, then:
+- it should load once when needed
+- operate on its in-memory state
+- persist after mutation
 
-## One top-level function per file
-If a file needs a function at module scope, it should normally have one top-level function only.
+What should be avoided:
+- reloading the file every time even though the store already owns the state
+- introducing queues or locks before there is a confirmed need
 
-That function can contain local inner helpers if they are tightly related to that one concept.
+## 17. Use examples carefully
+Examples in documentation should illustrate real boundaries and real responsibilities.
+They should not accidentally teach the wrong architecture.
 
-Good:
-- `createMessageState()` in `message-state.ts`
-- `createDiscordAgentClient()` in `discord.ts`
-- `resolveOpenAICodexCredential()` in `openai-codex-auth.ts`
+If the concept is a store, the example should show store behavior.
+If the concept is a use case, the example should show orchestration.
+If the concept is a provider client, the example should show provider-specific handling.
 
-Bad:
-- one file with five exported helpers and three internal helpers for unrelated concerns
+## Practical test
+Before keeping a piece of code, ask:
+- what concept does this file own?
+- what responsibility does this code have?
+- what boundary is being crossed here?
+- can I follow the flow top to bottom without hunting through the codebase?
+- is this complexity solving a real problem, or a hypothetical one?
 
-### Keep constants with the concept they belong to
-Constants are fine in module scope if they are part of the same concept.
-
-Good:
-```ts
-const WAKE_DEBOUNCE_MS = 1000;
-const WAKE_MAX_DELAY_MS = 10000;
-```
-
-### Prefer local variables over reusable micro-helpers
-If logic is only used once, keep it inline unless extraction makes the file meaningfully easier to read.
-
-Bad:
-```ts
-function normalizeChannelName(channel: Channel) {
-  ...
-}
-```
-when it is used exactly once and hides simple code.
-
-## Tool design
-
-### Use `createTool` directly
-Do not wrap `createTool` in local compatibility layers.
-Do not redefine the tool type system.
-
-Good:
-```ts
-const inputSchema = z.object({ slug: z.string() });
-
-export function createGetContactTool(agentId: string) {
-  return createTool({
-    id: 'get_contact',
-    description: 'Get a contact by slug.',
-    inputSchema,
-    execute: async (input) => {
-      return {
-        contact: await messageStore.getAgentContact(agentId, input.slug),
-      };
-    },
-  });
-}
-```
-
-Bad:
-```ts
-const tool = createTool as unknown as CustomToolFactory;
-```
-
-### Put operational contract in the tool schema and description
-If a rule is about how to call the tool, put it in the tool.
-Do not duplicate the same contract in the system prompt.
-
-Good:
-- `replyToMessageId` description explains when to use it
-- schema enforces `target` xor `contactSlug`
-
-Bad:
-- the tool enforces one rule
-- the prompt re-explains another version of the same rule
-
-## State and persistence
-
-### Keep state handling obvious
-When using file-backed state:
-- load once lazily when the store is first used
-- keep the state in memory for the lifetime of that store instance
-- mutate the in-memory state directly
-- save after mutation
-
-Do not reload the file inside every update if the store instance already owns the state in memory.
-
-Do not build write queues or concurrency machinery unless a real, observed problem requires it.
-
-Good:
-```ts
-function createMessageState() {
-  let currentState: State | null = null;
-
-  async function load() {
-    if (!currentState) {
-      currentState = await readStateFile();
-    }
-
-    return currentState;
-  }
-
-  async function saveCurrentState() {
-    if (!currentState) {
-      return;
-    }
-
-    await save(currentState);
-  }
-
-  async function updateMessage(message: StoredMessage) {
-    if (!currentState) {
-      currentState = await readStateFile();
-    }
-
-    currentState.messages.push(message);
-    await saveCurrentState();
-  }
-}
-```
-
-Bad:
-- loading from disk on every update even though the store already owns the state
-- queueing writes to solve unconfirmed contention
-- introducing locks before there is a demonstrated race
-
-## Architecture rules
-
-### The reusable package should stay reusable
-`packages/mastra-engine` should contain reusable Mastra-based runtime pieces.
-Application assembly should live in `apps/`.
-
-### Separate storage from intake
-Store is not the same thing as ingest.
-
-Store is responsible for:
-- reading state
-- writing state
-- querying state
-- updating persisted domain data
-
-Ingest or intake is responsible for:
-- receiving external input
-- validating it at the boundary
-- translating it into domain operations
-- calling the store or domain service underneath
-
-Good:
-- Discord receives a message
-- Discord normalizes the inbound event
-- Discord or an intake service calls the store with the data it needs to persist
-
-Bad:
-- the store is responsible for understanding Discord events
-- the store owns external event normalization
-- provider adapters and storage logic are mixed in the same concept
-
-### Keep provider-specific behavior at the edge
-Discord-specific behavior belongs in the Discord account module.
-Internal-chat-specific behavior belongs in the internal-chat module.
-Do not leak provider-specific rules into generic message code unless the generic code is explicitly routing provider behavior.
-
-### Keep the core explicit
-Core agent modules should be easy to follow:
-- message state
-- message store
-- contact book
-- account registry
-- message delivery
-- wake queue
-
-## What to do when the code feels hard to type
-
-If TypeScript becomes hard to satisfy:
-1. check if the file has too many responsibilities
-2. check if one function is doing too many things
-3. check if a generic is leaking too far
-4. check if a wrapper exists only to work around inference
-5. simplify the design before changing the typing approach
-
-If the problem is still real after simplifying, stop and discuss instead of forcing a workaround.
-
-## What not to do
-
-Do not do these things unless there is a confirmed reason:
-- create generic helper layers for one call site
-- create queues for possible concurrency
-- normalize unknown shapes in the middle of the flow
-- add casts to force the compiler to accept a design
-- rewrite library types locally
-- hide provider-specific behavior behind vague abstractions
-- split one linear flow into many tiny helpers for style alone
-
-## Preferred style examples
-
-### Example: good direct flow
-```ts
-export function createMessageStore() {
-  let state: State | null = null;
-
-  async function ensureLoaded() {
-    if (!state) {
-      state = await readStateFile();
-    }
-
-    return state;
-  }
-
-  async function saveMessage(input: SaveMessageInput) {
-    const currentState = await ensureLoaded();
-    const alreadyExists = currentState.messages.some(
-      (current) => current.accountId === input.accountId && current.messageId === input.messageId,
-    );
-
-    if (alreadyExists) {
-      return;
-    }
-
-    currentState.messages.push({
-      messageId: input.messageId,
-      accountId: input.accountId,
-      content: input.content,
-      unread: input.unread,
-      createdAt: input.createdAt,
-    });
-
-    await saveStateFile(currentState);
-  }
-
-  async function listMessages(accountId: string) {
-    const currentState = await ensureLoaded();
-    return currentState.messages.filter((message) => message.accountId === accountId);
-  }
-
-  return { saveMessage, listMessages };
-}
-```
-
-Why this is good:
-- one file, one concept
-- the concept is the store itself
-- straight-line flow
-- no defensive helper maze
-- no speculative infrastructure
-
-### Example: bad indirect flow
-```ts
-export function createMessageIngest() {
-  async function ingestInboundMessage(rawInput: unknown) {
-    const input = inboundMessageInputSchema.parse(rawInput);
-    const account = await messageStore.findAccount(input.accountId);
-    const contact = await messageStore.ensureContactFromInbound(input, account);
-    const message = toStoredMessage(input, contact);
-    await messageStore.saveMessage(message);
-  }
-
-  return { ingestInboundMessage };
-}
-```
-
-Why this is bad:
-- it pretends ingest is the main concept
-- it spreads one message concept across fake sub-concepts
-- it makes the store depend on a separate action layer without need
-- it weakens the file boundary instead of clarifying it
-
-## Final rule
-
-When in doubt, choose the version that:
-- is shorter
-- is more literal
-- is easier to read top to bottom
-- makes fewer assumptions
-- introduces fewer moving parts
-
-If a future problem happens, fix that problem then.
-Do not pre-pay complexity.
+If those answers are not clear, the code probably needs to be reorganized.
