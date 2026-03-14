@@ -1,3 +1,5 @@
+import type { Client } from '@libsql/client';
+
 import { createCommunicationStore } from './store';
 import type {
   CommunicationConversationView,
@@ -5,8 +7,8 @@ import type {
   CommunicationProvider,
 } from './provider-types';
 
-export function createCommunicationModule(config: { agentId: string; dbUrl: string; wakeUp(): void }) {
-  const store = createCommunicationStore(config.agentId, config.dbUrl);
+export function createCommunicationModule(config: { client: Client; wakeUp(): void }) {
+  const store = createCommunicationStore(config.client);
   const providers = new Map<string, CommunicationProvider>();
 
   async function syncProviderContacts(provider: CommunicationProvider) {
@@ -121,6 +123,10 @@ export function createCommunicationModule(config: { agentId: string; dbUrl: stri
   }) {
     const message = await store.saveOutboundMessage(input);
 
+    if (!message) {
+      throw new Error('Failed to persist outbound message');
+    }
+
     return {
       success: true,
       messageId: message.messageId,
@@ -170,6 +176,10 @@ export function createCommunicationModule(config: { agentId: string; dbUrl: stri
 
   async function upsertContact(input: { slug: string; displayName: string; description?: string }) {
     const contact = await store.upsertContact(input);
+
+    if (!contact) {
+      throw new Error(`Failed to upsert contact: ${input.slug}`);
+    }
 
     return {
       slug: contact.slug,

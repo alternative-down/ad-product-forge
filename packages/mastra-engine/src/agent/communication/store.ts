@@ -1,14 +1,15 @@
 import crypto from 'node:crypto';
 
-import { createClient } from '@libsql/client';
+import type { Client } from '@libsql/client';
 import { z } from 'zod';
 
-const accountSchema = z.object({
-  accountId: z.string(),
-  provider: z.string(),
-  externalAccountId: z.string(),
-  displayName: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+const attachmentSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().optional(),
+  url: z.string(),
+  contentType: z.string().optional(),
+  sizeBytes: z.number().optional(),
+  description: z.string().optional(),
 });
 
 const contactIdentitySchema = z.object({
@@ -22,15 +23,6 @@ const contactSchema = z.object({
   displayName: z.string(),
   description: z.string().optional(),
   accounts: z.array(contactIdentitySchema).default([]),
-});
-
-const attachmentSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().optional(),
-  url: z.string(),
-  contentType: z.string().optional(),
-  sizeBytes: z.number().optional(),
-  description: z.string().optional(),
 });
 
 const conversationSchema = z.object({
@@ -58,20 +50,13 @@ const messageSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-const stateSchema = z.object({
-  accounts: z.array(accountSchema).default([]),
-  contacts: z.array(contactSchema).default([]),
-  conversations: z.array(conversationSchema).default([]),
-  messages: z.array(messageSchema).default([]),
-});
-
 type Contact = z.infer<typeof contactSchema>;
 type Conversation = z.infer<typeof conversationSchema>;
 type MessageRecord = z.infer<typeof messageSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
 
-export function createCommunicationStore(agentId: string, dbUrl: string) {
-  const client = createClient({ url: dbUrl });
+export function createCommunicationStore(client: Client) {
+  let initPromise: Promise<void> | null = null;
 
   function slugify(value: string) {
     return (
@@ -85,36 +70,181 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     );
   }
 
-  async function readState() {
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS forge_communication_state (
-        agent_id TEXT PRIMARY KEY,
-        state TEXT NOT NULL
-      )
-    `);
-
-    const result = await client.execute({
-      sql: 'SELECT state FROM forge_communication_state WHERE agent_id = ?',
-      args: [agentId],
-    });
-
-    if (!result.rows[0]?.state || typeof result.rows[0].state !== 'string') {
-      const state = stateSchema.parse({});
-      await saveState(state);
-      return state;
+  async function ensureTables() {
+    if (!initPromise) {
+      initPromise = (async () => {
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS forge_communication_accounts (
+            account_id TEXT PRIMARY KEY,
+            provider TEXT NOT NULL,
+            external_account_id TEXT NOT NULL,
+            display_name TEXT,
+            metadata_json TEXT
+          )
+        `);
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS forge_communication_contacts (
+            slug TEXT PRIMARY KEY,
+            display_name TEXT NOT NULL,
+            description TEXT
+          )
+        `);
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS forge_communication_contact_accounts (
+            slug TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            external_user_id TEXT,
+            username TEXT,
+            UNIQUE (slug, provider, external_user_id, username)
+          )
+        `);
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS forge_communication_conversations (
+            conversation_id TEXT PRIMARY KEY,
+            provider TEXT NOT NULL,
+            provider_conversation_key TEXT NOT NULL,
+            name TEXT,
+            contact_slug TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE (provider, provider_conversation_key)
+          )
+        `);
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS forge_communication_messages (
+            message_id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            provider_message_id TEXT,
+            author_external_id TEXT,
+            author_display_name TEXT,
+            author_username TEXT,
+            content TEXT NOT NULL,
+            attachments_json TEXT NOT NULL,
+            unread INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            metadata_json TEXT
+          )
+        `);
+      })();
     }
 
-    return stateSchema.parse(JSON.parse(result.rows[0].state));
+    await initPromise;
   }
 
-  async function saveState(state: z.infer<typeof stateSchema>) {
-    await client.execute({
+  async function loadContact(slug: string) {
+    await ensureTables();
+
+    const contactResult = await client.execute({
       sql: `
-        INSERT INTO forge_communication_state (agent_id, state)
-        VALUES (?, ?)
-        ON CONFLICT(agent_id) DO UPDATE SET state = excluded.state
+        SELECT slug, display_name, description
+        FROM forge_communication_contacts
+        WHERE slug = ?
       `,
-      args: [agentId, JSON.stringify(state)],
+      args: [slug],
+    });
+
+    if (!contactResult.rows[0]) {
+      return null;
+    }
+
+    const accountResult = await client.execute({
+      sql: `
+        SELECT provider, external_user_id, username
+        FROM forge_communication_contact_accounts
+        WHERE slug = ?
+      `,
+      args: [slug],
+    });
+
+    return contactSchema.parse({
+      slug: String(contactResult.rows[0].slug),
+      displayName: String(contactResult.rows[0].display_name),
+      description:
+        typeof contactResult.rows[0].description === 'string' ? String(contactResult.rows[0].description) : undefined,
+      accounts: accountResult.rows.map((row) => ({
+        provider: String(row.provider),
+        externalUserId: typeof row.external_user_id === 'string' ? String(row.external_user_id) : undefined,
+        username: typeof row.username === 'string' ? String(row.username) : undefined,
+      })),
+    });
+  }
+
+  async function loadConversation(conversationId: string) {
+    await ensureTables();
+
+    const result = await client.execute({
+      sql: `
+        SELECT conversation_id, provider, provider_conversation_key, name, contact_slug, created_at, updated_at
+        FROM forge_communication_conversations
+        WHERE conversation_id = ?
+      `,
+      args: [conversationId],
+    });
+
+    if (!result.rows[0]) {
+      return null;
+    }
+
+    return conversationSchema.parse({
+      conversationId: String(result.rows[0].conversation_id),
+      provider: String(result.rows[0].provider),
+      providerConversationKey: String(result.rows[0].provider_conversation_key),
+      name: typeof result.rows[0].name === 'string' ? String(result.rows[0].name) : undefined,
+      contactSlug: typeof result.rows[0].contact_slug === 'string' ? String(result.rows[0].contact_slug) : undefined,
+      createdAt: String(result.rows[0].created_at),
+      updatedAt: String(result.rows[0].updated_at),
+    });
+  }
+
+  async function loadMessage(messageId: string) {
+    await ensureTables();
+
+    const result = await client.execute({
+      sql: `
+        SELECT
+          message_id,
+          conversation_id,
+          provider,
+          provider_message_id,
+          author_external_id,
+          author_display_name,
+          author_username,
+          content,
+          attachments_json,
+          unread,
+          created_at,
+          metadata_json
+        FROM forge_communication_messages
+        WHERE message_id = ?
+      `,
+      args: [messageId],
+    });
+
+    if (!result.rows[0]) {
+      return null;
+    }
+
+    return messageSchema.parse({
+      messageId: String(result.rows[0].message_id),
+      conversationId: String(result.rows[0].conversation_id),
+      provider: String(result.rows[0].provider),
+      providerMessageId:
+        typeof result.rows[0].provider_message_id === 'string' ? String(result.rows[0].provider_message_id) : undefined,
+      authorExternalId:
+        typeof result.rows[0].author_external_id === 'string' ? String(result.rows[0].author_external_id) : undefined,
+      authorDisplayName:
+        typeof result.rows[0].author_display_name === 'string' ? String(result.rows[0].author_display_name) : undefined,
+      authorUsername:
+        typeof result.rows[0].author_username === 'string' ? String(result.rows[0].author_username) : undefined,
+      content: String(result.rows[0].content),
+      attachments: attachmentSchema.array().parse(JSON.parse(String(result.rows[0].attachments_json))),
+      unread: Number(result.rows[0].unread) === 1,
+      createdAt: String(result.rows[0].created_at),
+      metadata:
+        typeof result.rows[0].metadata_json === 'string'
+          ? z.record(z.string(), z.unknown()).parse(JSON.parse(String(result.rows[0].metadata_json)))
+          : undefined,
     });
   }
 
@@ -124,61 +254,85 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     displayName?: string;
     metadata?: Record<string, unknown>;
   }) {
-    const state = await readState();
-    const accountId = `${agentId}:${input.provider}:${input.externalAccountId}`;
-    let account = state.accounts.find((current) => current.accountId === accountId);
+    await ensureTables();
 
-    if (!account) {
-      account = {
+    const accountId = `${input.provider}:${input.externalAccountId}`;
+
+    await client.execute({
+      sql: `
+        INSERT INTO forge_communication_accounts (
+          account_id,
+          provider,
+          external_account_id,
+          display_name,
+          metadata_json
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(account_id) DO UPDATE SET
+          display_name = COALESCE(excluded.display_name, forge_communication_accounts.display_name),
+          metadata_json = COALESCE(excluded.metadata_json, forge_communication_accounts.metadata_json)
+      `,
+      args: [
         accountId,
-        provider: input.provider,
-        externalAccountId: input.externalAccountId,
-      };
-      state.accounts.push(account);
-    }
+        input.provider,
+        input.externalAccountId,
+        input.displayName ?? null,
+        input.metadata ? JSON.stringify(input.metadata) : null,
+      ],
+    });
 
-    if (input.displayName !== undefined) {
-      account.displayName = input.displayName;
-    }
-
-    if (input.metadata !== undefined) {
-      account.metadata = input.metadata;
-    }
-
-    await saveState(state);
-    return account;
+    return {
+      accountId,
+      provider: input.provider,
+      externalAccountId: input.externalAccountId,
+      displayName: input.displayName,
+      metadata: input.metadata,
+    };
   }
 
   async function listContacts() {
-    return (await readState()).contacts;
+    await ensureTables();
+
+    const result = await client.execute(`
+      SELECT slug
+      FROM forge_communication_contacts
+      ORDER BY display_name ASC, slug ASC
+    `);
+
+    const contacts = await Promise.all(result.rows.map((row) => loadContact(String(row.slug))));
+
+    return contacts.filter((contact): contact is Contact => Boolean(contact));
   }
 
   async function getContact(slug: string) {
-    return (await readState()).contacts.find((contact) => contact.slug === slug) ?? null;
+    return loadContact(slugify(slug));
   }
 
   async function findContactByIdentity(provider: string, externalUserId?: string, username?: string) {
-    const state = await readState();
+    await ensureTables();
 
-    return (
-      state.contacts.find((contact) =>
-        contact.accounts.some((account) => {
-          if (account.provider !== provider) {
-            return false;
-          }
+    if (!externalUserId && !username) {
+      return null;
+    }
 
-          if (externalUserId && account.externalUserId === externalUserId) {
-            return true;
-          }
+    const result = await client.execute({
+      sql: `
+        SELECT slug
+        FROM forge_communication_contact_accounts
+        WHERE provider = ?
+          AND (
+            (? IS NOT NULL AND external_user_id = ?)
+            OR (? IS NOT NULL AND username = ?)
+          )
+        LIMIT 1
+      `,
+      args: [provider, externalUserId ?? null, externalUserId ?? null, username ?? null, username ?? null],
+    });
 
-          if (username && account.username === username) {
-            return true;
-          }
+    if (!result.rows[0]?.slug || typeof result.rows[0].slug !== 'string') {
+      return null;
+    }
 
-          return false;
-        }),
-      ) ?? null
-    );
+    return loadContact(String(result.rows[0].slug));
   }
 
   async function upsertContact(input: {
@@ -189,59 +343,37 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     externalUserId?: string;
     username?: string;
   }) {
-    const state = await readState();
+    await ensureTables();
+
     const slug = slugify(input.slug);
-    let contact = state.contacts.find((current) => current.slug === slug);
 
-    if (!contact) {
-      contact = {
-        slug,
-        displayName: input.displayName,
-        accounts: [],
-      };
-      state.contacts.push(contact);
-    }
+    await client.execute({
+      sql: `
+        INSERT INTO forge_communication_contacts (slug, display_name, description)
+        VALUES (?, ?, ?)
+        ON CONFLICT(slug) DO UPDATE SET
+          display_name = excluded.display_name,
+          description = excluded.description
+      `,
+      args: [slug, input.displayName, input.description ?? null],
+    });
 
-    contact.displayName = input.displayName;
-    contact.description = input.description;
-
-    if (input.provider) {
-      let identity = contact.accounts.find((account) => {
-        if (account.provider !== input.provider) {
-          return false;
-        }
-
-        if (input.externalUserId && account.externalUserId === input.externalUserId) {
-          return true;
-        }
-
-        if (input.username && account.username === input.username) {
-          return true;
-        }
-
-        return false;
+    if (input.provider && (input.externalUserId || input.username)) {
+      await client.execute({
+        sql: `
+          INSERT INTO forge_communication_contact_accounts (
+            slug,
+            provider,
+            external_user_id,
+            username
+          ) VALUES (?, ?, ?, ?)
+          ON CONFLICT(slug, provider, external_user_id, username) DO NOTHING
+        `,
+        args: [slug, input.provider, input.externalUserId ?? null, input.username ?? null],
       });
-
-      if (!identity) {
-        identity = {
-          provider: input.provider,
-          externalUserId: input.externalUserId,
-          username: input.username,
-        };
-        contact.accounts.push(identity);
-      }
-
-      if (input.externalUserId) {
-        identity.externalUserId = input.externalUserId;
-      }
-
-      if (input.username) {
-        identity.username = input.username;
-      }
     }
 
-    await saveState(state);
-    return contact;
+    return loadContact(slug);
   }
 
   async function ensureConversation(input: {
@@ -251,51 +383,67 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     contactSlug?: string;
     createdAt?: string;
   }) {
-    const state = await readState();
+    await ensureTables();
+
     const now = input.createdAt ?? new Date().toISOString();
-    let conversation = state.conversations.find(
-      (current) => current.provider === input.provider && current.providerConversationKey === input.providerConversationKey,
-    );
+    const existingResult = await client.execute({
+      sql: `
+        SELECT conversation_id
+        FROM forge_communication_conversations
+        WHERE provider = ? AND provider_conversation_key = ?
+        LIMIT 1
+      `,
+      args: [input.provider, input.providerConversationKey],
+    });
 
-    if (!conversation) {
-      conversation = {
-        conversationId: `conv_${crypto.randomUUID()}`,
-        provider: input.provider,
-        providerConversationKey: input.providerConversationKey,
-        name: input.name,
-        contactSlug: input.contactSlug,
-        createdAt: now,
-        updatedAt: now,
-      };
-      state.conversations.push(conversation);
-      await saveState(state);
-      return conversation;
+    if (existingResult.rows[0]?.conversation_id && typeof existingResult.rows[0].conversation_id === 'string') {
+      const conversationId = String(existingResult.rows[0].conversation_id);
+
+      await client.execute({
+        sql: `
+          UPDATE forge_communication_conversations
+          SET
+            name = COALESCE(?, name),
+            contact_slug = COALESCE(?, contact_slug),
+            updated_at = ?
+          WHERE conversation_id = ?
+        `,
+        args: [input.name ?? null, input.contactSlug ?? null, now, conversationId],
+      });
+
+      return loadConversation(conversationId);
     }
 
-    if (input.name !== undefined) {
-      conversation.name = input.name;
-    }
+    const conversationId = `conv_${crypto.randomUUID()}`;
 
-    if (input.contactSlug !== undefined) {
-      conversation.contactSlug = input.contactSlug;
-    }
+    await client.execute({
+      sql: `
+        INSERT INTO forge_communication_conversations (
+          conversation_id,
+          provider,
+          provider_conversation_key,
+          name,
+          contact_slug,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        conversationId,
+        input.provider,
+        input.providerConversationKey,
+        input.name ?? null,
+        input.contactSlug ?? null,
+        now,
+        now,
+      ],
+    });
 
-    conversation.updatedAt = now;
-    await saveState(state);
-    return conversation;
+    return loadConversation(conversationId);
   }
 
   async function getConversation(conversationId: string) {
-    return (await readState()).conversations.find((conversation) => conversation.conversationId === conversationId) ?? null;
-  }
-
-  async function findConversationByProvider(provider: string, providerConversationKey: string) {
-    return (
-      (await readState()).conversations.find(
-        (conversation) =>
-          conversation.provider === provider && conversation.providerConversationKey === providerConversationKey,
-      ) ?? null
-    );
+    return loadConversation(conversationId);
   }
 
   async function saveInboundMessage(input: {
@@ -312,13 +460,20 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     createdAt: string;
     metadata?: Record<string, unknown>;
   }) {
-    const state = await readState();
-    const existing = state.messages.find(
-      (message) => message.provider === input.provider && message.providerMessageId === input.providerMessageId,
-    );
+    await ensureTables();
 
-    if (existing) {
-      return existing;
+    const existingResult = await client.execute({
+      sql: `
+        SELECT message_id
+        FROM forge_communication_messages
+        WHERE provider = ? AND provider_message_id = ?
+        LIMIT 1
+      `,
+      args: [input.provider, input.providerMessageId],
+    });
+
+    if (existingResult.rows[0]?.message_id && typeof existingResult.rows[0].message_id === 'string') {
+      return loadMessage(String(existingResult.rows[0].message_id));
     }
 
     const conversation = await ensureConversation({
@@ -328,24 +483,47 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
       contactSlug: input.contactSlug,
       createdAt: input.createdAt,
     });
-    const message = {
-      messageId: `msg_${crypto.randomUUID()}`,
-      conversationId: conversation.conversationId,
-      provider: input.provider,
-      providerMessageId: input.providerMessageId,
-      authorExternalId: input.authorExternalId,
-      authorDisplayName: input.authorDisplayName,
-      authorUsername: input.authorUsername,
-      content: input.content,
-      attachments: input.attachments ?? [],
-      unread: true,
-      createdAt: input.createdAt,
-      metadata: input.metadata,
-    };
 
-    state.messages.push(message);
-    await saveState(state);
-    return message;
+    if (!conversation) {
+      throw new Error('Failed to create inbound conversation');
+    }
+
+    const messageId = `msg_${crypto.randomUUID()}`;
+
+    await client.execute({
+      sql: `
+        INSERT INTO forge_communication_messages (
+          message_id,
+          conversation_id,
+          provider,
+          provider_message_id,
+          author_external_id,
+          author_display_name,
+          author_username,
+          content,
+          attachments_json,
+          unread,
+          created_at,
+          metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        messageId,
+        conversation.conversationId,
+        input.provider,
+        input.providerMessageId,
+        input.authorExternalId ?? null,
+        input.authorDisplayName ?? null,
+        input.authorUsername ?? null,
+        input.content,
+        JSON.stringify(input.attachments ?? []),
+        1,
+        input.createdAt,
+        input.metadata ? JSON.stringify(input.metadata) : null,
+      ],
+    });
+
+    return loadMessage(messageId);
   }
 
   async function saveOutboundMessage(input: {
@@ -358,7 +536,8 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     createdAt?: string;
     metadata?: Record<string, unknown>;
   }) {
-    const state = await readState();
+    await ensureTables();
+
     const conversation = await ensureConversation({
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
@@ -366,109 +545,145 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
       contactSlug: input.contactSlug,
       createdAt: input.createdAt,
     });
-    const message = {
-      messageId: `msg_${crypto.randomUUID()}`,
-      conversationId: conversation.conversationId,
-      provider: input.provider,
-      providerMessageId: input.providerMessageId,
-      content: input.content,
-      attachments: [],
-      unread: false,
-      createdAt: input.createdAt ?? new Date().toISOString(),
-      metadata: input.metadata,
-    };
 
-    state.messages.push(message);
-    await saveState(state);
-    return message;
+    if (!conversation) {
+      throw new Error('Failed to create outbound conversation');
+    }
+
+    const messageId = `msg_${crypto.randomUUID()}`;
+
+    await client.execute({
+      sql: `
+        INSERT INTO forge_communication_messages (
+          message_id,
+          conversation_id,
+          provider,
+          provider_message_id,
+          content,
+          attachments_json,
+          unread,
+          created_at,
+          metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        messageId,
+        conversation.conversationId,
+        input.provider,
+        input.providerMessageId ?? null,
+        input.content,
+        JSON.stringify([]),
+        0,
+        input.createdAt ?? new Date().toISOString(),
+        input.metadata ? JSON.stringify(input.metadata) : null,
+      ],
+    });
+
+    return loadMessage(messageId);
   }
 
   async function getMessage(messageId: string) {
-    return (await readState()).messages.find((message) => message.messageId === messageId) ?? null;
+    return loadMessage(messageId);
   }
 
   async function markMessagesRead(messageIds: string[]) {
+    await ensureTables();
+
     if (messageIds.length === 0) {
       return;
     }
 
-    const state = await readState();
-    let changed = false;
-
-    for (const message of state.messages) {
-      if (messageIds.includes(message.messageId) && message.unread) {
-        message.unread = false;
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      await saveState(state);
+    for (const messageId of messageIds) {
+      await client.execute({
+        sql: `
+          UPDATE forge_communication_messages
+          SET unread = 0
+          WHERE message_id = ? AND unread = 1
+        `,
+        args: [messageId],
+      });
     }
   }
 
   async function listConversations(options: { provider?: string; contactSlug?: string; unread?: boolean; limit: number }) {
-    const state = await readState();
-    const result: Array<Conversation & { unreadCount: number; latestMessageAt: string; messages: MessageRecord[] }> = [];
+    await ensureTables();
 
-    for (const conversation of state.conversations) {
-      if (options.provider && conversation.provider !== options.provider) {
-        continue;
-      }
+    const conversationResult = await client.execute(`
+      SELECT conversation_id
+      FROM forge_communication_conversations
+    `);
 
-      if (options.contactSlug && conversation.contactSlug !== options.contactSlug) {
-        continue;
-      }
+    const conversations = (
+      await Promise.all(
+        conversationResult.rows.map(async (row) => {
+          const conversation = await loadConversation(String(row.conversation_id));
 
-      const messages = state.messages
-        .filter((message) => message.conversationId === conversation.conversationId)
-        .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+          if (!conversation) {
+            return null;
+          }
 
-      if (messages.length === 0) {
-        continue;
-      }
+          if (options.provider && conversation.provider !== options.provider) {
+            return null;
+          }
 
-      const unreadCount = messages.filter((message) => message.unread).length;
+          if (options.contactSlug && conversation.contactSlug !== options.contactSlug) {
+            return null;
+          }
 
-      if (options.unread !== undefined && (unreadCount > 0) !== options.unread) {
-        continue;
-      }
+          const messages = await getMessages(conversation.conversationId, 5);
 
-      result.push({
-        ...conversation,
-        unreadCount,
-        latestMessageAt: messages[messages.length - 1]!.createdAt,
-        messages: messages.slice(-5),
-      });
-    }
+          if (messages.length === 0) {
+            return null;
+          }
 
-    result.sort((left, right) => new Date(right.latestMessageAt).getTime() - new Date(left.latestMessageAt).getTime());
+          const unreadCount = messages.filter((message) => message.unread).length;
 
-    const conversations = result.slice(0, options.limit).map((conversation) => ({
-      conversationId: conversation.conversationId,
-      provider: conversation.provider,
-      latestMessageAt: conversation.latestMessageAt,
-      unreadCount: conversation.unreadCount,
-      name: conversation.name,
-      contactSlug: conversation.contactSlug,
-      messages: conversation.messages,
-    }));
+          if (options.unread !== undefined && (unreadCount > 0) !== options.unread) {
+            return null;
+          }
 
-    await markMessagesRead(
-      conversations.flatMap((conversation) => conversation.messages).filter((message) => message.unread).map((message) => message.messageId),
+          return {
+            ...conversation,
+            unreadCount,
+            latestMessageAt: messages[messages.length - 1]!.createdAt,
+            messages,
+          };
+        }),
+      )
+    ).filter(
+      (
+        conversation,
+      ): conversation is Conversation & { unreadCount: number; latestMessageAt: string; messages: MessageRecord[] } =>
+        Boolean(conversation),
     );
 
-    return conversations;
+    conversations.sort((left, right) => new Date(right.latestMessageAt).getTime() - new Date(left.latestMessageAt).getTime());
+
+    return conversations.slice(0, options.limit);
   }
 
   async function getMessages(conversationId: string, limit: number) {
-    const messages = (await readState()).messages
-      .filter((message) => message.conversationId === conversationId)
-      .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
-      .slice(-limit);
+    await ensureTables();
 
-    await markMessagesRead(messages.filter((message) => message.unread).map((message) => message.messageId));
-    return messages;
+    const result = await client.execute({
+      sql: `
+        SELECT message_id
+        FROM forge_communication_messages
+        WHERE conversation_id = ?
+        ORDER BY created_at ASC
+      `,
+      args: [conversationId],
+    });
+
+    const messages = (
+      await Promise.all(result.rows.map((row) => loadMessage(String(row.message_id))))
+    ).filter((message): message is MessageRecord => Boolean(message));
+
+    const recentMessages = messages.slice(-limit);
+
+    await markMessagesRead(recentMessages.filter((message) => message.unread).map((message) => message.messageId));
+
+    return recentMessages;
   }
 
   return {
@@ -479,7 +694,6 @@ export function createCommunicationStore(agentId: string, dbUrl: string) {
     upsertContact,
     ensureConversation,
     getConversation,
-    findConversationByProvider,
     saveInboundMessage,
     saveOutboundMessage,
     getMessage,
