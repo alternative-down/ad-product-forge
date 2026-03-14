@@ -2,461 +2,488 @@
 
 ## Purpose
 
-This document defines how the communication module should be built.
+This document defines how the communication module should be rebuilt.
 
-The goal is a simple module that is easy to read, easy to evolve, and easy to reason about.
+The main correction is this:
 
-This is not a description of the current code.
-This is the target design for rebuilding the communication module from a simpler center.
+- communication owns the flow
+- providers do not own the flow
+
+That is the architectural center.
+
+The previous direction was confusing because the flow was provider-driven:
+- Discord received an event
+- Discord decided what happened next
+- internal chat did the same
+
+That makes the system feel inverted and scattered.
+
+The target architecture is:
+- the agent registers providers when it is created
+- the communication module uses those providers
+- the communication module decides the flow
+- providers only handle transport concerns
 
 
-## Main idea
+## What the communication module is
 
-The communication module exists for one reason:
+The communication module is the part of the system that coordinates how an agent communicates.
 
-- let an agent receive messages
-- let an agent read pending conversations
-- let an agent send messages
+It should answer:
+- what providers are available to this agent?
+- how does the agent receive communication from them?
+- how does the agent send communication through them?
+- what tools does the agent use to interact with communication?
 
-Everything else is secondary.
+It should not become:
+- a Discord module
+- a state persistence module
+- a message storage module
+- a read/unread tracking module
 
-That means the center of the design should not be:
-- adapters
-- clients
-- registries
-- queues
-- helper layers
+Those things may exist in the system, but they are not the center of communication.
 
-The center should be:
 
-- conversations
-- messages
-- contacts
-- channels
+## Main architecture rule
+
+The flow must be:
+
+```text
+agent
+  -> communication module
+    -> provider
+```
+
+And for inbound:
+
+```text
+provider
+  -> communication module callback / entrypoint
+    -> agent wake or agent-facing effect
+```
+
+Not:
+
+```text
+provider
+  -> provider-specific orchestration
+    -> state
+    -> contacts
+    -> wake
+    -> tools
+```
+
+The provider should not be the conductor.
 
 
 ## Core concepts
 
-The module should be organized around four concepts.
+The module should be built around these concepts.
 
-### 1. Inbox
+### 1. Communication module
 
-The inbox is the internal record of what the agent has received.
+This is the orchestrator.
 
-It should answer:
-- what conversations exist?
-- what messages belong to each conversation?
-- what is unread?
-- what was already sent?
+It owns:
+- registration of providers for an agent
+- inbound entrypoints
+- outbound entrypoints
+- agent-facing tools
+- routing by provider/contact/channel
 
-The inbox is not transport.
-The inbox is not provider logic.
-The inbox is not wake logic.
+It does not own provider state.
 
-It is the internal communication state of the agent.
+### 2. Provider
 
-### 2. Contacts
-
-A contact is who the agent talks to.
-
-It should answer:
-- who is this person or agent?
-- what is their slug?
-- what identities do they have in each provider?
-
-A contact is not a message.
-A contact is not a conversation.
-
-### 3. Channels
-
-A channel is where a message is sent or received.
-
-Examples:
-- a Discord channel
-- a Discord DM channel
-- an internal chat direct thread between two agents
-
-The important point is:
-- contacts are people or agents
-- channels are places or paths of communication
-
-These are different concepts and should stay different.
-
-### 4. Providers
-
-A provider is the external or internal transport.
+A provider is a transport adapter.
 
 Examples:
 - Discord
 - internal chat
 
-A provider should only handle:
-- how to receive a message from that provider
-- how to send a message through that provider
+A provider should only know:
+- how to subscribe to inbound events
+- how to send outbound messages
+- how to deal with its own transport-specific state
 
-It should not own inbox logic.
-It should not own contact logic.
+Examples of provider-local state:
+- saved messages for that provider
+- unread/read tracking for that provider
+- cursors
+- channel ids
+- platform-specific ids
+
+That state belongs to the provider adapter, not to the communication module.
+
+### 3. Contact
+
+A contact is who the agent talks to.
+
+Examples:
+- Nicolas
+- Forge Helper
+- another internal agent
+
+A contact should answer:
+- who is this?
+- what is the slug?
+- what identities does this contact have in each provider?
+
+### 4. Channel or route
+
+A channel is where communication happens.
+
+Examples:
+- a Discord channel
+- a Discord DM
+- an internal direct route between two agents
+
+This is different from contact.
 
 
 ## Boundaries
 
-The module should have three boundaries.
+The module should have clear boundaries.
 
-### 1. Provider boundary
+### Provider boundary
 
-This is where an external or internal provider enters the system.
+This is where raw provider events and raw provider send operations exist.
 
 Examples:
-- a Discord message event
-- an internal chat send operation
+- Discord SDK message object
+- internal chat transport send callback
 
-At this boundary:
-- provider-specific data is still provider-specific
-- validation and translation happen here
+This boundary is provider-specific.
 
-The result should be a simple internal command.
+### Communication boundary
 
-### 2. Communication domain boundary
+This is where the system stops talking about SDK objects and starts talking about communication actions.
 
-This is where provider input becomes inbox/contact/channel state.
+Examples:
+- receive message from provider
+- send message through provider
+- list available contacts
+- resolve provider route for a contact
 
-This is the core of the module.
+### Agent tools boundary
 
-Here the system should reason in terms of:
-- conversation
-- message
+This is how the agent sees the communication module.
+
+The agent should work with:
+- provider
 - contact
 - channel
+- conversation
+- message
 
-Not in terms of Discord SDK objects.
-
-### 3. Agent tools boundary
-
-This is how the agent interacts with communication.
-
-The agent should not know transport details.
-The agent should work with:
-- contacts
-- conversations
-- messages
-- sending
+It should not have to care about transport internals beyond what is truly necessary.
 
 
-## Desired architecture
+## What belongs to the provider
 
-The module should be rebuilt from a small center.
+This part is important.
 
-### The center
+The following responsibilities should stay with the provider adapter:
 
-One module should own communication state and behavior.
+- provider client lifecycle
+- provider event subscription
+- provider-specific ids
+- provider-specific local message persistence, if needed
+- read/unread marking, if needed
+- channel/thread/dm resolution
+- actual send/reply calls
 
-That center should expose actions like:
-- receive message
-- list conversations
-- get messages
-- send message
-- get contact
-- upsert contact
+This means:
+- saving messages is not the job of the communication module
+- marking messages as read is not the job of the communication module
 
-These actions are the public language of the communication module.
-
-### Around the center
-
-Providers should be thin.
-
-Discord should do:
-- receive Discord event
-- translate it
-- call communication module
-
-Internal chat should do:
-- receive internal send
-- translate it
-- call communication module
-
-That means providers become adapters around the communication module, not parallel systems.
+Those are adapter concerns.
 
 
-## Suggested module shape
+## What belongs to the communication module
 
-This is the simplest target shape.
+The communication module should own:
+
+- provider registration for the agent
+- a unified API for inbound and outbound actions
+- contact resolution
+- routing decisions
+- agent-facing tools
+- wake triggering after inbound handling
+
+In other words:
+- providers do transport
+- communication does orchestration
+
+
+## Provider registration
+
+Providers should be registered when the agent is built.
+
+That means the agent should end up with something like:
+
+- Discord provider registered
+- internal chat provider registered
+
+Then the communication module uses those registered providers.
+
+This is better because:
+- the communication module becomes the center
+- the app still chooses what providers exist
+- each provider becomes a dependency, not the conductor
+
+
+## Suggested shape
+
+The module should start from a small center.
+
+A simple target shape would be:
 
 ```text
 communication/
-  inbox.ts
+  module.ts
   contacts.ts
-  channels.ts
-  send-message.ts
-  receive-message.ts
   tools.ts
 
-accounts/
+providers/
   discord.ts
   internal-chat.ts
 ```
 
-This does not mean every file must exist exactly like this.
-It means the concepts should be this clear.
+This is intentionally small.
 
-If a simpler shape is possible, use the simpler shape.
+The point is:
+- communication has a visible center
+- providers are around it
 
-For example:
-
-```text
-communication/
-  inbox.ts
-  contacts.ts
-  send.ts
-  receive.ts
-  tools.ts
-```
-
-would also be valid if it stays clear.
+If later we need more files, split only by real concept.
 
 
-## Data flow
+## Communication module API
 
-### Inbound flow
+The communication module should expose a small public language.
 
-This should be the flow for any provider.
+Examples:
+- registerProvider(...)
+- receiveInbound(...)
+- sendOutbound(...)
+- listContacts(...)
+- getContact(...)
+- upsertContact(...)
 
-1. provider receives an external event
-2. provider validates and translates it
-3. provider calls `receiveMessage(...)`
+Maybe later:
+- listConversations(...)
+- getMessages(...)
+
+But these should only exist if they still belong to the communication module and not to provider-local state.
+
+
+## Inbound flow
+
+This should be the inbound flow.
+
+1. provider is registered by the communication module
+2. communication module subscribes to provider inbound events
+3. provider emits an inbound event to the communication module
 4. communication module:
-   - resolves or creates the contact
-   - resolves the conversation/channel
-   - stores the inbound message
-   - marks it unread
-5. provider or app triggers wake
+   - identifies the provider
+   - resolves contact information
+   - decides what agent-facing effect should happen
+   - triggers wake
 
-Important:
-- wake is not part of communication state
-- wake is a runtime effect after communication state changes
+If the provider wants to persist its own local message state:
+- it does that inside the provider adapter
 
-### Outbound flow
+That persistence is not the communication module’s job.
 
-This should be the flow for any provider.
 
-1. agent calls `send_message`
+## Outbound flow
+
+This should be the outbound flow.
+
+1. agent calls a communication tool
 2. communication module resolves:
-   - provider
-   - target contact or channel
-   - reply context if any
-3. communication module calls the provider adapter
-4. provider sends the real message
-5. communication module stores the outbound message
+   - which provider to use
+   - which contact or channel to use
+   - whether this is a direct send or a reply
+3. communication module calls the chosen provider
+4. provider performs the real send
+5. provider records its own local message state if needed
 
-Important:
-- storing outbound is the job of the communication module
-- provider should only transport the message
-
-
-## What should not exist in the core
-
-These are the patterns to avoid in the redesign.
-
-### 1. State plus transport mixed together
-
-The inbox should not know how to call Discord.
-
-### 2. Contact logic mixed into message persistence by accident
-
-Contact resolution can happen during receive/send flows, but contacts remain their own concept.
-
-### 3. A generic runtime registry as the center of the architecture
-
-The center should be a communication model, not a dispatch table.
-
-Runtime lookup structures may still exist internally if needed, but they should not define the architecture.
-
-### 4. Provider-specific terms leaking into the whole module
-
-The communication module should not become “Discord-shaped”.
+Again:
+- communication coordinates
+- provider transports
 
 
 ## Internal chat
 
-Internal chat should follow the same design as any other provider.
+Internal chat should follow exactly the same architecture.
 
-It is just another transport.
+It is not a special subsystem.
+It is only another provider.
 
 That means:
-- it should not have a special parallel architecture
-- it should not bypass the communication module
-- it should go through the same receive/send entrypoints
+- it gets registered into the communication module
+- communication uses it like any other provider
+- it emits inbound events like any other provider
+- it sends outbound messages like any other provider
 
-The only difference is:
-- its transport target is another agent inside the system
+The difference is only transport target:
+- another agent instead of an external platform user
 
 
 ## Discord
 
-Discord should be treated as a transport adapter.
+Discord should be just a provider adapter.
 
-It should do only what is specific to Discord:
-- login and client lifecycle
-- listen to Discord events
-- translate Discord message data
-- send messages through Discord API
+It should own:
+- Discord client setup
+- Discord event listener
+- Discord send/reply logic
+- Discord local state if needed
 
-It should not own:
-- unread logic
-- conversation state
-- contact state
+It should not own the communication flow.
 
 
-## Contacts and channels
+## Contacts
 
-These two things should stay separate.
+Contacts still belong to the communication module.
 
-### Contact
+That is because contact identity is part of the agent’s communication model, not part of the transport.
 
-A contact is:
-- Nicolas
-- Forge Helper
-- another agent
+A contact should map identities across providers.
 
-### Channel
+Example:
+- slug: `nicolas`
+- Discord identity
+- maybe later email identity
+- maybe later another provider identity
 
-A channel is:
-- Discord channel id
-- Discord DM channel id
-- internal direct thread id
 
-A message belongs to a channel.
-A conversation is built around a channel or a direct contact path.
+## Conversations and messages
 
-Do not collapse these two concepts into one generic field.
+This needs an explicit decision before rebuilding.
+
+The current thinking should be:
+
+- communication should not own raw provider message persistence
+- communication may still expose conversation-level operations to the agent
+
+That means we need to decide one of two models:
+
+### Option A
+
+Communication owns high-level conversations and asks providers for underlying message state.
+
+### Option B
+
+Providers own both raw messages and conversation state, and communication only orchestrates them.
+
+This must be decided before coding.
+
+Right now, based on the latest direction, the safer assumption is:
+
+- provider owns message persistence and unread/read state
+- communication orchestrates access to that state
 
 
 ## Minimal first version
 
-The rebuild should start from the smallest useful version.
+The rebuild should start with the smallest valid slice.
 
 ### Step 1
 
-Build only these capabilities:
-- receive inbound message
-- list conversations
-- get messages from one conversation
-- send outbound message
+Implement the provider contract.
 
-Ignore advanced features at first.
+Each provider should support:
+- subscribe to inbound
+- send outbound
+
+Optionally:
+- provider-local message listing
+- provider-local read state
 
 ### Step 2
 
-Add contacts:
-- slug
-- display name
-- provider identities
+Implement communication module provider registration.
+
+It should:
+- register providers for an agent
+- receive inbound callbacks from them
+- call them for outbound
 
 ### Step 3
 
-Add internal chat on the same flow as Discord.
+Implement contacts in the communication module.
 
 ### Step 4
 
-Add richer behaviors only if needed:
-- scheduled self messages
-- channel aliases
-- groups
-- message formatting helpers
+Expose agent tools on top of the communication module.
+
+### Step 5
+
+Only after the above is solid, decide where conversation/message listing belongs.
 
 
-## Evolution rules
+## What should be avoided
 
-When evolving the module:
+### 1. Provider-driven orchestration
 
-- start from the smallest valid model
-- keep one central communication flow
-- add features only after the simpler path is solid
-- do not add registries, caches, queues, or abstractions unless a real problem is confirmed
+Bad:
+- provider receives event
+- provider decides domain flow
+- provider directly coordinates state, contacts, wake, and response behavior
 
+### 2. Communication pretending to be storage for everything
 
-## Practical design rules
+Bad:
+- communication owns every message table
+- communication owns unread/read flags
+- communication owns provider-local persistence
 
-### The communication module should read like a system, not like plumbing
+### 3. Generic runtime plumbing becoming the architecture
 
-A reader should be able to answer:
-- where inbound enters
-- where state changes
-- where outbound happens
-- where wake is triggered
+Bad:
+- registries, dispatch tables, and glue code becoming the main design
 
-without jumping through many files.
-
-### Tools should describe the communication domain, not transport internals
-
-Good tool language:
-- list conversations
-- get messages
-- get contact
-- send message
-
-Bad tool language:
-- transport registry
-- account dispatch
-- provider sender lookup
-
-Those may exist internally, but they are not the agent-facing model.
+These things may exist internally.
+They should not define the mental model of the system.
 
 
 ## Questions to settle before implementation
 
-Before rebuilding the module, these decisions should be explicit.
+### 1. What exact provider contract should exist?
 
-### 1. What defines a conversation?
+Minimum likely answer:
+- `onMessage(handler)`
+- `sendMessage(command)`
 
-Possible answer:
-- provider + channel
+### 2. Does communication ask providers for conversations/messages?
 
-But this must be decided clearly.
+This is still open and should be decided before coding.
 
-### 2. When sending by contact, how is the channel chosen?
+### 3. What is the minimal agent-facing tool set?
 
-Possible answer:
-- use DM for Discord
-- use direct route for internal chat
+Likely:
+- list contacts
+- get contact
+- send message
 
-This must be explicit.
+Conversation/message reading may come later depending on the chosen model.
 
-### 3. Where does wake belong?
+### 4. Where exactly does wake happen?
 
 Recommended answer:
-- outside communication state
-- triggered after successful inbound persistence
-
-### 4. Does the communication core call providers directly, or does the app wire transports into it?
-
-This should be decided once and kept consistent.
-
-
-## Recommended implementation order
-
-1. define the internal communication model
-2. define inbound command shape
-3. define outbound command shape
-4. implement inbox/conversation persistence
-5. implement contact persistence
-6. wire Discord to the inbound/outbound commands
-7. wire internal chat to the same inbound/outbound commands
-8. expose agent tools on top of that
+- after communication receives a valid inbound event
+- not inside provider transport logic
 
 
 ## Final target
 
-At the end, the communication module should feel like this:
+The final system should be explainable like this:
 
-- one clear center
-- thin providers around it
-- agent-facing tools that reflect the domain
-- transport details kept at the edge
-- no architecture built around workaround layers
-
-The module should be explainable in a few sentences:
-
-"Providers translate inbound and outbound messages.
-The communication core stores conversations, messages, contacts, and channels.
-The agent reads and sends through tools.
-Wake happens after inbound persistence."
+"Providers are registered into the communication module.
+Providers only handle transport and provider-local state.
+The communication module orchestrates inbound and outbound flow for the agent.
+Contacts live in the communication module.
+Wake happens after communication handles inbound events."
