@@ -1,6 +1,6 @@
-import { agentState, type Contact } from './state';
+import { communicationState, type Contact } from './communication-state';
 
-export function createContactBook() {
+export function createAgentContacts() {
   function slugify(value: string) {
     return (
       value
@@ -14,12 +14,12 @@ export function createContactBook() {
   }
 
   async function getAgentContact(agentId: string, slug: string) {
-    const state = await agentState.read();
+    const state = await communicationState.read();
     return state.contacts.find((contact) => contact.agentId === agentId && contact.slug === slug) ?? null;
   }
 
   async function listAgentContacts(agentId: string) {
-    const state = await agentState.read();
+    const state = await communicationState.read();
     return state.contacts.filter((contact) => contact.agentId === agentId);
   }
 
@@ -29,7 +29,7 @@ export function createContactBook() {
     externalUserId?: string,
     username?: string,
   ) {
-    const state = await agentState.read();
+    const state = await communicationState.read();
 
     return (
       state.contacts.find((contact) => {
@@ -67,7 +67,7 @@ export function createContactBook() {
       username?: string;
     }>;
   }) {
-    const state = await agentState.read();
+    const state = await communicationState.read();
     const slug = slugify(input.slug);
     let contact = state.contacts.find((current) => current.agentId === input.agentId && current.slug === slug);
 
@@ -119,7 +119,7 @@ export function createContactBook() {
       }
     }
 
-    await agentState.save();
+    await communicationState.save();
     return contact;
   }
 
@@ -134,7 +134,7 @@ export function createContactBook() {
       return null;
     }
 
-    const state = await agentState.read();
+    const state = await communicationState.read();
     let contact = state.contacts.find((current) => {
       if (current.agentId !== input.agentId) {
         return false;
@@ -213,7 +213,7 @@ export function createContactBook() {
       contact.displayName = input.authorName;
     }
 
-    await agentState.save();
+    await communicationState.save();
     return contact satisfies Contact;
   }
 
@@ -226,4 +226,4 @@ export function createContactBook() {
   };
 }
 
-export const contactBook = createContactBook();
+export const agentContacts = createAgentContacts();

@@ -62,11 +62,11 @@ export type ContactIdentity = z.infer<typeof contactIdentitySchema>;
 export type Contact = z.infer<typeof contactSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
 export type StoredMessage = z.infer<typeof storedMessageSchema>;
-export type AgentState = z.infer<typeof stateSchema>;
+export type CommunicationState = z.infer<typeof stateSchema>;
 
-export function createAgentState() {
+export function createCommunicationState() {
   const statePath = path.resolve('.forge-state', 'accounts.json');
-  let currentState: AgentState | null = null;
+  let currentState: CommunicationState | null = null;
 
   async function read() {
     if (currentState) {
@@ -98,4 +98,4 @@ export function createAgentState() {
   };
 }
 
-export const agentState = createAgentState();
+export const communicationState = createCommunicationState();

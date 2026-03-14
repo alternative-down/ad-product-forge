@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { contactBook } from './contact-book';
-import { agentState, type Attachment, type StoredMessage } from './state';
+import { agentContacts } from './agent-contacts';
+import { communicationState, type Attachment, type StoredMessage } from './communication-state';
 
 const inboundMessageSchema = z.object({
   agentId: z.string(),
@@ -88,7 +88,7 @@ export type ConversationView = {
 export function createMessageStore() {
   async function saveInboundMessage(rawInput: unknown) {
     const input = inboundMessageSchema.parse(rawInput);
-    const state = await agentState.read();
+    const state = await communicationState.read();
     const alreadyExists = state.messages.some(
       (message) => message.accountId === input.accountId && message.messageId === input.messageId,
     );
@@ -113,12 +113,12 @@ export function createMessageStore() {
       metadata: input.metadata,
     });
 
-    await agentState.save();
+    await communicationState.save();
   }
 
   async function saveOutboundMessage(rawInput: unknown) {
     const input = outboundMessageSchema.parse(rawInput);
-    const state = await agentState.read();
+    const state = await communicationState.read();
 
     state.messages.push({
       messageId: input.messageId,
@@ -136,23 +136,23 @@ export function createMessageStore() {
       },
     });
 
-    await agentState.save();
+    await communicationState.save();
   }
 
   async function findMessage(accountId: string, messageId: string) {
-    const state = await agentState.read();
+    const state = await communicationState.read();
     return state.messages.find((message) => message.accountId === accountId && message.messageId === messageId) ?? null;
   }
 
   async function toMessageView(agentId: string, message: StoredMessage) {
-    const state = await agentState.read();
+    const state = await communicationState.read();
     const account = state.accounts.find((current) => current.accountId === message.accountId);
 
     if (!account) {
       throw new Error(`Account not found for message: ${message.accountId}`);
     }
 
-    const contact = await contactBook.findContactByIdentity(
+    const contact = await agentContacts.findContactByIdentity(
       agentId,
       account.provider,
       message.authorId,
@@ -183,7 +183,7 @@ export function createMessageStore() {
 
   async function listMessageConversations(rawInput: unknown) {
     const input = listConversationsSchema.parse(rawInput);
-    const state = await agentState.read();
+    const state = await communicationState.read();
     const accountIds = new Set(
       state.accounts
         .filter((account) => account.agentId === input.agentId)
@@ -263,7 +263,7 @@ export function createMessageStore() {
         message.unread = false;
       }
 
-      await agentState.save();
+      await communicationState.save();
     }
 
     return result;
@@ -271,7 +271,7 @@ export function createMessageStore() {
 
   async function getMessages(rawInput: unknown) {
     const input = getMessagesSchema.parse(rawInput);
-    const state = await agentState.read();
+    const state = await communicationState.read();
     const accountIds = new Set(
       state.accounts
         .filter((account) => account.agentId === input.agentId)
@@ -315,7 +315,7 @@ export function createMessageStore() {
         message.unread = false;
       }
 
-      await agentState.save();
+      await communicationState.save();
     }
 
     return messages;

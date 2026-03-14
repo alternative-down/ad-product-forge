@@ -1,6 +1,6 @@
-import { agentState } from './state';
+import { communicationState } from './communication-state';
 
-export function createAccountRegistry() {
+export function createAgentAccounts() {
   async function ensureAccount(input: {
     agentId: string;
     provider: string;
@@ -8,7 +8,7 @@ export function createAccountRegistry() {
     displayName?: string;
     metadata?: Record<string, unknown>;
   }) {
-    const state = await agentState.read();
+    const state = await communicationState.read();
     const accountId = `${input.agentId}:${input.provider}:${input.externalAccountId}`;
     let account = state.accounts.find((current) => current.accountId === accountId);
 
@@ -30,12 +30,12 @@ export function createAccountRegistry() {
       account.metadata = input.metadata;
     }
 
-    await agentState.save();
+    await communicationState.save();
     return accountId;
   }
 
   async function getAgentProviderAccount(agentId: string, provider: string) {
-    const state = await agentState.read();
+    const state = await communicationState.read();
     return state.accounts.find((account) => account.agentId === agentId && account.provider === provider) ?? null;
   }
 
@@ -45,4 +45,4 @@ export function createAccountRegistry() {
   };
 }
 
-export const accountRegistry = createAccountRegistry();
+export const agentAccounts = createAgentAccounts();

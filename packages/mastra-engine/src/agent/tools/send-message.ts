@@ -1,9 +1,9 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { accountRegistry } from '../account-registry';
-import { contactBook } from '../contact-book';
-import { deliveryRegistry } from '../delivery-registry';
+import { agentAccounts } from '../agent-accounts';
+import { agentContacts } from '../agent-contacts';
+import { accountDeliveries } from '../account-deliveries';
 import { messageStore } from '../message-store';
 
 const sendMessageInputSchema = z
@@ -34,7 +34,7 @@ export function createSendMessageTool(agentId: string) {
     description: 'Send a message through one of the external providers owned by this agent.',
     inputSchema: sendMessageInputSchema,
     execute: async (input) => {
-      const account = await accountRegistry.getAgentProviderAccount(agentId, input.provider);
+      const account = await agentAccounts.getAgentProviderAccount(agentId, input.provider);
 
       if (!account) {
         throw new Error(`Provider not found for agent: ${input.provider}`);
@@ -47,7 +47,7 @@ export function createSendMessageTool(agentId: string) {
       let target = input.target;
 
       if (input.contactSlug) {
-        const contact = await contactBook.getAgentContact(agentId, input.contactSlug);
+        const contact = await agentContacts.getAgentContact(agentId, input.contactSlug);
         if (!contact) {
           throw new Error(`Contact not found: ${input.contactSlug}`);
         }
@@ -89,7 +89,7 @@ export function createSendMessageTool(agentId: string) {
         );
       }
 
-      const delivery = deliveryRegistry.get(account.accountId);
+      const delivery = accountDeliveries.get(account.accountId);
       if (!delivery) {
         throw new Error(`No active delivery registered for provider: ${input.provider}`);
       }

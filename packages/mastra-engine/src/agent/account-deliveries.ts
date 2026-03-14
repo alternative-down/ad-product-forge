@@ -31,4 +31,4 @@ export function createDeliveryRegistry() {
   };
 }
 
-export const deliveryRegistry = createDeliveryRegistry();
+export const accountDeliveries = createDeliveryRegistry();
