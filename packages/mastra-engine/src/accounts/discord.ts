@@ -12,7 +12,6 @@ export type DiscordAgentClientConfig = {
   wakeQueue: AgentWakeQueue;
   allowedChannelIds?: string[];
   respondToMentionsOnly?: boolean;
-  agentId?: string;
 };
 
 export async function createDiscordAgentClient(config: DiscordAgentClientConfig) {
@@ -25,7 +24,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     ],
     partials: [Partials.Channel],
   });
-  const agentId = config.agentId ?? config.agent.id;
+  const internalAgentId = config.agent.id;
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
 
@@ -35,15 +34,15 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     throw new Error('Discord client did not become ready after login');
   }
 
-  const botUserId = client.user.id;
-  const accountId = await messageStore.ensureAccount({
-    agentId,
+  const discordUserId = client.user.id;
+  const discordAccountId = await messageStore.ensureAccount({
+    agentId: internalAgentId,
     provider: 'discord',
-    externalAccountId: botUserId,
+    externalAccountId: discordUserId,
     displayName: client.user.tag,
   });
 
-  messageRouter.registerSender(accountId, async (input) => {
+  messageRouter.registerSender(discordAccountId, async (input) => {
     if (!input.target || !/^\d+$/.test(input.target)) {
       throw new Error(`Unsupported Discord target: ${input.target}`);
     }
@@ -52,9 +51,8 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       const user = await client.users.fetch(input.target);
       const channel = await user.createDM();
       await channel.sendTyping();
-      await new Promise((done) => setTimeout(done, 700));
       const sent = await channel.send(input.content);
-      return { messageId: sent.id, channelId: channel.id };
+      return { messageId: sent.id, channelId: sent.channel.id };
     }
 
     const channel = await client.channels.fetch(input.target);
@@ -63,9 +61,8 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     }
 
     await channel.sendTyping();
-    await new Promise((done) => setTimeout(done, 700));
 
-    if (input.replyToMessageId && 'messages' in channel) {
+    if (input.replyToMessageId) {
       const replyTarget = await channel.messages.fetch(input.replyToMessageId);
       const sent = await replyTarget.reply(input.content);
       return { messageId: sent.id, channelId: sent.channelId };
@@ -94,7 +91,11 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       return;
     }
 
-    if (message.channel.type !== ChannelType.DM && respondToMentionsOnly && !message.mentions.users.has(botUserId)) {
+    if (
+      message.channel.type !== ChannelType.DM &&
+      respondToMentionsOnly &&
+      !message.mentions.users.has(discordUserId)
+    ) {
       forgeDebug('discord', 'message ignored', {
         channelId: message.channelId,
         authorId: message.author.id,
@@ -105,18 +106,20 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
 
     try {
       const content = message.content
-        .replaceAll(`<@${botUserId}>`, '')
-        .replaceAll(`<@!${botUserId}>`, '')
+        .replaceAll(`<@${discordUserId}>`, '')
+        .replaceAll(`<@!${discordUserId}>`, '')
         .trim();
 
       await messageStore.saveInboundMessage({
-        agentId,
-        accountId,
+        agentId: internalAgentId,
+        accountId: discordAccountId,
         messageId: message.id,
         channelId: message.channelId,
-        channelName: message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
+        channelName:
+          message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
         authorId: message.author.id,
-        authorName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
+        authorName:
+          message.member?.displayName ?? message.author.globalName ?? message.author.username,
         username: message.author.username,
         content: content || '[no text content]',
         attachments: Array.from(message.attachments.values()).map((attachment) => ({
@@ -134,7 +137,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       });
 
       forgeDebug('discord', 'message registered', {
-        agentId,
+        agentId: internalAgentId,
         channelId: message.channelId,
         messageId: message.id,
       });
