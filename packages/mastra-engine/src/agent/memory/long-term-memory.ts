@@ -59,10 +59,10 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       autoIndexPaths: ['/'],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({
-        basePath: path.resolve(MEMORY_WORKSPACE_ROOT, config.agentId),
+        basePath: path.resolve(process.cwd(), MEMORY_WORKSPACE_ROOT, config.agentId),
       }),
       sandbox: new LocalSandbox({
-        workingDirectory: path.resolve(MEMORY_WORKSPACE_ROOT, config.agentId),
+        workingDirectory: path.resolve(process.cwd(), MEMORY_WORKSPACE_ROOT, config.agentId),
       }),
       vectorStore,
       searchIndexName: indexName,
