@@ -2,6 +2,8 @@ import { createTool } from '@mastra/core/tools';
 import Firecrawl from '@mendable/firecrawl-js';
 import { z } from 'zod';
 
+const tool = createTool as any;
+
 const SignalSchema = z.object({
   title: z.string().describe('Title or headline of the signal'),
   description: z.string().describe('Description of the problem, pain point, or opportunity'),
@@ -21,22 +23,13 @@ const FirecrawlAgentResponseSchema = z.object({
   creditsUsed: z.number().optional(),
 });
 
-const MarketResearchOutputSchema = z.object({
-  success: z.boolean(),
-  signals: z.array(SignalSchema).optional(),
-  creditsUsed: z.number().optional(),
-  status: z.string().optional(),
-  error: z.string().optional(),
-});
-
-export const marketResearchTool = createTool({
+export const marketResearchTool = tool({
   id: 'market_research',
   description: 'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
   inputSchema: z.object({
     customPrompt: z.string().optional().describe('Custom research prompt to override the default market research strategy'),
   }),
-  outputSchema: MarketResearchOutputSchema,
-  execute: async (input) => {
+  execute: async (input: any) => {
     const API_KEY = process.env.FIRECRAWL_API_KEY;
 
     if (!API_KEY) {
@@ -92,7 +85,7 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
               severity: z.enum(['low', 'medium', 'high']),
             })
           ),
-        }),
+        }) as any,
       });
 
       const result = FirecrawlAgentResponseSchema.safeParse(rawResponse);

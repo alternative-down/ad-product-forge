@@ -8,10 +8,10 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
-    "typecheck": "tsc --noEmit",
-    "example:basic": "tsx examples/basic-agent.ts",
-    "example:discord": "tsx examples/discord-bot.ts"
+    "build": "NODE_OPTIONS=--max-old-space-size=8192 tsc",
+    "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
+    "smoke:openai-codex": "tsx examples/openai-codex-smoke.ts",
+    "smoke:claude-max": "tsx examples/claude-max-smoke.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
@@ -22,7 +22,6 @@
     "@mastra/memory": "^1.6.2",
     "@mendable/firecrawl-js": "^4.15.4",
     "discord.js": "^14.24.2",
-    "dotenv": "^17.2.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
