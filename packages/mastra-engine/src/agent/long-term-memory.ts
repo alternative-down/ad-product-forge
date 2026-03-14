@@ -8,6 +8,7 @@ import type {
   Processor,
 } from '@mastra/core/processors';
 import type { Workspace } from '@mastra/core/workspace';
+import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
@@ -17,6 +18,7 @@ import { forgeDebug } from '../debug';
 import { embedTextWithFastembed } from './embedder';
 
 type ObservationRecord = Awaited<ReturnType<ObservationalMemory['getHistory']>>[number];
+const MEMORY_WORKSPACE_ROOT = '.forge-memory';
 
 export type LongTermMemoryConfig = {
   om: ObservationalMemory;
@@ -34,6 +36,38 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly incrementalHistoryLimit = 12;
 
   constructor(private readonly config: LongTermMemoryConfig) {}
+
+  static async create(config: { agentId: string; om: ObservationalMemory }) {
+    const indexName = `${config.agentId}_memory_search`.replace(/[^a-zA-Z0-9_]/g, '_');
+    const vectorStore = new LibSQLVector({
+      id: `${config.agentId}-memory-workspace-vector`,
+      url: `file:./${config.agentId}-memory-workspace.db`,
+    });
+    const workspace = new WorkspaceRuntime({
+      bm25: true,
+      autoSync: true,
+      autoIndexPaths: ['/'],
+      embedder: embedTextWithFastembed,
+      filesystem: new LocalFilesystem({
+        basePath: path.resolve(MEMORY_WORKSPACE_ROOT, config.agentId),
+      }),
+      sandbox: new LocalSandbox({
+        workingDirectory: path.resolve(MEMORY_WORKSPACE_ROOT, config.agentId),
+      }),
+      vectorStore,
+      searchIndexName: indexName,
+    });
+
+    await workspace.init();
+    await this.ensureWorkspaceVectorIndex(vectorStore, indexName);
+
+    return new LongTermMemory({
+      om: config.om,
+      workspace,
+      vectorStore,
+      graphIndexName: indexName,
+    });
+  }
 
   static async ensureWorkspaceVectorIndex(vectorStore: LibSQLVector, indexName: string) {
     try {

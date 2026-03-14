@@ -1,7 +1,6 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 
 import { createAgentMemory } from './agent/memory';
-import { createMemoryWorkspace } from './agent/memory-workspace';
 import { LongTermMemory } from './agent/long-term-memory';
 import { createObservationalMemory } from './agent/observational-memory';
 import { createAgentStorage } from './agent/storage';
@@ -33,18 +32,10 @@ export async function createForgeAgent<
     storage,
     model: config.omModel ?? config.model,
   });
-  const memoryWorkspace = await createMemoryWorkspace(config.id);
-  const longTermMemory = new LongTermMemory({
+  const longTermMemory = await LongTermMemory.create({
+    agentId: config.id,
     om,
-    workspace: memoryWorkspace.workspace,
-    vectorStore: memoryWorkspace.vectorStore,
-    graphIndexName: memoryWorkspace.indexName,
   });
-
-  await LongTermMemory.ensureWorkspaceVectorIndex(
-    memoryWorkspace.vectorStore,
-    memoryWorkspace.indexName,
-  );
 
   return new Agent<TAgentId, TTools, TOutput, TRequestContext>({
     id: config.id,
