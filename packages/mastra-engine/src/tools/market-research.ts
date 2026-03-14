@@ -1,65 +1,40 @@
-import { createTool, type Tool } from '@mastra/core/tools';
+import { createTool } from '@mastra/core/tools';
 import Firecrawl from '@mendable/firecrawl-js';
 import { z } from 'zod';
 
-type SimpleTool<TInput> = {
-  id: string;
-  description: string;
-  inputSchema: z.ZodType<TInput>;
-  execute: (input: TInput) => Promise<unknown> | unknown;
-};
+const signalSchema = z
+  .object({
+    title: z.string().describe('Title or headline of the signal'),
+    description: z.string().describe('Description of the problem, pain point, or opportunity'),
+    source: z.string().describe('Where was this signal found (website, forum, etc)'),
+    type: z
+      .enum(['pain_point', 'feature_request', 'trend', 'opportunity'])
+      .describe('Type of signal'),
+    severity: z.enum(['low', 'medium', 'high']).describe('How urgent or severe is this signal'),
+  })
+  .array()
+  .optional();
 
-const createMarketTool = createTool as unknown as <TInput>(tool: SimpleTool<TInput>) => Tool;
-
-const SignalSchema = z.object({
-  title: z.string().describe('Title or headline of the signal'),
-  description: z.string().describe('Description of the problem, pain point, or opportunity'),
-  source: z.string().describe('Where was this signal found (website, forum, etc)'),
-  type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']).describe('Type of signal'),
-  severity: z.enum(['low', 'medium', 'high']).describe('How urgent or severe is this signal'),
-});
-
-const FirecrawlAgentResponseSchema = z.object({
+const firecrawlAgentResponseSchema = z.object({
   success: z.boolean(),
   status: z.string(),
-  data: z
-    .object({
-      signals: z.array(SignalSchema),
-    })
-    .optional(),
+  data: signalSchema,
   creditsUsed: z.number().optional(),
 });
 
 const marketResearchInputSchema = z.object({
-  customPrompt: z.string().optional().describe('Custom research prompt to override the default market research strategy'),
+  customPrompt: z
+    .string()
+    .optional()
+    .describe('Custom research prompt to override the default market research strategy'),
 });
 
-const firecrawlSignalsSchema = {
-  type: 'object',
-  properties: {
-    signals: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          title: { type: 'string' },
-          description: { type: 'string' },
-          source: { type: 'string' },
-          type: { type: 'string', enum: ['pain_point', 'feature_request', 'trend', 'opportunity'] },
-          severity: { type: 'string', enum: ['low', 'medium', 'high'] },
-        },
-        required: ['title', 'description', 'source', 'type', 'severity'],
-      },
-    },
-  },
-  required: ['signals'],
-} satisfies Record<string, unknown>;
-
-export const marketResearchTool: Tool = createMarketTool({
+export const marketResearchTool = createTool({
   id: 'market_research',
-  description: 'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
+  description:
+    'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
   inputSchema: marketResearchInputSchema,
-  execute: async (input: z.infer<typeof marketResearchInputSchema>) => {
+  execute: async (input) => {
     const API_KEY = process.env.FIRECRAWL_API_KEY;
 
     if (!API_KEY) {
@@ -105,10 +80,10 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
     try {
       const rawResponse = await firecrawl.agent({
         prompt,
-        schema: firecrawlSignalsSchema,
+        schema: signalSchema,
       });
 
-      const result = FirecrawlAgentResponseSchema.safeParse(rawResponse);
+      const result = firecrawlAgentResponseSchema.safeParse(rawResponse);
 
       if (!result.success) {
         return {
@@ -129,7 +104,7 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
 
       return {
         success: true,
-        signals: response.data?.signals || [],
+        signals: response.data || [],
         creditsUsed: response.creditsUsed,
         status: response.status,
       };

@@ -1,18 +1,20 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "strict": true,
+    "baseUrl": ".",
     "noImplicitAny": true,
-    "skipLibCheck": true,
+    "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src",
-    "esModuleInterop": true,
     "declaration": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "@mastra-engine/core": ["../../packages/mastra-engine/dist/index.d.ts"]
+    }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", ".turbo", "dist"]
 }

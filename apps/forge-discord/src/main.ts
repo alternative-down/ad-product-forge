@@ -39,7 +39,9 @@ function resolveModel() {
     return claudeMaxProvider(modelId as ClaudeMaxModelId);
   }
 
-  throw new Error(`Unsupported FORGE_MODEL_PROVIDER: ${provider}. Use "openai-codex" or "claude-max".`);
+  throw new Error(
+    `Unsupported FORGE_MODEL_PROVIDER: ${provider}. Use "openai-codex" or "claude-max".`,
+  );
 }
 
 async function main() {

@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",
-    "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "build": "npm run -w @mastra-engine/core build && tsc",
+    "typecheck": "npm run -w @mastra-engine/core build && tsc --noEmit"
   },
   "dependencies": {
     "@mastra-engine/core": "0.1.0",

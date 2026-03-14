@@ -9,9 +9,7 @@ import {
   type SendableChannels,
 } from 'discord.js';
 
-import {
-  messageStore,
-} from '../agent/message-store';
+import { messageStore } from '../agent/message-store';
 import { forgeDebug } from '../debug';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 
@@ -130,8 +128,12 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
         sizeBytes: attachment.size,
         description: attachment.description ?? undefined,
       }));
-      const authorName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
-      const channelName = message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel';
+      const authorName =
+        message.member?.displayName ?? message.author.globalName ?? message.author.username;
+      const channelName =
+        message.channel.type === ChannelType.DM
+          ? 'direct-message'
+          : (message.channel.name ?? 'unknown-channel');
 
       forgeDebug('discord', 'message accepted', {
         channelId: message.channelId,

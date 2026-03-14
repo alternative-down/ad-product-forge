@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 
-import { openaiCodexProvider } from '../src/providers/openai-codex';
+import { openaiCodexProvider } from '../src/llm/openai-codex';
 
 async function main() {
   const agent = new Agent({
