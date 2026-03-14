@@ -8,7 +8,7 @@ import { agentContacts } from '../agent/communication/agent-contacts';
 import { messageStore } from '../agent/communication/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 
-type InternalChatParticipant = {
+type RegisteredAgent = {
   agentId: string;
   accountId: string;
   displayName: string;
@@ -16,11 +16,11 @@ type InternalChatParticipant = {
 };
 
 export function createInternalChatRouter() {
-  const participants = new Map<string, InternalChatParticipant>();
+  const agents = new Map<string, RegisteredAgent>();
 
-  async function syncContacts() {
-    for (const sourceAgent of participants.values()) {
-      for (const targetAgent of participants.values()) {
+  async function syncAgentContacts() {
+    for (const sourceAgent of agents.values()) {
+      for (const targetAgent of agents.values()) {
         if (sourceAgent.agentId === targetAgent.agentId) {
           continue;
         }
@@ -53,18 +53,18 @@ export function createInternalChatRouter() {
       externalAccountId: agentId,
       displayName,
     });
-    const participant = {
+    const registeredAgent = {
       agentId,
       accountId,
       displayName,
       wakeQueue: config.wakeQueue,
     };
 
-    participants.set(agentId, participant);
-    await syncContacts();
+    agents.set(agentId, registeredAgent);
+    await syncAgentContacts();
 
     accountDeliveries.register(accountId, async (input) => {
-      const recipient = participants.get(input.target);
+      const recipient = agents.get(input.target);
 
       if (!recipient) {
         throw new Error(`Internal chat target not found: ${input.target}`);
@@ -74,19 +74,19 @@ export function createInternalChatRouter() {
       await agentContacts.syncInboundContact({
         agentId: recipient.agentId,
         provider: 'internal-chat',
-        authorId: participant.agentId,
-        authorName: participant.displayName,
-        username: participant.agentId,
+        authorId: registeredAgent.agentId,
+        authorName: registeredAgent.displayName,
+        username: registeredAgent.agentId,
       });
       await messageStore.saveInboundMessage({
         agentId: recipient.agentId,
         accountId: recipient.accountId,
         messageId,
-        channelId: participant.agentId,
-        channelName: participant.displayName,
-        authorId: participant.agentId,
-        authorName: participant.displayName,
-        username: participant.agentId,
+        channelId: registeredAgent.agentId,
+        channelName: registeredAgent.displayName,
+        authorId: registeredAgent.agentId,
+        authorName: registeredAgent.displayName,
+        username: registeredAgent.agentId,
         content: input.content,
         attachments: [],
         createdAt: new Date().toISOString(),
@@ -97,19 +97,19 @@ export function createInternalChatRouter() {
       });
 
       recipient.wakeQueue.notifyExternalEvent();
-      return { messageId, channelId: participant.agentId };
+      return { messageId, channelId: registeredAgent.agentId };
     });
   }
 
   function unregisterAgent(agentId: string) {
-    const participant = participants.get(agentId);
+    const registeredAgent = agents.get(agentId);
 
-    if (!participant) {
+    if (!registeredAgent) {
       return;
     }
 
-    accountDeliveries.unregister(participant.accountId);
-    participants.delete(agentId);
+    accountDeliveries.unregister(registeredAgent.accountId);
+    agents.delete(agentId);
   }
 
   return {
