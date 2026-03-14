@@ -5,7 +5,7 @@ import type { CommunicationProvider } from '../agent/communication/provider-type
 type RegisteredAgent = {
   id: string;
   displayName: string;
-  onInbound(message: {
+  onMessage(message: {
     providerConversationKey: string;
     providerMessageId: string;
     conversationName?: string;
@@ -17,35 +17,10 @@ type RegisteredAgent = {
     createdAt: string;
     metadata?: Record<string, unknown>;
   }): Promise<void>;
-  upsertContact(input: {
-    slug: string;
-    displayName: string;
-    provider: string;
-    externalUserId?: string;
-    username?: string;
-  }): Promise<void>;
 };
 
 export function createInternalChatPreset() {
   const agents = new Map<string, RegisteredAgent>();
-
-  async function syncContacts() {
-    for (const source of agents.values()) {
-      for (const target of agents.values()) {
-        if (source.id === target.id) {
-          continue;
-        }
-
-        await source.upsertContact({
-          slug: target.id,
-          displayName: target.displayName,
-          provider: 'internal-chat',
-          externalUserId: target.id,
-          username: target.id,
-        });
-      }
-    }
-  }
 
   return {
     createProvider(config: { id: string; displayName: string }): CommunicationProvider {
@@ -57,17 +32,22 @@ export function createInternalChatPreset() {
             displayName: config.displayName,
           };
         },
-        async start({ onInbound, upsertContact }) {
+        async onMessage(callback) {
           agents.set(config.id, {
             id: config.id,
             displayName: config.displayName,
-            onInbound,
-            upsertContact,
+            onMessage: callback,
           });
-          await syncContacts();
         },
-        async stop() {
-          agents.delete(config.id);
+        async syncContacts() {
+          return Array.from(agents.values())
+            .filter((agent) => agent.id !== config.id)
+            .map((agent) => ({
+              slug: agent.id,
+              displayName: agent.displayName,
+              externalUserId: agent.id,
+              username: agent.id,
+            }));
         },
         async sendMessage(input) {
           const recipientId = input.providerConversationKey ?? input.contactExternalId;
@@ -79,7 +59,7 @@ export function createInternalChatPreset() {
 
           const providerMessageId = `internal:${crypto.randomUUID()}`;
 
-          await recipient.onInbound({
+          await recipient.onMessage({
             providerConversationKey: config.id,
             providerMessageId,
             conversationName: config.displayName,

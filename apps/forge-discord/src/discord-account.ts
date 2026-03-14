@@ -18,7 +18,7 @@ export function createDiscordProvider(config: {
   });
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
-  let started = false;
+  let listening = false;
 
   async function ensureClient() {
     if (!client.isReady()) {
@@ -42,8 +42,8 @@ export function createDiscordProvider(config: {
         displayName: user.tag,
       };
     },
-    async start({ onInbound }) {
-      if (started) {
+    async onMessage(callback) {
+      if (listening) {
         return;
       }
 
@@ -80,10 +80,11 @@ export function createDiscordProvider(config: {
           description: attachment.description ?? undefined,
         }));
 
-        await onInbound({
+        await callback({
           providerConversationKey: message.channelId,
           providerMessageId: message.id,
-          conversationName: message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
+          conversationName:
+            message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
           authorExternalId: message.author.id,
           authorDisplayName,
           authorUsername: message.author.username,
@@ -96,11 +97,11 @@ export function createDiscordProvider(config: {
         });
       });
 
-      started = true;
+      listening = true;
       console.log(`[discord] logged in as ${user.tag}`);
     },
     async sendMessage(input) {
-      const user = await ensureClient();
+      await ensureClient();
 
       if (input.contactExternalId && !input.providerConversationKey) {
         const targetUser = await client.users.fetch(input.contactExternalId);

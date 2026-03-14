@@ -20,17 +20,15 @@ export type CommunicationProvider = {
     displayName?: string;
     metadata?: Record<string, unknown>;
   }>;
-  start?(input: {
-    onInbound(message: CommunicationInboundMessage): Promise<void>;
-    upsertContact(input: {
+  onMessage?(callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> | void;
+  syncContacts?(): Promise<
+    Array<{
       slug: string;
       displayName: string;
-      provider: string;
       externalUserId?: string;
       username?: string;
-    }): Promise<void>;
-  }): Promise<void> | void;
-  stop?(): Promise<void> | void;
+    }>
+  >;
   sendMessage(input: {
     providerConversationKey?: string;
     contactExternalId?: string;
