@@ -1,5 +1,5 @@
 import type { Agent } from '@mastra/core/agent';
-import { ChannelType, Client, Events, GatewayIntentBits, Partials } from 'discord.js';
+import { ChannelType, Client, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
 
 import { accountDeliveries } from '../agent/communication/account-deliveries';
 import { agentAccounts } from '../agent/communication/agent-accounts';
@@ -44,7 +44,12 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     displayName: client.user.tag,
   });
 
-  accountDeliveries.register(discordAccountId, async (input) => {
+  async function sendDiscordMessage(input: {
+    target: string;
+    content: string;
+    replyToMessageId?: string;
+    contactSlug?: string;
+  }) {
     if (!input.target || !/^\d+$/.test(input.target)) {
       throw new Error(`Unsupported Discord target: ${input.target}`);
     }
@@ -72,9 +77,11 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
 
     const sent = await channel.send(input.content);
     return { messageId: sent.id, channelId: sent.channelId };
-  });
+  }
 
-  client.on(Events.MessageCreate, async (message) => {
+  accountDeliveries.register(discordAccountId, sendDiscordMessage);
+
+  async function handleInboundMessage(message: Message) {
     if (message.author.bot) {
       forgeDebug('discord', 'message ignored', {
         channelId: message.channelId,
@@ -161,7 +168,9 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       console.error('[forge:discord] agent execution failed', error);
       await message.reply(`Erro ao executar o agente: ${errorMessage}`);
     }
-  });
+  }
+
+  client.on(Events.MessageCreate, handleInboundMessage);
 
   console.log(`[discord] logged in as ${client.user.tag}`);
   return client;
