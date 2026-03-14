@@ -31,18 +31,14 @@ export function createInternalChatRouter() {
         externalAccountId: agentId,
         displayName,
       });
-
-      agents.set(agentId, {
+      const registeredAgent = {
         agentId,
         accountId,
         displayName,
         wakeQueue: config.wakeQueue,
-      });
+      };
 
       for (const current of agents.values()) {
-        if (current.agentId === agentId) {
-          continue;
-        }
 
         await messageStore.upsertAgentContact({
           agentId,
@@ -70,6 +66,8 @@ export function createInternalChatRouter() {
           ],
         });
       }
+
+      agents.set(agentId, registeredAgent);
 
       messageRouter.registerSender(accountId, async (input) => {
         const recipient = input.target ? agents.get(input.target) : null;
