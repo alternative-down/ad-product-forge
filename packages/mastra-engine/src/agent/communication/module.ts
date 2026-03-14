@@ -43,26 +43,17 @@ export async function createCommunicationModule(config: { client: Client; wakeUp
       input.authorUsername,
     );
 
-    if (existingContact) {
-      if (!input.authorDisplayName) {
-        return existingContact;
-      }
-
-      return store.upsertContact({
-        slug: existingContact.slug,
-        displayName: input.authorDisplayName,
-        description: existingContact.description,
-        provider: input.provider,
-        externalUserId: input.authorExternalId,
-        username: input.authorUsername,
-      });
+    if (existingContact && (!input.authorDisplayName || existingContact.displayName === input.authorDisplayName)) {
+      return existingContact;
     }
 
-    const slug = input.authorUsername || input.authorDisplayName || input.authorExternalId || 'contact';
+    const slug = existingContact?.slug || input.authorUsername || input.authorDisplayName || input.authorExternalId || 'contact';
+    const displayName = input.authorDisplayName || existingContact?.displayName || input.authorUsername || input.authorExternalId || slug;
 
     return store.upsertContact({
       slug,
-      displayName: input.authorDisplayName || input.authorUsername || input.authorExternalId || slug,
+      displayName,
+      description: existingContact?.description,
       provider: input.provider,
       externalUserId: input.authorExternalId,
       username: input.authorUsername,
