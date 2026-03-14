@@ -7,22 +7,13 @@ const upsertContactInputSchema = z.object({
   slug: z.string(),
   displayName: z.string(),
   description: z.string().optional(),
-  accounts: z
-    .array(
-      z.object({
-        provider: z.string(),
-        externalUserId: z.string().optional(),
-        username: z.string().optional(),
-      }),
-    )
-    .default([]),
 });
 
 export function createUpsertContactTool(agentId: string) {
   return createTool({
     id: 'upsert_contact',
     description:
-      'Create or update a contact with a stable slug, free-form description, and known accounts.',
+      'Create or update a contact with a stable slug, display name, and free-form description.',
     inputSchema: upsertContactInputSchema,
     execute: async (input) => {
       const contact = await communicationModule.upsertContact({
@@ -30,7 +21,6 @@ export function createUpsertContactTool(agentId: string) {
         slug: input.slug,
         displayName: input.displayName,
         description: input.description,
-        accounts: input.accounts,
       });
 
       return {

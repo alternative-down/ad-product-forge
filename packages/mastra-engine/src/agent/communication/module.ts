@@ -1,50 +1,34 @@
 import { z } from 'zod';
 
+import type {
+  ProviderConversationView,
+  ProviderMessageView,
+} from '../../accounts/provider-message-store';
 import { agentContacts } from './agent-contacts';
-import { messageStore, type ConversationView, type MessageView } from './message-store';
 import type { AgentWakeQueue } from '../wake-queue';
 
 const inboundMessageSchema = z.object({
   agentId: z.string(),
   provider: z.string(),
-  accountId: z.string(),
-  messageId: z.string(),
-  channelId: z.string().optional(),
-  channelName: z.string().optional(),
   authorId: z.string().optional(),
   authorName: z.string().optional(),
   username: z.string().optional(),
-  content: z.string(),
-  attachments: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        name: z.string().optional(),
-        url: z.string(),
-        contentType: z.string().optional(),
-        sizeBytes: z.number().optional(),
-        description: z.string().optional(),
-      }),
-    )
-    .default([]),
-  createdAt: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 type CommunicationProvider = {
   id: string;
-  accountId: string;
   listConversations(input: {
     agentId: string;
     contactSlug?: string;
     unread?: boolean;
     limit: number;
-  }): Promise<ConversationView[]>;
+  }): Promise<ProviderConversationView[]>;
   getMessages(input: {
     agentId: string;
     conversationId: string;
     limit: number;
-  }): Promise<MessageView[]>;
+  }): Promise<ProviderMessageView[]>;
+  findMessage(messageId: string): Promise<{ messageId: string; channelId?: string } | null>;
   sendMessage(input: {
     target: string;
     content: string;
@@ -110,7 +94,6 @@ export function createCommunicationModule() {
       authorName: input.authorName,
       username: input.username,
     });
-    await messageStore.saveInboundMessage(input);
     registeredProvider.wakeQueue.notifyExternalEvent();
   }
 
@@ -127,11 +110,6 @@ export function createCommunicationModule() {
     slug: string;
     displayName: string;
     description?: string;
-    accounts?: Array<{
-      provider: string;
-      externalUserId?: string;
-      username?: string;
-    }>;
   }) {
     return agentContacts.upsertAgentContact(input);
   }
@@ -212,7 +190,7 @@ export function createCommunicationModule() {
 
     const replyToMessageId = input.replyToMessageId?.trim() || undefined;
     const repliedMessage = replyToMessageId
-      ? await messageStore.findMessage(registeredProvider.provider.accountId, replyToMessageId)
+      ? await registeredProvider.provider.findMessage(replyToMessageId)
       : null;
     let target = input.target;
 
@@ -269,22 +247,7 @@ export function createCommunicationModule() {
       content: input.content,
       replyToMessageId,
     });
-    const messageId = sent.messageId || `out:${Date.now()}`;
-
-    await messageStore.saveOutboundMessage({
-      accountId: registeredProvider.provider.accountId,
-      provider: input.provider,
-      messageId,
-      channelId: sent.channelId || target,
-      content: input.content,
-      contactSlug: input.contactSlug,
-      replyToMessageId,
-    });
-
-    return {
-      success: true,
-      messageId,
-    };
+    return { success: true, messageId: sent.messageId || `out:${Date.now()}` };
   }
 
   return {

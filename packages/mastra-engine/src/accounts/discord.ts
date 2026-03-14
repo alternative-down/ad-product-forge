@@ -3,9 +3,9 @@ import { ChannelType, Client, Events, GatewayIntentBits, Message, Partials } fro
 
 import { agentAccounts } from '../agent/communication/agent-accounts';
 import { communicationModule } from '../agent/communication/module';
-import { messageStore } from '../agent/communication/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 import { forgeDebug } from '../debug';
+import { createProviderMessageStore } from './provider-message-store';
 
 export type DiscordAgentClientConfig = {
   agent: Agent;
@@ -42,6 +42,10 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     externalAccountId: discordUserId,
     displayName: client.user.tag,
   });
+  const messages = createProviderMessageStore({
+    agentId,
+    provider: 'discord',
+  });
 
   async function sendDiscordMessage(input: {
     target: string;
@@ -58,6 +62,16 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       const channel = await user.createDM();
       await channel.sendTyping();
       const sent = await channel.send(input.content);
+      await messages.saveOutboundMessage({
+        messageId: sent.id,
+        channelId: sent.channel.id,
+        channelName: 'direct-message',
+        content: input.content,
+        metadata: {
+          contactSlug: input.contactSlug,
+          replyToMessageId: input.replyToMessageId,
+        },
+      });
       return { messageId: sent.id, channelId: sent.channel.id };
     }
 
@@ -71,10 +85,30 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     if (input.replyToMessageId) {
       const replyTarget = await channel.messages.fetch(input.replyToMessageId);
       const sent = await replyTarget.reply(input.content);
+      await messages.saveOutboundMessage({
+        messageId: sent.id,
+        channelId: sent.channelId,
+        channelName: 'name' in channel ? channel.name ?? undefined : undefined,
+        content: input.content,
+        metadata: {
+          contactSlug: input.contactSlug,
+          replyToMessageId: input.replyToMessageId,
+        },
+      });
       return { messageId: sent.id, channelId: sent.channelId };
     }
 
     const sent = await channel.send(input.content);
+    await messages.saveOutboundMessage({
+      messageId: sent.id,
+      channelId: sent.channelId,
+      channelName: 'name' in channel ? channel.name ?? undefined : undefined,
+      content: input.content,
+      metadata: {
+        contactSlug: input.contactSlug,
+        replyToMessageId: input.replyToMessageId,
+      },
+    });
     return { messageId: sent.id, channelId: sent.channelId };
   }
 
@@ -83,21 +117,18 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     wakeQueue: config.wakeQueue,
     provider: {
       id: 'discord',
-      accountId: discordAccountId,
-      listConversations: ({ agentId, contactSlug, unread, limit }) =>
-        messageStore.listMessageConversations({
-          agentId,
-          provider: 'discord',
+      listConversations: ({ contactSlug, unread, limit }) =>
+        messages.listConversations({
           contactSlug,
           unread,
           limit,
         }),
-      getMessages: ({ agentId, conversationId, limit }) =>
-        messageStore.getMessages({
-          agentId,
+      getMessages: ({ conversationId, limit }) =>
+        messages.getMessages({
           conversationId,
           limit,
         }),
+      findMessage: (messageId) => messages.findMessage(messageId),
       sendMessage: sendDiscordMessage,
     },
   });
@@ -152,10 +183,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
         description: attachment.description ?? undefined,
       }));
 
-      await communicationModule.receiveInboundMessage({
-        agentId,
-        provider: 'discord',
-        accountId: discordAccountId,
+      await messages.saveInboundMessage({
         messageId: message.id,
         channelId: message.channelId,
         channelName,
@@ -168,6 +196,13 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
         metadata: {
           serverName: message.guild?.name ?? 'direct-message',
         },
+      });
+      await communicationModule.receiveInboundMessage({
+        agentId,
+        provider: 'discord',
+        authorId: message.author.id,
+        authorName,
+        username: message.author.username,
       });
 
       forgeDebug('discord', 'message registered', {

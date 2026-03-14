@@ -35,33 +35,15 @@ const attachmentSchema = z.object({
   description: z.string().optional(),
 });
 
-const storedMessageSchema = z.object({
-  messageId: z.string(),
-  accountId: z.string(),
-  direction: z.enum(['inbound', 'outbound']),
-  channelId: z.string().optional(),
-  channelName: z.string().optional(),
-  authorId: z.string().optional(),
-  authorName: z.string().optional(),
-  username: z.string().optional(),
-  content: z.string(),
-  attachments: z.array(attachmentSchema).default([]),
-  unread: z.boolean(),
-  createdAt: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
 const stateSchema = z.object({
   accounts: z.array(accountSchema).default([]),
   contacts: z.array(contactSchema).default([]),
-  messages: z.array(storedMessageSchema).default([]),
 });
 
 export type Account = z.infer<typeof accountSchema>;
 export type ContactIdentity = z.infer<typeof contactIdentitySchema>;
 export type Contact = z.infer<typeof contactSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
-export type StoredMessage = z.infer<typeof storedMessageSchema>;
 export type CommunicationState = z.infer<typeof stateSchema>;
 
 export function createCommunicationState() {
