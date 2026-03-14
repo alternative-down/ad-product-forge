@@ -38,35 +38,28 @@ export function createInternalChatRouter() {
         wakeQueue: config.wakeQueue,
       };
 
-      for (const currentAgent of agentsById.values()) {
-        await messageStore.upsertAgentContact({
-          agentId,
-          slug: currentAgent.agentId,
-          displayName: currentAgent.displayName,
-          accounts: [
-            {
-              provider: 'internal-chat',
-              externalUserId: currentAgent.agentId,
-              username: currentAgent.agentId,
-            },
-          ],
-        });
-
-        await messageStore.upsertAgentContact({
-          agentId: currentAgent.agentId,
-          slug: agentId,
-          displayName,
-          accounts: [
-            {
-              provider: 'internal-chat',
-              externalUserId: agentId,
-              username: agentId,
-            },
-          ],
-        });
-      }
-
       agentsById.set(agentId, registeredAgent);
+
+      for (const currentAgent of agentsById.values()) {
+        for (const peerAgent of agentsById.values()) {
+          if (currentAgent.agentId === peerAgent.agentId) {
+            continue;
+          }
+
+          await messageStore.upsertAgentContact({
+            agentId: currentAgent.agentId,
+            slug: peerAgent.agentId,
+            displayName: peerAgent.displayName,
+            accounts: [
+              {
+                provider: 'internal-chat',
+                externalUserId: peerAgent.agentId,
+                username: peerAgent.agentId,
+              },
+            ],
+          });
+        }
+      }
 
       messageRouter.registerSender(accountId, async (input) => {
         const recipient = agentsById.get(input.target);
