@@ -3,8 +3,7 @@ import path from 'node:path';
 
 import { z } from 'zod';
 
-import { agentContacts } from '../agent/communication/agent-contacts';
-import type { Attachment } from '../agent/communication/communication-state';
+import { agentContacts, type Attachment, type ProviderConversationView, type ProviderMessageView } from '@mastra-engine/core';
 
 const attachmentSchema = z.object({
   id: z.string().optional(),
@@ -36,41 +35,7 @@ const stateSchema = z.object({
 
 type StoredMessage = z.infer<typeof storedMessageSchema>;
 
-export type ProviderMessageView = {
-  messageId: string;
-  direction: 'inbound' | 'outbound';
-  provider: string;
-  channelId?: string;
-  channelName?: string;
-  authorId?: string;
-  authorName?: string;
-  username?: string;
-  content: string;
-  attachments: Attachment[];
-  unread: boolean;
-  createdAt: string;
-  metadata?: Record<string, unknown>;
-  contactSlug?: string;
-  contactDisplayName?: string;
-  conversationId: string;
-};
-
-export type ProviderConversationView = {
-  conversationId: string;
-  provider: string;
-  channelId?: string;
-  channelName?: string;
-  contactSlug?: string;
-  contactDisplayName?: string;
-  latestMessageAt: string;
-  unreadCount: number;
-  messages: ProviderMessageView[];
-};
-
-export function createProviderMessageStore(input: {
-  agentId: string;
-  provider: string;
-}) {
+export function createDiscordMessageStore(input: { agentId: string; provider: string }) {
   const statePath = path.resolve('.forge-state', 'providers', input.agentId, `${input.provider}.json`);
   let currentState: z.infer<typeof stateSchema> | null = null;
 
@@ -98,12 +63,8 @@ export function createProviderMessageStore(input: {
     await writeFile(statePath, JSON.stringify(currentState, null, 2), 'utf8');
   }
 
-  async function findMessageContact(authorId?: string, username?: string) {
-    return agentContacts.findContactByIdentity(input.agentId, input.provider, authorId, username);
-  }
-
   async function toMessageView(message: StoredMessage) {
-    const contact = await findMessageContact(message.authorId, message.username);
+    const contact = await agentContacts.findContactByIdentity(input.agentId, input.provider, message.authorId, message.username);
     const conversationId = `${input.provider}:${message.channelId || contact?.slug || message.authorId || message.messageId}`;
 
     return {
@@ -116,7 +77,7 @@ export function createProviderMessageStore(input: {
       authorName: message.authorName,
       username: message.username,
       content: message.content,
-      attachments: message.attachments,
+      attachments: message.attachments as Attachment[],
       unread: message.unread,
       createdAt: message.createdAt,
       metadata: message.metadata,
@@ -127,35 +88,25 @@ export function createProviderMessageStore(input: {
   }
 
   async function saveInboundMessage(rawInput: unknown) {
-    const message = storedMessageSchema
-      .omit({ direction: true, unread: true })
-      .parse(rawInput);
+    const message = storedMessageSchema.omit({ direction: true, unread: true }).parse(rawInput);
     const state = await readState();
-    const alreadyExists = state.messages.some((current) => current.messageId === message.messageId);
 
-    if (alreadyExists) {
+    if (state.messages.some((current) => current.messageId === message.messageId)) {
       return;
     }
 
-    state.messages.push({
-      ...message,
-      direction: 'inbound',
-      unread: true,
-    });
-
+    state.messages.push({ ...message, direction: 'inbound', unread: true });
     await saveState();
   }
 
   async function saveOutboundMessage(rawInput: unknown) {
-    const message = z
-      .object({
-        messageId: z.string(),
-        channelId: z.string().optional(),
-        channelName: z.string().optional(),
-        content: z.string(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      })
-      .parse(rawInput);
+    const message = z.object({
+      messageId: z.string(),
+      channelId: z.string().optional(),
+      channelName: z.string().optional(),
+      content: z.string(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+    }).parse(rawInput);
     const state = await readState();
 
     state.messages.push({
@@ -178,11 +129,7 @@ export function createProviderMessageStore(input: {
     return state.messages.find((message) => message.messageId === messageId) ?? null;
   }
 
-  async function listConversations(options: {
-    contactSlug?: string;
-    unread?: boolean;
-    limit: number;
-  }) {
+  async function listConversations(options: { contactSlug?: string; unread?: boolean; limit: number }) {
     const state = await readState();
     const conversations = new Map<string, ProviderConversationView>();
 
@@ -197,29 +144,26 @@ export function createProviderMessageStore(input: {
         continue;
       }
 
-      let conversation = conversations.get(view.conversationId);
+      const current = conversations.get(view.conversationId) ?? {
+        conversationId: view.conversationId,
+        provider: input.provider,
+        channelId: view.channelId,
+        channelName: view.channelName,
+        contactSlug: view.contactSlug,
+        contactDisplayName: view.contactDisplayName,
+        latestMessageAt: view.createdAt,
+        unreadCount: 0,
+        messages: [],
+      };
 
-      if (!conversation) {
-        conversation = {
-          conversationId: view.conversationId,
-          provider: input.provider,
-          channelId: view.channelId,
-          channelName: view.channelName,
-          contactSlug: view.contactSlug,
-          contactDisplayName: view.contactDisplayName,
-          latestMessageAt: view.createdAt,
-          unreadCount: 0,
-          messages: [],
-        };
-        conversations.set(view.conversationId, conversation);
-      }
-
-      conversation.messages.push(view);
-      conversation.latestMessageAt = view.createdAt;
+      current.messages.push(view);
+      current.latestMessageAt = view.createdAt;
 
       if (view.unread) {
-        conversation.unreadCount += 1;
+        current.unreadCount += 1;
       }
+
+      conversations.set(view.conversationId, current);
     }
 
     const result = Array.from(conversations.values())
@@ -231,24 +175,13 @@ export function createProviderMessageStore(input: {
           .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
           .slice(-5),
       }));
-    const unreadMessageIds = new Set(
-      result
-        .flatMap((conversation) => conversation.messages)
-        .filter((message) => message.unread)
-        .map((message) => message.messageId),
-    );
+    const unreadMessageIds = new Set(result.flatMap((conversation) => conversation.messages).filter((message) => message.unread).map((message) => message.messageId));
 
     if (unreadMessageIds.size > 0) {
       for (const message of state.messages) {
-        if (!unreadMessageIds.has(message.messageId)) {
-          continue;
+        if (unreadMessageIds.has(message.messageId) && message.unread) {
+          message.unread = false;
         }
-
-        if (!message.unread) {
-          continue;
-        }
-
-        message.unread = false;
       }
 
       await saveState();
@@ -257,40 +190,27 @@ export function createProviderMessageStore(input: {
     return result;
   }
 
-  async function getMessages(options: {
-    conversationId: string;
-    limit: number;
-  }) {
+  async function getMessages(options: { conversationId: string; limit: number }) {
     const state = await readState();
     const result: ProviderMessageView[] = [];
 
     for (const message of state.messages) {
       const view = await toMessageView(message);
 
-      if (view.conversationId !== options.conversationId) {
-        continue;
+      if (view.conversationId === options.conversationId) {
+        result.push(view);
       }
-
-      result.push(view);
     }
 
     result.sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
     const messages = result.slice(-options.limit);
-    const unreadMessageIds = new Set(
-      messages.filter((message) => message.unread).map((message) => message.messageId),
-    );
+    const unreadMessageIds = new Set(messages.filter((message) => message.unread).map((message) => message.messageId));
 
     if (unreadMessageIds.size > 0) {
       for (const message of state.messages) {
-        if (!unreadMessageIds.has(message.messageId)) {
-          continue;
+        if (unreadMessageIds.has(message.messageId) && message.unread) {
+          message.unread = false;
         }
-
-        if (!message.unread) {
-          continue;
-        }
-
-        message.unread = false;
       }
 
       await saveState();
@@ -299,11 +219,5 @@ export function createProviderMessageStore(input: {
     return messages;
   }
 
-  return {
-    saveInboundMessage,
-    saveOutboundMessage,
-    findMessage,
-    listConversations,
-    getMessages,
-  };
+  return { saveInboundMessage, saveOutboundMessage, findMessage, listConversations, getMessages };
 }

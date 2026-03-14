@@ -12,6 +12,7 @@
   "dependencies": {
     "@mastra-engine/core": "0.1.0",
     "@mastra/core": "^1.11.0",
+    "discord.js": "^14.24.2",
     "dotenv": "^17.2.3"
   },
   "devDependencies": {

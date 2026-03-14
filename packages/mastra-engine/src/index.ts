@@ -1,7 +1,6 @@
 export * from './create-forge-agent';
 export * from './create-simple-agent';
-export * from './accounts/discord';
-export * from './accounts/internal-chat';
+export * from './presets/internal-chat';
 export * from './llm/model-ids';
 export * from './llm/oauth-gateway';
 export * from './llm/openai-codex';
@@ -10,3 +9,6 @@ export * from './agent/communication/module';
 export * from './agent/communication/tools';
 export * from './agent/wake-queue';
 export * from './agent/tools/market-research';
+export * from './agent/communication/provider-types';
+export * from './agent/communication/agent-contacts';
+export type { Attachment } from './agent/communication/communication-state';

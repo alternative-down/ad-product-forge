@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-import type {
-  ProviderConversationView,
-  ProviderMessageView,
-} from '../../accounts/provider-message-store';
+import type { ProviderConversationView, ProviderMessageView } from './provider-types';
 import { agentAccounts } from './agent-accounts';
 import { agentContacts } from './agent-contacts';
 import type { AgentWakeQueue } from '../wake-queue';

@@ -5,13 +5,13 @@ import type { Agent } from '@mastra/core/agent';
 import { agentContacts } from '../agent/communication/agent-contacts';
 import { communicationModule } from '../agent/communication/module';
 import type { AgentWakeQueue } from '../agent/wake-queue';
-import { createProviderMessageStore } from './provider-message-store';
+import { createInternalChatMessageStore } from './internal-chat-message-store';
 
 type RegisteredAgent = {
   agentId: string;
   displayName: string;
   wakeQueue: AgentWakeQueue;
-  messages: ReturnType<typeof createProviderMessageStore>;
+  messages: ReturnType<typeof createInternalChatMessageStore>;
 };
 
 export function createInternalChatRouter() {
@@ -50,10 +50,7 @@ export function createInternalChatRouter() {
       agentId,
       displayName,
       wakeQueue: config.wakeQueue,
-      messages: createProviderMessageStore({
-        agentId,
-        provider: 'internal-chat',
-      }),
+      messages: createInternalChatMessageStore({ agentId }),
     };
 
     agents.set(agentId, registeredAgent);

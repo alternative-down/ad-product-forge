@@ -10,7 +10,6 @@ import {
   CLAUDE_MAX_MODELS,
   OPENAI_CODEX_MODELS,
   claudeMaxProvider,
-  createDiscordAgentClient,
   createExternalAccountTools,
   createForgeAgent,
   createInternalChatRouter,
@@ -19,6 +18,8 @@ import {
   createWakeQueueRegistry,
   openaiCodexProvider,
 } from '@mastra-engine/core';
+
+import { createDiscordAgentClient } from './discord-account.js';
 import { z } from 'zod';
 
 const envSchema = z.object({

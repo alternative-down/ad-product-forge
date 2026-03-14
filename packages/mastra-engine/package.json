@@ -21,7 +21,6 @@
     "@mastra/libsql": "^1.7.0",
     "@mastra/memory": "^1.6.2",
     "@mendable/firecrawl-js": "^4.15.4",
-    "discord.js": "^14.24.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {
