@@ -337,14 +337,20 @@ function markMessagesAsRead(state: State, accountIds: Set<string>, messages: Arr
   );
 
   if (unreadKeys.size === 0) {
-    return;
+    return false;
   }
+
+  let changed = false;
 
   for (const message of state.messages) {
     if (!accountIds.has(message.accountId)) continue;
     if (!unreadKeys.has(`${message.accountId}:${message.messageId}`)) continue;
+    if (!message.unread) continue;
     message.unread = false;
+    changed = true;
   }
+
+  return changed;
 }
 
 async function ensureAccount(input: {
@@ -368,8 +374,13 @@ async function ensureAccount(input: {
       state.accounts.push(account);
     }
 
-    account.displayName = input.displayName;
-    account.metadata = input.metadata;
+    if (input.displayName !== undefined) {
+      account.displayName = input.displayName;
+    }
+
+    if (input.metadata !== undefined) {
+      account.metadata = input.metadata;
+    }
 
     return accountId;
   });
@@ -530,9 +541,13 @@ async function listMessageConversations(input: z.input<typeof listConversationsI
       messages: conversation.messages.slice(-5),
     }));
 
-  await updateState((latestState) => {
-    markMessagesAsRead(latestState, accountIds, result.flatMap((conversation) => conversation.messages));
-  });
+  const messagesToMarkAsRead = result.flatMap((conversation) => conversation.messages).filter((message) => message.unread);
+
+  if (messagesToMarkAsRead.length > 0) {
+    await updateState((latestState) => {
+      markMessagesAsRead(latestState, accountIds, messagesToMarkAsRead);
+    });
+  }
 
   return result;
 }
@@ -549,9 +564,13 @@ async function getMessages(input: z.input<typeof getMessagesInputSchema>) {
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     .slice(-parsed.limit);
 
-  await updateState((latestState) => {
-    markMessagesAsRead(latestState, accountIds, messages);
-  });
+  const messagesToMarkAsRead = messages.filter((message) => message.unread);
+
+  if (messagesToMarkAsRead.length > 0) {
+    await updateState((latestState) => {
+      markMessagesAsRead(latestState, accountIds, messagesToMarkAsRead);
+    });
+  }
 
   return messages;
 }

@@ -23,6 +23,18 @@ const FirecrawlAgentResponseSchema = z.object({
   creditsUsed: z.number().optional(),
 });
 
+const firecrawlSignalsSchema = z.object({
+  signals: z.array(
+    z.object({
+      title: z.string(),
+      description: z.string(),
+      source: z.string(),
+      type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']),
+      severity: z.enum(['low', 'medium', 'high']),
+    }),
+  ),
+});
+
 export const marketResearchTool = tool({
   id: 'market_research',
   description: 'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
@@ -75,17 +87,7 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
     try {
       const rawResponse = await firecrawl.agent({
         prompt,
-        schema: z.object({
-          signals: z.array(
-            z.object({
-              title: z.string(),
-              description: z.string(),
-              source: z.string(),
-              type: z.enum(['pain_point', 'feature_request', 'trend', 'opportunity']),
-              severity: z.enum(['low', 'medium', 'high']),
-            })
-          ),
-        }) as any,
+        schema: firecrawlSignalsSchema as any,
       });
 
       const result = FirecrawlAgentResponseSchema.safeParse(rawResponse);

@@ -18,24 +18,17 @@ import {
   type OpenAICodexModelId,
 } from '@mastra-engine/core';
 
-function getRequiredEnv(name: string) {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`Missing required env var: ${name}`);
-  }
-  return value;
-}
-
-function parseAllowedChannelIds(value: string | undefined) {
-  return (value ?? '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function resolveModel() {
-  const provider = getRequiredEnv('FORGE_MODEL_PROVIDER');
-  const modelId = getRequiredEnv('FORGE_MODEL_ID');
+  const provider = process.env.FORGE_MODEL_PROVIDER?.trim();
+  const modelId = process.env.FORGE_MODEL_ID?.trim();
+
+  if (!provider) {
+    throw new Error('Missing required env var: FORGE_MODEL_PROVIDER');
+  }
+
+  if (!modelId) {
+    throw new Error('Missing required env var: FORGE_MODEL_ID');
+  }
 
   if (provider === 'openai-codex') {
     return openaiCodexProvider(modelId as OpenAICodexModelId);
@@ -52,8 +45,22 @@ async function main() {
   const systemPromptPath = path.resolve(import.meta.dirname, './forge-system.md');
   const systemPrompt = await readFile(systemPromptPath, 'utf8');
   const model = resolveModel();
-  const agentId = getRequiredEnv('FORGE_AGENT_ID');
-  const agentName = getRequiredEnv('FORGE_AGENT_NAME');
+  const agentId = process.env.FORGE_AGENT_ID?.trim();
+  const agentName = process.env.FORGE_AGENT_NAME?.trim();
+  const discordBotToken = process.env.DISCORD_BOT_TOKEN?.trim();
+
+  if (!agentId) {
+    throw new Error('Missing required env var: FORGE_AGENT_ID');
+  }
+
+  if (!agentName) {
+    throw new Error('Missing required env var: FORGE_AGENT_NAME');
+  }
+
+  if (!discordBotToken) {
+    throw new Error('Missing required env var: DISCORD_BOT_TOKEN');
+  }
+
   const helperAgentId = process.env.FORGE_HELPER_AGENT_ID?.trim() || 'forge-helper';
   const helperAgentName = process.env.FORGE_HELPER_AGENT_NAME?.trim() || 'Forge Helper';
   const helperInstructions = [
@@ -106,8 +113,11 @@ async function main() {
 
   await createDiscordAgentClient({
     agent,
-    token: getRequiredEnv('DISCORD_BOT_TOKEN'),
-    allowedChannelIds: parseAllowedChannelIds(process.env.DISCORD_ALLOWED_CHANNEL_IDS),
+    token: discordBotToken,
+    allowedChannelIds: (process.env.DISCORD_ALLOWED_CHANNEL_IDS ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
     respondToMentionsOnly: process.env.DISCORD_RESPOND_TO_MENTIONS_ONLY !== 'false',
   });
 }

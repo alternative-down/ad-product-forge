@@ -3,9 +3,56 @@ import { z } from 'zod';
 
 import { messageStore } from './message-store';
 
+const upsertContactInputSchema = z.object({
+  slug: z.string(),
+  displayName: z.string(),
+  description: z.string().optional(),
+  accounts: z
+    .array(
+      z.object({
+        provider: z.string(),
+        externalUserId: z.string().optional(),
+        username: z.string().optional(),
+      }),
+    )
+    .default([]),
+});
+
+const listConversationsInputSchema = z.object({
+  provider: z.string().optional(),
+  contactSlug: z.string().optional(),
+  unread: z.boolean().optional(),
+  limit: z.number().int().positive().max(100).default(20),
+});
+
+const getMessagesInputSchema = z.object({
+  conversationId: z.string(),
+  limit: z.number().int().positive().max(200).default(100),
+});
+
+const sendMessageInputSchema = z
+  .object({
+    provider: z.string(),
+    target: z.string().optional().describe('Send to a channel, thread, or conversation directly.'),
+    contactSlug: z
+      .string()
+      .optional()
+      .describe('Send to a known contact. Without replyToMessageId, the provider will use direct messaging when supported.'),
+    content: z.string().min(1),
+    replyToMessageId: z
+      .string()
+      .optional()
+      .describe(
+        'Optional message id to reply to. Use only a recent messageId from the same conversation. If unsure, omit it and send without reply.',
+      ),
+  })
+  .refine((input) => Number(Boolean(input.target)) + Number(Boolean(input.contactSlug)) === 1, {
+    message: 'Provide exactly one of target or contactSlug.',
+  });
+
 const tool = createTool as any;
 
-export function createExternalAccountTools(agentId: string): Record<string, any> {
+export function createExternalAccountTools(agentId: string) {
   const listContacts = tool({
     id: 'list_contacts',
     description: 'List the known contacts registered by this agent.',
@@ -36,20 +83,7 @@ export function createExternalAccountTools(agentId: string): Record<string, any>
   const upsertContact = tool({
     id: 'upsert_contact',
     description: 'Create or update a contact with a stable slug, free-form description, and known accounts.',
-    inputSchema: z.object({
-      slug: z.string(),
-      displayName: z.string(),
-      description: z.string().optional(),
-      accounts: z
-        .array(
-          z.object({
-            provider: z.string(),
-            externalUserId: z.string().optional(),
-            username: z.string().optional(),
-          }),
-        )
-        .default([]),
-    }),
+    inputSchema: upsertContactInputSchema,
     execute: async (input: any) => {
       const contact = await messageStore.upsertAgentContact({
         agentId,
@@ -71,12 +105,7 @@ export function createExternalAccountTools(agentId: string): Record<string, any>
     id: 'list_conversations',
     description:
       'List message conversations from the agent inbox. If unread preview messages are returned, they are automatically marked as read.',
-    inputSchema: z.object({
-      provider: z.string().optional(),
-      contactSlug: z.string().optional(),
-      unread: z.boolean().optional(),
-      limit: z.number().int().positive().max(100).default(20),
-    }),
+    inputSchema: listConversationsInputSchema,
     execute: async (input: any) => {
       const conversations = await messageStore.listMessageConversations({
         agentId,
@@ -116,10 +145,7 @@ export function createExternalAccountTools(agentId: string): Record<string, any>
     description: 'Read the messages from a single conversation. Returned unread messages are automatically marked as read.',
     // TODO: consider also returning a formatted text view for conversation reads, e.g.:
     // [${createdAt}][${provider}] ${contactDisplayName} (${contactSlug}): ${content}
-    inputSchema: z.object({
-      conversationId: z.string(),
-      limit: z.number().int().positive().max(200).default(100),
-    }),
+    inputSchema: getMessagesInputSchema,
     execute: async (input: any) => {
       const messages = await messageStore.getMessages({
         agentId,
@@ -145,22 +171,7 @@ export function createExternalAccountTools(agentId: string): Record<string, any>
   const sendMessage = tool({
     id: 'send_message',
     description: 'Send a message through one of the external providers owned by this agent.',
-    inputSchema: z
-      .object({
-        provider: z.string(),
-        target: z.string().optional().describe('Use this to send a message to a channel, thread, or conversation directly.'),
-        contactSlug: z.string().optional().describe('Use this to send a message to a known contact. Without replyToMessageId, the provider will use direct messaging when supported.'),
-        content: z.string().min(1),
-        replyToMessageId: z
-          .string()
-          .optional()
-          .describe(
-            'Optional message id to reply to. Use only a messageId returned by recent message tools for the same conversation. Prefer the most recent relevant message. If you are not sure, omit this field and send without reply.',
-          ),
-      })
-      .refine((input) => Number(Boolean(input.target)) + Number(Boolean(input.contactSlug)) === 1, {
-        message: 'Provide exactly one of target or contactSlug.',
-      }),
+    inputSchema: sendMessageInputSchema,
     execute: async (input: any) =>
       messageStore.sendAccountMessage({
         agentId,
