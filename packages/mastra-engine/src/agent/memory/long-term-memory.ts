@@ -24,7 +24,7 @@ export type LongTermMemoryConfig = {
   om: ObservationalMemory;
   workspace: Workspace;
   vectorStore: LibSQLVector;
-  graphIndexName: string;
+  searchIndexName: string;
 };
 
 export class LongTermMemory implements Processor<'long-term-memory'> {
@@ -35,7 +35,17 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
   private readonly incrementalHistoryLimit = 12;
 
-  constructor(private readonly config: LongTermMemoryConfig) {}
+  private readonly om: ObservationalMemory;
+  private readonly workspace: Workspace;
+  private readonly vectorStore: LibSQLVector;
+  private readonly searchIndexName: string;
+
+  constructor(config: LongTermMemoryConfig) {
+    this.om = config.om;
+    this.workspace = config.workspace;
+    this.vectorStore = config.vectorStore;
+    this.searchIndexName = config.searchIndexName;
+  }
 
   static async create(config: { agentId: string; om: ObservationalMemory }) {
     const indexName = `${config.agentId}_memory_search`.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -65,7 +75,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       om: config.om,
       workspace,
       vectorStore,
-      graphIndexName: indexName,
+      searchIndexName: indexName,
     });
   }
 
@@ -134,17 +144,17 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       return args.messageList;
     }
 
-    const currentRecord = await this.config.om.getRecord(context.threadId, context.resourceId);
+    const currentRecord = await this.om.getRecord(context.threadId, context.resourceId);
     if (!currentRecord) {
       return args.messageList;
     }
 
     const hasObservationsDir =
-      (await this.config.workspace.filesystem?.exists(this.observationsDir)) ?? false;
+      (await this.workspace.filesystem?.exists(this.observationsDir)) ?? false;
     const historyLimit = hasObservationsDir
       ? this.incrementalHistoryLimit
       : this.bootstrapHistoryLimit;
-    const observations = await this.config.om.getHistory(
+    const observations = await this.om.getHistory(
       context.threadId,
       context.resourceId,
       historyLimit,
@@ -188,14 +198,14 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       }
 
       const nextContent = [header, ...additions].filter(Boolean).join('\n\n').trim();
-      await this.config.workspace.filesystem?.writeFile(filePath, nextContent, {
+      await this.workspace.filesystem?.writeFile(filePath, nextContent, {
         recursive: true,
         overwrite: true,
       });
-      await this.config.workspace.index(filePath, nextContent, {
+      await this.workspace.index(filePath, nextContent, {
         metadata: {
           day,
-          indexName: this.config.graphIndexName,
+          indexName: this.searchIndexName,
           observationCount: dayObservations.length,
         },
       });
@@ -205,13 +215,13 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   }
 
   private async readFile(filePath: string) {
-    const exists = (await this.config.workspace.filesystem?.exists(filePath)) ?? false;
+    const exists = (await this.workspace.filesystem?.exists(filePath)) ?? false;
 
     if (!exists) {
       return '';
     }
 
-    const content = await this.config.workspace.filesystem?.readFile(filePath);
+    const content = await this.workspace.filesystem?.readFile(filePath);
     if (typeof content === 'string') {
       return content;
     }
@@ -221,7 +231,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
   private async searchWorkspace(queryText: string) {
     try {
-      const results = await this.config.workspace.search(queryText, {
+      const results = await this.workspace.search(queryText, {
         topK: 3,
         mode: 'hybrid',
       });
@@ -254,8 +264,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private async searchGraph(queryText: string) {
     try {
       const graphTool = createGraphRAGTool({
-        vectorStore: this.config.vectorStore,
-        indexName: this.config.graphIndexName,
+        vectorStore: this.vectorStore,
+        indexName: this.searchIndexName,
         model: fastembed,
         graphOptions: {
           threshold: 0.7,
