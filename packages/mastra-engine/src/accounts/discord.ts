@@ -1,10 +1,10 @@
 import type { Agent } from '@mastra/core/agent';
 import { ChannelType, Client, Events, GatewayIntentBits, Partials } from 'discord.js';
 
-import { agentAccounts } from '../agent/agent-accounts';
-import { agentContacts } from '../agent/agent-contacts';
-import { accountDeliveries } from '../agent/account-deliveries';
-import { messageStore } from '../agent/message-store';
+import { accountDeliveries } from '../agent/communication/account-deliveries';
+import { agentAccounts } from '../agent/communication/agent-accounts';
+import { agentContacts } from '../agent/communication/agent-contacts';
+import { messageStore } from '../agent/communication/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 import { forgeDebug } from '../debug';
 
@@ -26,7 +26,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
     ],
     partials: [Partials.Channel],
   });
-  const internalAgentId = config.agent.id;
+  const agentId = config.agent.id;
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
 
@@ -38,7 +38,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
 
   const discordUserId = client.user.id;
   const discordAccountId = await agentAccounts.ensureAccount({
-    agentId: internalAgentId,
+    agentId,
     provider: 'discord',
     externalAccountId: discordUserId,
     displayName: client.user.tag,
@@ -112,7 +112,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
         .replaceAll(`<@!${discordUserId}>`, '')
         .trim();
       await agentContacts.syncInboundContact({
-        agentId: internalAgentId,
+        agentId,
         provider: 'discord',
         authorId: message.author.id,
         authorName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
@@ -120,7 +120,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       });
 
       await messageStore.saveInboundMessage({
-        agentId: internalAgentId,
+        agentId,
         accountId: discordAccountId,
         messageId: message.id,
         channelId: message.channelId,
@@ -146,7 +146,7 @@ export async function createDiscordAgentClient(config: DiscordAgentClientConfig)
       });
 
       forgeDebug('discord', 'message registered', {
-        agentId: internalAgentId,
+        agentId,
         channelId: message.channelId,
         messageId: message.id,
       });

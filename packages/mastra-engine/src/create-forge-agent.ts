@@ -1,10 +1,10 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 
-import { createAgentMemory } from './agent/memory';
-import { LongTermMemory } from './agent/long-term-memory';
-import { createObservationalMemory } from './agent/observational-memory';
-import { createAgentStorage } from './agent/storage';
-import { appendWorkingMemoryInstructions } from './agent/working-memory';
+import { LongTermMemory } from './agent/memory/long-term-memory';
+import { createAgentMemory } from './agent/memory/memory';
+import { createObservationalMemory } from './agent/memory/observational-memory';
+import { createAgentStorage } from './agent/memory/storage';
+import { appendWorkingMemoryInstructions } from './agent/memory/working-memory';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,

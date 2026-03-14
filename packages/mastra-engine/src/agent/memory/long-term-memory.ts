@@ -14,7 +14,7 @@ import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
 import { ObservationalMemory } from '@mastra/memory/processors';
 
-import { forgeDebug } from '../debug';
+import { forgeDebug } from '../../debug';
 import { embedTextWithFastembed } from './embedder';
 
 type ObservationRecord = Awaited<ReturnType<ObservationalMemory['getHistory']>>[number];

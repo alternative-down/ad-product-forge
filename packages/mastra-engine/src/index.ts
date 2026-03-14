@@ -6,6 +6,6 @@ export * from './llm/model-ids';
 export * from './llm/oauth-gateway';
 export * from './llm/openai-codex';
 export * from './llm/claude-max';
-export * from './agent/message-tools';
+export * from './agent/communication/tools';
 export * from './agent/wake-queue';
 export * from './agent/tools/market-research';

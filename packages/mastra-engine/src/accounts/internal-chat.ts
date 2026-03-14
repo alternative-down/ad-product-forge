@@ -2,13 +2,13 @@ import crypto from 'node:crypto';
 
 import type { Agent } from '@mastra/core/agent';
 
-import { agentAccounts } from '../agent/agent-accounts';
-import { agentContacts } from '../agent/agent-contacts';
-import { accountDeliveries } from '../agent/account-deliveries';
-import { messageStore } from '../agent/message-store';
+import { accountDeliveries } from '../agent/communication/account-deliveries';
+import { agentAccounts } from '../agent/communication/agent-accounts';
+import { agentContacts } from '../agent/communication/agent-contacts';
+import { messageStore } from '../agent/communication/message-store';
 import type { AgentWakeQueue } from '../agent/wake-queue';
 
-type RegisteredAgent = {
+type InternalChatParticipant = {
   agentId: string;
   accountId: string;
   displayName: string;
@@ -16,11 +16,11 @@ type RegisteredAgent = {
 };
 
 export function createInternalChatRouter() {
-  const agentsById = new Map<string, RegisteredAgent>();
+  const participants = new Map<string, InternalChatParticipant>();
 
   async function syncContacts() {
-    for (const sourceAgent of agentsById.values()) {
-      for (const targetAgent of agentsById.values()) {
+    for (const sourceAgent of participants.values()) {
+      for (const targetAgent of participants.values()) {
         if (sourceAgent.agentId === targetAgent.agentId) {
           continue;
         }
@@ -44,29 +44,27 @@ export function createInternalChatRouter() {
   async function registerAgent(config: {
     agent: Agent;
     wakeQueue: AgentWakeQueue;
-    agentId?: string;
-    displayName?: string;
   }) {
-    const agentId = config.agentId ?? config.agent.id;
-    const displayName = config.displayName ?? config.agent.name;
+    const agentId = config.agent.id;
+    const displayName = config.agent.name;
     const accountId = await agentAccounts.ensureAccount({
       agentId,
       provider: 'internal-chat',
       externalAccountId: agentId,
       displayName,
     });
-    const registeredAgent = {
+    const participant = {
       agentId,
       accountId,
       displayName,
       wakeQueue: config.wakeQueue,
     };
 
-    agentsById.set(agentId, registeredAgent);
+    participants.set(agentId, participant);
     await syncContacts();
 
     accountDeliveries.register(accountId, async (input) => {
-      const recipient = agentsById.get(input.target);
+      const recipient = participants.get(input.target);
 
       if (!recipient) {
         throw new Error(`Internal chat target not found: ${input.target}`);
@@ -76,19 +74,19 @@ export function createInternalChatRouter() {
       await agentContacts.syncInboundContact({
         agentId: recipient.agentId,
         provider: 'internal-chat',
-        authorId: registeredAgent.agentId,
-        authorName: registeredAgent.displayName,
-        username: registeredAgent.agentId,
+        authorId: participant.agentId,
+        authorName: participant.displayName,
+        username: participant.agentId,
       });
       await messageStore.saveInboundMessage({
         agentId: recipient.agentId,
         accountId: recipient.accountId,
         messageId,
-        channelId: registeredAgent.agentId,
-        channelName: registeredAgent.displayName,
-        authorId: registeredAgent.agentId,
-        authorName: registeredAgent.displayName,
-        username: registeredAgent.agentId,
+        channelId: participant.agentId,
+        channelName: participant.displayName,
+        authorId: participant.agentId,
+        authorName: participant.displayName,
+        username: participant.agentId,
         content: input.content,
         attachments: [],
         createdAt: new Date().toISOString(),
@@ -99,19 +97,19 @@ export function createInternalChatRouter() {
       });
 
       recipient.wakeQueue.notifyExternalEvent();
-      return { messageId, channelId: registeredAgent.agentId };
+      return { messageId, channelId: participant.agentId };
     });
   }
 
   function unregisterAgent(agentId: string) {
-    const registeredAgent = agentsById.get(agentId);
+    const participant = participants.get(agentId);
 
-    if (!registeredAgent) {
+    if (!participant) {
       return;
     }
 
-    accountDeliveries.unregister(registeredAgent.accountId);
-    agentsById.delete(agentId);
+    accountDeliveries.unregister(participant.accountId);
+    participants.delete(agentId);
   }
 
   return {
