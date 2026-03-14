@@ -7,7 +7,11 @@ import type {
   CommunicationProvider,
 } from './provider-types';
 
-export async function createCommunicationModule(config: { client: Client }) {
+export async function createCommunicationModule(config: {
+  client: Client;
+  providers: CommunicationProvider[];
+  wakeUp(): void;
+}) {
   const store = await createCommunicationStore(config.client);
   const providers = new Map<string, CommunicationProvider>();
 
@@ -60,8 +64,7 @@ export async function createCommunicationModule(config: { client: Client }) {
     });
   }
 
-  async function start(config: { providers: CommunicationProvider[]; wakeUp(): void }) {
-    for (const provider of config.providers) {
+  for (const provider of config.providers) {
       const account = await provider.getAccount();
 
       await store.ensureAccount({
@@ -78,7 +81,7 @@ export async function createCommunicationModule(config: { client: Client }) {
         continue;
       }
 
-      await provider.onMessage(async (message) => {
+    await provider.onMessage(async (message) => {
         const contact = await syncInboundContact({
           provider: provider.id,
           authorExternalId: message.authorExternalId,
@@ -101,9 +104,8 @@ export async function createCommunicationModule(config: { client: Client }) {
           metadata: message.metadata,
         });
 
-        config.wakeUp();
-      });
-    }
+      config.wakeUp();
+    });
   }
 
   async function saveSentMessage(input: {
@@ -308,7 +310,6 @@ export async function createCommunicationModule(config: { client: Client }) {
   }
 
   return {
-    start,
     listContacts,
     getContact,
     upsertContact,
