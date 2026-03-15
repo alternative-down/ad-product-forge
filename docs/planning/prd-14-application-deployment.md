@@ -35,15 +35,10 @@ Agent checks deployment status, logs, health checks via tools
 
 **Deployment:**
 - `deployApplication(config)` — Deploy app to Coolify
-  - Input: app name, git repo, dockerfile/compose file
+  - Input: app name, git repo, dockerfile
   - Output: deployment ID, URL, status
 - `getDeploymentStatus(deploymentId)` — Check deployment progress
-- `getApplicationLogs(deploymentId)` — Retrieve application logs
 - `deleteApplication(deploymentId)` — Stop and remove app
-
-**Database:**
-- `provisionDatabase(type, name)` — Create PostgreSQL/MySQL database
-- `getDatabaseConfig(databaseId)` — Get connection string
 
 ---
 
@@ -60,36 +55,26 @@ When application deploys:
 ## 5. Storage
 
 - `deployments` — deployment_id, agent_id, app_name, repo_url, status, subdomain, coolify_app_id, deployed_at
-- `databases` — database_id, agent_id, type, name, connection_string (encrypted), created_at
 
 ---
 
 ## 6. Deployment States
 
-- `queued` — Waiting to build
 - `building` — Docker image building
 - `deploying` — Pushing to Coolify
 - `running` — Application started
 - `failed` — Deployment failed
-- `stopped` — Application stopped
 
 ---
 
 ## 7. Error Handling
 
 **Build Failures:**
-- Retrieve build logs
 - Return error to agent
 - Agent can fix code and redeploy
 
-**Health Check Failures:**
-- App started but not responding
-- Log error, mark as degraded
-- Agent can check logs and redeploy
-
 **Persistent Failures:**
-- After 3 retries, mark as failed
-- Don't auto-restart
+- Mark as failed
 - Agent takes manual action
 
 ---
@@ -97,8 +82,8 @@ When application deploys:
 ## 8. Implementation
 
 - **Week 1:** Coolify API client + deployment operations
-- **Week 2:** Database provisioning + integration with domain management
-- **Week 3:** Status monitoring, logs, error handling, tests
+- **Week 2:** Integration with domain management + status monitoring
+- **Week 3:** Error handling + tests
 
 ---
 
@@ -107,13 +92,15 @@ When application deploys:
 - Multiple deployment targets (only Coolify)
 - Load balancing / auto-scaling
 - Advanced CI/CD pipelines
-- Environment management beyond dev/prod
-- Secrets management UI
+- Environment variables management UI
 - Analytics/monitoring dashboard
 - Backup/restore automation
 - Service mesh / advanced networking
-- GPU support
-- Cost estimation
+- Multi-region deployments
+- Cost tracking
+- Database provisioning
+- Health check automation
+- Auto-restart on failure
 
 ---
 

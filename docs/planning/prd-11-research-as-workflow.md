@@ -55,12 +55,9 @@ Need to support research scenarios like:
 ### 2.3 Why Workflows?
 
 Workflows provide:
-- **Explicit state management** — Track what's completed, in-progress, failed
-- **Deterministic execution** — Reproducible, auditable research paths
-- **Error recovery** — Retry failed steps, skip expensive operations
-- **Composition** — Reuse workflows as building blocks
-- **Visibility** — Clear logs of every step, decision, and result
-- **Optimization** — Share research results across parallel paths
+- **Chainable research** — Execute multiple queries in sequence
+- **Conditional branching** — Skip steps based on results
+- **Simple composition** — Reuse workflows in agent prompts
 
 ---
 
@@ -112,6 +109,9 @@ Workflows provide:
 - Advanced ranking algorithms
 - Real-time streaming
 - Versioning and rollback
+- Persistent workflow storage
+- Audit logging
+- Cost tracking
 
 ### 4.3 Key Definitions
 
@@ -243,36 +243,27 @@ type StepResult = {
 // Workflow execution result
 type WorkflowResult = {
   workflowId: string;
-  status: 'completed' | 'partial' | 'failed';
+  status: 'completed' | 'failed';
   steps: Map<string, StepResult>;      // All step results
   finalResult: any;                    // Output of last step
   duration: number;                    // Total execution time
-  cache: {
-    hits: number;                      // Dedup cache hits
-    dedupKeysUsed: Set<string>;        // Which queries were deduplicated
-  };
 };
 
 // Runtime configuration
 type WorkflowConfig = {
   timeout?: number;                    // Total workflow time budget (ms)
   maxRetries?: number;                 // Default retries per step
-  cache?: boolean;                     // Enable result deduplication
-  parallel?: boolean;                  // [Phase 2] Parallel step execution
-  costBudget?: number;                 // [Phase 2] Max token spend
 };
 ```
 
 ### 6.3 Core Features
 
 1. **Workflow Definition** — Define workflows in TypeScript with typed steps
-2. **Sequential Execution** — Steps execute in order, respecting dependencies
+2. **Sequential Execution** — Steps execute in order
 3. **Conditional Branching** — Skip steps based on previous results
-4. **Result Aggregation** — Combine results from multiple steps into summary
-5. **Basic Caching** — Avoid duplicate queries within same workflow
-6. **Error Handling** — Retry failed steps with exponential backoff
-7. **Variable Substitution** — Parameterize workflows with `{variableName}` syntax
-8. **Timeouts** — Prevent runaway workflows with configurable timeouts
+4. **Result Aggregation** — Combine results into final output
+5. **Error Handling** — Retry failed steps
+6. **Timeouts** — Prevent runaway workflows
 
 ---
 
@@ -304,7 +295,6 @@ Simple sequential execution:
    - Check if conditions pass
    - Skip if condition fails
    - Execute step (query research, filter, or aggregate)
-   - Store result in cache (avoid duplicates)
    - Handle errors with retries
 3. Return final aggregated result
 

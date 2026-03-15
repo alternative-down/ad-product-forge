@@ -44,15 +44,18 @@ Raw HTTP payload received from external system.
 }
 ```
 
-### 3. Event Queue
+### 3. Event Storage
 
-Events queued per agent, processed FIFO.
+Events stored per agent, simple in-memory queue.
 
 ```typescript
 {
-  queueId: string;
+  eventId: string;
+  routeId: string;
   agentId: string;
-  eventCount: number;    // pending events
+  payload: Record<string, unknown>;
+  receivedAt: string;
+  isProcessed: boolean;
 }
 ```
 
@@ -79,11 +82,10 @@ Simple HTTP server that accepts POST requests:
 
 ### Response Codes
 
-- `202 Accepted` — Event queued
+- `202 Accepted` — Event received
 - `400 Bad Request` — Invalid payload
 - `401 Unauthorized` — Signature verification failed
 - `404 Not Found` — Route doesn't exist
-- `500 Internal Server Error` — Database error
 
 ---
 
@@ -119,16 +121,14 @@ deleteWebhookRoute(routeId: string): Promise<{ success: boolean }>
 
 ## Storage
 
-3 simple tables:
+2 simple tables:
 
 - `webhook_routes` — route_id, agent_id, path_pattern, secret
 - `webhook_events` — event_id, route_id, agent_id, payload, received_at, is_processed
-- `webhook_queues` — queue_id, agent_id, event_count
 
 ---
 
 ## Timeline
 
-- **Week 1**: HTTP server + route/event storage
-- **Week 2**: Event queue + wake integration
-- **Week 3**: Agent tools + tests
+- **Week 1**: HTTP server + route/event storage + agent tools
+- **Week 2**: Wake integration + tests

@@ -37,59 +37,56 @@ Agent receives GitHub push/PR/issue events via webhooks.
 ## 3. Core Tools
 
 **Repository Management:**
-- `createRepository(name, description)` — Create new repo
 - `readFile(repo, path)` — Read file from repo
 - `writeFile(repo, path, content)` — Create/update file
+- `listFiles(repo, path)` — List repo files
 
 **Commits & Branches:**
-- `createBranch(repo, branchName, fromBranch)` — New branch
-- `createCommit(repo, branch, message, changes)` — Create commit
-- `createPullRequest(repo, fromBranch, toBranch, title, body)` — Open PR
+- `createCommit(repo, branch, message, files)` — Create commit
+- `createPullRequest(repo, title, body, changes)` — Open PR to main
 
 **Events:**
-- Webhook at `/webhook/github/{agentId}` receives push/PR/issue events
+- Webhook receives GitHub events
 - Agent processes via `listQueuedEvents()` and `processWebhookEvent(eventId)`
 
 ---
 
 ## 4. Storage
 
-Simple database schema:
+Simple configuration:
 
-- `github_repos` — repo_id, agent_id, repo_name, repo_url, github_org, created_at
-- `github_credentials` — cred_id, agent_id, access_token (encrypted), scope
+- GitHub PAT stored in environment variables (not database)
+- Agent maintains single default repo context
 
 ---
 
 ## 5. Authentication
 
-Agents provide GitHub personal access token with repository scopes:
+GitHub personal access token via environment variables:
 - `repo` — Full control of private repositories
-- `workflow` — Full control of GitHub Actions workflows
 - `webhooks` — Manage webhooks
-
-Credentials stored encrypted in database.
 
 ---
 
 ## 6. Implementation
 
-- **Week 1:** GitHub API client + repo/file read/write operations
-- **Week 2:** Commit/branch/PR operations
-- **Week 3:** Webhook integration + tests
+- **Week 1:** GitHub API client + file read/write/commit operations
+- **Week 2:** PR creation + webhook integration
+- **Week 3:** Error handling + tests
 
 ---
 
 ## 7. Out of Scope
 
+- Repository creation (use GitHub UI)
 - GitHub Actions configuration
 - Issue/PR review workflows
 - Advanced Git operations
-- GitHub Apps (use personal tokens only)
 - Team/organization management
 - Branch protection rules
 - Code search/querying
 - Release management
+- Multiple repository support per agent
 
 ---
 

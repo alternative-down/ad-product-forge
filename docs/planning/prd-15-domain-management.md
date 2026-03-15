@@ -47,13 +47,8 @@ Query if DNS resolves correctly, certificate validity.
 ## 4. Tools
 
 **Subdomain Management:**
-- `createSubdomain(agentId)` — Create subdomain, return FQDN
-- `getSubdomain(agentId)` — Get subdomain details
-- `deleteSubdomain(agentId)` — Delete subdomain
-
-**DNS Status:**
-- `getDnsStatus(subdomain)` — Check if DNS resolves, certificate expiry
-- `updateDnsRecord(subdomain, ip)` — Update DNS A record (for IP changes)
+- `createSubdomain(appName)` — Create subdomain, return FQDN
+- `deleteSubdomain(subdomain)` — Delete subdomain
 
 ---
 
@@ -61,17 +56,16 @@ Query if DNS resolves correctly, certificate validity.
 
 Simple database schema:
 
-- `domain_config` — primary_domain, dns_provider, hertzner_server_id, hertzner_ip, api_key (encrypted)
-- `subdomains` — subdomain_id, agent_id, subdomain, fqdn, status, created_at
-- `certificates` — cert_id, domain, expires_at, created_at
+- `domain_config` — primary_domain, dns_provider, hetzner_ip, api_key (encrypted)
+- `subdomains` — subdomain_id, subdomain, fqdn, status, created_at
 
 ---
 
 ## 6. Implementation
 
-- **Week 1:** DNS provider API client + subdomain creation
+- **Week 1:** DNS provider API client + subdomain CRUD operations
 - **Week 2:** Certificate provisioning via Let's Encrypt
-- **Week 3:** Hetzner IP polling + DNS updates + tests
+- **Week 3:** Integration tests + error handling
 
 ---
 
@@ -82,8 +76,11 @@ Simple database schema:
 - Advanced monitoring dashboards
 - DNSSEC signing
 - Multi-cloud DNS management
-- Domain renewal automation (initial setup only)
+- Domain renewal automation
 - Custom domain support per agent
+- IP change monitoring/failover
+- Certificate renewal automation (Let's Encrypt handles this)
+- TTL management
 
 ---
 
