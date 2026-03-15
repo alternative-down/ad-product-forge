@@ -1,116 +1,116 @@
-# PRD — Database-Driven Agent System
+# PRD-01: Sistema de Agentes Orientado a Banco de Dados
 
-**Status:** Planning - Technical Analysis & Design
-**Date:** 2026-03-15
-**Version:** 1.0
-**Feature ID:** CORE-001
+**Status:** Planejamento - Análise Técnica & Design
+**Data:** 2026-03-15
+**Versão:** 1.0
+**ID da Feature:** CORE-001
 
-> **Note:** This is a personal solo-developer project. Requirements focus on functionality and simplicity, not enterprise-grade robustness.
-
----
-
-## Executive Summary
-
-**Framework Component:** Mastra Core - Agent Registry and Persistence
-
-**Objective:** Transform the Mastra agent orchestration framework from static, hardcoded agent configuration to a dynamic, database-backed agent creation and management system that enables runtime agent spawning and credential management.
-
-**Problem:** Currently, agents are created at startup with fixed configuration loaded from environment variables. This prevents dynamic agent creation and makes credential management inflexible. Any Mastra deployment needs this foundational capability.
-
-**Solution:** Implement SQLite with Drizzle ORM as the reusable persistence layer for:
-- Agent configurations and metadata (organization-agnostic)
-- Communication provider credentials and settings
-- Agent-to-provider mappings
-- Encrypted sensitive data storage
-- Support for both single-instance and distributed deployments
-
-**Value Proposition (Framework):**
-- Enable any Mastra deployment to support runtime agent creation without restart
-- Secure sensitive credential storage with transparent encryption
-- Provide foundation for multi-tenancy and advanced orchestration
-- Simple to deploy, scales from solo developer to team use
-
-**Value Proposition (ad-product-forge Application):**
-- Enable Nicolas' agents to autonomously create specialist agents for research, development, and product launching
-- Support credential management for Discord, Email, and other communication providers
-- Foundation for hiring workflow and agent hierarchy
-
-**Scope:** Phase 1 of agent lifecycle management, focusing on persistence infrastructure for the Mastra framework itself
+> **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Os requisitos focam em funcionalidade e simplicidade, não em robustez de nível empresarial.
 
 ---
 
-## Problem Statement
+## Sumário Executivo
 
-### Current State
-The application currently:
-- Creates agents at application startup from hardcoded factory functions
-- Loads provider credentials directly from environment variables (`.env`)
-- Provides no runtime mechanism for agent creation or reconfiguration
-- Stores communication data (contacts, messages) in per-agent SQLite databases
-- Lacks a centralized agent registry or configuration repository
+**Componente do Framework:** Mastra Core - Registro e Persistência de Agentes
 
-### Pain Points
-1. **No Dynamic Agent Creation:** Cannot create agents at runtime without code changes
-2. **Credentials in Plain Text:** Credentials stored in env vars without encryption
-3. **No Runtime Flexibility:** Cannot change provider bindings without restart
-4. **Scattered Configuration:** Config spread across environment and code
+**Objetivo:** Transformar o framework de orquestração de agentes Mastra de configuração estática e hardcoded para um sistema dinâmico de criação e gerenciamento de agentes orientado a banco de dados que permite spawning de agentes em tempo de execução e gerenciamento de credenciais.
 
-### Key Assumptions
-- SQLite with Drizzle ORM is sufficient for this single-instance system
-- Encryption will be handled via `crypto` module (Node.js built-in) with a master key strategy
-- Communication providers (Discord, Email) will continue to work with stored credentials
+**Problema:** Atualmente, agentes são criados na inicialização com configuração fixa carregada de variáveis de ambiente. Isso impede criação dinâmica de agentes e torna o gerenciamento de credenciais inflexível. Qualquer deployment Mastra precisa dessa capacidade fundamental.
 
----
+**Solução:** Implementar SQLite com Drizzle ORM como camada de persistência reutilizável para:
+- Configurações e metadados de agentes (agnóstico de organização)
+- Credenciais e configurações de provedores de comunicação
+- Mapeamentos agente-para-provedor
+- Armazenamento criptografado de dados sensíveis
+- Suporte para deployments de instância única e distribuídos
 
-## Objectives
+**Proposição de Valor (Framework):**
+- Permitir que qualquer deployment Mastra suporte criação de agentes em tempo de execução sem reinicialização
+- Armazenamento seguro de credenciais com criptografia transparente
+- Fundação para multi-tenancy e orquestração avançada
+- Simples de implantar, escala de desenvolvedor solo a uso em equipe
 
-### Primary Objectives
-1. **Establish Central Agent Registry:** Create a database schema to persist agent configurations, including ID, name, description, instructions, and model assignments
-2. **Persist Provider Credentials:** Store communication provider credentials (tokens, passwords, connection strings) in encrypted form
-3. **Enable Runtime Agent Creation:** Implement APIs/tools to create agents dynamically without application restart
-4. **Secure Sensitive Data:** Encrypt sensitive fields (credentials, tokens) before storage and decrypt on retrieval
+**Proposição de Valor (Aplicação ad-product-forge):**
+- Permitir que agentes de Nicolas criem autonomamente agentes especialistas para pesquisa, desenvolvimento e lançamento de produtos
+- Suportar gerenciamento de credenciais para Discord, Email e outros provedores de comunicação
+- Fundação para workflow de contratação e hierarquia de agentes
 
-### Success Criteria
-- All agent configuration can be read from and written to database
-- Sensitive data is encrypted at rest
-- Agents can be created and started dynamically via API/tools
-- System works correctly with new database-driven approach
+**Escopo:** Fase 1 do gerenciamento de ciclo de vida de agentes, focando em infraestrutura de persistência para o framework Mastra em si
 
 ---
 
-## Requirements
+## Declaração do Problema
 
-### Functional Requirements
+### Estado Atual
+A aplicação atualmente:
+- Cria agentes na inicialização da aplicação a partir de funções factory hardcoded
+- Carrega credenciais de provedor diretamente de variáveis de ambiente (`.env`)
+- Não fornece mecanismo em tempo de execução para criação ou reconfiguração de agentes
+- Armazena dados de comunicação (contatos, mensagens) em bancos de dados SQLite por agente
+- Carece de um registro centralizado de agentes ou repositório de configuração
 
-#### FR1: Agent Configuration Storage
-- Store agent metadata: ID, name, description, model, instructions
-- Track agent creation/modification timestamps
+### Pontos de Dor
+1. **Sem Criação Dinâmica de Agentes:** Não pode criar agentes em tempo de execução sem mudanças de código
+2. **Credenciais em Texto Plano:** Credenciais armazenadas em vars de ambiente sem criptografia
+3. **Sem Flexibilidade em Tempo de Execução:** Não pode mudar ligações de provedor sem reinicialização
+4. **Configuração Espalhada:** Config espalhada entre ambiente e código
 
-#### FR2: Agent-Provider Associations
-- Associate each agent with multiple providers (Discord, Email, etc)
-- Store encrypted credentials per agent-provider pair
-- Support provider_type: discord, email, slack, etc
-
-#### FR3: Encryption & Security
-- Encrypt credentials JSON before storage
-- Decrypt credentials on retrieval transparently
-- Use AES-256-GCM encryption
-- No credentials logged in plain text
-
-#### FR4: Runtime Agent Initialization
-- Load agents and their credentials from database at startup
-- Decrypt credentials for each provider
-- Create agent instances from database config
+### Suposições Principais
+- SQLite com Drizzle ORM é suficiente para este sistema de instância única
+- Criptografia será tratada via módulo `crypto` (built-in do Node.js) com estratégia de chave master
+- Provedores de comunicação (Discord, Email) continuarão funcionando com credenciais armazenadas
 
 ---
 
-## Architecture
+## Objetivos
 
-### Classification: AD-PRODUCT-FORGE APPLICATION
+### Objetivos Primários
+1. **Estabelecer Registro Centralizado de Agentes:** Criar schema de banco de dados para persistir configurações de agentes, incluindo ID, nome, descrição, instruções e atribuições de modelo
+2. **Persistir Credenciais de Provedor:** Armazenar credenciais de provedor de comunicação (tokens, senhas, strings de conexão) em forma criptografada
+3. **Habilitar Criação de Agentes em Tempo de Execução:** Implementar APIs/ferramentas para criar agentes dinamicamente sem reinicialização da aplicação
+4. **Assegurar Dados Sensíveis:** Criptografar campos sensíveis (credenciais, tokens) antes do armazenamento e descriptografar na recuperação
 
-**This PRD describes persistence infrastructure specific to Nicolas' ad-product-forge application.** It is application-specific, not a reusable Mastra framework component. It defines how ad-product-forge stores and encrypts agent configurations and credentials.
+### Critérios de Sucesso
+- Toda configuração de agente pode ser lida e escrita no banco de dados
+- Dados sensíveis são criptografados em repouso
+- Agentes podem ser criados e iniciados dinamicamente via API/ferramentas
+- Sistema funciona corretamente com nova abordagem orientada a banco de dados
 
-### High-Level Architecture
+---
+
+## Requisitos
+
+### Requisitos Funcionais
+
+#### FR1: Armazenamento de Configuração de Agentes
+- Armazenar metadados de agentes: ID, nome, descrição, modelo, instruções
+- Rastrear timestamps de criação/modificação de agentes
+
+#### FR2: Associações Agente-Provedor
+- Associar cada agente a múltiplos provedores (Discord, Email, etc)
+- Armazenar credenciais criptografadas por par agente-provedor
+- Suportar provider_type: discord, email, slack, etc
+
+#### FR3: Criptografia & Segurança
+- Criptografar JSON de credenciais antes do armazenamento
+- Descriptografar credenciais na recuperação de forma transparente
+- Usar criptografia AES-256-GCM
+- Nenhuma credencial registrada em texto plano
+
+#### FR4: Inicialização de Agentes em Tempo de Execução
+- Carregar agentes e suas credenciais do banco de dados na inicialização
+- Descriptografar credenciais para cada provedor
+- Criar instâncias de agentes a partir da configuração do banco de dados
+
+---
+
+## Arquitetura
+
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
+
+**Este PRD descreve infraestrutura de persistência específica para a aplicação ad-product-forge de Nicolas.** É específica da aplicação, não um componente reutilizável do framework Mastra. Define como ad-product-forge armazena e criptografa configurações de agentes e credenciais.
+
+### Arquitetura de Alto Nível
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -149,87 +149,87 @@ The application currently:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+### Responsabilidades dos Componentes
 
-#### 1. **Agent Registry Database Module** (`packages/mastra-engine/src/database/`)
-- Initialize Drizzle ORM with SQLite
-- Define schema using Drizzle definitions
-- Provide typed query builders
-- Support agent metadata storage and agent-provider associations
+#### 1. **Módulo de Banco de Dados de Registro de Agentes** (`packages/mastra-engine/src/database/`)
+- Inicializar Drizzle ORM com SQLite
+- Definir schema usando definições Drizzle
+- Fornecer construtores de query com tipo
+- Suportar armazenamento de metadados de agentes e associações agente-provedor
 
-#### 2. **Encryption Layer** (`packages/mastra-engine/src/encryption/`)
-- Load encryption key from environment
-- Provide encrypt/decrypt utilities
-- Support AES-256-GCM encryption
-- Encrypt/decrypt credentials JSON in `agent_providers` table
+#### 2. **Camada de Criptografia** (`packages/mastra-engine/src/encryption/`)
+- Carregar chave de criptografia do ambiente
+- Fornecer utilitários de criptografia/descriptografia
+- Suportar criptografia AES-256-GCM
+- Criptografar/descriptografar JSON de credenciais na tabela `agent_providers`
 
 #### 3. **Agent Loader** (`packages/mastra-engine/src/agent/loader.ts`)
-- Query database for agents and agent_providers at startup
-- Initialize encryption layer
-- Decrypt credentials for each provider
-- Create agent instances using database configuration
+- Consultar banco de dados para agentes e agent_providers na inicialização
+- Inicializar camada de criptografia
+- Descriptografar credenciais para cada provedor
+- Criar instâncias de agentes usando configuração do banco de dados
 
-### Data Flow
+### Fluxo de Dados
 
-#### Agent Creation Flow (Runtime)
+#### Fluxo de Criação de Agentes (Tempo de Execução)
 ```
-User/Tool Request
+Requisição de Usuário/Ferramenta
     │
     ▼
-Agent Creation Input (validated via Zod)
+Entrada de Criação de Agente (validada via Zod)
     │
     ▼
-Agent Loader Service
+Serviço de Agent Loader
     │
-    ├─→ Validate input (agent name, model, providers)
+    ├─→ Validar entrada (nome do agente, modelo, provedores)
     │
-    ├─→ Generate unique agent ID
+    ├─→ Gerar ID único do agente
     │
-    ├─→ Persist to database
+    ├─→ Persistir no banco de dados
     │
-    └─→ Return agent instance
+    └─→ Retornar instância do agente
 ```
 
-#### Agent Loading Flow (Startup)
+#### Fluxo de Carregamento de Agentes (Inicialização)
 ```
-Application Start
+Inicialização da Aplicação
     │
     ▼
-Initialize Database Connection
+Inicializar Conexão com Banco de Dados
     │
-    ├─→ Load encryption key from env
+    ├─→ Carregar chave de criptografia do env
     │
-    ├─→ Query agents table
+    ├─→ Consultar tabela de agentes
     │
-    ├─→ Load & decrypt provider credentials
+    ├─→ Carregar e descriptografar credenciais de provedor
     │
-    ├─→ Initialize providers with credentials
+    ├─→ Inicializar provedores com credenciais
     │
-    └─→ Create agent instances in registry
+    └─→ Criar instâncias de agentes no registro
 ```
 
-#### Provider Credential Lookup
+#### Lookup de Credenciais de Provedor
 ```
-Agent needs to connect to a provider
+Agente precisa se conectar a um provedor
     │
     ▼
-Query agent_providers table (agent_id + provider_type)
+Consultar tabela agent_providers (agent_id + provider_type)
     │
-    ├─→ Get encrypted_credentials (JSON)
+    ├─→ Obter encrypted_credentials (JSON)
     │
-    ├─→ Decrypt with ENCRYPTION_KEY
+    ├─→ Descriptografar com ENCRYPTION_KEY
     │
-    └─→ Extract token/password and return to agent
+    └─→ Extrair token/senha e retornar ao agente
 ```
 
 ---
 
-## Database Schema
+## Schema do Banco de Dados
 
-### Schema Overview
+### Visão Geral do Schema
 
 ```sql
--- Core agent configuration
+-- Configuração principal de agentes
 CREATE TABLE agents (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -240,32 +240,32 @@ CREATE TABLE agents (
   updated_at INTEGER NOT NULL
 );
 
--- Agent-to-provider associations with encrypted credentials
+-- Associações agente-para-provedor com credenciais criptografadas
 CREATE TABLE agent_providers (
   id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL,
-  provider_type TEXT NOT NULL,      -- e.g., 'discord', 'email'
-  encrypted_credentials TEXT NOT NULL,  -- JSON encrypted: {token, password, etc}
+  provider_type TEXT NOT NULL,      -- ex: 'discord', 'email'
+  encrypted_credentials TEXT NOT NULL,  -- JSON criptografado: {token, password, etc}
   created_at INTEGER NOT NULL,
   FOREIGN KEY (agent_id) REFERENCES agents(id),
   UNIQUE(agent_id, provider_type)
 );
 ```
 
-### Encryption Strategy
+### Estratégia de Criptografia
 
-**Field Encryption:**
-- Only `encrypted_credentials` in `agent_providers` table is encrypted
-- All other fields are plain text (agent_id, provider_type, created_at)
-- Credentials are stored as encrypted JSON: `{token: "...", password: "...", etc}`
-- Encryption uses AES-256-GCM
+**Criptografia de Campo:**
+- Apenas `encrypted_credentials` na tabela `agent_providers` é criptografado
+- Todos os outros campos são texto plano (agent_id, provider_type, created_at)
+- Credenciais são armazenadas como JSON criptografado: `{token: "...", password: "...", etc}`
+- Criptografia usa AES-256-GCM
 
-**Key Management:**
-- Master key loaded from `ENCRYPTION_KEY` environment variable
-- Key must be 32 bytes (256 bits) for AES-256-GCM
-- Simple for solo developer (no rotation needed initially)
+**Gerenciamento de Chaves:**
+- Chave master carregada da variável de ambiente `ENCRYPTION_KEY`
+- Chave deve ter 32 bytes (256 bits) para AES-256-GCM
+- Simples para desenvolvedor solo (sem rotação necessária inicialmente)
 
-**Decryption at Runtime:**
+**Descriptografia em Tempo de Execução:**
 ```typescript
 const agentProviders = await db.query.agent_providers.findMany({
   where: eq(agent_providers.agent_id, agentId)
@@ -277,7 +277,7 @@ for (const ap of agentProviders) {
 }
 ```
 
-**Encryption Implementation (Node.js crypto):**
+**Implementação de Criptografia (Node.js crypto):**
 ```typescript
 import crypto from 'node:crypto';
 
@@ -285,7 +285,7 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 export function encryptSecret(plaintext: string): string {
   const key = Buffer.from(ENCRYPTION_KEY, 'base64');
-  if (key.length !== 32) throw new Error('ENCRYPTION_KEY must be 256-bit');
+  if (key.length !== 32) throw new Error('ENCRYPTION_KEY deve ser 256-bit');
 
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
@@ -301,10 +301,10 @@ export function encryptSecret(plaintext: string): string {
 
 export function decryptSecret(encryptedValue: string): string {
   const key = Buffer.from(ENCRYPTION_KEY, 'base64');
-  if (key.length !== 32) throw new Error('ENCRYPTION_KEY must be 256-bit');
+  if (key.length !== 32) throw new Error('ENCRYPTION_KEY deve ser 256-bit');
 
   const combined = Buffer.from(encryptedValue, 'base64');
-  if (combined.length < 32) throw new Error('Invalid encrypted value');
+  if (combined.length < 32) throw new Error('Valor criptografado inválido');
 
   const iv = combined.subarray(0, 16);
   const authTag = combined.subarray(combined.length - 16);
@@ -322,15 +322,15 @@ export function decryptSecret(encryptedValue: string): string {
 
 ---
 
-## Provider Management API
+## API de Gerenciamento de Provedor
 
-### Register Provider Credentials
+### Registrar Credenciais de Provedor
 ```typescript
 async function registerProviderConfig(agentId: string, providerType: string, credentials: Record<string, string>) {
-  // 1. Encrypt credentials
+  // 1. Criptografar credenciais
   const encrypted = encryptSecret(JSON.stringify(credentials));
 
-  // 2. Store in agent_providers
+  // 2. Armazenar em agent_providers
   await db.insert(agent_providers).values({
     agent_id: agentId,
     provider_type: providerType,
@@ -340,7 +340,7 @@ async function registerProviderConfig(agentId: string, providerType: string, cre
 }
 ```
 
-### Get Provider Credentials
+### Obter Credenciais de Provedor
 ```typescript
 async function getProviderCredentials(agentId: string, providerType: string): Promise<Record<string, string>> {
   const record = await db.query.agent_providers.findFirst({
@@ -357,7 +357,7 @@ async function getProviderCredentials(agentId: string, providerType: string): Pr
 }
 ```
 
-### Rotate Provider Credentials
+### Rotacionar Credenciais de Provedor
 ```typescript
 async function rotateProviderCredentials(agentId: string, providerType: string, newCredentials: Record<string, string>) {
   const encrypted = encryptSecret(JSON.stringify(newCredentials));
@@ -373,45 +373,45 @@ async function rotateProviderCredentials(agentId: string, providerType: string, 
 
 ---
 
-## Technical Decisions
+## Decisões Técnicas
 
 ### 1. SQLite + Drizzle ORM
-**Decision:** Use SQLite with Drizzle ORM as the database/ORM combo
+**Decisão:** Usar SQLite com Drizzle ORM como combo banco de dados/ORM
 
-**Rationale:**
-- SQLite is serverless, file-based, requires minimal setup
-- Drizzle provides type-safe query building and schema management
-- Single-instance system doesn't need relational database complexity
-- Easy to inspect and debug
+**Justificativa:**
+- SQLite é sem servidor, baseado em arquivo, requer setup mínimo
+- Drizzle fornece construção de query com tipo seguro e gerenciamento de schema
+- Sistema de instância única não precisa de complexidade de banco de dados relacional
+- Fácil de inspecionar e debugar
 
-**Alternatives Considered:**
-- PostgreSQL: Overkill for single-instance personal project
-- Raw SQL: Lose type safety, more error-prone
+**Alternativas Consideradas:**
+- PostgreSQL: Excessivo para projeto pessoal de instância única
+- SQL bruto: Perder type safety, mais propenso a erros
 
-### 2. AES-256-GCM Encryption
-**Decision:** Use Node.js built-in `crypto` module with AES-256-GCM for field-level encryption
+### 2. Criptografia AES-256-GCM
+**Decisão:** Usar módulo `crypto` built-in do Node.js com AES-256-GCM para criptografia em nível de campo
 
-**Rationale:**
-- No external dependencies required
-- Industry-standard encryption algorithm
-- GCM mode provides authenticated encryption (detects tampering)
-- Performance sufficient for single-instance system
+**Justificativa:**
+- Nenhuma dependência externa necessária
+- Algoritmo de criptografia padrão da indústria
+- Modo GCM fornece criptografia autenticada (detecta falsificação)
+- Performance suficiente para sistema de instância única
 
-**Alternatives Considered:**
-- External encryption library: Adds dependency, more complex
-- Database-level encryption: Less flexible, harder to migrate
+**Alternativas Consideradas:**
+- Biblioteca de criptografia externa: Adiciona dependência, mais complexa
+- Criptografia em nível de banco de dados: Menos flexível, mais difícil de migrar
 
-### 3. Master Key via Environment Variable
-**Decision:** Store encryption master key in `ENCRYPTION_KEY` environment variable
+### 3. Chave Master via Variável de Ambiente
+**Decisão:** Armazenar chave master de criptografia em variável de ambiente `ENCRYPTION_KEY`
 
-**Rationale:**
-- Simple for solo developer
-- Works with `.env` file loading
+**Justificativa:**
+- Simples para desenvolvedor solo
+- Funciona com carregamento de arquivo `.env`
 
-### 4. Fallback to Hardcoded Config
-**Decision:** Keep hardcoded agent configuration as fallback
+### 4. Fallback para Configuração Hardcoded
+**Decisão:** Manter configuração de agentes hardcoded como fallback
 
-**Rationale:**
-- System works even if database is unavailable
-- Allows gradual migration
+**Justificativa:**
+- Sistema funciona mesmo se banco de dados estiver indisponível
+- Permite migração gradual
 
