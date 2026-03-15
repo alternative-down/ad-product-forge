@@ -1,20 +1,17 @@
 # PRD-05: Agent Hiring Workflow
 
+> **Note:** Este é um projeto pessoal de desenvolvedor solo. Requisitos focam em funcionalidade, não robustez corporativa.
+
 ## 1. Executive Summary
 
 **Feature Name:** Agent Hiring Workflow
 
-**Objective:** Enable autonomous agents to create and provision new agents within the system, implementing a complete workflow for agent recruitment, configuration, and deployment.
+**Objective:** Enable autonomous agents to create and provision new agents, with a complete workflow for agent creation, configuration, and deployment.
 
-**Business Value:**
-- Enables dynamic scaling of agent workforce without manual intervention
-- Allows agents to autonomously build teams based on operational needs
-- Establishes foundation for multi-agent organizational structures
-- Supports role-based specialization and task delegation
-
-**Priority:** High (Critical infrastructure for agent autonomy)
-
-**Timeline Estimate:** 4-6 weeks
+**Value:**
+- Dynamic scaling of agent workforce without manual intervention
+- Agents autonomously build teams based on operational needs
+- Foundation for multi-agent organizational structures
 
 ---
 
@@ -27,17 +24,15 @@
 - Missing configuration and communication setup automation
 
 ### Challenges
-- Agents need permission to create other agents (requires authorization layer)
-- Each new agent requires communication provider setup (Discord, Email, etc.)
-- Requires securely managing and storing new agent credentials
+- Agents need permission to create other agents
+- Each new agent requires communication provider setup
 - Need validation and constraints on agent creation parameters
-- Requires integration with role/permission system to assign capabilities
+- Need integration with role/permission system
 
 ### Impact
-- Blocks autonomous team formation and specialization
-- Limits multi-agent coordination scenarios
-- Prevents agents from responding to workload scaling needs
-- Reduces operational efficiency and responsiveness
+- Enables autonomous team formation
+- Allows multi-agent coordination scenarios
+- Enables agents to respond to workload scaling needs
 
 ---
 
@@ -199,39 +194,23 @@ As a newly hired agent, I need communication providers configured so that I can 
 ### Non-Functional Requirements
 
 #### NFR1: Security
-- Encrypt all credentials (provider tokens, passwords) at rest
-- Use secure key management (separate encryption keys per agent)
-- Sanitize audit logs (no credential exposure in logs)
-- Implement rate limiting on hiring operations
+- Encrypt credentials at rest
+- Sanitize logs (no credential exposure)
 - Require authorization check before credential access
-- Support credential rotation for provider accounts
 
 #### NFR2: Reliability
 - Idempotent operations (retry-safe)
-- Transaction support for multi-step provisioning
 - Rollback on partial failures
 - Provider timeout protection
-- Database consistency checks
-- Detailed error logging for debugging
+- Detailed error logging
 
 #### NFR3: Performance
-- Agent creation within 10 seconds (excluding provider setup)
-- Provider configuration within 30 seconds per provider
-- Batch hiring of 10 agents within 60 seconds total
-- Database queries optimized for agent lookup
-- No blocking operations in main flow
-
-#### NFR4: Scalability
-- Support hundreds of agents in system
+- Agent creation within 30 seconds total
 - Support multiple hiring operations in parallel
-- Efficient credential storage (minimal overhead per agent)
-- Provider credential management at scale
 
-#### NFR5: Auditability
+#### NFR4: Auditability
 - Log all hiring operations (who, when, what)
-- Track agent creation and lifecycle events
-- Maintain audit trail for compliance
-- Support audit report generation
+- Maintain audit trail
 
 ---
 
@@ -480,114 +459,64 @@ Acceptance Criteria:
 ## 8. Success Metrics
 
 ### Functional Success
-1. **Agent Creation Time**: 95% of agent creations complete within 30 seconds (excluding provider setup)
+1. **Agent Creation Time**: 95% of agent creations complete within 30 seconds
 2. **Provider Configuration Success**: 99% of provider configurations complete successfully
 3. **Authorization Enforcement**: 100% of unauthorized hiring attempts blocked
-4. **Audit Coverage**: 100% of hiring operations logged with full details
-5. **Parameter Validation**: 100% of invalid parameters rejected with clear error messages
+4. **Parameter Validation**: 100% of invalid parameters rejected with clear error messages
 
 ### Operational Success
 1. **Hiring Workflow Reliability**: 99.5% successful agent provision rate
 2. **Error Recovery**: 100% of provider failures result in automatic rollback
-3. **Credential Security**: 100% of credentials encrypted at rest, zero credential breaches
-4. **Scaling Capability**: Support creation of 100+ agents in single batch operation
-5. **System Performance**: No performance degradation with up to 1000 active agents
+3. **Credential Security**: 100% of credentials encrypted at rest
 
 ### User Experience Success
-1. **Creation Clarity**: Hiring agents understand process and parameters with < 10% error rate
-2. **Feedback Quality**: Clear error messages enable self-service resolution
-3. **Documentation Completeness**: 100% of hiring workflows documented with examples
-4. **Onboarding Speed**: New agents operational and participating within 5 minutes of creation
+1. **Feedback Quality**: Clear error messages enable self-service resolution
+2. **Documentation Completeness**: Hiring workflows documented with examples
 
 ---
 
 ## 9. Risk Analysis & Mitigation
 
 ### Risk 1: Unrestricted Agent Creation (Security)
-**Severity:** High | **Probability:** Medium
-
-**Risk:** Malicious agents exploit hiring permissions to create excessive agents, consuming resources or causing chaos.
+**Risk:** Malicious agents exploit hiring permissions to create excessive agents.
 
 **Mitigation:**
 - Implement strict permission model (only specific agents can hire)
-- Rate limiting on hiring operations (max N agents per time period)
-- Resource quotas per agent (max agents that can be hired)
-- Continuous monitoring of hiring patterns
-- Master agent approval required for hiring permission grants
+- Rate limiting on hiring operations
 
 ### Risk 2: Provider Credential Exposure (Security)
-**Severity:** Critical | **Probability:** Low
-
-**Risk:** Credentials stored improperly or exposed in logs/errors.
+**Risk:** Credentials stored improperly or exposed in logs.
 
 **Mitigation:**
-- Encrypt all credentials at rest with strong encryption
-- Never log credential values (sanitize logs)
-- Separate encryption keys per agent
-- Regular credential rotation capability
-- Audit log all credential access attempts
+- Encrypt all credentials at rest
+- Never log credential values
 
 ### Risk 3: Partial Provisioning Failure (Reliability)
-**Severity:** Medium | **Probability:** Medium
-
-**Risk:** Provider setup fails mid-process, leaving agent in inconsistent state.
+**Risk:** Provider setup fails mid-process.
 
 **Mitigation:**
-- Implement transaction semantics (all-or-nothing provisioning)
 - Automatic rollback on provider failures
-- Provider timeout protection (fail fast)
-- Idempotent operations (safe to retry)
-- Detailed error reporting for recovery
+- Provider timeout protection
+- Idempotent operations
 
-### Risk 4: Scaling Performance Degradation (Performance)
-**Severity:** Medium | **Probability:** Low
-
-**Risk:** System slows down as agent count increases.
-
-**Mitigation:**
-- Database indexing on agent queries
-- Asynchronous provider configuration (parallel provisioning)
-- Connection pooling for provider access
-- Regular performance testing with increased agent count
-- Capacity planning for growth
-
-### Risk 5: Invalid Configuration Parameters (Usability)
-**Severity:** Low | **Probability:** Medium
-
-**Risk:** Hiring agents create agents with invalid or conflicting configuration.
+### Risk 4: Invalid Configuration Parameters (Usability)
+**Risk:** Hiring agents create agents with invalid configuration.
 
 **Mitigation:**
 - Comprehensive parameter validation
-- Clear error messages with remediation guidance
-- Configuration templates for common scenarios
-- Dry-run mode to validate before creation
-- Documentation of valid parameter ranges
-
-### Risk 6: Orphaned Agents (Reliability)
-**Severity:** Medium | **Probability:** Low
-
-**Risk:** Agent provisioning succeeds but agent fails to activate or becomes unreachable.
-
-**Mitigation:**
-- Health check on newly created agents
-- Timeout detection and alerting
-- Automatic retry of activation attempts
-- Manual recovery procedures documented
-- Hiring agent notified of activation failures
+- Clear error messages
+- Configuration templates
 
 ---
 
-## 10. Out of Scope (for Phase 1)
+## 10. Out of Scope
 
-- Agent specialization templates (comes in later phase)
-- Advanced resource allocation and quota enforcement (future ERP integration)
-- Multi-region or multi-cloud agent provisioning
+- Agent specialization templates (future)
+- Advanced resource allocation and quota enforcement
+- Multi-region or multi-cloud provisioning
 - Automated team structure optimization
 - Agent skill assessment and matching
-- Dynamic role assignment based on workload
-- Cross-organization agent lending/trading
-- AI-driven hiring recommendations
-- Agent performance evaluation integration
+- Cross-organization agent lending
 
 ---
 
@@ -617,95 +546,57 @@ Acceptance Criteria:
 
 ## 12. Implementation Plan & Phases
 
-### Phase 1: Core Hiring Workflow (Weeks 1-2)
+### Phase 1: Core Hiring Workflow
 **Deliverables:**
 - Agent creation request API endpoint
 - Agent account creation and database storage
 - Permission validation and authorization
-- Audit logging system
 - Basic error handling and validation
 
 **Tasks:**
-1. Design database schema (agents, credentials, audit tables)
+1. Design database schema (agents, credentials tables)
 2. Implement authorization checks
 3. Create agent creation service
 4. Implement validation logic
-5. Create audit logging
-6. Implement error handling and rollback
-7. Write unit tests for core workflow
-8. Documentation of API contract
+5. Implement error handling and rollback
+6. Write unit tests
+7. Documentation of API contract
 
-### Phase 2: Provider Configuration (Weeks 2-3)
+### Phase 2: Provider Configuration
 **Deliverables:**
 - Provider credential management
-- Provider-specific account creation
 - Encrypted credential storage
-- Provider configuration API
 - Provider setup validation
 
 **Tasks:**
 1. Implement provider registry integration
 2. Create credential encryption/decryption
-3. Implement provider-agnostic credential storage
-4. Create Discord provider setup
-5. Create Email provider setup
-6. Implement credential validation
-7. Add provider setup error handling
-8. Write provider integration tests
+3. Create Discord provider setup
+4. Create Email provider setup
+5. Write provider integration tests
 
-### Phase 3: Agent Runtime & Activation (Weeks 3-4)
+### Phase 3: Agent Runtime & Activation
 **Deliverables:**
 - Agent runtime initialization
 - Communication module setup
-- Agent activation and notification
-- Status tracking system
-- Integration with existing agent creation
+- Agent activation
 
 **Tasks:**
 1. Integrate with createForgeAgent() factory
 2. Initialize communication module with providers
 3. Load permissions and tools
-4. Implement agent status tracking
-5. Implement activation notifications
-6. Create initialization message flow
-7. Integration testing with live agent
-8. Performance testing for agent startup
+4. Implement activation notifications
 
-### Phase 4: Batch Operations & Polish (Weeks 4-5)
+### Phase 4: Testing & Documentation
 **Deliverables:**
-- Batch agent hiring support
-- Enhanced error recovery
-- Performance optimization
-- Comprehensive testing
+- End-to-end testing
 - Documentation completion
 
 **Tasks:**
-1. Implement batch hiring API
-2. Add transaction support
-3. Optimize database queries
-4. Add connection pooling
-5. Performance testing at scale
-6. Write integration tests
-7. Create user documentation
-8. Create admin documentation
-
-### Phase 5: Testing & Rollout (Weeks 5-6)
-**Deliverables:**
-- End-to-end testing
-- Performance benchmarks
-- Deployment procedures
-- Rollback procedures
-- Production monitoring setup
-
-**Tasks:**
 1. Comprehensive end-to-end testing
-2. Load testing (100+ agents)
-3. Security audit and testing
-4. Penetration testing for credential storage
-5. Create deployment procedures
-6. Create rollback procedures
-7. Setup production monitoring
-8. Team training and documentation
+2. Security testing
+3. Create deployment procedures
+4. User documentation
 
 ---
 

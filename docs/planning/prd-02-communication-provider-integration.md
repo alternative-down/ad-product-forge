@@ -3,7 +3,8 @@
 **Status:** Draft - Detailed Analysis and Planning
 **Data:** 2026-03-15
 **Versão:** 1.0
-**Responsável:** Architecture & Database Team
+
+> **Note:** Este é um projeto pessoal de desenvolvedor solo. Requisitos focam em funcionalidade, não robustez corporativa.
 
 ---
 
@@ -28,11 +29,11 @@ Persistir, gerenciar e criptografar credenciais de provedores de comunicação (
 - Revogar/reatualizar credenciais sem cortar fluxo ativo
 
 ### Não está no Escopo
-- Integração com OAuth2/OIDC nesta fase (Phase 1)
+- Integração com OAuth2/OIDC (nice-to-have futura)
 - Interface UI de gerenciamento de providers
-- Sincronização automática de providers em múltiplas instâncias
-- Backup/restore automatizado de credenciais
-- Integração com secret management services (AWS Secrets Manager, HashiCorp Vault) - futura
+- Sincronização entre múltiplas instâncias
+- Backup/restore automatizado
+- Secret management services externos (AWS Secrets Manager, Vault)
 
 ---
 
@@ -91,9 +92,8 @@ Runtime (createAgent/createForgeAgent)
   - Provider type (email, discord, slack, etc)
   - Provider-specific credentials (IMAP host, SMTP port, tokens, keys)
   - Agent assignment (qual agente usa este provider)
-  - Status (active, inactive, revoked)
+  - Status (active, inactive)
   - Created/updated timestamps
-  - Rotation/expiry metadata
 
 **RF-2: Criptografia de credenciais sensíveis**
 - Criptografar valores sensíveis antes de persistir:
@@ -112,28 +112,20 @@ Runtime (createAgent/createForgeAgent)
 - Exemplo: Agent C com Slack + custom provider
 - Sistema deve suportar add/remove sem afetar outros
 
-**RF-4: Versionamento de credenciais**
-- Manter histórico de mudanças
-- Rastrear: quem alterou, quando, o que foi alterado (para auditoria)
-- Permitir rollback para versão anterior
-- Status: current, superseded, archived
 
 ### 3.2 Migração para Drizzle ORM
 
 **RF-5: Migração de SQLClient para Drizzle**
-- Converter todas as queries raw do módulo de comunicação para Drizzle ORM
-- Manter 100% backwards compatibility com API do módulo
-- Não alterar nenhuma interface externa (agent-facing tools)
+- Converter queries raw do módulo de comunicação para Drizzle ORM
+- Manter API compatível
 - Type-safe queries via Drizzle schema
 
 **RF-6: Schema revisado com Drizzle**
-- Definir schema em `packages/mastra-engine/src/db/schema.ts` (ou similar)
-- Adicionar tabelas para credenciais e provider configurations:
-  - `provider_configurations` — Config base do provider por agente
-  - `provider_credentials` — Credenciais criptografadas (variável por tipo)
-  - `provider_credential_versions` — Histórico de versões
+- Definir schema em `packages/mastra-engine/src/db/schema.ts`
+- Adicionar tabelas para credenciais:
+  - `provider_configurations` — Config do provider por agente
+  - `provider_credentials` — Credenciais criptografadas
 - Manter tabelas existentes: accounts, contacts, conversations, messages
-- Adicionar índices para performance
 
 ### 3.3 Interface de Configuração
 
@@ -167,15 +159,12 @@ const credentials = await communication.getProviderCredentials(providerId);
 - Se provider tiver múltiplas versões, usar `status=current`
 - Cache em memória com TTL (60s) para evitar queries constantemente
 
-**RF-9: Rotação de credenciais sem downtime**
+**RF-9: Rotação de credenciais**
 ```typescript
 await communication.rotateProviderCredentials(providerId, newSecrets);
 // Steps:
-// 1. Create new credential version with status=pending
-// 2. Validate new credentials (test connection)
-// 3. If valid: mark new as current, old as superseded
-// 4. Provider instance continues using old creds until next reload
-// 5. After 10s: reload provider with new creds
+// 1. Update credential com novo valor
+// 2. Provider recarrega com nova credencial
 ```
 
 ---
@@ -183,27 +172,16 @@ await communication.rotateProviderCredentials(providerId, newSecrets);
 ## 4. Requisitos Não-Funcionais
 
 ### 4.1 Performance
-- **RNF-1:** Lookup de credenciais < 50ms (com cache)
-- **RNF-2:** Criptografia/decriptografia < 10ms por record
-- **RNF-3:** Drizzle queries compiladas (prepare statements) para performance
+- **RNF-1:** Lookup de credenciais < 100ms (suficiente para solo dev)
+- **RNF-2:** Criptografia/decriptografia funcional
 
 ### 4.2 Segurança
-- **RNF-4:** Chave de criptografia isolada por ambiente (ENV, nunca em código)
-- **RNF-5:** Logging seguro: nunca logar valores de credenciais (mask/redact)
-- **RNF-6:** SQL injection prevention via Drizzle parametrização
+- **RNF-3:** Chave de criptografia isolada por ambiente (ENV)
+- **RNF-4:** Logging seguro: não logar valores de credenciais
+- **RNF-5:** SQL injection prevention via Drizzle
 
-### 4.3 Auditoria
-- **RNF-7:** Timestamp (UTC) em toda mudança
-- **RNF-8:** Rastrear agent_id e user_id (futura) em mudanças
-- **RNF-9:** Não permitir soft delete de credenciais ativas (apenas mark as revoked)
-
-### 4.4 Escalabilidade
-- **RNF-10:** Suportar 1000+ provider configurations por agente (via índices)
-- **RNF-11:** Criptografia não pode ser gargalo (usar algoritmo eficiente)
-
-### 4.5 Backwards Compatibility
-- **RNF-12:** Não quebrar API de communication module
-- **RNF-13:** Não quebrar existente agent-facing tools
+### 4.3 Compatibilidade
+- **RNF-6:** API de communication module não quebrada
 
 ---
 
@@ -214,62 +192,31 @@ await communication.rotateProviderCredentials(providerId, newSecrets);
 ```sql
 -- Configuração de provider por agente
 CREATE TABLE provider_configurations (
-  id TEXT PRIMARY KEY,                    -- uuid
+  id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL,
-  provider_id TEXT NOT NULL,              -- 'email-1', 'discord-1', etc
-  provider_type TEXT NOT NULL,            -- 'email', 'discord', 'slack', etc
+  provider_id TEXT NOT NULL,
+  provider_type TEXT NOT NULL,
 
-  -- Non-secret configuration (plaintext)
-  config_json TEXT NOT NULL,              -- { imap: { host, port, secure }, smtp: {...} }
-
-  status TEXT NOT NULL,                   -- 'active', 'inactive', 'revoked'
-  enabled_at TIMESTAMP,
-  disabled_at TIMESTAMP,
-  revoked_at TIMESTAMP,
+  config_json TEXT NOT NULL,
+  status TEXT NOT NULL,
 
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   UNIQUE (agent_id, provider_id),
-  INDEX idx_agent_id (agent_id),
-  INDEX idx_provider_type (provider_type)
+  INDEX idx_agent_id (agent_id)
 );
 
--- Credenciais criptografadas com histórico
+-- Credenciais criptografadas
 CREATE TABLE provider_credentials (
-  id TEXT PRIMARY KEY,                    -- uuid
-  configuration_id TEXT NOT NULL,         -- FK to provider_configurations.id
-
-  -- Credenciais criptografadas (AES-256-GCM)
-  secret_name TEXT NOT NULL,              -- 'imapPassword', 'smtpPassword', 'token', etc
-  encrypted_value TEXT NOT NULL,          -- Base64(IV + ciphertext + authTag)
-
-  status TEXT NOT NULL,                   -- 'current', 'pending', 'superseded', 'revoked'
-
-  version INTEGER NOT NULL,               -- auto-increment per configuration_id
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-  UNIQUE (configuration_id, secret_name, version),
-  INDEX idx_configuration_id (configuration_id),
-  INDEX idx_status (status)
-);
-
--- Histórico de mudanças para auditoria
-CREATE TABLE provider_credential_audit (
-  id TEXT PRIMARY KEY,                    -- uuid
+  id TEXT PRIMARY KEY,
   configuration_id TEXT NOT NULL,
-  credential_id TEXT,                     -- FK to provider_credentials.id
-
-  action TEXT NOT NULL,                   -- 'created', 'rotated', 'revoked', 'validated'
-  secret_name TEXT,
-  status_from TEXT,
-  status_to TEXT,
-
-  description TEXT,                       -- "Rotação automática", "Manual update", etc
-
+  secret_name TEXT NOT NULL,
+  encrypted_value TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_configuration_id (configuration_id),
-  INDEX idx_created_at (created_at)
+
+  UNIQUE (configuration_id, secret_name),
+  INDEX idx_configuration_id (configuration_id)
 );
 ```
 
@@ -341,6 +288,8 @@ export const providerCredentialsRelations = relations(providerCredentials, ({ on
     references: [providerConfigurations.id],
   }),
 }));
+
+// Remover tabela de auditoria para simplificar - solo dev não precisa
 ```
 
 ### 5.3 Módulo de Criptografia
@@ -429,18 +378,11 @@ export type ProviderConfig = {
 
 export async function registerProviderConfig(
   db: Database,
-  config: ProviderConfig,
-  options: { validateConnection?: boolean } = {}
+  config: ProviderConfig
 ) {
   // Validate config structure
   if (!config.agentId || !config.providerId || !config.providerType) {
     throw new Error('Missing required fields: agentId, providerId, providerType');
-  }
-
-  // Validate provider type is supported
-  const supportedTypes = ['email', 'discord', 'slack', 'internal-chat'];
-  if (!supportedTypes.includes(config.providerType)) {
-    throw new Error(`Unsupported provider type: ${config.providerType}`);
   }
 
   // 1. Create provider configuration
@@ -454,7 +396,6 @@ export async function registerProviderConfig(
       providerType: config.providerType,
       configJson: JSON.stringify(config.configJson),
       status: 'active',
-      enabledAt: new Date(),
     })
     .onConflictDoUpdate({
       target: [providerConfigurations.agentId, providerConfigurations.providerId],
@@ -467,61 +408,14 @@ export async function registerProviderConfig(
   // 2. Encrypt and store secrets
   for (const [secretName, secretValue] of Object.entries(config.secrets)) {
     const encrypted = encryptSecret(secretValue);
-
-    // Get current version
-    const lastVersion = await db
-      .select({ version: providerCredentials.version })
-      .from(providerCredentials)
-      .where(eq(providerCredentials.configurationId, configId))
-      .orderBy(asc(providerCredentials.version))
-      .limit(1);
-
-    const newVersion = (lastVersion[0]?.version ?? 0) + 1;
-
-    // Mark old version as superseded
-    if (lastVersion.length > 0) {
-      await db
-        .update(providerCredentials)
-        .set({ status: 'superseded' })
-        .where(
-          and(
-            eq(providerCredentials.configurationId, configId),
-            eq(providerCredentials.secretName, secretName),
-            eq(providerCredentials.status, 'current')
-          )
-        );
-    }
-
-    // Insert new credential
     const credentialId = uuid();
+
     await db.insert(providerCredentials).values({
       id: credentialId,
       configurationId: configId,
       secretName,
       encryptedValue: encrypted.encryptedValue,
-      status: 'current',
-      version: newVersion,
     });
-
-    // Log to audit trail
-    await db.insert(providerCredentialAudit).values({
-      id: uuid(),
-      configurationId: configId,
-      credentialId,
-      action: lastVersion.length > 0 ? 'rotated' : 'created',
-      secretName,
-      statusFrom: lastVersion.length > 0 ? 'current' : null,
-      statusTo: 'current',
-      description: `${config.providerType} credential ${secretName}`,
-    });
-  }
-
-  // 3. Optional: Validate connection (test email credentials, discord bot token, etc)
-  if (options.validateConnection) {
-    // Delegate to provider-specific validation
-    // For email: try IMAP connection
-    // For discord: try API call
-    // etc
   }
 
   return { configId, agentId: config.agentId, providerId: config.providerId };
@@ -557,70 +451,30 @@ export async function rotateProviderCredentials(
   configurationId: string,
   newSecrets: Record<string, string>
 ) {
-  // Mark all current secrets as pending
-  await db
-    .update(providerCredentials)
-    .set({ status: 'pending' })
-    .where(
-      and(
-        eq(providerCredentials.configurationId, configurationId),
-        eq(providerCredentials.status, 'current')
-      )
-    );
-
-  // Insert new versions
+  // Update secrets
   for (const [secretName, secretValue] of Object.entries(newSecrets)) {
     const encrypted = encryptSecret(secretValue);
 
-    const lastVersion = await db
-      .select({ version: providerCredentials.version })
-      .from(providerCredentials)
-      .where(eq(providerCredentials.configurationId, configurationId))
-      .orderBy(asc(providerCredentials.version))
-      .limit(1);
+    // Delete old and insert new
+    await db
+      .delete(providerCredentials)
+      .where(
+        and(
+          eq(providerCredentials.configurationId, configurationId),
+          eq(providerCredentials.secretName, secretName)
+        )
+      );
 
-    const newVersion = (lastVersion[0]?.version ?? 0) + 1;
     const credentialId = uuid();
-
     await db.insert(providerCredentials).values({
       id: credentialId,
       configurationId,
       secretName,
       encryptedValue: encrypted.encryptedValue,
-      status: 'pending',
-      version: newVersion,
-    });
-
-    await db.insert(providerCredentialAudit).values({
-      id: uuid(),
-      configurationId,
-      credentialId,
-      action: 'rotated',
-      secretName,
-      statusFrom: 'current',
-      statusTo: 'pending',
-      description: `Credential rotation in progress`,
     });
   }
 
-  // Validate connection (if implementation added)
-  // If validation fails: rollback pending, restore old as current
-  // If validation succeeds: mark old as superseded, pending as current
-
   return { status: 'rotated', configurationId };
-}
-
-export async function getAuditLog(
-  db: Database,
-  configurationId: string,
-  limit: number = 50
-) {
-  return db
-    .select()
-    .from(providerCredentialAudit)
-    .where(eq(providerCredentialAudit.configurationId, configurationId))
-    .orderBy(asc(providerCredentialAudit.createdAt))
-    .limit(limit);
 }
 ```
 
@@ -628,68 +482,49 @@ export async function getAuditLog(
 
 ## 6. Plano de Implementação
 
-### Fase 1: Setup e Infraestrutura (Sprint 1)
-- [ ] Setup Drizzle ORM no projeto (install, configure, initial migration)
-- [ ] Definir schema completo (4 tabelas: configurations, credentials, audit, + existentes)
+### Fase 1: Setup e Infraestrutura
+- [ ] Definir schema simplificado (2 tabelas: configurations, credentials)
 - [ ] Implementar módulo de criptografia (encrypt/decrypt functions)
 - [ ] Criar migrations para adicionar novas tabelas
-- [ ] Setup de testes para criptografia
 
-### Fase 2: API de Provider Configuration (Sprint 2)
+### Fase 2: API de Provider Configuration
 - [ ] Implementar `registerProviderConfig()` function
-- [ ] Implementar `getProviderCredentials()` com cache
+- [ ] Implementar `getProviderCredentials()` com cache simples
 - [ ] Implementar `rotateProviderCredentials()` function
-- [ ] Implementar `getAuditLog()` function
-- [ ] Testes unitários para cada função
+- [ ] Testes unitários básicos
 
-### Fase 3: Integração com Communication Module (Sprint 3)
-- [ ] Converter todas as queries raw → Drizzle ORM
+### Fase 3: Integração com Communication Module
+- [ ] Converter queries raw para Drizzle ORM
 - [ ] Integrar provider config lookup na inicialização de providers
-- [ ] Modificar `createAgent()` para aceitar providerIds (lookup DB)
-- [ ] Manter backwards compatibility com ENV-based providers
 - [ ] Testes de integração com providers reais
 
-### Fase 4: Validação e Rollout (Sprint 4)
+### Fase 4: Validação
 - [ ] Testes end-to-end com múltiplos agentes
-- [ ] Documentação de API
-- [ ] Documentação de setup (como gerar chave de criptografia)
-- [ ] Testing de rotação de credenciais
-- [ ] Performance testing (1000+ configs)
+- [ ] Documentação de setup
 
 ---
 
 ## 7. Riscos e Mitigações
 
-| Risco | Probabilidade | Impacto | Mitigação |
-|-------|---------------|--------|-----------|
-| Chave de criptografia comprometida | Baixa | CRÍTICO | Usar ENV, nunca em código; considerar HSM/KMS later |
-| Migração Drizzle quebra queries existentes | Média | Alto | Testes unitários completos antes/depois |
-| Performance de criptografia é gargalo | Baixa | Médio | Benchmark criptografia com 10k records |
-| Incompatibilidade LibSQL com Drizzle | Baixa | Alto | Verificar documentação, test early |
-| Credenciais vazam em logs | Média | CRÍTICO | Implementar masking/redacting de secrets em logs |
-| Rotação de credenciais com provider ativo | Média | Alto | Implementar validação antes de aplicar, cache TTL |
+| Risco | Mitigação |
+|-------|-----------|
+| Chave de criptografia comprometida | Usar ENV, nunca em código |
+| Migração Drizzle quebra queries | Testes antes/depois |
+| Credenciais vazam em logs | Não logar valores sensíveis |
 
 ---
 
 ## 8. Métricas de Sucesso
 
 ### Técnicas
-- [ ] 100% de queries migradas para Drizzle (0 raw SQL)
-- [ ] Lookup de credenciais < 50ms (com cache)
-- [ ] Suporta 1000+ provider configurations sem degradação
-- [ ] AES-256-GCM com 100% de success rate de encrypt/decrypt
-- [ ] 0 plain-text secrets em banco de dados (audit)
+- [ ] Queries migradas para Drizzle ORM
+- [ ] AES-256-GCM encryption/decryption funcional
+- [ ] Sem plain-text secrets em banco de dados
 
 ### Funcionais
 - [ ] Múltiplos provedores por agente funcionando
-- [ ] Rotação de credenciais sem downtime
-- [ ] Histórico de auditoria completo
+- [ ] Rotação de credenciais implementada
 - [ ] Backwards compatibility com V1 (ENV-based providers)
-
-### de Negócio
-- [ ] Reduzir time-to-market para suportar novos providers
-- [ ] Aumentar segurança percebida (criptografia + auditoria)
-- [ ] Eliminar necessidade de redeploy para trocar credenciais
 
 ---
 

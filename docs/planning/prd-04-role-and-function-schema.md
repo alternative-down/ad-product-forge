@@ -2,22 +2,19 @@
 
 **Status:** In Progress
 **Last Updated:** 2026-03-15
-**Author:** Platform Team
-**Document Version:** 1.0
+
+> **Note:** Este é um projeto pessoal de desenvolvedor solo. Requisitos focam em funcionalidade, não robustez corporativa.
 
 ---
 
 ## 1. Executive Summary
 
-The **Role and Function Schema** feature establishes a granular, hierarchical access control and capability system for agents within the Forge platform. This system enables organizations to define clear agent roles (with specific permissions), group agents by function (operational classification), and support permission delegation across the agent network.
-
-The feature implements a master agent pattern where a designated master agent initializes base configurations and manages permission grants/revokes for other agents, supporting multi-level delegation and role escalation while maintaining organizational coherence.
+The **Role and Function Schema** enables agents to have defined roles with specific permissions. This allows a master agent to initialize the system and manage permission grants/revokes for other agents through a simple delegation pattern.
 
 **Key Value:**
-- **Granular Control:** Define what each agent can access (Tools, Providers, Workflows)
-- **Organizational Clarity:** Represent agent positions within organizational structure
-- **Secure Delegation:** Master agent grants permissions safely; agents can be authorized to modify their own role configurations
-- **Scalability:** Support complex permission hierarchies and role inheritance across agent networks
+- **Simple Control:** Define what each agent can access (Tools, Providers, Workflows)
+- **Functional Grouping:** Group agents by operational function
+- **Delegation:** Master agent grants permissions to other agents
 
 ---
 
@@ -82,15 +79,12 @@ Currently, agents in the Forge platform have flat capability structures. Tools, 
 
 ### Success Metrics
 
-| Metric | Target | Measurement |
-| --- | --- | --- |
-| **Role Assignment Coverage** | 100% of agents have explicit role | Audit query on agent table |
-| **Permission Grant Latency** | < 500ms | Master agent test scenarios |
-| **Permission Check Performance** | < 10ms overhead per action | Profiling during agent execution |
-| **Audit Trail Completeness** | 100% of permission changes logged | Query audit_role_changes table |
-| **Master Agent Initialization Time** | < 2s | Test suite execution time |
-| **Role Template Reusability** | 3+ agents per template | Role management dashboard stats |
-| **Permission Revocation Consistency** | All cascade deletes verified | Integration test suite |
+| Metric | Target |
+| --- | --- |
+| **Role Assignment Coverage** | Agents have explicit role |
+| **Permission Grant Works** | Master agent can assign roles |
+| **Permission Checks Work** | Permission checks before tool access |
+| **Audit Trail** | Permission changes logged |
 
 ---
 
@@ -157,12 +151,6 @@ interface Role {
     isAdmin: boolean            // Master admin permissions
   }
 
-  // Escalation support
-  escalationPath?: {
-    roleId: string              // Role that can approve escalation
-    maxDurationMs?: number      // How long temporary elevation lasts
-  }
-
   metadata?: Record<string, unknown>
   createdAt: string
   updatedAt: string
@@ -181,22 +169,13 @@ Agents receive role assignments with optional scope binding:
 
 ```typescript
 interface AgentRoleAssignment {
-  id: string                    // UUID
-  agentId: string              // Agent being assigned role
-  roleId: string               // Role being assigned
-  functionId?: string          // Optional function scope
+  id: string
+  agentId: string
+  roleId: string
+  functionId?: string
   grantedAt: string
-  grantedBy: string            // Agent ID of who granted this
-  expiresAt?: string           // Optional expiration for temporary grants
+  grantedBy: string
   metadata?: Record<string, unknown>
-
-  // Audit trail
-  auditLog: Array<{
-    action: 'created' | 'modified' | 'escalated' | 'revoked'
-    timestamp: string
-    actor: string               // Who performed action
-    reason?: string
-  }>
 }
 ```
 
@@ -212,26 +191,16 @@ A designated master agent bootstrap the entire role/function system and manages 
 
 #### Operation Phase
 1. **Permission Grant**
-   - Only master agent or authorized agents can grant roles to others
-   - Grants create AgentRoleAssignment records
-   - Audit trail captures who, what, when, why
+   - Master agent or authorized agents can grant roles
+   - Creates AgentRoleAssignment records
 
 2. **Permission Revocation**
-   - Master agent can revoke any role
-   - Revocation cascades: removes agent access to all role-based resources
-   - Audit trail records revocation reason
+   - Master agent can revoke roles
+   - Removes agent access to role-based resources
 
-3. **Permission Escalation**
-   - Agent requests temporary elevated permissions
-   - Master agent (or escalation target) approves with expiration time
-   - System enforces time-limited access
-   - Automatic revocation when expiration passes
-
-4. **Role Modification**
+3. **Role Modification**
    - Master agent can modify role definitions
-   - Authorized agents can request changes to their own role (within bounds)
    - Changes apply to all agents holding that role
-   - Audit trail captures all modifications
 
 #### Master Agent Capabilities
 The master agent is granted an `admin` role with:
@@ -347,41 +316,13 @@ CREATE TABLE forge_agent_role_assignments (
   id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL,
   role_id TEXT NOT NULL,
-  function_id TEXT,            -- Optional scope binding
+  function_id TEXT,
   granted_at TEXT NOT NULL,
-  granted_by TEXT NOT NULL,    -- Agent ID who granted
-  expires_at TEXT,             -- NULL = permanent, set = temporary/escalation
+  granted_by TEXT NOT NULL,
   metadata TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (role_id) REFERENCES forge_roles(id)
-);
-```
-
-#### `forge_role_audit_log`
-```sql
-CREATE TABLE forge_role_audit_log (
-  id TEXT PRIMARY KEY,
-  resource_type TEXT NOT NULL, -- 'role' | 'function' | 'assignment'
-  resource_id TEXT NOT NULL,
-  action TEXT NOT NULL,        -- 'created' | 'modified' | 'deleted' | 'granted' | 'revoked'
-  actor_id TEXT NOT NULL,      -- Agent ID who performed action
-  old_value TEXT,              -- JSON: previous state (if modification)
-  new_value TEXT,              -- JSON: new state
-  reason TEXT,                 -- Why action was taken
-  created_at TEXT NOT NULL
-);
-```
-
-#### `forge_permission_checks`
-```sql
-CREATE TABLE forge_permission_checks (
-  id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL,
-  resource_type TEXT NOT NULL, -- 'tool' | 'provider' | 'workflow'
-  resource_id TEXT NOT NULL,
-  allowed BOOLEAN NOT NULL,
-  timestamp TEXT NOT NULL
 );
 ```
 
@@ -466,21 +407,6 @@ revokeRoleFromAgent(input: {
   reason?: string
 }): Promise<void>
 
-// Request temporary escalation
-requestEscalation(input: {
-  agentId: string
-  desiredRoleId: string
-  reason: string
-  requestedDurationMs: number
-}): Promise<EscalationRequest>
-
-// Approve/deny escalation (authorized agent)
-handleEscalationRequest(input: {
-  requestId: string
-  approved: boolean
-  actualDurationMs?: number
-  reason?: string
-}): Promise<AgentRoleAssignment | void>
 ```
 
 #### Permission Checking
@@ -504,31 +430,6 @@ getAgentsWithAccess(input: {
   resourceType: 'tool' | 'provider' | 'workflow'
   resourceId: string
 }): Promise<AgentRoleAssignment[]>
-```
-
-#### Audit & Monitoring
-
-```typescript
-// Get audit log for resource
-getAuditLog(input: {
-  resourceType?: 'role' | 'function' | 'assignment'
-  resourceId?: string
-  action?: string
-  actorId?: string
-  startDate?: string
-  endDate?: string
-  limit: number
-}): Promise<AuditLogEntry[]>
-
-// Get permission check history
-getPermissionCheckHistory(input: {
-  agentId?: string
-  resourceType?: string
-  allowed?: boolean
-  startDate?: string
-  endDate?: string
-  limit: number
-}): Promise<PermissionCheck[]>
 ```
 
 ### 5.3 Integration Points
@@ -787,54 +688,32 @@ class EscalationRejectedError extends Error {
 
 ## 9. Rollout & Implementation Strategy
 
-### Phase 1: Foundation (Week 1-2)
-- Create database schema (roles, functions, assignments, audit)
+### Phase 1: Foundation
+- Create database schema (roles, functions, assignments)
 - Implement Role and Function managers (CRUD APIs)
 - Implement master agent initialization
-- Unit tests for all schema operations
+- Unit tests
 
-### Phase 2: Runtime Integration (Week 3-4)
+### Phase 2: Runtime Integration
 - Implement PermissionChecker
 - Integrate permission checks into agent execution pipeline
 - Implement tool/provider/workflow access control
-- Integration tests for permission enforcement
+- Integration tests
 
-### Phase 3: Escalation & Delegation (Week 5-6)
-- Implement escalation request/approval workflow
-- Add escalation expiration logic
-- Implement agent-to-agent role grants (if authorized)
-- Test escalation expiration and auto-revocation
-
-### Phase 4: Audit & Monitoring (Week 7-8)
-- Implement comprehensive audit logging
-- Build audit query APIs
-- Create audit log cleanup/archival policies
-- Compliance testing
-
-### Phase 5: Documentation & Testing (Week 9-10)
-- Write agent-facing documentation
-- Create role/function templates for common scenarios
-- Run comprehensive security testing
-- Performance benchmarking and optimization
-
-### Phase 6: Deployment & Operations (Week 11-12)
-- Canary deployment to staging environment
-- Monitor audit log, permission decisions, performance metrics
-- Address issues, iterate
-- Full production rollout
+### Phase 3: Testing & Documentation
+- Write documentation
+- Create role templates for common scenarios
+- Security testing
 
 ---
 
 ## 10. Risk Assessment & Mitigation
 
-| Risk | Probability | Impact | Mitigation |
-| --- | --- | --- | --- |
-| **Master agent compromise** | Low | Critical | Master agent cannot have role revoked (system constraint); multi-signature approval for master agent action changes |
-| **Permission bypass via timing** | Low | High | Atomic permission checks; permission cache invalidation on role changes |
-| **Escalation abuse** | Medium | Medium | Audit trail visible to all; escalation approvers monitored; auto-revocation enforced |
-| **Audit log tampering** | Low | Critical | Append-only audit table; cryptographic hashing of audit entries; external audit export |
-| **Performance degradation** | Medium | Medium | Permission check caching; indexed database queries; batch permission validation |
-| **Database corruption on cascade delete** | Low | High | Transactional deletes; rollback on failure; integrity checks in tests |
+| Risk | Mitigation |
+| --- | --- |
+| **Master agent compromise** | Master agent cannot have role revoked (system constraint) |
+| **Permission bypass** | Atomic permission checks; cache invalidation on role changes |
+| **Performance degradation** | Permission check caching; indexed database queries |
 
 ---
 
@@ -1001,80 +880,26 @@ class EscalationRejectedError extends Error {
 }
 ```
 
-### C. Escalation Request Flow
-
-```
-Agent requests escalation:
-  → System validates request is in allowed path
-  → Creates EscalationRequest record
-  → Notifies escalation approver
-  → Approver reviews request
-  ├─ APPROVED:
-  │  → Creates temporary AgentRoleAssignment with expiration
-  │  → Agent immediately gains elevated permissions
-  │  → Logs approval to audit trail
-  │
-  └─ DENIED:
-     → Logs denial to audit trail
-     → Notifies requesting agent
-     → Request closed
-
-Auto-expiration cron job (every minute):
-  → Finds expired escalations
-  → Revokes assignments
-  → Logs auto-expiration to audit trail
-```
 
 ### D. Database Indexing Strategy
 
 ```sql
 -- Role queries
 CREATE INDEX idx_roles_id ON forge_roles(id);
-CREATE INDEX idx_roles_created_at ON forge_roles(created_at);
 
 -- Function queries
 CREATE INDEX idx_functions_id ON forge_functions(id);
-CREATE INDEX idx_functions_parent ON forge_functions(parent_function_id);
 
 -- Agent role lookup (critical path)
 CREATE INDEX idx_agent_roles_agent_id ON forge_agent_role_assignments(agent_id);
 CREATE INDEX idx_agent_roles_agent_role ON forge_agent_role_assignments(agent_id, role_id);
-CREATE INDEX idx_agent_roles_expires ON forge_agent_role_assignments(expires_at);
-
--- Audit queries
-CREATE INDEX idx_audit_resource ON forge_role_audit_log(resource_type, resource_id);
-CREATE INDEX idx_audit_actor ON forge_role_audit_log(actor_id);
-CREATE INDEX idx_audit_timestamp ON forge_role_audit_log(created_at);
 ```
 
 ### E. Future Enhancements
 
-1. **Role Templates Library**
-   - Pre-built role sets for common industries (SaaS, E-commerce, Agency)
-   - Community-contributed templates
-   - Template versioning and inheritance
-
-2. **Dynamic Role Conditions**
-   - Time-based roles (e.g., "can only access during business hours")
-   - Context-based roles (e.g., "can access tool A only with approval from tool B")
-   - ML-powered anomaly detection for permission misuse
-
-3. **Cross-Org Permission Delegation**
-   - Allow agents from different organizations to collaborate safely
-   - Org-level role hierarchies
-   - Cross-org escalation approval chains
-
-4. **Role Analytics Dashboard**
-   - Visualization of permission distribution
-   - Unused role/tool detection
-   - Permission usage trends over time
-   - Compliance reporting
-
-5. **Advanced Audit Features**
-   - Blockchain-based audit trail (immutability guarantee)
-   - Real-time audit log streaming
-   - ML-powered audit anomaly detection
-   - Custom audit policies per organization
+1. **Dynamic Role Conditions** — Time-based or context-based roles
+2. **Role Analytics** — View permission distribution and usage
+3. **Advanced Audit Features** — Comprehensive audit trail visibility
 
 ---
 

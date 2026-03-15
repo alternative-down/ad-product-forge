@@ -1,10 +1,12 @@
 # Cron/Scheduling Tool
 
+> **Note:** This is a personal project for a solo developer using LLM agents. Simplified for ease and practicality (KISS + YAGNI). Enterprise scheduling, distributed systems, and complex orchestration are out of scope.
+
 ## Overview
 
-The Cron/Scheduling Tool enables agents to create and manage scheduled tasks. It provides agents with a cron scheduling interface to define execution rules, generate internal messages for scheduled events, and automatically trigger agent execution at specified times. Agents receive auto-generated instructions and execute them without manual intervention. The system supports both recurrent and one-time scheduled tasks.
+The Cron/Scheduling Tool enables agents to create and manage scheduled tasks using standard cron syntax. When a scheduled event triggers, an internal message wakes the agent to execute the task.
 
-**Key behavior:** When a scheduled event triggers, an internal message is routed through the internal chat provider as an auto-message, which wakes the queue and allows the agent to process the scheduled task immediately.
+**Key behavior:** Scheduled events trigger agent execution via internal messaging.
 
 ---
 

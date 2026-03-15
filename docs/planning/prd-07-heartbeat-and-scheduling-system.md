@@ -1,5 +1,7 @@
 # PRD-07: Heartbeat and Scheduling System
 
+> **Note:** This is a personal project for a solo developer using LLM agents. Simplified for ease and practicality (KISS + YAGNI). Enterprise scheduling, distributed systems, and complex orchestration are out of scope.
+
 **Status:** Draft
 **Version:** 1.0
 **Created:** 2026-03-15
@@ -9,9 +11,9 @@
 
 ## Executive Summary
 
-The **Heartbeat and Scheduling System** enables agents to remain active and autonomous by implementing periodic health checks and autonomous scheduling capabilities. This feature prevents agents from indefinite dormancy, allows agents to trigger their own scheduled tasks via internal messaging, and enables agents to proactively check for pending work and resume interrupted executions.
+The **Heartbeat and Scheduling System** enables agents to remain active and autonomous by implementing periodic health checks and autonomous scheduling capabilities.
 
-**Core Objective:** Transform agents from purely event-driven to proactive, self-managing autonomous entities capable of autonomous scheduling and work resumption.
+**Core Objective:** Allow agents to schedule their own tasks and remain responsive even without external events.
 
 ---
 
@@ -19,28 +21,16 @@ The **Heartbeat and Scheduling System** enables agents to remain active and auto
 
 ### Current State
 
-Agents in the system operate on an event-driven model:
-- Agents wake only when external messages arrive (via communication providers)
-- Agents with no external communication remain indefinitely dormant
-- No mechanism exists for agents to schedule recurring tasks
-- Agents cannot proactively check for pending work or resume interrupted operations
-- System lacks visibility into agent health and activity status
+Agents operate on an event-driven model:
+- Agents wake only when external messages arrive
+- No mechanism for agents to schedule recurring tasks
+- Agents cannot check for pending work or resume interrupted operations
 
 ### Pain Points
 
-1. **Agent Dormancy**: Agents intended for periodic tasks (e.g., daily reports, cleanup routines, monitoring) cannot execute autonomously
-2. **Limited Autonomy**: Agents cannot trigger their own workflows without external stimuli
-3. **Work Continuity**: Interrupted executions lack resumption mechanisms
-4. **System Visibility**: No heartbeat signals indicate agent availability or liveness
-5. **Scalability Risk**: Without periodic activity, long-idle agents may face state inconsistency
-
-### Impact
-
-Without this feature, the autonomous system cannot:
-- Execute scheduled business processes (daily summaries, periodic checks)
-- Support agents with time-driven responsibilities
-- Resume interrupted work flows automatically
-- Monitor and maintain agent health across long periods of inactivity
+1. **No Autonomous Tasks**: Agents cannot schedule recurring work
+2. **No Work Resumption**: Interrupted executions cannot be resumed
+3. **No Visibility**: No heartbeat indicates agent health
 
 ---
 

@@ -1,4 +1,6 @@
-# PRD 10 — Multi-Provider Group Support
+# PRD-10: Multi-Provider Group Support
+
+> **Note:** This is a personal project for a solo developer using LLM agents. Simplified for ease and practicality (KISS + YAGNI). Enterprise features like real-time sync, role-based permissions, and webhooks are out of scope.
 
 **Status:** Draft - Analysis & Planning
 **Date:** 2026-03-15
@@ -9,18 +11,18 @@
 
 ## 1. Executive Summary
 
-**Objective:** Extend the agent communication system to support group-based messaging across all providers (Discord, Email), enabling agents to coordinate with multiple contacts simultaneously while maintaining provider-agnostic workflows.
+**Objective:** Extend the agent communication system to support group-based messaging across all providers (Discord, Email).
 
 **Value Proposition:**
 - Agents can create and manage groups across all communication providers
-- Distribute messages efficiently to multiple recipients (CC, BCC for email; channels/roles for Discord)
-- Unified API for group operations across different transport mechanisms
+- Distribute messages efficiently to multiple recipients
+- Unified API for group operations
 - Maintain consistency in group membership and communication history
 
 **Scope:**
-- Discord: Channel creation, group messaging via channels, @mentions for group notifications
-- Email: CC/BCC functionality, mailing list support, group message history
-- Core: Group entity in communication store, agent-facing tools for group management and messaging
+- Discord: Channel creation, group messaging via channels
+- Email: CC/BCC functionality, group message history
+- Core: Group entity in communication store, agent-facing tools for group management
 
 ---
 
@@ -28,44 +30,41 @@
 
 ### Current State
 - Individual conversations are supported (1-to-1 messaging)
-- Channels exist in Discord but are treated as single conversations without explicit group management
-- Email provider lacks group support (CC/BCC not implemented)
-- No unified interface for managing groups across providers
-- Agents cannot programmatically create groups or manage memberships
+- Discord channels exist but without explicit group management
+- Email provider lacks CC/BCC support
+- No unified interface for groups across providers
 
 ### Pain Points
-1. **Limited multi-recipient messaging** — Agents must send individual messages or use provider-specific APIs
-2. **Inconsistent group semantics** — Discord channels are not explicitly "groups"; email lacks groups entirely
-3. **No group lifecycle management** — Cannot create, update membership, or delete groups via agent tools
-4. **Provider-specific workarounds** — Different logic for Discord (channels) vs. Email (CC/BCC)
-5. **Historical context loss** — Group conversations are not properly tracked for future reference
+1. Agents must send individual messages for multiple recipients
+2. Discord channels and email groups have inconsistent semantics
+3. Cannot programmatically create or manage groups
+4. Different logic needed for each provider
 
 ### Impact Without Solution
-- Reduced agent capability for coordination tasks
-- Higher complexity for multi-recipient communication scenarios
+- Reduced agent capability for coordination
+- Higher complexity for multi-recipient communication
 - Fragmented group data across providers
-- Inability to reuse groups across multiple messages
 
 ---
 
 ## 3. Goals and Non-Goals
 
 ### Goals
-1. **✅ Create groups in Discord** — Agents can create channels and invite members
-2. **✅ Create groups in Email** — Agents can compose messages to multiple recipients with CC/BCC and mailing lists
-3. **✅ Manage group membership** — Add/remove members from groups
-4. **✅ Send group messages** — Unified tool for sending messages to groups across all providers
-5. **✅ Store group metadata** — Persist group definitions, members, and conversation history in communication store
-6. **✅ Unified agent API** — Agents use a single interface for group operations, not provider-specific logic
-7. **✅ Group message history** — Track conversation threads in groups consistently
+1. Create groups in Discord (agents can create channels and invite members)
+2. Create groups in Email (agents can compose messages with CC/BCC)
+3. Manage group membership (add/remove members)
+4. Send group messages (unified tool across all providers)
+5. Store group metadata (in communication store)
+6. Unified agent API (single interface for group operations)
+7. Group message history (track conversation threads)
 
 ### Non-Goals
-1. **❌ Real-time group sync** — Membership changes are not synchronized across providers
-2. **❌ Group permissions/roles** — Advanced role-based access control deferred to v2
-3. **❌ Group settings UI** — Group management via REST API only (no web dashboard in v1)
-4. **❌ Private/public group classification** — All groups are treated uniformly
-5. **❌ Group webhooks** — External notifications for group events
-6. **❌ Archive/restore groups** — Groups are permanent once created
+1. Real-time group sync (membership changes are one-way to provider)
+2. Group permissions/roles (deferred to v2)
+3. Group settings UI (API only in v1)
+4. Private/public group classification
+5. Group webhooks
+6. Archive/restore groups
 
 ---
 
@@ -841,22 +840,21 @@ packages/mastra-engine/src/
 ## 8. Dependencies and Constraints
 
 ### External Dependencies
-- **Discord.js:** Already integrated; no new version required
-- **nodemailer:** Already integrated; no new version required
-- **LibSQL:** Existing database; schema extensions only
+- Discord.js: Already integrated
+- nodemailer: Already integrated
+- LibSQL: Existing database; schema extensions only
 
 ### Internal Dependencies
 - Communication store (existing)
 - Provider registration system (existing)
 - Contact resolution (existing)
-- Wake queue (for inbound group messages)
 
 ### Constraints
-1. **Email groups are virtual** — No server-side mailing lists; stored only in store
-2. **Single guild assumption** — Discord provider assumes single guild (does not support multi-server agents)
-3. **No real-time sync** — Member changes are not pushed to providers; next send uses current membership
-4. **Backward compatibility** — Existing sendMessage() API remains unchanged; groupId is optional
-5. **No nested groups** — Groups cannot contain other groups in v1
+1. Email groups are virtual (no server-side mailing lists)
+2. Single guild assumption (Discord provider assumes single server)
+3. No real-time sync (member changes are one-way to provider)
+4. Backward compatible (existing sendMessage() unchanged)
+5. No nested groups in v1
 
 ---
 
@@ -913,16 +911,16 @@ packages/mastra-engine/src/
 
 ## 11. Future Enhancements (v2+)
 
-1. **Group Permissions & Roles** — Support read-only, member, admin roles
-2. **Group Settings UI** — Web dashboard for group management
-3. **Real-time Sync** — Push membership changes to providers immediately
-4. **Private/Public Groups** — Explicit classification with access control
-5. **Email Mailing Lists** — Server-side mailing list creation (requires mail server integration)
-6. **Group Webhooks** — External notifications for group events (member added, message posted)
-7. **Group Templates** — Pre-defined group structures for common use cases (tech team, sales team, etc.)
-8. **Nested Groups** — Groups containing other groups or managed team hierarchies
-9. **Archive/Restore** — Soft-delete groups; restore from archive
-10. **Multi-Guild Discord Support** — Agents spanning multiple Discord servers
+1. Group permissions & roles
+2. Group settings UI (web dashboard)
+3. Real-time sync to providers
+4. Private/public group classification
+5. Email mailing lists (server-side)
+6. Group webhooks
+7. Group templates
+8. Nested groups
+9. Archive/restore groups
+10. Multi-guild Discord support
 
 ---
 

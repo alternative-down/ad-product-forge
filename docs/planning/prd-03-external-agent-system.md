@@ -4,18 +4,19 @@
 **Feature:** External Agent System
 **Last Updated:** 2026-03-15
 
+> **Note:** Este é um projeto pessoal de desenvolvedor solo. Requisitos focam em funcionalidade, não robustez corporativa.
+
 ---
 
 ## 1. Executive Summary
 
-The External Agent System enables dynamic creation of temporary specialist agents that can be spawned on-demand to fulfill specific tasks requested by internal agents. These external agents act as consultants, personas, or domain experts within constrained boundaries. They operate with restricted permissions (messaging only), cannot access internal company resources or data, and are managed through the existing communication and wake queue infrastructure. External agents wake only when receiving messages and can be terminated once their assigned task is complete.
+The External Agent System enables dynamic creation of temporary specialist agents spawned on-demand to fulfill specific tasks. These external agents act as consultants or domain experts with restricted permissions (messaging only), managed through existing communication infrastructure. External agents wake on messages and can be terminated once tasks complete.
 
-**Business Value:**
-- Enable richer multi-agent workflows with specialized expert consultation
-- Support pre-interview personas and expert explanations
-- Reduce load on main agents by delegating specialized tasks
-- Maintain security and data isolation for external participants
-- Provide cost-efficient temporary agent lifecycle
+**Value:**
+- Enable multi-agent workflows with specialized consultation
+- Support persona-based interactions
+- Reduce load on main agents via task delegation
+- Isolate external agents from internal data
 
 ---
 
@@ -60,12 +61,11 @@ This limitation reduces flexibility in agent-based workflows and prevents design
 
 ### Success Criteria
 
-- [ ] External agents are created dynamically with <100ms latency
-- [ ] Communication round-trip latency is <2s average
-- [ ] External agents remain dormant (zero CPU) when no messages pending
-- [ ] All external agent interactions are logged and auditable
-- [ ] Termination cleanup happens within 5s
-- [ ] System supports >100 concurrent external agent instances
+- [ ] External agents are created dynamically
+- [ ] Communication works between internal and external agents
+- [ ] External agents terminate cleanly
+- [ ] Interactions are logged
+- [ ] System supports 50+ concurrent external agents
 
 ---
 
@@ -368,20 +368,15 @@ CREATE TABLE forge_external_agents (
   role TEXT NOT NULL,
   system_prompt TEXT NOT NULL,
   context TEXT,
-  max_tokens INTEGER DEFAULT 2000,
-  termination_signal TEXT,
-  status TEXT DEFAULT 'active',  -- 'active', 'terminated', 'error'
+  status TEXT DEFAULT 'active',
   created_at TEXT NOT NULL,
-  terminated_at TEXT,
-  metadata JSON
+  terminated_at TEXT
 );
 ```
 
 **Lifecycle:**
 - Created when `createExternalAgent()` succeeds
-- Updated on message exchange (metadata: last_message_at, message_count)
 - Marked "terminated" when termination requested
-- Archived (soft-delete) after 30 days
 
 ### 6.5 Security & Isolation
 
@@ -406,50 +401,35 @@ External agents have access to:
 - Conversation history visible only to creator and external agent
 - Audit log captures all interactions with external agent ID + creator ID
 
-#### Audit Logging
-**Schema Addition:** `forge_external_agent_audit_log`
-```sql
-CREATE TABLE forge_external_agent_audit_log (
-  log_id TEXT PRIMARY KEY,
-  external_agent_id TEXT NOT NULL,
-  creator_agent_id TEXT NOT NULL,
-  event_type TEXT,  -- 'created', 'message_sent', 'message_received', 'terminated'
-  details JSON,
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (external_agent_id) REFERENCES forge_external_agents
-);
-```
+#### Event Logging
+- Log agent creation, termination
+- Log message exchange (creator/external agent)
+- Keep logs simple and functional
 
 ---
 
 ## 7. Implementation Plan
 
-### Phase 1: Foundation (Week 1-2)
+### Phase 1: Foundation
 - [ ] Create `ExternalAgent` types and interfaces
 - [ ] Implement `createExternalAgent()` tool
 - [ ] Add `forge_external_agents` table schema
-- [ ] Implement security layer (tool filtering)
-- [ ] Write unit tests for external agent creation
+- [ ] Implement basic tool filtering
 
-### Phase 2: Communication (Week 2-3)
+### Phase 2: Communication
 - [ ] Integrate communication module for external agents
 - [ ] Implement `sendMessageToExternalAgent()` tool
 - [ ] Implement `getExternalAgentMessages()` tool
 - [ ] Add wake queue integration
-- [ ] Write integration tests for message flow
 
-### Phase 3: Lifecycle Management (Week 3-4)
+### Phase 3: Lifecycle Management
 - [ ] Implement `terminateExternalAgent()` tool
-- [ ] Add self-termination signal handling
 - [ ] Implement resource cleanup
-- [ ] Add audit logging infrastructure
-- [ ] Write end-to-end tests
+- [ ] Basic testing
 
-### Phase 4: Optimization & Documentation (Week 4-5)
-- [ ] Performance testing (create/terminate latency)
-- [ ] Load testing (100+ concurrent agents)
-- [ ] Documentation and API reference
-- [ ] Example workflows and code samples
+### Phase 4: Testing & Documentation
+- [ ] Integration tests
+- [ ] Documentation and examples
 
 ---
 
@@ -727,14 +707,11 @@ All events logged to `forge_external_agent_audit_log` with full context.
 
 ## 12. Risks & Mitigation
 
-| Risk | Impact | Mitigation |
-| --- | --- | --- |
-| **Token Explosion** | External agents consume unbounded tokens, costs spiral | Max tokens enforced per request; periodic cleanup of long-running agents |
-| **Security Breach** | External agent accesses internal data or tools | Tool filtering at creation; runtime validation on every call; audit logging |
-| **Deadlock** | External agent waits for message, creator waits for response | Async message delivery; timeout on response wait |
-| **Resource Leak** | Terminated agents leave orphaned processes | Explicit cleanup + scheduled garbage collection |
-| **Message Queue Backlog** | Wake queue overwhelmed with many external agents | Debounce + batch processing; backpressure handling |
-| **Identity Spoofing** | External agent impersonates internal agent or creator | Isolated tool scope; creator validation on every API call |
+| Risk | Mitigation |
+| --- | --- |
+| **Security Breach** | Tool filtering at creation; runtime validation |
+| **Resource Leak** | Explicit cleanup of terminated agents |
+| **Message Backlog** | Async message delivery with timeouts |
 
 ---
 

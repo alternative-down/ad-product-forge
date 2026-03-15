@@ -1,4 +1,6 @@
-# PRD — Internal Group Chat Implementation
+# PRD-09: Internal Group Chat Implementation
+
+> **Note:** This is a personal project for a solo developer using LLM agents. Simplified for ease and practicality (KISS + YAGNI). Enterprise features like role-based access, webhooks, and advanced permissions are out of scope.
 
 **Feature**: Internal Group Chat Implementation
 **Version**: 1.0
@@ -9,23 +11,15 @@
 
 ## 1. Executive Summary
 
-This PRD outlines the implementation of group chat capabilities within the internal communication system. Currently, the communication module supports only direct messages (1-to-1 conversations). This feature extends that system to enable multiple agents to collaborate and coordinate through group-based messaging.
+This PRD outlines the implementation of group chat capabilities within the internal communication system. Currently, the communication module supports only direct messages (1-to-1 conversations). This feature extends that system to enable multiple agents to coordinate through group-based messaging.
 
-**Core Objective**: Enable agents to create and participate in group conversations for collaborative coordination and knowledge sharing.
+**Core Objective**: Enable agents to create and participate in group conversations for coordination.
 
 ---
 
-## 2. Vision & Strategic Context
+## 2. Vision
 
-### 2.1 Vision Statement
-Build a collaborative communication infrastructure where agents can organize into groups, share information asynchronously, and coordinate complex tasks without direct integration with external platforms.
-
-### 2.2 Strategic Alignment
-This feature is foundational for:
-- **Agent Hiring Workflow** (Section 4.1 of ROADMAP): New agents need group channels to onboard and coordinate
-- **External Specialist Agents** (Section 2.1 of ROADMAP): Specialist agents need group messaging for task coordination
-- **Cron/Scheduling System** (Section 4.4 of ROADMAP): Self-messaging and scheduled task coordination
-- **Role & Permission Management** (Section 3.1 of ROADMAP): Group-based permission scoping and access control
+Build a simple communication infrastructure where agents can organize into groups and coordinate asynchronously.
 
 ---
 
@@ -428,60 +422,41 @@ Group inbound is **synthetic** (no external provider):
 
 ---
 
-## 8. Detailed Requirements & Constraints
+## 8. Requirements & Constraints
 
 ### 8.1 Functional Requirements
 
-| Req ID | Requirement | Priority | Notes |
-|---|---|---|---|
-| F1 | Create group with name + optional description | MUST | Via `createGroup()` tool |
-| F2 | Add existing agents to group | MUST | Via `addGroupMember()` by slug |
-| F3 | Send message to group (all members receive) | MUST | Via `sendMessage({ groupId })` |
-| F4 | Remove agent from group | SHOULD | Via `removeGroupMember()` |
-| F5 | List my groups (paginated) | MUST | Via `listGroups()` |
-| F6 | Get group details + members | MUST | Via `getGroup()` |
-| F7 | Update group name/description | SHOULD | Via `updateGroup()` |
-| F8 | Retrieve group message history | MUST | Via `getMessages({ groupId })` |
-| F9 | Unread message tracking per group | SHOULD | Via message entity + wake tracking |
-| F10 | Full-text search within group messages | NICE | Future: index + search API |
+| Req ID | Requirement | Priority |
+|---|---|---|
+| F1 | Create group with name + optional description | MUST |
+| F2 | Add existing agents to group | MUST |
+| F3 | Send message to group (all members receive) | MUST |
+| F4 | Remove agent from group | SHOULD |
+| F5 | List my groups | MUST |
+| F6 | Get group details + members | MUST |
+| F7 | Retrieve group message history | MUST |
 
 ### 8.2 Non-Functional Requirements
 
-| Req ID | Requirement | Target | Constraint |
-|---|---|---|---|
-| NFR1 | Group creation latency | <100ms | Database roundtrip |
-| NFR2 | Message send latency | <50ms | Synchronous persist |
-| NFR3 | List groups query time | <200ms | 1000 groups per agent |
-| NFR4 | Message history query | <200ms | 1000 messages per group |
-| NFR5 | Backward compatibility | 100% | Existing DM flows unaffected |
-| NFR6 | Data consistency | ACID | All or nothing group creation |
-| NFR7 | Scalability: agents per group | ≥100 | No hard cap, tested to 100 |
-| NFR8 | Scalability: messages per group | ≥10,000 | Indexed queries only |
+| Req ID | Requirement | Target |
+|---|---|---|
+| NFR1 | Group creation latency | <100ms |
+| NFR2 | Message send latency | <50ms |
+| NFR3 | Backward compatibility | 100% |
 
-### 8.3 Authorization & Permissions
-
-**Current Model** (extend):
-- Any agent can send DMs to any contact
-- No explicit permission model yet (future: Section 3.1 ROADMAP)
+### 8.3 Authorization
 
 **Group Permissions V1**:
-- **Group Creation**: Any agent can create a group (no restriction)
-- **Group Membership**: Creator can add/remove members
-- **Message Sending**: Only group members can send to group
-- **Message Reading**: Only group members see history
-- **Group Updates**: Only group owner can rename/update metadata
+- Any agent can create a group
+- Group creator can add/remove members
+- Only group members can send/read messages
+- Group owner can update metadata
 
-**Future (Role-Based Access)**:
-- Admins can manage member roles (admin, moderator, member)
-- Channel-level permissions tied to agent roles
-- Audit logging of group operations
+### 8.4 Data Retention
 
-### 8.4 Data Retention & Privacy
-
-- **Message retention**: Same as existing conversations (indefinite, subject to future retention policies)
-- **Soft deletes**: Groups and members marked `is_active=false` (not physically deleted)
-- **Audit trail**: Keep all group operations for compliance
-- **Privacy**: No encryption at this phase (internal system, trusted agents)
+- Message retention: Same as existing conversations
+- Soft deletes: Groups marked `is_active=false`
+- No encryption required (internal system, trusted agents)
 
 ---
 
@@ -625,35 +600,25 @@ None for Phase 1. Future integrations:
 
 ## 13. Open Questions & Future Considerations
 
-### 13.1 Open Questions (to resolve before Phase 1)
+### 13.1 Open Questions
 
-1. **Synthetic Conversation Records**: Should we create one `conversation` record per (group, agent) for UI/list compatibility, or bifurcate queries?
+1. **Synthetic Conversation Records**: Create one `conversation` record per (group, agent) or separate queries?
    - **Current decision**: Option A (synthetic, cleaner API)
-   - **Validation needed**: Query performance on 1000 synthetic records
 
-2. **Message Attribution**: When an agent sends to a group, should we store the author contact slug or agent ID?
+2. **Message Attribution**: Store author contact slug or agent ID?
    - **Current decision**: Store author contact slug (consistent with Contact model)
-   - **Impact**: Ties agent identity to Contact system; simplifies future agent references
 
-3. **Group Discoverability**: Should agents see all groups (directory) or only their own?
+3. **Group Discoverability**: Agents see all groups or only their own?
    - **Current decision**: Only own groups in V1
-   - **Future**: Directory view with search (Section 5.1 extension)
 
-4. **Message Expiry & Retention**: Should group messages have different retention than DMs?
-   - **Current decision**: Same retention policy
-   - **Future**: Configurable per group (when retention policy defined)
+### 13.2 Future Extensions
 
-### 13.2 Future Extensions (Post-MVP)
-
-- **Full-text search** within groups
-- **Message reactions** (emoji, custom reactions)
-- **Rich media**: File upload, inline images
-- **Message threading** (reply to specific message within group)
-- **Channel hierarchy** (parent/child groups, nested teams)
-- **Moderation tools**: Pinning messages, announcements, moderation logs
-- **Integration with external group providers**: Discord channel sync, Slack mirroring
-- **Advanced permissions**: Sub-group roles, guest access, temporary members
-- **Webhooks**: Trigger external systems on group events
+- Full-text search within groups
+- Message reactions
+- Rich media (files, images)
+- Message threading
+- Moderation tools
+- Integration with external providers
 
 ---
 
