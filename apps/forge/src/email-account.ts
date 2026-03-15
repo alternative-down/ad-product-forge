@@ -189,7 +189,6 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         await startIdleLoop(callback);
       } catch (error) {
         console.error('[email] Error in onMessage:', error);
-        listening = false;
         if (listening) {
           await reconnectWithBackoff(callback);
         }
@@ -211,7 +210,11 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       });
 
       try {
-        const recipientAddress = input.contactExternalId || 'unknown';
+        const recipientAddress = input.contactExternalId;
+        if (!recipientAddress) {
+          throw new Error(`[email] Cannot send: no recipient address resolved for conversation ${input.providerConversationKey}`);
+        }
+
         const isReply = !!input.providerConversationKey;
         const subject = isReply ? `Re: ${input.providerConversationKey}` : 'Message from agent';
 
@@ -232,7 +235,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
         return {
           providerMessageId: info.messageId,
-          providerConversationKey: input.providerConversationKey ?? String(Date.now()),
+          providerConversationKey: input.providerConversationKey ?? info.messageId,
         };
       } finally {
         await transporter.close();
