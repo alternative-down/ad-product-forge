@@ -1,9 +1,11 @@
 # PRD-09: Sistema CRM
 
-**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Status:** ❌ Descartado - Não Validado
 **Data:** 2026-03-15
 **Versão:** 1.0
 **Nota:** Projeto pessoal por desenvolvedor solo. Escopo limitado a funcionalidade principal (KISS + YAGNI).
+
+**Razão do Descarte:** CRM centralizado não faz sentido. Os SaaS que os agentes criarem terão seu próprio admin/dashboard. Cada aplicação gerencia seus próprios clientes e relacionamentos. Descartado em 2026-03-15.
 
 ---
 
