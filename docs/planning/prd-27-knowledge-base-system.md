@@ -8,9 +8,13 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes knowledge management infrastructure specific to ad-product-forge.** Knowledge base enables Nicolas' agents to build institutional memory and search by meaning. This is application-specific, not framework infrastructure.
+
 Implement a simple knowledge base that allows agents to store and retrieve documents using semantic search (embeddings-based).
 
-**Core Goal:** Agents can store text documents and search for relevant content by meaning, not just keywords.
+**Core Goal (for ad-product-forge):** Agents can store text documents and search for relevant content by meaning, not just keywords. Enables research agents to build knowledge over time.
 
 ---
 

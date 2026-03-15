@@ -10,9 +10,13 @@
 
 ## 1. Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes asynchronous task execution infrastructure specific to ad-product-forge.** Task queuing enables Nicolas' agents to defer long-running work (deployments, research processing, code generation) without blocking. While queuing patterns are general, this implementation is application-specific.
+
 Enable agents to queue long-running tasks asynchronously using BullMQ for job persistence and Redis for coordination.
 
-**Core Objective**: Allow agents to defer work without blocking, with automatic retries on failure.
+**Core Objective (for ad-product-forge)**: Allow agents to defer work without blocking, with automatic retries on failure.
 
 ---
 

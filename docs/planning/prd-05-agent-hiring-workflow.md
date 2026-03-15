@@ -4,14 +4,24 @@
 
 ## 1. Executive Summary
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes core agent lifecycle management for the Mastra framework.** The ability for agents to autonomously create and provision other agents is a fundamental capability for sophisticated multi-agent systems. This is framework-level infrastructure that enables self-organizing agent hierarchies in any Mastra deployment.
+
 **Feature Name:** Agent Hiring Workflow
 
 **Objective:** Enable autonomous agents to create and provision new agents, with a complete workflow for agent creation, configuration, and deployment.
 
-**Value:**
-- Dynamic scaling of agent workforce without manual intervention
-- Agents autonomously build teams based on operational needs
-- Foundation for multi-agent organizational structures
+**Value (Framework):**
+- **Self-Organizing Systems:** Agents can autonomously scale teams based on operational needs
+- **Delegation Pattern:** Foundation for hierarchical agent organizations
+- **Reusable Workflow:** Applicable to any multi-agent Mastra deployment
+- **Permission-Safe:** Integration with role/permission system ensures safe agent creation
+
+**Value (ad-product-forge):**
+- **Dynamic Scaling:** Nicolas' agents autonomously create specialist agents for research, development, marketing
+- **Team Formation:** Agents can hire consultants for specific tasks
+- **Autonomous Operation:** Master agent initializes system with minimal human intervention
 
 ---
 

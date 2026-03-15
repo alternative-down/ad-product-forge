@@ -11,23 +11,31 @@
 
 ## Executive Summary
 
-**Objective:** Transform the agent platform from static, hardcoded agent configuration to a dynamic, database-backed agent creation and management system that enables runtime agent spawning and credential management.
+**Framework Component:** Mastra Core - Agent Registry and Persistence
 
-**Problem:** Currently, agents are created at startup with fixed configuration loaded from environment variables. This prevents dynamic agent creation and makes credential management inflexible.
+**Objective:** Transform the Mastra agent orchestration framework from static, hardcoded agent configuration to a dynamic, database-backed agent creation and management system that enables runtime agent spawning and credential management.
 
-**Solution:** Implement SQLite with Drizzle ORM as the persistence layer for:
-- Agent configurations and metadata
+**Problem:** Currently, agents are created at startup with fixed configuration loaded from environment variables. This prevents dynamic agent creation and makes credential management inflexible. Any Mastra deployment needs this foundational capability.
+
+**Solution:** Implement SQLite with Drizzle ORM as the reusable persistence layer for:
+- Agent configurations and metadata (organization-agnostic)
 - Communication provider credentials and settings
 - Agent-to-provider mappings
 - Encrypted sensitive data storage
+- Support for both single-instance and distributed deployments
 
-**Value Proposition:**
-- Enable runtime agent creation without application restart
+**Value Proposition (Framework):**
+- Enable any Mastra deployment to support runtime agent creation without restart
 - Secure sensitive credential storage with transparent encryption
-- Provide foundation for advanced features (agent hiring, specialist agents)
-- Simple, single-instance deployment model
+- Provide foundation for multi-tenancy and advanced orchestration
+- Simple to deploy, scales from solo developer to team use
 
-**Scope:** Phase 1 of agent lifecycle management, focusing on persistence infrastructure
+**Value Proposition (ad-product-forge Application):**
+- Enable Nicolas' agents to autonomously create specialist agents for research, development, and product launching
+- Support credential management for Discord, Email, and other communication providers
+- Foundation for hiring workflow and agent hierarchy
+
+**Scope:** Phase 1 of agent lifecycle management, focusing on persistence infrastructure for the Mastra framework itself
 
 ---
 
@@ -122,15 +130,26 @@ The application currently:
 
 ## Architecture
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes core infrastructure for the Mastra agent orchestration framework.** It is framework-level, not application-specific, and should be designed for reusability across any project using Mastra.
+
+**Framework Characteristics:**
+- ✅ Core agent infrastructure (persistence, bootstrapping)
+- ✅ Reusable by any Mastra deployment
+- ✅ Multitenancy-capable architecture
+- ✅ Not specific to any one organization or use case
+- ✅ Should use language-agnostic documentation where possible
+
 ### High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Application Startup                       │
+│          Mastra Framework: Application Startup               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌──────────────────┐     ┌──────────────────────────────┐ │
-│  │ Environment Vars │     │   Agent Database (SQLite)    │ │
+│  │ Environment Vars │     │ Agent Registry DB (SQLite)   │ │
 │  │  (ENCRYPTION_KEY)      │                              │ │
 │  └──────────────────┘     │ ┌─ agents ─────────────────┐ │ │
 │         │                 │ │ ┌─ agent_providers ─────┐ │ │
@@ -165,26 +184,30 @@ The application currently:
 
 ### Component Responsibilities
 
-#### 1. **Agent Database Module** (`packages/mastra-engine/src/database/`)
+#### 1. **Agent Registry Database Module** (`packages/mastra-core/src/database/`)
 - Initialize Drizzle ORM with SQLite
 - Define schema using Drizzle definitions
 - Provide typed query builders
+- Support agent metadata storage, provider associations, credential management
 
-#### 2. **Encryption Layer** (`packages/mastra-engine/src/encryption/`)
+#### 2. **Encryption Layer** (`packages/mastra-core/src/encryption/`)
 - Load encryption key from environment
 - Provide encrypt/decrypt utilities
 - Support AES-256-GCM encryption
+- Ensure sensitive credentials are protected
 
-#### 3. **Agent Loader** (`packages/mastra-engine/src/agent-loader/`)
-- Query database for agents and providers at startup
+#### 3. **Agent Registry Loader** (`packages/mastra-core/src/agent-registry/loader.ts`)
+- Query database for agents and providers at framework initialization
 - Initialize encryption layer
 - Create agent instances using database configuration
 - Fallback to hardcoded configuration if database unavailable
+- Support both single-instance and distributed deployments
 
-#### 4. **Provider Credential Manager** (`packages/mastra-engine/src/providers/credential-manager.ts`)
+#### 4. **Provider Credential Manager** (`packages/mastra-core/src/providers/credential-manager.ts`)
 - Load and decrypt provider credentials
 - Manage credential lifecycle (create, update, revoke)
 - Validate credentials before provider initialization
+- Support credential rotation without restart
 
 ### Data Flow
 

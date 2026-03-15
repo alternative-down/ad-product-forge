@@ -11,9 +11,15 @@
 
 ## Executive Summary
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes core agent lifecycle infrastructure for the Mastra framework.** The ability for agents to self-schedule tasks and remain responsive is fundamental to autonomous multi-agent systems. This is framework-level infrastructure applicable to any Mastra deployment.
+
 The **Heartbeat and Scheduling System** enables agents to remain active and autonomous by implementing periodic health checks and autonomous scheduling capabilities.
 
-**Core Objective:** Allow agents to schedule their own tasks and remain responsive even without external events.
+**Core Objective (Framework):** Allow any Mastra agent to schedule its own tasks and remain responsive even without external events, enabling self-managing agent hierarchies.
+
+**Core Objective (ad-product-forge):** Enable Nicolas' agents to autonomously schedule research, development, and deployment tasks without human intervention.
 
 ---
 

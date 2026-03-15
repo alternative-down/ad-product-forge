@@ -8,14 +8,18 @@
 
 ## 1. Overview
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes domain management infrastructure specific to ad-product-forge.** Automatic subdomain provisioning enables Nicolas' agents to launch applications with unique, publicly accessible URLs without manual DNS management. This is application-specific infrastructure for autonomous product deployment.
+
 Automatic subdomain provisioning for deployed agent applications. Each deployed app gets a unique subdomain under a wildcard domain configuration.
 
-**Core flow:**
-1. Agent deploys application
-2. Domain system creates unique subdomain
+**Core flow (for ad-product-forge):**
+1. Development agents deploy applications
+2. Domain system automatically creates unique subdomain
 3. DNS A record points to Hetzner IP
 4. Wildcard TLS certificate covers subdomain
-5. App accessible at unique URL
+5. App accessible at unique URL (e.g., agent-sales-tool.domain.com)
 
 ---
 

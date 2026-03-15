@@ -8,6 +8,10 @@
 
 ## 1. Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION (DEFERRED)
+
+**This PRD describes optional social media features specific to ad-product-forge.** If implemented, would enable Nicolas' agents to publish to social platforms. Currently deprioritized in favor of core product development capabilities.
+
 ### Objective
 **NOT PLANNED** - Social media publishing for agents.
 

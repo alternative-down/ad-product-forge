@@ -8,12 +8,16 @@
 
 ## 1. Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes email communication infrastructure specific to ad-product-forge.** While email is a general communication medium, this specific implementation is tailored to Nicolas' agents' use cases (customer outreach, team communication, notifications). The communication provider system (PRD-02) is framework-level; this is the application-specific email integration.
+
 ### Objective
 Enable agents to send and receive emails using standard IMAP/SMTP providers.
 
-### Value
-- Agents can send emails
-- Agents can read inbox
+### Value (for ad-product-forge)
+- Nicolas' agents can send emails to customers and team members
+- Agents can read inbox for customer inquiries and feedback
 - Works with Gmail, Outlook, Fastmail
 - Simple, no corporate features
 

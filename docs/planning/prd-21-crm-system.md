@@ -9,14 +9,18 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes customer relationship management infrastructure specific to ad-product-forge.** CRM capabilities enable Nicolas' sales agents to autonomously track customers, manage opportunities, and log interactions. This is application-specific, not framework infrastructure.
+
 ### Goal
 Implement a simple CRM system for agents to track customer interactions, manage sales pipeline, and maintain customer data without external dependencies.
 
-### Core Features
-1. **Customer & Contact Management** - Store customer info and contacts
+### Core Features (for ad-product-forge)
+1. **Customer & Contact Management** - Store customer info and contacts for Nicolas' products
 2. **Sales Pipeline** - Track opportunities through sales stages
-3. **Interaction History** - Log emails, calls, meetings
-4. **Simple Reporting** - Basic metrics on pipeline and activity
+3. **Interaction History** - Log emails, calls, meetings with prospects and customers
+4. **Simple Reporting** - Basic metrics on pipeline and activity for Nicolas' oversight
 
 ### Out of Scope
 - ML predictions

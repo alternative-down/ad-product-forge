@@ -9,12 +9,22 @@
 
 ## 1. Executive Summary
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes core access control and organizational structure for the Mastra agent orchestration framework.** Role-based access control and function-based organization are fundamental patterns for any sophisticated multi-agent system. This is framework-level infrastructure that enables secure delegation and organizational hierarchy in any Mastra deployment.
+
 The **Role and Function Schema** enables agents to have defined roles with specific permissions. This allows a master agent to initialize the system and manage permission grants/revokes for other agents through a simple delegation pattern.
 
-**Key Value:**
-- **Simple Control:** Define what each agent can access (Tools, Providers, Workflows)
-- **Functional Grouping:** Group agents by operational function
-- **Delegation:** Master agent grants permissions to other agents
+**Key Value (Framework):**
+- **Secure by Default:** Define granular access control for multi-agent systems
+- **Functional Organization:** Group agents by operational function - pattern applicable to any domain
+- **Safe Delegation:** Master agent pattern for bootstrapping and managing agent hierarchy
+- **Audit-Ready:** Permission changes logged for compliance and debugging
+
+**Key Value (ad-product-forge):**
+- **Operational Structure:** Organize agents by function (research, development, marketing, operations)
+- **Permission Boundaries:** Ensure each agent has access only to necessary tools/providers
+- **Scalable Growth:** Add new agents with predefined roles without manual permission setup
 
 ---
 

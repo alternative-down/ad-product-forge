@@ -10,26 +10,36 @@
 
 ## Resumo Executivo
 
+### Classificação: MASTRA FRAMEWORK
+
+**This PRD describes core communication provider infrastructure for the Mastra agent orchestration framework.** It defines how any Mastra deployment manages credentials for communication channels (Email, Discord, Slack, etc.). This is framework-level infrastructure, reusable across all deployments.
+
 ### Objetivo Principal
 Persistir, gerenciar e criptografar credenciais de provedores de comunicação (email, Discord, Slack, etc.) em banco de dados centralizado, permitindo que múltiplos agentes utilizem múltiplos provedores simultamente com configuração dinâmica e segura.
 
-### Proposta de Valor
-1. **Segurança:** Credenciais criptografadas no banco de dados
-2. **Dinamismo:** Adicionar/remover provedores sem redeploy
-3. **Simplicidade:** Migração de raw SQL para Drizzle ORM para melhor type-safety
+### Proposta de Valor (Framework)
+1. **Segurança:** Credenciais criptografadas no banco de dados - padrão Mastra
+2. **Dinamismo:** Adicionar/remover provedores sem redeploy - fundamental para framework
+3. **Type-Safety:** Migração de raw SQL para Drizzle ORM para melhor type-safety
+4. **Reusability:** Provider configuration pattern aplicável a qualquer Mastra deployment
+
+### Proposta de Valor (ad-product-forge)
+- Suporta múltiplos agentes simultâneos com diferentes canais de comunicação
+- Permite que Nicolas adicione Discord, Email, Slack sem código novo
+- Credenciais seguras para integração com Discord/Email de produção
 
 ### Escopo da Feature
-- Criar tabelas para armazenar credenciais de providers
-- Implementar criptografia de credenciais sensíveis
-- Migrar para Drizzle ORM
-- Persistir configurações de provider por agente
-- Suportar múltiplos provedores por agente
+- Criar tabelas para armazenar credenciais de providers (framework)
+- Implementar criptografia de credenciais sensíveis (framework)
+- Migrar para Drizzle ORM (framework)
+- Persistir configurações de provider por agente (framework)
+- Suportar múltiplos provedores por agente (framework)
 
 ### Não está no Escopo
-- OAuth2/OIDC (futuro)
-- Interface UI
-- Sincronização entre múltiplas instâncias
-- Secret management externos
+- OAuth2/OIDC (futuro, mas parte do framework)
+- Interface UI (aplicação, não framework)
+- Sincronização entre múltiplas instâncias (futuro)
+- Secret management externos (futuro, seria enterprise feature)
 
 ---
 

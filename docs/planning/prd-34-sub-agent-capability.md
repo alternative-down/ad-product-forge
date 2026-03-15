@@ -14,9 +14,13 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 ## 1. Overview
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes cost optimization infrastructure specific to ad-product-forge.** Sub-agent capability enables Nicolas to reduce operational costs by delegating simple tasks to cheaper models. This is application-specific optimization, not framework infrastructure.
+
 **Goal:** Allow agents to delegate simple tasks to cheaper sub-agents (Haiku) for cost reduction.
 
-**Why:** Optimize cost by using cheaper models for simple tasks while keeping primary agent (Opus) for complex reasoning.
+**Why (for ad-product-forge):** Optimize cost by using cheaper models for simple tasks while keeping primary agent (Opus) for complex reasoning. Essential for Nicolas' autonomous platform profitability as it scales.
 
 **Priority:** Low (optional exploration)
 **Status:** Requires feasibility evaluation before implementation

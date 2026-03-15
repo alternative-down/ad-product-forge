@@ -8,6 +8,10 @@
 
 ## 1. Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION (OPTIONAL)
+
+**This PRD describes cost control features specific to ad-product-forge.** Budget limits and spending controls enable Nicolas to manage agent costs as the platform scales. Currently optional, deferred until multiple agents require budget management.
+
 ### Objective
 **OPTIONAL** - Set monthly spending limits per agent.
 

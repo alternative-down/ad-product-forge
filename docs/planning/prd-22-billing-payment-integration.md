@@ -9,13 +9,17 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes payment processing infrastructure specific to ad-product-forge.** Billing integration enables Nicolas' SaaS products to accept customer payments and manage subscriptions. This is application-specific business infrastructure, not framework.
+
 ### Goal
 Implement basic payment processing for subscriptions using Stripe, enabling the platform to accept payments and manage subscription lifecycles.
 
-### Core Features
-1. **Stripe Integration** - Process payments and manage subscriptions
-2. **Subscription Management** - Create, update, cancel subscriptions
-3. **Basic Transaction History** - Log successful payments
+### Core Features (for ad-product-forge)
+1. **Stripe Integration** - Process payments for Nicolas' SaaS products
+2. **Subscription Management** - Create, update, cancel customer subscriptions
+3. **Basic Transaction History** - Log successful payments for financial tracking
 
 ### Out of Scope
 - Multiple payment providers

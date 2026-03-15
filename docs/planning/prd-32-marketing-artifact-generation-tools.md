@@ -14,9 +14,13 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 ## 1. Overview
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes content generation infrastructure specific to ad-product-forge.** Marketing artifact generation enables Nicolas' agents to autonomously create visual and audio content for marketing campaigns. This is application-specific marketing tooling, not framework infrastructure.
+
 **Goal:** Provide tools for agents to generate marketing artifacts (images, audio) programmatically using external services.
 
-**Why:** Agents should be able to create visual and audio content without manual intervention.
+**Why (for ad-product-forge):** Nicolas' marketing agents should be able to create visual and audio content without manual intervention. Enables autonomous marketing campaign execution.
 
 **Priority:** Medium
 **Timeline:** 2-3 weeks

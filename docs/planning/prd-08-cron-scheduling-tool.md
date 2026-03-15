@@ -4,9 +4,15 @@
 
 ## Overview
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes core scheduling infrastructure for the Mastra framework.** The ability for agents to autonomously define and manage scheduled tasks is a fundamental capability for self-managing agent systems. This is framework-level infrastructure applicable to any Mastra deployment.
+
 The Cron/Scheduling Tool enables agents to create and manage scheduled tasks using standard cron syntax. When a scheduled event triggers, an internal message wakes the agent to execute the task.
 
-**Key behavior:** Scheduled events trigger agent execution via internal messaging.
+**Key behavior (Framework):** Scheduled events trigger agent execution via internal messaging - standard pattern for any Mastra deployment.
+
+**Key behavior (ad-product-forge):** Enable Nicolas' agents to autonomously schedule research, data processing, deployment, and reporting tasks on recurring schedules.
 
 ---
 

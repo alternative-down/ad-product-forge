@@ -11,18 +11,27 @@
 
 ## 1. Executive Summary
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes advanced multi-provider communication infrastructure for the Mastra framework.** Supporting group messaging across multiple providers (Discord, Email, Slack, etc.) is a fundamental capability for sophisticated multi-agent systems. This is framework-level infrastructure that extends PRD-09 with provider-specific implementations.
+
 **Objective:** Extend the agent communication system to support group-based messaging across all providers (Discord, Email).
 
-**Value Proposition:**
-- Agents can create and manage groups across all communication providers
-- Distribute messages efficiently to multiple recipients
-- Unified API for group operations
+**Value Proposition (Framework):**
+- Any Mastra deployment can use agents with group messaging across multiple providers
+- Unified API for group operations across provider implementations
+- Support for diverse communication channels (Discord channels, Email lists, Slack channels)
 - Maintain consistency in group membership and communication history
 
+**Value Proposition (ad-product-forge):**
+- Nicolas' agents can coordinate via Discord, Email, or Slack seamlessly
+- Create research teams, development teams, operations teams across different providers
+- Unified interface hides provider-specific details
+
 **Scope:**
-- Discord: Channel creation, group messaging via channels
-- Email: CC/BCC functionality, group message history
-- Core: Group entity in communication store, agent-facing tools for group management
+- Discord: Channel creation, group messaging via channels (framework)
+- Email: CC/BCC functionality, group message history (framework)
+- Core: Group entity in communication store, agent-facing tools for group management (framework)
 
 ---
 

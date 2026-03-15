@@ -8,6 +8,10 @@
 
 ## 1. Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION (DEFERRED)
+
+**This PRD describes optional marketing platform features specific to ad-product-forge.** If implemented, would enable Nicolas' agents to send marketing campaigns via Mailchimp. Currently deferred in favor of simple email (PRD-16).
+
 ### Status
 **DEFERRED** - Use PRD-16 (simple SMTP) instead for solo dev needs.
 

@@ -6,9 +6,19 @@
 
 ## Overview
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes integration infrastructure specific to ad-product-forge.** Webhook routing enables Nicolas' agents to respond to external system events (GitHub pushes, payment notifications, deployment completions, etc.). While webhook patterns are general, this specific implementation is application-specific.
+
 Simple webhook endpoint for external systems to trigger agent actions. Agents receive webhook events via internal messages.
 
 **Core behavior:** HTTP POST → validate signature → queue event → wake agent → agent processes event.
+
+**Application Use Cases:**
+- GitHub webhooks trigger development agents
+- Payment system webhooks trigger billing agents
+- Deployment webhooks notify operations agents
+- Ad platform webhooks feed signals to research agents
 
 ---
 

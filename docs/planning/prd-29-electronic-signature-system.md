@@ -8,9 +8,13 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes digital signature infrastructure specific to ad-product-forge.** Electronic signatures enable Nicolas' agents to sign contracts and documents as part of business processes. This is application-specific business capability, not framework infrastructure.
+
 Enable agents and users to digitally sign documents with cryptographic signatures for non-repudiation and audit trail.
 
-**Core Goal:** Agents can sign documents and verify signatures with proof of who signed and when.
+**Core Goal (for ad-product-forge):** Agents can sign documents and verify signatures with proof of who signed and when. Enables automated agreement signing in product workflows.
 
 ---
 

@@ -11,9 +11,15 @@
 
 ## 1. Executive Summary
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes core multi-agent communication infrastructure for the Mastra framework.** Group messaging is a fundamental pattern for coordinating multiple agents. This is framework-level infrastructure applicable to any Mastra deployment supporting team-based agent coordination.
+
 This PRD outlines the implementation of group chat capabilities within the internal communication system. Currently, the communication module supports only direct messages (1-to-1 conversations). This feature extends that system to enable multiple agents to coordinate through group-based messaging.
 
-**Core Objective**: Enable agents to create and participate in group conversations for coordination.
+**Core Objective (Framework)**: Enable any Mastra agents to create and participate in group conversations for coordination, enabling team-based agent workflows.
+
+**Core Objective (ad-product-forge)**: Enable Nicolas' agents to form teams (research, development, operations) and coordinate through internal group messaging.
 
 ---
 

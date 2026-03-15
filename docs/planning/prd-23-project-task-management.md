@@ -9,6 +9,10 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes project management infrastructure specific to ad-product-forge.** Task tracking enables Nicolas to organize and monitor agent work across multiple projects. This is application-specific, not framework infrastructure.
+
 ### Goal
 Implement a simple task management system for organizing work into projects with status tracking, without complex dependencies, hierarchies, or collaboration features.
 

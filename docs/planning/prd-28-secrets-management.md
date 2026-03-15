@@ -8,9 +8,13 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes secrets management infrastructure specific to ad-product-forge.** Secrets storage enables Nicolas' agents to securely access API keys and credentials for integrations. This is application-specific, not framework infrastructure (Mastra's PRD-01 handles communication provider credentials).
+
 Implement a simple secrets management system to securely store API keys, tokens, and passwords used by agents.
 
-**Core Goal:** Agents can securely retrieve credentials without exposing them in logs or code.
+**Core Goal (for ad-product-forge):** Agents can securely retrieve credentials (Stripe, GitHub, Coolify) without exposing them in logs or code.
 
 ---
 

@@ -10,13 +10,23 @@
 
 ## 1. Executive Summary
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes core multi-agent orchestration capability for the Mastra framework.** External agents are a fundamental pattern for any system using Mastra: temporary, specialized agents with restricted permissions for consultation, delegation, and expert evaluation. This is framework-level infrastructure that enables sophisticated multi-agent patterns.
+
 The External Agent System enables dynamic creation of temporary specialist agents spawned on-demand to fulfill specific tasks. These external agents act as consultants or domain experts with restricted permissions (messaging only), managed through existing communication infrastructure. External agents wake on messages and can be terminated once tasks complete.
 
-**Value:**
-- Enable multi-agent workflows with specialized consultation
-- Support persona-based interactions
-- Reduce load on main agents via task delegation
-- Isolate external agents from internal data
+**Value (Framework):**
+- Enable sophisticated multi-agent workflows with specialized consultation patterns
+- Support persona-based interactions and evaluation scenarios
+- Provide reusable pattern for agent delegation and expert consultation
+- Isolate specialized agents from sensitive internal data (security by design)
+- Foundation for research, evaluation, and interview workflows
+
+**Value (ad-product-forge):**
+- Support research agents creating temporary specialist agents for market analysis
+- Enable pre-interviews with persona agents before human evaluation
+- Support expert consultation patterns (data scientist, architect, ethicist agents)
 
 ---
 

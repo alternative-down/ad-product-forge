@@ -9,6 +9,10 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes file storage infrastructure specific to ad-product-forge.** Storage system enables Nicolas' agents to persist generated artifacts (code, documents, reports). This is application-specific, not framework infrastructure.
+
 ### Goal
 Implement a simple local file storage system for agents to persist artifacts and files.
 

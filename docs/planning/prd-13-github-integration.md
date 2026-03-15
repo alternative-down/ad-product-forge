@@ -8,13 +8,18 @@
 
 ## 1. Overview
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes integration infrastructure specific to ad-product-forge.** GitHub integration enables Nicolas' development agents to autonomously manage code repositories, create pull requests, and respond to repository events. This is application-specific infrastructure for autonomous development workflows.
+
 Enable agents to read/write GitHub repositories, create commits, open PRs, and respond to GitHub events via webhooks.
 
-**Core capabilities:**
-- Read files from repositories
-- Create commits
-- Create branches and PRs
-- Respond to GitHub webhook events
+**Core capabilities (for ad-product-forge):**
+- Development agents read/write application code
+- Create commits for new features and fixes
+- Create branches and PRs for code review
+- Respond to GitHub events (push, PR, issue) via webhooks
+- Manage repositories under Nicolas' GitHub organization
 
 ---
 

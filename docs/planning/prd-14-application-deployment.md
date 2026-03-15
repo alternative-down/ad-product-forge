@@ -8,13 +8,18 @@
 
 ## 1. Overview
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes deployment infrastructure specific to ad-product-forge.** Deployment to Coolify enables Nicolas' development agents to autonomously launch applications without manual deployment. This is application-specific infrastructure for autonomous product deployment.
+
 Enable agents to deploy applications to Coolify (self-hosted on Hetzner). Applications get a unique subdomain URL automatically.
 
-**Core flow:**
-1. Agent generates application code
-2. Agent deploys to Coolify via API
+**Core flow (for ad-product-forge):**
+1. Development agents generate application code
+2. Agents deploy to Coolify via API
 3. Coolify builds and starts application
 4. Application accessible via auto-generated subdomain
+5. Operations agents monitor deployment status
 
 ---
 

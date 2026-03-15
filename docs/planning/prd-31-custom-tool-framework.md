@@ -14,9 +14,13 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 ## 1. Overview
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes tool extensibility infrastructure specific to ad-product-forge.** Custom tool framework enables Nicolas' agents to dynamically create specialized tools for specific products and domains. This is application-specific capability extension, not core framework infrastructure.
+
 **Goal:** Allow agents to create and use custom tools dynamically without restarting the application.
 
-**Why:** Agents should be able to extend their capabilities at runtime by wrapping Skills or defining simple HTTP integrations.
+**Why (for ad-product-forge):** Agents should be able to extend their capabilities at runtime by wrapping Skills or defining simple HTTP integrations to new products and services.
 
 **Priority:** High
 **Timeline:** 3-4 weeks

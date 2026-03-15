@@ -8,9 +8,13 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes code generation infrastructure specific to ad-product-forge.** Application templates enable Nicolas' development agents to autonomously scaffold new products at speed. This is application-specific developer tooling, not framework infrastructure.
+
 Provide pre-built application templates so agents can rapidly scaffold production-ready applications with standard patterns for authentication, database, and deployment.
 
-**Core Goal:** Agents can generate a complete web application in seconds instead of building from scratch.
+**Core Goal (for ad-product-forge):** Agents can generate a complete web application in seconds instead of building from scratch. Enables rapid autonomous product development.
 
 ---
 

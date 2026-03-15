@@ -14,9 +14,13 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 ## 1. Overview
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes browser automation infrastructure specific to ad-product-forge.** Browser service enables Nicolas' agents to interact with web pages for research, data gathering, and testing. This is application-specific capability, not framework infrastructure.
+
 **Goal:** Provide agents with web automation and scraping capabilities via an external browser service.
 
-**Why:** Agents need to interact with web pages, fill forms, and scrape dynamic content without sandbox constraints.
+**Why (for ad-product-forge):** Nicolas' research and development agents need to interact with web pages, fill forms, and scrape dynamic content without sandbox constraints. Enables web-based market research and testing.
 
 **Priority:** Medium
 **Timeline:** 2-3 weeks

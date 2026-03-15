@@ -9,6 +9,10 @@
 
 ## Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes customer support infrastructure specific to ad-product-forge.** Ticketing system enables Nicolas' support agents to track and resolve customer issues. This is application-specific, not framework infrastructure.
+
 ### Goal
 Implement a basic ticketing system for tracking and resolving support issues, with simple routing and status tracking.
 

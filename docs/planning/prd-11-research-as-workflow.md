@@ -14,13 +14,18 @@
 
 ## 1. Executive Summary
 
+### Classification: AD-PRODUCT-FORGE APPLICATION
+
+**This PRD describes a feature specific to Nicolas' autonomous product development platform.** Research workflow capabilities are essential to ad-product-forge's market discovery and validation processes, but are application-specific, not framework infrastructure.
+
 Enable multi-step research workflows: chain queries together, branch on results, and aggregate findings. Builds on existing research tool.
 
-**Core Value:**
-- Chain multiple research queries
-- Branch workflows conditionally
-- Combine results from multiple searches
-- Simple API, backward compatible
+**Core Value (ad-product-forge):**
+- Chain multiple research queries for market analysis, competitor research, problem validation
+- Branch workflows conditionally based on market signals (size > X → research competitors)
+- Combine results from multiple research angles into comprehensive market analysis
+- Simple API, backward compatible with existing research tool calls
+- Enable Nicolas' research agents to autonomously discover market opportunities end-to-end
 
 ---
 

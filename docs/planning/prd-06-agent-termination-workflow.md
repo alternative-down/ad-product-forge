@@ -4,13 +4,22 @@
 
 ## 1. Executive Summary
 
+### Classification: MASTRA FRAMEWORK
+
+**This PRD describes core agent lifecycle management for the Mastra framework.** Clean agent removal is a fundamental requirement for any sophisticated multi-agent system. This is framework-level infrastructure that complements agent hiring (PRD-05) and enables safe agent management in any Mastra deployment.
+
 The Agent Termination Workflow provides a safe mechanism for removing agents from the system. This ensures that when an agent is no longer needed, associated resources are cleaned up and data is preserved.
 
-**Key objectives:**
-- Provide a standardized workflow for agent removal
-- Manage cleanup of agent resources (memory, communication, databases)
+**Key objectives (Framework):**
+- Provide a standardized workflow for agent removal across all Mastra deployments
+- Manage cleanup of agent resources (memory, communication, databases) reliably
 - Prevent orphaned references and stale data
 - Support soft-termination (deactivation) and hard-termination (deletion)
+
+**Key objectives (ad-product-forge):**
+- Enable Nicolas to safely remove specialist agents after tasks complete
+- Clean up resources when temporary research or development agents finish
+- Maintain system health with proper agent lifecycle management
 
 ---
 

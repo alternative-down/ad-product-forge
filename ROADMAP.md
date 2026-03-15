@@ -1,8 +1,14 @@
-# Roadmap - Agent Platform Evolution
+# Roadmap - Mastra Framework & ad-product-forge Application
 
-## 1. Core Infrastructure - Dynamic Agent Management
+---
 
-### 1.1 Database-Driven Agent System
+## PART 1: MASTRA FRAMEWORK CORE
+
+**Classification:** Framework infrastructure for autonomous multi-agent orchestration. These features are reusable across any Mastra deployment and enable sophisticated agent-based systems.
+
+### 1. Agent Registry & Persistence
+
+#### 1.1 Database-Driven Agent System (PRD-01)
 - **Objective**: Transform from static agent configuration to runtime agent creation and management
 - **Requirements**:
   - Migrate from fixed agent creation to database-backed dynamic spawning
@@ -12,336 +18,284 @@
   - Encrypt sensitive data (tokens, passwords) at rest
   - Define encryption strategy for data protection
 
-### 1.2 Communication Provider Integration
+#### 1.2 Communication Provider Integration (PRD-02)
 - **Objective**: Persist and manage communication provider credentials and configuration
 - **Requirements**:
-  - Store communication provider environment variables in database
-  - Migrate communication module from direct SQLClient to Drizzle ORM
+  - Store communication provider credentials in database
+  - Migrate to Drizzle ORM for type-safe queries
   - Ensure provider credentials are encrypted before storage
   - Support multiple communication providers per agent
 
-## 2. External Specialist Agents
+### 2. Multi-Agent Orchestration
 
-### 2.1 External Agent System
+#### 2.1 External Agent System (PRD-03)
 - **Objective**: Enable creation of temporary specialist agents for specific tasks
 - **Requirements**:
   - Support external specialist agents (consultants, personas, subject matter experts)
   - Create agents on-demand for internal agent requests
-  - Examples: pre-interview with personas, expert explanations, research support
   - External agents have restricted permissions (messaging only)
-  - External agents cannot access internal company resources or data
+  - External agents cannot access internal resources
   - Communication via internal messaging system
   - Agents only wake up when receiving messages
   - Can be terminated when task is complete
 
-## 3. Role & Permission Management
+### 3. Access Control & Organization
 
-### 3.1 Role and Function Schema
+#### 3.1 Role and Function Schema (PRD-04)
 - **Objective**: Define granular access control and capabilities for each agent
 - **Requirements**:
   - Implement Function schema - acts as grouper/classifier for agents
   - Implement Role schema - defines specific capabilities and permissions
   - Role configuration includes: Tools, Providers, Workflows access
-  - Represent agent's position within the organization
-  - Enable authorized agents to modify role/function configurations
   - Implement master agent with unrestricted permissions
   - Master agent initializes base configurations
-  - Master agent grants/revokes permissions to other agents as they are hired
+  - Master agent grants/revokes permissions to other agents
   - Support permission escalation and delegation
 
-## 4. Agent Lifecycle Management
+### 4. Agent Lifecycle Management
 
-### 4.1 Agent Hiring Workflow
+#### 4.1 Agent Hiring Workflow (PRD-05)
 - **Objective**: Enable agents to autonomously create and provision new agents
 - **Requirements**:
-  - Create workflow for agent contraction (hiring)
+  - Create workflow for agent creation and provisioning
   - Allow agents to define account creation parameters
   - Enable agents to select communication providers for new agents
   - Define configurable parameters for agent instantiation
   - Implement agent provisioning process
 
-### 4.2 Agent Termination Workflow
+#### 4.2 Agent Termination Workflow (PRD-06)
 - **Objective**: Gracefully remove agents from the system
 - **Requirements**:
-  - Create workflow for agent removal (demissão/termination)
+  - Create workflow for agent removal
   - Handle cleanup of agent-related resources and data
   - Define deactivation procedures
 
-### 4.3 Heartbeat and Scheduling System
-- **Objective**: Keep inactive agents active and enable autonomous scheduling
+#### 4.3 Heartbeat and Scheduling System (PRD-07)
+- **Objective**: Keep agents active and enable autonomous scheduling
 - **Requirements**:
   - Implement heartbeat scheduling to periodically wake agents
   - Prevent agents from indefinite stand-by periods
-  - Allow agents to create their own cron jobs via internal messaging
-  - Enable agents to check pending tasks and resume interrupted executions
+  - Allow agents to create their own cron jobs
+  - Enable agents to check for pending tasks
+  - Support resume of interrupted executions
 
-### 4.4 Cron/Scheduling Tool
+#### 4.4 Cron/Scheduling Tool (PRD-08)
 - **Objective**: Enable agents to create and manage scheduled tasks
 - **Requirements**:
   - Implement cron tool for agents to define scheduling rules
   - Support scheduling configuration and repetition patterns
   - Generate internal messages for scheduled events
-  - Route messages to internal chat provider as self-messaging
-  - Trigger wakeQueue notification on scheduled event
-  - Agent receives own-created instructions and executes them
+  - Trigger wake events on scheduled time
   - Support recurring and one-time schedules
 
-## 5. Communication System
+### 5. Multi-Agent Communication
 
-### 5.1 Internal Group Chat Implementation
+#### 5.1 Internal Group Chat Implementation (PRD-09)
 - **Objective**: Enable agents to collaborate and coordinate through group messaging
 - **Requirements**:
   - Extend internal communication module to support group conversations
-  - Currently supports direct messages only - add group support
   - Enable agents to create coordination groups
   - Support multiple agents within a single group
   - Enable group-based communication for all agents
 
-### 5.2 Multi-Provider Group Support
+#### 5.2 Multi-Provider Group Support (PRD-10)
 - **Objective**: Extend group capabilities to all communication providers
 - **Requirements**:
   - Implement groups for Discord provider (channels, mentions)
   - Implement groups for Email provider (CC, BCC, mailing lists)
   - Support channel creation per agent
-  - Support email distribution and CC functionality
+  - Support email distribution functionality
   - Maintain consistency across all providers
 
-### 5.3 Research as Workflow
-- **Objective**: Transform research from tool to workflow
+---
+
+## PART 2: AD-PRODUCT-FORGE APPLICATION
+
+**Classification:** Application-specific features tailored to Nicolas' autonomous product development platform. These are not framework infrastructure but implementation-specific to ad-product-forge's business model.
+
+### 1. Product Development & Research
+
+#### 1.1 Research as Workflow (PRD-11)
+- **Objective**: Transform research from tool to workflow for complex analysis
 - **Requirements**:
   - Convert current Research tool to workflow implementation
-  - Maintain research functionality with workflow benefits
-  - Enable more complex research orchestration
+  - Support sequential research queries
+  - Enable conditional branching based on results
+  - Support parallel research streams
+  - Maintain backward compatibility with tool calls
 
-## 6. External Integration & Event Handling
+### 2. External Integration
 
-### 6.1 Webhook & Event Routing System
+#### 2.1 Webhook & Event Routing System (PRD-12)
 - **Objective**: Enable external systems to trigger agent actions
 - **Requirements**:
   - Implement webhook infrastructure for external triggers
   - Support agent-created custom webhook routes
-  - Support pre-configured webhook routes (GitHub, Coolify, Payments, Ads, etc.)
+  - Support pre-configured routes (GitHub, Coolify, Payments, Ads, etc.)
   - Route incoming events to appropriate agents
   - Trigger agent wakeup on external events
-  - Enable agents to process and respond to external triggers
-  - Support event queue and message passing
-  - Handle various event types (repository events, deployment events, payment notifications, ad events)
 
-## 7. Version Control & Repository Management
-
-### 7.1 GitHub Integration
+#### 2.2 GitHub Integration (PRD-13)
 - **Objective**: Enable agents to manage repositories and respond to events
 - **Requirements**:
   - Provide agents access to GitHub organization
   - Enable repository creation and manipulation by agents
-  - Implement GitHub event webhooks for listening to repository events
+  - Implement GitHub event webhooks
   - Define workflow for triggering agent actions based on GitHub events
   - Support agent-driven repository management
 
-## 8. Deployment & Infrastructure
+### 3. Deployment & Infrastructure
 
-### 8.1 Application Deployment
+#### 3.1 Application Deployment (PRD-14)
 - **Objective**: Allow agents to deploy created applications
 - **Requirements**:
-  - Integrate with Coolify on Hertzner infrastructure
+  - Integrate with Coolify on Hetzner infrastructure
   - Enable agents to configure and deploy applications via Coolify
   - Ensure deployed applications are immediately accessible
 
-### 8.2 Domain Management
+#### 3.2 Domain Management (PRD-15)
 - **Objective**: Provide wildcard domain configuration for agent applications
 - **Requirements**:
-  - Configure wildcard DNS pointing to Hertzner machine
-  - Migrate domain control from .br registry to provider supporting advanced configurations
+  - Configure wildcard DNS pointing to Hetzner machine
   - Enable automatic domain assignment for deployed applications
   - Support subdomain provisioning per agent application
 
-### 8.3 Email Service Integration
-- **Objective**: Provide organizational email for each agent
+#### 3.3 Email Service Integration (PRD-16)
+- **Objective**: Provide organizational email for agents
 - **Requirements**:
-  - Define and integrate email service provider
   - Support domain-based email configuration
   - Enable SMTP/IMAP access for agents
   - Provide email inbox and sending capabilities per agent
-  - Integrate existing SMTP/IMAP provider with chosen email service
 
-## 9. Community & Marketing
+### 4. Business Operations
 
-### 9.1 Social Media & Community Integration
-- **Objective**: Enable agents to promote creations and identify opportunities
-- **Requirements**:
-  - Integrate with social media platforms
-  - Integrate with forums and community sites
-  - Enable agents to publish and share work
-  - Provide opportunity identification from community interactions
-
-### 9.2 Marketing Platform Integration
-- **Objective**: Enable campaign execution and marketing automation
-- **Requirements**:
-  - Integrate with marketing platforms
-  - Enable agents to execute marketing campaigns
-  - Support campaign management and automation
-
-## 10. Financial Management & ERP
-
-### 10.1 Micro-ERP System
-- **Objective**: Provide comprehensive financial tracking and management
+#### 4.1 Micro-ERP System (PRD-19)
+- **Objective**: Provide financial tracking and management
 - **Requirements**:
   - Implement expense tracking and recording
   - Implement revenue tracking and recording
-  - Implement payroll management (agent costs and compensation)
   - Support financial forecasting and projections
-  - Enable flow control based on financial data
-  - Provide agents access to their own financial data
 
-### 10.2 Cash Flow Control
-- **Objective**: Control and prioritize agent actions based on financial status
-- **Requirements**:
-  - Implement cash flow analysis and monitoring
-  - Enable action limiting based on financial constraints
-  - Support prioritization based on cash flow status
-  - Integrate financial data into agent decision-making
-
-### 10.3 CRM System
+#### 4.2 CRM System (PRD-21)
 - **Objective**: Provide customer relationship management capabilities
 - **Requirements**:
-  - Implement CRM system alongside ERP
-  - Track customer interactions and relationships
+  - Implement customer and contact management
   - Support sales pipeline management
-  - Enable customer data management
+  - Enable interaction history tracking
+  - Provide simple reporting on pipeline and activity
 
-### 10.4 Billing & Payment Integration
+#### 4.3 Billing & Payment Integration (PRD-22)
 - **Objective**: Integrate payment processing with platform
 - **Requirements**:
   - Integrate Stripe for payment processing
-  - Integrate Assas for payment processing
   - Support recurring billing and subscriptions
   - Track payment transactions
   - Connect to ERP for financial reconciliation
 
-### 10.5 Project & Task Management
+#### 4.4 Project & Task Management (PRD-23)
 - **Objective**: Provide project and task tracking system
 - **Requirements**:
   - Implement project management system
-  - Support task creation and assignment
-  - Enable task tracking and status management
-  - Support collaboration on projects and tasks
+  - Support task creation with status tracking
+  - Enable task listing and filtering
 
-## 11. Customer Support & Communication
-
-### 11.1 Ticketing System
+#### 4.5 Ticketing System (PRD-24)
 - **Objective**: Provide support infrastructure for agent-created applications
 - **Requirements**:
   - Implement ticketing system for customer support
-  - Support tickets as communication provider (alongside Discord/Email)
-  - Enable agents to handle support tickets for their created systems
-  - Provide ticket management and routing capabilities
+  - Support basic ticket creation and status tracking
+  - Enable agents to handle support tickets
 
-## 12. Data Storage & Knowledge Management
+### 5. Data Storage & Knowledge
 
-### 12.1 Distributed Storage System
+#### 5.1 Distributed Storage System (PRD-25)
 - **Objective**: Provide scalable storage for agents and applications
 - **Requirements**:
-  - Implement Minio for object storage
-  - Enable agents to use Minio for file storage
-  - Support per-application or shared storage models
-  - Enable storage for generated artifacts and data
-  - Support backup and data management
+  - Implement local file storage for agents
+  - Enable agents to use storage for artifacts
+  - Support metadata tracking in database
 
-### 12.2 Task Queue & Event Processing
+#### 5.2 Task Queue & Event Processing (PRD-26)
 - **Objective**: Provide asynchronous task processing capabilities
 - **Requirements**:
   - Integrate BullMQ for job queuing
-  - Support trigger.dev for workflow orchestration
   - Enable agents to queue and execute tasks
-  - Support per-application or shared queues
-  - Enable event-driven task processing
+  - Support automatic retries on failure
 
-### 12.3 Knowledge Base System
+#### 5.3 Knowledge Base System (PRD-27)
 - **Objective**: Provide semantic search and knowledge retrieval
 - **Requirements**:
-  - Integrate knowledge base with ERP system
-  - Use Mastra workspace for embeddings generation
-  - Implement semantic fulltext search
-  - Support GraphRAG (Graph Retrieval-Augmented Generation)
-  - Similar implementation to agent long-term memory
+  - Implement document storage with semantic search
+  - Use embeddings for similarity-based retrieval
   - Enable agents to search and retrieve knowledge
-  - Support knowledge organization and management
 
-### 12.4 Secrets Management
+#### 5.4 Secrets Management (PRD-28)
 - **Objective**: Securely store and manage sensitive credentials
-- **Status**: Optional/Under evaluation
 - **Requirements**:
   - Implement vault system for agent secrets
   - Store API keys, tokens, and credentials securely
   - Support secret rotation and management
   - Enable agents to access secrets securely
-  - Audit secret access
 
-### 12.5 Electronic Signature System
+#### 5.5 Electronic Signature System (PRD-29)
 - **Objective**: Enable document signing capabilities
 - **Requirements**:
   - Implement electronic document signing
-  - Support legal signature verification
+  - Support cryptographic verification
   - Enable agents to sign documents
   - Store signed document audit trails
 
-## 13. Application Templates & Development
+### 6. Application Development Tools
 
-### 13.1 Web Application Templates
+#### 6.1 Web Application Templates (PRD-30)
 - **Objective**: Accelerate agent application development
 - **Requirements**:
   - Create pre-built application templates with common features
   - Include authentication system in templates
   - Include payment gateway integration
-  - Include ticketing system integration
   - Support agents to rapidly scaffold new applications
 
-## 14. Agent Capabilities & Tools
-
-### 14.1 Custom Tool Framework
+#### 6.2 Custom Tool Framework (PRD-31)
 - **Objective**: Enable agents to create and use specialized tools
 - **Requirements**:
   - Implement framework for custom tool creation
   - Allow agents to build specialized tools for their operations
-  - Support tool creation using Skills or custom Tool builder interface
-  - Enable agents to evolve and create their own integrations/utilities
-  - Agents can extend their capabilities independently
+  - Support tool creation using Skills or custom interfaces
+  - Enable agents to evolve and create their own integrations
 
-### 14.2 Marketing Artifact Generation Tools
+#### 6.3 Marketing Artifact Generation Tools (PRD-32)
 - **Objective**: Provide agents with tools for creating marketing materials
 - **Requirements**:
-  - Integration with Nanobanana for image generation
-  - Integration with Vimeo for video hosting/manipulation
+  - Integration with image generation services
   - Text-to-Speech (TTS) capabilities
-  - Speech-to-Text (STT) capabilities
-  - Support for multiple artifact types (images, animations, videos)
+  - Support for multiple artifact types (images, audio)
   - Enable agents to create and deploy marketing materials
 
-### 14.3 Browser Service
+#### 6.4 Browser Service (PRD-33)
 - **Objective**: Provide agents with browser automation capabilities
 - **Requirements**:
-  - Implement browser service integration (external service, not sandbox-bound)
-  - Consider OpenClaw-like external service approach
-  - Handle Playwright integration challenges (path resolution, sandbox issues)
+  - Implement browser service integration (external service)
   - Enable agents to interact with web interfaces
   - Support web scraping and browser automation tasks
 
-### 14.4 Sub-Agent Capability (Optional Investigation)
+#### 6.5 Sub-Agent Capability (PRD-34, Optional)
 - **Objective**: Explore using cheaper LLM models for internal agent tasks
 - **Status**: Exploratory, needs further evaluation
 - **Considerations**:
-  - Use sub-agents for context-heavy or information gathering tasks
+  - Use sub-agents for information gathering tasks
   - Primary agent acts as supervisor/orchestrator
-  - Potential concern: confusion with existing multi-agent system
-  - May not be suitable depending on actual implementation needs
+  - Cost optimization for at-scale deployments
 
-### 14.5 Advanced Capabilities
-- **Objective**: Provide agents with diverse operational capabilities
-- **Requirements**:
-  - Browser service integration (potentially external service like OpenClaw)
-  - Marketing artifact generation (images, animations, video via Nanobanana/Vimeo)
-  - Document signing capabilities
-  - Knowledge base with semantic search
-  - Minio storage integration
-  - BullMQ queue management
-  - External agent creation for specialized consultants
+### 7. Optional/Deferred Features
+
+#### 7.1 Social Media & Community Integration (PRD-17, DEFERRED)
+- **Status**: Deprioritized in favor of core product development
+- **Reason**: Solo dev prefers manual control over automated social posting
+
+#### 7.2 Marketing Platform Integration (PRD-18, DEFERRED)
+- **Status**: Deferred, use PRD-16 (simple email) instead
+- **Reason**: Basic email sufficient for current needs
+
+#### 7.3 Cash Flow Control (PRD-20, OPTIONAL)
+- **Status**: Optional, deferred until multiple agents require budget management
+- **Reason**: Value-to-effort ratio too low for MVP
