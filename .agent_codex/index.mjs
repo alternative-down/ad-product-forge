@@ -22,8 +22,11 @@ const cliMode =
   process.env.AGENT_CLI_MODE?.trim() ||
   (cliProvider === 'claude' ? process.env.CLAUDE_MODE?.trim() : process.env.CODEX_MODE?.trim()) ||
   'yolo';
-const cliWorkDir = process.env.AGENT_CLI_WORKDIR?.trim() || process.env.CODEX_WORKDIR?.trim() || '..';
-const debounceMs = Number(process.env.AGENT_CLI_DEBOUNCE_MS || process.env.CODEX_DEBOUNCE_MS || 6000);
+const cliWorkDir =
+  process.env.AGENT_CLI_WORKDIR?.trim() || process.env.CODEX_WORKDIR?.trim() || '..';
+const debounceMs = Number(
+  process.env.AGENT_CLI_DEBOUNCE_MS || process.env.CODEX_DEBOUNCE_MS || 6000,
+);
 const respondToMentionsOnly = process.env.DISCORD_RESPOND_TO_MENTIONS_ONLY === 'true';
 const allowedChannelIds = new Set(
   (process.env.DISCORD_ALLOWED_CHANNEL_IDS || '')
@@ -47,7 +50,8 @@ function shouldHandle(message, botUserId) {
 }
 
 function formatIncomingMessage(message, botUserId) {
-  const authorName = message.member?.displayName || message.author.globalName || message.author.username;
+  const authorName =
+    message.member?.displayName || message.author.globalName || message.author.username;
   const content =
     message.content.replaceAll(`<@${botUserId}>`, '').replaceAll(`<@!${botUserId}>`, '').trim() ||
     '[no text content]';
@@ -98,7 +102,13 @@ function buildCodexArgs() {
 }
 
 function buildClaudeArgs() {
-  const args = ['--print', '--output-format', 'json'];
+  const args = [
+    '--resume',
+    '4d59c939-3b54-4d0f-9c73-997ca6c2edb1',
+    '--print',
+    '--output-format',
+    'json',
+  ];
 
   if (cliMode === 'dangerous' || cliMode === 'yolo') {
     args.push('--dangerously-skip-permissions');
