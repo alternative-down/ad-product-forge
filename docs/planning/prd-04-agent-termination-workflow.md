@@ -46,11 +46,11 @@ Enable agents to autonomously terminate other agents (or admin to terminate any 
 ### Flow
 
 ```
-Agent Request (via tool)
+Agent invokes termination workflow
   │
-  ├─ tool: terminateAgent({agentId, reason})
+  ├─ Mastra workflow: terminateAgent({agentId, reason})
   │
-  ├─ Mastra workflow executes
+  ├─ Workflow executes:
   │  ├─ Validate agentId exists
   │  ├─ Delete from agents table
   │  ├─ Cascade: delete from agent_providers
@@ -59,7 +59,7 @@ Agent Request (via tool)
   │  ├─ Log termination event
   │  └─ Return confirmation
   │
-  └─ Return list of deleted resources
+  └─ Return list of deleted resources to agent
 ```
 
 ---
