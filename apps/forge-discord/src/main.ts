@@ -74,7 +74,7 @@ export async function main() {
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean),
-        respondToMentionsOnly: false,
+        respondToMentionsOnly: env.DISCORD_RESPOND_TO_MENTIONS_ONLY !== 'false',
       }),
     ],
   });

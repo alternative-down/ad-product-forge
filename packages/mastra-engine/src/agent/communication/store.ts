@@ -122,6 +122,12 @@ export async function createCommunicationStore(client: Client) {
       UNIQUE (provider, provider_message_id)
     )
   `);
+  // Ensure unique index exists on existing tables that predate the UNIQUE constraint
+  await client.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_provider_message_id
+    ON forge_communication_messages (provider, provider_message_id)
+    WHERE provider_message_id IS NOT NULL
+  `);
 
   async function loadContact(slug: string) {
     const contactResult = await client.execute({
