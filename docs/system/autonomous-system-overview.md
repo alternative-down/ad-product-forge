@@ -1,168 +1,94 @@
 # Sistema Autônomo — Visão Geral
 
-## Status
-Draft
+## Objetivo
+Criar uma empresa digital operada por agentes LLM autônomos que funcionam sem intervenção humana, de forma coordenada e contínua.
 
-## Premissa global
-Criar uma empresa digital operada por agentes LLMs, sem intervenção humana, funcionando de forma automática e coordenada.
+## Princípios Operacionais
 
-Isso vale para o ciclo completo:
-1. coleta de dados
-2. enriquecimento e organização semântica
-3. mineração e extração de oportunidades
-4. priorização/ranking
-5. análise de viabilidade
-6. decisão de status
-7. geração de propostas de solução
-8. encaminhamento para execução
+**Autonomia completa**: Todas as etapas executam automaticamente, sem aprovações manuais.
 
-## Princípios operacionais
-- **Autonomia fim-a-fim**: sem etapas manuais de aprovação.
-- **Rastreabilidade**: cada decisão automática deixa trilha de evidência.
-- **Revisão contínua**: oportunidades e decisões podem ser reavaliadas por novos sinais.
-- **Estados explícitos**: itens percorrem status claros (priorizar, despriorizar, delayed, descartar, etc.).
-- **Ciclo fechado de aprendizado**: dados de operação dos produtos alimentam novas decisões.
-- **Controle financeiro mínimo**: empresa mantém caixa com visão simples de contas a pagar, contas a receber, custos e fluxo de caixa.
+**Rastreabilidade**: Cada decisão deixa registro de contexto e evidência.
 
-## Processo 1 (inicial) — Coleta ativa na internet
-- Um agente de coleta (firecrawl) recebe um prompt com:
-  - locais iniciais sugeridos
-  - instrução para explorar também novos lugares relacionados
-- Retorno esperado da coleta ativa:
-  - link do conteúdo
-  - conteúdo bruto
-  - contexto adicional da coleta
-- Esses dados são registrados localmente.
-- A mesma estrutura também pode chegar por endpoint de ingestão (canal passivo para outras fontes).
-- Endpoint(s) de hooks externos recebem notificações de sistemas terceiros (financeiro, email, etc.).
-- Cada novo insumo registrado dispara 1 job no runtime do agente, processado por agente LLM.
-- Objetivo: ampliar a descoberta de sinais além da lista inicial, com exploração guiada.
+**Revisão contínua**: Decisões podem ser reavaliadas quando novos sinais chegam.
 
-## Base semântica do sistema
-- Armazenamento em LibSQL (SQLite) com índices vetoriais via LibSQLVector
-- Embeddings em chunks de conhecimento e observações
-- Busca híbrida com vetores e BM25
-- Grafo de conhecimento construído continuamente pelos agentes (relações, categorização, evidências) via GraphRAG
+**Estados explícitos**: Itens percorrem status claros e previsíveis (ativo, priorizado, adiado, descartado).
 
-## Identidade dos agentes
-Cada agente do sistema possui:
-- persona
-- nome
-- email
-- papel
+**Aprendizado cíclico**: Dados da operação de produtos alimentam novas decisões.
 
-## Modelo organizacional
-- agentes são tratados como funcionários da empresa digital
-- tools/skills iniciais são definidos conforme papel/cargo/função do agente
+**Controle financeiro básico**: Visibilidade simples de contas a pagar, a receber, custos e fluxo de caixa.
 
-## Comunicação entre agentes
-- agentes se comunicam por eventos assíncronos (fila de jobs/eventos de outro agente)
-- envio de mensagem entre agentes é assíncrono
-- pode haver janela de espera para resposta (ex.: até 5 minutos)
-- se não houver resposta no tempo, retorno informa indisponibilidade temporária do outro agente
-- durante execução, o runtime verifica replies pendentes entre steps
-- quando reply chega, ele é injetado na lista de mensagens da execução/thread
+## Arquitetura de Agentes
 
-## Modelo de thread por agente
-- cada agente possui uma única thread de mensagens
-- tudo que acontece com o agente roda nessa thread
-- a thread é o canal principal de contexto e continuidade do agente
-- execuções do agente podem criar ramificações por execução
-- ao fim de cada run, o histórico detalhado é compactado para manter só:
-  - prompt inicial da execução
-  - resumo executivo do run
-- abordagem operacional possível: executar em thread clonada e retornar somente o resultado compacto para a thread principal
+Cada agente é um "funcionário" da empresa com:
 
-## Fila de jobs por agente
-- cada agente possui sua própria fila de eventos/jobs
-- cada job dispara um run
-- fila alimenta as execuções do agente e suas ramificações
-- retry/backoff pode ser implementado no runtime do agente conforme necessário
+- **Identidade**: Nome, email, persona, papel (define ferramentas iniciais)
+- **Thread única**: Histórico persistente de tudo que o agente processa
+- **Memória isolada**: Conhecimento próprio, separado de outros agentes
+- **Fila de jobs**: Eventos chegam como jobs que disparam execuções
 
-## Memória por agente
-- cada agente terá memória própria e isolada
-- memória combina abordagem atual do OpenClaw + padrão observacional semelhante ao Mastra (referência)
-- gestão de memória/contexto e execução será específica deste projeto (modelo próprio)
-- memória não é acionada por tool manual do agente
-- durante um run, runtime recupera memória por step (semântica + fulltext/BM25) e injeta no contexto como mensagem da thread (ex.: `<memory>`)
-- criação/atualização de memória ocorre no fim da execução, antes do resumo executivo ser devolvido para a thread primária
-- se houver compactação durante o run, memória é construída antes da compactação
-- regra de compactação por mensagens intermediárias (do meio) aplica-se à execução do run
-- compactação da memória primária segue fluxo normal
+## Ciclo de Execução (Run Loop)
 
-## Agendamento por agente
-- agentes podem criar crons para tarefas recorrentes
-- agentes também podem usar heartbeat para manutenção/checagens periódicas
-- ideia funcional inspirada na abordagem já usada no OpenClaw
+1. **Trigger**: Um job chega na fila do agente
+2. **Setup**: Runtime clona a thread principal para criar contexto isolado
+3. **Execução por steps**:
+   - Antes de cada step, memória relevante é recuperada (busca híbrida: vetorial + BM25)
+   - Resultados são injetados como contexto no passo atual
+   - Agente não chama memória manualmente; é injeção automática
+4. **Fechamento**:
+   - Novas informações são armazenadas na memória de longo prazo
+   - Um resumo executivo compacto é gerado
+   - Apenas o prompt inicial e resumo voltam à thread principal
+   - Histórico detalhado é descartado para evitar inchaço de contexto
 
-Observação:
-- referência conceitual inspirada em abordagens recentes de memória/thread (ex.: ecossistema Mastra), com adaptação própria do projeto.
+## Comunicação Entre Agentes
 
-## Papel dos agentes LLM no sistema
-- agentes de coleta/interpretação
-- agentes de enriquecimento e relacionamento semântico
-- agentes mineradores (exploração livre e guiada)
-- agentes de categorização e proposta de valor
-- agentes de análise de viabilidade
+Assíncrona baseada em eventos:
 
-## Processo posterior (quando operação estiver estável)
-- Condição: sem novo sistema em construção e apps em produção estáveis.
-- Definição atual de app estável: em produção com poucas issues na semana (menos de 10).
-- O agente percorre a fila de problemas extraídos (FIFO).
-- Rodada mínima: 3 problemas analisados (ou todos os disponíveis, se houver menos de 3).
-- Para cada problema:
-  - usa o `context` do item
-  - pode consultar o grafo para relações e sinais complementares
-  - produz uma proposta de valor
-  - analisa o que precisa ser feito para atender a proposta
-  - estima custo e esforço para atendimento
-  - registra métricas numéricas (complexidade, features, custo, potencial de receita/MRR)
-  - valida fit com as restrições da plataforma (web, micro-SaaS, recorrência/crédito/one-time)
-  - valida se o custo é suportável pelo fluxo de caixa
-- Se não encaixar no momento, o problema volta para o final da fila.
-- Após concluir a rodada, propostas avaliadas são ranqueadas por métricas (custo-benefício, complexidade, rapidez e valor).
-- Problema selecionado para seguir no pipeline é marcado como `ideation`.
-- Etapa de ideação prepara documentação do projeto (overview, briefing, PRD, features, arquitetura/organização) em repositório baseado em template, já clonado e linkado ao remoto.
-- Antes do desenvolvimento completo da solução, sistema cria landing page focada na dor para coletar leads.
-- Agentes podem contatar interessados e coletar informações adicionais.
-- Sistema também pode enviar status reports e outras notificações para esses interessados.
-- Interessados podem ser usados como beta testers com incentivos (desconto, créditos ou uso gratuito por período).
-- Sistema executa marketing social e distribuição (fóruns/comunidades/redes) para aquisição e validação contínua.
-- Integrações candidatas para publicação/distribuição: APIs Hub, diretas/PKD, Buffer (decisão técnica posterior).
-- Com documentação pronta, sistema gera plano de desenvolvimento.
-- Cada tarefa do plano vira issue.
-- Antes de executar cada tarefa, sistema analisa complexidade/tempo/passos e decompõe tarefas grandes em menores.
-- Depois, sistema executa tarefas continuamente por motor de desenvolvimento autônomo, item por item da fila.
-- Agentes serão criados usando Mastra.
-- Automaker entra apenas por picks pontuais do que for útil/necessário.
-- Com tarefas concluídas e validação local finalizada, sistema faz deploy em ambiente de teste (staging).
-- Em staging, agentes testam e corrigem como se fosse produção.
-- Após estabilização em staging, sistema promove para produção.
-- Todo app sobe com base padrão de observabilidade (métricas + logs + eventos contextuais) e canais de suporte.
-- Canais de suporte padrão: embutido no app + email.
-- Tickets de suporte são atendidos por agentes LLM.
-- Agentes de suporte têm acesso ao repositório e às documentações.
-- Agentes usam busca por embeddings e BM25 para responder e auxiliar usuários.
-- Eventos de runtime podem acionar o criador de issues automaticamente.
-- Agentes de suporte também podem acionar esse mesmo criador de issues quando identificarem problema acionável.
-- Problemas identificados no atendimento podem virar issue mesmo sem erro explícito em log.
-- O criador de issues coleta contexto adicional antes da abertura.
-- Essas issues entram na mesma esteira de desenvolvimento e CI/CD do restante do sistema.
-- Respostas e sinais vindos de marketing social também podem alimentar leads, problemas e novas issues.
-- Nova rodada de produto inicia automaticamente quando:
-  - fluxo de caixa operacional 30d >= 0
-  - runway projetado >= 3 meses
-  - apps em produção estáveis (menos de 10 issues/semana)
-  - MRR atual >= 1.15x média dos 2 meses anteriores
-## Papel das regras determinísticas
-- pontuação/ranking consistente
-- transições de estado com critérios claros
-- redução de variabilidade entre execuções
+- Agentes enviam mensagens para a fila de jobs do destinatário
+- Mensagens são recuperadas entre steps da execução
+- Suporte opcional de timeout para simulação de respostas síncronas
 
-## Diretriz de definição de stack
-- Não definir stack antecipadamente durante a fase de planejamento funcional/conceitual.
-- Toda tecnologia (fila, orquestrador, banco, framework, etc.) deve ficar registrada como **opção a avaliar**.
-- A escolha oficial de stack ocorre apenas na etapa de documentação técnica/arquitetural.
+## Memória por Agente
 
-## Observação
-Esta premissa (100% autônomo) deve ser aplicada como base em todas as features do sistema.
+Combinação de três camadas:
+
+**Memória de trabalho (Working Memory)**: Contexto atual do step, injetado automaticamente pelo runtime
+
+**Memória observacional (Observational Memory)**: Reflexões curtas sobre observações do LLM durante runs
+
+**Memória de longo prazo (Long-Term Memory)**:
+- Armazenadas em LibSQL (SQLite) + LibSQLVector
+- Busca híbrida: vetorial via fastembed + BM25 fulltext
+- Grafo de conhecimento construído com GraphRAG
+- Arquivo de observações por dia em workspace
+
+## Comunicação com Sistemas Externos
+
+- **Provedores de comunicação**: Conectam agentes a plataformas externas (email, redes sociais, etc)
+- **Wake queue**: Quando mensagens chegam, o agente acorda (debounce de 1s, máx 10s)
+- **Sincronização de contatos**: Agentes mantêm lista de contatos de cada provedor
+- **Armazenamento de mensagens**: Inbound e outbound são persistidos para auditoria
+
+## Tecnologia
+
+**Framework**: Mastra.ai para agentes, workflows e ferramentas
+
+**Banco de dados**: LibSQL (SQLite) para persistência de tudo
+
+**Embeddings**: Fastembed para vetorização de memória
+
+**Busca**: Híbrida via Workspace + GraphRAG
+
+**Processadores**: Input/Output processors automatizam injeção de memória e atualização
+
+## Próximos Estágios (Não Implementados)
+
+Quando sistema estiver operacional e produtos em produção estáveis:
+
+- Ciclo completo de product discovery, ideation, desenvolvimento e deploy
+- Geração automática de landing pages e coleta de leads
+- Marketing e distribuição em redes/fóruns
+- Atendimento de suporte com tickets
+- Criação automática de issues de bugs identificados
+
+Critérios para iniciar nova rodada: fluxo de caixa positivo, runway >= 3 meses, MRR em crescimento, menos de 10 issues/semana.
