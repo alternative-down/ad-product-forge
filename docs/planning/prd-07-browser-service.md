@@ -1,8 +1,8 @@
-# PRD-07: Serviço de Navegador
+# PRD-07: Serviço de Navegador — Investigação Necessária
 
-**Status:** Planejamento
+**Status:** ⚠️ Investigação Necessária - Não Implementado
 **Data:** 2026-03-15
-**Versão:** 1.0
+**Versão:** 0.1 (Rascunho - Requer Pesquisa)
 
 ---
 
@@ -12,140 +12,94 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 
 ---
 
-## 1. Visão Geral
+## Objetivo (Tentativo)
 
-### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
-
-**Este PRD descreve infraestrutura de automação de navegador específica para ad-product-forge.** Serviço de navegador permite que agentes de Nicolas interajam com páginas web para pesquisa, coleta de dados e testes. Esta é capacidade específica da aplicação, não infraestrutura do framework.
-
-**Objetivo:** Fornecer agentes com capacidades de automação web e web scraping via serviço de navegador externo.
-
-**Por quê (para ad-product-forge):** Agentes de pesquisa e desenvolvimento de Nicolas precisam interagir com interfaces web, preencher formulários e fazer scraping de conteúdo dinâmico sem restrições de sandbox. Habilita pesquisa de mercado baseada em web e testes.
-
-**Prioridade:** Média
-**Timeline:** 2-3 semanas
+Permitir que agentes de Nicolas interajam com páginas web para pesquisa, coleta de dados e testes via automação de navegador.
 
 ---
 
-## 2. Problema
+## Problema Identificado
 
 - Agentes não conseguem interagir com interfaces web
 - Não conseguem fazer scraping de conteúdo renderizado por JavaScript dinâmico
-- Automação de navegador em ambientes sandboxed é problemática
-- Precisa de infraestrutura de navegador isolada e escalável
+- Automação de navegador em ambientes sandboxed é problemática (Playwright não encontra navegador quando testado em sandbox Mastra)
+- Solução ideal ainda desconhecida
 
 ---
 
-## 3. Casos de Uso
+## O Que Precisa Ser Investigado
 
-1. **Agente faz scraping de um site:** Agente navega para site, extrai dados
-2. **Agente preenche e submete formulários:** Agente automatiza fluxo de preenchimento de formulário
-3. **Agente aguarda conteúdo dinâmico:** Agente aguarda JavaScript renderizar, depois extrai
-4. **Agente tira screenshots:** Agente captura estado da página para análise
+### 1. Viabilidade em Sandbox
+- [ ] Playwright pode rodar em sandbox Mastra com configuração correta?
+- [ ] Qual é a configuração necessária?
+- [ ] Existem limitações fundamentais do sandbox que impedem browser automation?
+
+### 2. Soluções Existentes
+- [ ] Como **openclaw** implementa browser automation? (referência conhecida que funciona)
+- [ ] Qual abordagem eles usam? (sandbox, externo, container, etc)
+- [ ] Podemos adaptar a solução deles?
+- [ ] Existem outras projetos de code agents que resolvem isso?
+
+### 3. Alternativas Possíveis
+- [ ] Serviço externo separado (como descrito no rascunho anterior)
+- [ ] Container Docker com Playwright
+- [ ] API de browser automation como serviço (BrowserStack, etc)
+- [ ] Biblioteca alternativa a Playwright (Puppeteer, Selenium, etc)
+- [ ] Abordagem sem navegador (busca por API endpoints em vez de scraping UI)
+
+### 4. Trade-offs de Cada Abordagem
+- [ ] Complexidade de implementação
+- [ ] Performance
+- [ ] Confiabilidade
+- [ ] Custo de recursos (CPU, memória)
+- [ ] Manutenibilidade
 
 ---
 
-## 4. Requisitos
+## Requisitos Funcionais (Esperados)
 
-### Recursos Principais
+Se viável, espera-se:
 
-**FR1: Gerenciamento de Sessão de Navegador**
-- Criar novas sessões de navegador sob demanda
-- Manter estado de sessão através de múltiplas operações
-- Limpeza automática de sessões inativas (timeout: 30 minutos)
-
-**FR2: Navegação de Página & Conteúdo**
+**FR1: Web Navigation**
 - Navegar para URLs
-- Recuperar HTML e conteúdo de texto da página
-- Obter metadados da página (título, URL, status)
+- Recuperar conteúdo (HTML, texto)
+- Seguir redirects
 
-**FR3: Interação com Elementos**
-- Clicar elementos por seletor CSS
-- Preencher campos de formulário
-- Submeter formulários
+**FR2: Web Interaction**
+- Clicar elementos
+- Preencher formulários
+- Submeter dados
+- Aguardar conteúdo dinâmico
 
-**FR4: Extração de Conteúdo**
-- Consultar elementos por seletor CSS
+**FR3: Content Extraction**
+- Consultar elementos por CSS/XPath
 - Extrair texto e atributos
-- Extração básica de dados de tabela
+- Fazer scraping de dados estruturados (tabelas, listas)
 
-**FR5: Execução de JavaScript**
-- Executar JavaScript simples no contexto de página
-- Condições básicas de espera
-
-### Ferramentas Voltadas para Agentes
-
-```typescript
-createBrowserSession(): Promise<{sessionId}>
-closeBrowserSession(sessionId: string): Promise<void>
-navigateTo(sessionId: string, url: string): Promise<{url, status, title}>
-getPageContent(sessionId: string): Promise<{html, text, url}>
-clickElement(sessionId: string, selector: string): Promise<{success}>
-fillField(sessionId: string, selector: string, value: string): Promise<{success}>
-submitForm(sessionId: string, formSelector?: string): Promise<{success}>
-querySelector(sessionId: string, selector: string): Promise<{element}>
-querySelectorAll(sessionId: string, selector: string): Promise<{elements}>
-executeScript(sessionId: string, script: string): Promise<{result}>
-```
+**FR4: Session Management**
+- Manter cookies/estado entre operações
+- Cleanup automático de sessões
 
 ---
 
-## 5. Critérios de Sucesso
+## Próximos Passos
 
-- Agentes podem navegar para URLs e recuperar conteúdo
-- Automação de formulário funciona através de diferentes tipos de formulário
-- Web scraping lida com conteúdo dinâmico
-- Operações de navegador se completam em <30 segundos
-- Sessões propriamente isoladas e limpas
-- Serviço lida com requisições concorrentes de múltiplos agentes
-
----
-
-## 6. Requisitos Não-Funcionais
-
-**Performance:**
-- Criação de sessão: <5 segundos
-- Navegação: <15 segundos
-- Interação com elementos: resposta rápida
-- Velocidade de execução razoável para uso de desenvolvedor solo
-
-**Confiabilidade:**
-- Isolamento de sessão (sem interferência entre sessões)
-- Limpeza apropriada de processos obsoletos
-- Lógica básica de timeout e retry
-
-**Segurança:**
-- Isolamento de sessão entre agentes
-- Validação de entrada (prevenir injeção)
-- Tratamento de erros sem expor internals
+1. **Investigar openclaw** — Entender como implementam browser automation
+2. **Testar Playwright** — Com diferentes configurações de sandbox
+3. **Documentar soluções alternativas** — Pesquisar opções
+4. **POC (Proof of Concept)** — Testar a abordagem mais promissora
+5. **Decidir** — Qual solução seguir
 
 ---
 
-## 7. Arquitetura
+## Notas
 
-### Componentes
+- Não implementar até investigação ser concluída
+- Não usar a solução descrita em versões anteriores (foi inventada sem teste)
+- Priorizar baseado no que já funciona (openclaw)
+- Considerar simplicidade para solo dev
 
-1. **Serviço de Navegador Externo** (processo/container separado)
-   - Gerencia instâncias de navegador Playwright
-   - API HTTP para controle remoto
-   - Gerenciamento de ciclo de vida de sessão
-   - Roda fora do sandbox
+---
 
-2. **Ferramentas de Navegador Voltadas para Agentes** (em Motor Mastra)
-   - Ferramentas de alto nível para agentes
-   - Cliente HTTP para serviço de navegador
-   - Tratamento de erros e lógica de retry
-   - Gerenciamento de timeout
-
-### Arquitetura de Rede
-
-```
-Agente (em Motor Mastra)
-  ↓
-Ferramentas de Navegador
-  ↓
-Cliente HTTP
-  ↓
-Serviço de Navegador (Externo)
-  ├─ Playwright
-```
+**Status do Documento:** Aguardando Investigação
+**Última Atualização:** 2026-03-15
