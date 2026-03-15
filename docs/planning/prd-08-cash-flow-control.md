@@ -1,6 +1,6 @@
 # PRD-08: Controle de Fluxo de Caixa (Budget Global de LLM)
 
-**Status:** Planejamento
+**Status:** ⏸️ Adiado - Para Depois
 **Data:** 2026-03-15
 **Versão:** 1.0
 
