@@ -1,113 +1,83 @@
-# PRD-14: Application Deployment
+# PRD-05: Implantação de Aplicações
 
-**Status:** Planning
+**Status:** Planejamento
 
-**Note:** This is a personal project from a solo developer. Built with KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles in mind.
-
----
-
-## 1. Overview
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes deployment infrastructure specific to ad-product-forge.** Deployment to Coolify enables Nicolas' development agents to autonomously launch applications without manual deployment. This is application-specific infrastructure for autonomous product deployment.
-
-Enable agents to deploy applications to Coolify (self-hosted on Hetzner). Applications get a unique subdomain URL automatically.
-
-**Core flow (for ad-product-forge):**
-1. Development agents generate application code
-2. Agents deploy to Coolify via API
-3. Coolify builds and starts application
-4. Application accessible via auto-generated subdomain
-5. Operations agents monitor deployment status
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com os princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
-## 2. Use Cases
+## Objetivo
 
-### 2.1 Deploy Web Application
-Agent creates Node.js/Python/static web app → deploys to Coolify → accessible at `https://agent-{name}.domain.com`
-
-### 2.2 Deploy with Database
-Agent generates app + database config → Coolify provisions database → app connects automatically
-
-### 2.3 Monitor Deployment
-Agent checks deployment status, logs, health checks via tools
+Permitir que agentes de desenvolvimento façam deploy autônomo de aplicações da empresa (ad-product-forge) para Coolify (auto-hospedado em Hetzner), com URLs de subdomínio gerado automaticamente. Os agentes geram código, fazem deploy em nome da empresa via API Coolify, e agentes de operações monitoram o status.
 
 ---
 
-## 3. Core Tools
+## Requisitos Funcionais
 
-**Deployment:**
-- `deployApplication(config)` — Deploy app to Coolify
-  - Input: app name, git repo, dockerfile
-  - Output: deployment ID, URL, status
-- `getDeploymentStatus(deploymentId)` — Check deployment progress
-- `deleteApplication(deploymentId)` — Stop and remove app
+**FR1: Fazer Deploy de Aplicação**
+- Agente fornece: nome da app, repositório Git, Dockerfile
+- Sistema retorna: ID de deployment, URL completa, status
+- Subdomínio único é criado automaticamente (ex: `https://app-{nome}.domain.com`)
 
----
+**FR2: Monitorar Status de Deployment**
+- Agente consulta status via `getDeploymentStatus(deploymentId)`
+- Retorna: estado atual (building, deploying, running, failed), logs, mensagens de erro
 
-## 4. Integration with Domain Management
+**FR3: Remover Aplicação**
+- Agente invoca `deleteApplication(deploymentId)`
+- Sistema para container, remove app do Coolify, marca como deletada
 
-When application deploys:
-1. Create unique subdomain via domain management system
-2. Point to Coolify instance IP
-3. Return FQDN to agent
-4. SSL certificate (wildcard) covers subdomain
-
----
-
-## 5. Storage
-
-- `deployments` — deployment_id, agent_id, app_name, repo_url, status, subdomain, coolify_app_id, deployed_at
+**FR4: Integração com Gerenciamento de Domínio**
+- Na criação do deployment, sistema:
+  - Cria subdomínio único via sistema de gerenciamento de domínios
+  - Aponta para IP da instância Coolify
+  - Retorna FQDN ao agente
+  - Certificado SSL wildcard cobre o subdomínio
 
 ---
 
-## 6. Deployment States
+## Arquitetura
 
-- `building` — Docker image building
-- `deploying` — Pushing to Coolify
-- `running` — Application started
-- `failed` — Deployment failed
-
----
-
-## 7. Error Handling
-
-**Build Failures:**
-- Return error to agent
-- Agent can fix code and redeploy
-
-**Persistent Failures:**
-- Mark as failed
-- Agent takes manual action
-
----
-
-## 8. Implementation
-
-- **Week 1:** Coolify API client + deployment operations
-- **Week 2:** Integration with domain management + status monitoring
-- **Week 3:** Error handling + tests
+```
+Agente de Desenvolvimento
+        ↓
+   deployApplication()
+        ↓
+API Coolify + Gerenciador de Domínios
+        ↓
+   [Build Docker]
+   [Deploy Container]
+   [Criar Subdomínio]
+        ↓
+URL Acessível + ID Deployment
+        ↓
+Agente de Operações monitora via getDeploymentStatus()
+```
 
 ---
 
-## 9. Out of Scope
+## Schema do Banco de Dados
 
-- Multiple deployment targets (only Coolify)
-- Load balancing / auto-scaling
-- Advanced CI/CD pipelines
-- Environment variables management UI
-- Analytics/monitoring dashboard
-- Backup/restore automation
-- Service mesh / advanced networking
-- Multi-region deployments
-- Cost tracking
-- Database provisioning
-- Health check automation
-- Auto-restart on failure
+**Tabela: deployments**
+- `deployment_id` — Identificador único
+- `agent_id` — Qual agente fez o deploy
+- `app_name` — Nome da aplicação
+- `repo_url` — URL do repositório Git
+- `status` — Estado atual (building, deploying, running, failed)
+- `subdomain` — Subdomínio atribuído (ex: app-invoice-1)
+- `coolify_app_id` — ID da app no Coolify
+- `deployed_at` — Timestamp do deployment
 
 ---
 
-**Document Version:** 0.1 (Simplified)
-**Last Updated:** 2026-03-15
+## Decisões Técnicas
+
+1. **Apenas Coolify:** Suportar somente Coolify como alvo de deployment. Sem multi-cloud.
+2. **Subdomínio Automático:** Sistema gera subdomínios únicos baseado em nome da app + timestamp para evitar conflitos.
+3. **Estados Simples:** Quatro estados básicos (building, deploying, running, failed) sem transições complexas.
+4. **SSL Wildcard:** Certificado wildcard cobre todos os subdomínios, sem provisioning individual.
+
+---
+
+**Versão do Documento:** 0.1 (Simplificado)
+**Última Atualização:** 2026-03-15
