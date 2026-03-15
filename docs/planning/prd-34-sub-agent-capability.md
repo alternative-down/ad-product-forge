@@ -14,11 +14,11 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 ## 1. Overview
 
-**Goal:** Allow agents to delegate tasks to cheaper sub-agents for cost optimization.
+**Goal:** Allow agents to delegate simple tasks to cheaper sub-agents (Haiku) for cost reduction.
 
-**Why:** Complex reasoning and simple data gathering both use expensive models. Delegate simple tasks to cheaper models (Haiku) to reduce costs while keeping primary agent (Opus) for complex reasoning.
+**Why:** Optimize cost by using cheaper models for simple tasks while keeping primary agent (Opus) for complex reasoning.
 
-**Priority:** Low (exploratory phase)
+**Priority:** Low (optional exploration)
 **Status:** Requires feasibility evaluation before implementation
 
 ---
@@ -34,13 +34,12 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 ## 3. Key Concept
 
-**Sub-Agent:** Temporary, lightweight agent spawned by primary agent for a specific task.
+**Sub-Agent:** Temporary agent spawned by primary agent for simple tasks.
 
 - **Lifecycle:** Created on-demand, runs task, terminates
-- **Model:** Haiku or Sonnet (3-5x cheaper than Opus)
-- **Scope:** Single, well-defined task
+- **Model:** Haiku (3-5x cheaper than Opus)
+- **Scope:** Single, simple task
 - **Communication:** Synchronous request-response
-- **Isolation:** Lightweight (can share some resources)
 
 ---
 
@@ -58,12 +57,10 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 | Aspect | Sub-Agents | External Agents |
 |--------|-----------|-----------------|
-| **Purpose** | Cost-optimize internal tasks | Security isolation for external consultation |
-| **Model Tier** | Haiku/Sonnet (cheap) | Same as primary (quality-focused) |
-| **Context Access** | Can access task context | No access to internal data |
-| **Communication** | Direct, synchronous | Asynchronous, message-based |
+| **Purpose** | Cost-optimize simple tasks | Security isolation for external interaction |
+| **Model Tier** | Haiku (cheap) | Opus (quality-focused) |
 | **Lifecycle** | Short-lived, task-scoped | Long-lived, conversational |
-| **Failure Mode** | Degrade gracefully, retry | May terminate task |
+| **Failure Mode** | Degrade gracefully | May terminate task |
 
 ---
 
@@ -72,34 +69,19 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 ### Core Features
 
 **FR1: Sub-Agent Creation**
-- Tool: `spawnSubAgent(taskName, taskDescription, taskInput, modelTier, options)`
+- Tool: `spawnSubAgent(taskName, taskDescription, taskInput, options)`
 - Input validation and task specification
-- Create temporary agent with task-specific prompt
-- Execute on specified model tier (Haiku/Sonnet)
+- Create temporary Haiku agent with task-specific prompt
 
 **FR2: Execution & Results**
-- Execute task synchronously (primary agent blocks on result)
-- Validate result against expected format
-- Return: status, result, tokens used, cost estimate, execution time
+- Execute task synchronously
+- Return: status, result, tokens used, execution time
 - Handle timeout and errors gracefully
 
-**FR3: Cost Tracking**
-- Track tokens used per sub-agent task
-- Calculate cost based on model tier
-- Display cost savings vs. primary agent
-- Accumulate total savings
-
-**FR4: Error Handling**
+**FR3: Error Handling**
 - Timeout protection (default: 30 seconds)
-- Invalid result validation
 - Retry logic for transient failures
-- Fallback to alternative model if needed
 - Graceful degradation if sub-agent fails
-
-**FR5: Batch Sub-Agents** (optional, Phase 2)
-- `spawnSubAgentBatch(tasks, parallelism)` to spawn multiple sub-agents
-- Execute in parallel with concurrency limits
-- Collect all results before returning
 
 ### Agent-Facing Tool
 
@@ -108,17 +90,13 @@ spawnSubAgent({
   taskName: string;
   taskDescription: string;
   taskInput: Record<string, unknown>;
-  modelTier: "haiku" | "sonnet";
   maxTokens?: number;
   timeoutSeconds?: number;
-  expectedOutputFormat?: string;
 }): Promise<{
-  subAgentId: string;
   status: "success" | "failed" | "timeout";
   result?: unknown;
   error?: string;
   tokensUsed: number;
-  costEstimate: number;
   executionTimeMs: number;
 }>
 ```
@@ -127,30 +105,25 @@ spawnSubAgent({
 
 ## 7. Success Criteria
 
-- Sub-agents created and terminated with <500ms latency
-- Parallel execution reduces workflow time by ≥30%
-- Cost per task reduced by ≥60% when using sub-agents
+- Sub-agents created and executed successfully
+- Cost per task reduced when using sub-agents
 - Sub-agent failure doesn't crash primary agent
-- Documentation clearly distinguishes sub-agents from external agents
+- Clear documentation on when to use sub-agents vs. primary agent
 
 ---
 
 ## 8. Non-Functional Requirements
 
 **Performance:**
-- Sub-agent creation: <500ms
-- Task execution overhead: minimal
-- Parallel spawning: support 10+ concurrent sub-agents
+- Sub-agent creation: reasonable latency
+- Task execution: reliable
 
 **Reliability:**
 - Failed sub-agents return clear error
-- Retry logic for transient failures
 - Primary agent continues on sub-agent failure
 
 **Cost:**
 - Haiku usage: 3-5x cheaper than Opus
-- Sonnet usage: 2-3x cheaper than Opus
-- Cost calculation accurate and logged
 
 ---
 
@@ -159,11 +132,9 @@ spawnSubAgent({
 ### Environment Variables
 
 ```bash
-SUB_AGENT_DEFAULT_MODEL=claude-haiku
+SUB_AGENT_MODEL=claude-haiku
 SUB_AGENT_TIMEOUT_SECONDS=30
 SUB_AGENT_MAX_TOKENS=1000
-SUB_AGENT_ENABLE_COST_TRACKING=true
-SUB_AGENT_MAX_PARALLEL_SPAWNS=50
 ```
 
 ---
@@ -172,42 +143,35 @@ SUB_AGENT_MAX_PARALLEL_SPAWNS=50
 
 ### In Scope (if approved)
 - Sub-agent creation and execution
-- Cost tracking per task
 - Synchronous execution model
 - Error handling and retry logic
-- Differentiation documentation from external agents
+- Clear documentation distinguishing from external agents
 
 ### Out of Scope
-- Batch/parallel execution (Phase 2)
-- Sub-agents spawning sub-agents (nested)
-- Distributed sub-agent execution
-- Advanced task decomposition algorithms
+- Batch/parallel execution
+- Nested sub-agents (sub-agents spawning sub-agents)
+- Distributed execution
+- Advanced task decomposition
 - Sub-agent result caching
+- Cost tracking and analytics
 
 ---
 
 ## 11. Implementation Plan
 
-### Phase 0: Feasibility (Week 1-2) [REQUIRED BEFORE GO/NO-GO]
+### Phase 0: Feasibility Prototype (1 week) [REQUIRED BEFORE GO/NO-GO]
 
-- [ ] **Prototype:** Build minimal proof-of-concept (spawn one Haiku sub-agent from Opus)
-- [ ] **Cost Analysis:** Measure actual token usage and cost savings
-- [ ] **Latency Testing:** Measure sub-agent creation and execution overhead
-- [ ] **Architecture Decision:** Determine creation mechanism and communication protocol
-- [ ] **Feasibility Report:** Document findings and recommend go/no-go
+- [ ] Build minimal proof-of-concept (spawn one Haiku sub-agent from Opus)
+- [ ] Measure actual token usage and cost savings
+- [ ] Test sub-agent creation latency
+- [ ] Document findings and recommend go/no-go
 
-### Phase 1: Core Implementation (if approved, Week 3-4)
+### Phase 1: Core Implementation (if approved, 1-2 weeks)
 1. Create sub-agent type definitions
 2. Implement `spawnSubAgent()` tool
 3. Integrate with agent lifecycle
-4. Implement cost tracking
-5. Unit tests
-
-### Phase 2: Advanced Features (Week 5-6, optional)
-1. Batch execution support
-2. Async/promise-based communication
-3. Nested sub-agents
-4. Integration tests
+4. Error handling and logging
+5. Basic testing
 
 ---
 
@@ -240,19 +204,18 @@ Primary Agent (Opus)
 
 ---
 
-## 13. Risks & Mitigation
+## 12. Risks & Mitigation
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| Quality degradation | Medium | Task decomposition guidelines, validation |
-| Confusion with external agents | High | Clear documentation, decision matrix |
-| Uncontrolled spawning | Medium | Max parallelism limits, cost budgets |
-| Latency overhead | Medium | Prototype testing, benchmarking |
+| Quality degradation | Medium | Task specification guidelines |
+| Confusion with external agents | High | Clear documentation |
+| Latency overhead | Medium | Prototype testing |
 | Feasibility blocker | High | Early prototype validation |
 
 ---
 
-## 14. Example Workflow
+## 13. Example Workflow
 
 ```typescript
 const primaryAgent = await createAgent({
@@ -261,69 +224,30 @@ const primaryAgent = await createAgent({
   model: 'claude-opus',
 });
 
-const documents = [doc1, doc2, doc3];
+const document = doc1;
 
-// Spawn sub-agents for parallel processing
-const results = [];
-for (const doc of documents) {
-  const result = await primaryAgent.tool('spawnSubAgent', {
-    taskName: `Analyze Document`,
-    taskDescription: 'Extract key themes and sentiment',
-    taskInput: { document: doc },
-    modelTier: 'haiku',
-    maxTokens: 500
-  });
-  results.push(result);
-}
+// Spawn sub-agent for simple task
+const result = await primaryAgent.tool('spawnSubAgent', {
+  taskName: 'Analyze Document',
+  taskDescription: 'Extract key themes',
+  taskInput: { document: document },
+  maxTokens: 500
+});
 
-// Synthesize
-const synthesis = await primaryAgent.synthesize(results);
-
-// Cost: ~$0.05 (vs. ~$0.15 with Opus only)
+// Cost: ~$0.01 (vs. ~$0.05 with Opus)
 ```
 
 ---
 
-## 15. Open Questions
-
-**Technical Decisions Needed:**
-1. In-process vs. separate instance sub-agents?
-2. Synchronous (blocking) or asynchronous (promises)?
-3. Should sub-agents access primary agent's memory?
-4. Fixed model tier (Haiku) or flexible (Haiku/Sonnet/Opus)?
-
-**Feasibility Questions:**
-1. Can token counts be tracked accurately?
-2. What is sub-agent creation overhead?
-3. Is Haiku quality acceptable for typical tasks?
-4. How much integration work is required?
-
----
-
-## 16. Decision Checklist
-
-Before proceeding to Phase 1, these decisions must be made:
-
-- [ ] GO/NO-GO decision on Sub-Agent capability
-- [ ] Communication protocol: synchronous or asynchronous?
-- [ ] Model tier strategy: fixed or flexible?
-- [ ] Isolation level: lightweight or heavy?
-- [ ] Storage: track executions in database?
-
----
-
-## Glossary
+## 14. Glossary
 
 | Term | Definition |
 |------|-----------|
-| Sub-Agent | Temporary agent spawned for specific task |
-| Primary Agent | Orchestrating agent that spawns sub-agents |
-| Task Decomposition | Breaking large task into sub-agent-sized chunks |
-| Model Tier | Price/capability level (Haiku, Sonnet, Opus) |
-| Cost Savings | Reduction in token spend vs. primary agent |
+| Sub-Agent | Temporary Haiku agent for simple tasks |
+| Primary Agent | Opus agent that spawns sub-agents |
+| Task Specification | Clear description of what sub-agent must do |
 
 ---
 
 **Status:** Awaiting feasibility assessment decision
-**Decision Required By:** End of Week 2
 **Next Review:** Upon completion of feasibility phase

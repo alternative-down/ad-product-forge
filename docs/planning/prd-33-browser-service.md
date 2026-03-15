@@ -19,7 +19,7 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 **Why:** Agents need to interact with web pages, fill forms, and scrape dynamic content without sandbox constraints.
 
 **Priority:** Medium
-**Timeline:** 3-4 weeks
+**Timeline:** 2-3 weeks
 
 ---
 
@@ -49,36 +49,25 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 - Create new browser sessions on demand
 - Maintain session state across multiple operations
 - Auto-cleanup inactive sessions (timeout: 30 minutes)
-- List and close sessions
 
 **FR2: Page Navigation & Content**
-- Navigate to URLs with page load waiting
+- Navigate to URLs
 - Retrieve page HTML and text content
-- Take screenshots (PNG/JPEG)
 - Get page metadata (title, URL, status)
 
 **FR3: Element Interaction**
 - Click elements by CSS selector
 - Fill form fields
 - Submit forms
-- Scroll to elements
-- Handle file uploads
 
 **FR4: Content Extraction**
 - Query elements by CSS selector
 - Extract text and attributes
-- Extract table data
-- Find specific text on page
+- Basic table data extraction
 
 **FR5: JavaScript Execution**
-- Execute arbitrary JavaScript in page context
-- Wait for JavaScript conditions
-- Handle script errors
-
-**FR6: Cookie & Storage Management**
-- Get/set cookies
-- Get/set local storage
-- Get/set session storage
+- Execute simple JavaScript in page context
+- Basic wait conditions
 
 ### Agent-Facing Tools
 
@@ -92,10 +81,7 @@ fillField(sessionId: string, selector: string, value: string): Promise<{success}
 submitForm(sessionId: string, formSelector?: string): Promise<{success}>
 querySelector(sessionId: string, selector: string): Promise<{element}>
 querySelectorAll(sessionId: string, selector: string): Promise<{elements}>
-takeScreenshot(sessionId: string, fullPage?: boolean): Promise<{imageData}>
 executeScript(sessionId: string, script: string): Promise<{result}>
-getCookies(sessionId: string): Promise<{cookies}>
-setCookies(sessionId: string, cookies: any[]): Promise<{success}>
 ```
 
 ---
@@ -116,20 +102,18 @@ setCookies(sessionId: string, cookies: any[]): Promise<{success}>
 **Performance:**
 - Session creation: <5 seconds
 - Navigation: <15 seconds
-- Element interaction: <2 seconds
-- Screenshot capture: <5 seconds
+- Element interaction: quick response
+- Reasonable execution speed for solo developer use
 
 **Reliability:**
-- Automatic recovery from browser crashes
 - Session isolation (no cross-session interference)
 - Proper cleanup of stale processes
-- Timeout and retry logic
+- Basic timeout and retry logic
 
 **Security:**
 - Session isolation between agents
-- No credential leakage across sessions
-- Input validation and sanitization
-- HTTPS support for production
+- Input validation (prevent injection)
+- Error handling without exposing internals
 
 ---
 
@@ -193,46 +177,30 @@ Browser Service creates session
 - Page navigation and content retrieval
 - Basic element interaction (click, fill, submit)
 - Content extraction (querySelector, text extraction)
-- JavaScript execution
-- Cookie and storage management
-- Screenshot capture
+- Simple JavaScript execution
 - Error handling and timeout management
 
 ### Out of Scope
+- Cookie and storage management
+- Screenshot capture
 - Visual regression testing
-- Performance profiling
-- Browser extension support
-- Video recording
-- Multiple browser engines (Safari, Firefox)
+- Multiple browser engines
 - Distributed browser service
 - CAPTCHA solving
-- Advanced proxy/VPN support
+- Proxy/VPN support
 
 ---
 
 ## 9. Implementation Phases
 
-**Phase 1: MVP (Week 1-2)**
-1. External browser service setup (Docker)
-2. Session management (create, close)
+**Phase 1: Core Implementation (2-3 weeks)**
+1. Browser service setup (Node/Playwright)
+2. Session management (create, close, timeout)
 3. Page navigation and content retrieval
-4. Basic element interaction (click, fill, submit)
-5. Simple content extraction
-6. Error handling and timeout
-
-**Phase 2: Enhancement (Week 2-3)**
-1. Advanced element interaction (drag-drop, hover, file upload)
-2. Table and list extraction
-3. JavaScript execution
-4. Cookies/storage management
-5. Screenshot generation
-6. Device emulation
-
-**Phase 3: Optimization (Week 3-4)**
-1. Session pooling
-2. Performance tuning
-3. Advanced error handling
-4. Monitoring and metrics
+4. Element interaction (click, fill, submit)
+5. Content extraction (basic)
+6. JavaScript execution (simple)
+7. Error handling and logging
 
 ---
 
@@ -245,20 +213,7 @@ Browser Service creates session
 - service_session_id (UUID) -- assigned by browser service
 - created_at (TIMESTAMP)
 - closed_at (TIMESTAMP, nullable)
-- last_activity_at (TIMESTAMP)
-- status (ENUM: active, idle, closed, error)
-- url (VARCHAR, nullable) -- current page
-```
-
-**`forge_browser_operations` table:**
-```
-- operation_id (UUID, primary key)
-- session_id (UUID, foreign key)
-- operation_type (VARCHAR) -- click, navigate, fillField, etc
-- status (ENUM: success, failure, timeout)
-- duration (INTEGER) -- milliseconds
-- error_message (TEXT, nullable)
-- timestamp (TIMESTAMP)
+- status (ENUM: active, closed)
 ```
 
 ---
@@ -293,40 +248,22 @@ createForgeAgent({
 
 ---
 
-## 12. External Service
-
-Deploy as Docker container (separate from main application):
-
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY . .
-RUN npm install
-RUN npx playwright install chromium
-EXPOSE 9000
-CMD ["node", "src/server.ts"]
-```
-
----
-
-## 13. Risks & Mitigation
+## 12. Risks & Mitigation
 
 | Risk | Mitigation |
 |------|-----------|
-| Browser service bottleneck | Session pooling, horizontal scaling, monitoring |
-| Memory leaks in browser instances | Regular cleanup, monitoring, container policies |
+| Memory leaks in browser instances | Regular cleanup, session timeouts |
 | Timeout issues | Configurable timeouts, clear error messages |
-| Cross-session data leakage | Strict session isolation, security testing |
+| Cross-session data leakage | Strict session isolation |
 | Service unavailability | Graceful error handling, clear feedback |
 
 ---
 
-## 14. Testing Strategy
+## 13. Testing Strategy
 
-- **Unit Tests:** Session management, client communication
+- **Unit Tests:** Session management, basic functionality
 - **Integration Tests:** End-to-end navigation, interaction, extraction
-- **Security Tests:** Session isolation, no cross-session leakage
-- **Performance Tests:** Concurrent sessions, operation timing
+- **Error Handling:** Timeout, invalid input, API failures
 
 ---
 
@@ -335,10 +272,9 @@ CMD ["node", "src/server.ts"]
 | Term | Definition |
 |------|-----------|
 | Browser Session | Isolated browser context for agent operations |
-| Browser Service | External HTTP service managing browser instances |
+| Browser Service | HTTP service managing browser instances |
 | Selector | CSS selector for identifying page elements |
-| Timeout | Maximum time for an operation before cancellation |
 
 ---
 
-**Next Steps:** Finalize service design and begin Phase 1 (basic browser service setup)
+**Next Steps:** Begin Phase 1 implementation

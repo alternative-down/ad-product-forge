@@ -52,30 +52,17 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 **FR2: Tool Implementation Methods**
 - **Skills wrapper:** Reference an existing Skill by ID
 - **HTTP integration:** Call an external API endpoint
-- Sandboxed function execution (optional, Phase 2)
 
 **FR3: Tool Storage & Persistence**
-- Custom tools stored in agent database (one table per agent type)
+- Custom tools stored in simple database table
 - Tools persist across agent restarts
-- Tools include metadata: creation timestamp, creator, version number
+- Tools include metadata: creation timestamp, creator
 
 **FR4: Tool Access & Execution**
 - Agents can call custom tools like system tools
 - Tools execute with timeout protection (30 second default)
 - Tool execution is logged
 - Input validation against tool schema
-- Context isolation (no access to other agent data)
-
-**FR5: Tool Discovery**
-- Agents can search for tools by name or type
-- Discovery returns tool metadata and usage examples
-- Tools are documented automatically from metadata
-
-**FR6: Tool Versioning**
-- Each tool update creates a new version
-- Agents can specify which version to use
-- Default always uses latest stable version
-- Can mark tools as deprecated
 
 ---
 
@@ -83,10 +70,9 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 - Agents can create, persist, and use custom tools
 - Tool creation takes <5 seconds
-- Custom tool execution has <50ms overhead vs. system tools
-- Tool execution is fully logged
-- Agents cannot access other agents' data through tools
-- Tool schema validation prevents 90%+ invalid definitions
+- Custom tool execution works reliably
+- Tool execution is logged for debugging
+- Tool schema validation prevents invalid definitions
 
 ---
 
@@ -94,19 +80,16 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 **Performance:**
 - Tool creation: <5 seconds
-- Tool execution: <50ms overhead
-- Discovery query: <500ms for 100+ tools
+- Tool execution works reliably
 
 **Reliability:**
 - Tool execution failure doesn't crash agent
 - Failed calls are logged; agent can retry
-- Tool persistence survives agent restart (zero data loss)
+- Tool persistence survives agent restart
 
 **Security:**
-- Tool execution sandboxing prevents data exfiltration
-- No tool can exceed agent's own permissions
+- HTTP integrations only for public APIs (no credential leakage)
 - All modifications logged with timestamp and creator
-- HTTP integrations restricted to pre-approved domains
 
 ---
 
@@ -116,17 +99,15 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 - Tool creation and validation
 - Skill wrapper implementation
 - HTTP integration implementation
-- Tool persistence and versioning
+- Tool persistence
 - Tool execution with logging
-- Basic tool discovery
-- Auto-generated documentation
 
-### Out of Scope (Future)
-- Visual tool builder UI
-- Tool marketplace or sharing infrastructure
+### Out of Scope
+- Tool versioning and lifecycle management
+- Tool discovery/search API
 - Tool composition (combining tools)
-- Distributed execution
-- Advanced analytics dashboard
+- Visual tool builder UI
+- Advanced analytics
 
 ---
 
@@ -148,50 +129,23 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 - tool_id (UUID, primary key)
 - agent_id (UUID)
 - tool_name (VARCHAR, unique per agent)
-- tool_display_name (VARCHAR)
 - tool_description (TEXT)
-- tool_type (ENUM: skill, http, custom)
-- current_version_id (UUID)
-- status (ENUM: active, deprecated, archived)
-- created_at (TIMESTAMP)
-- updated_at (TIMESTAMP)
-- metadata (JSON)
-```
-
-**`forge_custom_tool_versions` table:**
-```
-- version_id (UUID, primary key)
-- tool_id (UUID)
-- version_number (INTEGER)
+- tool_type (ENUM: skill, http)
 - implementation_type (ENUM: skill, http)
 - implementation_config (JSON)
 - required_inputs (JSON schema)
-- output_schema (JSON schema)
 - created_at (TIMESTAMP)
 ```
 
 ### Implementation Phases
 
-**Phase 1: Core Framework (Week 1)**
+**Phase 1: Core Framework (1-2 weeks)**
 1. Define tool data model
-2. Implement tool creation API
-3. Build persistence layer
-4. Integrate tool execution
-
-**Phase 2: Implementation Methods (Week 1-2)**
-1. Skill wrapper handler
-2. HTTP integration handler
-3. Error handling and timeout protection
-
-**Phase 3: Discovery & Management (Week 2-3)**
-1. Tool discovery API
-2. Auto-generate documentation
-3. Versioning and lifecycle management
-
-**Phase 4: Testing & Polish (Week 3-4)**
-1. Security audit
-2. Performance optimization
-3. Documentation
+2. Implement tool creation and storage
+3. Integrate with agent tool system
+4. Skill wrapper implementation
+5. HTTP integration implementation
+6. Error handling and logging
 
 ---
 
@@ -199,35 +153,26 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 | Risk | Mitigation |
 |------|-----------|
-| Security issues in custom tools | Sandbox execution, rate limits, logging |
-| Tool performance degrades | Monitor execution time, alert on regression |
-| Tool dependency hell | Encourage loose coupling, version pinning |
-| Poor tool discovery | Clear search, usage metrics visible |
+| HTTP API errors | Proper error handling and retry logic |
+| Tool execution timeout | Configurable timeout, clear error messages |
+| Database persistence issues | Simple schema, regular backups |
 
 ---
 
 ## 11. Metrics
 
-**Adoption:**
-- Number of custom tools created per agent
-- Tools created successfully on first attempt (%)
-
-**Quality:**
+**Simple Tracking:**
+- Number of custom tools created (one developer, so basic usage tracking is enough)
 - Tool execution success rate
-- Average tool execution time
-
-**Usage:**
-- Custom tool executions per day
-- Tool discovery API calls
+- Errors and failures for debugging
 
 ---
 
 ## 12. Testing Strategy
 
-- **Unit Tests:** Validation logic, routing, versioning
-- **Integration Tests:** End-to-end creation, execution, discovery
-- **Security Tests:** Sandbox isolation, permission checks, HTTP domain restrictions
-- **Performance Tests:** Creation latency, execution throughput
+- **Unit Tests:** Validation logic, basic functionality
+- **Integration Tests:** End-to-end creation, execution
+- **Error Handling Tests:** Timeout, HTTP failures, invalid input
 
 ---
 
@@ -236,10 +181,8 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 | Term | Definition |
 |------|-----------|
 | Custom Tool | Tool created by agent to extend capabilities |
-| Tool Type | Classification: skill (wrapper), http (API), custom (other) |
-| Tool Version | Immutable snapshot of tool definition |
+| Tool Type | Classification: skill (wrapper), http (API) |
 | Skill Wrapper | Custom tool that wraps existing Skill |
-| Tool Discovery | Search and find custom tools in system |
 
 ---
 

@@ -19,7 +19,7 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 **Why:** Agents should be able to create visual and audio content without manual intervention.
 
 **Priority:** Medium
-**Timeline:** 3-4 weeks
+**Timeline:** 2-3 weeks
 
 ---
 
@@ -66,18 +66,17 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 **FR4: Artifact Storage & Tracking**
 - Store artifact metadata in database (type, URL, source, agent ID, created timestamp)
-- Query artifacts by agent, type, source, date range
+- Query artifacts by agent and type
 - Delete artifacts
-- Prevent duplicate generation through caching
+- Simple caching to prevent duplicate generation
 
 ### Agent-Facing Tools
 
 ```typescript
-generateImage(prompt: string, options?: {style, resolution, format}): Promise<{url, metadata}>
-synthesizeAudio(text: string, options?: {voice, language, speed}): Promise<{url, duration}>
-transcribeAudio(audioUrl: string, language?: string): Promise<{text, confidence}>
-listArtifacts(filters?: {agentId, type, source}): Promise<Artifact[]>
-getArtifact(artifactId: string): Promise<Artifact>
+generateImage(prompt: string, options?: {style, resolution}): Promise<{url, metadata}>
+synthesizeAudio(text: string, options?: {voice, language}): Promise<{url, duration}>
+transcribeAudio(audioUrl: string, language?: string): Promise<{text}>
+listArtifacts(filters?: {agentId, type}): Promise<Artifact[]>
 deleteArtifact(artifactId: string): Promise<void>
 ```
 
@@ -99,17 +98,16 @@ deleteArtifact(artifactId: string): Promise<void>
 **Performance:**
 - Image generation: <30 seconds
 - Audio synthesis: <10 seconds
-- Artifact lookup: <100ms
+- Artifact lookup: fast enough for one developer
 
 **Reliability:**
 - Failed API calls don't crash agent
-- Retry logic for transient failures
-- Graceful error messages
+- Basic retry logic for transient failures
+- Clear error messages
 
 **Security:**
-- API credentials stored securely (encrypted in database)
-- Agents can only access their own artifacts
-- No credential leakage in logs or responses
+- API credentials stored in environment variables
+- No credential leakage in logs
 
 ---
 
@@ -120,16 +118,15 @@ deleteArtifact(artifactId: string): Promise<void>
 - Text-to-speech synthesis
 - Speech-to-text transcription
 - Artifact metadata storage
-- Caching to prevent duplicate generation
-- Basic cost tracking per artifact
+- Simple caching to prevent duplicate generation
 
 ### Out of Scope
 - Video generation or hosting
-- Advanced image editing or manipulation
+- Advanced image editing
 - Custom voice training
 - Real-time streaming
-- Manual UI for artifact management
-- Advanced analytics dashboard
+- Cost tracking/billing
+- Advanced analytics
 
 ---
 
@@ -143,43 +140,23 @@ deleteArtifact(artifactId: string): Promise<void>
 - agent_id (UUID)
 - type (ENUM: image, audio)
 - source (ENUM: nanobanana, tts, stt)
-- source_id (VARCHAR) -- external service ID
 - url (VARCHAR) -- public access URL
 - prompt (TEXT, nullable) -- for images
 - input_text (TEXT, nullable) -- for TTS
-- metadata (JSON) -- size, duration, resolution, etc
+- metadata (JSON) -- size, duration, resolution
 - created_at (TIMESTAMP)
-- expires_at (TIMESTAMP, nullable)
-- cost (DECIMAL, nullable)
-```
-
-**`forge_artifact_cache` table:**
-```
-- cache_id (UUID, primary key)
-- hash (VARCHAR, unique) -- SHA256 of prompt/text
-- artifact_id (UUID, foreign key)
-- created_at (TIMESTAMP)
-- expires_at (TIMESTAMP)
 ```
 
 ### Implementation Phases
 
-**Phase 1: Setup & Image Generation (Week 1)**
-1. Set up external service integrations (Nanobanana API)
+**Phase 1: Core Implementation (2-3 weeks)**
+1. Set up external service integrations
 2. Implement image generation tool
-3. Build artifact storage layer
-4. Add basic caching
-
-**Phase 2: Audio Tools (Week 2)**
-1. Implement TTS integration
-2. Implement STT integration
-3. Add voice selection
-4. Add batch processing
-
-**Phase 3: Refinement (Week 3-4)**
-1. Error handling and retry logic
-2. Cost tracking
-3. Testing and documentation
+3. Implement TTS integration
+4. Implement STT integration
+5. Build artifact storage layer
+6. Error handling and logging
+7. Basic testing
 
 ---
 
@@ -197,18 +174,17 @@ All credentials stored in environment variables and encrypted in database.
 
 | Risk | Mitigation |
 |------|-----------|
-| External API downtime | Graceful error handling, user notification |
-| Cost overruns | Rate limiting, cost tracking, alerts |
-| Poor quality outputs | Clear documentation on prompt best practices |
-| Cache invalidation bugs | TTL-based expiration, manual clearing option |
+| External API downtime | Graceful error handling, clear error messages |
+| Failed generation | Retry logic, fallback to error response |
+| API quota exceeded | Monitor usage, adjust as needed |
 
 ---
 
 ## 11. Testing Strategy
 
-- **Unit Tests:** Caching logic, artifact metadata handling
+- **Unit Tests:** Basic functionality, validation
 - **Integration Tests:** End-to-end generation, storage, retrieval
-- **Error Handling:** API failures, timeout, invalid input
+- **Error Handling:** API failures, invalid input
 
 ---
 
@@ -217,10 +193,9 @@ All credentials stored in environment variables and encrypted in database.
 | Term | Definition |
 |------|-----------|
 | Artifact | Generated media (image, audio) with metadata |
-| Cache | Storage of results to avoid regenerating identical requests |
 | Source | External service that generated the artifact |
 | Prompt | Text description for image generation |
 
 ---
 
-**Next Steps:** Finalize external service selection and begin Phase 1
+**Next Steps:** Begin Phase 1 implementation
