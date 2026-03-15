@@ -1,49 +1,94 @@
-# Engine-Mastra: Refactoring Simplificado (V2)
+# Engine-Mastra: Current Implementation (V3)
 
-Após o brainstorming com o Nicolas, refizemos a proposta de refatoração focando em **simplicidade** e **eficiência de cache**.
+**Status:** This document describes the simplified approach that was implemented, moving away from complex refactoring proposals.
 
-## 1. Solução Técnica: Cache-Aware Injection
+## Current Architecture
 
-O principal problema da proposta anterior era o uso de `contextBuilder`, que injeta dados no início do prompt, invalidando o cache a cada step.
+The engine now follows Mastra's standard patterns more directly:
 
-**Nova Estratégia:** O `HybridRecallProcessor` agora injeta o contexto como uma mensagem de sistema **logo antes da última mensagem** da lista.
-- **Resultado:** O histórico anterior permanece estático (cache hit), e o novo conhecimento é adicionado dinamicamente apenas para o passo atual.
+### 1. Agent Creation: `createAgent()` and `createForgeAgent()`
 
-## 2. Unificação do Embedder (Zero Casting)
+Located in `packages/mastra-engine/src/create-forge-agent.ts`:
 
-Para resolver a bagunça de embedders duplicados e o uso de `as any`:
-- O `Embedder` é definido uma única vez na factory.
-- Ele é propagado para a `Memory` e para o `GraphIntegrator` via Dependency Injection (DI).
-- Isso garante que o grafo e a memória sempre falem a mesma "língua" vetorial.
+```typescript
+export async function createAgent<...>(config, options = {}): Promise<Agent> {
+  // Storage: Uses LibSQL (not GraphIntegrator)
+  const { client, storage, vector } = createAgentStorage(config.id);
 
-## 3. Recall Híbrido "Limpo"
+  // Communication module handles external integrations
+  const communication = await createCommunicationModule({
+    client,
+    providers: config.providers ?? [],
+  });
 
-Substituímos a manipulação frágil de XML por um fluxo estruturado:
-- **Markdown:** O contexto injetado agora é formatado como Markdown limpo.
-- **Estrutura:** O processador constrói um objeto `ContextData` e delega a formatação para um método privado.
-- **Real-time:** Continua extraindo contexto de ToolCalls e ToolResults em cada iteração do loop.
+  // Memory system with storage and vector embeddings
+  const memory = createAgentMemory({ storage, vector });
+  const om = createObservationalMemory({
+    storage,
+    model: config.omModel ?? config.model,
+  });
 
----
+  // Input/Output processors for memory
+  const inputProcessors: InputProcessorOrWorkflow[] = [om];
+  const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
-## Plano de Implementação (Refatorado)
+  // Optional: Long-term memory layer
+  if (options.longTermMemory) {
+    const longTermMemory = await LongTermMemory.create({ agentId: config.id, om });
+    inputProcessors.push(longTermMemory);
+    outputProcessors.push(longTermMemory);
+  }
 
-### Fase 1: Fundação DI e Embedder Único
-- [ ] Refatorar a factory `createAgent` para definir o embedder no topo.
-- [ ] Injetar o embedder consistentemente em todos os componentes.
-- [ ] **Meta:** Eliminar todos os castings `as any` da inicialização.
+  // Create agent with Mastra's standard Agent class
+  const agent = new Agent({...});
 
-### Fase 2: Hybrid Recall Cache-Aware
-- [ ] Refatorar o `HybridRecallProcessor` para implementar o padrão de injeção *antes da última mensagem*.
-- [ ] Migrar de XML para Markdown na formatação do contexto.
+  // Wake queue for debounced external event processing
+  const wakeQueue = createAgentWakeQueue({
+    run: () => agent.generate('Pending external activity...', {...})
+  });
+}
+```
 
-### Fase 3: Integração do GraphRAG no Motor
-- [ ] Refatorar o `EngineAgent` para receber o `GraphIntegrator` já instanciado.
-- [ ] Implementar a query de grafo real dentro do processador híbrido.
+### 2. Storage Layer: LibSQL
 
----
+Located in `packages/mastra-engine/src/agent/memory/storage.ts`:
 
-**Resumo da Simplificação:**
-- ❌ Sem interfaces `IKnowledgeGraph`.
-- ❌ Sem `contextBuilder` nativo do Mastra.
-- ❌ Sem Managers de lifecycle complexos.
-- ✅ Foco total em DI simples e proteção do Prompt Cache.
+- Uses `@libsql/client` for local SQLite databases
+- `LibSQLStore` for key-value message storage
+- `LibSQLVector` for vector embeddings
+- Database path: `{agentId}.db` in current working directory
+
+### 3. Wake Queue: Debounce Mechanism
+
+Located in `packages/mastra-engine/src/agent/wake-queue.ts`:
+
+- Simple debounced event notification
+- WAKE_DEBOUNCE_MS = 1000 (1 second debounce)
+- WAKE_MAX_DELAY_MS = 10000 (max 10 seconds before forced trigger)
+- Used to batch external messages and reduce unnecessary processing
+
+### 4. OAuth Gateway: Token Management
+
+Located in `packages/mastra-engine/src/llm/oauth-gateway.ts`:
+
+- Handles credentials for both Anthropic (Claude) and OpenAI Codex
+- Token refresh with stored credentials in `~/.mastra-engine/oauth.json`
+- Middleware for request/response transformation
+- Prompt caching support for Claude models
+
+## Design Decisions
+
+**Simplicity over Complexity:**
+- No `IKnowledgeGraph` abstraction - use Mastra's standard patterns
+- No `contextBuilder` - handle memory via processors
+- No lifecycle managers - leverage Mastra's orchestration
+
+**Storage Focus:**
+- LibSQL for persistence (local development, single-machine friendly)
+- Vector embeddings via Mastra's built-in support
+- Message threading within agents
+
+**Token Management:**
+- Centralized OAuth gateway
+- Automatic refresh with skew-aware expiry
+- Secure file storage (mode 0o600)
