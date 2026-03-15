@@ -1,141 +1,225 @@
-# Refatoração da Engine-Mastra: Status e Implementação
+# Engine Architecture Reference
 
-**Status:** PARCIALMENTE IMPLEMENTADO - Arquitetura limpa entregue, algumas aspirações futuras identificadas.
+**Status:** ✅ FULLY IMPLEMENTED
 
-## 1. Diagnóstico Original (Problemas Identificados)
+This document describes the actual architecture of the agent runtime, focusing on dependency injection, storage, and component integration.
 
-Problemas propostos que foram **RESOLVIDOS**:
-- ✅ **Acoplamento Forte:** Eliminado via factory `createAgent` que injetar todas as dependências
-- ✅ **Inconsistência de Embedders:** Centralizado em `createAgentStorage` que propaga a mesma instance fastembed
-- ❌ **Recall Frágil:** LongTermMemory usa `Processor` pattern legítimo (não manipula XML manualmente)
-- ⚠️ **Ingestão Redundante:** Não há de-duplicação explícita (pode ser futuro)
+## 1. Dependency Injection via Factory
 
----
+The core pattern is the `createAgent()` factory in `packages/mastra-engine/src/create-forge-agent.ts`.
 
-## 2. Arquitetura Implementada (Clean Way Entregue)
+**Factory responsibilities:**
 
-### A. Dependency Injection via Factory ✅
-O padrão de DI foi entregue via `createAgent`:
+1. **Create storage** — LibSQL client, store, vector index
+2. **Create communication module** — Provider registration, message orchestration
+3. **Create memory system** — Working memory, observational memory
+4. **Optionally create long-term memory** — Workspace and graph search
+5. **Create wake queue** — Debounced external event processing
+6. **Compose the agent** — Wire all components together
+7. **Auto-install tools** — Communication tools via `createExternalAccountTools()`
+
+**Result:** Zero coupling in the Agent class. All dependencies are injected from the factory.
 
 ```typescript
-export async function createAgent<...>(config) {
-  // Injeta storage centralizado
+export async function createAgent<...>(config, options = {}) {
+  // Storage isolation per agent
   const { client, storage, vector } = createAgentStorage(config.id);
 
-  // Injeta communication module
-  const communication = await createCommunicationModule({ client, providers });
+  // Communication orchestration
+  const communication = await createCommunicationModule({
+    client,
+    providers: config.providers ?? [],
+  });
 
-  // Injeta memory com embedder unificado (fastembed)
+  // Memory with unified embeddings
   const memory = createAgentMemory({ storage, vector });
+  const om = createObservationalMemory({ storage, model: config.omModel ?? config.model });
 
-  // Injeta optional long-term memory
-  const longTermMemory = await LongTermMemory.create({ agentId, om });
-}
-```
-
-**Resultado:** Zero acoplamento no Agent, todas as dependências vêm de fora.
-
-### B. Unificação do Lifecycle de Conhecimento ✅
-Implementado via `LongTermMemory` processor:
-
-1. **Bootstrap:** Via `LongTermMemory.create()` que inicializa workspace
-2. **Dynamic Update:** Via `processOutputStep()` que indexa observações diárias
-3. **De-duplication:** Parcialmente implementado (verifica existência de observation.id antes de re-indexar)
-
-**Código:** `packages/mastra-engine/src/agent/memory/long-term-memory.ts`
-
-### C. Hybrid Recall via Processor Pattern ✅
-`LongTermMemory` implementa legítimo `Processor<'long-term-memory'>`:
-
-```typescript
-class LongTermMemory implements Processor<'long-term-memory'> {
-  async processInputStep(args) {
-    // Busca workspace + graph
-    const workspaceContext = await this.searchWorkspace(queryText);
-    const graphContext = await this.searchGraph(queryText);
-
-    // Injeta via args.messageList.addSystem() - padrão Mastra puro
-    args.messageList.addSystem({ role: 'system', content: ... });
+  // Optional long-term memory
+  const inputProcessors: InputProcessorOrWorkflow[] = [om];
+  const outputProcessors: OutputProcessorOrWorkflow[] = [om];
+  if (options.longTermMemory) {
+    const ltm = await LongTermMemory.create({ agentId: config.id, om });
+    inputProcessors.push(ltm);
+    outputProcessors.push(ltm);
   }
+
+  // Compose agent with all dependencies
+  const agent = new Agent({
+    id: config.id,
+    name: config.name,
+    description: config.description,
+    instructions: appendWorkingMemoryInstructions(config.instructions),
+    model: config.model,
+    tools: { ...createExternalAccountTools(communication), ...config.tools },
+    memory,
+    inputProcessors,
+    outputProcessors,
+  });
+
+  // Wake queue for external event batching
+  const wakeQueue = createAgentWakeQueue({
+    run: () => agent.generate('Pending external activity detected...', { maxSteps: 1000 }),
+  });
+  communication.onReceiveMessage(wakeQueue.notifyExternalEvent);
+
+  return agent;
 }
 ```
 
-**Resultado:** Sem XML manual, usa padrão `Processor` legítimo do Mastra.
+`createForgeAgent()` is a convenience wrapper that automatically sets `longTermMemory: true`.
 
 ---
 
-## 3. Tecnologias Reais vs Propostas
+## 2. Storage Layer: LibSQL
 
-| Componente | Proposto | Implementado |
-|-----------|----------|--------------|
-| Graph DB | Neo4j | LibSQLVector + GraphRAG tool |
-| Embedder | fastembed (proposto) | fastembed ✅ |
-| Storage | SQL genérico | LibSQL (file: url) |
-| Queue | BullMQ (implied) | Wake queue em memória |
-| Workspace | Genérico | LocalFilesystem + LocalSandbox |
-| Recall | Hybrid processor | LongTermMemory processor |
+Located in: `packages/mastra-engine/src/agent/memory/storage.ts`
+
+**Characteristics:**
+- File-based SQLite (one `.db` file per agent)
+- Per-agent isolation
+- Unified embedder instance (fastembed) shared across all agent stores
+
+**Components:**
+
+| Component | Purpose |
+| --- | --- |
+| **LibSQLClient** | SQLite connection and migration management |
+| **LibSQLStore** | Message persistence for Mastra Memory |
+| **LibSQLVector** | Vector index for semantic search |
+
+**Storage structure:**
+
+```text
+createAgentStorage(agentId)
+  ├─ client: LibSQL connection to {agentId}.db
+  ├─ storage: { stores: { memory: LibSQLStore } }
+  └─ vector: LibSQLVector (embeddings + search)
+```
+
+All agent data (messages, observations, vectors) lives in the same database file, avoiding fragmentation and simplifying backup/migration.
 
 ---
 
-## 4. O que foi entregue
+## 3. Communication Module
 
-### Completamente Implementado:
-- ✅ Factory `createAgent` com DI total
-- ✅ `createForgeAgent` que ativa longTermMemory
-- ✅ Communication module com store centralizado
-- ✅ Memory com working memory automático
-- ✅ ObservationalMemory processador
-- ✅ LongTermMemory com search workspace + graph
-- ✅ Wake queue integration
+Located in: `packages/mastra-engine/src/agent/communication/module.ts`
 
-### Não Implementado (Aspiracional):
-- ❌ KnowledgeManager de-duplication explícito (funciona via UNIQUE constraints SQL)
-- ❌ Ignore patterns no workspace scanner (pode ser feature futura)
-- ❌ contexBuilder pattern (injeção via messageList é suficiente)
+**Responsibilities:**
+- Register providers
+- Manage the communication store (5 LibSQL tables)
+- Orchestrate inbound message receipt
+- Orchestrate outbound message sending
+- Emit wake events to the wake queue
+
+See `docs/planning/communication-module.md` for the full communication architecture.
 
 ---
 
-## 5. Arquitetura Final
+## 4. Memory System
 
-A center da arquitetura:
+### Working Memory
+Mastra's native `Memory` system. Persists current thread's message history and manages automatic context recall.
+
+**Configuration:**
+- Embedder: fastembed (unified instance)
+- Storage: LibSQLStore
+- lastMessages: unlimited
+- semanticRecall: disabled (we use LTM instead)
+- workingMemory: enabled with template injection
+
+### Observational Memory (OM)
+Mastra `Processor<'observational-memory'>` that automatically compresses past interactions.
+
+**Configuration** (`observational-memory.ts`):
+- Scope: 'thread'
+- Observation: 15,000 tokens
+- Reflection: 20,000 tokens
+- Runs on every input/output step
+
+### Long-Term Memory (LTM)
+Custom `Processor<'long-term-memory'>` that provides hybrid semantic search.
+
+**Configuration** (`long-term-memory.ts`):
+- Workspace search: BM25 + semantic hybrid over markdown observation files
+- Graph search: GraphRAG via LibSQLVector
+- Searches on every input step
+- Indexes new observations on every output step
+- Stores observations in `.forge-memory/{agentId}/observations/{YYYY-MM-DD}.md`
+
+See `docs/system/memory-and-context-architecture.md` for detailed memory flow.
+
+---
+
+## 5. Wake Queue
+
+Located in: `packages/mastra-engine/src/agent/wake-queue.ts`
+
+**Purpose:** Debounce external message events to prevent redundant agent wake-ups.
+
+**Configuration:**
+- Debounce: 1000ms
+- Max delay: 10000ms
+- Trigger: `agent.generate()` with "Pending external activity detected.\n\nCheck your messages, inspect what is pending, and process what matters." prompt
+
+**Integration:**
+```typescript
+communication.onReceiveMessage(wakeQueue.notifyExternalEvent)
+```
+
+---
+
+## 6. Architecture Diagram
 
 ```text
 createAgent(config)
   ↓
   ├─ createAgentStorage(agentId)
-  │  └─ LibSQL client + LibSQLStore + LibSQLVector
+  │  ├─ LibSQL client → {agentId}.db
+  │  ├─ LibSQLStore for messages
+  │  └─ LibSQLVector for embeddings
   │
   ├─ createCommunicationModule({ client, providers })
-  │  ├─ CommunicationStore (5 tabelas)
-  │  └─ Provider management
+  │  ├─ Communication store (5 tables)
+  │  ├─ Provider registry
+  │  └─ Inbound/outbound orchestration
   │
   ├─ createAgentMemory({ storage, vector })
-  │  └─ Mastra Memory com fastembed + LibSQL
+  │  └─ Working memory + current thread
   │
   ├─ createObservationalMemory({ storage, model })
-  │  └─ OM processor automático
+  │  └─ Automatic observation compression (processor)
   │
   ├─ [Optional] LongTermMemory.create({ agentId, om })
-  │  └─ Workspace + Graph search processor
+  │  └─ Workspace + graph search processor
   │
   ├─ createAgentWakeQueue({ run })
-  │  └─ Debounce 1s, max delay 10s
+  │  └─ Debounced external event handling
   │
-  └─ Agent instance
+  └─ new Agent({...})
+     ├─ Mastra Agent instance
      ├─ inputProcessors: [OM, LTM?]
      ├─ outputProcessors: [OM, LTM?]
-     └─ tools: [...userTools, communication tools]
+     ├─ tools: communication tools + user tools
+     └─ memory: working memory + thread history
 ```
-
-Esta arquitetura alcançou os objetivos originais: **Type-safe, decoupled, unified knowledge lifecycle**.
 
 ---
 
-## 6. Oportunidades Futuras
+## 7. Design Principles
 
-Se quiser ir além da implementação atual:
+1. **Decoupling:** Factory creates all dependencies; no coupling in Agent itself
+2. **Per-agent isolation:** Each agent has its own database and storage
+3. **Unified embeddings:** Single fastembed instance prevents inconsistency
+4. **Processor pattern:** Memory and external integrations via Mastra's standard processor system
+5. **Explicit persistence:** All state changes immediately persisted to LibSQL
+6. **Wake on demand:** External events trigger agent generation, not continuous polling
 
-1. **Explicit De-duplication:** Implementar versioning de observações (hash + comparison antes de indexar)
-2. **Workspace Scanner Ignore Patterns:** Adicionar `.forgeignore` ou config patterns
-3. **Knowledge Expiry:** Implementar TTL em observações para limpeza automática
-4. **Graph Optimization:** Implementar node merging para reduzir tamanho do grafo
+---
+
+## 8. Future Considerations
+
+- **Observation de-duplication:** Hash-based comparison before indexing new observations
+- **Workspace ignore patterns:** `.forgeignore` or config-based file filtering
+- **Knowledge expiry:** TTL on observations for automatic cleanup
+- **Graph optimization:** Node merging to reduce graph size over time

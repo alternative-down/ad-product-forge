@@ -1,182 +1,282 @@
-# Research: OAuth Integration for Model Providers (Claude & Codex)
+# OAuth Gateway for Model Providers
 
-**Date:** 2026-03-11
-**Status:** Implemented
-**Purpose:** Implement account-based authentication (Plan accounts) for Anthropic Claude and OpenAI Codex using Mastra Custom Gateways.
+**Status:** ✅ FULLY IMPLEMENTED
 
----
-
-## 1. Context: Using Plan Accounts vs. API Keys
-
-Standard API integration uses fixed keys (`sk-...`) which are billed per usage. To use personal/team plan accounts (e.g., Claude Pro, ChatGPT Plus), we must use **OAuth Access Tokens**.
-
-Mastra provides the `MastraModelGateway` abstraction to handle this. By implementing a custom gateway, we can:
-1. Handle token exchange/refresh.
-2. Ingest the correct headers (`Authorization: Bearer <token>`).
-3. Use account-based models through standard Agent interfaces.
+This document describes the OAuth authentication system for accessing Claude and OpenAI Codex via account-based credentials (Claude Pro, ChatGPT Plus) rather than API keys.
 
 ---
 
-## 2. Technical Implementation: OAuthGateway with Token Management
+## 1. Overview
 
-The actual implementation uses a unified `OAuthGateway` that extends `MastraModelGateway` from `@mastra/core/llm` and handles token refresh, credential storage, and middleware-based request transformation.
+Standard API integration uses fixed API keys for per-usage billing. To use account-based subscriptions (Claude Pro, ChatGPT Plus), we use **OAuth access tokens** instead.
 
-**File Location:** `packages/mastra-engine/src/llm/oauth-gateway.ts`
+**Gateway:** `OAuthGateway` (extends `MastraModelGateway`)
 
-### 2.1 OAuthGateway Structure
+**Supported providers:**
+- `claude-max` — Anthropic Claude via OAuth
+- `openai-codex` — OpenAI Codex via OAuth
 
-The `OAuthGateway` class extends `MastraModelGateway` and provides two provider configurations:
-
-**Providers:**
-- `openai-codex`: Uses OpenAI Codex API via OAuth (backend-api/codex)
-- `claude-max`: Uses Anthropic Claude API with OAuth support
-
-**Key Features:**
-1. **Token Management:** Handles credential resolution, refresh token logic, and storage via `oauthStore`.
-2. **Middleware Chain:** Applies provider-specific middleware to transform requests and process responses.
-3. **Custom Fetch:** Implements custom fetch handlers to inject OAuth tokens and manage headers.
-4. **Prompt Caching:** Supports ephemeral prompt caching for Claude models (TTL 1h).
-
-### 2.2 Token Resolution Flow
-
-For **Anthropic (Claude)** via `resolveAnthropicCredential()`:
-```
-1. Check stored token in ~/.mastra-engine/oauth.json (non-expired)
-2. If stored but expired, refresh using refresh_token
-   POST https://console.anthropic.com/v1/oauth/token
-3. If no stored token, read from authFilePath or setupTokenFilePath (/tmp/claude_oauth_token)
-4. Cache result in ~/.mastra-engine/oauth.json
-```
-
-For **OpenAI Codex** via `resolveOpenAICodexCredential()`:
-```
-1. Check stored token in ~/.mastra-engine/oauth.json (non-expired)
-2. If stored but expired, refresh using refresh_token
-   POST https://auth.openai.com/oauth/token
-3. Read from CLI auth file (~/.codex/auth.json)
-4. Cache result in ~/.mastra-engine/oauth.json
-```
-
-Token expiry is tracked in milliseconds; credentials expire 5 minutes early (60s skew) to prevent API failures.
-
-### 2.3 Middleware for Request/Response Transformation
-
-**openAIMiddleware** (for openai-codex):
-- Transforms system prompts into store instructions
-- Handles streamed responses with fine-grained buffering (text, reasoning, tool calls)
-- Processes stream parts: text-start/delta/end, reasoning-start/delta/end, tool calls, sources
-
-**claudeCodeMiddleware** (for claude-max):
-- Injects Claude Code identity system message: "You are Claude Code, Anthropic's official CLI for Claude."
-- Removes `topP` if `temperature` is set (Anthropic API incompatibility)
-
-**promptCacheMiddleware** (for claude-max):
-- Adds ephemeral prompt caching (TTL 1h) to system and last message
-- Prevents cache invalidation on dynamic context injection
-- Uses cache control type: `ephemeral`
-
-### 2.4 Custom Fetch Implementation
-
-Each provider uses a custom fetch handler to:
-1. Remove default authorization headers (`authorization`, `x-api-key`)
-2. Set `Authorization: Bearer <token>` header with OAuth token
-3. Add provider-specific headers:
-   - Anthropic: `anthropic-beta`, `anthropic-version`
-   - OpenAI: Custom ChatGPT headers
-4. Log request/response for debugging via `forgeDebug()`
+**Gateway ID:** `account-oauth`
 
 ---
 
-## 3. Registering and Using the OAuthGateway
+## 2. Architecture
 
-Register the `OAuthGateway` instance and reference models using the gateway format:
+### Location
+- **Main gateway:** `packages/mastra-engine/src/llm/oauth-gateway.ts`
+- **Auth handlers:** `packages/mastra-engine/src/llm/auth/anthropic.ts` and `openai-codex.ts`
+- **Storage:** `packages/mastra-engine/src/llm/auth/store.ts`
 
+### Key Components
+
+| Component | Purpose |
+| --- | --- |
+| `OAuthGateway` | Mastra gateway extending `MastraModelGateway` |
+| `resolveAnthropicCredential()` | Fetch/refresh Claude OAuth tokens |
+| `resolveOpenAICodexCredential()` | Fetch/refresh Codex OAuth tokens |
+| `oauthStore` | Persistent credential storage in `~/.mastra-engine/oauth.json` |
+| Middleware chain | Provider-specific request/response transformation |
+| Custom fetch | Token injection and header management |
+
+### Supported Features
+
+- ✅ Token refresh with automatic expiry tracking
+- ✅ Secure storage (mode 0o600, parent 0o700)
+- ✅ Ephemeral prompt caching for Claude (TTL 1h)
+- ✅ Store instructions middleware for Codex
+- ✅ Fine-grained streaming response buffering
+
+---
+
+## 3. Token Resolution and Refresh
+
+### 3.1 Anthropic (Claude)
+
+**File:** `packages/mastra-engine/src/llm/auth/anthropic.ts`
+
+**Resolution order:**
+1. Check stored token in `~/.mastra-engine/oauth.json`
+2. If not expired, return stored token
+3. If expired but refresh token exists, call refresh endpoint
+4. If no stored token, read from `setupTokenFilePath` (default: `/tmp/claude_oauth_token`)
+5. If `authFilePath` provided, read from that file
+
+**Refresh process:**
+```
+POST https://console.anthropic.com/v1/oauth/token
+Content-Type: application/json
+
+{
+  "grant_type": "refresh_token",
+  "client_id": "OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl",
+  "refresh_token": "<refresh_token>"
+}
+```
+
+**Token storage:**
 ```typescript
-import { createOAuthGateway } from './llm/oauth-gateway';
-
-export const oauthGateway = createOAuthGateway({
-  anthropic: {
-    // Optional: custom paths for auth files
-    authFilePath?: string;
-    setupTokenFilePath?: string;  // defaults to /tmp/claude_oauth_token
-    storePath?: string;  // defaults to ~/.mastra-engine/oauth.json
-  },
-  openaiCodex: {
-    cliAuthFilePath?: string;  // defaults to ~/.codex/auth.json
-    storePath?: string;  // defaults to ~/.mastra-engine/oauth.json
-  },
-});
-
-// Use in agents:
-const agent = new Agent({
-  id: 'my-agent',
-  // Format: account-oauth/[provider]/[model]
-  model: 'account-oauth/claude-max/claude-3-5-sonnet-20241022',
-});
+type OAuthCredential = {
+  access: string;      // access token
+  refresh?: string;    // refresh token
+  expires?: number;    // milliseconds since epoch
+};
 ```
 
-**Supported Models:**
-- Claude: Defined in `CLAUDE_MAX_MODELS` in `model-ids.ts`
-- OpenAI Codex: Defined in `OPENAI_CODEX_MODELS` in `model-ids.ts`
+**Expiry tracking:** Tokens expire 5 minutes early (300s skew) to prevent edge-case failures
 
-**Gateway ID:** Exported as `OAUTH_GATEWAY_ID = 'account-oauth'`
+### 3.2 OpenAI Codex
 
----
+**File:** `packages/mastra-engine/src/llm/auth/openai-codex.ts`
 
-## 4. How to Obtain and Store Tokens
+**Resolution order:**
+1. Check stored token in `~/.mastra-engine/oauth.json`
+2. If not expired, return stored token
+3. If expired but refresh token exists, call refresh endpoint
+4. Read from OpenAI CLI auth file `~/.codex/auth.json`
 
-### 4.1 Claude (Anthropic) Token
-
-The gateway resolves credentials in this order:
-1. **Stored token:** Check `~/.mastra-engine/oauth.json` for non-expired token
-2. **Setup token file:** Read from `setupTokenFilePath` (defaults to `/tmp/claude_oauth_token`)
-3. **Auth file:** If provided, read from `authFilePath` (must contain JSON with `access_token` and `refresh_token`)
-
-To use:
-- Place Claude OAuth token in `/tmp/claude_oauth_token` or configure via `setupTokenFilePath`
-- Once read, token is cached in `~/.mastra-engine/oauth.json` for subsequent runs
-
-### 4.2 OpenAI Codex Token
-
-The gateway resolves credentials in this order:
-1. **Stored token:** Check `~/.mastra-engine/oauth.json` for non-expired token
-2. **CLI auth file:** Read from `~/.codex/auth.json` (OpenAI Codex CLI location)
-
-The auth file format (created by OpenAI CLI):
+**CLI auth file format:**
 ```json
 {
   "tokens": {
     "access_token": "...",
     "refresh_token": "...",
-    "account_id": "..."  // optional, used for ChatGPT account switching
+    "account_id": "..."
+  }
+}
+```
+
+**Refresh process:**
+```
+POST https://auth.openai.com/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token&
+refresh_token=<refresh_token>&
+client_id=app_EMoamEEZ73f0CkXaXp7hrann
+```
+
+**Expiry decoding:** For Codex tokens, expiry is decoded from JWT payload if refresh token unavailable
+
+**Account switching:** Account ID is preserved across token refreshes for ChatGPT account selection
+
+### 3.3 Token Storage
+
+**Location:** `~/.mastra-engine/oauth.json`
+
+**File permissions:**
+- File: mode `0o600` (user read/write only)
+- Parent directory: mode `0o700` (user rwx only)
+
+**Storage schema:**
+```json
+{
+  "anthropic": {
+    "access": "sk-ant-...",
+    "refresh": "...",
+    "expires": 1726531200000
+  },
+  "openai-codex": {
+    "access": "...",
+    "refresh": "...",
+    "expires": 1726531200000,
+    "accountId": "..."
   }
 }
 ```
 
 ---
 
-## 5. Security & Refresh Logic
+## 4. Middleware and Request Transformation
 
-The `OAuthGateway` includes built-in token refresh logic:
+### 4.1 Claude Middleware
 
-**Refresh Endpoints:**
-- **Anthropic:** `https://console.anthropic.com/v1/oauth/token` (POST with `grant_type: refresh_token`)
-- **OpenAI Codex:** `https://auth.openai.com/oauth/token` (POST with URL-encoded form body)
+**Location:** `oauth-gateway.ts`, `claudeCodeMiddleware`
 
-**Token Refresh Flow:**
-1. Check if stored token is expired (with 60s skew buffer)
-2. If expired and `refresh_token` exists, call provider's token endpoint
-3. Parse new `access_token` and `expires_in`
-4. Calculate expiry: `Date.now() + expires_in * 1000 - skew`
-5. Update stored credential with new token and expiry
-6. If refresh fails, throw error with details for debugging
+**Transformations:**
+1. Inject identity system message: "You are Claude Code, Anthropic's official CLI for Claude."
+2. Remove `topP` parameter if `temperature` is set (API incompatibility)
 
-**Storage Security:**
-- OAuth store file is created with mode `0o600` (user-only read/write)
-- Parent directory created with mode `0o700`
-- Token expiry includes buffer to prevent edge-case API failures
-- Credentials stored locally in `~/.mastra-engine/oauth.json`
+**Headers added:**
+- `anthropic-beta`: OAuth-2025-04-20, claude-code-20250219, interleaved-thinking-2025-05-14, fine-grained-tool-streaming-2025-05-14
+- `anthropic-version`: 2023-06-01
 
-**Account ID Support (OpenAI):**
-- OpenAI Codex supports ChatGPT account switching via `ChatGPT-Account-Id` header
-- Account ID is extracted from CLI auth file and preserved across token refreshes
+### 4.2 Codex Middleware
+
+**Location:** `oauth-gateway.ts`, `openAIMiddleware`
+
+**Transformations:**
+1. Extract system prompts and convert to `store.instructions` parameter
+2. Handle streamed responses with fine-grained buffering:
+   - Text streaming: `text-start` → `text-delta` → `text-end`
+   - Reasoning streaming: `reasoning-start` → `reasoning-delta` → `reasoning-end`
+   - Tool calls and sources
+3. Accumulate stream parts into complete response
+
+### 4.3 Prompt Caching Middleware (Claude)
+
+**Location:** `oauth-gateway.ts`, `promptCacheMiddleware`
+
+**Feature:** Ephemeral prompt caching for reduced latency and cost
+
+**Configuration:**
+- Applies to system message and last user message
+- TTL: 1 hour (ephemeral)
+- Cache-control type: `ephemeral`
+- Prevents cache invalidation on dynamic context injection
+
+### 4.4 Custom Fetch Handlers
+
+Each provider has a custom fetch implementation that:
+
+1. **Removes default auth headers:**
+   - Strips `authorization`, `x-api-key`
+
+2. **Injects OAuth token:**
+   - `Authorization: Bearer <access_token>`
+
+3. **Adds provider-specific headers:**
+   - Claude: `anthropic-beta`, `anthropic-version`
+   - Codex: ChatGPT-specific headers (routing, account ID)
+
+4. **Logging:**
+   - Logs requests/responses via `forgeDebug()` for troubleshooting
+
+---
+
+## 5. Using the Gateway
+
+### 5.1 Registration
+
+```typescript
+import { createOAuthGateway } from './llm/oauth-gateway';
+
+const gateway = createOAuthGateway({
+  anthropic: {
+    setupTokenFilePath?: string;  // default: /tmp/claude_oauth_token
+    authFilePath?: string;         // custom auth file path
+    storePath?: string;            // default: ~/.mastra-engine/oauth.json
+  },
+  openaiCodex: {
+    cliAuthFilePath?: string;      // default: ~/.codex/auth.json
+    storePath?: string;            // default: ~/.mastra-engine/oauth.json
+  },
+});
+
+// Register with Mastra agent system
+const agent = new Agent({
+  model: 'account-oauth/claude-max/claude-3-5-sonnet-20241022',
+  // ... other config
+});
+```
+
+### 5.2 Model Format
+
+Gateway-referenced models use the format:
+```
+account-oauth/<provider>/<model-id>
+```
+
+**Supported providers:**
+- `claude-max` — Anthropic Claude
+- `openai-codex` — OpenAI Codex
+
+**Supported models:**
+- Claude: All models in `CLAUDE_MAX_MODELS` list
+- Codex: All models in `OPENAI_CODEX_MODELS` list
+
+### 5.3 Token Setup
+
+**Claude:**
+1. Place access token in `/tmp/claude_oauth_token`, OR
+2. Provide `authFilePath` pointing to JSON with `access_token` and `refresh_token`, OR
+3. Let it read from previously cached `~/.mastra-engine/oauth.json`
+
+**Codex:**
+1. OpenAI CLI automatically creates `~/.codex/auth.json` when you authenticate, OR
+2. Provide custom `cliAuthFilePath` to override location, OR
+3. Let it read from previously cached `~/.mastra-engine/oauth.json`
+
+---
+
+## 6. Error Handling
+
+**Common errors:**
+
+| Error | Cause | Resolution |
+| --- | --- | --- |
+| `Claude setup token not found in /tmp/claude_oauth_token` | Token file missing | Write token to `/tmp/claude_oauth_token` or configure path |
+| `Anthropic refresh token missing` | No refresh token in stored credential | Re-authenticate or provide auth file |
+| `Codex access token not found in ~/.codex/auth.json` | CLI auth file missing | Run OpenAI CLI auth flow |
+| `Token refresh failed: 401` | Invalid refresh token | Re-authenticate or manually update store |
+
+All errors include detailed context for debugging. Check `~/.mastra-engine/oauth.json` to verify stored credentials and expiry.
+
+---
+
+## 7. Implementation Notes
+
+**Thread safety:** Token refresh is not synchronized; concurrent refreshes may occur. The second refresh will overwrite the first, but both should produce valid tokens.
+
+**Expiry skew:** Tokens expire 300 seconds early to prevent edge-case API failures near the true expiry time.
+
+**Storage location:** Credentials always stored in home directory (`~/.mastra-engine/oauth.json`), not in agent storage, to allow sharing across multiple agents.
