@@ -1,58 +1,105 @@
-# Arquitetura: Unified Step-wise Recall (Nova Versão Simplificada)
+# Long-Term Memory Processor: Technical Overview
 
-Após revisão técnica e brainstorming, decidimos abandonar a arquitetura de dois níveis (Primary/Execution) em favor de uma solução nativa baseada em **Processadores Unificados** e **Filtros de Contexto**.
+## What It Does
 
-## 1. O Conceito Central
-
-Em vez de gerenciar a complexidade de clonagem e sincronização de threads, utilizaremos um único processador que potencializa o `SemanticRecall` nativo do Mastra para rodar em cada passo da execução.
-
-### Principais Pilares:
-- **Thread Única:** O agente opera em apenas uma thread, simplificando a persistência e a identidade.
-- **UnifiedRecallProcessor:** Um processador customizado que encapsula o `SemanticRecall` e estende sua funcionalidade para Workspace e GraphRAG.
-- **Isolamento via Filtros:** Utilizaremos `FilterToolCalls` ou processadores de filtragem para manter a janela de contexto limpa, exibindo apenas o necessário para o modelo sem poluir o histórico de longo prazo.
+The `LongTermMemory` processor implements step-wise recovery of past knowledge. It runs on every input step to inject relevant context from the agent's long-term store.
 
 ---
 
-## 2. Funcionamento do `UnifiedRecallProcessor`
+## Processing Pipeline
 
-Este processador implementará a interface `Processor` e gerenciará três fontes de conhecimento de forma síncrona com o ciclo de vida do agente:
+### Input Step (`processInputStep`)
 
-### A. Integração com SemanticRecall
-O processador instanciará internamente o `SemanticRecall` do Mastra. No hook `processInputStep`, ele delegará a busca de mensagens passadas para este componente oficial, garantindo estabilidade e uso correto dos tipos do Mastra.
+1. **Extract Query:**
+   - Collect the last 8 user/assistant/tool messages
+   - Format as `[role] message` strings
+   - This becomes the search query
 
-### B. Expansão de Contexto (Workspace & Grafo)
-Além das mensagens, o processador consultará:
-1.  **Workspace Store:** Busca híbrida nos arquivos locais.
-2.  **GraphRAG Store:** Busca de conexões semânticas no índice de conhecimento.
+2. **Search Workspace:**
+   - Hybrid search (BM25 + semantic) over `.forge-memory/<agentId>/observations/`
+   - Top-K results: 3
+   - Returns markdown files with observations grouped by date
 
-### C. Injeção Cache-Aware
-O resultado consolidado será injetado na lista de mensagens respeitando a eficiência de cache, inserindo os dados recuperados logo antes da última mensagem do step.
+3. **Search Graph:**
+   - GraphRAG semantic search over the vector index
+   - Uses fastembed for query embedding
+   - Graph options: threshold 0.7, randomWalkSteps 50
+   - Returns relevant context chunks
+
+4. **Inject Context:**
+   - Combine workspace results + graph results
+   - Format as system message: `"Recovered past memory relevant to the current step. Use it as supporting recall, not as a replacement for the current conversation."`
+   - Insert into message list (clears old injections first)
+
+### Output Step (`processOutputStep`)
+
+1. **Retrieve Observations:**
+   - Fetch pending observations from Observational Memory
+   - Compare against history limit (12 records after observations exist, unlimited on bootstrap)
+
+2. **Group by Date:**
+   - Organize observations into daily buckets
+   - Path: `.forge-memory/<agentId>/observations/{YYYY-MM-DD}.md`
+
+3. **Write Files:**
+   - Read existing file content
+   - Append new observations (skip if already present)
+   - Format: `## observation:{id}` headers with type, creation time, and content
+   - Include metadata (day, index name, observation count)
+
+4. **Index:**
+   - Call `workspace.index()` on each file
+   - Makes files searchable for next step's input phase
 
 ---
 
-## 3. Fluxo Simplificado
+## Code Structure
 
-1.  **Início do Step:** O Mastra chama `UnifiedRecallProcessor.processInputStep()`.
-2.  **Recall:** 
-    *   `SemanticRecall` busca mensagens passadas.
-    *   Busca paralela no Workspace e no Grafo.
-3.  **Consolidação:** Um bloco de contexto Markdown é montado.
-4.  **Injeção:** O bloco é inserido no histórico transiente do step.
-5.  **Geração:** O modelo responde com todo o conhecimento necessário.
+**Location:** `/packages/mastra-engine/src/agent/memory/long-term-memory.ts`
 
----
-
-## 4. Vantagens da Abordagem
-
-- **Performance:** Menos chamadas de banco de dados (sem clone/delete thread).
-- **Simplicidade de Código:** Removemos a subclasse `EngineAgent` e a lógica de sincronização manual de `WorkingMemory`.
-- **Nativo:** Trabalha *com* o Mastra e não *em volta* dele.
-- **Custo:** Proteção total do cache de prefixo (Prompt Caching).
+**Key Methods:**
+- `processInputStep()` — Runs on input, injects past memory
+- `processOutputStep()` — Runs on output, writes and indexes observations
+- `searchWorkspace()` — Hybrid search
+- `searchGraph()` — GraphRAG search
+- `buildRecallQuery()` — Extracts query from messages
 
 ---
 
-## 5. Próximos Passos (Implementação)
+## Data Flows
 
-- [ ] Criar o `UnifiedRecallProcessor` no `@mastra-engine/core`.
-- [ ] Configurar o `createAgent` para injetar este processador e o `FilterToolCalls`.
-- [ ] Validar a recuperação de contexto em thread única.
+```
+Observations (from OM)
+  ↓
+processOutputStep:
+  Write to: .forge-memory/<agentId>/observations/{date}.md
+  Index in: LibSQLVector + Workspace indexes
+  ↓
+Next Step Input:
+  buildRecallQuery()
+  ↓
+  searchWorkspace() + searchGraph()
+  ↓
+  Inject as system message
+  ↓
+  Model sees full context + past knowledge
+```
+
+---
+
+## Integration with Other Layers
+
+- **Observational Memory:** Provides observations to recover in output step
+- **Workspace:** Stores observations as markdown files, provides search index
+- **Vector Store (LibSQLVector):** Hosts embeddings for graph search
+- **Message List:** LTM injects system messages to provide context without polluting conversation history
+
+---
+
+## Design Notes
+
+- **Per-Step Queries:** Each step's query is built fresh from the last 8 messages, avoiding stale injection
+- **Dual Search:** Workspace (exact + semantic) + Graph (relationship-aware) provides comprehensive recall
+- **Async:** All search operations are parallel for performance
+- **Error Handling:** Search failures are caught and logged; they do not block step execution
+- **Cache-Friendly:** System messages are injected, not interspersed with conversation history

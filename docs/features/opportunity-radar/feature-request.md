@@ -61,8 +61,8 @@ Também queremos evitar o erro de olhar apenas para “dor explícita”: há op
 - Registra insumo bruto
 - Aplica deduplicação interna
 - Enfileira para processamento item a item
-- Cada novo insumo dispara um job na fila (trigger/bull)
-- O processador do job é um agente LLM que manipula o grafo no Neo4j
+- Cada novo insumo dispara um job de processamento
+- O processador do job é um agente LLM que enriquece o insumo no grafo de conhecimento
 
 ---
 
@@ -93,9 +93,9 @@ Campos mínimos:
 - O agente minerador extrai dores/problemas/desejos/oportunidades da base de conhecimento
 - Não extrai ideias de produto nesta etapa
 ### 7.3.1 Base de grafo para enriquecimento/mineração
-- Neo4j como grafo de trabalho
+- Grafo de conhecimento construído continuamente
 - Nós e arestas com embeddings
-- Índice fulltext com BM25
+- Busca com suporte a BM25 e busca semântica
 
 ### 7.4 Estrutura semântica
 - Sem taxonomia/ontologia fixa na V1

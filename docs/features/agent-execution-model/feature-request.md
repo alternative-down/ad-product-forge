@@ -11,12 +11,12 @@ Draft inicial
 ## Modelo de execução por step
 Durante o run:
 1. executar step atual
-2. runtime recupera memória do agente (semântica + fulltext/BM25)
-3. runtime injeta memória recuperada como mensagem da thread (ex.: `<memory>`)
+2. runtime recupera memória do agente (semântica + fulltext)
+3. runtime injeta memória recuperada como mensagem da thread
 4. repetir até finalizar o run
 
 Observação:
-- não existe tool de memória acionada manualmente pelo agente.
+- memória é recuperada automaticamente; agentes não acionam tool de memória manualmente
 
 ## Modelo de fechamento do run
 Ao concluir um run:
@@ -32,15 +32,14 @@ Ordem importante:
 - em compactação durante execução: criar/atualizar memória antes de compactar o contexto.
 
 ## Estratégia de compactação de contexto
-- regra de "mensagens do meio" vale para compactação da execução (run)
-- compactação da memória primária segue fluxo normal
-- na execução, compactação não precisa considerar toda a thread desde o início
-- prioridade para compactar mensagens intermediárias (do meio), preservando bordas relevantes do contexto
+- durante a execução, histórico intermediário é compactado
+- contexto preserva pontos relevantes: início, fim, e eventos importantes
+- compactação ocorre antes de gravar memórias da execução
 
-## Estratégia de implementação sugerida (conceitual)
-- clonar a thread principal para execução isolada
-- processar o run na thread clonada
-- ao final, devolver para a thread principal apenas o prompt inicial + resumo executivo
+## Isolamento de contexto por execução
+- cada execução (run) mantém seu próprio contexto isolado
+- ao final, apenas prompt inicial e resumo executivo são preservados na thread principal
+- histórico detalhado é compactado para manter contexto limpo
 
 ## Fila por agente
 - cada agente possui sua própria fila de eventos/jobs
@@ -48,11 +47,9 @@ Ordem importante:
 - mensagens entre agentes são eventos enviados para a fila do agente destino
 
 ## Comunicação assíncrona entre agentes
-- envio de mensagem: assíncrono
-- janela de espera por reply: até 5 minutos (configurável)
-- se não houver reply no prazo, chamada retorna indisponibilidade temporária
-- entre steps da execução, runtime verifica fila de entrada/replies
-- reply recebido é injetado no contexto/mensagens da execução
+- envio de mensagem: assíncrono via fila do agente destino
+- entre steps da execução, runtime verifica mensagens recebidas
+- replies recebidas são injetadas no contexto/mensagens da execução
 
 ## Objetivo
 Manter continuidade de contexto com thread única, evitando inchaço de histórico e preservando só o essencial por execução.

@@ -1,207 +1,237 @@
-# Refatoração da Arquitetura de Agentes
+# Agent Runtime Architecture: Design Decisions
 
-## Status
-Draft ativo
+## Overview
 
-## Objetivo
-Transformar o repositório em uma base para desenvolvimento de um sistema de agentes persistentes com integrações externas múltiplas, identidade própria, memória própria, comunicação interna entre agentes e criação dinâmica de novos agentes.
+This document explains the current architecture of the agent runtime system in `packages/mastra-engine`. It captures architectural decisions and explains why the system is structured as it is.
 
-## Contexto
-Hoje o pacote `packages/mastra-engine` já funciona para um caso concreto:
-- um agente persistente criado por `createForgeAgent`
-- memória própria com OM, working memory e long-term memory materializada
-- providers autenticados por gateway custom (`openai-codex`, `claude-max`)
-- uma integração externa concreta (`Discord`)
+---
 
-Isso valida partes importantes do sistema, mas a arquitetura ainda está centrada em um agente concreto e uma integração concreta.
+## Problem Statement
 
-## Leitura da Arquitetura Atual
+The system needed to support:
+- **Persistent agents** with stable identity and state
+- **Multiple memory layers** (working, observational, long-term)
+- **External integrations** (Discord, internal chat)
+- **Extensibility** for future providers and adapters
+- **Single-thread operation** with per-step context recovery
 
-### Núcleo atual
-1. `createForgeAgent`
-- cria storage, vector stores, workspace de memória, `Memory`, `ObservationalMemory`, `LongTermMemory`
-- instancia `Agent`
-- instancia `Mastra`
-- injeta contexto fixo de memória por override de `generate/stream`
+---
 
-2. `createDiscordAgentClient`
-- conecta no Discord
-- normaliza a mensagem externa
-- roda o loop de structured output
-- entrega respostas ao canal
+## Key Architectural Decisions
 
-3. `ForgeAuthGateway`
-- expõe providers autenticados por account/token
-- adapta Codex e Claude Max ao runtime do Mastra
+### 1. Single Thread per Agent
 
-### Diagnóstico
-1. O core do agente está acoplado ao caso `ForgeAgent`.
-2. Identidade do agente ainda está implícita no `id` e em paths/DB names derivados dele.
-3. Integração externa está modelada como cliente de Discord, não como adapter genérico.
-4. O protocolo conversacional (`send_message` / `finish`) está preso à integração Discord.
-5. Memória e runtime ainda estão misturados na mesma factory.
-6. O gateway de auth está razoavelmente separado, mas ainda mistura credenciais, provider registry e adaptação de modelo.
+**Decision:** Agents operate in a single thread, rather than cloning threads for execution isolation.
 
-## Direção Arquitetural
-O repositório deve deixar de ser “um pacote de bot com memória” e passar a ser “um runtime de agentes persistentes com adapters externos”.
+**Why:**
+- Simplifies persistence and identity — the agent's state is directly the thread state
+- Eliminates sync overhead and complexity
+- Enables cleaner storage model
 
-## Modelo Alvo
+**Trade-off:** Task isolation is handled via context injection (LTM) and observation compression (OM), not thread-level separation.
 
-### 1. Domínio
-Entidades centrais do sistema:
-- `AgentProfile`
-- `AgentAccount`
-- `AgentRuntimeContext`
-- `ExternalEvent`
-- `AgentAction`
+---
 
-### 2. Runtime do agente
-Responsável por:
-- montar/configurar o `Agent` do Mastra
-- garantir contexto fixo do agente
-- aplicar memória, processors e workspace
-- expor execução conversacional e execução de tarefas
+### 2. Three-Layer Memory System
 
-### 3. Memória
-Subsistema separado para:
-- storage/vector
-- OM
-- working memory
-- materialização de long-term memory
-- recuperação híbrida por step
+**Decision:** Memory is organized into three distinct layers with different responsibilities:
 
-### 4. Integrações externas
-Adapters por canal/serviço:
-- Discord
-- Email
-- Webhooks
-- futuros serviços
+| Layer | Purpose | Technology |
+| :--- | :--- | :--- |
+| **Working Memory** | Current conversation state | Mastra's native `Memory` + LibSQLStore |
+| **Observational Memory** | Compressed past interactions | Mastra `Processor` + LibSQLStore (memory table) |
+| **Long-Term Memory** | Semantic recovery per step | Custom `Processor` + Workspace + Vector search |
 
-Cada adapter deve apenas:
-- receber evento externo
-- normalizar em um `ExternalEvent`
-- encaminhar para o runtime/router
-- entregar de volta as ações produzidas
+**Why:**
+- Each layer has a clear, minimal responsibility
+- OM compresses; LTM recovers — this separation allows efficient storage and retrieval
+- Per-step recovery (LTM) avoids stale context injection
+- Layered design allows future improvements (e.g., better compression, different search strategies) without cascading changes
 
-### 5. Roteamento e orquestração
-Camada responsável por:
-- resolver qual agente atende qual account/evento
-- mapear account externa -> agente
-- suportar comunicação interna agente -> agente
-- preparar criação dinâmica de agentes
-- futuramente suportar filas/jobs/heartbeat
+---
 
-## Estrutura de Pastas Alvo
+### 3. Processor-Based Integration
 
-```text
-packages/mastra-engine/src/
-  domain/
-    agent-profile.ts
-    agent-account.ts
-    external-event.ts
-    agent-action.ts
-    runtime-context.ts
+**Decision:** Memory functionality is implemented as Mastra `Processor` implementations, not custom hooks or overrides.
 
-  runtime/
-    agent-runtime.ts
-    conversation-loop.ts
-    agent-router.ts
-    agent-registry.ts
-    account-registry.ts
+**Why:**
+- Works *with* Mastra's lifecycle, not around it
+- Automatic integration into `processInputStep` and `processOutputStep` hooks
+- Type-safe and versioning-friendly
+- Easier testing (processors are isolated)
 
-  memory/
-    memory-runtime.ts
-    long-term-memory.ts
-    observational-memory.ts
-    recall-pipeline.ts
+---
 
-  integrations/
-    discord/
-      adapter.ts
-      normalizer.ts
-      delivery.ts
+### 4. Workspace as Source of Truth for Long-Term Knowledge
 
-  providers/
-    credentials/
-      oauth-auth.ts
-    adapters/
-      openai-codex.ts
-      claude-max.ts
-    gateway/
-      forge-auth-gateway.ts
-      model-ids.ts
+**Decision:** Observations are written to markdown files in `.forge-memory/<agentId>/observations/`, not just stored in a database.
 
-  presets/
-    forge/
-      create-forge-agent.ts
-      system-prompt.ts
+**Why:**
+- Enables auditing and manual inspection
+- Supports re-indexing without losing original data
+- Hybrid search (BM25 + semantic) is more powerful on filesystem-backed content
+- Future-proof: can be migrated to other storage systems
+- Observations are human-readable
+
+---
+
+### 5. Per-Step Query-Based Recovery
+
+**Decision:** Each input step builds a fresh query from the last 8 messages and searches for context. Context is not pre-loaded or cached.
+
+**Why:**
+- Avoids injection of irrelevant context
+- Adapts recovery to the current conversation direction
+- Cleaner than trying to predict relevance upfront
+- Lower latency on cache misses (search is fast for small datasets)
+
+---
+
+### 6. Dual Search (Workspace + Graph)
+
+**Decision:** LTM uses both hybrid search (BM25 + semantic) on workspace files AND GraphRAG search on the vector index.
+
+**Why:**
+- Hybrid captures both exact matches (tasks, dates) and semantic similarity
+- GraphRAG adds relationship-aware search (entities, concepts)
+- Together they provide comprehensive recall coverage
+- Failures in one search don't block the other (independent try-catch)
+
+---
+
+### 7. Metadata-Driven Observation Organization
+
+**Decision:** Observations are grouped by date into separate files, with inline metadata headers.
+
+Format:
+```markdown
+# Observations for {date}
+
+## observation:{id}
+Type: {originType}
+CreatedAt: {timestamp}
+
+{activeObservations}
 ```
 
-## Princípios da Refatoração
-- `ForgeAgent` vira preset, não o centro da arquitetura.
-- Discord vira adapter, não o centro da arquitetura.
-- Providers/auth continuam em infraestrutura.
-- Memória vira subsistema próprio.
-- Roteamento, identidade e accounts viram domínio explícito.
+**Why:**
+- Enables efficient incremental updates (append only per date)
+- Dates are natural query boundaries for workspace search
+- Metadata enables filtering and later re-processing
+- Markdown is universally readable
 
-## Fases da Refatoração
+---
 
-### Fase 0 — Documento canônico
-- registrar arquitetura atual
-- registrar arquitetura alvo
-- marcar docs antigas como históricas quando necessário
+## Architectural Patterns
 
-### Fase 1 — Domínio mínimo
-- introduzir tipos explícitos para agente, account, evento externo e ação
-- sem mudar comportamento ainda
+### Provider Factory Pattern
 
-### Fase 2 — Extrair runtime
-- separar runtime do agente do preset `createForgeAgent`
-- separar memória/runtime/processors em módulos próprios
+`createAgent` is the main factory:
+```typescript
+createAgent(config) {
+  // 1. Create storage
+  const storage = createAgentStorage(agentId);
 
-### Fase 3 — Generalizar protocolo de conversa
-- tirar `send_message` / `finish` do Discord
-- mover loop conversacional para `runtime/`
+  // 2. Create memory layers
+  const om = createObservationalMemory({ storage, model });
+  const ltm = await LongTermMemory.create({ agentId, om });
 
-### Fase 4 — Transformar Discord em adapter
-- separar normalização, entrega e sessão do Discord
-- fazer Discord consumir o runtime genérico
+  // 3. Create Mastra Agent with processors
+  const agent = new Agent({
+    processors: [om, ltm],
+    ...
+  });
 
-### Fase 5 — Introduzir roteamento por account
-- criar `AgentAccount`
-- criar `AgentRouter`
-- resolver agent por account externa
+  // 4. Return configured runtime
+  return new AgentRuntime(agent);
+}
+```
 
-### Fase 6 — Registry/factory
-- introduzir `AgentRegistry`, `AccountRegistry`, `AgentRuntimeFactory`
-- preparar criação dinâmica de agentes
+This pattern:
+- Encapsulates configuration complexity
+- Allows versioning (V1, V2 factories)
+- Supports presets (`createForgeAgent`)
 
-### Fase 7 — Comunicação agente-agente
-- definir contrato de mensagens/eventos internos
-- sem implementar fila ainda
+---
 
-### Fase 8 — Reorganizar providers/auth
-- separar credenciais
-- separar adapters de provider
-- manter gateway como registry/resolução
+### Wake Queue Pattern
 
-## Prioridades Técnicas
-1. Separar runtime e preset.
-2. Separar protocolo conversacional e integração externa.
-3. Criar modelo explícito de account e roteamento.
-4. Extrair memória para módulo próprio.
-5. Só depois introduzir comunicação agente-agente e filas.
+Agents are awakened via `createAgentWakeQueue`:
 
-## O que não implementar agora
-- comunicação agente-agente completa
-- criação dinâmica completa
-- BullMQ/Trigger
-- generalização total de todas as integrações externas
+```typescript
+{
+  notifyExternalEvent() {
+    // Debounces external events (1s), with max delay (10s)
+    // Triggers agent.run() when ready
+  }
+}
+```
 
-## Resultado esperado
-Ao final da refatoração incremental, o repositório deve suportar:
-- múltiplos agentes persistentes
-- múltiplas accounts externas por agente
-- adapters externos independentes
-- runtime de agente reutilizável
-- base preparada para criação dinâmica e comunicação interna
+**Why:**
+- Prevents thrashing on rapid events
+- Ensures agent runs with latest state
+- No external job queue needed (suitable for single-agent deployments)
+
+---
+
+### Communication Module Pattern
+
+Internal agent-agent communication is via `CommunicationModule`:
+- Provides `send_message` and `finish` tools
+- Agents can message each other synchronously
+- Future: can be replaced with async queue (Bullmq, etc.)
+
+---
+
+## What's Not Here (Future)
+
+The following are explicitly out of scope for the current architecture:
+
+1. **Multiple agents per deployment** — Communication module is basic; scaling to many agents would require:
+   - Job queue (Bullmq, Redis)
+   - Agent registry
+   - Event-driven wake (not polling)
+
+2. **Agent-to-agent async messaging** — Current design is synchronous; async would require:
+   - Message queue with persistence
+   - Delivery guarantees
+   - Retry logic
+
+3. **Dynamic agent creation** — The runtime assumes static agent set at startup; dynamic creation would need:
+   - Agent factory with versioning
+   - Tenant isolation
+   - On-demand storage/index creation
+
+4. **Advanced provider adapters** — Only Discord and internal chat are implemented. Future adapters (Slack, Email, etc.) would follow the same pattern:
+   - Normalize external event → `ExternalEvent`
+   - Route to agent via `CommunicationModule`
+   - Deliver responses back to provider
+
+---
+
+## Folder Structure
+
+```
+packages/mastra-engine/src/agent/
+├── memory/
+│   ├── long-term-memory.ts          # LTM processor
+│   ├── observational-memory.ts      # OM configuration
+│   ├── memory.ts                    # Working memory configuration
+│   ├── storage.ts                   # Storage factory
+│   └── working-memory.ts            # Template
+├── wake-queue.ts                    # Event debouncing
+├── communication/
+│   ├── module.ts                    # Communication tools
+│   ├── tools/                       # Individual tools
+│   └── store.ts                     # Conversation store
+├── integrations/
+│   └── discord/                     # Discord adapter
+└── tools/
+    └── market-research.ts           # Agent-specific tools
+```
+
+---
+
+## Conclusion
+
+The current architecture balances **simplicity** (single thread, three memory layers, processor-based) with **power** (workspace-backed recovery, dual search, extensible factory pattern). It is suitable for single to few agents; scaling beyond that would require the architectural additions listed above.

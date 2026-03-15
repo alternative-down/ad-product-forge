@@ -1,74 +1,154 @@
-# Design de Contexto: Memória de Dois Níveis (V4 - GraphRAG Ingestion)
+# Memory and Context Architecture
 
-Este documento detalha como o **Mastra Engine** popula o GraphRAG com dados provenientes de múltiplas fontes (OM, Workspace e Mensagens).
+## Overview
 
-## 1. Estratégia de Ingestão Unificada
+The agent memory system has three distinct layers:
 
-O GraphRAG nativo do Mastra requer um índice vetorial rico para construir as relações. Utilizaremos o índice `knowledge_index` no `LibSQLVector` como a base de conhecimento central ("Cérebro") do agente.
+1. **Working Memory** — The immediate context of the current conversation thread, including message history and workspace state
+2. **Observational Memory (OM)** — Compressed reflections of past interactions, stored per thread
+3. **Long-Term Memory (LTM)** — Semantic search over observations and workspace files, recovered per step
 
-### 1.1 Fontes de Dados
+Together, these layers provide the agent with:
+- Immediate access to the current thread's state
+- Compressed knowledge from past interactions
+- Persistent recall of relevant information during each step
 
-| Fonte | Momento da Ingestão | Descrição |
+---
+
+## 1. Working Memory
+
+Working Memory is provided by Mastra's native `Memory` system. It maintains:
+- The raw message history of the current thread
+- Workspace state (enabled, scope: 'thread')
+- Raw storage in LibSQL (`LibSQLStore`)
+
+**Configuration** (`memory.ts`):
+```typescript
+new Memory({
+  embedder: fastembed,
+  storage: config.storage,
+  vector: config.vector,
+  options: {
+    lastMessages: Number.MAX_SAFE_INTEGER,
+    semanticRecall: false,
+    observationalMemory: false,
+    workingMemory: {
+      enabled: true,
+      scope: 'thread',
+      template: WORKING_MEMORY_TEMPLATE,
+    },
+  },
+})
+```
+
+The system disables Mastra's built-in semantic recall and observational memory in favor of our custom implementations.
+
+---
+
+## 2. Observational Memory
+
+Observational Memory (OM) runs as a native Mastra `Processor`. It:
+- Observes at the end of each step, compressing the step's messages into observations
+- Produces reflections (summaries) from those observations
+- Stores observations with metadata per thread and resource
+
+**Configuration** (`observational-memory.ts`):
+```typescript
+new ObservationalMemory({
+  storage: config.storage.stores.memory!,
+  model: config.model,
+  scope: 'thread',
+  observation: { messageTokens: 15000 },
+  reflection: { observationTokens: 20000 },
+})
+```
+
+---
+
+## 3. Long-Term Memory (LTM)
+
+LongTermMemory is a custom `Processor` that:
+- Runs on every input step
+- Searches for relevant past information based on the current step's query
+- Injects recovered context into the message list as a system message
+
+**Layers searched:**
+1. **Workspace** — BM25 + semantic hybrid search over `.forge-memory/<agentId>/observations/` markdown files
+2. **Graph** — GraphRAG semantic search over the vector index
+
+**Flow** (`long-term-memory.ts`):
+
+```
+processInputStep:
+  1. Extract query from last 8 messages
+  2. Hybrid-search workspace observations
+  3. GraphRAG-search vector index
+  4. Inject results as system message
+
+processOutputStep:
+  1. Fetch pending observations from OM
+  2. Group observations by day
+  3. Write to `.forge-memory/<agentId>/observations/{YYYY-MM-DD}.md`
+  4. Index files in workspace (for next step's search)
+```
+
+---
+
+## 4. Context Building per Step
+
+1. **Input Step** (processInputStep):
+   - Build a query from the last 8 messages in the thread
+   - Search workspace observations (hybrid BM25 + semantic)
+   - Search graph with GraphRAG
+   - Inject matching results as system message
+   - Model now has both immediate message history + relevant past context
+
+2. **Output Step** (processOutputStep):
+   - Collect new observations from OM
+   - Write them to workspace as markdown files (grouped by date)
+   - Index files for next step's search
+
+---
+
+## 5. Storage Architecture
+
+| Component | Technology | Role |
 | :--- | :--- | :--- |
-| **OM Reflections** | Pós-Ciclo de Geração | Toda reflexão gerada pelo OM (seja na Primary ou na ExecThread) é capturada, chunkada e indexada. |
-| **Workspace Files** | Inicialização / Update | Arquivos do diretório `./workspace` são processados pelo `MDocument` e enviados ao `knowledge_index`. |
-| **Consolidated Messages** | Pós-Ciclo de Geração | O par Request/Response final da Thread Primária é indexado para recall semântico imediato via grafo. |
+| **Working Memory Store** | LibSQLStore | Raw messages, current thread state |
+| **OM Store** | LibSQLStore (memory table) | Observation records, per thread |
+| **Workspace** | LocalFilesystem + BM25/semantic index | Long-term knowledge in markdown |
+| **Vector Index** | LibSQLVector | Embeddings for workspace and graph search |
 
 ---
 
-## 2. Fluxo de Reflexões (As duas Threads?)
+## 6. Data Flow
 
-**Sim.** Embora a Thread Primária seja o log oficial, tarefas muito longas podem disparar reflexões (compressão) dentro da Thread de Execução (Nível 2).
-
-- **Thread de Execução:** Captura o "como" a tarefa foi feita (detalhes técnicos, erros superados).
-- **Thread Primária:** Captura o "o que" foi feito (resultado final e intenção do usuário).
-
-O orquestrador agora verifica e ingere observações de **ambas** as threads ao final de cada ciclo.
-
----
-
-## 3. Implementação Técnica da Ingestão
-
-### 3.1 Componente `GraphIntegrator`
-O integrador agora possui métodos para diferentes tipos de dados:
-
-```typescript
-export class GraphIntegrator {
-  // Ingestão de blocos de texto (Reflexões/Mensagens)
-  async ingestText(text: string, metadata: any);
-  
-  // Ingestão recursiva de arquivos do Workspace
-  async ingestWorkspace(workspace: Workspace);
-}
 ```
+Step N input:
+  │
+  ├─ Working Memory provides current message history
+  ├─ LTM.processInputStep:
+  │   ├─ Search workspace (observations) → system message
+  │   └─ Search graph → system message
+  │
+  └─ Model generates response
 
-### 3.2 Ciclo de Vida no `EngineAgent`
-
-```typescript
-override async generate(...) {
-  // ... execução ...
-  
-  // 1. Ingestão da Thread de Execução (Transient Knowledge)
-  const execObs = await this.omProcessor.getObservations(execThreadId);
-  await this.integrator.ingestText(execObs, { scope: 'execution' });
-
-  // 2. Consolidação e Ingestão da Primary Thread (Identity Knowledge)
-  await this.omProcessor.observe({ threadId: primaryId });
-  const primaryObs = await this.omProcessor.getObservations(primaryId);
-  await this.integrator.ingestText(primaryObs, { scope: 'primary' });
-}
+Step N output:
+  │
+  ├─ OM generates observations from step's messages
+  ├─ LTM.processOutputStep:
+  │   ├─ Write observations to workspace/{date}.md
+  │   └─ Index files for next step's search
+  │
+  └─ Step complete
 ```
 
 ---
 
-## 4. Diferença entre Store e Graph
+## 7. Key Design Decisions
 
-- **Store (LibSQL DB):** Armazena as mensagens brutas para o `lastMessages` e o estado exato do `WorkingMemory`.
-- **Graph Index (LibSQL Vector):** Armazena as "partículas" de conhecimento (chunks) que o Mastra conecta via similaridade para o GraphRAG.
-
-A busca híbrida no `HybridRecallProcessor` agora consulta o `knowledge_index` usando a ferramenta de GraphRAG, permitindo que o agente "navegue" entre uma reflexão de 3 dias atrás e um arquivo de configuração recém-criado.
-
-## 5. Próximos Passos
-- [ ] Atualizar `GraphIntegrator` com suporte a Workspace e Dedeplicação básica.
-- [ ] Implementar ingestão dupla (Primary + Exec) no `EngineAgent`.
-- [ ] Validar se o `HybridRecallProcessor` consegue relacionar dados das duas fontes.
+- **Single Thread:** Agents operate in one thread, simplifying persistence and identity.
+- **Per-Step Recovery:** Context is built fresh each step based on the current query, avoiding stale injection.
+- **Hybrid Search:** Workspace search combines BM25 (exact matching) with semantic similarity.
+- **Graph Integration:** GraphRAG provides relationship-aware search over the vector index.
+- **Workspace as Source of Truth:** Observations are stored durably in markdown, enabling future auditing and re-indexing.
