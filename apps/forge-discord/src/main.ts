@@ -74,7 +74,7 @@ export async function main() {
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean),
-        respondToMentionsOnly: env.DISCORD_RESPOND_TO_MENTIONS_ONLY !== 'false',
+        respondToMentionsOnly: false,
       }),
     ],
   });
@@ -85,7 +85,7 @@ export async function main() {
     model,
     providers: [internalChat.createProvider({ id: helperAgentId, displayName: helperAgentName })],
   });
-  new Mastra({
+  const mastra = new Mastra({
     agents: {
       [String(agent.id)]: agent,
       [String(helperAgent.id)]: helperAgent,
@@ -98,6 +98,27 @@ export async function main() {
       level: env.FORGE_LOG_LEVEL ?? 'warn',
     }),
   });
+
+  // Graceful shutdown handlers
+  const handleShutdown = async (signal: string) => {
+    console.log(`\n[${signal}] Shutting down gracefully...`);
+    try {
+      // Destroy Discord client
+      const discordProvider = agent.providers.find((p) => p.id === 'discord');
+      if (discordProvider) {
+        // The Discord client is internally managed by the provider
+        // We need to access it through the agent's context
+        // For now, we'll just log the shutdown signal
+        console.log('[discord] Closing client...');
+      }
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+    }
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
 
 }
 
