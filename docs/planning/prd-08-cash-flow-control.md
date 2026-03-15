@@ -1,111 +1,117 @@
-# PRD-08: Controle de Fluxo de Caixa (Simplificado)
+# PRD-08: Controle de Fluxo de Caixa (Budget Global de LLM)
 
-**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Status:** Planejamento
 **Data:** 2026-03-15
-**Nota:** Projeto de desenvolvedor pessoal. Aplicar princípios KISS + YAGNI.
+**Versão:** 1.0
 
 ---
 
-## 1. Sumário
+## Objetivo
 
-### Classificação: APLICAÇÃO AD-PRODUCT-FORGE (OPCIONAL)
-
-**Este PRD descreve recursos de controle de custo específicos para ad-product-forge.** Limites de orçamento e controles de gastos permitem que Nicolas gerencie custos de agentes conforme a plataforma escala. Atualmente opcional, adiado até que múltiplos agentes exijam gerenciamento de orçamento.
-
-### Objetivo
-**OPCIONAL** - Definir limites de gastos mensais por agente.
-
-### Por que Desproiorizado
-- Dev solo pode rastrear manualmente orçamento
-- Não é necessário para MVP (apenas 1-2 agentes inicialmente)
-- Pode adicionar se/quando escalar para múltiplos agentes
-- Proporção valor-para-esforço muito baixa atualmente
+Implementar um sistema de budget global para controlar o ritmo de execução de LLM na plataforma. A plataforma deve respeitar um limite mensal de tokens/custos e throttle (desacelerar) execuções de agentes quando aproximando-se do limite.
 
 ---
 
-## 2. Escopo
+## Conceito
 
-### Incluído
-- Definir limite de gastos por agente (mensal)
-- Verificar orçamento restante antes da ação
-- Alertar quando limite se aproxima
-- Logging simples
+**Budget Global = Limite mensal de custos de LLM para toda a plataforma**
 
-### Não Incluído
-- Protocolos de emergência
-- Escalação de restrição
-- Equidade entre agentes
-- Realocação dinâmica
-- Previsão
-- Integração com dados financeiros externos
-- Fluxos de trabalho de aprovação
-- Dashboard de UI
+Não é limite por agente, mas sim limite agregado que controla:
+- Quantos tokens LLM a plataforma pode gastar por mês
+- Quando throttle/desacelerar execuções (reduzir concorrência, aumentar retry delays)
+- Quando parar completamente (se atingir hard limit)
 
 ---
 
-## 3. Requisitos Mínimos (se implementado)
+## Requisitos Funcionais
 
-### RF-1: Ferramenta setSpendingLimit
+**FR1: Rastrear Gastos Totais**
+- Monitorar consumo total de tokens de todos os agentes
+- Atualizar contador em tempo real
+- Registrar custo por provedor (OpenAI, Claude, etc)
+
+**FR2: Definir Budget Mensal**
+- Configurar limite mensal global (ex: $100 USD/mês)
+- Reset automático a cada novo mês
+- Threshold para alertas (ex: 80% → aviso)
+
+**FR3: Throttle Automático**
+- Se 70% do budget: reduzir concorrência, aumentar delays entre execuções
+- Se 85% do budget: modo lento, priorizar apenas tarefas críticas
+- Se 95% do budget: apenas leitura, sem novos processamentos
+- Se 100%: parar completamente
+
+**FR4: Visibilidade**
+- Ferramenta para consultar: gastos totais, % usado, remaining
+- Logs de quando throttle foi ativado
+- Histórico de gastos por dia/semana/mês
+
+---
+
+## Schema do Banco de Dados
+
+**Tabela: budget_config**
 ```typescript
-interface SetSpendingLimitParams {
-  agentId: string;
-  monthlyLimit: number; // USD
+{
+  id: 'global',
+  monthly_budget_usd: number,
+  reset_day: number, // dia do mês (1-31)
+  alert_threshold_percent: number, // ex: 80
+  throttle_threshold_percent: number, // ex: 70
+  updated_at: timestamp
 }
-
-// Retorna: success: boolean
 ```
 
-### RF-2: Ferramenta getSpendingStatus
+**Tabela: budget_usage**
 ```typescript
-interface GetSpendingStatusParams {
-  agentId: string;
+{
+  id: UUID,
+  date: date,
+  provider: string, // 'openai', 'anthropic', etc
+  tokens_used: number,
+  cost_usd: number,
+  agent_id: string,
+  timestamp: timestamp
 }
+```
 
-// Retorna: {
-//   limit: number;
-//   spent: number;
-//   remaining: number;
-// }
+**Cache/Estado Runtime:**
+```typescript
+{
+  current_month_cost_usd: number,
+  last_updated: timestamp,
+  throttle_status: 'normal' | 'slow' | 'critical' | 'paused'
+}
 ```
 
 ---
 
-## 4. Banco de Dados (Mínimo)
+## Decisões Técnicas
 
-```sql
-CREATE TABLE agent_spending_limits (
-  agent_id TEXT PRIMARY KEY,
-  monthly_limit DECIMAL(10, 2)
-);
+1. **Custos calculados em tempo real** — Cada chamada LLM registra uso imediato
+2. **Reset automático** — Primeiro dia do mês ou data configurada
+3. **Throttle gracioso** — Não falha abruptamente, degrada performance
+4. **Sem billing externo** — Apenas controle interno, não integra com Stripe/Asaas
+
+---
+
+## Exemplo de Fluxo
+
+```
+Agente A tenta executar LLM
+  ↓
+Sistema checa budget atual
+  ↓
+Se 70%: reduzir concorrência (queue delay +500ms)
+Se 85%: modo crítico only (rejeita tasks não essenciais)
+Se 95%: pausa (rejeita todas as execuções)
+  ↓
+Registra gastos em budget_usage
+  ↓
+Atualiza counter total
 ```
 
-Nota: Usar financial_log existente de PRD-19 para calcular gastos do mês atual.
-
 ---
 
-## 5. Implementação (se necessário)
-
-- Criar tabela única: agent_spending_limits
-- Implementar setSpendingLimit, getSpendingStatus (2-3h total)
-- Usar financial_log de PRD-19 para cálculo
-
----
-
-## 6. Critérios de Sucesso
-- [ ] Pode definir limite de gastos por agente
-- [ ] Pode visualizar gastos do mês atual
-- [ ] Pode ver orçamento restante
-
----
-
-## 7. Status
-**Adiado** - Nice to have, não essencial para MVP.
-
----
-
-## 8. Esforço
-- **Total: 2-3 horas** (se implementado)
-
----
-
-**Fim do documento**
+**Versão:** 0.1
+**Última Atualização:** 2026-03-15
