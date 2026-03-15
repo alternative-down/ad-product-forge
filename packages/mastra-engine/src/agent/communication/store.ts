@@ -290,6 +290,21 @@ export async function createCommunicationStore(client: Client) {
     return contacts.filter((contact): contact is Contact => Boolean(contact));
   }
 
+  async function listSelfAccounts() {
+    const result = await client.execute(`
+      SELECT account_id, provider, external_account_id, display_name, metadata_json
+      FROM forge_communication_accounts
+      ORDER BY provider ASC
+    `);
+
+    return result.rows.map((row) => ({
+      accountId: String(row.account_id),
+      provider: String(row.provider),
+      externalAccountId: String(row.external_account_id),
+      displayName: typeof row.display_name === 'string' ? row.display_name : undefined,
+    }));
+  }
+
   async function getContact(slug: string) {
     return loadContact(slugify(slug));
   }
@@ -696,6 +711,7 @@ export async function createCommunicationStore(client: Client) {
 
   return {
     ensureAccount,
+    listSelfAccounts,
     listContacts,
     getContact,
     findContactByIdentity,

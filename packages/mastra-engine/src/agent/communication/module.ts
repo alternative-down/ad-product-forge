@@ -160,14 +160,20 @@ export async function createCommunicationModule(config: {
     return null;
   }
 
-  async function listContacts() {
-    const contacts = await store.listContacts();
+  async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
+    const [selfAccounts, otherContacts] = await Promise.all([
+      filter !== 'others' ? store.listSelfAccounts() : Promise.resolve([]),
+      filter !== 'self' ? store.listContacts() : Promise.resolve([]),
+    ]);
 
-    return contacts.map((contact) => ({
-      slug: contact.slug,
-      displayName: contact.displayName,
-      description: contact.description,
-    }));
+    return {
+      self: selfAccounts,
+      others: otherContacts.map((contact) => ({
+        slug: contact.slug,
+        displayName: contact.displayName,
+        description: contact.description,
+      })),
+    };
   }
 
   async function getContact(slug: string) {
