@@ -355,7 +355,7 @@ export class OAuthGateway extends MastraModelGateway {
     });
   }
 
-  private resolveClaudeMaxModel(modelId: string, apiKey: string) {
+  private async resolveClaudeMaxModel(modelId: string, apiKey: string) {
     const baseURL = this.buildUrl(`${this.id}/claude-max/${modelId}`);
 
     if (!baseURL) {
