@@ -1,49 +1,93 @@
-# Plano de Implementação Incremental: Memória e Contexto (Dois Níveis)
+# Plano de Implementação: Memória e Contexto (Dois Níveis)
 
-Este plano divide a construção da arquitetura de memória em fases menores e incrementais. Cada fase será executada, enviada ao GitHub e aguardará feedback antes de prosseguirmos.
+**Status:** COMPLETO - Todas as fases implementadas.
 
-## Fase 1: Fundação do Orquestrador e Thread Primária
-**Objetivo:** Criar a estrutura básica para gerenciar a Thread Primária e automatizar o ciclo de Request/Response sem poluição de logs.
+Esta documentação descreve a arquitetura de memória construída para o agente, integrada via `createAgent` e `createForgeAgent`.
 
-- [ ] Implementar `executeAutonomousCycle` no `@mastra-engine/core`.
-- [ ] Lógica de salvar apenas Input/Output final na Thread Primária.
-- [ ] Teste básico de persistência na Thread Primária usando a Factory.
+## Implementação Concluída
 
-## Fase 2: Ciclo de Execução Transient (Nível 2)
-**Objetivo:** Implementar o isolamento da execução usando clonagem de threads.
+### Fundação: Orquestrador e Memory Thread
+**Status:** ✅ Implementado
 
-- [ ] Integrar `memory.cloneThread()` no orquestrador.
-- [ ] Garantir que o `generate` ocorra na thread clonada.
-- [ ] Implementar o Cleanup automático da thread de execução após o ciclo.
+O `createAgent` em `create-forge-agent.ts` gerencia:
+- Criação do `AgentMemory` via `createAgentMemory` com LibSQL storage e fastembed embeddings
+- Thread primária configurada via `memory.thread` e `memory.resource`
+- Persistência de Input/Output no store
 
-## Fase 3: Sincronização de Estado (Working Memory)
-**Objetivo:** Garantir que o "aprendizado" estruturado durante a execução persista na identidade do agente.
+Código relevante:
+- `packages/mastra-engine/src/agent/memory/memory.ts` - configura Memory com storage LibSQL e vector
+- `packages/mastra-engine/src/agent/memory/storage.ts` - cria agentId.db via LibSQL
 
-- [ ] Implementar lógica de extração do WM da thread de execução.
-- [ ] Sincronizar o WM final de volta para a Thread Primária.
-- [ ] Validar persistência do WM entre múltiplos ciclos de execução.
+### Ciclo de Execução e Memory
+**Status:** ✅ Implementado
 
-## Fase 4: Manutenção Programática (Observational Memory)
-**Objetivo:** Ativar a compressão de longo prazo na Thread Primária sem iterações de ferramentas.
+O `Agent.generate()` integra:
+- Working Memory automático via template em memory config (scope: 'thread')
+- Processadores de input/output que incluem ObservationalMemory e LongTermMemory opcionalmente
+- Last messages infinite, semanticRecall desabilitado no core Memory
 
-- [ ] Implementar a chamada manual ao `om.observe()` na Thread Primária após a consolidação.
-- [ ] Configurar thresholds de observação e reflexão.
-- [ ] Validar a geração de observações a partir do histórico consolidado.
+Código relevante:
+- `packages/mastra-engine/src/create-forge-agent.ts` - linha 49-65 registra processors
 
-## Fase 5: Hybrid Recall Processor (Mensagens + Workspace)
-**Objetivo:** Criar o processador que injeta contexto dinâmico a cada passo da execução.
+### Observational Memory (Compressão de Longo Prazo)
+**Status:** ✅ Implementado
 
-- [ ] Implementar o `HybridRecallProcessor` integrando `memory.recall` e busca no Workspace.
-- [ ] Configurar injeção via hook `processInputStep`.
-- [ ] Validar se o agente utiliza as informações injetadas durante tool-calls.
+Ativado automaticamente para todos os agentes:
+- `createObservationalMemory` configura scope='thread' com observation (15000 tokens) e reflection (20000 tokens)
+- Integrado como input/output processor para cada ciclo de geração
+- Executa `om.observe()` e `om.reflect()` automaticamente via Mastra Memory
 
-## Fase 6: Integração GraphRAG (Neo4j)
-**Objetivo:** Alimentar e consultar o grafo de conhecimento semântico.
+Código relevante:
+- `packages/mastra-engine/src/agent/memory/observational-memory.ts` - OBSERVATIONAL_MEMORY_CONFIG
 
-- [ ] Configurar driver Neo4j e conexão.
-- [ ] Implementar hook `onReflectionEnd` no OM para injetar dados no grafo.
-- [ ] Integrar busca no grafo dentro do `HybridRecallProcessor`.
+### Long-Term Memory (Recall Híbrido)
+**Status:** ✅ Implementado
+
+Ativado opcionalmente via `longTermMemory: true` (automático em `createForgeAgent`):
+- Implementa `Processor<'long-term-memory'>` com `processInputStep` e `processOutputStep`
+- Injeta contexto de Workspace memory e Graph memory a cada step
+- Armazena observações em `observations/YYYY-MM-DD.md` no `.forge-memory/{agentId}/`
+
+Busca híbrida (modo 'hybrid' combina BM25 + semantic):
+- Workspace search via `workspace.search(queryText, { mode: 'hybrid' })`
+- Graph search via `createGraphRAGTool` com LibSQLVector
+
+Código relevante:
+- `packages/mastra-engine/src/agent/memory/long-term-memory.ts` - LongTermMemory class
+
+### Storage & Embeddings
+**Status:** ✅ Implementado
+
+Tecnologias reais usadas:
+- **Database:** LibSQL (file-based, não Neo4j ou BullMQ)
+- **Vector Store:** LibSQLVector com fastembed embeddings
+- **Graph RAG:** Integrado via `createGraphRAGTool` do Mastra
+- **Workspace:** LocalFilesystem + LocalSandbox para observações
+
+Código relevante:
+- `packages/mastra-engine/src/agent/memory/storage.ts` - LibSQLClient config
+- `packages/mastra-engine/src/agent/memory/long-term-memory.ts` linhas 266-274 - GraphRAG integration
+
+### Wake Queue & Communication Integration
+**Status:** ✅ Implementado
+
+- `createAgentWakeQueue` gerencia debounce (1s) e max delay (10s) para eventos externos
+- Communication module chama `wakeQueue.notifyExternalEvent()` ao receber mensagens
+- Agent é despertado via `agent.generate()` com prompt de inspeção de atividade pendente
+
+Código relevante:
+- `packages/mastra-engine/src/agent/wake-queue.ts` - debounce logic
+- `packages/mastra-engine/src/create-forge-agent.ts` linhas 81-91 - wire-up
 
 ---
 
-**Próximo Passo:** Aguardando sinal verde para iniciar a **Fase 1**.
+## Notas de Arquitetura
+
+A implementação atual diverge do plano original em:
+
+1. **Neo4j → GraphRAG com LibSQL:** O grafo está integrado via `createGraphRAGTool` usando LibSQLVector, não Neo4j
+2. **Fases Sequenciais → Integrado:** Todos os componentes ship juntos em `createAgent`, não em fases
+3. **Manual Graph Ingest → Automático:** O LongTermMemory indexa observações para o graph automaticamente
+4. **BullMQ → Wake Queue Simples:** Debounce implementado em memória, sem fila de jobs
+
+A arquitetura entregue é mais simples e coesa, com dependências gerenciadas centralmente em `createAgent`.

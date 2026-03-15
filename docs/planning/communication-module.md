@@ -58,15 +58,15 @@ provider
 
 ### 1. Agent runtime
 
-`createForgeAgent` and `createSimpleAgent` are the runtime constructors.
+`createForgeAgent` and `createAgent` are the runtime constructors (with `createForgeAgent` being a convenience that enables long-term memory).
 
-They should:
+They:
 
-- create the Mastra agent
-- create the communication module for that agent
-- create the wake queue for that agent
-- register the providers passed in the config
-- install the communication tools automatically
+- ✅ create the Mastra agent
+- ✅ create the communication module for that agent
+- ✅ create the wake queue for that agent
+- ✅ register the providers passed in the config
+- ✅ install the communication tools automatically via `createExternalAccountTools(communication)`
 
 The app composes the runtime.
 The runtime owns communication.
@@ -415,3 +415,46 @@ runtime
 ```
 
 That should be the new base.
+
+---
+
+## Implementation Status
+
+**Status:** ✅ FULLY IMPLEMENTED
+
+All concepts above have been realized in the codebase:
+
+### Runtime (`createAgent` / `createForgeAgent`)
+- **File:** `packages/mastra-engine/src/create-forge-agent.ts`
+- Creates and wires: communication module, wake queue, memory, tools
+- `createForgeAgent` enables long-term memory via `longTermMemory: true` option
+
+### Communication Module
+- **File:** `packages/mastra-engine/src/agent/communication/module.ts`
+- Owns orchestration, provider registration, inbound/outbound flow
+- Exposes: `onReceiveMessage`, `listContacts`, `getContact`, `sendMessage`, `listConversations`, `getMessages`
+
+### Communication Store
+- **File:** `packages/mastra-engine/src/agent/communication/store.ts`
+- LibSQL-based (5 tables: accounts, contacts, contact_accounts, conversations, messages)
+- Handles internal ID generation and provider ID mapping
+- Supports conversation and message read/unread state tracking
+
+### Provider Types
+- **File:** `packages/mastra-engine/src/agent/communication/provider-types.ts`
+- `CommunicationProvider` interface: minimal transport adapter contract
+- `getAccount()`, `onMessage()`, `syncContacts()`, `sendMessage()` methods
+- No provider owns flow, store, or wake logic
+
+### Wake Queue
+- **File:** `packages/mastra-engine/src/agent/wake-queue.ts`
+- Debounce: 1000ms
+- Max delay: 10000ms
+- Triggers `agent.generate()` with "Pending external activity" prompt
+
+### Communication Tools
+- **File:** `packages/mastra-engine/src/agent/communication/tools.ts`
+- Auto-registered via `createExternalAccountTools(communication)`
+- Agent-facing tools use internal IDs, communication module translates to provider IDs
+
+The architecture matches the spec above: runtime owns communication, communication owns store, providers are transport-only.
