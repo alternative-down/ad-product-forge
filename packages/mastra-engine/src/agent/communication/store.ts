@@ -118,8 +118,15 @@ export async function createCommunicationStore(client: Client) {
       attachments_json TEXT NOT NULL,
       unread INTEGER NOT NULL,
       created_at TEXT NOT NULL,
-      metadata_json TEXT
+      metadata_json TEXT,
+      UNIQUE (provider, provider_message_id)
     )
+  `);
+  // Ensure unique index exists on existing tables that predate the UNIQUE constraint
+  await client.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_provider_message_id
+    ON forge_communication_messages (provider, provider_message_id)
+    WHERE provider_message_id IS NOT NULL
   `);
 
   async function loadContact(slug: string) {
@@ -434,20 +441,6 @@ export async function createCommunicationStore(client: Client) {
     createdAt: string;
     metadata?: Record<string, unknown>;
   }) {
-    const existingResult = await client.execute({
-      sql: `
-        SELECT message_id
-        FROM forge_communication_messages
-        WHERE provider = ? AND provider_message_id = ?
-        LIMIT 1
-      `,
-      args: [input.provider, input.providerMessageId],
-    });
-
-    if (existingResult.rows[0]?.message_id && typeof existingResult.rows[0].message_id === 'string') {
-      return loadMessage(String(existingResult.rows[0].message_id));
-    }
-
     const conversation = await ensureConversation({
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
@@ -478,6 +471,7 @@ export async function createCommunicationStore(client: Client) {
           created_at,
           metadata_json
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(provider, provider_message_id) DO NOTHING
       `,
       args: [
         messageId,
@@ -495,7 +489,21 @@ export async function createCommunicationStore(client: Client) {
       ],
     });
 
-    return loadMessage(messageId);
+    const existingResult = await client.execute({
+      sql: `
+        SELECT message_id
+        FROM forge_communication_messages
+        WHERE provider = ? AND provider_message_id = ?
+        LIMIT 1
+      `,
+      args: [input.provider, input.providerMessageId],
+    });
+
+    if (!existingResult.rows[0]?.message_id || typeof existingResult.rows[0].message_id !== 'string') {
+      throw new Error('Failed to save inbound message');
+    }
+
+    return loadMessage(String(existingResult.rows[0].message_id));
   }
 
   async function saveOutboundMessage(input: {
@@ -579,10 +587,42 @@ export async function createCommunicationStore(client: Client) {
       FROM forge_communication_conversations
     `);
 
+    const conversationIds = conversationResult.rows.map((row) => String(row.conversation_id));
+
+    if (conversationIds.length === 0) {
+      return [];
+    }
+
+    // Load all messages in bulk using IN clause
+    const placeholders = conversationIds.map(() => '?').join(',');
+    const messagesResult = await client.execute({
+      sql: `
+        SELECT message_id
+        FROM forge_communication_messages
+        WHERE conversation_id IN (${placeholders})
+        ORDER BY created_at ASC
+      `,
+      args: conversationIds,
+    });
+
+    const allMessages = await Promise.all(
+      messagesResult.rows.map((row) => loadMessage(String(row.message_id)))
+    );
+
+    const messagesByConversation = new Map<string, MessageRecord[]>();
+    for (const message of allMessages) {
+      if (message) {
+        if (!messagesByConversation.has(message.conversationId)) {
+          messagesByConversation.set(message.conversationId, []);
+        }
+        messagesByConversation.get(message.conversationId)!.push(message);
+      }
+    }
+
     const conversations = (
       await Promise.all(
-        conversationResult.rows.map(async (row) => {
-          const conversation = await loadConversation(String(row.conversation_id));
+        conversationIds.map(async (conversationId) => {
+          const conversation = await loadConversation(conversationId);
 
           if (!conversation) {
             return null;
@@ -596,23 +636,27 @@ export async function createCommunicationStore(client: Client) {
             return null;
           }
 
-          const messages = await getMessages(conversation.conversationId, 5);
+          const messages = messagesByConversation.get(conversationId) || [];
+          const recentMessages = messages.slice(-5);
 
-          if (messages.length === 0) {
+          if (recentMessages.length === 0) {
             return null;
           }
 
-          const unreadCount = messages.filter((message) => message.unread).length;
+          const unreadCount = recentMessages.filter((message) => message.unread).length;
 
           if (options.unread !== undefined && (unreadCount > 0) !== options.unread) {
             return null;
           }
 
+          // Mark messages as read
+          await markMessagesRead(recentMessages.filter((message) => message.unread).map((message) => message.messageId));
+
           return {
             ...conversation,
             unreadCount,
-            latestMessageAt: messages[messages.length - 1]!.createdAt,
-            messages,
+            latestMessageAt: recentMessages[recentMessages.length - 1]!.createdAt,
+            messages: recentMessages,
           };
         }),
       )

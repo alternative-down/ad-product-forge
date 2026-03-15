@@ -13,7 +13,7 @@ export async function createCommunicationModule(config: {
 }) {
   const store = await createCommunicationStore(config.client);
   const providers = new Map<string, CommunicationProvider>();
-  const receiveMessageHandlers = new Set<() => void>();
+  let receiveMessageHandler: (() => void) | null = null;
 
   async function syncProviderContacts(provider: CommunicationProvider) {
     if (!provider.syncContacts) {
@@ -104,14 +104,18 @@ export async function createCommunicationModule(config: {
           metadata: message.metadata,
         });
 
-        for (const onReceiveMessage of receiveMessageHandlers) {
-          onReceiveMessage();
+        if (receiveMessageHandler) {
+          try {
+            receiveMessageHandler();
+          } catch (error) {
+            console.error('Error in receiveMessageHandler:', error);
+          }
         }
       });
   }
 
   function onReceiveMessage(handler: () => void) {
-    receiveMessageHandlers.add(handler);
+    receiveMessageHandler = handler;
   }
 
   async function saveSentMessage(input: {
@@ -135,7 +139,7 @@ export async function createCommunicationModule(config: {
     };
   }
 
-  async function getContactExternalId(provider: CommunicationProvider, providerId: string, contactSlug: string) {
+  async function getContactExternalId(providerId: string, contactSlug: string) {
     const contact = await store.getContact(contactSlug);
     const identity = contact?.accounts.find((account) => account.provider === providerId);
 
@@ -143,12 +147,17 @@ export async function createCommunicationModule(config: {
       return identity.externalUserId || identity.username || null;
     }
 
-    await syncProviderContacts(provider);
+    const provider = providers.get(providerId);
+    if (provider) {
+      await syncProviderContacts(provider);
 
-    const syncedContact = await store.getContact(contactSlug);
-    const syncedIdentity = syncedContact?.accounts.find((account) => account.provider === providerId);
+      const syncedContact = await store.getContact(contactSlug);
+      const syncedIdentity = syncedContact?.accounts.find((account) => account.provider === providerId);
 
-    return syncedIdentity?.externalUserId || syncedIdentity?.username || null;
+      return syncedIdentity?.externalUserId || syncedIdentity?.username || null;
+    }
+
+    return null;
   }
 
   async function listContacts() {
@@ -198,27 +207,33 @@ export async function createCommunicationModule(config: {
     const conversations = await store.listConversations(input);
     const contacts = await store.listContacts();
 
-    return conversations.map((conversation) => ({
-      conversationId: conversation.conversationId,
-      provider: conversation.provider,
-      latestMessageAt: conversation.latestMessageAt,
-      unreadCount: conversation.unreadCount,
-      name: conversation.name,
-      contactSlug: conversation.contactSlug,
-      contactDisplayName: contacts.find((contact) => contact.slug === conversation.contactSlug)?.displayName,
-      messages: conversation.messages.map((message) => ({
-        messageId: message.messageId,
-        conversationId: message.conversationId,
-        provider: message.provider,
-        content: message.content,
-        attachments: message.attachments,
-        unread: message.unread,
-        createdAt: message.createdAt,
-        authorDisplayName: message.authorDisplayName,
+    const contactMap = new Map(contacts.map((contact) => [contact.slug, contact]));
+
+    return conversations.map((conversation) => {
+      const contactDisplayName = conversation.contactSlug ? contactMap.get(conversation.contactSlug)?.displayName : undefined;
+
+      return {
+        conversationId: conversation.conversationId,
+        provider: conversation.provider,
+        latestMessageAt: conversation.latestMessageAt,
+        unreadCount: conversation.unreadCount,
+        name: conversation.name,
         contactSlug: conversation.contactSlug,
-        contactDisplayName: contacts.find((contact) => contact.slug === conversation.contactSlug)?.displayName,
-      })),
-    }));
+        contactDisplayName,
+        messages: conversation.messages.map((message) => ({
+          messageId: message.messageId,
+          conversationId: message.conversationId,
+          provider: message.provider,
+          content: message.content,
+          attachments: message.attachments,
+          unread: message.unread,
+          createdAt: message.createdAt,
+          authorDisplayName: message.authorDisplayName,
+          contactSlug: conversation.contactSlug,
+          contactDisplayName,
+        })),
+      };
+    });
   }
 
   async function getMessages(input: {
@@ -293,7 +308,7 @@ export async function createCommunicationModule(config: {
       throw new Error(`No destination provided for provider: ${input.provider}`);
     }
 
-    const contactExternalId = await getContactExternalId(provider, input.provider, input.contactSlug);
+    const contactExternalId = await getContactExternalId(input.provider, input.contactSlug);
 
     if (!contactExternalId) {
       throw new Error(`No direct identity found for contact: ${input.contactSlug}`);

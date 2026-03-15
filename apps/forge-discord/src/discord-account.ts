@@ -68,51 +68,55 @@ export function createDiscordProvider(config: {
       const user = await ensureClient();
 
       client.on(Events.MessageCreate, async (message: Message) => {
-        if (message.author.bot) {
-          return;
+        try {
+          if (message.author.bot) {
+            return;
+          }
+
+          if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
+            return;
+          }
+
+          if (
+            message.channel.type !== ChannelType.DM &&
+            respondToMentionsOnly &&
+            !message.mentions.users.has(user.id)
+          ) {
+            return;
+          }
+
+          const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
+          const content = message.content
+            .replaceAll(`<@${user.id}>`, '')
+            .replaceAll(`<@!${user.id}>`, '')
+            .trim();
+          const attachments = Array.from(message.attachments.values()).map((attachment) => ({
+            id: attachment.id,
+            name: attachment.name,
+            url: attachment.url,
+            contentType: attachment.contentType ?? undefined,
+            sizeBytes: attachment.size,
+            description: attachment.description ?? undefined,
+          }));
+
+          await callback({
+            providerConversationKey: message.channelId,
+            providerMessageId: message.id,
+            conversationName:
+              message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
+            authorExternalId: message.author.id,
+            authorDisplayName,
+            authorUsername: message.author.username,
+            content: content || '[no text content]',
+            attachments,
+            createdAt: new Date(message.createdTimestamp).toISOString(),
+            metadata: {
+              serverName: message.guild?.name ?? 'direct-message',
+            },
+          });
+        } catch (error) {
+          console.error('[discord] Error handling MessageCreate event:', error);
         }
-
-        if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
-          return;
-        }
-
-        if (
-          message.channel.type !== ChannelType.DM &&
-          respondToMentionsOnly &&
-          !message.mentions.users.has(user.id)
-        ) {
-          return;
-        }
-
-        const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
-        const content = message.content
-          .replaceAll(`<@${user.id}>`, '')
-          .replaceAll(`<@!${user.id}>`, '')
-          .trim();
-        const attachments = Array.from(message.attachments.values()).map((attachment) => ({
-          id: attachment.id,
-          name: attachment.name ?? undefined,
-          url: attachment.url,
-          contentType: attachment.contentType ?? undefined,
-          sizeBytes: attachment.size,
-          description: attachment.description ?? undefined,
-        }));
-
-        await callback({
-          providerConversationKey: message.channelId,
-          providerMessageId: message.id,
-          conversationName:
-            message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
-          authorExternalId: message.author.id,
-          authorDisplayName,
-          authorUsername: message.author.username,
-          content: content || '[no text content]',
-          attachments,
-          createdAt: new Date(message.createdTimestamp).toISOString(),
-          metadata: {
-            serverName: message.guild?.name ?? 'direct-message',
-          },
-        });
       });
 
       listening = true;

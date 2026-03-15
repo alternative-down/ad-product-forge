@@ -1,4 +1,5 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
+import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
 
 import { createCommunicationModule } from './agent/communication/module';
 import type { CommunicationProvider } from './agent/communication/provider-types';
@@ -20,7 +21,11 @@ export type CreateForgeAgentConfig<
   providers?: CommunicationProvider[];
 };
 
-export async function createForgeAgent<
+export type CreateAgentOptions = {
+  longTermMemory?: boolean;
+};
+
+export async function createAgent<
   TAgentId extends string = string,
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
@@ -30,6 +35,7 @@ export async function createForgeAgent<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
     'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'workspace' | 'agents' | 'omModel' | 'providers'
   >,
+  options: CreateAgentOptions = {},
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const { client, storage, vector } = createAgentStorage(config.id);
   const communication = await createCommunicationModule({
@@ -45,10 +51,19 @@ export async function createForgeAgent<
     storage,
     model: config.omModel ?? config.model,
   });
-  const longTermMemory = await LongTermMemory.create({
-    agentId: config.id,
-    om,
-  });
+
+  const inputProcessors: InputProcessorOrWorkflow[] = [om];
+  const outputProcessors: OutputProcessorOrWorkflow[] = [om];
+
+  if (options.longTermMemory) {
+    const longTermMemory = await LongTermMemory.create({
+      agentId: config.id,
+      om,
+    });
+    inputProcessors.push(longTermMemory);
+    outputProcessors.push(longTermMemory);
+  }
+
   const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({
     id: config.id,
     name: config.name,
@@ -60,8 +75,8 @@ export async function createForgeAgent<
     workspace: config.workspace,
     agents: config.agents,
     memory,
-    inputProcessors: [om, longTermMemory],
-    outputProcessors: [om, longTermMemory],
+    inputProcessors,
+    outputProcessors,
   });
   const wakeQueue = createAgentWakeQueue({
     run: () =>
@@ -76,4 +91,18 @@ export async function createForgeAgent<
   communication.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
   return agent;
+}
+
+export async function createForgeAgent<
+  TAgentId extends string = string,
+  TTools extends ToolsInput = ToolsInput,
+  TOutput = undefined,
+  TRequestContext extends Record<string, unknown> | unknown = unknown,
+>(
+  config: Pick<
+    CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
+    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'workspace' | 'agents' | 'omModel' | 'providers'
+  >,
+): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
+  return createAgent(config, { longTermMemory: true });
 }

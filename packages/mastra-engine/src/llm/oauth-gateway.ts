@@ -13,10 +13,10 @@ import { resolveOpenAICodexCredential } from './auth/openai-codex';
 const OPENAI_CODEX_URL = 'https://chatgpt.com/backend-api/codex';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_BETA_HEADER = [
-  'oauth-2025-04-20',
-  'claude-code-20250219',
-  'interleaved-thinking-2025-05-14',
-  'fine-grained-tool-streaming-2025-05-14',
+  'oauth-2025-04-20',                    // OAuth 2.0 support
+  'claude-code-20250219',                // Claude Code CLI integration
+  'interleaved-thinking-2025-05-14',     // Extended thinking / reasoning
+  'fine-grained-tool-streaming-2025-05-14', // Fine-grained tool call streaming
 ].join(',');
 const CLAUDE_CODE_IDENTITY = "You are Claude Code, Anthropic's official CLI for Claude.";
 
@@ -32,11 +32,18 @@ export type OAuthGatewayOptions = {
     setupTokenFilePath?: string;
     storePath?: string;
   };
+  openAICodexUrl?: string;
+  anthropicUrl?: string;
 };
 
 export class OAuthGateway extends MastraModelGateway {
   readonly id = OAUTH_GATEWAY_ID;
   readonly name = 'Account OAuth Gateway';
+  private readonly openAICodexUrl: string;
+  private readonly anthropicUrl: string;
+
+  // Middleware for OpenAI Codex provider. Handles store instructions and stream processing.
+  // Applied to: 'openai-codex' models
   private readonly openAIMiddleware: LanguageModelMiddleware = {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
@@ -154,6 +161,9 @@ export class OAuthGateway extends MastraModelGateway {
       };
     },
   };
+  // Middleware for Claude Max provider. Adds Claude Code identity context.
+  // Applied to: 'claude-max' models
+  // Prepends a system message identifying the model as Claude Code, and removes topP if temperature is set.
   private readonly claudeCodeMiddleware: LanguageModelMiddleware = {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
@@ -169,19 +179,26 @@ export class OAuthGateway extends MastraModelGateway {
       };
     },
   };
+  // Middleware for Claude Max provider. Applies prompt caching to system and last message.
+  // Applied to: 'claude-max' models (with claudeCodeMiddleware)
+  // Ordering: claudeCodeMiddleware runs first to add identity, then promptCacheMiddleware adds cache control.
+  // Caches the system message and the last user message with ephemeral cache control.
   private readonly promptCacheMiddleware: LanguageModelMiddleware = {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
       const cacheControl = { type: 'ephemeral' as const, ttl: '1h' as const };
       const prompt = [...params.prompt] as Array<Record<string, unknown>>;
-      const indices = [prompt.length - 1];
+      const lastIndex = prompt.length - 1;
 
-      for (let index = prompt.length - 1; index >= 0; index -= 1) {
-        if (prompt[index]?.role === 'system') {
-          indices.unshift(index);
-          break;
-        }
-      }
+      // Find system message by searching from the end
+      const systemIndex = [...prompt].reverse().findIndex((m) => m.role === 'system');
+
+      // Build list of indices to cache: system message (if found) and last message
+      const indicesToCache = systemIndex >= 0
+        ? [lastIndex - systemIndex, lastIndex].filter((v, i, a) => a.indexOf(v) === i)
+        : [lastIndex];
+
+      const indices = indicesToCache;
 
       for (const index of indices) {
         if (index < 0) {
@@ -232,6 +249,8 @@ export class OAuthGateway extends MastraModelGateway {
 
   constructor(private readonly options: OAuthGatewayOptions = {}) {
     super();
+    this.openAICodexUrl = options.openAICodexUrl ?? OPENAI_CODEX_URL;
+    this.anthropicUrl = options.anthropicUrl ?? ANTHROPIC_URL;
   }
 
   async fetchProviders(): Promise<Record<string, ProviderConfig>> {
@@ -241,25 +260,25 @@ export class OAuthGateway extends MastraModelGateway {
         models: [...OPENAI_CODEX_MODELS],
         apiKeyEnvVar: 'FORGE_AUTH_UNUSED',
         gateway: this.id,
-        url: OPENAI_CODEX_URL,
+        url: this.openAICodexUrl,
       },
       'claude-max': {
         name: 'Claude Max OAuth',
         models: [...CLAUDE_MAX_MODELS],
         apiKeyEnvVar: 'FORGE_AUTH_UNUSED',
         gateway: this.id,
-        url: ANTHROPIC_URL,
+        url: this.anthropicUrl,
       },
     };
   }
 
   buildUrl(modelId: string) {
     if (modelId.startsWith(`${this.id}/openai-codex/`)) {
-      return OPENAI_CODEX_URL;
+      return this.openAICodexUrl;
     }
 
     if (modelId.startsWith(`${this.id}/claude-max/`)) {
-      return ANTHROPIC_URL;
+      return this.anthropicUrl;
     }
 
     return undefined;
@@ -336,7 +355,7 @@ export class OAuthGateway extends MastraModelGateway {
     });
   }
 
-  private resolveClaudeMaxModel(modelId: string, apiKey: string) {
+  private async resolveClaudeMaxModel(modelId: string, apiKey: string) {
     const baseURL = this.buildUrl(`${this.id}/claude-max/${modelId}`);
 
     if (!baseURL) {

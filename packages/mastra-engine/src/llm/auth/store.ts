@@ -31,8 +31,19 @@ export function createOAuthStore() {
   function readJsonFile(filePath: string) {
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch {
-      return null;
+    } catch (error) {
+      // File doesn't exist (expected case)
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        return null;
+      }
+
+      // JSON parsing error (should be reported)
+      if (error instanceof SyntaxError) {
+        throw new Error(`Failed to parse JSON in ${filePath}: ${error.message}`);
+      }
+
+      // Other errors (rethrow)
+      throw error;
     }
   }
 

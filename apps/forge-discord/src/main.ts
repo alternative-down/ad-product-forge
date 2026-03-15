@@ -85,7 +85,7 @@ export async function main() {
     model,
     providers: [internalChat.createProvider({ id: helperAgentId, displayName: helperAgentName })],
   });
-  new Mastra({
+  const mastra = new Mastra({
     agents: {
       [String(agent.id)]: agent,
       [String(helperAgent.id)]: helperAgent,
@@ -98,6 +98,15 @@ export async function main() {
       level: env.FORGE_LOG_LEVEL ?? 'warn',
     }),
   });
+
+  // Graceful shutdown handlers
+  const handleShutdown = (signal: string) => {
+    console.log(`\n[${signal}] Shutting down gracefully...`);
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
 
 }
 
