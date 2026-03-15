@@ -1,4 +1,5 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
+import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
 
 import { createCommunicationModule } from './agent/communication/module';
 import type { CommunicationProvider } from './agent/communication/provider-types';
@@ -51,8 +52,8 @@ export async function createAgent<
     model: config.omModel ?? config.model,
   });
 
-  const inputProcessors = [om];
-  const outputProcessors = [om];
+  const inputProcessors: InputProcessorOrWorkflow[] = [om];
+  const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
     const longTermMemory = await LongTermMemory.create({
