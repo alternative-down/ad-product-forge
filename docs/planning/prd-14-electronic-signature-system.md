@@ -1,43 +1,43 @@
-# PRD — Electronic Signature System
+# PRD-14: Sistema de Assinatura Eletrônica
 
-**Status:** Planning - Technical Design
-**Date:** 2026-03-15
-**Scope:** Personal developer project - KISS & YAGNI principles
-
----
-
-## Executive Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes digital signature infrastructure specific to ad-product-forge.** Electronic signatures enable Nicolas' agents to sign contracts and documents as part of business processes. This is application-specific business capability, not framework infrastructure.
-
-Enable agents and users to digitally sign documents with cryptographic signatures for non-repudiation and audit trail.
-
-**Core Goal (for ad-product-forge):** Agents can sign documents and verify signatures with proof of who signed and when. Enables automated agreement signing in product workflows.
+**Status:** Planejamento - Design Técnico
+**Data:** 2026-03-15
+**Escopo:** Projeto pessoal de desenvolvedor - Princípios KISS & YAGNI
 
 ---
 
-## Problem Statement
+## Resumo Executivo
 
-Currently, the platform cannot:
-- Create cryptographic signatures on documents
-- Verify document authenticity
-- Prove who signed a document
-- Maintain audit trail of signatures
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**Target Scenarios:**
-1. Agent signs a contract as part of workflow
-2. User signs a document for authorization
-3. Platform maintains audit trail proving document authenticity
+**Este PRD descreve infraestrutura de assinatura digital específica do ad-product-forge.** Assinaturas eletrônicas permitem que os agentes de Nicolas assinem contratos e documentos como parte dos processos de negócios. Esta é uma capacidade comercial específica da aplicação, não infraestrutura do framework.
+
+Permitir que agentes e usuários assinem digitalmente documentos com assinaturas criptográficas para não-repúdio e trilha de auditoria.
+
+**Objetivo Principal (para ad-product-forge):** Agentes podem assinar documentos e verificar assinaturas com prova de quem assinou e quando. Permite assinatura automatizada de acordos em fluxos de produtos.
 
 ---
 
-## Key Features
+## Declaração do Problema
 
-### 1. Document Signing
+Atualmente, a plataforma não pode:
+- Criar assinaturas criptográficas em documentos
+- Verificar autenticidade de documentos
+- Provar quem assinou um documento
+- Manter trilha de auditoria de assinaturas
+
+**Cenários Alvo:**
+1. Agente assina contrato como parte do fluxo de trabalho
+2. Usuário assina documento para autorização
+3. Plataforma mantém trilha de auditoria provando autenticidade do documento
+
+---
+
+## Características Principais
+
+### 1. Assinatura de Documento
 ```typescript
-// Sign a document as agent
+// Assinar um documento como agente
 signDocument(input: {
   documentId: string;
   documentContent: Buffer;
@@ -48,9 +48,9 @@ signDocument(input: {
 }>;
 ```
 
-### 2. Signature Verification
+### 2. Verificação de Assinatura
 ```typescript
-// Verify a signature
+// Verificar uma assinatura
 verifySignature(input: {
   signatureId: string;
   documentContent: Buffer;
@@ -61,9 +61,9 @@ verifySignature(input: {
 }>;
 ```
 
-### 3. Signature Retrieval
+### 3. Recuperação de Assinatura
 ```typescript
-// Get signature details
+// Obter detalhes da assinatura
 getSignature(signatureId: string): Promise<{
   signatureId: string;
   documentId: string;
@@ -74,7 +74,7 @@ getSignature(signatureId: string): Promise<{
 
 ---
 
-## Database Schema
+## Schema do Banco de Dados
 
 **signatures**
 ```
@@ -90,43 +90,43 @@ getSignature(signatureId: string): Promise<{
 
 ---
 
-## Security
+## Segurança
 
-- Use ECDSA-P256 for signing
-- Private keys encrypted at rest
-- Document hash binding prevents signature reuse
-
----
-
-## Implementation
-
-### Phase 1: Core (2 weeks)
-- [ ] Signature engine (ECDSA-P256)
-- [ ] Document signing and verification
-- [ ] Agent API integration
-- [ ] Basic key management
-
-### Phase 2: Enhancement (Future)
-- [ ] Multi-party signatures
+- Usar ECDSA-P256 para assinatura
+- Chaves privadas criptografadas em repouso
+- Binding de hash de documento previne reutilização de assinatura
 
 ---
 
-## Success Criteria
+## Implementação
 
-- [ ] Agent can sign documents
-- [ ] Signatures can be verified
-- [ ] Document tampering is detected
+### Fase 1: Core (2 semanas)
+- [ ] Motor de assinatura (ECDSA-P256)
+- [ ] Assinatura de documento e verificação
+- [ ] Integração com API de agente
+- [ ] Gerenciamento básico de chaves
 
----
-
-## Risks
-
-- Key compromise is critical
-- Signature verification must be accurate
-- Audit trail integrity is essential
+### Fase 2: Aprimoramento (Futuro)
+- [ ] Assinaturas de múltiplas partes
 
 ---
 
-## Future Enhancements
+## Critérios de Sucesso
 
-- Multi-party signatures (counter-signatures)
+- [ ] Agente pode assinar documentos
+- [ ] Assinaturas podem ser verificadas
+- [ ] Alteração de documento é detectada
+
+---
+
+## Riscos
+
+- Compromisso de chave é crítico
+- Verificação de assinatura deve ser precisa
+- Integridade da trilha de auditoria é essencial
+
+---
+
+## Aprimoramentos Futuros
+
+- Assinaturas de múltiplas partes (contra-assinaturas)

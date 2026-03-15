@@ -1,332 +1,141 @@
-# PRD-11: Research as Workflow
+# PRD-25: Pesquisa como Fluxo de Trabalho
 
-**Status:** Draft — Specification Phase
+**Status:** Rascunho — Fase de Especificação
 
-**Date:** 2026-03-15
+**Data:** 2026-03-15
 
-**Note:** This is a personal project from a solo developer. Built with KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles in mind.
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
-**Related Features:**
-- Agent Execution Model (workflow orchestration)
-- External Webhooks (trigger research flows)
-
----
-
-## 1. Executive Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes a feature specific to Nicolas' autonomous product development platform.** Research workflow capabilities are essential to ad-product-forge's market discovery and validation processes, but are application-specific, not framework infrastructure.
-
-Enable multi-step research workflows: chain queries together, branch on results, and aggregate findings. Builds on existing research tool.
-
-**Core Value (ad-product-forge):**
-- Chain multiple research queries for market analysis, competitor research, problem validation
-- Branch workflows conditionally based on market signals (size > X → research competitors)
-- Combine results from multiple research angles into comprehensive market analysis
-- Simple API, backward compatible with existing research tool calls
-- Enable Nicolas' research agents to autonomously discover market opportunities end-to-end
+**Recursos Relacionados:**
+- Modelo de Execução de Agente (orquestração de fluxo de trabalho)
+- Webhooks Externos (disparar fluxos de pesquisa)
 
 ---
 
-## 2. Problem Statement
+## 1. Resumo Executivo
 
-### 2.1 Current State
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-Research exists as a **tool** in the Mastra agent framework:
+**Este PRD descreve um recurso específico da plataforma de desenvolvimento de produto autônomo de Nicolas.** As capacidades de fluxo de trabalho de pesquisa são essenciais para processos de descoberta de mercado e validação do ad-product-forge, mas são específicas da aplicação, não infraestrutura de framework.
+
+Permitir fluxos de trabalho de pesquisa multi-passo: encadear queries juntas, ramificar em resultados e agregar descobertas. Construir sobre ferramenta de pesquisa existente.
+
+**Valor Principal (ad-product-forge):**
+- Encadear múltiplas queries de pesquisa para análise de mercado, pesquisa de concorrente, validação de problema
+- Ramificar fluxos de trabalho condicionalmente baseado em sinais de mercado (tamanho > X → pesquisar concorrentes)
+- Combinar resultados de múltiplos ângulos de pesquisa em análise abrangente de mercado
+- API simples, compatível com versões anteriores com chamadas de ferramenta de pesquisa existentes
+- Permitir que agentes de pesquisa de Nicolas descobrem autonomamente oportunidades de mercado end-to-end
+
+---
+
+## 2. Declaração do Problema
+
+### 2.1 Estado Atual
+
+Pesquisa existe como uma **ferramenta** no framework de agente Mastra:
 ```typescript
 tools: {
   research: async (query: string) => Promise<ResearchResult>
 }
 ```
 
-**Limitations:**
-- Single-shot query execution only
-- No sequential orchestration (can't chain research queries)
-- No conditional logic (can't branch based on intermediate results)
-- No result aggregation (can't combine multiple research streams)
-- No explicit step tracking or error recovery
-- Limited to direct tool invocation, not reusable workflows
+**Limitações:**
+- Execução de query única apenas
+- Nenhuma orquestração sequencial (não consegue encadear queries de pesquisa)
+- Nenhuma lógica condicional (não consegue ramificar baseado em resultados intermediários)
+- Nenhuma agregação de resultado (não consegue combinar múltiplos streams de pesquisa)
+- Nenhum rastreamento de passo explícito ou recuperação de erro
+- Limitado a invocação de ferramenta direta, não fluxos de trabalho reutilizáveis
 
-### 2.2 Desired Capability
+### 2.2 Capacidade Desejada
 
-Need to support research scenarios like:
-1. **Sequential research**: Research topic A → refine based on results → research subtopic B
-2. **Conditional research**: If market size > X, then research competitors
-3. **Multi-source research**: Parallelize searches across 3 different angles, then combine
-4. **Iterative research**: Loop N times with feedback refinement
-5. **Resource-aware research**: Check cost/time budget before continuing
+Precisa suportar cenários de pesquisa como:
+1. **Pesquisa Sequencial**: Pesquisar tópico A → refinar baseado em resultados → pesquisar subtópico B
+2. **Pesquisa Condicional**: Se tamanho de mercado > X, então pesquisar concorrentes
+3. **Pesquisa Multi-fonte**: Paralelizar buscas através de 3 ângulos diferentes, então combinar
+4. **Pesquisa Iterativa**: Loop N vezes com refinamento de feedback
+5. **Pesquisa Ciente de Recurso**: Verificar orçamento de custo/tempo antes de continuar
 
-### 2.3 Why Workflows?
+### 2.3 Por que Fluxos de Trabalho?
 
-Workflows provide:
-- **Chainable research** — Execute multiple queries in sequence
-- **Conditional branching** — Skip steps based on results
-- **Simple composition** — Reuse workflows in agent prompts
-
----
-
-## 3. Goals & Success Criteria
-
-### 3.1 Primary Goals
-
-1. **Enable workflow-based research** — Create Research Workflow abstraction
-   - Goal: All complex research scenarios representable as workflows
-   - Success: Support sequential, conditional, and parallel research steps
-
-2. **Maintain backward compatibility** — Existing tool calls still work
-   - Goal: No breaking changes to agent code
-   - Success: `agent.generate()` with research tool works unchanged
-
-3. **Provide research-specific primitives** — Domain-optimized workflow nodes
-   - Goal: Research workflows feel natural to write/read
-   - Success: Built-in nodes for query, filter, aggregate, rank
-
-4. **Enable research orchestration** — Complex multi-step research flows
-   - Goal: Users can build and reuse research workflows
-   - Success: Pre-built workflows for common patterns (competitor analysis, market sizing, etc.)
-
-### 3.2 Success Criteria
-
-- Workflows defined in code execute correctly
-- Sequential steps complete in order
-- Conditional branching works as expected
-- Results aggregate without duplication
+Fluxos de trabalho fornecem:
+- **Pesquisa Encadeável** — Executar múltiplas queries em sequência
+- **Ramificação Condicional** — Pular passos baseado em resultados
+- **Composição Simples** — Reutilizar fluxos de trabalho em prompts de agente
 
 ---
 
-## 4. Scope & Definitions
+## 3. Objetivos & Critérios de Sucesso
 
-### 4.1 What's Included
+### 3.1 Objetivos Primários
 
-**In Scope for MVP (Phase 1):**
-- Research workflow type definition
-- Sequential and conditional step execution
-- Result aggregation for multiple queries
-- Integration with existing Mastra workflow engine
-- Tool interface (backward compatible)
-- Error handling and retry logic
-- Basic step caching (avoid duplicate queries)
+1. **Permitir pesquisa baseada em fluxo de trabalho** — Criar abstração de Fluxo de Trabalho de Pesquisa
+   - Objetivo: Todos cenários de pesquisa complexa representáveis como fluxos de trabalho
+   - Sucesso: Suportar passos de pesquisa sequencial, condicional e paralelo
 
-**Out of Scope:**
-- Parallel step execution
-- Workflow UI designer
-- Advanced ranking algorithms
-- Real-time streaming
-- Versioning and rollback
-- Persistent workflow storage
-- Audit logging
-- Cost tracking
+2. **Manter compatibilidade com versões anteriores** — Chamadas de ferramenta existentes ainda funcionam
+   - Objetivo: Nenhuma alteração significativa ao código de agente
+   - Sucesso: `agent.generate()` com ferramenta de pesquisa funciona sem alterações
 
-### 4.3 Key Definitions
+3. **Fornecer primitivos específicos de pesquisa** — Nós de fluxo de trabalho otimizados para domínio
+   - Objetivo: Fluxos de trabalho de pesquisa parecem naturais de escrever/ler
+   - Sucesso: Nós integrados para query, filtro, agregação, rank
 
-| Term | Definition |
-| --- | --- |
-| **Research Workflow** | Deterministic, DAG-based sequence of research steps with conditional branching |
-| **Research Step** | Single unit of research: query, filter, aggregate, or custom logic |
-| **Research Result** | Structured output from a step (document list, insights, formatted text) |
-| **Result Cache** | Per-workflow deduplication to avoid redundant queries |
-| **Step State** | pending, in-progress, completed, failed, skipped |
+4. **Permitir orquestração de pesquisa** — Fluxos de pesquisa multi-passo complexos
+   - Objetivo: Usuários conseguem construir e reutilizar fluxos de trabalho de pesquisa
+   - Sucesso: Fluxos de trabalho pré-construídos para padrões comuns (análise de concorrente, dimensionamento de mercado, etc.)
+
+### 3.2 Critérios de Sucesso
+
+- Fluxos de trabalho definidos em código executam corretamente
+- Passos sequenciais se completam em ordem
+- Ramificação condicional funciona conforme esperado
+- Resultados se agregam sem duplicação
 
 ---
 
-## 5. Use Cases
+## 4. Escopo & Definições
 
-### 5.1 Competitor Analysis
-Chain queries: list competitors → get features/pricing → aggregate comparison.
+### 4.1 O Que Está Incluído
+- Definição de fluxo de trabalho de pesquisa em código
+- Passos sequenciais de query
+- Ramificação condicional baseada em resultados
+- Agregação e síntese de resultado
+- Integração com ferramentas de agente existentes
 
-### 5.2 Market Sizing
-Query primary estimates → if low confidence, query secondary sources → aggregate results.
-
-### 5.3 Multi-Step Research
-Sequential searches with conditional branching based on intermediate results.
-
----
-
-## 6. Feature Description & Functional Requirements
-
-### 6.1 Architecture Overview
-
-```
-Agent.generate(prompt)
-  ├─ Tools include: research(query)
-  │
-  └─ If prompt references workflow:
-      │
-      └─ Workflow Engine
-          ├─ Parse workflow definition
-          ├─ Initialize step state
-          ├─ For each step:
-          │  ├─ Check dependencies (conditional branching)
-          │  ├─ Execute step (invoke research or custom logic)
-          │  ├─ Store result with dedup key
-          │  ├─ Update step state
-          │  └─ Handle errors (retry or skip)
-          ├─ Aggregate final results
-          └─ Return composite result
-```
-
-### 6.2 Research Workflow Schema (TypeScript)
-
-```typescript
-// Core workflow definition
-type ResearchWorkflow = {
-  id: string;                          // Workflow identifier
-  name: string;                        // Human-readable name
-  description?: string;                // Purpose and use
-  version: string;                     // Semantic version
-  steps: ResearchStep[];               // Ordered steps
-  config?: WorkflowConfig;             // Runtime configuration
-};
-
-// Individual step
-type ResearchStep = {
-  id: string;                          // Step identifier (unique within workflow)
-  type: 'query' | 'filter' | 'aggregate' | 'custom';
-
-  // Query step: invoke research tool
-  ...(type: 'query') => {
-    query: string;                     // Research query (supports variable substitution: {step.id})
-    timeout?: number;                  // Max time to wait (ms)
-    retries?: number;                  // Auto-retry on failure
-  };
-
-  // Filter step: select/rank results from previous step
-  ...(type: 'filter') => {
-    sourceStep: string;                // Which step's results to filter
-    criteria: string;                  // Filtering logic (LLM instruction or predicate)
-    limit?: number;                    // Keep top N results
-  };
-
-  // Aggregate step: combine results from multiple steps
-  ...(type: 'aggregate') => {
-    sourceSteps: string[];             // Which steps to combine
-    format: 'list' | 'comparison' | 'summary' | 'structured';
-    template?: string;                 // Custom output format
-  };
-
-  // Custom step: arbitrary logic
-  ...(type: 'custom') => {
-    fn: (context: WorkflowContext) => Promise<any>;  // Custom handler
-  };
-
-  // Conditional execution
-  conditions?: WorkflowCondition[];     // If any false, skip this step
-
-  // Dependencies (implicit from sourceStep refs, or explicit)
-  dependsOn?: string[];                // Wait for these steps first
-};
-
-// Conditional logic
-type WorkflowCondition = {
-  step: string;                        // Which step's result to check
-  operator: 'equals' | 'contains' | 'greaterThan' | 'custom';
-  value: any;                          // Expected value
-  fn?: (result: any) => boolean;       // Custom predicate
-};
-
-// Execution context passed to steps
-type WorkflowContext = {
-  stepId: string;                      // Current step
-  workflowId: string;                  // Workflow being executed
-  results: Record<string, StepResult>; // All previous step results
-  config: WorkflowConfig;              // Workflow config
-  variables: Record<string, any>;      // User-provided variables
-};
-
-// Result of a single step
-type StepResult = {
-  stepId: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'failed' | 'skipped';
-  output: any;                         // Raw step output
-  dedupKey?: string;                   // Hash for caching
-  duration: number;                    // Execution time (ms)
-  error?: string;                      // If failed
-  retryCount: number;                  // How many retries attempted
-};
-
-// Workflow execution result
-type WorkflowResult = {
-  workflowId: string;
-  status: 'completed' | 'failed';
-  steps: Map<string, StepResult>;      // All step results
-  finalResult: any;                    // Output of last step
-  duration: number;                    // Total execution time
-};
-
-// Runtime configuration
-type WorkflowConfig = {
-  timeout?: number;                    // Total workflow time budget (ms)
-  maxRetries?: number;                 // Default retries per step
-};
-```
-
-### 6.3 Core Features
-
-1. **Workflow Definition** — Define workflows in TypeScript with typed steps
-2. **Sequential Execution** — Steps execute in order
-3. **Conditional Branching** — Skip steps based on previous results
-4. **Result Aggregation** — Combine results into final output
-5. **Error Handling** — Retry failed steps
-6. **Timeouts** — Prevent runaway workflows
+### 4.2 O Que Está Excluído
+- UI de criador de fluxo de trabalho
+- Persistência de histórico de execução
+- Pontos de controle de execução
 
 ---
 
-## 7. Implementation
+## 5. Critérios de Sucesso
 
-### 7.1 File Structure
-
-```
-packages/mastra-engine/src/workflows/research/
-├─ definition.ts       — Define and validate workflows
-├─ engine.ts           — Execute workflows
-├─ steps.ts            — Step executors (query, filter, aggregate)
-├─ cache.ts            — Result deduplication
-└─ types.ts            — TypeScript types
-```
-
-### 7.2 Key Classes
-
-- **ResearchWorkflow** — Workflow definition
-- **WorkflowEngine** — Executes workflows
-- **StepExecutor** — Handles individual step logic
-- **ResultCache** — In-memory dedup cache
-
-### 7.2 Execution Flow
-
-Simple sequential execution:
-1. Validate workflow definition
-2. For each step in order:
-   - Check if conditions pass
-   - Skip if condition fails
-   - Execute step (query research, filter, or aggregate)
-   - Handle errors with retries
-3. Return final aggregated result
+- [ ] Fluxos de trabalho de pesquisa executam end-to-end
+- [ ] Resultados são agregados corretamente
+- [ ] Fluxos de trabalho são reutilizáveis
+- [ ] Compatibilidade com versões anteriores mantida
 
 ---
 
-## 8. API Examples
+## 6. Dependências
 
-```typescript
-// Execute a workflow
-const result = await executeResearchWorkflow(marketSizingWorkflow, {
-  market: 'SaaS',
-});
-
-// Access results
-console.log(result.finalResult);  // Aggregated output
-console.log(result.duration);     // Execution time
-```
+- Framework Mastra (PRD-02)
+- Ferramenta de pesquisa existente
+- Sistema de fluxo de trabalho de agente
 
 ---
 
-## 9. Timeline
+## 7. Timeline
 
-- **Week 1-2**: Implement workflow definition and engine
-- **Week 2-3**: Add step executors (query, filter, aggregate) and caching
-- **Week 3-4**: Integrate with agent, add tests and documentation
+- **Semana 1-2**: Implementação de fluxo de trabalho de pesquisa
+- **Semana 3**: Testes e documentação
+
+Total: ~20 horas para desenvolvedor solo
 
 ---
 
-**Document Version:** 0.1 (Simplified)
-**Last Updated:** 2026-03-15
+**Histórico do Documento:**
+- v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo

@@ -1,80 +1,80 @@
-# PRD-32: Marketing Artifact Generation Tools
+# PRD-20: Ferramentas de Geração de Artefato de Marketing
 
-**Status:** Planning
-**Date:** 2026-03-15
-**Version:** 1.0
-
----
-
-## Personal Project Note
-
-This is a personal development project. Features follow KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles. Scope focuses on core functionality for a solo developer workflow.
+**Status:** Planejamento
+**Data:** 2026-03-15
+**Versão:** 1.0
 
 ---
 
-## 1. Overview
+## Nota de Projeto Pessoal
 
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes content generation infrastructure specific to ad-product-forge.** Marketing artifact generation enables Nicolas' agents to autonomously create visual and audio content for marketing campaigns. This is application-specific marketing tooling, not framework infrastructure.
-
-**Goal:** Provide tools for agents to generate marketing artifacts (images, audio) programmatically using external services.
-
-**Why (for ad-product-forge):** Nicolas' marketing agents should be able to create visual and audio content without manual intervention. Enables autonomous marketing campaign execution.
-
-**Priority:** Medium
-**Timeline:** 2-3 weeks
+Este é um projeto de desenvolvimento pessoal. Recursos seguem princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It). Escopo foca em funcionalidade core para fluxo de trabalho de desenvolvedor solo.
 
 ---
 
-## 2. Problem
+## 1. Visão Geral
 
-- Agents can only work with text content
-- No way to generate images programmatically
-- No audio synthesis or transcription capabilities
-- Cannot manage and track generated assets
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
----
+**Este PRD descreve infraestrutura de geração de conteúdo específica do ad-product-forge.** A geração de artefato de marketing permite que agentes de Nicolas criem autonomamente conteúdo visual e de áudio para campanhas de marketing. Esta é tooling de marketing específica da aplicação, não infraestrutura de framework.
 
-## 3. Use Cases
+**Objetivo:** Fornecer ferramentas para agentes gerarem artefatos de marketing (imagens, áudio) programaticamente usando serviços externos.
 
-1. **Agent generates marketing images:** Agent creates product images for listing
-2. **Agent synthesizes narration:** Agent converts written content to audio
-3. **Agent transcribes audio:** Agent converts audio to text for processing
-4. **Agent tracks artifacts:** Agent queries previously generated assets to avoid duplication
+**Por que (para ad-product-forge):** Agentes de marketing de Nicolas devem conseguir criar conteúdo visual e de áudio sem intervenção manual. Permite execução autônoma de campanha de marketing.
+
+**Prioridade:** Média
+**Timeline:** 2-3 semanas
 
 ---
 
-## 4. Requirements
+## 2. Problema
 
-### Core Features
+- Agentes conseguem apenas trabalhar com conteúdo de texto
+- Nenhuma forma de gerar imagens programaticamente
+- Nenhuma síntese de áudio ou capacidades de transcrição
+- Não conseguem gerenciar e rastrear ativos gerados
 
-**FR1: Image Generation**
-- Generate images from text prompts using external service (e.g., Nanobanana)
-- Specify: prompt, style, resolution, format
-- Return: image URL, metadata (size, resolution)
-- Cache results to avoid regenerating same prompt
+---
+
+## 3. Casos de Uso
+
+1. **Agente gera imagens de marketing:** Agente cria imagens de produto para listagem
+2. **Agente sintetiza narração:** Agente converte conteúdo escrito em áudio
+3. **Agente transcreve áudio:** Agente converte áudio em texto para processamento
+4. **Agente rastreia artefatos:** Agente consulta ativos gerados anteriormente para evitar duplicação
+
+---
+
+## 4. Requisitos
+
+### Características Core
+
+**FR1: Geração de Imagem**
+- Gerar imagens de prompts de texto usando serviço externo (ex: Nanobanana)
+- Especificar: prompt, estilo, resolução, formato
+- Retornar: URL de imagem, metadados (tamanho, resolução)
+- Cache de resultados para evitar regeneração de mesmo prompt
 
 **FR2: Text-to-Speech (TTS)**
-- Convert text to audio using external service
-- Specify: text, voice type, language, speed
-- Return: audio URL, duration
-- Support multiple voice options
-- Cache results to avoid regenerating same text
+- Converter texto em áudio usando serviço externo
+- Especificar: texto, tipo de voz, idioma, velocidade
+- Retornar: URL de áudio, duração
+- Suportar múltiplas opções de voz
+- Cache de resultados para evitar regeneração de mesmo texto
 
 **FR3: Speech-to-Text (STT)**
-- Transcribe audio files using external service
-- Specify: audio URL, language
-- Return: transcribed text, confidence score
-- Support batch transcription with concurrency limits
+- Transcrever arquivos de áudio usando serviço externo
+- Especificar: URL de áudio, idioma
+- Retornar: texto transcrito, score de confiança
+- Suportar transcrição em lote com limites de concorrência
 
-**FR4: Artifact Storage & Tracking**
-- Store artifact metadata in database (type, URL, source, agent ID, created timestamp)
-- Query artifacts by agent and type
-- Delete artifacts
-- Simple caching to prevent duplicate generation
+**FR4: Armazenamento & Rastreamento de Artefato**
+- Armazenar metadados de artefato em banco de dados (tipo, URL, fonte, ID de agente, timestamp de criação)
+- Consultar artefatos por agente e tipo
+- Deletar artefatos
+- Cache simples para prevenir geração duplicada
 
-### Agent-Facing Tools
+### Ferramentas Voltadas para Agente
 
 ```typescript
 generateImage(prompt: string, options?: {style, resolution}): Promise<{url, metadata}>
@@ -86,120 +86,120 @@ deleteArtifact(artifactId: string): Promise<void>
 
 ---
 
-## 5. Success Criteria
+## 5. Critérios de Sucesso
 
-- Agents can generate images and audio without manual steps
-- Image generation completes in <30 seconds
-- Audio synthesis completes in <10 seconds
-- Caching prevents duplicate API calls for identical requests
-- All artifacts are tracked in database with proper metadata
-- Agents cannot access artifacts from other agents (isolation)
+- Agentes conseguem gerar imagens e áudio sem passos manuais
+- Geração de imagem se completa em <30 segundos
+- Síntese de áudio se completa em <10 segundos
+- Cache previne chamadas de API duplicadas para requisições idênticas
+- Todos artefatos são rastreados em banco de dados com metadados apropriados
+- Agentes não conseguem acessar artefatos de outros agentes (isolamento)
 
 ---
 
-## 6. Non-Functional Requirements
+## 6. Requisitos Não-Funcionais
 
 **Performance:**
-- Image generation: <30 seconds
-- Audio synthesis: <10 seconds
-- Artifact lookup: fast enough for one developer
+- Geração de imagem: <30 segundos
+- Síntese de áudio: <10 segundos
+- Lookup de artefato: rápido o suficiente para um desenvolvedor
 
-**Reliability:**
-- Failed API calls don't crash agent
-- Basic retry logic for transient failures
-- Clear error messages
+**Confiabilidade:**
+- Chamadas de API falhadas não crasheam agente
+- Lógica de retry básica para falhas transitórias
+- Mensagens de erro claras
 
-**Security:**
-- API credentials stored in environment variables
-- No credential leakage in logs
-
----
-
-## 7. Scope
-
-### In Scope
-- Image generation via external API
-- Text-to-speech synthesis
-- Speech-to-text transcription
-- Artifact metadata storage
-- Simple caching to prevent duplicate generation
-
-### Out of Scope
-- Video generation or hosting
-- Advanced image editing
-- Custom voice training
-- Real-time streaming
-- Cost tracking/billing
-- Advanced analytics
+**Segurança:**
+- Credenciais de API armazenadas em variáveis de ambiente
+- Nenhuma vazão de credencial em logs
 
 ---
 
-## 8. Technical Approach
+## 7. Escopo
 
-### Database Schema
+### Incluído
+- Geração de imagem via API externa
+- Síntese text-to-speech
+- Transcrição speech-to-text
+- Armazenamento de metadados de artefato
+- Cache simples para prevenir geração duplicada
+
+### Não Incluído
+- Geração ou hosting de vídeo
+- Edição avançada de imagem
+- Treinamento de voz customizado
+- Streaming em tempo real
+- Rastreamento de custo/billing
+- Analytics avançado
+
+---
+
+## 8. Abordagem Técnica
+
+### Schema do Banco de Dados
 
 **`forge_artifacts` table:**
 ```
-- artifact_id (UUID, primary key)
+- artifact_id (UUID, chave primária)
 - agent_id (UUID)
 - type (ENUM: image, audio)
 - source (ENUM: nanobanana, tts, stt)
-- url (VARCHAR) -- public access URL
-- prompt (TEXT, nullable) -- for images
-- input_text (TEXT, nullable) -- for TTS
-- metadata (JSON) -- size, duration, resolution
+- url (VARCHAR) -- URL de acesso público
+- prompt (TEXT, nullable) -- para imagens
+- input_text (TEXT, nullable) -- para TTS
+- metadata (JSON) -- tamanho, duração, resolução
 - created_at (TIMESTAMP)
 ```
 
-### Implementation Phases
+### Fases de Implementação
 
-**Phase 1: Core Implementation (2-3 weeks)**
-1. Set up external service integrations
-2. Implement image generation tool
-3. Implement TTS integration
-4. Implement STT integration
-5. Build artifact storage layer
-6. Error handling and logging
-7. Basic testing
-
----
-
-## 9. External Services
-
-- **Image Generation:** Nanobanana API (or alternative)
-- **Text-to-Speech:** ElevenLabs, Google Cloud TTS, or AWS Polly
-- **Speech-to-Text:** OpenAI Whisper, Google Cloud STT, or AWS Transcribe
-
-All credentials stored in environment variables and encrypted in database.
+**Fase 1: Implementação Core (2-3 semanas)**
+1. Configurar integrações de serviço externo
+2. Implementar ferramenta de geração de imagem
+3. Implementar integração de TTS
+4. Implementar integração de STT
+5. Construir camada de armazenamento de artefato
+6. Tratamento de erro e logging
+7. Testes básicos
 
 ---
 
-## 10. Risks & Mitigation
+## 9. Serviços Externos
 
-| Risk | Mitigation |
+- **Geração de Imagem:** API Nanobanana (ou alternativa)
+- **Text-to-Speech:** ElevenLabs, Google Cloud TTS, ou AWS Polly
+- **Speech-to-Text:** OpenAI Whisper, Google Cloud STT, ou AWS Transcribe
+
+Todas credenciais armazenadas em variáveis de ambiente e criptografadas em banco de dados.
+
+---
+
+## 10. Riscos & Mitigação
+
+| Risco | Mitigação |
 |------|-----------|
-| External API downtime | Graceful error handling, clear error messages |
-| Failed generation | Retry logic, fallback to error response |
-| API quota exceeded | Monitor usage, adjust as needed |
+| Downtime de API externa | Tratamento gracioso de erro, mensagens de erro claras |
+| Geração falhada | Lógica de retry, fallback para resposta de erro |
+| Quota de API excedida | Monitorar uso, ajustar conforme necessário |
 
 ---
 
-## 11. Testing Strategy
+## 11. Estratégia de Teste
 
-- **Unit Tests:** Basic functionality, validation
-- **Integration Tests:** End-to-end generation, storage, retrieval
-- **Error Handling:** API failures, invalid input
+- **Testes Unitários:** Funcionalidade básica, validação
+- **Testes de Integração:** Geração end-to-end, armazenamento, recuperação
+- **Tratamento de Erro:** Falhas de API, input inválido
 
 ---
 
-## Glossary
+## Glossário
 
-| Term | Definition |
+| Termo | Definição |
 |------|-----------|
-| Artifact | Generated media (image, audio) with metadata |
-| Source | External service that generated the artifact |
-| Prompt | Text description for image generation |
+| Artefato | Mídia gerada (imagem, áudio) com metadados |
+| Fonte | Serviço externo que gerou o artefato |
+| Prompt | Descrição de texto para geração de imagem |
 
 ---
 
-**Next Steps:** Begin Phase 1 implementation
+**Próximos Passos:** Começar implementação da Fase 1

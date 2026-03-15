@@ -1,45 +1,45 @@
-# PRD — Web Application Templates
+# PRD-32: Templates de Aplicação Web
 
-**Status:** Planning - Technical Design
-**Date:** 2026-03-15
-**Scope:** Personal developer project - KISS & YAGNI principles
-
----
-
-## Executive Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes code generation infrastructure specific to ad-product-forge.** Application templates enable Nicolas' development agents to autonomously scaffold new products at speed. This is application-specific developer tooling, not framework infrastructure.
-
-Provide pre-built application templates so agents can rapidly scaffold production-ready applications with standard patterns for authentication, database, and deployment.
-
-**Core Goal (for ad-product-forge):** Agents can generate a complete web application in seconds instead of building from scratch. Enables rapid autonomous product development.
+**Status:** Planejamento - Design Técnico
+**Data:** 2026-03-15
+**Escopo:** Projeto pessoal de desenvolvedor - Princípios KISS & YAGNI
 
 ---
 
-## Problem Statement
+## Resumo Executivo
 
-Currently, agents starting new applications must:
-- Set up authentication manually
-- Configure database connections
-- Create boilerplate code
-- Set up error handling, logging, deployment
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-This is time-consuming and repetitive.
+**Este PRD descreve infraestrutura de geração de código específica do ad-product-forge.** Templates de aplicação permitir que agentes de desenvolvimento de Nicolas façam scaffold de novos produtos em velocidade. Isto é tooling de desenvolvedor específica da aplicação, não infraestrutura de framework.
 
-**Target Scenarios:**
-1. Agent runs: `scaffold create-app --template rest-api --name my-api`
-2. Agent gets ready-to-customize REST API with auth and database
-3. Agent can deploy immediately
+Fornecer templates de aplicação pré-construídos para que agentes façam scaffold rapidamente de aplicações production-ready com padrões padrão para autenticação, banco de dados e deployment.
+
+**Objetivo Principal (para ad-product-forge):** Agentes conseguem gerar uma aplicação web completa em segundos em vez de construir do zero. Permite desenvolvimento de produto autônomo rápido.
 
 ---
 
-## Key Features
+## Declaração do Problema
 
-### 1. Template Management
+Atualmente, agentes começando novas aplicações devem:
+- Configurar autenticação manualmente
+- Configurar conexões de banco de dados
+- Criar código boilerplate
+- Configurar tratamento de erro, logging, deployment
+
+Isto é consumidor de tempo e repetitivo.
+
+**Cenários Alvo:**
+1. Agente executa: `scaffold create-app --template rest-api --name my-api`
+2. Agente obtém REST API pronto-para-customizar com auth e banco de dados
+3. Agente consegue fazer deploy imediatamente
+
+---
+
+## Características Principais
+
+### 1. Gerenciamento de Template
 ```typescript
-// List available templates
+// Listar templates disponíveis
 listTemplates(): Promise<Array<{
   templateId: string;
   name: string;
@@ -48,7 +48,7 @@ listTemplates(): Promise<Array<{
   language: string;
 }>>;
 
-// Create application from template
+// Criar aplicação de template
 createApplication(input: {
   templateId: string;
   appName: string;
@@ -60,49 +60,49 @@ createApplication(input: {
 }>;
 ```
 
-### 2. CLI Interface
+### 2. Interface de CLI
 ```bash
-# List templates
+# Listar templates
 agent-scaffold list
 
-# Create new app
+# Criar nova app
 agent-scaffold create-app \
   --template rest-api \
   --name my-api \
   --output ./apps/my-api
 
-# Customize template
+# Customizar template
 agent-scaffold configure --app-path ./apps/my-api
 ```
 
 ---
 
-## Core Templates
+## Templates Core
 
-### Template 1: REST API Backend
+### Template 1: Backend de REST API
 - **Stack:** Node.js/Express, TypeScript, SQLite
-- **Includes:**
-  - Basic CRUD routes
-  - Database schema setup
-  - Error handling
-  - .env template
+- **Inclui:**
+  - Rotas CRUD básicas
+  - Setup de schema de banco de dados
+  - Tratamento de erro
+  - Template .env
 
-### Template 2: Full-Stack Web Application
+### Template 2: Aplicação Web Full-Stack
 - **Stack:** React, Node.js, SQLite, TypeScript
-- **Includes:**
-  - Basic login/signup
-  - User dashboard
-  - Backend API
-  - Responsive design (Tailwind)
+- **Inclui:**
+  - Login/signup básico
+  - Dashboard de usuário
+  - API de backend
+  - Design responsivo (Tailwind)
 
 ---
 
-## Template Structure
+## Estrutura de Template
 
 ```
 templates/
 ├── rest-api-backend/
-│  ├── template.yml          # Metadata
+│  ├── template.yml          # Metadados
 │  ├── src/
 │  │  ├── config/
 │  │  ├── routes/
@@ -120,40 +120,44 @@ templates/
 
 ---
 
-## Implementation
+## Implementação
 
-### Phase 1: Foundation (2 weeks)
-- [ ] Template engine and CLI
-- [ ] REST API Backend template
-- [ ] Full-Stack Web template
-- [ ] Basic documentation
+### Fase 1: Foundation (2 semanas)
+- [ ] Motor de template e CLI
+- [ ] Template de Backend de REST API
+- [ ] Template de Web Full-Stack
+- [ ] Documentação básica
 
-### Phase 2: Enhancement (Future)
-- [ ] Template customization wizard
-- [ ] Additional templates
-
----
-
-## Success Criteria
-
-- [ ] Agent can list templates
-- [ ] Agent can generate application in < 10 seconds
-- [ ] Generated app is runnable without modifications
-- [ ] Templates are well-documented
-- [ ] Setup instructions are clear
+### Fase 2: Aprimoramento (Futuro)
+- [ ] Wizard de customização de template
+- [ ] Templates adicionais
 
 ---
 
-## Risks
+## Critérios de Sucesso
 
-- Templates may become outdated as frameworks evolve
-- Generated code should follow best practices
-- Security must be embedded in templates
+- [ ] Agente consegue listar templates
+- [ ] Agente consegue gerar aplicação em < 10 segundos
+- [ ] Aplicação gerada é executável sem modificações
+- [ ] Templates são bem documentados
+- [ ] Instruções de setup são claras
 
 ---
 
-## Future Enhancements
+## Riscos
 
-- Admin dashboard template
-- GraphQL API template
-- Custom template creation framework
+- Templates podem ficar obsoletos conforme frameworks evoluem
+- Código gerado deve seguir melhores práticas
+- Segurança deve ser embutida em templates
+
+---
+
+## Aprimoramentos Futuros
+
+- Template de dashboard de admin
+- Template de API GraphQL
+- Framework de criação de template customizado
+
+---
+
+**Fim do documento**

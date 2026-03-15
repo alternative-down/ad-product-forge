@@ -1,57 +1,57 @@
-# PRD-27: Knowledge Base System
+# PRD-19: Sistema de Base de Conhecimento
 
-**Status:** Planning - Technical Design
-**Date:** 2026-03-15
-**Scope:** Personal developer project - KISS & YAGNI principles
-
----
-
-## Executive Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes knowledge management infrastructure specific to ad-product-forge.** Knowledge base enables Nicolas' agents to build institutional memory and search by meaning. This is application-specific, not framework infrastructure.
-
-Implement a simple knowledge base that allows agents to store and retrieve documents using semantic search (embeddings-based).
-
-**Core Goal (for ad-product-forge):** Agents can store text documents and search for relevant content by meaning, not just keywords. Enables research agents to build knowledge over time.
+**Status:** Planejamento - Design Técnico
+**Data:** 2026-03-15
+**Escopo:** Projeto pessoal de desenvolvedor - Princípios KISS & YAGNI
 
 ---
 
-## Problem Statement
+## Resumo Executivo
 
-Currently, agents cannot:
-- Store and retrieve documents across conversations
-- Search for knowledge by meaning (semantic search)
-- Organize information for reuse
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**Target Scenarios:**
-1. Agent stores customer best practices and finds them later via semantic search
-2. Agent uploads product documentation and retrieves relevant sections
-3. Agent builds institutional knowledge that persists across conversations
+**Este PRD descreve infraestrutura de gerenciamento de conhecimento específica do ad-product-forge.** A base de conhecimento permite que agentes de Nicolas construam memória institucional e pesquisem por significado. Isto é específico da aplicação, não infraestrutura de framework.
+
+Implementar uma base de conhecimento simples que permita agentes armazenar e recuperar documentos usando busca semântica (baseada em embeddings).
+
+**Objetivo Principal (para ad-product-forge):** Agentes conseguem armazenar documentos de texto e buscar conteúdo relevante por significado, não apenas keywords. Permite agentes de pesquisa construir conhecimento ao longo do tempo.
 
 ---
 
-## Key Features
+## Declaração do Problema
 
-### 1. Document Storage
-- Store documents with title and content
-- Support text content (markdown, plain text)
+Atualmente, agentes não conseguem:
+- Armazenar e recuperar documentos entre conversas
+- Buscar conhecimento por significado (busca semântica)
+- Organizar informação para reutilização
 
-### 2. Semantic Search
-- Convert documents to embeddings using Mastra
-- Find documents by similarity to query
-- Return ranked results by relevance
+**Cenários Alvo:**
+1. Agente armazena melhores práticas de cliente e as encontra depois via busca semântica
+2. Agente faz upload de documentação de produto e recupera seções relevantes
+3. Agente constrói conhecimento institucional que persiste entre conversas
 
-### 3. Knowledge Management API
+---
+
+## Características Principais
+
+### 1. Armazenamento de Documento
+- Armazenar documentos com título e conteúdo
+- Suportar conteúdo de texto (markdown, texto simples)
+
+### 2. Busca Semântica
+- Converter documentos para embeddings usando Mastra
+- Encontrar documentos por similaridade com consulta
+- Retornar resultados classificados por relevância
+
+### 3. API de Gerenciamento de Conhecimento
 ```typescript
-// Store document
+// Armazenar documento
 storeDocument(input: {
   title: string;
   content: string;
 }): Promise<{ documentId: string; }>;
 
-// Search documents
+// Buscar documentos
 searchDocuments(query: string, limit?: number): Promise<Array<{
   documentId: string;
   title: string;
@@ -59,57 +59,57 @@ searchDocuments(query: string, limit?: number): Promise<Array<{
   similarity: number;
 }>>;
 
-// Delete document
+// Deletar documento
 deleteDocument(documentId: string): Promise<{ success: boolean; }>;
 ```
 
 ---
 
-## Database Schema
+## Schema do Banco de Dados
 
 **knowledge_base_documents**
 ```
 - documentId (TEXT, PRIMARY KEY)
 - title (TEXT, NOT NULL)
 - content (TEXT, NOT NULL)
-- embedding (BLOB)  -- stored embeddings
+- embedding (BLOB)  -- embeddings armazenados
 - createdAt (TEXT, NOT NULL)
 ```
 
 ---
 
-## Implementation
+## Implementação
 
-### Phase 1: Core (2 weeks)
-- [ ] Document storage and retrieval
-- [ ] Embedding generation using Mastra
-- [ ] Basic semantic search
-- [ ] Agent API integration
+### Fase 1: Core (2 semanas)
+- [ ] Armazenamento e recuperação de documento
+- [ ] Geração de embedding usando Mastra
+- [ ] Busca semântica básica
+- [ ] Integração com API de agente
 
-### Phase 2: Enhancement (Future)
-- [ ] Full-text search (BM25)
-- [ ] Hybrid search (semantic + keyword)
-
----
-
-## Success Criteria
-
-- [ ] Agent can store documents
-- [ ] Agent can search and retrieve relevant documents by meaning
-- [ ] Embeddings are generated and stored
-- [ ] API is accessible from agent tools
+### Fase 2: Aprimoramento (Futuro)
+- [ ] Busca de texto completo (BM25)
+- [ ] Busca híbrida (semântica + keyword)
 
 ---
 
-## Risks
+## Critérios de Sucesso
 
-- Embedding quality depends on Mastra service
-- Large documents may be slow to embed
-- Vector storage in SQLite may not scale (can migrate to vector DB later)
+- [ ] Agente consegue armazenar documentos
+- [ ] Agente consegue buscar e recuperar documentos relevantes por significado
+- [ ] Embeddings são gerados e armazenados
+- [ ] API é acessível de ferramentas de agente
 
 ---
 
-## Future Enhancements
+## Riscos
 
-- Hybrid search (BM25 + semantic)
-- Bulk import from files
+- Qualidade de embedding depende de serviço Mastra
+- Documentos grandes podem ser lentos para embeddings
+- Armazenamento de vetor em SQLite pode não escalar (consegue migrar para DB de vetor depois)
+
+---
+
+## Aprimoramentos Futuros
+
+- Busca híbrida (BM25 + semântica)
+- Importação em massa de arquivos

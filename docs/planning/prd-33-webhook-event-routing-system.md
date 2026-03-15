@@ -1,62 +1,64 @@
-# PRD-12: Webhook & Event Routing System
+# PRD-33: Sistema de Roteamento de Evento & Webhook
 
-**Status:** Planning
+**Status:** Planejamento
 
-**Note:** This is a personal project from a solo developer. Built with KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles in mind.
-
-## Overview
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes integration infrastructure specific to ad-product-forge.** Webhook routing enables Nicolas' agents to respond to external system events (GitHub pushes, payment notifications, deployment completions, etc.). While webhook patterns are general, this specific implementation is application-specific.
-
-Simple webhook endpoint for external systems to trigger agent actions. Agents receive webhook events via internal messages.
-
-**Core behavior:** HTTP POST → validate signature → queue event → wake agent → agent processes event.
-
-**Application Use Cases:**
-- GitHub webhooks trigger development agents
-- Payment system webhooks trigger billing agents
-- Deployment webhooks notify operations agents
-- Ad platform webhooks feed signals to research agents
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
-## Core Concepts
+## Visão Geral
 
-### 1. Webhook Route
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-An HTTP endpoint that receives events from external systems.
+**Este PRD descreve infraestrutura de integração específica do ad-product-forge.** Roteamento de webhook permite que agentes de Nicolas respondam a eventos de sistema externo (pushes GitHub, notificações de pagamento, conclusões de deployment, etc.). Enquanto padrões de webhook sejam gerais, esta implementação específica é específica da aplicação.
+
+Endpoint simples de webhook para sistemas externos dispararem ações de agente. Agentes recebem eventos de webhook via mensagens internas.
+
+**Comportamento Core:** HTTP POST → validar assinatura → enfileirar evento → acordar agente → agente processa evento.
+
+**Casos de Uso de Aplicação:**
+- Webhooks GitHub disparam agentes de desenvolvimento
+- Webhooks de sistema de pagamento disparam agentes de billing
+- Webhooks de deployment notificam agentes de operações
+- Webhooks de plataforma de ad alimentam sinais para agentes de pesquisa
+
+---
+
+## Conceitos Core
+
+### 1. Rota de Webhook
+
+Um endpoint HTTP que recebe eventos de sistemas externos.
 
 ```typescript
 {
   routeId: string;              // UUID
-  agentId: string;              // Agent that owns this route
-  pathPattern: string;          // URL path (e.g., "/webhook/my-route")
-  secret?: string;              // HMAC secret for signature verification
-  isActive: boolean;            // Accept events?
+  agentId: string;              // Agente que possui esta rota
+  pathPattern: string;          // Caminho URL (ex: "/webhook/my-route")
+  secret?: string;              // Segredo HMAC para verificação de assinatura
+  isActive: boolean;            // Aceitar eventos?
   createdAt: string;
 }
 ```
 
-### 2. Webhook Event
+### 2. Evento de Webhook
 
-Raw HTTP payload received from external system.
+Payload HTTP bruto recebido de sistema externo.
 
 ```typescript
 {
   eventId: string;              // UUID
-  routeId: string;              // Which route received this
-  agentId: string;              // Agent that owns the route
-  payload: Record<string, unknown>;  // Raw JSON payload
-  receivedAt: string;           // When received
-  isProcessed: boolean;         // Agent processed it?
+  routeId: string;              // Qual rota recebeu isto
+  agentId: string;              // Agente que possui a rota
+  payload: Record<string, unknown>;  // Payload JSON bruto
+  receivedAt: string;           // Quando recebido
+  isProcessed: boolean;         // Agente processou?
 }
 ```
 
-### 3. Event Storage
+### 3. Armazenamento de Evento
 
-Events stored per agent, simple in-memory queue.
+Eventos armazenados por agente, fila em memória simples.
 
 ```typescript
 {
@@ -69,42 +71,42 @@ Events stored per agent, simple in-memory queue.
 }
 ```
 
-### 4. Event Routing
+### 4. Roteamento de Evento
 
-Simple flow:
-1. HTTP POST to `/webhook/{routeId}`
-2. Verify signature if secret configured
-3. Create event record
-4. Queue event → wake agent
-5. Return 202 Accepted immediately
-6. Agent processes later
+Fluxo simples:
+1. HTTP POST para `/webhook/{routeId}`
+2. Verificar assinatura se segredo configurado
+3. Criar registro de evento
+4. Enfileirar evento → acordar agente
+5. Retornar 202 Accepted imediatamente
+6. Agente processa depois
 
 ---
 
-## Implementation
+## Implementação
 
-### HTTP Server
+### Servidor HTTP
 
-Simple HTTP server that accepts POST requests:
-- Port: 3001 (configurable via env var)
-- Base path: `/webhook`
+Servidor HTTP simples que aceita requisições POST:
+- Porta: 3001 (configurável via var env)
+- Caminho base: `/webhook`
 - Endpoint: `POST /webhook/{routeId}`
 
-### Response Codes
+### Códigos de Resposta
 
-- `202 Accepted` — Event received
-- `400 Bad Request` — Invalid payload
-- `401 Unauthorized` — Signature verification failed
-- `404 Not Found` — Route doesn't exist
+- `202 Accepted` — Evento recebido
+- `400 Bad Request` — Payload inválido
+- `401 Unauthorized` — Verificação de assinatura falhada
+- `404 Not Found` — Rota não existe
 
 ---
 
-## Agent Tools
+## Ferramentas de Agente
 
-Simple tools for agents to work with webhooks:
+Ferramentas simples para agentes trabalharem com webhooks:
 
 ```typescript
-// Create a webhook route
+// Criar uma rota de webhook
 createWebhookRoute(input: {
   name: string;
 }): Promise<{
@@ -113,25 +115,25 @@ createWebhookRoute(input: {
   secret: string;
 }>
 
-// List webhook events for this agent
+// Listar eventos de webhook para este agente
 listQueuedEvents(): Promise<Array<{
   eventId: string;
   payload: Record<string, unknown>;
   receivedAt: string;
 }>>
 
-// Mark event as processed
+// Marcar evento como processado
 processWebhookEvent(eventId: string): Promise<{ success: boolean }>
 
-// Delete a webhook route
+// Deletar uma rota de webhook
 deleteWebhookRoute(routeId: string): Promise<{ success: boolean }>
 ```
 
 ---
 
-## Storage
+## Armazenamento
 
-2 simple tables:
+2 tabelas simples:
 
 - `webhook_routes` — route_id, agent_id, path_pattern, secret
 - `webhook_events` — event_id, route_id, agent_id, payload, received_at, is_processed
@@ -140,5 +142,9 @@ deleteWebhookRoute(routeId: string): Promise<{ success: boolean }>
 
 ## Timeline
 
-- **Week 1**: HTTP server + route/event storage + agent tools
-- **Week 2**: Wake integration + tests
+- **Semana 1**: Servidor HTTP + armazenamento de rota/evento + ferramentas de agente
+- **Semana 2**: Integração de wake + testes
+
+---
+
+**Fim do documento**

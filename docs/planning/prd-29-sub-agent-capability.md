@@ -1,93 +1,93 @@
-# PRD-34: Sub-Agent Capability
+# PRD-29: Capacidade de Sub-Agente
 
-**Status:** Exploratory
-**Date:** 2026-03-15
-**Version:** 1.0
-
----
-
-## Personal Project Note
-
-This is a personal development project. Features follow KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles. Scope focuses on core functionality for a solo developer workflow.
+**Status:** Exploratório
+**Data:** 2026-03-15
+**Versão:** 1.0
 
 ---
 
-## 1. Overview
+## Nota de Projeto Pessoal
 
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes cost optimization infrastructure specific to ad-product-forge.** Sub-agent capability enables Nicolas to reduce operational costs by delegating simple tasks to cheaper models. This is application-specific optimization, not framework infrastructure.
-
-**Goal:** Allow agents to delegate simple tasks to cheaper sub-agents (Haiku) for cost reduction.
-
-**Why (for ad-product-forge):** Optimize cost by using cheaper models for simple tasks while keeping primary agent (Opus) for complex reasoning. Essential for Nicolas' autonomous platform profitability as it scales.
-
-**Priority:** Low (optional exploration)
-**Status:** Requires feasibility evaluation before implementation
+Este é um projeto de desenvolvimento pessoal. Recursos seguem princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It). Escopo foca em funcionalidade core para fluxo de trabalho de desenvolvedor solo.
 
 ---
 
-## 2. Problem
+## 1. Visão Geral
 
-- All tasks run on expensive Opus model regardless of complexity
-- Simple tasks (data gathering, formatting) waste expensive token budget
-- Parallelizable work executes sequentially
-- No cost-awareness in agent workflows
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
----
+**Este PRD descreve infraestrutura de otimização de custo específica do ad-product-forge.** Capacidade de sub-agente permite que Nicolas reduza custos operacionais delegando tarefas simples a modelos mais baratos. Esta é otimização específica da aplicação, não infraestrutura de framework.
 
-## 3. Key Concept
+**Objetivo:** Permitir que agentes deleguem tarefas simples a sub-agentes mais baratos (Haiku) para redução de custo.
 
-**Sub-Agent:** Temporary agent spawned by primary agent for simple tasks.
+**Por que (para ad-product-forge):** Otimizar custo usando modelos mais baratos para tarefas simples enquanto mantém agente primário (Opus) para raciocínio complexo. Essencial para lucratividade da plataforma autônoma de Nicolas conforme escala.
 
-- **Lifecycle:** Created on-demand, runs task, terminates
-- **Model:** Haiku (3-5x cheaper than Opus)
-- **Scope:** Single, simple task
-- **Communication:** Synchronous request-response
+**Prioridade:** Baixa (exploração opcional)
+**Status:** Requer avaliação de viabilidade antes de implementação
 
 ---
 
-## 4. Use Cases
+## 2. Problema
 
-1. **Batch Document Analysis:** Primary agent spawns 10 Haiku sub-agents to analyze 10 documents in parallel, then synthesizes results
-2. **Data Gathering:** Primary agent spawns 3 sub-agents to fetch data from different sources simultaneously
-3. **Content Preprocessing:** Sub-agents clean and normalize input data before primary agent analyzes
+- Todas tarefas executam no modelo Opus caro independentemente de complexidade
+- Tarefas simples (coleta de dados, formatação) gastam orçamento caro de token
+- Trabalho paralelizável executa sequencialmente
+- Nenhuma consciência de custo em fluxos de trabalho de agente
 
 ---
 
-## 5. Sub-Agent vs. External Agent
+## 3. Conceito Chave
 
-**Critical Distinction:**
+**Sub-Agente:** Agente temporário spawned por agente primário para tarefas simples.
 
-| Aspect | Sub-Agents | External Agents |
+- **Ciclo de Vida:** Criado on-demand, executa tarefa, termina
+- **Modelo:** Haiku (3-5x mais barato que Opus)
+- **Escopo:** Tarefa única, simples
+- **Comunicação:** Síncrono request-response
+
+---
+
+## 4. Casos de Uso
+
+1. **Análise de Documento em Lote:** Agente primário spawns 10 sub-agentes Haiku para analisar 10 documentos em paralelo, então sintetiza resultados
+2. **Coleta de Dados:** Agente primário spawns 3 sub-agentes para buscar dados de diferentes fontes simultaneamente
+3. **Pré-processamento de Conteúdo:** Sub-agentes limpam e normalizam dados de input antes que agente primário analise
+
+---
+
+## 5. Sub-Agente vs. Agente Externo
+
+**Distinção Crítica:**
+
+| Aspecto | Sub-Agentes | Agentes Externos |
 |--------|-----------|-----------------|
-| **Purpose** | Cost-optimize simple tasks | Security isolation for external interaction |
-| **Model Tier** | Haiku (cheap) | Opus (quality-focused) |
-| **Lifecycle** | Short-lived, task-scoped | Long-lived, conversational |
-| **Failure Mode** | Degrade gracefully | May terminate task |
+| **Propósito** | Otimizar custo tarefas simples | Isolamento de segurança para interação externa |
+| **Tier de Modelo** | Haiku (barato) | Opus (foco em qualidade) |
+| **Ciclo de Vida** | Curta-vida, escopo de tarefa | Longa-vida, conversacional |
+| **Modo de Falha** | Degrade graciosamente | Pode terminar tarefa |
 
 ---
 
-## 6. Requirements
+## 6. Requisitos
 
-### Core Features
+### Características Core
 
-**FR1: Sub-Agent Creation**
-- Tool: `spawnSubAgent(taskName, taskDescription, taskInput, options)`
-- Input validation and task specification
-- Create temporary Haiku agent with task-specific prompt
+**FR1: Criação de Sub-Agente**
+- Ferramenta: `spawnSubAgent(taskName, taskDescription, taskInput, options)`
+- Validação de input e especificação de tarefa
+- Criar agente Haiku temporário com prompt específico de tarefa
 
-**FR2: Execution & Results**
-- Execute task synchronously
-- Return: status, result, tokens used, execution time
-- Handle timeout and errors gracefully
+**FR2: Execução & Resultados**
+- Executar tarefa sincronamente
+- Retornar: status, resultado, tokens usados, tempo de execução
+- Manipular timeout e erros graciosamente
 
-**FR3: Error Handling**
-- Timeout protection (default: 30 seconds)
-- Retry logic for transient failures
-- Graceful degradation if sub-agent fails
+**FR3: Tratamento de Erro**
+- Proteção de timeout (padrão: 30 segundos)
+- Lógica de retry para falhas transitórias
+- Degradação gracioso se sub-agente falhar
 
-### Agent-Facing Tool
+### Ferramenta Voltada para Agente
 
 ```typescript
 spawnSubAgent({
@@ -107,151 +107,56 @@ spawnSubAgent({
 
 ---
 
-## 7. Success Criteria
+## 7. Critérios de Sucesso
 
-- Sub-agents created and executed successfully
-- Cost per task reduced when using sub-agents
-- Sub-agent failure doesn't crash primary agent
-- Clear documentation on when to use sub-agents vs. primary agent
+- Sub-agentes criados e executados com sucesso
+- Custo por tarefa reduzido quando usando sub-agentes
+- Falha de sub-agente não crasheia agente primário
+- Documentação clara em quando usar sub-agentes vs. agente primário
 
 ---
 
-## 8. Non-Functional Requirements
+## 8. Requisitos Não-Funcionais
 
 **Performance:**
-- Sub-agent creation: reasonable latency
-- Task execution: reliable
+- Criação de sub-agente: latência razoável
+- Execução de tarefa: confiável
 
-**Reliability:**
-- Failed sub-agents return clear error
-- Primary agent continues on sub-agent failure
+**Confiabilidade:**
+- Sub-agentes falhados retornam erro claro
+- Agente primário continua em falha de sub-agente
 
-**Cost:**
-- Haiku usage: 3-5x cheaper than Opus
-
----
-
-## 9. Configuration
-
-### Environment Variables
-
-```bash
-SUB_AGENT_MODEL=claude-haiku
-SUB_AGENT_TIMEOUT_SECONDS=30
-SUB_AGENT_MAX_TOKENS=1000
-```
+**Custo:**
+- Uso de Haiku: 3-5x mais barato que Opus
 
 ---
 
-## 10. Scope
+## 9. Escopo
 
-### In Scope (if approved)
-- Sub-agent creation and execution
-- Synchronous execution model
-- Error handling and retry logic
-- Clear documentation distinguishing from external agents
+### Incluído (se aprovado)
+- Criação e execução de sub-agente
+- Modelo de execução síncrono
+- Tratamento de erro e lógica de retry
+- Documentação clara distinguindo de agentes externos
 
-### Out of Scope
-- Batch/parallel execution
-- Nested sub-agents (sub-agents spawning sub-agents)
-- Distributed execution
-- Advanced task decomposition
-- Sub-agent result caching
-- Cost tracking and analytics
-
----
-
-## 11. Implementation Plan
-
-### Phase 0: Feasibility Prototype (1 week) [REQUIRED BEFORE GO/NO-GO]
-
-- [ ] Build minimal proof-of-concept (spawn one Haiku sub-agent from Opus)
-- [ ] Measure actual token usage and cost savings
-- [ ] Test sub-agent creation latency
-- [ ] Document findings and recommend go/no-go
-
-### Phase 1: Core Implementation (if approved, 1-2 weeks)
-1. Create sub-agent type definitions
-2. Implement `spawnSubAgent()` tool
-3. Integrate with agent lifecycle
-4. Error handling and logging
-5. Basic testing
+### Não Incluído
+- Execução em lote/paralela
+- Sub-agentes aninhados (sub-agentes spawning sub-agentes)
+- Execução distribuída
+- Decomposição avançada de tarefa
+- Cache de resultado de sub-agente
+- Rastreamento de custo e analytics
 
 ---
 
-## 12. Data Flow
+## 10. Métricas de Sucesso
 
-### Execution Flow
-
-```
-Primary Agent (Opus)
-  │
-  ├─ Receives task: "Analyze 3 documents"
-  │
-  ├─ spawnSubAgent({
-  │    taskName: "Analyze Document 1",
-  │    taskInput: { doc: "..." },
-  │    modelTier: "haiku"
-  │  })
-  │    ├─ Create Haiku sub-agent instance
-  │    ├─ Inject task context + system prompt
-  │    ├─ Execute task (process document)
-  │    ├─ Validate result format
-  │    └─ Return: { status: "success", result: {...}, costEstimate: "$0.02" }
-  │
-  └─ Repeat for documents 2 and 3
-     └─ Aggregate results
-        ├─ Synthesize findings
-        ├─ Log total cost: ~$0.06 (vs. ~$0.30 if done by Opus)
-        └─ Return to requester
-```
+- Custo reduzido para tarefas simples
+- Latência aceitável de criação de sub-agente
+- Nenhum impacto em capacidades de agente primário
+- Documentação clara e exemplos
 
 ---
 
-## 12. Risks & Mitigation
-
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| Quality degradation | Medium | Task specification guidelines |
-| Confusion with external agents | High | Clear documentation |
-| Latency overhead | Medium | Prototype testing |
-| Feasibility blocker | High | Early prototype validation |
-
----
-
-## 13. Example Workflow
-
-```typescript
-const primaryAgent = await createAgent({
-  id: 'analyst-001',
-  instructions: 'Analyze documents',
-  model: 'claude-opus',
-});
-
-const document = doc1;
-
-// Spawn sub-agent for simple task
-const result = await primaryAgent.tool('spawnSubAgent', {
-  taskName: 'Analyze Document',
-  taskDescription: 'Extract key themes',
-  taskInput: { document: document },
-  maxTokens: 500
-});
-
-// Cost: ~$0.01 (vs. ~$0.05 with Opus)
-```
-
----
-
-## 14. Glossary
-
-| Term | Definition |
-|------|-----------|
-| Sub-Agent | Temporary Haiku agent for simple tasks |
-| Primary Agent | Opus agent that spawns sub-agents |
-| Task Specification | Clear description of what sub-agent must do |
-
----
-
-**Status:** Awaiting feasibility assessment decision
-**Next Review:** Upon completion of feasibility phase
+**Status:** Aguardando avaliação de viabilidade
+**Próxima Revisão:** Após conclusão de fase de viabilidade

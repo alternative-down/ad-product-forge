@@ -1,53 +1,53 @@
-# PRD-16: Email Service Integration (Simplified)
+# PRD-15: Integração de Serviço de Email (Simplificado)
 
-**Status:** Draft - Simplified for Solo Developer
-**Date:** 2026-03-15
-**Note:** Personal developer project. Apply KISS + YAGNI principles.
-
----
-
-## 1. Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes email communication infrastructure specific to ad-product-forge.** While email is a general communication medium, this specific implementation is tailored to Nicolas' agents' use cases (customer outreach, team communication, notifications). The communication provider system (PRD-02) is framework-level; this is the application-specific email integration.
-
-### Objective
-Enable agents to send and receive emails using standard IMAP/SMTP providers.
-
-### Value (for ad-product-forge)
-- Nicolas' agents can send emails to customers and team members
-- Agents can read inbox for customer inquiries and feedback
-- Works with Gmail, Outlook, Fastmail
-- Simple, no corporate features
+**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Data:** 2026-03-15
+**Nota:** Projeto de desenvolvedor pessoal. Aplicar princípios KISS + YAGNI.
 
 ---
 
-## 2. Scope
+## 1. Resumo
 
-### Included
-- Send emails via SMTP
-- Read inbox via IMAP
-- Agent tools: `sendEmail()`, `getInbox()`, `readEmail()`
-- Store credentials (via PRD-02)
-- Basic logging
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-### Not Included
-- Email provisioning
-- Continuous sync
-- Custom domains
+**Este PRD descreve infraestrutura de comunicação por email específica do ad-product-forge.** Embora email seja um meio de comunicação geral, esta implementação específica é adaptada para os casos de uso dos agentes de Nicolas (contato com clientes, comunicação em equipe, notificações). O sistema de provedor de comunicação (PRD-02) é nível de framework; isto é integração de email específica da aplicação.
+
+### Objetivo
+Permitir que agentes enviem e recebam emails usando provedores padrão IMAP/SMTP.
+
+### Valor (para ad-product-forge)
+- Os agentes de Nicolas podem enviar emails para clientes e membros da equipe
+- Agentes podem ler a caixa de entrada para perguntas e feedback de clientes
+- Funciona com Gmail, Outlook, Fastmail
+- Simples, sem recursos corporativos
+
+---
+
+## 2. Escopo
+
+### Incluído
+- Enviar emails via SMTP
+- Ler caixa de entrada via IMAP
+- Ferramentas de agente: `sendEmail()`, `getInbox()`, `readEmail()`
+- Armazenar credenciais (via PRD-02)
+- Log básico
+
+### Não Incluído
+- Provisionamento de email
+- Sincronização contínua
+- Domínios personalizados
 - Templates
-- Forwarding/aliases
+- Encaminhamento/aliases
 - DKIM/SPF/DMARC
-- Attachments
-- Multiple emails per agent
-- Email UI
+- Anexos
+- Múltiplos emails por agente
+- UI de email
 
 ---
 
-## 3. Requirements
+## 3. Requisitos
 
-### RF-1: sendEmail Tool
+### RF-1: Ferramenta sendEmail
 ```typescript
 interface SendEmailParams {
   to: string;
@@ -55,16 +55,16 @@ interface SendEmailParams {
   body: string;
 }
 
-// Returns: { success: boolean, error?: string }
+// Retorna: { success: boolean, error?: string }
 ```
 
-### RF-2: getInbox Tool
+### RF-2: Ferramenta getInbox
 ```typescript
 interface GetInboxParams {
-  limit?: number; // default 10
+  limit?: number; // padrão 10
 }
 
-// Returns: Array<{
+// Retorna: Array<{
 //   id: string;
 //   from: string;
 //   subject: string;
@@ -72,56 +72,56 @@ interface GetInboxParams {
 // }>
 ```
 
-### RF-3: readEmail Tool
+### RF-3: Ferramenta readEmail
 ```typescript
 interface ReadEmailParams {
   id: string;
 }
 
-// Returns: { body: string }
+// Retorna: { body: string }
 ```
 
-### RF-4: Store Email Configuration
-- Email address, SMTP/IMAP credentials
+### RF-4: Armazenar Configuração de Email
+- Endereço de email, credenciais SMTP/IMAP
 - Via provider_configurations (PRD-02)
 
 ---
 
-## 4. Database
+## 4. Banco de Dados
 
-None needed. No logging required for solo dev.
-
----
-
-## 5. Implementation
-
-### Phase 1: Email Service Wrapper (6h)
-- Create email service with sendEmail(), getInbox(), readEmail()
-- Basic error handling
-
-### Phase 2: Agent Tools (3h)
-- Wire 3 tools to agent executor
+Nenhum necessário. Nenhum log obrigatório para desenvolvedor solo.
 
 ---
 
-## 6. Success Criteria
-- [ ] Agents can send emails
-- [ ] Agents can read inbox (latest 10)
-- [ ] Agents can read email body
-- [ ] Works with Gmail/Outlook
+## 5. Implementação
+
+### Fase 1: Wrapper de Serviço de Email (6h)
+- Criar serviço de email com sendEmail(), getInbox(), readEmail()
+- Tratamento básico de erro
+
+### Fase 2: Ferramentas de Agente (3h)
+- Conectar 3 ferramentas ao executor de agente
 
 ---
 
-## 7. Effort
-- **Total: ~9 hours**
+## 6. Critérios de Sucesso
+- [ ] Agentes podem enviar emails
+- [ ] Agentes podem ler caixa de entrada (últimos 10)
+- [ ] Agentes podem ler corpo do email
+- [ ] Funciona com Gmail/Outlook
 
 ---
 
-## 8. Dependencies
-- PRD-02: Provider configuration system
+## 7. Esforço
+- **Total: ~9 horas**
+
+---
+
+## 8. Dependências
+- PRD-02: Sistema de configuração de provedor
 - `nodemailer` — SMTP
-- `imapflow` — IMAP (alternative: `imap` npm package)
+- `imapflow` — IMAP (alternativa: pacote npm `imap`)
 
 ---
 
-**End of document**
+**Fim do documento**

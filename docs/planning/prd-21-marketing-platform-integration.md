@@ -1,32 +1,32 @@
-# PRD-18: Marketing Platform Integration (Simplified)
+# PRD-21: Integração de Plataforma de Marketing (Simplificado)
 
-**Status:** Draft - Simplified for Solo Developer
-**Date:** 2026-03-15
-**Note:** Personal developer project. Apply KISS + YAGNI principles.
+**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Data:** 2026-03-15
+**Nota:** Projeto de desenvolvedor pessoal. Aplicar princípios KISS + YAGNI.
 
 ---
 
-## 1. Summary
+## 1. Resumo
 
-### Classification: AD-PRODUCT-FORGE APPLICATION (DEFERRED)
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE (ADIADO)
 
-**This PRD describes optional marketing platform features specific to ad-product-forge.** If implemented, would enable Nicolas' agents to send marketing campaigns via Mailchimp. Currently deferred in favor of simple email (PRD-16).
+**Este PRD descreve recursos opcionais de plataforma de marketing específicos do ad-product-forge.** Se implementado, permitiria que agentes de Nicolas enviassem campanhas de marketing via Mailchimp. Atualmente adiado em favor de email simples (PRD-15).
 
 ### Status
-**DEFERRED** - Use PRD-16 (simple SMTP) instead for solo dev needs.
+**ADIADO** - Usar PRD-15 (SMTP simples) em vez disso para necessidades de desenvolvedor solo.
 
 ---
 
-## 2. Rationale
+## 2. Justificativa
 
-Why deprioritized:
-- PRD-16 provides basic email (sufficient for solo dev)
-- Mailchimp adds complexity without proportional benefit
-- No need for bulk email campaigns for personal agents
-- If bulk email needed later, can add in 2-3 hours
+Por que deprioritizado:
+- PRD-15 fornece email básico (suficiente para desenvolvedor solo)
+- Mailchimp adiciona complexidade sem benefício proporcional
+- Nenhuma necessidade de campanhas de email em massa para agentes pessoais
+- Se email em massa for necessário depois, consegue adicionar em 2-3 horas
 
-Keep this as reference only if volume scales significantly.
+Manter isto como referência apenas se volume escalar significativamente.
 
 ---
 
-**End of document**
+**Fim do documento**

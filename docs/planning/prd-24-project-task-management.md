@@ -1,61 +1,61 @@
-# PRD 23: Project & Task Management
+# PRD-24: Gerenciamento de Projeto & Tarefa
 
-**Status:** Draft - Simplified for Solo Developer
-**Date:** 2026-03-15
-**Version:** 1.0
-**Note:** Personal project by solo developer. Scope limited to core functionality (KISS + YAGNI).
+**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Data:** 2026-03-15
+**Versão:** 1.0
+**Nota:** Projeto pessoal por desenvolvedor solo. Escopo limitado a funcionalidade core (KISS + YAGNI).
 
 ---
 
-## Executive Summary
+## Resumo Executivo
 
-### Classification: AD-PRODUCT-FORGE APPLICATION
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**This PRD describes project management infrastructure specific to ad-product-forge.** Task tracking enables Nicolas to organize and monitor agent work across multiple projects. This is application-specific, not framework infrastructure.
+**Este PRD descreve infraestrutura de gerenciamento de projeto específica do ad-product-forge.** Rastreamento de tarefa permite que Nicolas organize e monitore trabalho de agente através de múltiplos projetos. Isto é específico da aplicação, não infraestrutura de framework.
 
-### Goal
-Implement a simple task management system for organizing work into projects with status tracking, without complex dependencies, hierarchies, or collaboration features.
+### Objetivo
+Implementar um sistema simples de gerenciamento de tarefa para organizar trabalho em projetos com rastreamento de status, sem dependências complexas, hierarquias ou recursos de colaboração.
 
-### Core Features
-1. **Projects** - Create and organize work into projects
-2. **Tasks** - Create tasks within projects with basic status
-3. **Status Tracking** - Track task progress (to-do, in-progress, done)
-4. **Simple Listing** - View tasks filtered by project or status
+### Características Core
+1. **Projetos** - Criar e organizar trabalho em projetos
+2. **Tarefas** - Criar tarefas dentro de projetos com status básico
+3. **Rastreamento de Status** - Rastrear progresso de tarefa (to-do, in-progress, done)
+4. **Listagem Simples** - Visualizar tarefas filtradas por projeto ou status
 
-### Out of Scope
-- Task dependencies
-- Subtasks/hierarchies
-- Assignments/team features
-- Comments/discussions
-- File attachments
-- Notifications
-- Activity feeds
-- Advanced filtering
+### Fora do Escopo
+- Dependências de tarefa
+- Subtarefas/hierarquias
+- Atribuições/recursos de equipe
+- Comentários/discussões
+- Anexos de arquivo
+- Notificações
+- Feeds de atividade
+- Filtragem avançada
 - Dashboards
 
 ---
 
-## Data Model
+## Modelo de Dados
 
-### Projects
+### Projetos
 ```typescript
 projects {
   id: UUID
   name: string
-  description: string (optional)
+  description: string (opcional)
   status: 'active' | 'archived'
   created_at: timestamp
   updated_at: timestamp
 }
 ```
 
-### Tasks
+### Tarefas
 ```typescript
 tasks {
   id: UUID
-  project_id: UUID (foreign key)
+  project_id: UUID (chave estrangeira)
   title: string
-  description: string (optional)
+  description: string (opcional)
   status: 'to-do' | 'in-progress' | 'done'
   created_at: timestamp
   updated_at: timestamp
@@ -64,75 +64,75 @@ tasks {
 
 ---
 
-## API Endpoints
+## Endpoints de API
 
-### Projects
-- `POST /api/projects` — Create project
-- `GET /api/projects` — List projects
-- `GET /api/projects/:id` — Get project details
-- `PUT /api/projects/:id` — Update project
-- `DELETE /api/projects/:id` — Delete project
+### Projetos
+- `POST /api/projects` — Criar projeto
+- `GET /api/projects` — Listar projetos
+- `GET /api/projects/:id` — Obter detalhes do projeto
+- `PUT /api/projects/:id` — Atualizar projeto
+- `DELETE /api/projects/:id` — Deletar projeto
 
-### Tasks
-- `POST /api/projects/:project_id/tasks` — Create task
-- `GET /api/projects/:project_id/tasks` — List project tasks
-- `GET /api/tasks/:id` — Get task details
-- `PUT /api/tasks/:id` — Update task (including status changes)
-- `DELETE /api/tasks/:id` — Delete task
+### Tarefas
+- `POST /api/projects/:project_id/tasks` — Criar tarefa
+- `GET /api/projects/:project_id/tasks` — Listar tarefas do projeto
+- `GET /api/tasks/:id` — Obter detalhes da tarefa
+- `PUT /api/tasks/:id` — Atualizar tarefa (incluindo mudanças de status)
+- `DELETE /api/tasks/:id` — Deletar tarefa
 
-### Filtering
-- `GET /api/tasks?status=in-progress` — List tasks by status
-- `GET /api/tasks?project_id=X` — List tasks by project (via GET /api/projects/:project_id/tasks)
-
----
-
-## Implementation Notes
-
-### Database
-- Use existing Drizzle ORM + LibSQL
-- Create tables: `projects`, `tasks`
-- Index on project_id for fast task queries
-- Index on status for filtering
-
-### API Design
-- Simple REST endpoints
-- All field updates via PUT
-- Permanent delete is fine
-
-### Validation
-- Use Zod for schema validation
-- Required: project name, task title
-- Valid statuses enforced at API level
-
-### Testing
-- Unit tests for CRUD operations
-- API endpoint tests
-- Status transition tests
+### Filtragem
+- `GET /api/tasks?status=in-progress` — Listar tarefas por status
+- `GET /api/tasks?project_id=X` — Listar tarefas por projeto (via GET /api/projects/:project_id/tasks)
 
 ---
 
-## Success Criteria
-- Projects can be created, listed, updated, deleted
-- Tasks can be created and moved between statuses
-- Filtering by project and status works
-- Data persists correctly
+## Notas de Implementação
+
+### Banco de Dados
+- Usar ORM Drizzle + LibSQL existentes
+- Criar tabelas: `projects`, `tasks`
+- Índice em project_id para queries rápidas de tarefa
+- Índice em status para filtragem
+
+### Design de API
+- Endpoints REST simples
+- Todas atualizações de campo via PUT
+- Delete permanente é aceitável
+
+### Validação
+- Usar Zod para validação de schema
+- Obrigatório: nome de projeto, título de tarefa
+- Status válidos aplicados em nível de API
+
+### Testes
+- Testes unitários para operações CRUD
+- Testes de endpoint de API
+- Testes de transição de status
 
 ---
 
-## Dependencies
-- Drizzle ORM (existing)
-- LibSQL (existing)
-- Zod (existing)
+## Critérios de Sucesso
+- Projetos conseguem ser criados, listados, atualizados, deletados
+- Tarefas conseguem ser criadas e movidas entre statuses
+- Filtragem por projeto e status funciona
+- Dados persistem corretamente
+
+---
+
+## Dependências
+- Drizzle ORM (existente)
+- LibSQL (existente)
+- Zod (existente)
 
 ---
 
 ## Timeline
-- **Week 1:** Database schema + all endpoints
-- **Week 2:** Testing + documentation
+- **Semana 1:** Schema de banco de dados + todos endpoints
+- **Semana 2:** Testes + documentação
 
-Total: ~15 hours for solo developer
+Total: ~15 horas para desenvolvedor solo
 
 ---
 
-**Document History:**
-- v1.0 (2026-03-15): Simplified for personal solo developer project
+**Histórico do Documento:**
+- v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo

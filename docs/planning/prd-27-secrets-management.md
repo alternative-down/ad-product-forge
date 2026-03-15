@@ -1,122 +1,122 @@
-# PRD 28: Secrets Management System
+# PRD-27: Sistema de Gerenciamento de Segredos
 
-**Status:** Planning - Technical Design
-**Date:** 2026-03-15
-**Scope:** Personal developer project - KISS & YAGNI principles
-
----
-
-## Executive Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes secrets management infrastructure specific to ad-product-forge.** Secrets storage enables Nicolas' agents to securely access API keys and credentials for integrations. This is application-specific, not framework infrastructure (Mastra's PRD-01 handles communication provider credentials).
-
-Implement a simple secrets management system to securely store API keys, tokens, and passwords used by agents.
-
-**Core Goal (for ad-product-forge):** Agents can securely retrieve credentials (Stripe, GitHub, Coolify) without exposing them in logs or code.
+**Status:** Planejamento - Design Técnico
+**Data:** 2026-03-15
+**Escopo:** Projeto pessoal de desenvolvedor - Princípios KISS & YAGNI
 
 ---
 
-## Problem Statement
+## Resumo Executivo
 
-Currently, secrets are:
-- Stored as environment variables (not scalable)
-- Hardcoded in config files (security risk)
-- Not encrypted
-- Not auditable
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**Target Scenarios:**
-1. Agent securely retrieves Stripe API key
-2. Agent gets database credentials without exposing them
-3. Admin can rotate secrets without restarting
+**Este PRD descreve infraestrutura de gerenciamento de segredos específica do ad-product-forge.** Armazenamento de segredos permite que agentes de Nicolas acessem com segurança chaves de API e credenciais para integrações. Isto é específico da aplicação, não infraestrutura de framework (O PRD-02 de Mastra manipula credenciais de provedor de comunicação).
+
+Implementar um sistema simples de gerenciamento de segredos para armazenar com segurança chaves de API, tokens e senhas usados por agentes.
+
+**Objetivo Principal (para ad-product-forge):** Agentes conseguem recuperar com segurança credenciais (Stripe, GitHub, Coolify) sem expô-los em logs ou código.
 
 ---
 
-## Key Features
+## Declaração do Problema
 
-### 1. Secure Storage
-- Encrypt all secrets using AES-256-GCM
-- Store encryption key in environment
-- Prevent secrets from appearing in logs
+Atualmente, segredos são:
+- Armazenados como variáveis de ambiente (não escalável)
+- Hardcoded em arquivos de config (risco de segurança)
+- Não criptografados
+- Não auditáveis
 
-### 2. Agent API
+**Cenários Alvo:**
+1. Agente recupera com segurança chave de API Stripe
+2. Agente obtém credenciais de banco de dados sem expô-los
+3. Admin consegue rotacionar segredos sem reiniciar
+
+---
+
+## Características Principais
+
+### 1. Armazenamento Seguro
+- Criptografar todos segredos usando AES-256-GCM
+- Armazenar chave de criptografia em ambiente
+- Prevenir segredos de aparecerem em logs
+
+### 2. API de Agente
 ```typescript
-// Get a secret
+// Obter um segredo
 await agent.secrets.get('stripe_api_key'): Promise<string>;
 
-// List available secrets (metadata only, no values)
+// Listar segredos disponíveis (apenas metadados, sem valores)
 await agent.secrets.list(): Promise<Array<{ name: string; }>>;
 ```
 
-### 3. Admin Operations
+### 3. Operações de Admin
 ```typescript
-// Create/update secret
+// Criar/atualizar segredo
 createSecret(input: {
   name: string;
   value: string;
 }): Promise<{ secretId: string; }>;
 
-// Delete secret
+// Deletar segredo
 deleteSecret(secretId: string): Promise<void>;
 
-// List secrets
+// Listar segredos
 listSecrets(): Promise<Array<{ secretId: string; name: string; }>>;
 ```
 
 ---
 
-## Database Schema
+## Schema do Banco de Dados
 
 **secrets**
 ```
 - secretId (TEXT, PRIMARY KEY)
 - name (TEXT, NOT NULL, UNIQUE)
 - encryptedValue (TEXT, NOT NULL)
-- iv (TEXT)    -- initialization vector for encryption
+- iv (TEXT)    -- vetor de inicialização para criptografia
 - createdAt (TEXT)
 ```
 
 ---
 
-## Security
+## Segurança
 
-- All values encrypted with AES-256-GCM
-- Encryption key from environment variable `SECRETS_ENCRYPTION_KEY`
-- Secrets never logged or exposed in error messages
-- Access to all operations logged in audit trail
-
----
-
-## Implementation
-
-### Phase 1: Core (2 weeks)
-- [ ] Encryption/decryption layer
-- [ ] Secrets storage and retrieval
-- [ ] Agent API for secret access
-- [ ] Encryption key management
-
-### Phase 2: Enhancement (Future)
-- [ ] In-memory caching with TTL
+- Todos valores criptografados com AES-256-GCM
+- Chave de criptografia da variável de ambiente `SECRETS_ENCRYPTION_KEY`
+- Segredos nunca registrados ou expostos em mensagens de erro
+- Acesso a todas operações registrado em trilha de auditoria
 
 ---
 
-## Success Criteria
+## Implementação
 
-- [ ] Secrets are encrypted at rest
-- [ ] Agents can retrieve secrets via API
-- [ ] Secrets never appear in logs
+### Fase 1: Core (2 semanas)
+- [ ] Camada de criptografia/descriptografia
+- [ ] Armazenamento e recuperação de segredos
+- [ ] API de agente para acesso de segredo
+- [ ] Gerenciamento de chave de criptografia
 
----
-
-## Risks
-
-- Encryption key compromise is critical
-- In-memory plaintext exposure if not careful
-- Performance impact of encryption/decryption (mitigate with caching)
+### Fase 2: Aprimoramento (Futuro)
+- [ ] Cache em memória com TTL
 
 ---
 
-## Future Enhancements
+## Critérios de Sucesso
 
-- In-memory caching with TTL
+- [ ] Segredos são criptografados em repouso
+- [ ] Agentes conseguem recuperar segredos via API
+- [ ] Segredos nunca aparecem em logs
+
+---
+
+## Riscos
+
+- Compromisso de chave de criptografia é crítico
+- Exposição de plaintext em memória se não for cuidadoso
+- Impacto de performance de criptografia/descriptografia (mitigar com cache)
+
+---
+
+## Aprimoramentos Futuros
+
+- Cache em memória com TTL

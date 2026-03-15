@@ -1,99 +1,99 @@
-# PRD-13: GitHub Integration
+# PRD-16: Integração com GitHub
 
-**Status:** Planning
+**Status:** Planejamento
 
-**Note:** This is a personal project from a solo developer. Built with KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles in mind.
-
----
-
-## 1. Overview
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes integration infrastructure specific to ad-product-forge.** GitHub integration enables Nicolas' development agents to autonomously manage code repositories, create pull requests, and respond to repository events. This is application-specific infrastructure for autonomous development workflows.
-
-Enable agents to read/write GitHub repositories, create commits, open PRs, and respond to GitHub events via webhooks.
-
-**Core capabilities (for ad-product-forge):**
-- Development agents read/write application code
-- Create commits for new features and fixes
-- Create branches and PRs for code review
-- Respond to GitHub events (push, PR, issue) via webhooks
-- Manage repositories under Nicolas' GitHub organization
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
-## 2. Use Cases
+## 1. Visão Geral
 
-### 2.1 Create Repository
-Agent provisions a new GitHub repository under authenticated organization/account.
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-### 2.2 Push Code
-Agent commits code to repository (new commits, push changes).
+**Este PRD descreve infraestrutura de integração específica do ad-product-forge.** A integração com GitHub permite que agentes de desenvolvimento autônomos de Nicolas gerenciem repositórios de código, criem pull requests e respondam a eventos de repositório. Esta é infraestrutura específica da aplicação para fluxos de trabalho de desenvolvimento autônomo.
 
-### 2.3 Open Pull Request
-Agent creates pull request with generated code/changes.
+Permitir que agentes leiam/escrevam repositórios GitHub, criem commits, abram PRs e respondam a eventos GitHub via webhooks.
 
-### 2.4 Listen to Events
-Agent receives GitHub push/PR/issue events via webhooks.
+**Capacidades principais (para ad-product-forge):**
+- Agentes de desenvolvimento leem/escrevem código da aplicação
+- Criam commits para novos recursos e correções
+- Criam branches e PRs para revisão de código
+- Respondem a eventos GitHub (push, PR, issue) via webhooks
+- Gerenciam repositórios sob a organização GitHub de Nicolas
 
 ---
 
-## 3. Core Tools
+## 2. Casos de Uso
 
-**Repository Management:**
-- `readFile(repo, path)` — Read file from repo
-- `writeFile(repo, path, content)` — Create/update file
-- `listFiles(repo, path)` — List repo files
+### 2.1 Criar Repositório
+Agente provisiona um novo repositório GitHub sob organização/conta autenticada.
+
+### 2.2 Fazer Push de Código
+Agente faz commit de código para repositório (novos commits, push de alterações).
+
+### 2.3 Abrir Pull Request
+Agente cria pull request com código/alterações geradas.
+
+### 2.4 Escutar Eventos
+Agente recebe eventos GitHub push/PR/issue via webhooks.
+
+---
+
+## 3. Ferramentas Principais
+
+**Gerenciamento de Repositório:**
+- `readFile(repo, path)` — Ler arquivo do repositório
+- `writeFile(repo, path, content)` — Criar/atualizar arquivo
+- `listFiles(repo, path)` — Listar arquivos do repositório
 
 **Commits & Branches:**
-- `createCommit(repo, branch, message, files)` — Create commit
-- `createPullRequest(repo, title, body, changes)` — Open PR to main
+- `createCommit(repo, branch, message, files)` — Criar commit
+- `createPullRequest(repo, title, body, changes)` — Abrir PR para main
 
-**Events:**
-- Webhook receives GitHub events
-- Agent processes via `listQueuedEvents()` and `processWebhookEvent(eventId)`
-
----
-
-## 4. Storage
-
-Simple configuration:
-
-- GitHub PAT stored in environment variables (not database)
-- Agent maintains single default repo context
+**Eventos:**
+- Webhook recebe eventos GitHub
+- Agente processa via `listQueuedEvents()` e `processWebhookEvent(eventId)`
 
 ---
 
-## 5. Authentication
+## 4. Armazenamento
 
-GitHub personal access token via environment variables:
-- `repo` — Full control of private repositories
-- `webhooks` — Manage webhooks
+Configuração simples:
 
----
-
-## 6. Implementation
-
-- **Week 1:** GitHub API client + file read/write/commit operations
-- **Week 2:** PR creation + webhook integration
-- **Week 3:** Error handling + tests
+- Token de acesso pessoal GitHub armazenado em variáveis de ambiente (não banco de dados)
+- Agente mantém contexto único de repositório padrão
 
 ---
 
-## 7. Out of Scope
+## 5. Autenticação
 
-- Repository creation (use GitHub UI)
-- GitHub Actions configuration
-- Issue/PR review workflows
-- Advanced Git operations
-- Team/organization management
-- Branch protection rules
-- Code search/querying
-- Release management
-- Multiple repository support per agent
+Token de acesso pessoal GitHub via variáveis de ambiente:
+- `repo` — Controle total de repositórios privados
+- `webhooks` — Gerenciar webhooks
 
 ---
 
-**Document Version:** 0.1 (Simplified)
-**Last Updated:** 2026-03-15
+## 6. Implementação
+
+- **Semana 1:** Cliente da API GitHub + operações de ler/escrever/commit de arquivo
+- **Semana 2:** Criação de PR + integração com webhook
+- **Semana 3:** Tratamento de erro + testes
+
+---
+
+## 7. Fora do Escopo
+
+- Criação de repositório (usar UI do GitHub)
+- Configuração do GitHub Actions
+- Fluxos de trabalho de revisão de issue/PR
+- Operações Git avançadas
+- Gerenciamento de equipe/organização
+- Regras de proteção de branch
+- Busca/consulta de código
+- Gerenciamento de release
+- Suporte a múltiplos repositórios por agente
+
+---
+
+**Versão do Documento:** 0.1 (Simplificado)
+**Última Atualização:** 2026-03-15

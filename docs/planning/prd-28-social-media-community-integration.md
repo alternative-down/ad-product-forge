@@ -1,44 +1,44 @@
-# PRD-17: Social Media & Community Integration (Simplified)
+# PRD-28: Integração de Mídia Social & Comunidade (Simplificado)
 
-**Status:** Draft - Simplified for Solo Developer
-**Date:** 2026-03-15
-**Note:** Personal developer project. Apply KISS + YAGNI principles.
+**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Data:** 2026-03-15
+**Nota:** Projeto de desenvolvedor pessoal. Aplicar princípios KISS + YAGNI.
 
 ---
 
-## 1. Summary
+## 1. Resumo
 
-### Classification: AD-PRODUCT-FORGE APPLICATION (DEFERRED)
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE (ADIADO)
 
-**This PRD describes optional social media features specific to ad-product-forge.** If implemented, would enable Nicolas' agents to publish to social platforms. Currently deprioritized in favor of core product development capabilities.
+**Este PRD descreve recursos opcionais de mídia social específicos do ad-product-forge.** Se implementado, permitiria que agentes de Nicolas publiquem em plataformas sociais. Atualmente deprioritizado em favor de recursos core de desenvolvimento de produto.
 
-### Objective
-**NOT PLANNED** - Social media publishing for agents.
+### Objetivo
+**NÃO PLANEJADO** - Publicação em mídia social para agentes.
 
-### Why Deprioritized
-- Solo dev doesn't need automated social posting
-- Manual control preferred for brand/reputation
-- Can be added later if needed
+### Por Que Deprioritizado
+- Desenvolvedor solo não precisa de postagem social automatizada
+- Controle manual preferido para marca/reputação
+- Consegue ser adicionado depois se necessário
 
 ---
 
 ## 2. Status
 
-**DEFERRED INDEFINITELY** - Not part of MVP or near-term roadmap.
+**ADIADO INDEFINIDAMENTE** - Não parte de MVP ou roadmap de curto prazo.
 
-Reason: Solo developer prefers manual control over automated social posting.
-
----
-
-## 3. Rationale
-
-Social media automation adds minimal value for solo developer:
-- Brand control is better with manual posting
-- Volume too low to benefit from automation
-- Risk of automated content damage to reputation
-
-If needed later, can build simple integration (2-3h effort).
+Razão: Desenvolvedor solo prefere controle manual sobre postagem social automatizada.
 
 ---
 
-**End of document**
+## 3. Justificativa
+
+Automação de mídia social adiciona mínimo valor para desenvolvedor solo:
+- Controle de marca é melhor com postagem manual
+- Volume muito baixo para beneficiar de automação
+- Risco de conteúdo automatizado dano a reputação
+
+Se necessário depois, consegue construir integração simples (2-3h de esforço).
+
+---
+
+**Fim do documento**
