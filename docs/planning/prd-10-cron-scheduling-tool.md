@@ -16,14 +16,14 @@ A Ferramenta Cron/Agendamento permite que agentes criem e gerenciem tarefas agen
 
 ---
 
-## Implementação: Usar Library de Cron
+## Implementação: Usar node-schedule
 
-**Usar uma das seguintes bibliotecas Node.js:**
-- `node-cron` (npm: `node-cron`)
+**Usar biblioteca Node.js:**
 - `node-schedule` (npm: `node-schedule`)
-- `bull` / `bullmq` (npm: `bull` ou `bullmq`) - para job queues mais robustas
 
-A library fornece o scheduler que avalia cronexpressions e dispara callbacks.
+Motivo: Suporta tanto cron expressions quanto Date objects, oferecendo mais flexibilidade para agentes definirem agendamentos.
+
+A library fornece o scheduler que avalia regras e dispara callbacks.
 
 ---
 
@@ -113,6 +113,59 @@ Detalhes da Ação:
 Esta é uma tarefa agendada automatizada. Revise as instruções acima e execute conforme necessário.
 ```
 
+---
+
+## Schema do Banco de Dados
+
+**Tabela: agent_schedules**
+```typescript
+agent_schedules {
+  id: UUID (primary key)
+  agent_id: UUID (foreign key -> agents)
+  name: string (nome legível da regra)
+  description: string (opcional)
+  schedule_type: 'cron' | 'date' // cron expression ou Date specific
+  cron_expression: string (opcional, ex: "0 9 * * 1-5")
+  scheduled_date: timestamp (opcional, para execuções em data específica)
+  timezone: string (IANA timezone, ex: "America/New_York")
+  action_type: string (ex: "message", "webhook")
+  payload: JSON (dados específicos da ação)
+  is_active: boolean (default true)
+  created_at: timestamp
+  updated_at: timestamp
+  last_executed_at: timestamp (opcional)
+  next_execution_at: timestamp (computed)
+}
+```
+
+---
+
+## CRUD de Agendamentos
+
+**Ferramentas para Agentes:**
+
+**FR1: Criar Agendamento**
+- `createSchedule(agentId, {name, description, scheduleType, cronExpression|scheduledDate, timezone, actionType, payload})`
+- Retorna: scheduleId
+
+**FR2: Listar Agendamentos do Agente**
+- `listSchedules(agentId)`
+- Retorna: array de agendamentos
+
+**FR3: Atualizar Agendamento**
+- `updateSchedule(scheduleId, {name?, description?, isActive?, payload?})`
+- Permite alteração de nome, descrição, ativação/desativação, payload
+
+**FR4: Deletar Agendamento**
+- `deleteSchedule(scheduleId)`
+- Remove agendamento do banco e cancela execução
+
+**FR5: Recarregar na Inicialização**
+- Na inicialização da aplicação:
+  - Carregar todos os agendamentos ativos do banco de dados
+  - Para cada agendamento: registrar com node-schedule
+  - Se houver próxima execução passada, executar imediatamente (catch-up)
+
 **Exemplo para standup recorrente:**
 ```
 Tarefa Agendada: Daily Standup
@@ -130,3 +183,56 @@ Template: Daily standup - O que foi feito, o que vem a seguir, blockers?
 ---
 Esta é uma tarefa agendada automatizada. Revise as instruções acima e execute conforme necessário.
 ```
+
+---
+
+## Schema do Banco de Dados
+
+**Tabela: agent_schedules**
+```typescript
+agent_schedules {
+  id: UUID (primary key)
+  agent_id: UUID (foreign key -> agents)
+  name: string (nome legível da regra)
+  description: string (opcional)
+  schedule_type: 'cron' | 'date' // cron expression ou Date specific
+  cron_expression: string (opcional, ex: "0 9 * * 1-5")
+  scheduled_date: timestamp (opcional, para execuções em data específica)
+  timezone: string (IANA timezone, ex: "America/New_York")
+  action_type: string (ex: "message", "webhook")
+  payload: JSON (dados específicos da ação)
+  is_active: boolean (default true)
+  created_at: timestamp
+  updated_at: timestamp
+  last_executed_at: timestamp (opcional)
+  next_execution_at: timestamp (computed)
+}
+```
+
+---
+
+## CRUD de Agendamentos
+
+**Ferramentas para Agentes:**
+
+**FR1: Criar Agendamento**
+- `createSchedule(agentId, {name, description, scheduleType, cronExpression|scheduledDate, timezone, actionType, payload})`
+- Retorna: scheduleId
+
+**FR2: Listar Agendamentos do Agente**
+- `listSchedules(agentId)`
+- Retorna: array de agendamentos
+
+**FR3: Atualizar Agendamento**
+- `updateSchedule(scheduleId, {name?, description?, isActive?, payload?})`
+- Permite alteração de nome, descrição, ativação/desativação, payload
+
+**FR4: Deletar Agendamento**
+- `deleteSchedule(scheduleId)`
+- Remove agendamento do banco e cancela execução
+
+**FR5: Recarregar na Inicialização**
+- Na inicialização da aplicação:
+  - Carregar todos os agendamentos ativos do banco de dados
+  - Para cada agendamento: registrar com node-schedule
+  - Se houver próxima execução passada, executar imediatamente (catch-up)
