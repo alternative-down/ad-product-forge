@@ -167,7 +167,10 @@ export async function createCommunicationModule(config: {
     ]);
 
     return {
-      self: selfAccounts,
+      self: selfAccounts.map((account) => ({
+        provider: account.provider,
+        displayName: account.displayName,
+      })),
       others: otherContacts.map((contact) => ({
         slug: contact.slug,
         displayName: contact.displayName,
