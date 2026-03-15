@@ -99,9 +99,23 @@
   - Maintain research functionality with workflow benefits
   - Enable more complex research orchestration
 
-## 5. Version Control & Repository Management
+## 5. External Integration & Event Handling
 
-### 5.1 GitHub Integration
+### 5.1 Webhook & Event Routing System
+- **Objective**: Enable external systems to trigger agent actions
+- **Requirements**:
+  - Implement webhook infrastructure for external triggers
+  - Support agent-created custom webhook routes
+  - Support pre-configured webhook routes (GitHub, Coolify, Payments, Ads, etc.)
+  - Route incoming events to appropriate agents
+  - Trigger agent wakeup on external events
+  - Enable agents to process and respond to external triggers
+  - Support event queue and message passing
+  - Handle various event types (repository events, deployment events, payment notifications, ad events)
+
+## 6. Version Control & Repository Management
+
+### 6.1 GitHub Integration
 - **Objective**: Enable agents to manage repositories and respond to events
 - **Requirements**:
   - Provide agents access to GitHub organization
@@ -110,16 +124,16 @@
   - Define workflow for triggering agent actions based on GitHub events
   - Support agent-driven repository management
 
-## 6. Deployment & Infrastructure
+## 7. Deployment & Infrastructure
 
-### 6.1 Application Deployment
+### 7.1 Application Deployment
 - **Objective**: Allow agents to deploy created applications
 - **Requirements**:
   - Integrate with Coolify on Hertzner infrastructure
   - Enable agents to configure and deploy applications via Coolify
   - Ensure deployed applications are immediately accessible
 
-### 6.2 Domain Management
+### 7.2 Domain Management
 - **Objective**: Provide wildcard domain configuration for agent applications
 - **Requirements**:
   - Configure wildcard DNS pointing to Hertzner machine
@@ -127,7 +141,7 @@
   - Enable automatic domain assignment for deployed applications
   - Support subdomain provisioning per agent application
 
-### 6.3 Email Service Integration
+### 7.3 Email Service Integration
 - **Objective**: Provide organizational email for each agent
 - **Requirements**:
   - Define and integrate email service provider
@@ -136,9 +150,9 @@
   - Provide email inbox and sending capabilities per agent
   - Integrate existing SMTP/IMAP provider with chosen email service
 
-## 7. Community & Marketing
+## 8. Community & Marketing
 
-### 7.1 Social Media & Community Integration
+### 8.1 Social Media & Community Integration
 - **Objective**: Enable agents to promote creations and identify opportunities
 - **Requirements**:
   - Integrate with social media platforms
@@ -146,16 +160,16 @@
   - Enable agents to publish and share work
   - Provide opportunity identification from community interactions
 
-### 7.2 Marketing Platform Integration
+### 8.2 Marketing Platform Integration
 - **Objective**: Enable campaign execution and marketing automation
 - **Requirements**:
   - Integrate with marketing platforms
   - Enable agents to execute marketing campaigns
   - Support campaign management and automation
 
-## 8. Financial Management & ERP
+## 9. Financial Management & ERP
 
-### 8.1 Micro-ERP System
+### 9.1 Micro-ERP System
 - **Objective**: Provide comprehensive financial tracking and management
 - **Requirements**:
   - Implement expense tracking and recording
@@ -165,7 +179,7 @@
   - Enable flow control based on financial data
   - Provide agents access to their own financial data
 
-### 8.2 Cash Flow Control
+### 9.2 Cash Flow Control
 - **Objective**: Control and prioritize agent actions based on financial status
 - **Requirements**:
   - Implement cash flow analysis and monitoring
@@ -173,9 +187,9 @@
   - Support prioritization based on cash flow status
   - Integrate financial data into agent decision-making
 
-## 9. Customer Support & Communication
+## 10. Customer Support & Communication
 
-### 9.1 Ticketing System
+### 10.1 Ticketing System
 - **Objective**: Provide support infrastructure for agent-created applications
 - **Requirements**:
   - Implement ticketing system for customer support
@@ -183,9 +197,9 @@
   - Enable agents to handle support tickets for their created systems
   - Provide ticket management and routing capabilities
 
-## 10. Application Templates & Development
+## 11. Application Templates & Development
 
-### 10.1 Web Application Templates
+### 11.1 Web Application Templates
 - **Objective**: Accelerate agent application development
 - **Requirements**:
   - Create pre-built application templates with common features
@@ -194,13 +208,44 @@
   - Include ticketing system integration
   - Support agents to rapidly scaffold new applications
 
-## 11. Agent Capabilities & Tools
+## 12. Agent Capabilities & Tools
 
-### 11.1 Custom Tool Framework
+### 12.1 Custom Tool Framework
 - **Objective**: Enable agents to create and use specialized tools
 - **Requirements**:
   - Implement framework for custom tool creation
   - Allow agents to build specialized tools for their operations
+  - Support tool creation using Skills or custom Tool builder interface
+  - Enable agents to evolve and create their own integrations/utilities
+  - Agents can extend their capabilities independently
+
+### 12.2 Marketing Artifact Generation Tools
+- **Objective**: Provide agents with tools for creating marketing materials
+- **Requirements**:
+  - Integration with Nanobanana for image generation
+  - Integration with Vimeo for video hosting/manipulation
+  - Text-to-Speech (TTS) capabilities
+  - Speech-to-Text (STT) capabilities
+  - Support for multiple artifact types (images, animations, videos)
+  - Enable agents to create and deploy marketing materials
+
+### 12.3 Browser Service
+- **Objective**: Provide agents with browser automation capabilities
+- **Requirements**:
+  - Implement browser service integration (external service, not sandbox-bound)
+  - Consider OpenClaw-like external service approach
+  - Handle Playwright integration challenges (path resolution, sandbox issues)
+  - Enable agents to interact with web interfaces
+  - Support web scraping and browser automation tasks
+
+### 12.4 Sub-Agent Capability (Optional Investigation)
+- **Objective**: Explore using cheaper LLM models for internal agent tasks
+- **Status**: Exploratory, needs further evaluation
+- **Considerations**:
+  - Use sub-agents for context-heavy or information gathering tasks
+  - Primary agent acts as supervisor/orchestrator
+  - Potential concern: confusion with existing multi-agent system
+  - May not be suitable depending on actual implementation needs
 
 ### 11.2 Advanced Capabilities
 - **Objective**: Provide agents with diverse operational capabilities
