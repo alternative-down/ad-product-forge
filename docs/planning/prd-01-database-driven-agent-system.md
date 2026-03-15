@@ -83,38 +83,25 @@ The application currently:
 ### Functional Requirements
 
 #### FR1: Agent Configuration Storage
-- Store agent metadata in database: ID, name, description, model reference
-- Store agent instructions (system prompt/rules)
-- Support multiple agents per system
-- Associate agents with communication providers
+- Store agent metadata: ID, name, description, model, instructions
 - Track agent creation/modification timestamps
 
-#### FR2: Provider Credential Management
-- Store provider credentials: API tokens, usernames, passwords, connection strings
-- Support multiple credential sets per provider type
-- Associate credentials with specific agents
+#### FR2: Agent-Provider Associations
+- Associate each agent with multiple providers (Discord, Email, etc)
+- Store encrypted credentials per agent-provider pair
+- Support provider_type: discord, email, slack, etc
 
-#### FR3: Provider Configuration Schema
-- Store provider-specific settings (API endpoints, ports, TLS settings)
-- Support provider-specific metadata (e.g., Discord channel ID allowlists, email BCC addresses)
-- Store provider settings per agent
+#### FR3: Encryption & Security
+- Encrypt credentials JSON before storage
+- Decrypt credentials on retrieval transparently
+- Use AES-256-GCM encryption
+- No credentials logged in plain text
 
-#### FR4: Encryption & Security
-- Encrypt sensitive fields before database storage
-- Transparent decryption on retrieval
-- Prevent accidental credential logging
-- Support encrypted fields: API tokens, passwords, connection strings, OAuth credentials
-
-#### FR5: Runtime Agent Instantiation
-- Load agent configuration from database at startup
-- Create agent instances from database configuration
-- Enable fallback to hardcoded config if database unavailable
-
-#### FR6: Provider Integration
-- Load communication provider credentials from database
-- Initialize providers with persisted credentials at startup
-- Support changing provider credentials without code changes
-- Maintain compatibility with existing provider interfaces (Discord, Email)
+#### FR4: Runtime Agent Initialization
+- Load agents and their credentials from database at startup
+- Decrypt credentials for each provider
+- Create agent instances from database config
+- Fallback to hardcoded config if database unavailable
 
 ### Non-Functional Requirements
 
@@ -130,84 +117,69 @@ The application currently:
 
 ## Architecture
 
-### Classification: MASTRA FRAMEWORK
+### Classification: AD-PRODUCT-FORGE APPLICATION
 
-**This PRD describes core infrastructure for the Mastra agent orchestration framework.** It is framework-level, not application-specific, and should be designed for reusability across any project using Mastra.
-
-**Framework Characteristics:**
-- ✅ Core agent infrastructure (persistence, bootstrapping)
-- ✅ Reusable by any Mastra deployment
-- ✅ Multitenancy-capable architecture
-- ✅ Not specific to any one organization or use case
-- ✅ Should use language-agnostic documentation where possible
+**This PRD describes persistence infrastructure specific to Nicolas' ad-product-forge application.** It is application-specific, not a reusable Mastra framework component. It defines how ad-product-forge stores and encrypts agent configurations and credentials.
 
 ### High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│          Mastra Framework: Application Startup               │
+│          ad-product-forge: Application Startup               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌──────────────────┐     ┌──────────────────────────────┐ │
 │  │ Environment Vars │     │ Agent Registry DB (SQLite)   │ │
-│  │  (ENCRYPTION_KEY)      │                              │ │
-│  └──────────────────┘     │ ┌─ agents ─────────────────┐ │ │
-│         │                 │ │ ┌─ agent_providers ─────┐ │ │
-│         │                 │ │ │ ┌─ providers ────────┐ │ │ │
-│         ▼                 │ │ │ │ ┌─ credentials ───┐ │ │ │ │
-│  ┌──────────────────┐     │ │ │ │ │                │ │ │ │ │
-│  │ Encryption Layer │────▶│ │ │ │ └────────────────┘ │ │ │ │
-│  │  (encrypt/decrypt)     │ │ │ └──────────────────┘ │ │ │
-│  └──────────────────┘     │ │ └────────────────────┘ │ │
-│                          │ └──────────────────────────┘ │
-│         ▲                 │                              │
-│         │                 │  Drizzle ORM               │
-│  ┌──────────────────┐     │  (Query Builder + Schema)   │
-│  │ Agent Loader     │────▶│                              │
-│  │  (Runtime Init)  │     └──────────────────────────────┘
-│  └──────────────────┘
-│         │
-│         ▼
-│  ┌──────────────────┐
-│  │  Agent Registry  │
-│  │  (In-Memory)     │
-│  └──────────────────┘
-│         │
-│         ▼
-│  ┌──────────────────┐
-│  │ Mastra Instance  │
-│  │ (Agent Executor) │
-│  └──────────────────┘
-│
+│  │ (ENCRYPTION_KEY) │     │                              │ │
+│  └──────────────────┘     │  agents                      │ │
+│         │                 │  agent_providers             │ │
+│         │                 │  (encrypted_credentials)     │ │
+│         ▼                 └──────────────────────────────┘ │
+│  ┌──────────────────┐                                      │
+│  │ Encryption Layer │◀──────── Drizzle ORM               │
+│  │ (encrypt/decrypt)│     (Query + Schema)               │
+│  └──────────────────┘                                      │
+│         ▲                                                   │
+│         │                                                   │
+│  ┌──────────────────┐                                      │
+│  │ Agent Loader     │                                      │
+│  └──────────────────┘                                      │
+│         │                                                   │
+│         ▼                                                   │
+│  ┌──────────────────┐                                      │
+│  │ Agent Registry   │                                      │
+│  │ (In-Memory)      │                                      │
+│  └──────────────────┘                                      │
+│         │                                                   │
+│         ▼                                                   │
+│  ┌──────────────────┐                                      │
+│  │ Mastra Instance  │                                      │
+│  │ (Agent Executor) │                                      │
+│  └──────────────────┘                                      │
+│                                                            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Responsibilities
 
-#### 1. **Agent Registry Database Module** (`packages/mastra-core/src/database/`)
+#### 1. **Agent Registry Database Module** (`packages/mastra-engine/src/database/`)
 - Initialize Drizzle ORM with SQLite
 - Define schema using Drizzle definitions
 - Provide typed query builders
-- Support agent metadata storage, provider associations, credential management
+- Support agent metadata storage and agent-provider associations
 
-#### 2. **Encryption Layer** (`packages/mastra-core/src/encryption/`)
+#### 2. **Encryption Layer** (`packages/mastra-engine/src/encryption/`)
 - Load encryption key from environment
 - Provide encrypt/decrypt utilities
 - Support AES-256-GCM encryption
-- Ensure sensitive credentials are protected
+- Encrypt/decrypt credentials JSON in `agent_providers` table
 
-#### 3. **Agent Registry Loader** (`packages/mastra-core/src/agent-registry/loader.ts`)
-- Query database for agents and providers at framework initialization
+#### 3. **Agent Loader** (`packages/mastra-engine/src/agent/loader.ts`)
+- Query database for agents and agent_providers at startup
 - Initialize encryption layer
+- Decrypt credentials for each provider
 - Create agent instances using database configuration
 - Fallback to hardcoded configuration if database unavailable
-- Support both single-instance and distributed deployments
-
-#### 4. **Provider Credential Manager** (`packages/mastra-core/src/providers/credential-manager.ts`)
-- Load and decrypt provider credentials
-- Manage credential lifecycle (create, update, revoke)
-- Validate credentials before provider initialization
-- Support credential rotation without restart
 
 ### Data Flow
 
@@ -250,18 +222,16 @@ Initialize Database Connection
 
 #### Provider Credential Lookup
 ```
-Agent needs provider credential
+Agent needs to connect to a provider
     │
     ▼
-Agent Registry lookup (agent_id → agent)
+Query agent_providers table (agent_id + provider_type)
     │
-    ├─→ Get associated providers (agent_providers table)
+    ├─→ Get encrypted_credentials (JSON)
     │
-    ├─→ Load credentials for each provider
+    ├─→ Decrypt with ENCRYPTION_KEY
     │
-    ├─→ Decrypt sensitive fields
-    │
-    └─→ Return configured provider instance
+    └─→ Extract token/password and return to agent
 ```
 
 ---
@@ -282,84 +252,44 @@ CREATE TABLE agents (
   updated_at INTEGER NOT NULL
 );
 
--- Communication provider definitions
-CREATE TABLE providers (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,           -- e.g., 'discord', 'email'
-  base_config TEXT,              -- JSON, non-sensitive settings
-  created_at INTEGER NOT NULL
-);
-
--- Agent-to-provider associations
+-- Agent-to-provider associations with encrypted credentials
 CREATE TABLE agent_providers (
   id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL,
-  provider_id TEXT NOT NULL,
-  provider_config TEXT,           -- Agent-specific provider config (JSON)
+  provider_type TEXT NOT NULL,      -- e.g., 'discord', 'email'
+  encrypted_credentials TEXT NOT NULL,  -- JSON encrypted: {token, password, etc}
   created_at INTEGER NOT NULL,
   FOREIGN KEY (agent_id) REFERENCES agents(id),
-  FOREIGN KEY (provider_id) REFERENCES providers(id),
-  UNIQUE(agent_id, provider_id)
-);
-
--- Encrypted credentials
-CREATE TABLE credentials (
-  id TEXT PRIMARY KEY,
-  provider_id TEXT NOT NULL,
-  credential_type TEXT NOT NULL,  -- e.g., 'api_token', 'password', 'oauth'
-  encrypted_value TEXT NOT NULL,  -- Encrypted with encryption key
-  metadata TEXT,                   -- JSON, non-sensitive metadata
-  created_at INTEGER NOT NULL,
-  FOREIGN KEY (provider_id) REFERENCES providers(id)
+  UNIQUE(agent_id, provider_type)
 );
 ```
 
 ### Encryption Strategy
 
 **Field Encryption:**
-- Only `encrypted_value` in `credentials` table is encrypted
-- All other fields are plain text (non-sensitive metadata, configuration)
-- Encryption uses AES-256-GCM with PBKDF2-derived key from master key
+- Only `encrypted_credentials` in `agent_providers` table is encrypted
+- All other fields are plain text (agent_id, provider_type, created_at)
+- Credentials are stored as encrypted JSON: `{token: "...", password: "...", etc}`
+- Encryption uses AES-256-GCM
 
 **Key Management:**
-- Master key loaded from `ENCRYPTION_KEY` environment variable at startup
-- Key is 32 bytes (256 bits) for AES-256-GCM
-- No key rotation support in Phase 1 (simple for solo developer)
+- Master key loaded from `ENCRYPTION_KEY` environment variable
+- Key must be 32 bytes (256 bits) for AES-256-GCM
+- Simple for solo developer (no rotation needed initially)
 
 **Decryption at Runtime:**
 ```typescript
-const agentProviders = await getAgentProviders(agentId);
+const agentProviders = await db.query.agent_providers.findMany({
+  where: eq(agent_providers.agent_id, agentId)
+});
+
 for (const ap of agentProviders) {
-  const creds = await getAndDecryptCredentials(ap.provider_id);
-  provider.initialize(creds);
+  const decryptedCreds = decrypt(ap.encrypted_credentials);
+  provider.initialize(ap.provider_type, decryptedCreds);
 }
 ```
 
 ---
-
-## Implementation Plan
-
-### Phase 1: Core Infrastructure (1 week)
-
-- [ ] Set up Drizzle ORM with SQLite
-- [ ] Design and implement database schema
-- [ ] Implement encryption/decryption layer
-- [ ] Create basic migrations
-- [ ] Add database initialization at startup
-
-### Phase 2: Agent Loader (1 week)
-
-- [ ] Implement Agent Loader to read from database
-- [ ] Create fallback to hardcoded config
-- [ ] Basic error handling
-- [ ] Simple unit tests
-
-### Phase 3: API & Testing (1 week)
-
-- [ ] Implement agent creation/update APIs
-- [ ] Implement credential storage API
-- [ ] Basic integration tests
-- [ ] Documentation
 
 ---
 
