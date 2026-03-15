@@ -1,79 +1,79 @@
-# PRD-33: Browser Service
+# PRD-07: Serviço de Navegador
 
-**Status:** Planning
-**Date:** 2026-03-15
-**Version:** 1.0
-
----
-
-## Personal Project Note
-
-This is a personal development project. Features follow KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles. Scope focuses on core functionality for a solo developer workflow.
+**Status:** Planejamento
+**Data:** 2026-03-15
+**Versão:** 1.0
 
 ---
 
-## 1. Overview
+## Nota de Projeto Pessoal
 
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes browser automation infrastructure specific to ad-product-forge.** Browser service enables Nicolas' agents to interact with web pages for research, data gathering, and testing. This is application-specific capability, not framework infrastructure.
-
-**Goal:** Provide agents with web automation and scraping capabilities via an external browser service.
-
-**Why (for ad-product-forge):** Nicolas' research and development agents need to interact with web pages, fill forms, and scrape dynamic content without sandbox constraints. Enables web-based market research and testing.
-
-**Priority:** Medium
-**Timeline:** 2-3 weeks
+Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It). Escopo focado em funcionalidade principal para fluxo de trabalho de desenvolvedor solo.
 
 ---
 
-## 2. Problem
+## 1. Visão Geral
 
-- Agents cannot interact with web interfaces
-- Cannot scrape dynamic JavaScript-rendered content
-- Browser automation in sandboxed environments is problematic
-- Need isolated, scalable browser infrastructure
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
----
+**Este PRD descreve infraestrutura de automação de navegador específica para ad-product-forge.** Serviço de navegador permite que agentes de Nicolas interajam com páginas web para pesquisa, coleta de dados e testes. Esta é capacidade específica da aplicação, não infraestrutura do framework.
 
-## 3. Use Cases
+**Objetivo:** Fornecer agentes com capacidades de automação web e web scraping via serviço de navegador externo.
 
-1. **Agent scrapes a website:** Agent navigates to site, extracts data
-2. **Agent fills and submits forms:** Agent automates form completion workflow
-3. **Agent waits for dynamic content:** Agent waits for JavaScript to render, then extracts
-4. **Agent takes screenshots:** Agent captures page state for analysis
+**Por quê (para ad-product-forge):** Agentes de pesquisa e desenvolvimento de Nicolas precisam interagir com interfaces web, preencher formulários e fazer scraping de conteúdo dinâmico sem restrições de sandbox. Habilita pesquisa de mercado baseada em web e testes.
+
+**Prioridade:** Média
+**Timeline:** 2-3 semanas
 
 ---
 
-## 4. Requirements
+## 2. Problema
 
-### Core Features
+- Agentes não conseguem interagir com interfaces web
+- Não conseguem fazer scraping de conteúdo renderizado por JavaScript dinâmico
+- Automação de navegador em ambientes sandboxed é problemática
+- Precisa de infraestrutura de navegador isolada e escalável
 
-**FR1: Browser Session Management**
-- Create new browser sessions on demand
-- Maintain session state across multiple operations
-- Auto-cleanup inactive sessions (timeout: 30 minutes)
+---
 
-**FR2: Page Navigation & Content**
-- Navigate to URLs
-- Retrieve page HTML and text content
-- Get page metadata (title, URL, status)
+## 3. Casos de Uso
 
-**FR3: Element Interaction**
-- Click elements by CSS selector
-- Fill form fields
-- Submit forms
+1. **Agente faz scraping de um site:** Agente navega para site, extrai dados
+2. **Agente preenche e submete formulários:** Agente automatiza fluxo de preenchimento de formulário
+3. **Agente aguarda conteúdo dinâmico:** Agente aguarda JavaScript renderizar, depois extrai
+4. **Agente tira screenshots:** Agente captura estado da página para análise
 
-**FR4: Content Extraction**
-- Query elements by CSS selector
-- Extract text and attributes
-- Basic table data extraction
+---
 
-**FR5: JavaScript Execution**
-- Execute simple JavaScript in page context
-- Basic wait conditions
+## 4. Requisitos
 
-### Agent-Facing Tools
+### Recursos Principais
+
+**FR1: Gerenciamento de Sessão de Navegador**
+- Criar novas sessões de navegador sob demanda
+- Manter estado de sessão através de múltiplas operações
+- Limpeza automática de sessões inativas (timeout: 30 minutos)
+
+**FR2: Navegação de Página & Conteúdo**
+- Navegar para URLs
+- Recuperar HTML e conteúdo de texto da página
+- Obter metadados da página (título, URL, status)
+
+**FR3: Interação com Elementos**
+- Clicar elementos por seletor CSS
+- Preencher campos de formulário
+- Submeter formulários
+
+**FR4: Extração de Conteúdo**
+- Consultar elementos por seletor CSS
+- Extrair texto e atributos
+- Extração básica de dados de tabela
+
+**FR5: Execução de JavaScript**
+- Executar JavaScript simples no contexto de página
+- Condições básicas de espera
+
+### Ferramentas Voltadas para Agentes
 
 ```typescript
 createBrowserSession(): Promise<{sessionId}>
@@ -90,195 +90,62 @@ executeScript(sessionId: string, script: string): Promise<{result}>
 
 ---
 
-## 5. Success Criteria
+## 5. Critérios de Sucesso
 
-- Agents can navigate to URLs and retrieve content
-- Form automation works across different form types
-- Web scraping handles dynamic content
-- Browser operations complete within <30 seconds
-- Sessions properly isolated and cleaned up
-- Service handles concurrent requests from multiple agents
+- Agentes podem navegar para URLs e recuperar conteúdo
+- Automação de formulário funciona através de diferentes tipos de formulário
+- Web scraping lida com conteúdo dinâmico
+- Operações de navegador se completam em <30 segundos
+- Sessões propriamente isoladas e limpas
+- Serviço lida com requisições concorrentes de múltiplos agentes
 
 ---
 
-## 6. Non-Functional Requirements
+## 6. Requisitos Não-Funcionais
 
 **Performance:**
-- Session creation: <5 seconds
-- Navigation: <15 seconds
-- Element interaction: quick response
-- Reasonable execution speed for solo developer use
+- Criação de sessão: <5 segundos
+- Navegação: <15 segundos
+- Interação com elementos: resposta rápida
+- Velocidade de execução razoável para uso de desenvolvedor solo
 
-**Reliability:**
-- Session isolation (no cross-session interference)
-- Proper cleanup of stale processes
-- Basic timeout and retry logic
+**Confiabilidade:**
+- Isolamento de sessão (sem interferência entre sessões)
+- Limpeza apropriada de processos obsoletos
+- Lógica básica de timeout e retry
 
-**Security:**
-- Session isolation between agents
-- Input validation (prevent injection)
-- Error handling without exposing internals
+**Segurança:**
+- Isolamento de sessão entre agentes
+- Validação de entrada (prevenir injeção)
+- Tratamento de erros sem expor internals
 
 ---
 
-## 7. Architecture
+## 7. Arquitetura
 
-### Components
+### Componentes
 
-1. **External Browser Service** (separate process/container)
-   - Manages Playwright browser instances
-   - HTTP API for remote control
-   - Session lifecycle management
-   - Runs outside sandbox
+1. **Serviço de Navegador Externo** (processo/container separado)
+   - Gerencia instâncias de navegador Playwright
+   - API HTTP para controle remoto
+   - Gerenciamento de ciclo de vida de sessão
+   - Roda fora do sandbox
 
-2. **Agent-Facing Browser Tools** (in Mastra Engine)
-   - High-level tools for agents
-   - HTTP client to browser service
-   - Error handling and retry logic
-   - Timeout management
+2. **Ferramentas de Navegador Voltadas para Agentes** (em Motor Mastra)
+   - Ferramentas de alto nível para agentes
+   - Cliente HTTP para serviço de navegador
+   - Tratamento de erros e lógica de retry
+   - Gerenciamento de timeout
 
-### Network Architecture
+### Arquitetura de Rede
 
 ```
-Agent (in Mastra Engine)
+Agente (em Motor Mastra)
   ↓
-Browser Tools
+Ferramentas de Navegador
   ↓
-HTTP Client
+Cliente HTTP
   ↓
-Browser Service (External)
+Serviço de Navegador (Externo)
   ├─ Playwright
-  └─ Chrome/Chromium
 ```
-
-### Session Management
-
-```
-Agent requests new session
-  ↓
-Browser Service creates session
-  ├─ Launch Playwright browser context
-  ├─ Assign session ID
-  ├─ Set 30-minute timeout
-  └─ Return session ID
-       ↓
-    Agent performs operations using session ID
-       ├─ Navigate, interact, extract
-       └─ Session state maintained across calls
-            ↓
-         Session timeout or explicit close
-         ├─ Close browser context
-         ├─ Release resources
-         └─ Cleanup
-```
-
----
-
-## 8. Scope
-
-### In Scope
-- Browser session management (create, close, timeout)
-- Page navigation and content retrieval
-- Basic element interaction (click, fill, submit)
-- Content extraction (querySelector, text extraction)
-- Simple JavaScript execution
-- Error handling and timeout management
-
-### Out of Scope
-- Cookie and storage management
-- Screenshot capture
-- Visual regression testing
-- Multiple browser engines
-- Distributed browser service
-- CAPTCHA solving
-- Proxy/VPN support
-
----
-
-## 9. Implementation Phases
-
-**Phase 1: Core Implementation (2-3 weeks)**
-1. Browser service setup (Node/Playwright)
-2. Session management (create, close, timeout)
-3. Page navigation and content retrieval
-4. Element interaction (click, fill, submit)
-5. Content extraction (basic)
-6. JavaScript execution (simple)
-7. Error handling and logging
-
----
-
-## 10. Database Schema
-
-**`forge_browser_sessions` table:**
-```
-- session_id (UUID, primary key)
-- agent_id (UUID)
-- service_session_id (UUID) -- assigned by browser service
-- created_at (TIMESTAMP)
-- closed_at (TIMESTAMP, nullable)
-- status (ENUM: active, closed)
-```
-
----
-
-## 11. Configuration
-
-### Browser Service Environment Variables
-
-```
-BROWSER_PORT=9000
-MAX_SESSIONS=50
-SESSION_TIMEOUT=1800000  # 30 minutes
-LOG_LEVEL=info
-HEADLESS=true
-```
-
-### Agent Configuration
-
-```typescript
-createForgeAgent({
-  browser: {
-    enabled: true,
-    serviceUrl: process.env.BROWSER_SERVICE_URL || "http://localhost:9000",
-    timeout: 30000,
-    sessions: {
-      maxConcurrent: 5,
-      idleTimeout: 1800000,
-    }
-  }
-})
-```
-
----
-
-## 12. Risks & Mitigation
-
-| Risk | Mitigation |
-|------|-----------|
-| Memory leaks in browser instances | Regular cleanup, session timeouts |
-| Timeout issues | Configurable timeouts, clear error messages |
-| Cross-session data leakage | Strict session isolation |
-| Service unavailability | Graceful error handling, clear feedback |
-
----
-
-## 13. Testing Strategy
-
-- **Unit Tests:** Session management, basic functionality
-- **Integration Tests:** End-to-end navigation, interaction, extraction
-- **Error Handling:** Timeout, invalid input, API failures
-
----
-
-## Glossary
-
-| Term | Definition |
-|------|-----------|
-| Browser Session | Isolated browser context for agent operations |
-| Browser Service | HTTP service managing browser instances |
-| Selector | CSS selector for identifying page elements |
-
----
-
-**Next Steps:** Begin Phase 1 implementation

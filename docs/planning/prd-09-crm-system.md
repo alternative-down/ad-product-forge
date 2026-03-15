@@ -1,39 +1,39 @@
-# PRD 21: CRM System
+# PRD-09: Sistema CRM
 
-**Status:** Draft - Simplified for Solo Developer
-**Date:** 2026-03-15
-**Version:** 1.0
-**Note:** Personal project by solo developer. Scope limited to core functionality (KISS + YAGNI).
-
----
-
-## Executive Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes customer relationship management infrastructure specific to ad-product-forge.** CRM capabilities enable Nicolas' sales agents to autonomously track customers, manage opportunities, and log interactions. This is application-specific, not framework infrastructure.
-
-### Goal
-Implement a simple CRM system for agents to track customer interactions, manage sales pipeline, and maintain customer data without external dependencies.
-
-### Core Features (for ad-product-forge)
-1. **Customer & Contact Management** - Store customer info and contacts for Nicolas' products
-2. **Sales Pipeline** - Track opportunities through sales stages
-3. **Interaction History** - Log emails, calls, meetings with prospects and customers
-4. **Simple Reporting** - Basic metrics on pipeline and activity for Nicolas' oversight
-
-### Out of Scope
-- ML predictions
-- Dashboard UI (Phase 2)
-- Advanced reporting
-- Third-party integrations
-- Email automation
+**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Data:** 2026-03-15
+**Versão:** 1.0
+**Nota:** Projeto pessoal por desenvolvedor solo. Escopo limitado a funcionalidade principal (KISS + YAGNI).
 
 ---
 
-## Data Model
+## Sumário Executivo
 
-### Customers
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
+
+**Este PRD descreve infraestrutura de gerenciamento de relacionamento com cliente específica para ad-product-forge.** Capacidades de CRM permitem que agentes de vendas de Nicolas rastrearem autonomamente clientes, gerenciarem oportunidades e registrarem interações. Esta é específica da aplicação, não infraestrutura do framework.
+
+### Objetivo
+Implementar um sistema CRM simples para agentes rastrearem interações de cliente, gerenciarem pipeline de vendas e manterem dados de cliente sem dependências externas.
+
+### Recursos Principais (para ad-product-forge)
+1. **Gerenciamento de Cliente & Contato** - Armazenar info de cliente e contatos para produtos de Nicolas
+2. **Pipeline de Vendas** - Rastrear oportunidades através de estágios de vendas
+3. **Histórico de Interação** - Registrar emails, chamadas, reuniões com prospects e clientes
+4. **Relatório Simples** - Métricas básicas em pipeline e atividade para supervisão de Nicolas
+
+### Fora do Escopo
+- Previsões de ML
+- Dashboard de UI (Fase 2)
+- Relatório avançado
+- Integrações de terceiros
+- Automação de email
+
+---
+
+## Modelo de Dados
+
+### Clientes
 ```typescript
 customers {
   id: UUID
@@ -45,7 +45,7 @@ customers {
 }
 ```
 
-### Contacts
+### Contatos
 ```typescript
 contacts {
   id: UUID
@@ -53,13 +53,13 @@ contacts {
   name: string
   email: string
   phone: string
-  role: string (optional)
+  role: string (opcional)
   created_at: timestamp
   updated_at: timestamp
 }
 ```
 
-### Opportunities
+### Oportunidades
 ```typescript
 opportunities {
   id: UUID
@@ -71,7 +71,7 @@ opportunities {
 }
 ```
 
-### Interactions
+### Interações
 ```typescript
 interactions {
   id: UUID
@@ -85,78 +85,65 @@ interactions {
 
 ---
 
-## API Endpoints
+## Endpoints da API
 
-### Customers
-- `POST /api/crm/customers` — Create customer
-- `GET /api/crm/customers` — List customers
-- `GET /api/crm/customers/:id` — Get customer details
-- `PUT /api/crm/customers/:id` — Update customer
-- `DELETE /api/crm/customers/:id` — Delete customer
+### Clientes
+- `POST /api/crm/customers` — Criar cliente
+- `GET /api/crm/customers` — Listar clientes
+- `GET /api/crm/customers/:id` — Obter detalhes de cliente
+- `PUT /api/crm/customers/:id` — Atualizar cliente
+- `DELETE /api/crm/customers/:id` — Deletar cliente
 
-### Opportunities
-- `POST /api/crm/opportunities` — Create opportunity
-- `GET /api/crm/opportunities` — List opportunities
-- `PUT /api/crm/opportunities/:id` — Update opportunity (including stage changes)
-- `DELETE /api/crm/opportunities/:id` — Delete opportunity
+### Oportunidades
+- `POST /api/crm/opportunities` — Criar oportunidade
+- `GET /api/crm/opportunities` — Listar oportunidades
+- `PUT /api/crm/opportunities/:id` — Atualizar oportunidade (incluindo mudanças de estágio)
+- `DELETE /api/crm/opportunities/:id` — Deletar oportunidade
 
-### Interactions
-- `POST /api/crm/interactions` — Log interaction
-- `GET /api/crm/customers/:id/interactions` — Get customer interactions
+### Interações
+- `POST /api/crm/interactions` — Registrar interação
+- `GET /api/crm/customers/:id/interactions` — Obter interações de cliente
 
 ### Pipeline
-- `GET /api/crm/pipeline` — Get pipeline summary (count and value by stage)
+- `GET /api/crm/pipeline` — Obter resumo de pipeline (contagem e valor por estágio)
 
 ---
 
-## Implementation Notes
+## Notas de Implementação
 
-### Database
-- Use existing Drizzle ORM + LibSQL setup
-- Create tables: `customers`, `contacts`, `opportunities`, `interactions`
-- Add simple indexes on foreign keys and frequently queried fields
+### Banco de Dados
+- Usar setup existente de Drizzle ORM + LibSQL
+- Criar tabelas: `customers`, `contacts`, `opportunities`, `interactions`
+- Adicionar índices simples em foreign keys e campos frequentemente consultados
 
-### Integration
-- Agent tools to create/update customers and opportunities
-- Auto-log interactions from communication module (Phase 2)
-- Simple REST API for future UI
+### Integração
+- Ferramentas de agente para criar/atualizar clientes e oportunidades
+- Auto-registrar interações do módulo de comunicação (Fase 2)
+- API REST simples para UI futura
 
-### Validation
-- Use Zod for schema validation
-- Required fields: customer name, opportunity title, stage
+### Validação
+- Usar Zod para validação de schema
+- Campos obrigatórios: nome de cliente, título de oportunidade, estágio
 
-### Testing
-- Unit tests for core operations
-- API endpoint tests
-- Basic validation tests
-
----
-
-## Success Criteria
-- Agents can CRUD customers and opportunities
-- Pipeline API returns stage counts
-- All data persists in database
-- Basic filtering by stage/customer works
+### Testes
+- Testes unitários para operações principais
+- Testes de endpoint de API
+- Testes básicos de validação
 
 ---
 
-## Dependencies
-- Drizzle ORM (existing)
-- LibSQL (existing)
-- Zod (existing)
-- Agent context/tools framework (existing)
+## Critérios de Sucesso
+- Agentes podem CRUD clientes e oportunidades
+- API de pipeline retorna contagens por estágio
+- Todos os dados persistem no banco de dados
+- Filtragem básica por estágio/cliente funciona
 
 ---
 
-## Timeline
-- **Week 1:** Database schema + migrations
-- **Week 2:** API endpoints + validation
-- **Week 3:** Agent tools + testing
-- **Week 4:** Documentation
-
-Total: ~40 hours for solo developer
+## Dependências
+- Drizzle ORM (existente)
+- LibSQL (existente)
+- Zod (existente)
+- Framework de contexto/ferramentas de agentes (existente)
 
 ---
-
-**Document History:**
-- v1.0 (2026-03-15): Simplified for personal solo developer project

@@ -1,67 +1,67 @@
-# PRD-20: Cash Flow Control (Simplified)
+# PRD-08: Controle de Fluxo de Caixa (Simplificado)
 
-**Status:** Draft - Simplified for Solo Developer
-**Date:** 2026-03-15
-**Note:** Personal developer project. Apply KISS + YAGNI principles.
-
----
-
-## 1. Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION (OPTIONAL)
-
-**This PRD describes cost control features specific to ad-product-forge.** Budget limits and spending controls enable Nicolas to manage agent costs as the platform scales. Currently optional, deferred until multiple agents require budget management.
-
-### Objective
-**OPTIONAL** - Set monthly spending limits per agent.
-
-### Why Deprioritized
-- Solo dev can manually track budget
-- Not needed for MVP (only 1-2 agents initially)
-- Can add if/when scaling to multiple agents
-- Value-to-effort ratio too low currently
+**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Data:** 2026-03-15
+**Nota:** Projeto de desenvolvedor pessoal. Aplicar princípios KISS + YAGNI.
 
 ---
 
-## 2. Scope
+## 1. Sumário
 
-### Included
-- Set spending limit per agent (monthly)
-- Check remaining budget before action
-- Alert when limit approaching
-- Simple logging
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE (OPCIONAL)
 
-### Not Included
-- Emergency protocols
-- Constraint escalation
-- Multi-agent fairness
-- Dynamic reallocation
-- Forecasting
-- External financial data integration
-- Approval workflows
-- UI dashboard
+**Este PRD descreve recursos de controle de custo específicos para ad-product-forge.** Limites de orçamento e controles de gastos permitem que Nicolas gerencie custos de agentes conforme a plataforma escala. Atualmente opcional, adiado até que múltiplos agentes exijam gerenciamento de orçamento.
+
+### Objetivo
+**OPCIONAL** - Definir limites de gastos mensais por agente.
+
+### Por que Desproiorizado
+- Dev solo pode rastrear manualmente orçamento
+- Não é necessário para MVP (apenas 1-2 agentes inicialmente)
+- Pode adicionar se/quando escalar para múltiplos agentes
+- Proporção valor-para-esforço muito baixa atualmente
 
 ---
 
-## 3. Minimal Requirements (if implemented)
+## 2. Escopo
 
-### RF-1: setSpendingLimit Tool
+### Incluído
+- Definir limite de gastos por agente (mensal)
+- Verificar orçamento restante antes da ação
+- Alertar quando limite se aproxima
+- Logging simples
+
+### Não Incluído
+- Protocolos de emergência
+- Escalação de restrição
+- Equidade entre agentes
+- Realocação dinâmica
+- Previsão
+- Integração com dados financeiros externos
+- Fluxos de trabalho de aprovação
+- Dashboard de UI
+
+---
+
+## 3. Requisitos Mínimos (se implementado)
+
+### RF-1: Ferramenta setSpendingLimit
 ```typescript
 interface SetSpendingLimitParams {
   agentId: string;
   monthlyLimit: number; // USD
 }
 
-// Returns: success: boolean
+// Retorna: success: boolean
 ```
 
-### RF-2: getSpendingStatus Tool
+### RF-2: Ferramenta getSpendingStatus
 ```typescript
 interface GetSpendingStatusParams {
   agentId: string;
 }
 
-// Returns: {
+// Retorna: {
 //   limit: number;
 //   spent: number;
 //   remaining: number;
@@ -70,7 +70,7 @@ interface GetSpendingStatusParams {
 
 ---
 
-## 4. Database (Minimal)
+## 4. Banco de Dados (Mínimo)
 
 ```sql
 CREATE TABLE agent_spending_limits (
@@ -79,33 +79,33 @@ CREATE TABLE agent_spending_limits (
 );
 ```
 
-Note: Use existing financial_log from PRD-19 to calculate current month spending.
+Nota: Usar financial_log existente de PRD-19 para calcular gastos do mês atual.
 
 ---
 
-## 5. Implementation (if needed)
+## 5. Implementação (se necessário)
 
-- Create single table: agent_spending_limits
-- Implement setSpendingLimit, getSpendingStatus (2-3h total)
-- Use financial_log from PRD-19 for calculation
+- Criar tabela única: agent_spending_limits
+- Implementar setSpendingLimit, getSpendingStatus (2-3h total)
+- Usar financial_log de PRD-19 para cálculo
 
 ---
 
-## 6. Success Criteria
-- [ ] Can set spending limit per agent
-- [ ] Can view current month spending
-- [ ] Can see remaining budget
+## 6. Critérios de Sucesso
+- [ ] Pode definir limite de gastos por agente
+- [ ] Pode visualizar gastos do mês atual
+- [ ] Pode ver orçamento restante
 
 ---
 
 ## 7. Status
-**Deferred** - Nice to have, not essential for MVP.
+**Adiado** - Nice to have, não essencial para MVP.
 
 ---
 
-## 7. Effort
-- **Total: 2-3 hours** (if implemented)
+## 8. Esforço
+- **Total: 2-3 horas** (se implementado)
 
 ---
 
-**End of document**
+**Fim do documento**

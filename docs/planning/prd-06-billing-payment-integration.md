@@ -1,45 +1,45 @@
-# PRD 22: Billing & Payment Integration
+# PRD-06: Integração de Pagamento & Faturamento
 
-**Status:** Draft - Simplified for Solo Developer
-**Date:** 2026-03-15
-**Version:** 1.0
-**Note:** Personal project by solo developer. Scope limited to core functionality (KISS + YAGNI).
-
----
-
-## Executive Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes payment processing infrastructure specific to ad-product-forge.** Billing integration enables Nicolas' SaaS products to accept customer payments and manage subscriptions. This is application-specific business infrastructure, not framework.
-
-### Goal
-Implement basic payment processing for subscriptions using Stripe, enabling the platform to accept payments and manage subscription lifecycles.
-
-### Core Features (for ad-product-forge)
-1. **Stripe Integration** - Process payments for Nicolas' SaaS products
-2. **Subscription Management** - Create, update, cancel customer subscriptions
-3. **Basic Transaction History** - Log successful payments for financial tracking
-
-### Out of Scope
-- Multiple payment providers
-- ERP reconciliation
-- Admin dashboard
-- Refunds & disputes handling
-- Advanced error recovery
-- Webhook event processing
-- PCI compliance details (Stripe handles this)
+**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Data:** 2026-03-15
+**Versão:** 1.0
+**Nota:** Projeto pessoal por desenvolvedor solo. Escopo limitado a funcionalidade principal (KISS + YAGNI).
 
 ---
 
-## Data Model
+## Sumário Executivo
 
-### Subscriptions
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
+
+**Este PRD descreve infraestrutura de processamento de pagamento específica para ad-product-forge.** Integração de faturamento permite que produtos SaaS de Nicolas aceitem pagamentos de clientes e gerenciem ciclos de vida de inscrições. Esta é infraestrutura comercial específica da aplicação, não do framework.
+
+### Objetivo
+Implementar processamento básico de pagamento para inscrições usando Stripe, permitindo que a plataforma aceite pagamentos e gerencie ciclos de vida de inscrições.
+
+### Recursos Principais (para ad-product-forge)
+1. **Integração Stripe** - Processar pagamentos para produtos SaaS de Nicolas
+2. **Gerenciamento de Inscrições** - Criar, atualizar, cancelar inscrições de clientes
+3. **Histórico de Transações Básico** - Registrar pagamentos bem-sucedidos para rastreamento financeiro
+
+### Fora do Escopo
+- Múltiplos provedores de pagamento
+- Reconciliação ERP
+- Dashboard de admin
+- Reembolsos & tratamento de disputas
+- Recuperação avançada de erros
+- Processamento de eventos webhook
+- Detalhes de conformidade PCI (Stripe lida com isso)
+
+---
+
+## Modelo de Dados
+
+### Inscrições
 ```typescript
 subscriptions {
   id: UUID
   customer_id: UUID (foreign key)
-  stripe_subscription_id: string (Stripe reference)
+  stripe_subscription_id: string (referência Stripe)
   product_id: string
   status: 'active' | 'cancelled'
   amount: decimal
@@ -50,13 +50,13 @@ subscriptions {
 }
 ```
 
-### Transactions
+### Transações
 ```typescript
 transactions {
   id: UUID
-  subscription_id: UUID (foreign key, optional)
+  subscription_id: UUID (foreign key, opcional)
   customer_id: UUID (foreign key)
-  stripe_payment_id: string (Stripe reference)
+  stripe_payment_id: string (referência Stripe)
   amount: decimal
   status: 'completed' | 'failed'
   created_at: timestamp
@@ -65,77 +65,77 @@ transactions {
 
 ---
 
-## API Endpoints
+## Endpoints da API
 
-### Subscriptions
-- `POST /api/billing/subscriptions` — Create subscription
-- `GET /api/billing/subscriptions/:id` — Get subscription
-- `PUT /api/billing/subscriptions/:id` — Update subscription (cancel)
-- `GET /api/billing/subscriptions` — List customer subscriptions
+### Inscrições
+- `POST /api/billing/subscriptions` — Criar inscrição
+- `GET /api/billing/subscriptions/:id` — Obter inscrição
+- `PUT /api/billing/subscriptions/:id` — Atualizar inscrição (cancelar)
+- `GET /api/billing/subscriptions` — Listar inscrições do cliente
 
-### Transactions
-- `GET /api/billing/transactions` — List transactions
-- `GET /api/billing/transactions/:id` — Get transaction details
-
----
-
-## Implementation Notes
-
-### Database
-- Use existing Drizzle ORM + LibSQL
-- Create tables: `subscriptions`, `transactions`
-- Index stripe_subscription_id field
-
-### Stripe Integration
-- Use Stripe SDK (`stripe` npm package)
-- Store Stripe keys in environment variables
-- Create/cancel subscriptions via Stripe API
-- Store subscription state locally for reference
-
-### Error Handling
-- Log failed payments
-- Return meaningful validation errors
-- No retry logic needed (Stripe handles this)
-
-### Validation
-- Use Zod for request validation
-- Required: customer_id, product_id, amount, billing_cycle
+### Transações
+- `GET /api/billing/transactions` — Listar transações
+- `GET /api/billing/transactions/:id` — Obter detalhes de transação
 
 ---
 
-## Success Criteria
-- Subscriptions can be created and cancelled in Stripe
-- Transaction history queryable
-- Basic error handling for Stripe failures
-- Data persists correctly
+## Notas de Implementação
+
+### Banco de Dados
+- Usar Drizzle ORM + LibSQL existente
+- Criar tabelas: `subscriptions`, `transactions`
+- Indexar campo stripe_subscription_id
+
+### Integração Stripe
+- Usar SDK Stripe (pacote npm `stripe`)
+- Armazenar chaves Stripe em variáveis de ambiente
+- Criar/cancelar inscrições via API Stripe
+- Armazenar estado de inscrição localmente para referência
+
+### Tratamento de Erros
+- Registrar pagamentos falhados
+- Retornar erros de validação significativos
+- Nenhuma lógica de retry necessária (Stripe lida com isso)
+
+### Validação
+- Usar Zod para validação de requisição
+- Obrigatório: customer_id, product_id, amount, billing_cycle
 
 ---
 
-## Security Considerations
-- Verify Stripe webhook signatures (non-negotiable)
-- Never log full credit card info (Stripe handles this)
-- Use HTTPS for all API calls
-- Store Stripe keys in environment variables only
+## Critérios de Sucesso
+- Inscrições podem ser criadas e canceladas em Stripe
+- Histórico de transações consultável
+- Tratamento básico de erros para falhas Stripe
+- Dados persistem corretamente
 
 ---
 
-## Dependencies
-- Stripe SDK
-- Drizzle ORM (existing)
-- LibSQL (existing)
-- Zod (existing)
+## Considerações de Segurança
+- Verificar assinaturas de webhook Stripe (não negociável)
+- Nunca registrar informação completa de cartão de crédito (Stripe lida com isso)
+- Usar HTTPS para todas as chamadas de API
+- Armazenar chaves Stripe apenas em variáveis de ambiente
+
+---
+
+## Dependências
+- SDK Stripe
+- Drizzle ORM (existente)
+- LibSQL (existente)
+- Zod (existente)
 
 ---
 
 ## Timeline
-- **Week 1:** Database schema + Stripe SDK setup
-- **Week 2:** Subscription CRUD endpoints
-- **Week 3:** Transaction logging + testing
-- **Week 4:** Documentation
+- **Semana 1:** Schema de banco de dados + setup de SDK Stripe
+- **Semana 2:** Endpoints CRUD de inscrição
+- **Semana 3:** Logging de transações + testes
+- **Semana 4:** Documentação
 
-Total: ~25 hours for solo developer
+Total: ~25 horas para desenvolvedor solo
 
 ---
 
-**Document History:**
-- v1.0 (2026-03-15): Simplified for personal solo developer project
+**Histórico do Documento:**
+- v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo
