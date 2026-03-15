@@ -1,105 +1,105 @@
-# PRD-04: Agent Termination Workflow
+# PRD-04: Workflow de Terminação de Agentes
 
-**Status:** Planning
-**Date:** 2026-03-15
+**Status:** Planejamento
+**Data:** 2026-03-15
 
-> **Note:** This is a personal solo-developer project. Requirements focus on functionality and simplicity.
-
----
-
-## Objective
-
-Enable agents to autonomously terminate other agents (or admin to terminate any agent). Termination workflow uses Mastra workflow pattern to cleanly remove agent from system and clean up resources.
+> **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Os requisitos focam em funcionalidade e simplicidade.
 
 ---
 
-## Requirements
+## Objetivo
 
-### FR1: Terminate Agent via Workflow
-- Agent requests to terminate agent via tool (similar to hiring)
-- Input: agentId, reason (optional)
-- Uses Mastra workflow pattern
-- Output: confirmation with deleted resources
-
-### FR2: Resource Cleanup
-- Delete agent from `agents` table
-- Cascade delete from `agent_providers` table (via FK)
-- Delete agent database files (if any: `{agentId}.db`)
-- Delete agent memory/state files (`.forge-memory/{agentId}/`)
-- Clean up any agent-specific temporary files
-
-### FR3: Termination Confirmation
-- Return confirmation with list of resources deleted
-- Log termination event (audit trail)
+Permitir que agentes terminem autonomamente outros agentes (ou admin terminar qualquer agente). Workflow de terminação usa padrão de workflow Mastra para remover limpar o agente do sistema e limpar recursos.
 
 ---
 
-## Architecture
+## Requisitos
 
-### Components
+### FR1: Terminar Agente via Workflow
+- Agente solicita terminar agente via ferramenta (similar a contratação)
+- Entrada: agentId, motivo (opcional)
+- Usa padrão de workflow Mastra
+- Saída: confirmação com recursos deletados
 
-1. **Termination Workflow** — Mastra workflow invoked by agent
-2. **Cascade Deletion** — Database constraints cascade FK deletions
-3. **File Cleanup** — Find and delete agent-specific files
-4. **Logging** — Record termination event
+### FR2: Limpeza de Recursos
+- Deletar agente da tabela `agents`
+- Cascade delete da tabela `agent_providers` (via FK)
+- Deletar arquivos de banco de dados do agente (se houver: `{agentId}.db`)
+- Deletar arquivos de memória/estado do agente (`.forge-memory/{agentId}/`)
+- Limpar qualquer arquivo temporário específico do agente
 
-### Flow
+### FR3: Confirmação de Terminação
+- Retornar confirmação com lista de recursos deletados
+- Registrar evento de terminação (trilha de auditoria)
+
+---
+
+## Arquitetura
+
+### Componentes
+
+1. **Workflow de Terminação** — Workflow Mastra invocado por agente
+2. **Deleção em Cascata** — Restrições de banco de dados fazem deletes de FK em cascata
+3. **Limpeza de Arquivo** — Encontrar e deletar arquivos específicos do agente
+4. **Logging** — Registrar evento de terminação
+
+### Fluxo
 
 ```
-Agent invokes termination workflow
+Agente invoca workflow de terminação
   │
   ├─ Mastra workflow: terminateAgent({agentId, reason})
   │
-  ├─ Workflow executes:
-  │  ├─ Validate agentId exists
-  │  ├─ Delete from agents table
-  │  ├─ Cascade: delete from agent_providers
-  │  ├─ Find and delete {agentId}.db
-  │  ├─ Find and delete .forge-memory/{agentId}/
-  │  ├─ Log termination event
-  │  └─ Return confirmation
+  ├─ Workflow executa:
+  │  ├─ Validar agentId existe
+  │  ├─ Deletar da tabela agents
+  │  ├─ Cascade: deletar de agent_providers
+  │  ├─ Encontrar e deletar {agentId}.db
+  │  ├─ Encontrar e deletar .forge-memory/{agentId}/
+  │  ├─ Registrar evento de terminação
+  │  └─ Retornar confirmação
   │
-  └─ Return list of deleted resources to agent
+  └─ Retornar lista de recursos deletados para agente
 ```
 
 ---
 
-## Database Schema
+## Schema do Banco de Dados
 
-**No new tables needed.**
+**Nenhuma tabela nova necessária.**
 
-**Changes to agents table:**
-- Optional: add `terminated_at` (TIMESTAMP) to track when agent was deleted
-- Or: simply delete row from table
+**Mudanças na tabela agents:**
+- Opcional: adicionar `terminated_at` (TIMESTAMP) para rastrear quando agente foi deletado
+- Ou: simplesmente deletar linha da tabela
 
-**Cascading deletes:**
-- `agent_providers`: delete all rows where `agent_id = {agentId}`
-- This clears all credentials automatically
+**Deletes em cascata:**
+- `agent_providers`: deletar todas as linhas onde `agent_id = {agentId}`
+- Isso limpa todas as credenciais automaticamente
 
 ---
 
-## Technical Decisions
+## Decisões Técnicas
 
 ### 1. Hard Delete vs Soft Delete
-**Decision:** Hard delete (remove from table completely)
+**Decisão:** Hard delete (remover da tabela completamente)
 
-**Rationale:**
-- Solo dev project, no compliance/audit retention needed
-- Simpler data model
-- No need for deleted agent recovery
+**Justificativa:**
+- Projeto dev solo, nenhuma compliance/retenção de auditoria necessária
+- Modelo de dados mais simples
+- Sem necessidade de recuperação de agente deletado
 
-### 2. Cascade Deletion
-**Decision:** Delete all related records (agent_providers, credentials)
+### 2. Deleção em Cascata
+**Decisão:** Deletar todos os registros relacionados (agent_providers, credenciais)
 
-**Rationale:**
-- Clean removal
-- No orphaned credentials
-- Database constraints ensure consistency
+**Justificativa:**
+- Remoção limpa
+- Sem credenciais órfãs
+- Restrições de banco de dados garantem consistência
 
-### 3. File Cleanup
-**Decision:** Delete agent database files and memory directories
+### 3. Limpeza de Arquivo
+**Decisão:** Deletar arquivos de banco de dados do agente e diretórios de memória
 
-**Rationale:**
-- Free up disk space
-- Clean system state
-- No orphaned files
+**Justificativa:**
+- Liberar espaço em disco
+- Estado de sistema limpo
+- Sem arquivos órfãos
