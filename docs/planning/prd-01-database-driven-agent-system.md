@@ -168,7 +168,6 @@ The application currently:
 - Initialize encryption layer
 - Decrypt credentials for each provider
 - Create agent instances using database configuration
-- Fallback to hardcoded configuration if database unavailable
 
 ### Data Flow
 
@@ -278,7 +277,99 @@ for (const ap of agentProviders) {
 }
 ```
 
+**Encryption Implementation (Node.js crypto):**
+```typescript
+import crypto from 'node:crypto';
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+
+export function encryptSecret(plaintext: string): string {
+  const key = Buffer.from(ENCRYPTION_KEY, 'base64');
+  if (key.length !== 32) throw new Error('ENCRYPTION_KEY must be 256-bit');
+
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+
+  let ciphertext = cipher.update(plaintext, 'utf8', 'hex');
+  ciphertext += cipher.final('hex');
+
+  const authTag = cipher.getAuthTag();
+  const combined = Buffer.concat([iv, Buffer.from(ciphertext, 'hex'), authTag]);
+
+  return combined.toString('base64');
+}
+
+export function decryptSecret(encryptedValue: string): string {
+  const key = Buffer.from(ENCRYPTION_KEY, 'base64');
+  if (key.length !== 32) throw new Error('ENCRYPTION_KEY must be 256-bit');
+
+  const combined = Buffer.from(encryptedValue, 'base64');
+  if (combined.length < 32) throw new Error('Invalid encrypted value');
+
+  const iv = combined.subarray(0, 16);
+  const authTag = combined.subarray(combined.length - 16);
+  const ciphertext = combined.subarray(16, combined.length - 16);
+
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+
+  let plaintext = decipher.update(ciphertext.toString('hex'), 'hex', 'utf8');
+  plaintext += decipher.final('utf8');
+
+  return plaintext;
+}
+```
+
 ---
+
+## Provider Management API
+
+### Register Provider Credentials
+```typescript
+async function registerProviderConfig(agentId: string, providerType: string, credentials: Record<string, string>) {
+  // 1. Encrypt credentials
+  const encrypted = encryptSecret(JSON.stringify(credentials));
+
+  // 2. Store in agent_providers
+  await db.insert(agent_providers).values({
+    agent_id: agentId,
+    provider_type: providerType,
+    encrypted_credentials: encrypted,
+    created_at: Date.now()
+  });
+}
+```
+
+### Get Provider Credentials
+```typescript
+async function getProviderCredentials(agentId: string, providerType: string): Promise<Record<string, string>> {
+  const record = await db.query.agent_providers.findFirst({
+    where: and(
+      eq(agent_providers.agent_id, agentId),
+      eq(agent_providers.provider_type, providerType)
+    )
+  });
+
+  if (!record) return {};
+
+  const decrypted = decryptSecret(record.encrypted_credentials);
+  return JSON.parse(decrypted);
+}
+```
+
+### Rotate Provider Credentials
+```typescript
+async function rotateProviderCredentials(agentId: string, providerType: string, newCredentials: Record<string, string>) {
+  const encrypted = encryptSecret(JSON.stringify(newCredentials));
+
+  await db.update(agent_providers)
+    .set({ encrypted_credentials: encrypted })
+    .where(and(
+      eq(agent_providers.agent_id, agentId),
+      eq(agent_providers.provider_type, providerType)
+    ));
+}
+```
 
 ---
 
@@ -324,36 +415,3 @@ for (const ap of agentProviders) {
 - System works even if database is unavailable
 - Allows gradual migration
 
----
-
-## Dependencies
-
-### Required
-- `sqlite3` (or `better-sqlite3`) - Database driver
-- `drizzle-orm` - TypeScript ORM
-- `zod` - Input validation
-- Node.js built-in `crypto` module
-
-### Optional (Future)
-- Migration CLI tools
-- Database visualization tools
-- Backup/restore utilities
-
----
-
-## Glossary
-
-- **Agent:** An AI-powered entity that can execute tasks and communicate via providers
-- **Provider:** A communication channel (Discord, Email, etc.) for agent interaction
-- **Credential:** Sensitive authentication data (tokens, passwords) for a provider
-- **Encryption Key:** Master key used to encrypt/decrypt credentials
-- **Drizzle ORM:** TypeScript ORM for type-safe database queries
-- **Migration:** Schema change script applied at startup
-
----
-
-## Sign-Off
-
-**Author:** Development Team
-**Approved:** N/A (Personal Project)
-**Last Updated:** 2026-03-15
