@@ -11,7 +11,7 @@ Cada agente é tratado como um "funcionário" da empresa digital, possuindo:
 - **Thread Única:** Cada agente possui uma thread principal de mensagens que mantém a continuidade histórica.
 
 ## 3. Modelo de Execução (Run Loop)
-A execução de tarefas é disparada por eventos em uma fila de jobs (BullMQ/Trigger.dev).
+A execução de tarefas é disparada por eventos no runtime do agente.
 
 ### 3.1 Ciclo de Vida de um Run
 1. **Trigger:** Um novo job chega na fila do agente.
@@ -36,8 +36,8 @@ A comunicação é estritamente assíncrona e baseada em eventos.
 
 ## 5. Gestão de Memória (Isolated Knowledge)
 Cada agente possui um repositório de conhecimento isolado.
-- **Tecnologias Candidatas:** Neo4j (Grafo Semântico) ou SQLite-vec (Vetor + BM25).
-- **Abordagem Observacional:** Inspirada no padrão de logs/rastreabilidade do Mastra, mas com gestão customizada de persistência e recuperação.
+- **Tecnologia:** LibSQL (SQLite) com LibSQLVector para armazenamento de embeddings.
+- **Abordagem Observacional:** Implementada via ObservationalMemory do Mastra, com gestão customizada de persistência e recuperação via workspace e GraphRAG.
 
 ## 6. Implementação com Mastra.ai
 - **Mastra Agent:** Utilizado para configurar o modelo (LLM), instruções de sistema e registro de ferramentas.
@@ -46,11 +46,12 @@ Cada agente possui um repositório de conhecimento isolado.
 - **Mastra Syncs:** Podem ser usados para rotinas de manutenção de memória (Heartbeats) e ingestão de dados externos.
 
 ## 7. Infraestrutura de Suporte
-- **Fila:** BullMQ (Redis) para orquestração de jobs.
-- **Observabilidade:** Logs contextuais e métricas de execução por run/agente.
-- **Cron/Heartbeat:** Agendamento nativo do framework ou via sistema de jobs para rotinas periódicas.
+- **Armazenamento:** LibSQL (SQLite) para persistência de mensagens, contexto e observações.
+- **Vetores:** LibSQLVector para embeddings de memória de longo prazo.
+- **Observabilidade:** Logs contextuais e métricas de execução por run/agente via ObservationalMemory.
+- **Cron/Heartbeat:** Pode ser implementado no runtime do agente ou integrado com sistema externo conforme necessário.
 
-## 8. Próximos Passos
-1. Definição da stack de banco de dados (Neo4j vs SQLite).
-2. Criação do wrapper de orquestração que gerencia o ciclo de vida da thread (clonagem e compactação).
-3. Implementação do agente de coleta (Firecrawl) como o primeiro "funcionário" Mastra.
+## 8. Status Atual
+1. Stack de banco de dados: LibSQL (SQLite) com LibSQLVector para embeddings.
+2. Wrapper de orquestração implementado via Mastra Agent com LongTermMemory processor.
+3. Sistema de memória integrado com observações, workspace e GraphRAG.

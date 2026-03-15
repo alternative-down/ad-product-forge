@@ -35,14 +35,14 @@ Isso vale para o ciclo completo:
 - Esses dados são registrados localmente.
 - A mesma estrutura também pode chegar por endpoint de ingestão (canal passivo para outras fontes).
 - Endpoint(s) de hooks externos recebem notificações de sistemas terceiros (financeiro, email, etc.).
-- Cada novo insumo registrado dispara 1 job na fila (trigger/bull), processado por agente LLM.
+- Cada novo insumo registrado dispara 1 job no runtime do agente, processado por agente LLM.
 - Objetivo: ampliar a descoberta de sinais além da lista inicial, com exploração guiada.
 
 ## Base semântica do sistema
-- Grafo em Neo4j
-- Embeddings em nós e arestas
-- Busca fulltext com BM25
-- Grafo de conhecimento construído continuamente pelos agentes (relações, categorização, evidências)
+- Armazenamento em LibSQL (SQLite) com índices vetoriais via LibSQLVector
+- Embeddings em chunks de conhecimento e observações
+- Busca híbrida com vetores e BM25
+- Grafo de conhecimento construído continuamente pelos agentes (relações, categorização, evidências) via GraphRAG
 
 ## Identidade dos agentes
 Cada agente do sistema possui:
@@ -77,7 +77,7 @@ Cada agente do sistema possui:
 - cada agente possui sua própria fila de eventos/jobs
 - cada job dispara um run
 - fila alimenta as execuções do agente e suas ramificações
-- retry/backoff pode ser tratado nativamente pelo orquestrador de jobs (BullMQ/Trigger), com backoff exponencial por job
+- retry/backoff pode ser implementado no runtime do agente conforme necessário
 
 ## Memória por agente
 - cada agente terá memória própria e isolada

@@ -51,8 +51,8 @@ O resultado consolidado será injetado na lista de mensagens respeitando a efici
 
 ---
 
-## 5. Próximos Passos (Implementação)
+## 5. Status Atual (Implementação)
 
-- [ ] Criar o `UnifiedRecallProcessor` no `@mastra-engine/core`.
-- [ ] Configurar o `createAgent` para injetar este processador e o `FilterToolCalls`.
-- [ ] Validar a recuperação de contexto em thread única.
+- [x] `LongTermMemory` processor implementado como processador unificado em `@mastra-engine`.
+- [x] `createAgent` configura automaticamente os processadores de entrada/saída (OM + LongTermMemory).
+- [x] Recuperação de contexto em thread única validada através de workspace, observações e GraphRAG.

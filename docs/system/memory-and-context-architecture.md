@@ -1,10 +1,10 @@
 # Design de Contexto: Memória de Dois Níveis (V4 - GraphRAG Ingestion)
 
-Este documento detalha como o **Mastra Engine** popula o GraphRAG com dados provenientes de múltiplas fontes (OM, Workspace e Mensagens).
+Este documento detalha como o **Mastra Engine** implementa a memória através de múltiplas camadas: observações (OM), workspace local (Workspace) e busca semântica (GraphRAG via LibSQLVector).
 
 ## 1. Estratégia de Ingestão Unificada
 
-O GraphRAG nativo do Mastra requer um índice vetorial rico para construir as relações. Utilizaremos o índice `knowledge_index` no `LibSQLVector` como a base de conhecimento central ("Cérebro") do agente.
+O sistema de memória do Mastra é implementado com um índice vetorial em `LibSQLVector` como a base de conhecimento central ("Cérebro") do agente. GraphRAG utiliza este índice para construir relações e recuperação semântica.
 
 ### 1.1 Fontes de Dados
 
@@ -68,7 +68,7 @@ override async generate(...) {
 
 A busca híbrida no `HybridRecallProcessor` agora consulta o `knowledge_index` usando a ferramenta de GraphRAG, permitindo que o agente "navegue" entre uma reflexão de 3 dias atrás e um arquivo de configuração recém-criado.
 
-## 5. Próximos Passos
-- [ ] Atualizar `GraphIntegrator` com suporte a Workspace e Dedeplicação básica.
-- [ ] Implementar ingestão dupla (Primary + Exec) no `EngineAgent`.
-- [ ] Validar se o `HybridRecallProcessor` consegue relacionar dados das duas fontes.
+## 5. Status Atual
+- [x] LongTermMemory processor implementado com suporte a Workspace e busca semântica.
+- [x] Integração com ObservationalMemory e GraphRAG via LibSQLVector.
+- [x] Busca híbrida (workspace + graph) funcionando na LongTermMemory.

@@ -1,7 +1,7 @@
 # Refatoração da Arquitetura de Agentes
 
 ## Status
-Draft ativo
+Parcialmente completo — este documento é histórico e reflete a estratégia inicial de refatoração. Muitas das fases descritas já foram implementadas através do `createAgent` e seus subsistemas.
 
 ## Objetivo
 Transformar o repositório em uma base para desenvolvimento de um sistema de agentes persistentes com integrações externas múltiplas, identidade própria, memória própria, comunicação interna entre agentes e criação dinâmica de novos agentes.
@@ -192,16 +192,24 @@ packages/mastra-engine/src/
 4. Extrair memória para módulo próprio.
 5. Só depois introduzir comunicação agente-agente e filas.
 
-## O que não implementar agora
-- comunicação agente-agente completa
-- criação dinâmica completa
-- BullMQ/Trigger
-- generalização total de todas as integrações externas
+## O que não foi implementado (Escopo Futuro)
+- Comunicação agente-agente através de fila (Fase 7) — apenas protocolo básico existe via CommunicationModule
+- Criação dinâmica completa (Fase 6) — framework preparado mas sem factory completa
+- BullMQ/Trigger (não faz parte da arquitetura atual) — agentes despertam via wake-queue local
+- Generalização total de todas as integrações externas (Fase 4) — Discord adapter existe, outros adaptadores em futuro
 
-## Resultado esperado
-Ao final da refatoração incremental, o repositório deve suportar:
-- múltiplos agentes persistentes
-- múltiplas accounts externas por agente
-- adapters externos independentes
-- runtime de agente reutilizável
-- base preparada para criação dinâmica e comunicação interna
+## Mapeamento: Plano → Implementação Atual
+- **Fases 1-3:** Completas — domínio, runtime e memória separados em módulos próprios
+- **Fase 4:** Parcial — Discord implementado como adapter, outros em futuro
+- **Fase 5:** Parcial — AgentAccount conceitual, roteamento básico via CommunicationModule
+- **Fase 6:** Não iniciada — Registry/factory seria segundo passo
+- **Fase 7:** Não iniciada — Comunicação agente-agente apenas conceitual
+- **Fase 8:** Parcial — Providers/auth separados em estrutura clara
+
+## Resultado Atual
+O repositório suporta:
+- Múltiplos agentes persistentes via `createAgent`
+- Múltiplas accounts externas por agente via CommunicationModule
+- Adapters externos integrados (Discord, interno-chat)
+- Runtime de agente reutilizável e testável
+- Base preparada para comunicação interna (wake-queue, thread única)
