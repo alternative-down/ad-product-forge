@@ -1,124 +1,124 @@
-# PRD-02: External Agent System
+# PRD-02: Sistema de Agentes Externos
 
-**Status:** Planning
-**Date:** 2026-03-15
+**Status:** Planejamento
+**Data:** 2026-03-15
 
-> **Note:** This is a personal solo-developer project. Requirements focus on functionality and simplicity.
-
----
-
-## Objective
-
-Enable internal agents to dynamically create temporary specialist agents for consultation, research, or delegation tasks. External agents are regular agents created via workflow, communicate via standard messaging provider, and can be terminated when tasks complete.
+> **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Os requisitos focam em funcionalidade e simplicidade.
 
 ---
 
-## Requirements
+## Objetivo
 
-### FR1: Create External Agent
-- Internal agent requests to create external agent via tool
-- Input: name, role, systemPrompt, context (optional)
-- External agent created using `createSimpleAgent()` with workflow
-- Returned: externalAgentId, conversationId
-- External agent saved in `agents` table (no separate table)
-
-### FR2: Communication
-- External agent communicates via `sendMessage()` / `getMessages()` tools
-- Uses `external_agent_chat` provider (similar to internal chat)
-- Messages routed between internal and external agent only
-
-### FR3: Termination
-- Internal agent can terminate external agent
-- External agent marked as terminated in database
-- Messages no longer accepted
+Permitir que agentes internos criem dinamicamente agentes especialistas temporários para tarefas de consulta, pesquisa ou delegação. Agentes externos são agentes regulares criados via workflow, comunicam via provedor de mensagens padrão, e podem ser terminados quando as tarefas se completam.
 
 ---
 
-## Architecture
+## Requisitos
 
-### Components
+### FR1: Criar Agente Externo
+- Agente interno solicita criação de agente externo via ferramenta
+- Entrada: nome, role, systemPrompt, contexto (opcional)
+- Agente externo criado usando `createSimpleAgent()` com workflow
+- Retornado: externalAgentId, conversationId
+- Agente externo salvo na tabela `agents` (sem tabela separada)
 
-1. **Workflow Integration** — Use Mastra workflow to create external agent
-2. **External Agent Chat Provider** — New provider `external_agent_chat` (copy of internal chat)
-3. **Agent Storage** — External agents stored in `agents` table (same as regular agents)
-4. **Messaging** — Use existing communication module tools
+### FR2: Comunicação
+- Agente externo comunica via ferramentas `sendMessage()` / `getMessages()`
+- Usa provedor `external_agent_chat` (similar ao chat interno)
+- Mensagens roteadas entre agente interno e externo apenas
 
-### Flow
+### FR3: Terminação
+- Agente interno pode terminar agente externo
+- Agente externo marcado como terminado no banco de dados
+- Mensagens não são mais aceitas
+
+---
+
+## Arquitetura
+
+### Componentes
+
+1. **Integração com Workflow** — Usar workflow Mastra para criar agente externo
+2. **Provedor de Chat de Agente Externo** — Novo provedor `external_agent_chat` (cópia do chat interno)
+3. **Armazenamento de Agentes** — Agentes externos armazenados na tabela `agents` (mesmo que agentes regulares)
+4. **Mensagens** — Usar ferramentas de módulo de comunicação existentes
+
+### Fluxo
 
 ```
-Internal Agent invokes external agent workflow
+Agente Interno invoca workflow de agente externo
   │
   ├─ Mastra workflow: createExternalAgent({name, role, systemPrompt, context})
   │
-  ├─ Workflow creates agent:
-  │  ├─ agentId = UUID (marks as external)
+  ├─ Workflow cria agente:
+  │  ├─ agentId = UUID (marca como externo)
   │  ├─ instructions = systemPrompt + context
-  │  ├─ model = same as parent
-  │  └─ Save in agents table
+  │  ├─ model = mesmo do pai
+  │  └─ Salvar na tabela agents
   │
-  └─ Return agentId + conversationId
+  └─ Retornar agentId + conversationId
 
-Communication (uses standard messaging)
+Comunicação (usa mensagens padrão)
   │
   ├─ sendMessage(externalAgentId, content)
-  │  └─ Message via external_agent_chat provider
+  │  └─ Mensagem via provedor external_agent_chat
   │
-  ├─ Agent receives, generates response
-  │  └─ Response via sendMessage()
+  ├─ Agente recebe, gera resposta
+  │  └─ Resposta via sendMessage()
   │
   └─ getMessages(externalAgentId)
 
-Termination
+Terminação
   │
   └─ Mastra workflow: terminateExternalAgent(externalAgentId)
-     └─ Mark agent status = "terminated"
+     └─ Marcar status do agente = "terminated"
 ```
 
 ---
 
-## Database Schema
+## Schema do Banco de Dados
 
-**No new tables needed.** External agents stored in existing `agents` table.
+**Nenhuma tabela nova necessária.** Agentes externos armazenados na tabela existente `agents`.
 
-**Additions to agents table:**
-- `is_external` (boolean, default false)
-- `parent_agent_id` (TEXT, optional - tracks creator)
-- `terminated_at` (TIMESTAMP, optional)
-
----
-
-## Provider: External Agent Chat
-
-New provider configuration:
-- Name: `external_agent_chat`
-- Type: Internal messaging (no external credentials)
-- Enables messaging between internal and external agents only
-- Based on existing internal chat provider
+**Adições à tabela agents:**
+- `is_external` (booleano, padrão false)
+- `parent_agent_id` (TEXT, opcional - rastreia criador)
+- `terminated_at` (TIMESTAMP, opcional)
 
 ---
 
-## Technical Decisions
+## Provedor: Chat de Agente Externo
 
-### 1. Use Existing Agent Creation
-**Decision:** External agents = regular agents created via workflow
+Nova configuração de provedor:
+- Nome: `external_agent_chat`
+- Tipo: Mensagens internas (sem credenciais externas)
+- Habilita mensagens entre agentes internos e externos apenas
+- Baseado em provedor de chat interno existente
 
-**Rationale:**
-- Simpler than separate infrastructure
-- Reuses existing agent capabilities
-- System prompt provides scope/expertise definition
+---
 
-### 2. Existing Messaging Tools
-**Decision:** Use standard `sendMessage()` / `getMessages()` for communication
+## Decisões Técnicas
 
-**Rationale:**
-- No duplicate tools needed
-- Provider routing handles agent isolation
-- Same API for all agents
+### 1. Usar Criação Existente de Agentes
+**Decisão:** Agentes externos = agentes regulares criados via workflow
 
-### 3. Same Agents Table
-**Decision:** External agents stored in `agents` table with flags
+**Justificativa:**
+- Mais simples que infraestrutura separada
+- Reutiliza capacidades de agentes existentes
+- System prompt fornece definição de escopo/expertise
 
-**Rationale:**
-- No schema duplication
-- Unified agent lifecycle management
-- Simpler queries and admin operations
+### 2. Ferramentas de Mensagens Existentes
+**Decisão:** Usar `sendMessage()` / `getMessages()` padrão para comunicação
+
+**Justificativa:**
+- Nenhuma ferramenta duplicada necessária
+- Roteamento de provedor lida com isolamento de agentes
+- Mesma API para todos os agentes
+
+### 3. Mesma Tabela de Agentes
+**Decisão:** Agentes externos armazenados na tabela `agents` com flags
+
+**Justificativa:**
+- Sem duplicação de schema
+- Gerenciamento unificado de ciclo de vida de agentes
+- Queries mais simples e operações admin
