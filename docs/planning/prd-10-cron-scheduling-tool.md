@@ -21,6 +21,7 @@ A Ferramenta Cron/Agendamento permite que agentes criem e gerenciem tarefas agen
 **Usar uma das seguintes bibliotecas Node.js:**
 - `node-cron` (npm: `node-cron`)
 - `node-schedule` (npm: `node-schedule`)
+- `bull` / `bullmq` (npm: `bull` ou `bullmq`) - para job queues mais robustas
 
 A library fornece o scheduler que avalia cronexpressions e dispara callbacks.
 
