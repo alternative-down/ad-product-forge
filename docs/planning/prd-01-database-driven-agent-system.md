@@ -101,17 +101,6 @@ The application currently:
 - Load agents and their credentials from database at startup
 - Decrypt credentials for each provider
 - Create agent instances from database config
-- Fallback to hardcoded config if database unavailable
-
-### Non-Functional Requirements
-
-#### NFR1: Security
-- Encryption key managed via environment variable
-- No sensitive data logged by default
-
-#### NFR2: Reliability
-- Fallback to hardcoded config if database unavailable
-- Schema validation on startup
 
 ---
 
@@ -337,73 +326,6 @@ for (const ap of agentProviders) {
 
 ---
 
-## Error Handling & Edge Cases
-
-### Encryption Key Missing
-- **Behavior:** Application refuses to start, clear error message
-- **Recovery:** User must provide `ENCRYPTION_KEY` environment variable
-
-### Database Unavailable
-- **Behavior:** Fall back to hardcoded agent configuration
-- **Recovery:** Fix database issue, restart application
-
-### Credential Decryption Fails
-- **Behavior:** Agent fails to initialize, clear error message
-- **Recovery:** Verify encryption key matches, check credential storage
-
-### Invalid Agent Configuration
-- **Behavior:** Validation error during agent creation
-- **Recovery:** User corrects input, retries
-
-### Database Corruption
-- **Behavior:** Clear error message on startup
-- **Recovery:** Restore from backup or reinitialize database
-
----
-
-## Testing Strategy
-
-### Unit Tests
-- Encryption/decryption functions
-- Database queries
-
-### Integration Tests
-- Agent loading from database
-- Credential encryption/decryption
-- Fallback to hardcoded config
-
-### Manual Testing
-- Agents load on startup
-- Credentials are encrypted (not readable in DB)
-- Create agent via API
-- Fallback works when database unavailable
-
----
-
-## Success Metrics
-
-1. **Functionality**
-   - Agents load correctly from database on startup
-   - Agents can be created at runtime without restart
-   - Credentials are persisted and encrypted
-
-2. **Security**
-   - Credentials cannot be read from database in plain text
-   - Encryption/decryption works correctly
-   - No credentials logged accidentally
-
-3. **Reliability**
-   - System falls back gracefully if database unavailable
-   - Clear error messages guide user to fix issues
-   - No data corruption during normal use
-
-4. **Developer Experience**
-   - Easy to add new agents
-   - Easy to rotate credentials
-   - Clear API and documentation
-
----
-
 ## Dependencies
 
 ### Required
@@ -416,25 +338,6 @@ for (const ap of agentProviders) {
 - Migration CLI tools
 - Database visualization tools
 - Backup/restore utilities
-
----
-
-## Future Enhancements
-
-- Credential rotation
-- Agent scheduling
-- Audit logging for changes
-
----
-
-## Risks & Mitigation
-
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| Encryption key leaked | High - all credentials exposed | Use environment variable, secure server |
-| Database corruption | Medium - agents fail to load | Fallback to hardcoded config, regular backups |
-| Migration issues | Medium - schema mismatch | Test migrations carefully, keep SQL simple |
-| Performance degradation | Low - encryption overhead | Monitor < 10ms per operation |
 
 ---
 
