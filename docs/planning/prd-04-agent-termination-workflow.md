@@ -9,27 +9,28 @@
 
 ## Objective
 
-Enable safe removal of agents from the system. Agent termination cleans up resources (database, memory files) and removes agent from registry.
+Enable agents to autonomously terminate other agents (or admin to terminate any agent). Termination workflow uses Mastra workflow pattern to cleanly remove agent from system and clean up resources.
 
 ---
 
 ## Requirements
 
-### FR1: Delete Agent
-- Internal agent or admin requests to terminate agent via tool
+### FR1: Terminate Agent via Workflow
+- Agent requests to terminate agent via tool (similar to hiring)
 - Input: agentId, reason (optional)
-- Requires confirmation (prevent accidents)
-- Agent removed from `agents` table
+- Uses Mastra workflow pattern
+- Output: confirmation with deleted resources
 
 ### FR2: Resource Cleanup
-- Delete agent database files (if any)
+- Delete agent from `agents` table
+- Cascade delete from `agent_providers` table (via FK)
+- Delete agent database files (if any: `{agentId}.db`)
 - Delete agent memory/state files (`.forge-memory/{agentId}/`)
-- Delete agent-provider credentials from `agent_providers` table
 - Clean up any agent-specific temporary files
 
 ### FR3: Termination Confirmation
-- Return confirmation with details of what was deleted
-- Log termination with reason (audit trail)
+- Return confirmation with list of resources deleted
+- Log termination event (audit trail)
 
 ---
 
@@ -37,31 +38,28 @@ Enable safe removal of agents from the system. Agent termination cleans up resou
 
 ### Components
 
-1. **Termination Tool** — Tool available to agents or admin
-2. **Resource Locator** — Find all agent-related files/data
-3. **Cleanup Process** — Delete database, files, registry entries
-4. **Logging** — Record termination for audit
+1. **Termination Workflow** — Mastra workflow invoked by agent
+2. **Cascade Deletion** — Database constraints cascade FK deletions
+3. **File Cleanup** — Find and delete agent-specific files
+4. **Logging** — Record termination event
 
 ### Flow
 
 ```
-Termination Request
+Agent Request (via tool)
   │
   ├─ tool: terminateAgent({agentId, reason})
   │
-  ├─ Confirm termination (prevent accidents)
+  ├─ Mastra workflow executes
+  │  ├─ Validate agentId exists
+  │  ├─ Delete from agents table
+  │  ├─ Cascade: delete from agent_providers
+  │  ├─ Find and delete {agentId}.db
+  │  ├─ Find and delete .forge-memory/{agentId}/
+  │  ├─ Log termination event
+  │  └─ Return confirmation
   │
-  ├─ Delete from agents table
-  │
-  ├─ Delete from agent_providers table
-  │
-  ├─ Delete database files ({agentId}.db)
-  │
-  ├─ Delete memory files (.forge-memory/{agentId}/)
-  │
-  ├─ Log termination event
-  │
-  └─ Return confirmation
+  └─ Return list of deleted resources
 ```
 
 ---
