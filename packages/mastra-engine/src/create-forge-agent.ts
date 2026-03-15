@@ -32,18 +32,10 @@ export async function createForgeAgent<
   >,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const { client, storage, vector } = createAgentStorage(config.id);
-
-  function runAgent() {
-    return agent.generate('Pending external activity detected.\n\nCheck your messages, inspect what is pending, and process what matters.', {
-      memory: {
-        thread: config.id,
-        resource: config.id,
-      },
-      maxSteps: 1000,
-    });
-  }
-
-  const communication = await createCommunicationModule({ client });
+  const communication = await createCommunicationModule({
+    client,
+    providers: config.providers ?? [],
+  });
   const tools = {
     ...createExternalAccountTools(communication),
     ...(config.tools ?? {}),
@@ -71,12 +63,17 @@ export async function createForgeAgent<
     inputProcessors: [om, longTermMemory],
     outputProcessors: [om, longTermMemory],
   });
-  const wakeQueue = createAgentWakeQueue({ run: runAgent });
-
-  await communication.start({
-    providers: config.providers ?? [],
-    wakeUp: () => wakeQueue.notifyExternalEvent(),
+  const wakeQueue = createAgentWakeQueue({
+    run: () =>
+      agent.generate('Pending external activity detected.\n\nCheck your messages, inspect what is pending, and process what matters.', {
+        memory: {
+          thread: config.id,
+          resource: config.id,
+        },
+        maxSteps: 1000,
+      }),
   });
+  communication.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
   return agent;
 }
