@@ -32,6 +32,22 @@ export async function createForgeAgent<
   >,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const { client, storage, vector } = createAgentStorage(config.id);
+
+  function runAgent() {
+    return agent.generate('Pending external activity detected.\n\nCheck your messages, inspect what is pending, and process what matters.', {
+      memory: {
+        thread: config.id,
+        resource: config.id,
+      },
+      maxSteps: 1000,
+    });
+  }
+
+  const communication = await createCommunicationModule({ client });
+  const tools = {
+    ...createExternalAccountTools(communication),
+    ...(config.tools ?? {}),
+  } as TTools;
   const memory = createAgentMemory({ storage, vector });
   const om = createObservationalMemory({
     storage,
@@ -47,7 +63,7 @@ export async function createForgeAgent<
     description: config.description,
     instructions: appendWorkingMemoryInstructions(config.instructions),
     model: config.model,
-    tools: (config.tools ?? {}) as TTools,
+    tools,
     workflows: config.workflows,
     workspace: config.workspace,
     agents: config.agents,
@@ -55,25 +71,12 @@ export async function createForgeAgent<
     inputProcessors: [om, longTermMemory],
     outputProcessors: [om, longTermMemory],
   });
-  const wakeQueue = createAgentWakeQueue({
-    run: () =>
-      agent.generate('Pending external activity detected.\n\nCheck your messages, inspect what is pending, and process what matters.', {
-        memory: {
-          thread: config.id,
-          resource: config.id,
-        },
-        maxSteps: 1000,
-      }),
-  });
-  const communication = await createCommunicationModule({
-    client,
+  const wakeQueue = createAgentWakeQueue({ run: runAgent });
+
+  await communication.start({
     providers: config.providers ?? [],
-    wakeUp: wakeQueue.notifyExternalEvent,
+    wakeUp: () => wakeQueue.notifyExternalEvent(),
   });
-  agent.__setTools({
-    ...createExternalAccountTools(communication),
-    ...(config.tools ?? {}),
-  } as TTools);
 
   return agent;
 }
