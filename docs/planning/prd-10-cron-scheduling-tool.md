@@ -16,6 +16,17 @@ A Ferramenta Cron/Agendamento permite que agentes criem e gerenciem tarefas agen
 
 ---
 
+## Implementação: Usar Library de Cron
+
+**Usar uma das seguintes bibliotecas Node.js:**
+- `node-cron` (npm: `node-cron`)
+- `node-schedule` (npm: `node-schedule`)
+- `bull` (para job queues mais robustas)
+
+A library fornece o scheduler que avalia cronexpressions e dispara callbacks.
+
+---
+
 ## Conceitos Principais
 
 ### 1. Regra de Agendamento
