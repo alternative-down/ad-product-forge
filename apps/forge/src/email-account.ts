@@ -8,6 +8,7 @@ type EmailProviderConfig = {
   id?: string;
   imap: { host: string; port: number; secure: boolean; user: string; password: string };
   smtp: { host: string; port: number; secure: boolean; user: string; password: string };
+  bcc?: string;
 };
 
 function resolveThreadKey(messageId: string, references: string): string {
@@ -194,6 +195,10 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         }
       }
     },
+    // TODO: The current sendMessage interface supports only a single recipient.
+    // Future enhancement: extend CommunicationProvider.sendMessage to support
+    // multiple TO recipients, CC, and explicit BCC fields. This would require
+    // changes to the provider-types contract and the agent-facing tooling.
     async sendMessage(input) {
       const transporter = nodemailer.createTransport({
         host: config.smtp.host,
@@ -215,6 +220,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           to: recipientAddress,
           subject,
           text: input.content,
+          bcc: config.bcc,
         };
 
         if (isReply && input.providerConversationKey) {

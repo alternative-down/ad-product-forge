@@ -43,6 +43,7 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_SECURE: z.string().optional(),
+  FORGE_EMAIL_BCC: z.string().optional(),
 });
 
 export async function main() {
@@ -108,6 +109,7 @@ export async function main() {
           user: env.SMTP_USER!,
           password: env.SMTP_PASSWORD!,
         },
+        bcc: env.FORGE_EMAIL_BCC,
       }),
     );
   }

@@ -258,6 +258,9 @@ export async function createCommunicationModule(config: {
     }));
   }
 
+  // TODO: Future enhancement — support multiple recipients (TO, CC) per message.
+  // This requires extending the sendMessage input contract in provider-types.ts
+  // and updating the agent-facing communication tools accordingly.
   async function sendMessage(input: {
     provider: string;
     conversationId?: string;
