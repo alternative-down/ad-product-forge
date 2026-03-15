@@ -51,13 +51,13 @@ interface SendEmailParams {
   body: string;
 }
 
-// Returns: { status: 'sent' | 'failed', error?: string }
+// Returns: { success: boolean, error?: string }
 ```
 
 ### RF-2: getInbox Tool
 ```typescript
 interface GetInboxParams {
-  limit?: number; // default 20
+  limit?: number; // default 10
 }
 
 // Returns: Array<{
@@ -65,7 +65,6 @@ interface GetInboxParams {
 //   from: string;
 //   subject: string;
 //   date: Date;
-//   preview: string;
 // }>
 ```
 
@@ -75,75 +74,42 @@ interface ReadEmailParams {
   id: string;
 }
 
-// Returns: {
-//   from: string;
-//   subject: string;
-//   body: string;
-//   date: Date;
-// }
+// Returns: { body: string }
 ```
 
 ### RF-4: Store Email Configuration
-- Email address, SMTP host, IMAP host
-- Username, password
+- Email address, SMTP/IMAP credentials
 - Via provider_configurations (PRD-02)
-
-### RF-5: Basic Logging
-- Store sent emails in log table
-- Log: agent_id, to, subject, status, timestamp
 
 ---
 
 ## 4. Database
 
-```sql
-CREATE TABLE email_sent_log (
-  id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL,
-  to_address TEXT NOT NULL,
-  subject TEXT,
-  sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  status TEXT,
-
-  INDEX idx_agent_id (agent_id),
-  INDEX idx_sent_at (sent_at)
-);
-```
+None needed. No logging required for solo dev.
 
 ---
 
 ## 5. Implementation
 
-### Phase 1: Email Service Class
-- SMTP/IMAP client wrapper
-- sendEmail(), getInbox(), readEmail()
-- Error handling, basic retry
+### Phase 1: Email Service Wrapper (6h)
+- Create email service with sendEmail(), getInbox(), readEmail()
+- Basic error handling
 
-### Phase 2: Agent Tools
-- Create 3 tools: sendEmail, getInbox, readEmail
-- Integrate with agent executor
-
-### Phase 3: Testing
-- Unit tests with mocked SMTP/IMAP
-- Integration test with real email provider
+### Phase 2: Agent Tools (3h)
+- Wire 3 tools to agent executor
 
 ---
 
 ## 6. Success Criteria
 - [ ] Agents can send emails
-- [ ] Agents can read inbox
-- [ ] Agents can read specific emails
+- [ ] Agents can read inbox (latest 10)
+- [ ] Agents can read email body
 - [ ] Works with Gmail/Outlook
-- [ ] Credentials stored securely
-- [ ] Basic logging works
 
 ---
 
 ## 7. Effort
-- Phase 1: 8h (email service)
-- Phase 2: 4h (agent tools)
-- Phase 3: 4h (testing)
-- **Total: ~16 hours**
+- **Total: ~9 hours**
 
 ---
 

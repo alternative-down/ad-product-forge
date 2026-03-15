@@ -9,20 +9,13 @@
 ## 1. Summary
 
 ### Objective
-Simple spending limits for agents to prevent budget overruns.
+**OPTIONAL** - Set monthly spending limits per agent.
 
-### Value
-- Agents know how much they can spend
-- Prevent overspending
-- Simple alerts
-
-### Important Note
-This is a personal project. Skip:
-- Emergency protocols
-- Complex constraint engines
-- Multi-agent resource fairness
-- Graceful degradation
-- Integration with external data sources
+### Why Deprioritized
+- Solo dev can manually track budget
+- Not needed for MVP (only 1-2 agents initially)
+- Can add if/when scaling to multiple agents
+- Value-to-effort ratio too low currently
 
 ---
 
@@ -46,114 +39,58 @@ This is a personal project. Skip:
 
 ---
 
-## 3. Requirements
+## 3. Minimal Requirements (if implemented)
 
-### RF-1: getCashFlowStatus Tool
-```typescript
-interface GetCashFlowStatusParams {
-  agentId?: string;
-}
-
-// Returns: {
-//   totalBudget: number;
-//   spent: number;
-//   remaining: number;
-//   percentUsed: number;
-// }
-```
-
-### RF-2: evaluateAction Tool
-```typescript
-interface EvaluateActionParams {
-  agentId: string;
-  estimatedCost: number;
-}
-
-// Returns: {
-//   allowed: boolean;
-//   message?: string; // "Budget exceeded" or "OK, 50% remaining"
-// }
-```
-
-### RF-3: logAction Tool
-```typescript
-interface LogActionParams {
-  agentId: string;
-  actionType: string;
-  estimatedCost: number;
-  actualCost?: number;
-  description?: string;
-}
-
-// Returns: { logged: true }
-```
-
-### RF-4: setSpendingLimit Tool
+### RF-1: setSpendingLimit Tool
 ```typescript
 interface SetSpendingLimitParams {
   agentId: string;
-  monthlyLimit: number;
+  monthlyLimit: number; // USD
 }
 
-// Returns: { success: true }
+// Returns: success: boolean
+```
+
+### RF-2: getSpendingStatus Tool
+```typescript
+interface GetSpendingStatusParams {
+  agentId: string;
+}
+
+// Returns: {
+//   limit: number;
+//   spent: number;
+//   remaining: number;
+// }
 ```
 
 ---
 
-## 4. Database
+## 4. Database (Minimal)
 
 ```sql
-CREATE TABLE spending_limits (
-  id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL UNIQUE,
-  monthly_limit DECIMAL(10, 2) NOT NULL,
-  period_start DATE,
-  period_end DATE,
-
-  INDEX idx_agent_id (agent_id)
-);
-
-CREATE TABLE spending_log (
-  id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL,
-  action_type TEXT,
-  estimated_cost DECIMAL(10, 2),
-  actual_cost DECIMAL(10, 2),
-  logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  INDEX idx_agent_id (agent_id),
-  INDEX idx_logged_at (logged_at)
+CREATE TABLE agent_spending_limits (
+  agent_id TEXT PRIMARY KEY,
+  monthly_limit DECIMAL(10, 2)
 );
 ```
 
+Note: Use existing financial_log from PRD-19 to calculate current month spending.
+
 ---
 
-## 5. Implementation
+## 5. Implementation (if needed)
 
-### Phase 1: Spending Limits (2h)
-- Create spending_limits table
-- Implement setCashFlowLimit, getCashFlowStatus
-
-### Phase 2: Action Evaluation (2h)
-- Implement evaluateAction
-- Check against limits
-
-### Phase 3: Logging (1h)
-- Implement logAction
-- Simple logging
-
-### Phase 4: Testing (2h)
-- Unit tests
-- Integration tests
+- Create single table: agent_spending_limits
+- Implement setSpendingLimit, getSpendingStatus (2-3h total)
+- Use financial_log from PRD-19 for calculation
 
 ---
 
 ## 6. Success Criteria
 - [ ] Can set spending limit per agent
-- [ ] Can check remaining budget
-- [ ] Can evaluate action cost
-- [ ] Logs actions
-- [ ] Alerts when limit approaching
+- [ ] Can view current month spending
+- [ ] Can see remaining budget
 
 ---
 
@@ -162,8 +99,8 @@ CREATE TABLE spending_log (
 
 ---
 
-## 8. Effort
-- Total: ~7 hours
+## 7. Effort
+- **Total: 2-3 hours** (if implemented)
 
 ---
 

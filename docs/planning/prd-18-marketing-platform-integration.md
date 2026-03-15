@@ -8,76 +8,20 @@
 
 ## 1. Summary
 
-### Objective
-Enable agents to send emails via marketing platforms (like Mailchimp).
-
-### Value
-- Agents can send bulk emails via Mailchimp
-- Simple integration, no campaign management
+### Status
+**DEFERRED** - Use PRD-16 (simple SMTP) instead for solo dev needs.
 
 ---
 
-## 2. Scope
+## 2. Rationale
 
-### Included (if implemented)
-- Send email via Mailchimp API
-- Store Mailchimp credentials
-- Basic error handling
+Why deprioritized:
+- PRD-16 provides basic email (sufficient for solo dev)
+- Mailchimp adds complexity without proportional benefit
+- No need for bulk email campaigns for personal agents
+- If bulk email needed later, can add in 2-3 hours
 
-### Not Included
-- Campaign creation/management
-- Audience management
-- A/B testing
-- Analytics
-- Multiple platforms
-- Workflows
-- Customer journey automation
-- UI dashboard
-
----
-
-## 3. Minimal Requirements
-
-### RF-1: sendEmailViaMailchimp Tool
-```typescript
-interface SendEmailViaMailchimpParams {
-  to: string[];
-  subject: string;
-  body: string;
-}
-
-// Returns: { campaignId: string, status: string } | { error: string }
-```
-
-### RF-2: Store Mailchimp API Key
-- Via provider_configurations (PRD-02)
-- Secured
-
----
-
-## 4. Implementation
-
-### Phase 1: Mailchimp Integration (4h)
-- Use Mailchimp API
-- Implement `sendEmailViaMailchimp()` tool
-- Error handling
-
----
-
-## 5. Success Criteria
-- [ ] Agent can send email via Mailchimp
-- [ ] Credentials stored securely
-- [ ] Basic error handling
-
----
-
-## 6. Status
-**Deferred** - Low priority. Use PRD-16 (simple email) instead unless bulk email needed.
-
----
-
-## 7. Effort
-- Phase 1: ~4 hours (if implemented)
+Keep this as reference only if volume scales significantly.
 
 ---
 

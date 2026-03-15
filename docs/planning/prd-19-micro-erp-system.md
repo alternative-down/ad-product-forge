@@ -51,52 +51,33 @@ This is a personal project. Skip complex features like:
 ### RF-1: logExpense Tool
 ```typescript
 interface LogExpenseParams {
-  category: string; // 'infrastructure', 'tools', 'other'
   amount: number;
   description: string;
-  date?: Date;
 }
 
-// Returns: { id: string, status: 'logged' }
+// Returns: success: boolean
 ```
 
 ### RF-2: logRevenue Tool
 ```typescript
 interface LogRevenueParams {
-  source: string;
   amount: number;
   description: string;
-  date?: Date;
 }
 
-// Returns: { id: string, status: 'logged' }
+// Returns: success: boolean
 ```
 
-### RF-3: getFinancialSummary Tool
+### RF-3: getSummary Tool
 ```typescript
-interface GetFinancialSummaryParams {
-  period?: 'month' | 'year'; // default: current month
+interface GetSummaryParams {
+  // No params - return current month summary
 }
 
 // Returns: {
 //   totalExpenses: number;
 //   totalRevenues: number;
 //   netProfit: number;
-//   byCategory: Record<string, number>;
-// }
-```
-
-### RF-4: getAgentCost Tool
-```typescript
-interface GetAgentCostParams {
-  agentId: string;
-  period?: 'month' | 'year';
-}
-
-// Returns: {
-  //   totalCost: number;
-//   revenue: number;
-//   roi: number; // %
 // }
 ```
 
@@ -108,17 +89,9 @@ interface GetAgentCostParams {
 CREATE TABLE financial_log (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL, -- 'expense' or 'revenue'
-
-  category TEXT,
   amount DECIMAL(10, 2) NOT NULL,
   description TEXT,
-
-  agent_id TEXT,
-  logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  INDEX idx_type (type),
-  INDEX idx_agent_id (agent_id),
-  INDEX idx_logged_at (logged_at)
+  logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -126,35 +99,27 @@ CREATE TABLE financial_log (
 
 ## 5. Implementation
 
-### Phase 1: Financial Logging (4h)
-- Simple table for expenses/revenues
-- Implement 2 tools: logExpense, logRevenue
-
-### Phase 2: Reporting (3h)
-- Implement getFinancialSummary, getAgentCost
-- Basic calculations (sum, average)
-
-### Phase 3: Testing (2h)
-- Unit tests
-- Sample data
+### Phase 1: Table + Tools (4h)
+- Create financial_log table
+- Implement: logExpense, logRevenue, getSummary
+- Simple sum calculations
 
 ---
 
 ## 6. Success Criteria
 - [ ] Can log expenses and revenues
-- [ ] Can view financial summary
-- [ ] Can calculate agent ROI
-- [ ] Data is secure
+- [ ] Can view monthly summary
+- [ ] Returns correct totals
 
 ---
 
-## 7. Status
+## 8. Status
 **Deferred** - Nice to have, not essential for MVP.
 
 ---
 
-## 8. Effort
-- Total: ~9 hours
+## 7. Effort
+- **Total: ~4 hours**
 
 ---
 
