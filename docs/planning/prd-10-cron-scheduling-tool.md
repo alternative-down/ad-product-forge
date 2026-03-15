@@ -16,6 +16,42 @@ A Ferramenta Cron/Agendamento permite que agentes criem e gerenciem tarefas agen
 
 ---
 
+## Sistema de Heartbeat (Independente)
+
+O **Sistema de Heartbeat** é a infraestrutura de base que executa independentemente, paralela aos agendamentos criados pelos agentes:
+
+### Responsabilidades do Heartbeat:
+
+1. **Verificação Periódica de Saúde:** Heartbeat periódico (padrão: 5 min) por agente
+   - Atualiza `lastHeartbeatAt` na metadata do agente
+   - Detecta agentes "obsoletos" (sem heartbeat > 2x intervalo)
+
+2. **Avaliação de Agendamentos:** Em cada heartbeat
+   - Avalia todos os agendamentos ativos do agente
+   - Identifica quais agendamentos devem executar neste momento
+   - Dispara execução via mensagem interna (mesma integração que agendamentos criados pelo agente)
+
+3. **Retomada de Tarefas Pendentes:** Detecta tarefas incompletas
+   - Agente consulta `getPendingTasks()` durante heartbeat
+   - Sistema resume de último checkpoint se necessário
+
+4. **Debounce:** Previne múltiplos wake-ups
+   - Janela de debounce: 1000ms
+   - Agrupa múltiplos triggers em single wake-up
+
+### Configuração do Heartbeat:
+
+- `agentConfig.heartbeat.interval` — Intervalo em ms (padrão: 300000 = 5 min)
+- `agentConfig.heartbeat.debounceMs` — Janela de debounce (padrão: 1000)
+- `agentConfig.heartbeat.timeoutMs` — Duração máxima de execução (padrão: 3600000 = 1 hora)
+
+### Controle de Acesso:
+
+- Agentes conseguem apenas gerenciar seus próprios agendamentos
+- Heartbeat é sistema-level, não controlado por agente individual
+
+---
+
 ## Implementação: Usar node-schedule
 
 **Usar biblioteca Node.js:**
@@ -184,55 +220,3 @@ Template: Daily standup - O que foi feito, o que vem a seguir, blockers?
 Esta é uma tarefa agendada automatizada. Revise as instruções acima e execute conforme necessário.
 ```
 
----
-
-## Schema do Banco de Dados
-
-**Tabela: agent_schedules**
-```typescript
-agent_schedules {
-  id: UUID (primary key)
-  agent_id: UUID (foreign key -> agents)
-  name: string (nome legível da regra)
-  description: string (opcional)
-  schedule_type: 'cron' | 'date' // cron expression ou Date specific
-  cron_expression: string (opcional, ex: "0 9 * * 1-5")
-  scheduled_date: timestamp (opcional, para execuções em data específica)
-  timezone: string (IANA timezone, ex: "America/New_York")
-  action_type: string (ex: "message", "webhook")
-  payload: JSON (dados específicos da ação)
-  is_active: boolean (default true)
-  created_at: timestamp
-  updated_at: timestamp
-  last_executed_at: timestamp (opcional)
-  next_execution_at: timestamp (computed)
-}
-```
-
----
-
-## CRUD de Agendamentos
-
-**Ferramentas para Agentes:**
-
-**FR1: Criar Agendamento**
-- `createSchedule(agentId, {name, description, scheduleType, cronExpression|scheduledDate, timezone, actionType, payload})`
-- Retorna: scheduleId
-
-**FR2: Listar Agendamentos do Agente**
-- `listSchedules(agentId)`
-- Retorna: array de agendamentos
-
-**FR3: Atualizar Agendamento**
-- `updateSchedule(scheduleId, {name?, description?, isActive?, payload?})`
-- Permite alteração de nome, descrição, ativação/desativação, payload
-
-**FR4: Deletar Agendamento**
-- `deleteSchedule(scheduleId)`
-- Remove agendamento do banco e cancela execução
-
-**FR5: Recarregar na Inicialização**
-- Na inicialização da aplicação:
-  - Carregar todos os agendamentos ativos do banco de dados
-  - Para cada agendamento: registrar com node-schedule
-  - Se houver próxima execução passada, executar imediatamente (catch-up)
