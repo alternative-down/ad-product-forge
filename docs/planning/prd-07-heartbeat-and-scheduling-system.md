@@ -48,22 +48,9 @@ Agents operate on an event-driven model:
 
 ### Success Metrics
 
-- **Heartbeat Delivery**: 100% of heartbeat events reach agents within configured interval
-- **Scheduling Success Rate**: > 99% of cron jobs execute at scheduled times (±30 seconds)
-- **Agent Wake Latency**: < 500ms from heartbeat trigger to agent execution start
-- **Resource Efficiency**: Heartbeat processing uses < 2% CPU per agent (measured on 100-agent system)
-- **Job Resumption Rate**: > 95% of interrupted jobs resume successfully
-
-### OKRs
-
-**Q2 2026 OKRs:**
-- **O1**: All agents remain responsive and schedulable
-  - KR1: Implement heartbeat system for 100% of agents
-  - KR2: Enable ≥ 3 agents to schedule autonomous tasks
-
-- **O2**: Support agent-driven work resumption
-  - KR1: 95%+ interrupted task resumption success
-  - KR2: Zero manual job restarts for agent failures
+- **Heartbeat Delivery**: Agents wake reliably on heartbeat
+- **Cron Execution**: Jobs execute at scheduled times
+- **Simple & Reliable**: No complex error handling needed
 
 ---
 
@@ -211,13 +198,11 @@ Agents operate on an event-driven model:
 
 | Requirement | Specification |
 | --- | --- |
-| **Performance** | Heartbeat evaluation < 100ms per agent; cron matching < 10ms |
-| **Scalability** | Support ≥ 100 concurrent agents with heartbeat intervals ≥ 5 min |
-| **Reliability** | 99.9% heartbeat delivery; no lost cron jobs due to crashes |
-| **Durability** | Cron jobs and pending tasks persisted in agent's LibSQL database |
-| **Observability** | Log all heartbeat events, cron executions, and resumptions |
-| **Security** | Agents can only manage their own cron jobs; internal messaging validated |
-| **Isolation** | Scheduled executions isolated per agent; no cross-agent interference |
+| **Performance** | Heartbeat evaluation < 100ms per agent |
+| **Reliability** | Cron jobs execute reliably at scheduled times |
+| **Durability** | Cron jobs persisted in agent's LibSQL database |
+| **Security** | Agents can only manage their own cron jobs |
+| **Isolation** | Scheduled executions isolated per agent |
 
 ---
 
@@ -462,16 +447,7 @@ Alerts:
 
 ## 8. Risk Analysis & Mitigation
 
-### Risk 1: Heartbeat Storms (Thundering Herd)
-**Risk**: If many agents wake simultaneously, CPU/network spike
-**Mitigation**:
-- Heartbeat intervals randomized within ±10% of configured value
-- Debounce window (1s) prevents rapid re-triggering
-- Stagger heartbeat start times per agent
-
----
-
-### Risk 2: Cron Job Overlap (Double Execution)
+### Risk 1: Cron Job Overlap (Double Execution)
 **Risk**: If execution takes longer than heartbeat interval, next run starts before prior completes
 **Mitigation**:
 - Check if job is already running before triggering new execution
@@ -484,35 +460,14 @@ Alerts:
 **Risk**: Cron jobs lost due to storage failure
 **Mitigation**:
 - Store cron jobs in agent's LibSQL database (same as communication/memory)
-- Regular backups of agent databases
-- Migration script to recover jobs from logs/audits
 
 ---
 
-### Risk 4: Runaway Scheduled Executions
-**Risk**: Agent enters infinite loop in scheduled task, blocking subsequent executions
-**Mitigation**:
-- Maximum execution time per scheduled task (default: 1 hour, configurable)
-- Task timeout triggers abort and logging
-- Agent wakes on timeout to allow recovery
-
----
-
-### Risk 5: Timezone Misconfiguration
+### Risk 3: Timezone Misconfiguration
 **Risk**: Cron jobs execute at wrong time due to timezone issues
 **Mitigation**:
-- Default to UTC; warn if timezone differs from system
-- Timezone stored per cron job; validated on creation
+- Default to UTC
 - Daylight saving time handled by standard cron library
-
----
-
-### Risk 6: Memory Exhaustion (Too Many Pending Tasks)
-**Risk**: Agent accumulates too many pending tasks, memory grows unbounded
-**Mitigation**:
-- Limit pending tasks table to 1000 entries per agent
-- Completed tasks auto-purged after 30 days
-- Alert if pending tasks exceed 80% of limit
 
 ---
 
@@ -568,66 +523,9 @@ Alerts:
 
 ---
 
-### Phase 4: Pending Task Resumption (Week 7-8)
-**Goal**: Agents can detect and resume interrupted work
+### Phase 4: Simple Implementation
 
-- [ ] Implement `getPendingTasks()` tool
-- [ ] Implement `resumeTask()` tool
-- [ ] Create PendingTasks table and management logic
-- [ ] Integrate with memory system for context injection
-- [ ] Write scenario tests (multi-day task resumption)
-
-**Deliverables**:
-- Agents detect pending tasks at heartbeat
-- Resume execution preserves prior context
-- 95%+ successful resumptions
-
----
-
-### Phase 5: Health Monitoring & Dashboard (Week 9-10)
-**Goal**: System visibility into agent health and scheduling
-
-- [ ] Implement agent status API (`GET /agents/{id}/status`)
-- [ ] Add dashboard widget for agent heartbeat status
-- [ ] Implement alerts for stale agents
-- [ ] Add scheduling metrics (jobs created, success rate, avg duration)
-- [ ] Documentation and runbook for operators
-
-**Deliverables**:
-- Dashboard shows all agent heartbeats
-- Stale agents flagged and alerted
-- Metrics available via API
-
----
-
-### Phase 6: Optimization & Hardening (Week 11-12)
-**Goal**: Production-ready reliability and performance
-
-- [ ] Load testing: 100+ agents, concurrent heartbeats
-- [ ] Failure scenario testing (crashes, network outages)
-- [ ] Migration testing (existing agent databases)
-- [ ] Performance tuning (cron evaluation, debounce)
-- [ ] Security audit (access control, injection prevention)
-- [ ] Documentation: agent instructions, operator runbook
-
-**Deliverables**:
-- Meets all performance targets
-- 99.9% heartbeat delivery
-- Production deployment guide
-
----
-
-### Timeline
-
-```
-Week 1-2   [====] Heartbeat Infrastructure
-Week 3-4   [====] Cron Job Management
-Week 5-6   [====] Scheduled Execution
-Week 7-8   [====] Task Resumption
-Week 9-10  [====] Health Monitoring
-Week 11-12 [====] Production Hardening
-           [======================] Total: ~3 months
-```
+**Total Scope**: 2-3 weeks solo developer effort
 
 ---
 
@@ -746,45 +644,20 @@ Feature: Execution Overlap Prevention
 - Monitor for 1 week; rollback if critical issues
 - Publish runbook and metrics dashboard
 
-### Monitoring & Alerting
+### Monitoring
 
 **Key Metrics**:
-- Heartbeat delivery rate (target: 99.9%)
-- Cron execution success rate (target: 99%)
-- Average execution latency (target: < 500ms)
-- Pending task resumption success (target: > 95%)
-- Agent stale rate (target: < 1%)
-
-**Alerts**:
-- Heartbeat delivery drops below 95%
-- Cron execution success drops below 95%
-- Agent stale for > 2x configured interval
-- Pending task queue grows > 100 items
+- Cron jobs execute at scheduled times
+- Agent wakes reliably on heartbeat
+- No data loss of scheduled jobs
 
 ---
 
-## 13. Future Enhancements & Post-Launch
+## 13. Future Enhancements
 
-### Short-Term (Post-Launch)
-
-1. **Cron Job Dashboard**: Visual editor for creating/editing cron jobs (UI component)
-2. **Execution Metrics**: Per-agent dashboard of scheduled task performance
-3. **Retry Logic**: Configurable retry policy for failed cron executions
-4. **Timezone UI**: Web interface to configure agent timezone and DST rules
-
-### Medium-Term (Q3 2026)
-
-1. **Cron Templates**: Pre-built cron patterns (daily, weekly, monthly, custom)
-2. **Job Dependencies**: Cron jobs can depend on other jobs' completion
-3. **Dry-Run Mode**: Test cron expressions before enabling
-4. **Notification System**: Alerts on job failures, long-running tasks
-
-### Long-Term (Q4 2026+)
-
-1. **Distributed Scheduling**: Heartbeat system works across multiple runtime instances
-2. **Advanced Triggers**: Event-based triggers beyond cron (webhook, message arrival, etc.)
-3. **Job Persistence**: Store job outputs in workspace for historical analysis
-4. **Agent Coordination**: Multi-agent scheduled workflows (agents triggering each other)
+1. **Cron Job Dashboard**: Visual editor (if needed)
+2. **Retry Logic**: Configurable retry policy for failed executions
+3. **Job Dependencies**: If multi-agent coordination needed
 
 ---
 

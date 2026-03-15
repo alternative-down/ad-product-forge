@@ -50,13 +50,12 @@ Build a simple communication infrastructure where agents can organize into group
 5. **Provide agent-facing API**: Groups accessible via same tool interface as conversations
 
 ### 4.2 Success Metrics
-| Metric | Target | Rationale |
-|---|---|---|
-| Group creation time | <100ms | Performance: instant group formation |
-| Message delivery latency | <50ms | User experience: fast async communication |
-| API compatibility | 100% backward compatible | Risk: no breaking changes to existing code |
-| Group capacity | ≥100 agents per group | Scale: support medium-to-large teams |
-| Query performance | <200ms for 1000-message history | UX: fast history retrieval |
+| Metric | Target |
+|---|---|
+| Group creation | Works reliably |
+| Message delivery | Groups receive messages |
+| API compatibility | 100% backward compatible |
+| Simple implementation | Solo dev can maintain in 2-3 weeks |
 
 ---
 
@@ -362,63 +361,17 @@ Group inbound is **synthetic** (no external provider):
 
 ---
 
-## 7. Implementation Roadmap
+## 7. Implementation Plan
 
-### 7.1 Phase 1: Core Infrastructure (Sprint 1–2)
-
-**Deliverables**:
-- [ ] New database tables: `forge_communication_groups`, `forge_communication_group_members`
-- [ ] Database migrations (Drizzle)
-- [ ] Group CRUD store operations: `createGroup()`, `getGroup()`, `addMember()`, `removeMember()`
-- [ ] Message storage extension: `group_id` column + queries
-- [ ] Basic error handling and validation
-
-**Success Criteria**:
-- All CRUD operations tested
-- No performance regression on existing DM queries
-- Database consistency maintained
-
-### 7.2 Phase 2: Agent Tools (Sprint 2–3)
+**Total: 2-3 weeks solo developer effort**
 
 **Deliverables**:
-- [ ] Implement `listGroups()`, `getGroup()`, `createGroup()` tools
-- [ ] Implement `addGroupMember()`, `removeGroupMember()` tools
-- [ ] Implement `updateGroup()` tool
-- [ ] Extend `sendMessage()` to support `groupId` parameter
-- [ ] Extend `listConversations()` to filter by group
-- [ ] Extend `getMessages()` to query by group
-
-**Success Criteria**:
-- All tools callable from agent context
-- Proper authorization checks (owner, membership validation)
-- Full test coverage
-
-### 7.3 Phase 3: Wake Queue Integration (Sprint 3)
-
-**Deliverables**:
-- [ ] Batch wake events for group members on new message
-- [ ] Debounce logic (reuse existing 1000ms debounce)
-- [ ] Per-member unread tracking and wake payload
-- [ ] Integration test: agent receives group message + wakes up
-
-**Success Criteria**:
-- Agent wakes within expected timeframe
-- Multiple agents in group each receive wake event
-- No redundant events
-
-### 7.4 Phase 4: Testing & Documentation (Sprint 4)
-
-**Deliverables**:
-- [ ] Integration tests: create group → add members → send message → verify all receive
-- [ ] Load test: 50-agent group with 1000+ messages
-- [ ] API documentation update
-- [ ] Agent prompt/system documentation
-- [ ] Migration guide for existing agents
-
-**Success Criteria**:
-- 90%+ code coverage on new functions
-- All user stories tested end-to-end
-- Documentation complete and clear
+- Database tables: `forge_communication_groups`, `forge_communication_group_members`
+- Store CRUD operations: `createGroup()`, `getGroup()`, `addMember()`, `removeMember()`
+- Message storage extension: `group_id` column
+- Agent tools: `createGroup()`, `listGroups()`, `sendMessage()` (extended), `addGroupMember()`, `removeGroupMember()`
+- Wake queue integration for group messages
+- Basic tests and documentation
 
 ---
 
@@ -521,30 +474,13 @@ Flow:
 
 ## 10. Risk Analysis & Mitigation
 
-### 10.1 Technical Risks
+### Technical Risks
 
-| Risk | Impact | Probability | Mitigation |
-|---|---|---|---|
-| **Database contention** on high-volume groups | Message latency increases | Medium | Batch inserts per group; profile before scaling past 100 agents |
-| **Wake event storm** (too many simultaneous wakes) | System overload | Medium | Use existing debounce (1000ms); cap simultaneous wake jobs |
-| **Message query N+1 problem** | Slow history retrieval | Medium | Index `(group_id, created_at)` immediately; use batch queries |
-| **Backward compatibility break** | Existing agents break | Low | API extensions only; no parameter renames; thorough integration tests |
-
-### 10.2 Operational Risks
-
-| Risk | Impact | Probability | Mitigation |
-|---|---|---|---|
-| **Accidental group deletion** | Loss of message history | Low | Soft deletes only; admin recovery procedure document |
-| **Permission leakage** (agent sees group they don't own) | Security issue | Low | Always validate `contact_slug` in query filters; audit code for blind spots |
-| **Infinite loop** (agent sends to self-group) | Runaway messages | Very Low | Exclude sender from recipient list; log and alert on duplicates |
-
-### 10.3 Scope Risks
-
-| Risk | Item | Mitigation |
-|---|---|---|
-| **Feature creep** | Full-text search, rich media, reactions | Define as NICE/future; ship MVP without them |
-| **Authorization complexity** | Role-based access, channel hierarchy | Defer to Section 3.1 ROADMAP; use simple ownership model for V1 |
-| **External provider groups** | Discord channels, Email CC lists | Define as Section 5.2 ROADMAP; keep internal-only in this feature |
+| Risk | Mitigation |
+|---|---|
+| **Database contention** on group messages | Simple design; profile if needed |
+| **Wake event storm** | Reuse existing debounce (1000ms) |
+| **Backward compatibility break** | API extensions only; no breaking changes |
 
 ---
 
@@ -622,15 +558,11 @@ None for Phase 1. Future integrations:
 
 ---
 
-## 14. Success Timeline & Delivery Plan
+## 14. Success Timeline
 
-| Phase | Duration | Key Deliverables | Readiness Gate |
-|---|---|---|---|
-| **Phase 1: Core Infrastructure** | 2 weeks | Tables, migrations, store ops | DB consistency tests pass |
-| **Phase 2: Agent Tools** | 2 weeks | API, authorization, validation | All tools tested end-to-end |
-| **Phase 3: Wake Integration** | 1 week | Wake events, batching, debounce | Integration test: full message flow |
-| **Phase 4: Testing & Docs** | 1 week | Coverage, docs, deployment guide | 90%+ coverage, docs approved |
-| **Total MVP** | **6 weeks** | Shipping-ready internal group chat | Ready for production agents |
+**Total MVP: 2-3 weeks** for solo developer
+
+Simple, straightforward implementation with no enterprise features.
 
 ---
 

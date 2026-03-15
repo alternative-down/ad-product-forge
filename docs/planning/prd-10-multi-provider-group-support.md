@@ -47,24 +47,20 @@
 
 ---
 
-## 3. Goals and Non-Goals
-
 ### Goals
 1. Create groups in Discord (agents can create channels and invite members)
-2. Create groups in Email (agents can compose messages with CC/BCC)
-3. Manage group membership (add/remove members)
-4. Send group messages (unified tool across all providers)
-5. Store group metadata (in communication store)
-6. Unified agent API (single interface for group operations)
-7. Group message history (track conversation threads)
+2. Manage group membership (add/remove members)
+3. Send group messages to Discord channels
+4. Store group metadata
+5. Unified agent API for group operations
 
 ### Non-Goals
-1. Real-time group sync (membership changes are one-way to provider)
-2. Group permissions/roles (deferred to v2)
-3. Group settings UI (API only in v1)
+1. Real-time group sync
+2. Group permissions/roles
+3. Group settings UI
 4. Private/public group classification
-5. Group webhooks
-6. Archive/restore groups
+5. Archive/restore groups
+6. Email CC/BCC groups (keep simple)
 
 ---
 
@@ -92,28 +88,6 @@ Communication.createGroup()
   └─ Return groupId + metadata
 ```
 
-### User Story 2: Send Email to Multiple Recipients with CC
-**As an:** Agent sending project updates
-**I want to:** Send an email to a group of recipients, some as To, some as CC
-**So that:** All stakeholders are informed but email chains stay organized
-
-**Acceptance Criteria:**
-- Agent calls `sendMessage({ provider: 'email', groupId: 'xyz', content: '...' })`
-- Email is sent to all primary members (To)
-- CC members receive a copy but are not in main recipient list
-- Email thread is linked to group conversation in store
-
-**Implementation Flow:**
-```
-Agent → sendMessage({ groupId })
-  ↓
-Communication.sendMessage()
-  ├─ Resolve groupId → group metadata (To, CC, BCC lists)
-  ├─ Provider.sendMessage() with email composition
-  │  └─ nodemailer: To=primary, CC=secondary, BCC=hidden
-  ├─ Store.saveOutboundMessage()
-  └─ Return messageId + conversationId
-```
 
 ### User Story 3: Manage Group Membership
 **As an:** Agent managing team communications
@@ -199,13 +173,6 @@ interface GroupMember {
   memberContactSlug: string;          // Reference to existing contact
   externalUserId?: string;            // Provider-specific ID
   username?: string;                  // Provider username
-
-  // Email-specific fields
-  emailRecipientType?: 'to' | 'cc' | 'bcc';  // How to include in email sends
-
-  // Discord-specific fields
-  discordRoleId?: string;             // Role within channel (future)
-
   joinedAt: string;                   // When member was added
 }
 ```
@@ -235,30 +202,11 @@ CREATE TABLE forge_communication_group_members (
   member_contact_slug TEXT NOT NULL,
   external_user_id TEXT,
   username TEXT,
-  email_recipient_type TEXT,  -- 'to' | 'cc' | 'bcc'
-  discord_role_id TEXT,
   joined_at TEXT NOT NULL,
 
   PRIMARY KEY (group_id, member_contact_slug),
   FOREIGN KEY (group_id) REFERENCES forge_communication_groups(group_id)
 );
-
-CREATE INDEX idx_group_members_contact ON forge_communication_group_members(member_contact_slug);
-```
-
-**Table: `forge_communication_group_conversations`**
-```sql
-CREATE TABLE forge_communication_group_conversations (
-  group_conversation_id TEXT PRIMARY KEY,
-  group_id TEXT NOT NULL,
-  conversation_id TEXT NOT NULL,  -- Internal conversation ID
-  created_at TEXT NOT NULL,
-
-  FOREIGN KEY (group_id) REFERENCES forge_communication_groups(group_id),
-  FOREIGN KEY (conversation_id) REFERENCES forge_communication_conversations(conversation_id)
-);
-
-CREATE INDEX idx_group_conv_group ON forge_communication_group_conversations(group_id);
 ```
 
 ### 5.2 Provider Enhancements
@@ -307,39 +255,6 @@ type DiscordProvider = CommunicationProvider & {
 - Use `channel.members.add()` and `channel.members.remove()` for membership
 - Leverage channel type for group vs. direct messaging distinction
 
-#### Email Provider (`createEmailProvider`)
-
-**New Capabilities:**
-- Support CC/BCC recipients in `sendMessage()`
-- Maintain group definitions without server-side persistence (email groups exist only in agent logic)
-
-**Contract Changes:**
-```typescript
-type EmailProvider = CommunicationProvider & {
-  sendMessage(input: {
-    providerConversationKey?: string;
-    contactExternalId?: string;
-
-    // New group-specific fields
-    toAddresses?: string[];           // Primary To recipients
-    ccAddresses?: string[];           // CC recipients
-    bccAddresses?: string[];          // BCC recipients
-
-    content: string;
-    replyToProviderMessageId?: string;
-  }): Promise<{
-    providerMessageId: string;
-    providerConversationKey: string;
-    sentTo: string[];                 // All recipients
-  }>;
-};
-```
-
-**Implementation Details:**
-- Extract CC/BCC from group metadata in Communication module
-- Pass to `nodemailer` transport in SMTP send
-- Email groups are purely virtual (no server-side mailing lists in v1)
-- Group members are stored in store; emails are composed client-side
 
 ### 5.3 Communication Module Enhancements
 
@@ -396,15 +311,10 @@ deleteGroup(input: {
 // Send message to group (variant of existing sendMessage)
 sendMessage(input: {
   provider: string;
-
-  // One of the following:
-  conversationId?: string;      // Existing conversation
-  contactSlug?: string;         // Direct message to contact
-  groupId?: string;             // Send to group
-
+  groupId: string;              // Send to group
   content: string;
   replyToMessageId?: string;
-}): Promise<{ success: boolean; messageId: string; conversationId: string }>
+}): Promise<{ success: boolean; messageId: string }>
 ```
 
 **Implementation in Communication Module:**
@@ -619,37 +529,6 @@ export async function getChannelMembers(client: Client, channelId: string) {
 }
 ```
 
-### 5.5 Email-Specific Implementation
-
-**File:** `packages/mastra-engine/src/accounts/email-groups.ts` (new)
-
-```typescript
-// Email provider already supports CC/BCC via sendMessage()
-// Groups are virtual (stored only in communication store, not on email server)
-
-// When sending to an email group:
-// 1. Resolve group members from store
-// 2. Separate by emailRecipientType (to/cc/bcc)
-// 3. Pass to nodemailer transport
-
-export function composeFmailToGroup(input: {
-  toAddresses: string[];
-  ccAddresses?: string[];
-  bccAddresses?: string[];
-  content: string;
-  subject?: string;
-  replyTo?: string;
-}) {
-  return {
-    to: input.toAddresses.join(', '),
-    cc: input.ccAddresses?.join(', '),
-    bcc: input.bccAddresses?.join(', '),
-    subject: input.subject || 'Group Message',
-    text: input.content,
-    inReplyTo: input.replyTo,
-  };
-}
-```
 
 ---
 
@@ -721,53 +600,6 @@ Store (5 existing + 3 new tables)
 3. Returns: { groupId, name, memberCount: 2 }
 ```
 
-### 6.3 Data Flow Example: Email Group Message
-
-```
-1. Agent calls: sendMessage({
-     provider: 'email',
-     groupId: 'group-email-001',
-     content: 'Project update: ...'
-   })
-
-2. Communication module:
-   a. Fetches group from store:
-      {
-        groupId: 'group-email-001',
-        provider: 'email',
-        name: 'stakeholders',
-        members: [
-          { contactSlug: 'alice', emailRecipientType: 'to', username: 'alice@company.com' },
-          { contactSlug: 'bob', emailRecipientType: 'cc', username: 'bob@company.com' },
-          { contactSlug: 'carol', emailRecipientType: 'bcc', username: 'carol@company.com' }
-        ]
-      }
-
-   b. Calls provider.sendMessage({
-        toAddresses: ['alice@company.com'],
-        ccAddresses: ['bob@company.com'],
-        bccAddresses: ['carol@company.com'],
-        content: 'Project update: ...'
-      })
-      - nodemailer composes email with To/CC/BCC
-      - SMTP sends via configured server
-      - Returns providerMessageId
-
-   c. Stores in database:
-      forge_communication_messages:
-        messageId: uuid-yyy
-        conversation_id: (group conversation)
-        provider: 'email'
-        provider_message_id: <Message-ID from SMTP>
-        content: 'Project update: ...'
-
-      forge_communication_group_conversations:
-        groupId: 'group-email-001'
-        conversationId: uuid-group-conv
-        created_at: now()
-
-3. Returns: { success: true, messageId, conversationId }
-```
 
 ### 6.4 File Structure
 
@@ -798,42 +630,15 @@ packages/mastra-engine/src/
 
 ## 7. Implementation Plan
 
-### Phase 1: Data Model & Store (Week 1)
-- [ ] Add 3 new tables to communication store
-- [ ] Create migrations (if using versioned schema)
-- [ ] Define TypeScript interfaces for Group and GroupMember
-- [ ] Add store methods: saveGroup, getGroup, updateGroupMembers
+**Total: 2 weeks solo developer effort**
 
-### Phase 2: Provider Extensions (Week 1-2)
-- [ ] Extend Discord provider with createChannel, addChannelMembers, removeChannelMembers
-- [ ] Extend Email provider to support CC/BCC in sendMessage
-- [ ] Implement discord-groups.ts helper module
-- [ ] Implement email-groups.ts helper module
-- [ ] Update provider interface in provider-types.ts
-
-### Phase 3: Communication Module (Week 2)
-- [ ] Implement createGroup() in communication module
-- [ ] Implement updateGroup() in communication module
-- [ ] Implement listGroups(), getGroup(), deleteGroup()
-- [ ] Extend sendMessage() to handle groupId parameter
-- [ ] Test group creation and messaging end-to-end
-
-### Phase 4: Agent Tools (Week 2-3)
-- [ ] Create tool files: create-group.ts, update-group.ts, etc.
-- [ ] Wire tools into module.ts and tools.ts
-- [ ] Update tool definitions with input/output schemas
-- [ ] Test tools via agent interface
-
-### Phase 5: Integration Tests (Week 3)
-- [ ] Discord: Create channel, add members, send message
-- [ ] Email: Create group, send message with CC/BCC
-- [ ] Verify store persistence
-- [ ] Verify group conversation history
-
-### Phase 6: Documentation (Week 3)
-- [ ] Update communication module reference
-- [ ] Add group examples to agent docs
-- [ ] Document provider contract changes
+**Key Deliverables:**
+- Add 2 new tables to communication store (groups + members)
+- Discord provider extensions: createChannel, addChannelMembers, removeChannelMembers
+- Communication module group operations
+- Agent tools: createGroup, listGroups, sendMessage (extended), addGroupMember, removeGroupMember
+- Discord-specific implementation
+- Integration tests and documentation
 
 ---
 
@@ -884,43 +689,20 @@ packages/mastra-engine/src/
 
 ### Risk 1: Discord Rate Limiting
 **Severity:** Medium
-**Impact:** Group creation may fail if agent creates multiple channels rapidly
-**Mitigation:** Implement exponential backoff; queue channel creations
+**Mitigation:** Implement exponential backoff if needed; queue channel creations
 
-### Risk 2: Email CC/BCC Complexity
-**Severity:** Medium
-**Impact:** Complex logic to maintain separate To/CC/BCC lists; higher bug surface
-**Mitigation:** Comprehensive tests; consider email-specific edge cases (large groups, invalid emails)
-
-### Risk 3: Schema Migration
+### Risk 2: Schema Migration
 **Severity:** Low
-**Impact:** Existing agents without new tables may break
-**Mitigation:** Add migration logic; auto-create tables on first use (similar to existing flow)
-
-### Risk 4: Group Consistency Across Providers
-**Severity:** Low
-**Impact:** Agent confusion if group membership diverges between store and provider
-**Mitigation:** v1 is unidirectional (store is source of truth); provider is secondary
-
-### Risk 5: Email Group Conflicts
-**Severity:** Low
-**Impact:** Two agents sending to overlapping email groups may create confusion
-**Mitigation:** Groups are agent-scoped; not shared across agents
+**Mitigation:** Auto-create tables on first use (existing pattern)
 
 ---
 
-## 11. Future Enhancements (v2+)
+## 11. Future Enhancements
 
-1. Group permissions & roles
-2. Group settings UI (web dashboard)
+1. Group permissions & roles (if needed)
+2. Email group support (if needed)
 3. Real-time sync to providers
-4. Private/public group classification
-5. Email mailing lists (server-side)
-6. Group webhooks
-7. Group templates
-8. Nested groups
-9. Archive/restore groups
-10. Multi-guild Discord support
+4. Multi-guild Discord support
 
 ---
 
@@ -936,30 +718,26 @@ packages/mastra-engine/src/
 - [ ] Provider-specific errors are properly caught and reported to agent
 
 ### Code Quality
-- [ ] All new code has >80% test coverage (unit + integration)
-- [ ] Types are strict (no `any`; use zod schemas)
-- [ ] Error handling is comprehensive (no unhandled rejections)
-- [ ] Documentation is complete (README + API docs)
+- [ ] Core functionality tested
+- [ ] Types are properly typed
+- [ ] Error handling covers main cases
+- [ ] Documentation is clear
 
 ### Backward Compatibility
-- [ ] Existing sendMessage() calls (without groupId) work unchanged
-- [ ] Existing agents without groups do not experience performance degradation
+- [ ] Existing sendMessage() calls work unchanged
+- [ ] Existing agents unaffected
 - [ ] Conversation API unchanged for non-group conversations
 
 ---
 
-## 13. Sign-Off and Timeline
+## 13. Timeline
 
-**Feature Lead:** [To be assigned]
-**PM:** Nicolas (Product)
-**Reviewers:** [Engineering team]
+**Estimated Delivery:** 2 weeks (solo developer)
 
-**Estimated Delivery:** 3 weeks (full implementation + testing + docs)
-
-**Key Milestones:**
-- **Week 1:** Data model + provider extensions
-- **Week 2:** Communication module + agent tools
-- **Week 3:** Integration tests + documentation
+**Solo Developer Plan:**
+- Data model + provider extensions
+- Communication module + agent tools
+- Integration tests + documentation
 
 ---
 

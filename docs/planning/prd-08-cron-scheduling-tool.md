@@ -122,36 +122,22 @@ Located in: `packages/mastra-engine/src/agent/scheduling/store.ts`
 
 **One store per agent** — All scheduling rules for an agent are stored in the same LibSQL database as communication.
 
-**Storage schema** (2 tables):
+**Storage schema** (1 table):
 
 | Table | Purpose | Key Fields |
 | --- | --- | --- |
 | `forge_scheduling_rules` | Scheduling rules | rule_id, agent_id, name, cron_expression, timezone, is_active |
-| `forge_scheduling_events` | Execution events | event_id, rule_id, execution_time, status, generated_message_id |
 
 **Rule fields:**
 - `ruleId` — UUID, primary key
 - `agentId` — which agent owns this
 - `name` — rule name
-- `description` — optional description
 - `cronExpression` — cron syntax string
-- `timezone` — IANA timezone
-- `actionType` — type of scheduled action
-- `payload` — JSON object with action details
+- `timezone` — IANA timezone (default UTC)
 - `isActive` — boolean
 - `createdAt`, `updatedAt` — timestamps
 - `lastExecutedAt` — nullable, last execution timestamp
 - `nextExecutionAt` — computed from cron expression
-
-**Event fields:**
-- `eventId` — UUID, primary key
-- `ruleId` — foreign key to rule
-- `executionTime` — when event fired
-- `generatedMessageId` — internal message ID created
-- `status` — `pending` | `executed` | `failed`
-- `output` — JSON result data (nullable)
-- `errorMessage` — error description (nullable)
-- `createdAt` — timestamp
 
 ---
 
@@ -163,8 +149,7 @@ Located in: `packages/mastra-engine/src/agent/scheduling/scheduler.ts`
 - Maintain active scheduler per agent
 - Evaluate rules at regular intervals (every 60 seconds)
 - Determine which rules match current time
-- Generate execution events and auto-messages
-- Route messages through internal chat provider
+- Send heartbeat message to wake agent
 - Update rule state (lastExecutedAt, nextExecutionAt)
 - Handle timezone conversions for cron evaluation
 
@@ -177,15 +162,15 @@ createAgent()
   ├─ load all active rules from store
   └─ start evaluation loop (60s interval)
        ├─ for each active rule:
-       │  ├─ evaluate cron expression in rule's timezone
+       │  ├─ evaluate cron expression
        │  ├─ check if current time matches
-       │  └─ if match: fire rule
+       │  └─ if match: send heartbeat message
        └─ repeat
 ```
 
-**Cron library:** `node-cron` (for expression parsing) or custom cron parser with timezone support.
+**Cron library:** `cron-parser` for expression parsing.
 
-**Timezone handling:** All rule times are stored and evaluated in the rule's specified timezone. Internal execution timestamps are ISO 8601 with timezone offset.
+**Timezone handling:** All rule times are stored and evaluated in UTC by default.
 
 ---
 
@@ -193,17 +178,14 @@ createAgent()
 
 Located in: `packages/mastra-engine/src/agent/scheduling/tools.ts`
 
-The scheduling module exposes these tools to the agent:
+The scheduling module exposes these simple tools to the agent:
 
 ```typescript
 // Create a new scheduling rule
 createSchedulingRule(input: {
   name: string;
-  description?: string;
   cronExpression: string;      // e.g., "0 9 * * 1-5"
-  timezone: string;            // e.g., "America/New_York"
-  actionType: string;          // "message", "webhook", "custom"
-  payload: Record<string, unknown>;  // action-specific data
+  timezone?: string;           // e.g., "America/New_York" (default: UTC)
   isActive?: boolean;          // default: true
 }): Promise<{
   ruleId: string;
@@ -211,52 +193,15 @@ createSchedulingRule(input: {
   nextExecutionAt: string;
 }>
 
-// Update an existing rule
-updateSchedulingRule(input: {
-  ruleId: string;
-  name?: string;
-  description?: string;
-  cronExpression?: string;
-  timezone?: string;
-  payload?: Record<string, unknown>;
-  isActive?: boolean;
-}): Promise<{
-  ruleId: string;
-  nextExecutionAt: string;
-}>
-
 // List all rules for this agent
-listSchedulingRules(input: {
-  activeOnly?: boolean;  // default: false
-  limit?: number;
-  offset?: number;
-}): Promise<Array<{
+listSchedulingRules(): Promise<Array<{
   ruleId: string;
   name: string;
-  description?: string;
   cronExpression: string;
   timezone: string;
-  actionType: string;
   isActive: boolean;
-  lastExecutedAt?: string;
   nextExecutionAt: string;
-  createdAt: string;
 }>>
-
-// Get a single rule
-getSchedulingRule(ruleId: string): Promise<{
-  ruleId: string;
-  name: string;
-  description?: string;
-  cronExpression: string;
-  timezone: string;
-  actionType: string;
-  payload: Record<string, unknown>;
-  isActive: boolean;
-  lastExecutedAt?: string;
-  nextExecutionAt: string;
-  createdAt: string;
-}>
 
 // Delete a rule
 deleteSchedulingRule(ruleId: string): Promise<{ success: boolean }>
@@ -266,99 +211,48 @@ pauseSchedulingRule(ruleId: string): Promise<{ success: boolean }>
 
 // Resume a rule
 resumeSchedulingRule(ruleId: string): Promise<{ success: boolean }>
-
-// Get execution history for a rule
-listSchedulingEvents(input: {
-  ruleId: string;
-  limit?: number;
-  offset?: number;
-}): Promise<Array<{
-  eventId: string;
-  executionTime: string;
-  status: "pending" | "executed" | "failed";
-  output?: Record<string, unknown>;
-  errorMessage?: string;
-  createdAt: string;
-}>>
 ```
 
-**Key principle:** All agent-facing tools use internal IDs only (ruleId, eventId). The scheduling module handles all internal conversions and store operations.
-
----
-
-## Internal Chat Provider Integration
-
-The scheduling system integrates with the existing internal chat provider to deliver auto-messages.
-
-**Provider configuration:**
-- Provider ID: `internal` (built-in, always available)
-- Conversation key: `scheduled-tasks` (fixed conversation)
-- Author identity: `{ externalUserId: "scheduler", displayName: "Scheduler System" }`
-
-**Integration flow:**
-
-```typescript
-// In scheduler.ts, when rule fires:
-async function fireRule(rule: SchedulingRule) {
-  const event = await store.createEvent(rule.ruleId);
-
-  const instruction = generateTaskInstruction(rule);
-
-  // Route through internal chat provider
-  const message = await internalProvider.sendMessage({
-    providerConversationKey: "scheduled-tasks",
-    contactExternalId: "scheduler",  // or use conversationKey-only mode
-    content: instruction,
-  });
-
-  // Update event with generated message ID
-  await store.updateEvent(event.eventId, {
-    generatedMessageId: message.providerMessageId,
-    status: "pending",
-  });
-
-  // Communication module receives the inbound message
-  // and triggers wake queue automatically
-}
-```
-
-**Internal chat provider behavior:**
-- Receives auto-messages from scheduler via `sendMessage()`
-- Stores as inbound messages in communication store
-- Marks as unread to signal new activity
-- Triggers wake queue via communication module
-- Agent sees "Scheduler System" as sender
+**Key principle:** Simple API, minimal surface area. Each rule just creates a cron job that wakes the agent.
 
 ---
 
 ## Wake Queue Integration
 
-When a scheduled task fires and an auto-message is created, the wake queue is triggered through the communication module.
+The scheduling system triggers the heartbeat via the existing wake queue.
 
-**Flow:**
+**Integration flow:**
 
+```typescript
+// In scheduler.ts, when rule matches:
+async function fireRule(rule: SchedulingRule) {
+  // Send internal message to wake agent
+  await internalProvider.sendMessage({
+    content: `Scheduled task: ${rule.name}`,
+  });
+
+  // Update rule state
+  await store.updateRule(rule.ruleId, {
+    lastExecutedAt: now(),
+    nextExecutionAt: calculateNext(rule.cronExpression),
+  });
+}
 ```
-Scheduler fires rule
-  ↓
-Generate auto-message via internal chat provider
-  ↓
-Communication.onReceiveMessage() triggered
-  ├─ Mark as unread
-  ├─ Store in database
-  └─ Call wake handler
-       ↓
-    Wake queue debounces and wakes agent
-       ↓
-    Agent.generate() with pending message
-       ↓
-    Agent processes scheduled task
-```
 
-**Debounce behavior (from wake queue):**
+**Behavior:**
+- Scheduler fires rule and sends internal message
+- Communication module receives message
+- Wake queue triggers agent execution
+- Agent wakes with context of scheduled task
+
+---
+
+## Debounce Behavior
+
+The wake queue uses standard debouncing:
 - Debounce: 1000ms
 - Max delay: 10000ms
-- Batches multiple events into single wake
-- Ensures agent sees all pending messages at once
+- Ensures efficient agent waking
 
 ---
 
@@ -493,24 +387,19 @@ createForgeAgent({
   scheduling: {
     enabled: true,
     evaluationIntervalSeconds: 60,  // check rules every 60s
-    maxConcurrentExecutions: 10,    // limit parallel executions
-    messageGenerationTimeout: 5000, // ms to wait for auto-message
   },
 })
 ```
 
 ### Limits Per Agent
 
-- Maximum 500 scheduling rules per agent
-- Maximum 100,000 execution events stored per agent (older events archived/deleted)
+- Maximum 50 scheduling rules per agent (reasonable for solo developer)
 - Rule name: max 255 characters
-- Rule description: max 2000 characters
-- Payload: max 10 KB JSON
 
 ### Timezone Validation
 
-- Only IANA timezone database strings accepted
-- Validated against `Intl.DateTimeFormat.supportedLocalesOf()`
+- Accepts IANA timezone strings (e.g., "America/New_York", "UTC")
+- Default: UTC
 - Invalid timezone returns error on rule creation
 
 ---
@@ -533,41 +422,26 @@ packages/
 
 ---
 
-## Out of Scope (for now)
+## Out of Scope
 
-- Custom scheduling algorithms beyond cron (e.g., lunar calendar, business day logic)
+- Custom scheduling algorithms beyond cron
 - Scheduling rule templates or presets
-- Retry logic for failed executions (manual re-fire only)
-- Rule-level rate limiting or execution throttling per rule
-- Webhook action type (message and custom only in v1)
-- UI/dashboard for rule management (API only)
-- Scheduled rule backups or migration tools
+- Retry logic for failed executions
+- Rule-level rate limiting
+- UI/dashboard for rule management (CLI/API only)
 - Event notification to external systems
-- Concurrent execution of same rule (serialized per rule)
 
 ---
 
 ## Implementation Priority
 
-**Phase 1 (MVP):**
-1. Database schema (rules + events tables)
+**MVP (Solo Dev):**
+1. Database schema (rules table)
 2. Store implementation (create/read/update/delete rules)
 3. Cron evaluation logic with timezone support
 4. Basic scheduler service (run evaluation loop)
-5. Auto-message generation and internal chat routing
-6. Agent tools: createSchedulingRule, listSchedulingRules, deleteSchedulingRule
-7. Wake queue integration
+5. Agent tools: createSchedulingRule, listSchedulingRules, deleteSchedulingRule, pauseSchedulingRule
+6. Wake queue integration
 
-**Phase 2:**
-1. Rule pause/resume
-2. Execution history API (listSchedulingEvents)
-3. Advanced payload templates per actionType
-4. Error recovery and retry mechanisms
-5. Rule import/export for backup
-
-**Phase 3:**
-1. Webhook action type support
-2. Rule templates and presets
-3. Analytics dashboard
-4. Advanced scheduling (business hours, holidays, etc.)
+**Simple & Done** - No phases or advanced features needed for solo developer use.
 
