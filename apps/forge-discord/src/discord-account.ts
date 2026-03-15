@@ -94,9 +94,9 @@ export function createDiscordProvider(config: {
             id: attachment.id,
             name: attachment.name,
             url: attachment.url,
-            contentType: attachment.contentType,
+            contentType: attachment.contentType ?? undefined,
             sizeBytes: attachment.size,
-            description: attachment.description,
+            description: attachment.description ?? undefined,
           }));
 
           await callback({
