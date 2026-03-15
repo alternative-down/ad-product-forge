@@ -1,8 +1,22 @@
 # PRD-16: Integração com GitHub
 
-**Status:** Planejamento
+**Status:** ❌ Não Alinhado - Interpretação Incorreta
 
 **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
+
+---
+
+## ❌ Nota de Desalinhamento
+
+**Problema:** PRD apresenta ferramentas de agente para GitHub, mas a intenção era diferente.
+
+**Intenção Original:**
+1. **Configuração de GitHub APP:** Setup de GitHub App
+2. **Cliente Local:** Escutar eventos do GitHub via webhooks
+
+**Abordagem Correta:** Para tooling de agentes com GitHub, usar `gh` (GitHub CLI) se possível com GitHub App. Apenas criar Tools customizadas se `gh` não puder ser usado com GitHub App.
+
+**Status:** Não é um PRD de feature. Será necessário investigar viabilidade de usar `gh` com GitHub App.
 
 ---
 
