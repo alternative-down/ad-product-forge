@@ -4,29 +4,21 @@
 **Version**: 1.0
 **Status**: In Analysis & Planning
 **Last Updated**: 2026-03-15
+**Scope**: Personal developer project - KISS & YAGNI principles apply
 
 ---
 
 ## 1. Executive Summary
 
-This PRD outlines the implementation of a robust task queue and event processing system to enable asynchronous task execution and event-driven workflows within the ad-product-forge platform. Currently, agents execute work synchronously with limited ability to queue tasks or respond to events. This feature introduces job queuing via BullMQ, workflow orchestration via trigger.dev, and event-driven processing capabilities.
+Enable agents to queue long-running tasks and process events asynchronously using BullMQ for job persistence and Redis for coordination.
 
-**Core Objective**: Enable agents to enqueue long-running tasks, execute them asynchronously, and react to system events in a scalable, resilient manner.
+**Core Objective**: Allow agents to defer work without blocking, with automatic retries on failure.
 
 ---
 
 ## 2. Vision & Strategic Context
 
-### 2.1 Vision Statement
-Build a distributed task execution infrastructure where agents can defer work to reliable job queues, orchestrate complex multi-step workflows, and respond to business events without blocking synchronous operations.
-
-### 2.2 Strategic Alignment
-This feature is foundational for:
-- **External Agent System** (Section 2.1 of ROADMAP): Specialist agents need async task execution for remote work
-- **Webhook Event Routing** (Section 5.3 of ROADMAP): Event processing requires task queues to handle spikes
-- **Cron Scheduling System** (Section 4.4 of ROADMAP): Scheduled tasks must enqueue work asynchronously
-- **Agent Hiring Workflow** (Section 4.1 of ROADMAP): Onboarding involves background job orchestration
-- **External Specialist Agents** (Section 2.1 of ROADMAP): Delegation patterns require job queues
+Build a simple asynchronous task execution system where agents can defer work to job queues without blocking operations.
 
 ---
 
@@ -51,21 +43,17 @@ This feature is foundational for:
 ## 4. Objectives & Success Metrics
 
 ### 4.1 Primary Objectives
-1. **Integrate BullMQ** as the core job queue system for reliable task persistence and execution
-2. **Enable trigger.dev integration** for workflow orchestration and multi-step job chains
-3. **Provide agent-facing API** for task enqueueing, retrieval, and event subscriptions
-4. **Support application-scoped and shared queues** for flexible resource management
-5. **Implement event-driven processing** to trigger task execution on external/internal events
+1. **Integrate BullMQ** as job queue for reliable task persistence
+2. **Provide agent-facing API** for task enqueueing and status retrieval
+3. **Implement event subscriptions** to trigger jobs from events
+4. **Support automatic retries** with exponential backoff
 
 ### 4.2 Success Metrics
-| Metric | Target | Rationale |
-|---|---|---|
-| Task enqueue latency | <50ms | Performance: fast job creation |
-| Task execution reliability | 99.9% success rate (with retries) | Reliability: minimal data loss |
-| Job retry attempts | 3-5 configurable | Resilience: reasonable retry budget |
-| Event processing latency | <500ms | Reactivity: timely event handling |
-| Queue monitoring uptime | 99.95% | Operational: queue health visibility |
-| Scalability: jobs per queue | ≥10,000 concurrent | Scale: handle enterprise workloads |
+| Metric | Target |
+|---|---|
+| Task enqueue latency | <100ms |
+| Job retry logic works | 3 max attempts |
+| Event routing works | Basic pattern matching |
 
 ---
 
@@ -142,23 +130,13 @@ EventSubscription {
 
 ### 5.2 Agent-Facing API
 
-#### 5.2.1 Queue Management Tools
-
-**listQueues()**
+**createQueue(input)**
 ```typescript
-listQueues(input?: {
-  limit?: number;                 // Default: 100
-  offset?: number;               // Default: 0
-  scope?: "application" | "shared" | "all"; // Default: "all"
-}): Promise<Array<{
-  queueId: string;
+createQueue(input: {
   name: string;
-  type: "application" | "shared";
-  concurrency: number;
-  jobCount: number;              // Pending + processing jobs
-  failedCount: number;           // Recently failed jobs
-  createdAt: string;
-}>>
+  concurrency?: number;          // Default: 5
+  maxRetries?: number;           // Default: 3
+}): Promise<{ queueId: string; name: string; }>
 ```
 
 **getQueue(queueId)**
@@ -166,174 +144,51 @@ listQueues(input?: {
 getQueue(queueId: string): Promise<{
   queueId: string;
   name: string;
-  type: "application" | "shared";
   concurrency: number;
-  retryPolicy: {
-    maxRetries: number;
-    backoffType: string;
-    backoffDelay: number;
-  };
-  stats: {
-    pending: number;
-    processing: number;
-    completed: number;
-    failed: number;
-  };
-  createdAt: string;
+  stats: { pending: number; processing: number; completed: number; failed: number; };
 }>
 ```
 
-**createQueue(input)**
-```typescript
-createQueue(input: {
-  name: string;                  // Required
-  type?: "application" | "shared"; // Default: "application"
-  concurrency?: number;          // Default: 5
-  retryPolicy?: {
-    maxRetries?: number;         // Default: 3
-    backoffType?: "fixed" | "exponential"; // Default: "exponential"
-    backoffDelay?: number;       // Default: 1000
-    backoffMultiplier?: number;  // Default: 2
-  };
-}): Promise<{
-  queueId: string;
-  name: string;
-  createdAt: string;
-}>
-```
+**listQueues()** — List all queues
 
-#### 5.2.2 Job Management Tools
-
-**enqueueJob(input)**
+**enqueueJob(input)** — Add job to queue
 ```typescript
 enqueueJob(input: {
-  queueId: string;               // Which queue
-  type: string;                  // Job type identifier
-  payload: Record<string,any>;   // Job parameters
-  priority?: number;             // 1-10, default: 5
-  maxAttempts?: number;          // Override queue default
-  tags?: string[];              // Optional categorization
-  delayMs?: number;             // Schedule for later (ms)
-}): Promise<{
-  jobId: string;
-  queueId: string;
-  status: "pending";
-  createdAt: string;
-}>
-```
-
-**getJob(jobId)**
-```typescript
-getJob(jobId: string): Promise<{
-  jobId: string;
   queueId: string;
   type: string;
-  status: "pending" | "processing" | "completed" | "failed" | "canceled";
   payload: Record<string,any>;
-  result?: Record<string,any>;
-  error?: string;
-  attempts: number;
-  maxAttempts: number;
-  progress?: number;             // 0-100 if supported
-  createdAt: string;
-  completedAt?: string;
-}>
+  priority?: number;             // 1-10, default: 5
+}): Promise<{ jobId: string; }>
 ```
 
-**listJobs(queueId)**
-```typescript
-listJobs(input: {
-  queueId: string;
-  status?: "pending" | "processing" | "completed" | "failed" | "canceled";
-  limit?: number;               // Default: 100
-  offset?: number;              // Default: 0
-}): Promise<Array<{
-  jobId: string;
-  type: string;
-  status: string;
-  priority: number;
-  attempts: number;
-  maxAttempts: number;
-  createdAt: string;
-  completedAt?: string;
-}>>
-```
+**getJob(jobId)** — Get job status and result
 
-**cancelJob(jobId)**
-```typescript
-cancelJob(jobId: string): Promise<{
-  success: boolean;
-  jobId: string;
-  previousStatus: string;
-}>
-```
+**listJobs(queueId)** — List jobs in queue
 
-**retryJob(jobId)**
-```typescript
-retryJob(jobId: string): Promise<{
-  success: boolean;
-  jobId: string;
-  newStatus: "pending";
-  nextAttempt: number;
-}>
-```
+**cancelJob(jobId)** — Cancel pending job
 
-#### 5.2.3 Event Processing Tools
+**retryJob(jobId)** — Manually retry failed job
 
-**subscribeToEvent(input)**
+**subscribeToEvent(input)** — Subscribe to events
 ```typescript
 subscribeToEvent(input: {
-  eventType: string;             // Pattern: "payment.*" or exact type
-  targetQueueId: string;         // Queue to enqueue jobs
-  jobTemplate?: {
-    type?: string;              // Default: same as eventType
-    priority?: number;          // Default: 5
-  };
-}): Promise<{
-  subscriptionId: string;
-  eventType: string;
-  targetQueue: string;
-  createdAt: string;
-}>
-```
-
-**unsubscribeFromEvent(subscriptionId)**
-```typescript
-unsubscribeFromEvent(subscriptionId: string): Promise<{
-  success: boolean;
-  subscriptionId: string;
-}>
-```
-
-**listSubscriptions(input?)**
-```typescript
-listSubscriptions(input?: {
-  eventType?: string;            // Filter by event type pattern
-  limit?: number;               // Default: 100
-}): Promise<Array<{
-  subscriptionId: string;
-  eventType: string;
+  eventType: string;             // Exact type or pattern like "payment.*"
   targetQueueId: string;
-  isActive: boolean;
-  createdAt: string;
-}>>
+}): Promise<{ subscriptionId: string; }>
 ```
 
-**publishEvent(input)**
+**publishEvent(input)** — Publish event to trigger subscriptions
 ```typescript
 publishEvent(input: {
-  source: string;                // Event source identifier
-  type: string;                 // Event type
-  payload: Record<string,any>;  // Event data
-  correlationId?: string;       // Optional correlation ID
-}): Promise<{
-  eventId: string;
-  type: string;
   source: string;
-  matchedSubscriptions: number;  // How many subscriptions triggered
-  timestamp: string;
-}>
+  type: string;
+  payload: Record<string,any>;
+}): Promise<{ eventId: string; matchedSubscriptions: number; }>
 ```
+
+**listSubscriptions()** — List active subscriptions
+
+**unsubscribeFromEvent(subscriptionId)** — Remove subscription
 
 ### 5.3 Data Persistence
 
@@ -437,32 +292,18 @@ CREATE TABLE forge_task_event_subscriptions (
 ```
 Task Queue System
 ├─ Queue Manager (BullMQ)
-│  ├─ Queue creation and configuration
+│  ├─ Queue creation
 │  ├─ Job persistence in Redis
 │  ├─ Worker pool management
-│  ├─ Retry orchestration
-│  └─ Dead-letter queue handling
-├─ Workflow Orchestrator (trigger.dev)
-│  ├─ Multi-step job chains
-│  ├─ Conditional workflows
-│  ├─ Parallel job execution
-│  ├─ Timeout and circuit-breaker handling
-│  └─ Webhook integration
+│  └─ Retry orchestration
 ├─ Event Processing Engine
-│  ├─ Event ingestion and routing
+│  ├─ Event routing
 │  ├─ Subscription matching (pattern-based)
-│  ├─ Job triggering from events
-│  └─ Dead-letter queue for unmatched events
-├─ Agent-Facing API
-│  ├─ Task enqueueing tools
-│  ├─ Job status/retrieval tools
-│  ├─ Event subscription tools
-│  └─ Queue management tools
-└─ Monitoring & Observability
-   ├─ Queue health metrics
-   ├─ Job execution logs
-   ├─ Event processing metrics
-   └─ Alert triggers
+│  └─ Job triggering from events
+└─ Agent-Facing API
+   ├─ Task enqueueing tools
+   ├─ Job status/retrieval tools
+   └─ Event subscription tools
 ```
 
 ### 6.2 Message Flow — Job Enqueueing
@@ -537,587 +378,102 @@ EventRouter.routeEvent()
 
 ## 7. Implementation Roadmap
 
-### 7.1 Phase 1: Queue Infrastructure (Sprint 1–2)
+### Phase 1: Queue Infrastructure (2 weeks)
 
 **Deliverables**:
-- [ ] BullMQ dependency and Redis connection setup
+- [ ] BullMQ + Redis setup
 - [ ] Database tables: `forge_task_queues`, `forge_task_jobs`
-- [ ] Queue CRUD operations: `createQueue()`, `getQueue()`, `listQueues()`
-- [ ] Job CRUD operations: `enqueueJob()`, `getJob()`, `listJobs()`
-- [ ] Basic job worker and retry logic
-- [ ] Job lifecycle syncing to LibSQL
+- [ ] Queue CRUD operations
+- [ ] Job CRUD operations with retry logic
+- [ ] Basic worker pool
 
 **Success Criteria**:
-- Jobs successfully enqueue and process
-- Retry policy applied correctly
-- No data loss on queue failures
-- Job status consistent in Redis and LibSQL
+- Jobs enqueue and process
+- Retries work correctly
+- No data loss on restart
 
-### 7.2 Phase 2: Event Processing (Sprint 2–3)
+### Phase 2: Event Processing (1 week)
 
 **Deliverables**:
 - [ ] Database tables: `forge_task_events`, `forge_task_event_subscriptions`
-- [ ] Event ingestion: `publishEvent()` tool
-- [ ] Event routing: pattern matching on event types
-- [ ] Subscription management: `subscribeToEvent()`, `unsubscribeFromEvent()`
-- [ ] Event-to-job creation pipeline
-- [ ] Dead-letter queue for unmatched events
+- [ ] Event routing with pattern matching
+- [ ] Subscription management
 
 **Success Criteria**:
 - Events route to correct subscriptions
-- Jobs created from events appear in target queue
-- Pattern matching works (wildcard support)
-- No event loss
-
-### 7.3 Phase 3: Workflow Orchestration (Sprint 3–4)
-
-**Deliverables**:
-- [ ] trigger.dev integration setup
-- [ ] Multi-step job chains (A → B → C sequences)
-- [ ] Conditional workflows (if/else branching)
-- [ ] Parallel job execution and wait patterns
-- [ ] Timeout and circuit-breaker support
-- [ ] Webhook callbacks to trigger.dev
-
-**Success Criteria**:
-- Complex workflows execute end-to-end
-- Results flow between jobs correctly
-- Failures handled gracefully
-- Logs available for debugging
-
-### 7.4 Phase 4: Agent API & Monitoring (Sprint 4–5)
-
-**Deliverables**:
-- [ ] All agent-facing tools fully implemented
-- [ ] Queue health monitoring dashboard
-- [ ] Job execution metrics and logs
-- [ ] Alert configuration for failures
-- [ ] API documentation and examples
-- [ ] Integration tests (end-to-end)
-
-**Success Criteria**:
-- 90%+ code coverage
-- Monitoring shows accurate metrics
-- Agents can query all job/queue information
-- Documentation complete
+- Jobs created from events
 
 ---
 
-## 8. Detailed Requirements & Constraints
+## 8. Key Requirements
 
-### 8.1 Functional Requirements
-
-| Req ID | Requirement | Priority | Notes |
-|---|---|---|---|
-| F1 | Create application-scoped queues | MUST | Via `createQueue()` tool |
-| F2 | Enqueue jobs with priority and retry policy | MUST | Via `enqueueJob()` |
-| F3 | Execute jobs with configurable concurrency | MUST | BullMQ worker pool |
-| F4 | Retry failed jobs with exponential backoff | MUST | Configurable per queue |
-| F5 | Cancel pending/processing jobs | SHOULD | Via `cancelJob()` |
-| F6 | Retrieve job status and results | MUST | Via `getJob()` |
-| F7 | Create event subscriptions (pattern-based) | MUST | Via `subscribeToEvent()` |
-| F8 | Automatically enqueue jobs from events | MUST | Event router integration |
-| F9 | Support multi-step workflows via trigger.dev | SHOULD | Phase 3 |
-| F10 | Query queue statistics and job history | MUST | Via `listQueues()`, `listJobs()` |
-
-### 8.2 Non-Functional Requirements
-
-| Req ID | Requirement | Target | Constraint |
-|---|---|---|---|
-| NFR1 | Job enqueue latency | <50ms | Synchronous Redis write |
-| NFR2 | Job execution reliability | 99.9% | With retries, no data loss |
-| NFR3 | Event routing latency | <500ms | Subscription matching |
-| NFR4 | Queue scalability | ≥10,000 concurrent jobs | Per queue, tested load |
-| NFR5 | Job retention | ≥7 days | Configurable TTL |
-| NFR6 | Backward compatibility | 100% | No breaking agent API changes |
-| NFR7 | Redis availability | 99.95% | Separate cluster from cache |
-| NFR8 | Monitoring query latency | <200ms | Dashboard responsiveness |
+- Create and manage queues
+- Enqueue jobs with priority and retry logic
+- Retrieve job status and results
+- Subscribe to events and trigger job creation
+- Support basic pattern matching on events (e.g., "payment.*")
 
 ### 8.3 Job Execution Guarantees
 
-**Exactly-once semantics**:
-- Jobs processed at least once (retries may cause duplicates)
-- Idempotent job handlers required for safety
-- Job ID enables deduplication at application level
-
-**Failure handling**:
-- Transient failures: retry with backoff
-- Permanent failures: move to dead-letter queue
-- Timeout: after 60 seconds (configurable per job)
-- Missing handler: fail immediately, log error
-
-### 8.4 Event Processing Semantics
-
-**Event routing**:
-- Pattern matching on event type (supports wildcards: `payment.*`)
-- Multiple subscriptions per event type allowed
-- Event firing doesn't guarantee job execution (async)
-
-**Event deduplication**:
-- Events tracked by `eventId` (UUID)
-- Duplicate events within 1 hour are deduplicated
-- Correlation IDs link related events
-
-### 8.5 Authorization & Permissions
-
-**Queue access**:
-- Application-scoped queues: only owning application's agents
-- Shared queues: accessible to any agent (platform-wide)
-- Future: role-based queue permissions (Section 3.1 ROADMAP)
-
-**Event subscriptions**:
-- Application-scoped: agent can subscribe to own app's events
-- Platform events: any agent can subscribe to published events
+- Jobs retry on failure with exponential backoff
+- Max retry attempts configurable per queue (default: 3)
+- Failed jobs after retries stored for manual review
 
 ---
 
-## 9. Use Cases & User Stories
+## 9. Use Cases
 
-### 9.1 Use Case: Long-Running Email Campaign
+**Use Case 1: Long-Running Email Campaign**
+Agent enqueues email jobs (10,000+) instead of sending synchronously. Jobs process in parallel, retry on failure.
 
-```
-Scenario: A marketing agent needs to send emails to 10,000 contacts.
-The agent enqueues individual email jobs instead of blocking
-on 10,000 synchronous sends.
+**Use Case 2: Event-Triggered Data Export**
+When webhook event fires (user signup), automatically enqueue export job.
 
-Flow:
-1. marketing_agent calls createQueue({ name: "email-delivery" })
-2. Loop: for each contact, call enqueueJob({ queueId, type: "send-email", payload: {...} })
-3. BullMQ workers process emails at configured concurrency (e.g., 50 parallel)
-4. marketing_agent polls getJob() or subscribes to "email.sent" events
-5. On failure (bounced email), job retries with exponential backoff (max 3 times)
-6. Failed jobs move to dead-letter queue for manual review
-```
-
-**User Story**:
-> As a marketing agent, I want to enqueue email jobs
-> so that I can send campaigns at scale without blocking.
-
-### 9.2 Use Case: Event-Triggered Data Export
-
-```
-Scenario: When a user signs up (webhook event), trigger automatic
-data export and notification to analysis team.
-
-Flow:
-1. platform creates "user.signed_up" event from webhook
-2. data_export_agent subscribed: subscribeToEvent({
-     eventType: "user.signed_up",
-     targetQueue: "export-queue"
-   })
-3. publishEvent({ type: "user.signed_up", payload: { userId: "123" } })
-4. Event router creates job in "export-queue"
-5. BullMQ worker exports user data to S3
-6. On completion, publishEvent({ type: "user.data_exported", ... })
-7. analysis_agent receives event, publishes results
-```
-
-**User Story**:
-> As a data agent, I want to automatically export data
-> when users sign up so that the analysis team has fresh data.
-
-### 9.3 Use Case: Complex Multi-Step Workflow
-
-```
-Scenario: A fulfillment agent orchestrates order processing:
-1. Validate order
-2. Reserve inventory
-3. Generate shipping label
-4. Notify customer (parallel with #3)
-5. Update accounting system
-
-Flow:
-1. order_agent calls enqueueJob({ type: "validate-order", ... })
-   (via trigger.dev workflow definition)
-2. trigger.dev chains jobs: validate → reserve → [shipping + notify] → accounting
-3. On any step failure: rollback and notify order_agent via event
-4. On completion: order_agent retrieves full workflow result
-```
-
-**User Story**:
-> As an order fulfillment agent, I want to orchestrate
-> multi-step order processing so that orders complete reliably.
-
-### 9.4 Use Case: Agent Self-Scheduling (Cron Integration)
-
-```
-Scenario: A scheduled task enqueues jobs to a queue instead of
-running synchronously.
-
-Flow:
-1. scheduler creates cron: "daily data cleanup"
-2. At trigger time, publishEvent({ type: "cron.daily-cleanup" })
-3. data_agent subscribed to "cron.*"
-4. Event triggers job: enqueueJob({ type: "cleanup-cache" })
-5. BullMQ worker executes cleanup
-6. Job completion triggers follow-up event: "cleanup.completed"
-7. scheduler receives event, logs result
-```
-
-**User Story**:
-> As a scheduler, I want cron tasks to enqueue work
-> so that jobs are resilient to failures and retryable.
+**Use Case 3: Scheduled Maintenance**
+Cron job enqueues cleanup task instead of running synchronously.
 
 ---
 
-## 10. Risk Analysis & Mitigation
+## 10. Risks
 
-### 10.1 Technical Risks
-
-| Risk | Impact | Probability | Mitigation |
-|---|---|---|---|
-| **Redis unavailability** | Jobs cannot queue/process | Medium | Separate Redis cluster; failover setup; queue backlog to LibSQL |
-| **Job handler errors** | Silent failures; no retry | Medium | Structured error handling; try-catch + logging in every handler; alerting |
-| **Event storm** | Queue backlog; processing delays | Medium | Rate limiting on event subscriptions; priority queues; topic-specific concurrency caps |
-| **Duplicate job execution** | Data inconsistency | Low | Idempotent handlers required; client deduplication via jobId |
-| **Long-running job timeout** | Job cancellation mid-execution | Medium | Configurable timeout; graceful shutdown; cleanup handlers |
-
-### 10.2 Operational Risks
-
-| Risk | Impact | Probability | Mitigation |
-|---|---|---|---|
-| **Queue deadlock** | Jobs stuck pending | Low | Deadlock detection; alert on age > 1 hour; manual intervention |
-| **Storage exhaustion** | New jobs fail to enqueue | Low | TTL-based cleanup; archive old jobs to cold storage; capacity planning |
-| **Unmatched events** | Silent event loss | Medium | Dead-letter queue; DLQ monitoring; fallback handlers |
-| **Cascading failures** (one failed job blocks chain) | Workflow halts | Medium | Circuit breakers; skip-on-error patterns; compensating transactions |
-
-### 10.3 Scope Risks
-
-| Risk | Item | Mitigation |
-|---|---|---|
-| **Feature creep** | Job graphs, dynamic workflows, custom DSLs | Define MVP: linear chains only; defer graph support to Phase 4 |
-| **Compliance complexity** | GDPR data cleanup, audit logs | Use existing audit system; define retention per job type |
-| **External dependency** | trigger.dev availability | Cache workflow definitions; fallback to manual orchestration |
-
----
-
-## 11. Success Criteria & Acceptance Tests
-
-### 11.1 Functional Acceptance
-
-- [ ] An agent can create a queue with custom retry policy
-- [ ] An agent can enqueue a job and retrieve its status
-- [ ] A job executes and produces a result
-- [ ] Failed jobs retry with exponential backoff
-- [ ] An agent can cancel a pending job
-- [ ] An agent can subscribe to events and jobs auto-enqueue
-- [ ] Pattern-based event matching works (e.g., "payment.*")
-- [ ] trigger.dev workflows execute multi-step jobs end-to-end
-- [ ] Dead-letter queue captures unprocessable jobs
-- [ ] Job history is queryable and searchable
-
-### 11.2 Performance Acceptance
-
-- [ ] Job enqueue completes in <50ms
-- [ ] Event routing completes in <500ms
-- [ ] Processing 10,000 jobs per hour with 5 workers
-- [ ] Querying 10,000 job history items in <200ms
-- [ ] Redis memory usage <1GB for 100,000 pending jobs
-- [ ] No queue lock contention observed under load
-
-### 11.3 Reliability Acceptance
-
-- [ ] 99.9% of jobs eventually complete or fail (no silently stuck)
-- [ ] Retry policy: jobs retry exactly N times (no over/under-retry)
-- [ ] Event deduplication: duplicate events don't create duplicate jobs
-- [ ] Subscription cleanup: unsubscribed events don't enqueue jobs
-- [ ] Database consistency: job status in LibSQL matches Redis
-- [ ] No data loss on queue/Redis restart
-
----
-
-## 12. Dependencies & Integration Points
-
-### 12.1 Internal Dependencies
-
-| Component | Dependency | Risk | Mitigation |
-|---|---|---|---|
-| **Redis** | Job storage, worker coordination | Medium | Separate Redis cluster; replication/failover; monitored |
-| **LibSQL** | Audit trail, job history, events | Low | Existing system; extensible schema |
-| **trigger.dev** | Workflow orchestration | Medium | API documented; webhooks for integration; fallback to direct BullMQ |
-| **Agent Tools System** | Register queue/job/event tools | Low | Standard tool registration; no API changes |
-| **Webhook System** (Section 5.3 ROADMAP) | Event ingestion | Medium | Bidirectional; webhooks → events → jobs |
-| **Communication Module** | Status updates via messages | Low | Optional; graceful degradation if unavailable |
-
-### 12.2 External Dependencies
-
-- **BullMQ**: Open-source job queue (Node.js/TS ecosystem)
-- **trigger.dev**: Workflow orchestration SaaS (API integration)
-- **Redis**: In-memory data store (must be deployed/managed)
-
----
-
-## 13. Open Questions & Future Considerations
-
-### 13.1 Open Questions (to resolve before Phase 1)
-
-1. **Redis topology**: Single instance, cluster, or managed service (e.g., AWS ElastiCache)?
-   - **Decision needed**: Production deployment strategy
-   - **Impact**: Failover, scaling, cost
-
-2. **Dead-letter queue capacity**: How long to retain failed jobs?
-   - **Current assumption**: 7 days (configurable)
-   - **Validation needed**: Retention vs. storage cost tradeoff
-
-3. **trigger.dev vs. custom orchestration**: Build workflows in trigger.dev or maintain YAML DSL?
-   - **Current decision**: trigger.dev for Phase 3 (more features)
-   - **Alternative**: BullMQ workers + chaining (simpler, less powerful)
-
-4. **Event schema versioning**: How to handle event payload changes over time?
-   - **Current assumption**: Event source is responsible; subscriptions use path expressions
-   - **Future**: Schema registry (Phase 4+)
-
-### 13.2 Future Extensions (Post-MVP)
-
-- **Job progress tracking**: Update job progress (0-100%) during execution
-- **Webhook callbacks**: Job completion triggers external webhooks
-- **Time-based scheduling**: Schedule job execution at specific time
-- **Batch job processing**: Enqueue multiple jobs atomically
-- **Job graphs**: Define complex DAG dependencies between jobs
-- **Custom event schema**: Schema validation on event payloads
-- **Rate limiting**: Per-queue, per-agent, per-job-type rate limits
-- **Cost tracking**: Monitor job execution cost (duration × resources)
-- **Job prioritization**: Preempt lower-priority jobs for higher-priority ones
-- **Multi-region support**: Distribute queues across geographic regions
-- **Integration with workflow tools**: Zapier, Make.com, n8n connectors
-
----
-
-## 14. Success Timeline & Delivery Plan
-
-| Phase | Duration | Key Deliverables | Readiness Gate |
-|---|---|---|---|
-| **Phase 1: Queue Infrastructure** | 2 weeks | BullMQ, Redis, job CRUD, retry logic | All jobs queue/process correctly |
-| **Phase 2: Event Processing** | 2 weeks | Event tables, subscriptions, routing, DLQ | Events trigger jobs reliably |
-| **Phase 3: Workflow Orchestration** | 2 weeks | trigger.dev integration, job chains, conditionals | Multi-step workflows execute |
-| **Phase 4: Agent API & Monitoring** | 1 week | Tools, monitoring, docs, integration tests | 90%+ coverage, agents can query |
-| **Total MVP** | **7 weeks** | Shipping-ready task queue system | Ready for production agents |
-
----
-
-## Appendix A: Schema Diagrams
-
-### Task Queue System Tables
-
-```
-Core Tables:
-  ├─ forge_task_queues
-  │  └─ (queue_id, application_id, name, type, concurrency, retry_policy)
-  ├─ forge_task_jobs
-  │  └─ (job_id, queue_id, type, status, payload, result, error, attempts, timestamps)
-  ├─ forge_task_events
-  │  └─ (event_id, source, type, payload, correlation_id, timestamp, processed)
-  └─ forge_task_event_subscriptions
-     └─ (subscription_id, application_id, event_type, handler_queue_id)
-
-Redis Storage (BullMQ):
-  ├─ queue:{queueId}
-  │  └─ Pending, processing, completed, failed job sets
-  ├─ job:{jobId}
-  │  └─ Job payload, progress, state
-  └─ worker:*
-     └─ Active worker heartbeats
-```
-
-### Entity Relationships
-
-```
-Queue (1) ──── (N) Job
-  │              └─ Status tracking
-  └─ (1) ──── (N) EventSubscription
-              └─ Handler routing
-
-Event (1) ──── (N) EventSubscription (pattern matching)
-  │
-  └─ Triggers Job creation
-```
-
----
-
-## Appendix B: API Examples
-
-### Example 1: Enqueue Email Campaign
-
-```typescript
-// Create queue for email delivery
-const queueRes = await taskQueue.createQueue({
-  name: "email-delivery",
-  concurrency: 50,
-  retryPolicy: {
-    maxRetries: 3,
-    backoffType: "exponential",
-    backoffDelay: 1000
-  }
-});
-const emailQueueId = queueRes.queueId;
-
-// Enqueue 10,000 email jobs
-for (const contact of contacts) {
-  await taskQueue.enqueueJob({
-    queueId: emailQueueId,
-    type: "send-email",
-    payload: {
-      to: contact.email,
-      subject: "Q2 Campaign",
-      templateId: "campaign-2026-q2"
-    },
-    priority: contact.isPremium ? 9 : 5
-  });
-}
-
-// Check progress
-const emailJobs = await taskQueue.listJobs({
-  queueId: emailQueueId,
-  status: "pending"
-});
-console.log(`${emailJobs.length} emails pending...`);
-
-// Subscribe to completion
-await taskQueue.subscribeToEvent({
-  eventType: "email.sent",
-  targetQueueId: "notification-queue"
-});
-```
-
-### Example 2: Event-Driven Data Export
-
-```typescript
-// Subscribe to user signup events
-const sub = await taskQueue.subscribeToEvent({
-  eventType: "user.signed_up",
-  targetQueueId: exportQueueId,
-  jobTemplate: {
-    type: "export-user-data",
-    priority: 8
-  }
-});
-
-// When user signs up (webhook)
-await taskQueue.publishEvent({
-  source: "webhook.user-service",
-  type: "user.signed_up",
-  payload: {
-    userId: "user-123",
-    email: "alice@example.com",
-    timestamp: new Date().toISOString()
-  },
-  correlationId: "webhook-456"
-});
-
-// Job automatically created and enqueued in exportQueueId
-// Worker processes: export data to S3, send notification, etc.
-```
-
-### Example 3: Multi-Step Workflow
-
-```typescript
-// Define workflow via trigger.dev
-const workflow = await triggerDev.defineWorkflow({
-  name: "order-fulfillment",
-  jobs: [
-    {
-      id: "validate",
-      type: "validate-order",
-      timeout: 30_000
-    },
-    {
-      id: "reserve",
-      type: "reserve-inventory",
-      dependsOn: ["validate"],
-      timeout: 60_000
-    },
-    {
-      id: "shipping",
-      type: "generate-shipping-label",
-      dependsOn: ["reserve"],
-      parallel: true
-    },
-    {
-      id: "notify",
-      type: "notify-customer",
-      dependsOn: ["reserve"],
-      parallel: true
-    },
-    {
-      id: "accounting",
-      type: "update-accounting",
-      dependsOn: ["shipping", "notify"],
-      timeout: 120_000
-    }
-  ]
-});
-
-// Enqueue order
-const jobId = await taskQueue.enqueueJob({
-  queueId: orderQueueId,
-  type: "order-fulfillment",
-  payload: {
-    orderId: "order-789",
-    items: [...],
-    shippingAddress: {...}
-  }
-});
-
-// Monitor workflow progress
-const job = await taskQueue.getJob(jobId);
-console.log(job.result); // { status: "completed", accounting_updated: true }
-```
-
----
-
-## Appendix C: BullMQ & trigger.dev Integration Notes
-
-### BullMQ Key Features Used
-- **Job persistence**: Jobs survive queue restart
-- **Retry logic**: Built-in exponential backoff with max attempts
-- **Concurrency control**: Process N jobs in parallel per queue
-- **Priority queues**: High-priority jobs process first
-- **Dead-letter queue**: Failed jobs moved after max retries
-- **Events**: Job state changes trigger system events
-
-### trigger.dev Integration Points
-- **Workflow definition**: YAML or API-based job chains
-- **State machine**: Track job states across steps
-- **Conditional execution**: If/else branching on job results
-- **Webhooks**: Receive callbacks on job completion
-- **Error handling**: Retry policies, timeout handling
-- **Monitoring**: Built-in logging and metrics
-
-### Redis Cluster Topology (Production)
-```
-Primary Redis Cluster (3 nodes)
-├─ Node 1 (master)
-├─ Node 2 (replica)
-└─ Node 3 (replica)
-
-BullMQ Config:
-  ├─ Connection string: redis-cluster://...
-  ├─ Retry strategy: exponential backoff
-  └─ Health checks: every 30 seconds
-```
-
----
-
-## Appendix D: Glossary
-
-| Term | Definition |
+| Risk | Mitigation |
 |---|---|
-| **Queue** | A container for jobs of a specific type or application |
-| **Job** | A unit of work to be executed asynchronously |
-| **Event** | A notification of something that happened (internal or external) |
-| **Subscription** | A binding between an event type and a job queue |
-| **Worker** | A process that executes jobs from a queue |
-| **Retry policy** | Configuration for automatic job retries on failure |
-| **Dead-letter queue** | A queue for jobs that failed and exhausted retries |
-| **Exactly-once semantics** | Guarantee that a job is processed (at least once) |
-| **Idempotent handler** | A job handler that produces the same result on repeat execution |
-| **Correlation ID** | A token linking related events across systems |
-| **Debounce** | Batching of events to reduce redundant processing |
+| Redis unavailability | Ensure Redis is running; backups |
+| Job handler errors | Proper error handling and logging |
+| Duplicate job execution | Job handlers should be idempotent |
 
 ---
 
-## Document History
+## 11. Success Criteria
 
-| Version | Date | Author | Changes |
-|---|---|---|---|
-| 1.0 | 2026-03-15 | Product Analysis | Initial PRD: core requirements, BullMQ/trigger.dev integration, event processing, acceptance criteria |
+- [ ] Agent can create queue and enqueue jobs
+- [ ] Jobs execute and are retrievable
+- [ ] Failed jobs retry correctly
+- [ ] Event subscriptions trigger job creation
+- [ ] Pattern matching works (e.g., "payment.*")
+
+---
+
+## 12. Dependencies
+
+- **BullMQ**: Job queue library
+- **Redis**: In-memory data store for job coordination
+- **LibSQL**: For audit trail and job history
+
+---
+
+## 13. Future Enhancements
+
+- Job progress tracking
+- Time-based scheduling
+- Batch job processing
+- Rate limiting per queue
+- Multi-step workflow orchestration (future phase)
+
+---
+
+## 14. Timeline
+
+- **Phase 1 (Queue Infrastructure)**: 2 weeks
+- **Phase 2 (Event Processing)**: 1 week
+- **Total MVP**: 3 weeks
