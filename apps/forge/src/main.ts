@@ -17,6 +17,7 @@ import {
 } from '@mastra-engine/core';
 
 import { createDiscordProvider } from './discord-account.js';
+import { createEmailProvider } from './email-account.js';
 import { z } from 'zod';
 
 const envSchema = z.object({
@@ -24,12 +25,25 @@ const envSchema = z.object({
   FORGE_MODEL_ID: z.string().min(1),
   FORGE_AGENT_ID: z.string().min(1),
   FORGE_AGENT_NAME: z.string().min(1),
-  DISCORD_BOT_TOKEN: z.string().min(1),
   FORGE_HELPER_AGENT_ID: z.string().optional(),
   FORGE_HELPER_AGENT_NAME: z.string().optional(),
+  FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+  // Discord provider (optional)
+  DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_ALLOWED_CHANNEL_IDS: z.string().optional(),
   DISCORD_RESPOND_TO_MENTIONS_ONLY: z.string().optional(),
-  FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+  // Email provider (optional)
+  IMAP_HOST: z.string().optional(),
+  IMAP_PORT: z.string().optional(),
+  IMAP_USER: z.string().optional(),
+  IMAP_PASSWORD: z.string().optional(),
+  IMAP_SECURE: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_SECURE: z.string().optional(),
+  FORGE_EMAIL_BCC: z.string().optional(),
 });
 
 export async function main() {
@@ -38,8 +52,8 @@ export async function main() {
   const workspace = new Workspace({
     autoSync: true,
     bm25: true,
-    filesystem: new LocalFilesystem({ basePath: path.resolve(process.cwd(), 'workspace-discord') }),
-    sandbox: new LocalSandbox({ workingDirectory: path.resolve(process.cwd(), 'workspace-discord') }),
+    filesystem: new LocalFilesystem({ basePath: path.resolve(process.cwd(), 'workspace') }),
+    sandbox: new LocalSandbox({ workingDirectory: path.resolve(process.cwd(), 'workspace') }),
   });
   const helperAgentId = env.FORGE_HELPER_AGENT_ID?.trim() || 'forge-helper';
   const helperAgentName = env.FORGE_HELPER_AGENT_NAME?.trim() || 'Forge Helper';
@@ -60,14 +74,12 @@ export async function main() {
       ? `${OAUTH_GATEWAY_ID}/openai-codex/${z.enum(OPENAI_CODEX_MODELS).parse(env.FORGE_MODEL_ID)}`
       : `${OAUTH_GATEWAY_ID}/claude-max/${z.enum(CLAUDE_MAX_MODELS).parse(env.FORGE_MODEL_ID)}`;
 
-  const agent = await createForgeAgent({
-    id: env.FORGE_AGENT_ID,
-    name: env.FORGE_AGENT_NAME,
-    instructions: systemPrompt,
-    model,
-    workspace,
-    providers: [
-      internalChat.createProvider({ id: env.FORGE_AGENT_ID, displayName: env.FORGE_AGENT_NAME }),
+  // Build providers array - internalChat is always included
+  const providers = [internalChat.createProvider({ id: env.FORGE_AGENT_ID, displayName: env.FORGE_AGENT_NAME })];
+
+  // Add Discord provider if DISCORD_BOT_TOKEN is set
+  if (env.DISCORD_BOT_TOKEN) {
+    providers.push(
       createDiscordProvider({
         token: env.DISCORD_BOT_TOKEN,
         allowedChannelIds: (env.DISCORD_ALLOWED_CHANNEL_IDS ?? '')
@@ -76,7 +88,39 @@ export async function main() {
           .filter(Boolean),
         respondToMentionsOnly: env.DISCORD_RESPOND_TO_MENTIONS_ONLY !== 'false',
       }),
-    ],
+    );
+  }
+
+  // Add Email provider if both IMAP_HOST and SMTP_HOST are set
+  if (env.IMAP_HOST && env.SMTP_HOST) {
+    providers.push(
+      createEmailProvider({
+        imap: {
+          host: env.IMAP_HOST,
+          port: Number(env.IMAP_PORT ?? 993),
+          secure: env.IMAP_SECURE !== 'false',
+          user: env.IMAP_USER!,
+          password: env.IMAP_PASSWORD!,
+        },
+        smtp: {
+          host: env.SMTP_HOST,
+          port: Number(env.SMTP_PORT ?? 587),
+          secure: env.SMTP_SECURE === 'true',
+          user: env.SMTP_USER!,
+          password: env.SMTP_PASSWORD!,
+        },
+        bcc: env.FORGE_EMAIL_BCC,
+      }),
+    );
+  }
+
+  const agent = await createForgeAgent({
+    id: env.FORGE_AGENT_ID,
+    name: env.FORGE_AGENT_NAME,
+    instructions: systemPrompt,
+    model,
+    workspace,
+    providers,
   });
   const helperAgent = await createSimpleAgent({
     id: helperAgentId,

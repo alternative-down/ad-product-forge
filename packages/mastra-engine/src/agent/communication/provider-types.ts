@@ -29,6 +29,8 @@ export type CommunicationProvider = {
       username?: string;
     }>
   >;
+  // TODO: Extend to support multiple TO recipients, CC, and BCC fields.
+  // Currently limited to a single recipient via conversationId or contactExternalId.
   sendMessage(input: {
     providerConversationKey?: string;
     contactExternalId?: string;

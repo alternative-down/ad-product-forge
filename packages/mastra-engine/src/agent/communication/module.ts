@@ -258,6 +258,9 @@ export async function createCommunicationModule(config: {
     }));
   }
 
+  // TODO: Future enhancement — support multiple recipients (TO, CC) per message.
+  // This requires extending the sendMessage input contract in provider-types.ts
+  // and updating the agent-facing communication tools accordingly.
   async function sendMessage(input: {
     provider: string;
     conversationId?: string;
@@ -288,8 +291,14 @@ export async function createCommunicationModule(config: {
         throw new Error(`Conversation ${input.conversationId} does not belong to provider ${input.provider}`);
       }
 
+      let contactExternalId: string | null = null;
+      if (conversation.contactSlug) {
+        contactExternalId = await getContactExternalId(input.provider, conversation.contactSlug);
+      }
+
       const sent = await provider.sendMessage({
         providerConversationKey: conversation.providerConversationKey,
+        contactExternalId: contactExternalId || undefined,
         content: input.content,
         replyToProviderMessageId: replyMessage?.providerMessageId,
       });
