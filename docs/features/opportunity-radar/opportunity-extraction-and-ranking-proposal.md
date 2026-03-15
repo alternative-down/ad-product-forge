@@ -43,16 +43,17 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
    - aplica deduplicação interna
 
 2. **Enriquecimento no grafo**
-   - cada novo insumo gera 1 job (trigger/bull)
+   - cada novo insumo gera 1 job de processamento
    - processamento por item (1 job = 1 item)
    - processador do job: agente LLM
    - agente analisa e conecta contexto/rotina/tensão
    - agente revisor valida consistência
-   - manipulação do grafo em Neo4j (com embeddings em nós/arestas + fulltext BM25)
    - construção contínua de grafo de conhecimento com:
      - relações semânticas
      - categorização
      - evidências vinculadas
+     - embeddings em nós e arestas
+     - busca por BM25 e semântica
    - estrutura definida pelos agentes (sem schema semântico rígido nesta fase)
 
 3. **Mineração de insights**

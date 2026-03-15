@@ -22,9 +22,7 @@ Cada agente possui sua própria memória isolada.
 - também pode ocorrer durante o run quando houver necessidade de compactação de contexto
 - regra: antes de compactar, construir/atualizar memória; depois executar a compactação
 
-## Opções de base para memória e busca
-- Neo4j
-- sqlite-vec + fulltext BM25
-
-## Observação
-A escolha final entre as opções será definida mais adiante, na etapa técnica/arquitetural.
+## Implementação de memória e busca
+- Memória persistida com LibSQL
+- Busca semântica com embeddings (FastEmbed)
+- Busca fulltext com BM25
