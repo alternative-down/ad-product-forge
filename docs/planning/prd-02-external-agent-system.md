@@ -46,11 +46,11 @@ Enable internal agents to dynamically create temporary specialist agents for con
 ### Flow
 
 ```
-Internal Agent Request
+Internal Agent invokes external agent workflow
   │
-  ├─ tool: createExternalAgent({name, role, systemPrompt, context})
+  ├─ Mastra workflow: createExternalAgent({name, role, systemPrompt, context})
   │
-  ├─ Mastra workflow creates agent
+  ├─ Workflow creates agent:
   │  ├─ agentId = UUID (marks as external)
   │  ├─ instructions = systemPrompt + context
   │  ├─ model = same as parent
@@ -58,20 +58,20 @@ Internal Agent Request
   │
   └─ Return agentId + conversationId
 
-Communication
+Communication (uses standard messaging)
   │
-  ├─ Internal: sendMessage(externalAgentId, content)
+  ├─ sendMessage(externalAgentId, content)
   │  └─ Message via external_agent_chat provider
   │
-  ├─ External: receives message, generates response
-  │  └─ Response via sendMessage() tool
+  ├─ Agent receives, generates response
+  │  └─ Response via sendMessage()
   │
-  └─ Internal: getMessages(externalAgentId)
+  └─ getMessages(externalAgentId)
 
 Termination
   │
-  ├─ Internal: terminateExternalAgent(externalAgentId)
-  │  └─ Mark agent status = "terminated"
+  └─ Mastra workflow: terminateExternalAgent(externalAgentId)
+     └─ Mark agent status = "terminated"
 ```
 
 ---

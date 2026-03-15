@@ -54,25 +54,24 @@ Enable internal agents to autonomously create and provision permanent specialist
 ### Flow
 
 ```
-Hiring Agent Request
+Internal Agent invokes hiring workflow
   │
-  ├─ tool: hireAgent({name, role, function, systemPrompt, providers, context})
+  ├─ Mastra workflow: hireAgent({name, role, function, systemPrompt, providers, context})
   │
-  ├─ Validate role exists
+  ├─ Workflow executes:
+  │  ├─ Validate role exists
+  │  ├─ Create agent:
+  │  │  ├─ agentId = UUID
+  │  │  ├─ instructions = systemPrompt + context
+  │  │  ├─ model = default or role-specific
+  │  │  └─ Save in agents table with role/function
+  │  │
+  │  ├─ Configure providers:
+  │  │  └─ For each provider: encrypt credentials, store in agent_providers
+  │  │
+  │  └─ Load tools for role
   │
-  ├─ Mastra workflow creates agent
-  │  ├─ agentId = UUID
-  │  ├─ instructions = systemPrompt + context
-  │  ├─ model = default or role-specific
-  │  └─ Save in agents table with role/function
-  │
-  ├─ Configure providers
-  │  └─ For each provider: encrypt credentials, store in agent_providers
-  │
-  ├─ Load tools for role
-  │  └─ Agent initialized with role-specific tools
-  │
-  └─ Return agentId + conversationId
+  └─ Return agentId + conversationId to hiring agent
 ```
 
 ---
