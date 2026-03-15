@@ -112,11 +112,6 @@ export async function main() {
     );
   }
 
-  // Ensure at least one communication provider is configured
-  if (providers.length === 1) {
-    throw new Error('At least one communication provider must be configured (DISCORD_BOT_TOKEN or IMAP_HOST+SMTP_HOST)');
-  }
-
   const agent = await createForgeAgent({
     id: env.FORGE_AGENT_ID,
     name: env.FORGE_AGENT_NAME,
