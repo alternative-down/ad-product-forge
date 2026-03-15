@@ -4,9 +4,9 @@
 
 ## Visão Geral
 
-### Classificação: FRAMEWORK MASTRA
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**Este PRD descreve infraestrutura principal de agendamento para o framework Mastra.** A capacidade de agentes definirem e gerenciarem autonomamente tarefas agendadas é uma capacidade fundamental para sistemas de agentes auto-gerenciáveis. Esta é infraestrutura em nível de framework aplicável a qualquer deployment Mastra.
+**Este PRD descreve sistema de agendamento específico para ad-product-forge.** Permite que agentes de Nicolas criem e gerenciem tarefas agendadas usando node-schedule. Esta é funcionalidade específica da aplicação, não infraestrutura do framework Mastra.
 
 A Ferramenta Cron/Agendamento permite que agentes criem e gerenciem tarefas agendadas usando sintaxe cron padrão. Quando um evento agendado dispara, uma mensagem interna desperta o agente para executar a tarefa.
 
