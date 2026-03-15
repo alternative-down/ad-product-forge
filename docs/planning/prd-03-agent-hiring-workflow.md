@@ -1,122 +1,122 @@
-# PRD-03: Agent Hiring Workflow
+# PRD-03: Workflow de Contratação de Agentes
 
-**Status:** Planning
-**Date:** 2026-03-15
+**Status:** Planejamento
+**Data:** 2026-03-15
 
-> **Note:** This is a personal solo-developer project. Requirements focus on functionality and simplicity.
-
----
-
-## Objective
-
-Enable internal agents to autonomously create and provision permanent specialist agents with specific roles, communication providers, and tools. Agent hiring follows Mastra workflow pattern similar to external agents but with persistent configuration.
+> **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Os requisitos focam em funcionalidade e simplicidade.
 
 ---
 
-## Requirements
+## Objetivo
 
-### FR1: Create Agent with Role
-- Internal agent requests to hire agent via tool
-- Input: name, role, function, systemPrompt, providers (list), context (optional)
-- Created using Mastra workflow (similar to `createSimpleAgent()`)
-- Output: agentId, conversationId
-- Agent saved in `agents` table with role/function metadata
-
-### FR2: Provider Configuration
-- System configures multiple providers per agent (Discord, Email, Slack, etc)
-- Each provider gets credentials stored encrypted (via PRD-01 mechanism)
-- Agent initialized with all provider credentials at startup
-- Can communicate via all configured providers
-
-### FR3: Role-Based Tools
-- Agent assigned tools based on role/function
-- Example: "research" role gets research tools, "developer" role gets development tools
-- Tools loaded from tooling system based on role
-- System prompt + role determines capabilities
-
-### FR4: Agent Status Tracking
-- Track agent lifecycle: provisioning, active, terminated
-- Agent marked active after successful provisioning
-- Hiring agent receives confirmation with agentId
+Permitir que agentes internos criem e provisionem autonomamente agentes especialistas permanentes com roles específicas, provedores de comunicação e ferramentas. A contratação de agentes segue o padrão de workflow Mastra similar a agentes externos mas com configuração persistente.
 
 ---
 
-## Architecture
+## Requisitos
 
-### Components
+### FR1: Criar Agente com Role
+- Agente interno solicita contratar agente via ferramenta
+- Entrada: nome, role, função, systemPrompt, provedores (lista), contexto (opcional)
+- Criado usando workflow Mastra (similar a `createSimpleAgent()`)
+- Saída: agentId, conversationId
+- Agente salvo na tabela `agents` com metadados de role/função
 
-1. **Workflow Integration** — Mastra workflow to create agent
-2. **Role/Function System** — Maps role to capabilities, tools, constraints
-3. **Provider Provisioning** — Configure multiple providers per agent (reuse PRD-01)
-4. **Tool Injection** — Load tools based on agent role
-5. **Agent Storage** — Agents table with role/function metadata
+### FR2: Configuração de Provedor
+- Sistema configura múltiplos provedores por agente (Discord, Email, Slack, etc)
+- Cada provedor recebe credenciais armazenadas criptografadas (via mecanismo PRD-01)
+- Agente inicializado com todas as credenciais de provedor na inicialização
+- Pode se comunicar via todos os provedores configurados
 
-### Flow
+### FR3: Ferramentas Baseadas em Role
+- Agente atribuído ferramentas baseado em role/função
+- Exemplo: role "pesquisa" recebe ferramentas de pesquisa, role "desenvolvedor" recebe ferramentas de desenvolvimento
+- Ferramentas carregadas do sistema de tooling baseado em role
+- System prompt + role determinam capacidades
+
+### FR4: Rastreamento de Status do Agente
+- Rastrear ciclo de vida do agente: provisionando, ativo, terminado
+- Agente marcado como ativo após provisionamento bem-sucedido
+- Agente contratante recebe confirmação com agentId
+
+---
+
+## Arquitetura
+
+### Componentes
+
+1. **Integração com Workflow** — Workflow Mastra para criar agente
+2. **Sistema de Role/Função** — Mapeia role para capacidades, ferramentas, restrições
+3. **Provisionamento de Provedor** — Configurar múltiplos provedores por agente (reutilizar PRD-01)
+4. **Injeção de Ferramentas** — Carregar ferramentas baseado em role do agente
+5. **Armazenamento de Agente** — Tabela agents com metadados de role/função
+
+### Fluxo
 
 ```
-Internal Agent invokes hiring workflow
+Agente Interno invoca workflow de contratação
   │
   ├─ Mastra workflow: hireAgent({name, role, function, systemPrompt, providers, context})
   │
-  ├─ Workflow executes:
-  │  ├─ Validate role exists
-  │  ├─ Create agent:
+  ├─ Workflow executa:
+  │  ├─ Validar role existe
+  │  ├─ Criar agente:
   │  │  ├─ agentId = UUID
   │  │  ├─ instructions = systemPrompt + context
-  │  │  ├─ model = default or role-specific
-  │  │  └─ Save in agents table with role/function
+  │  │  ├─ model = padrão ou específico de role
+  │  │  └─ Salvar em agents table com role/function
   │  │
-  │  ├─ Configure providers:
-  │  │  └─ For each provider: encrypt credentials, store in agent_providers
+  │  ├─ Configurar provedores:
+  │  │  └─ Para cada provedor: criptografar credenciais, armazenar em agent_providers
   │  │
-  │  └─ Load tools for role
+  │  └─ Carregar ferramentas para role
   │
-  └─ Return agentId + conversationId to hiring agent
+  └─ Retornar agentId + conversationId para agente contratante
 ```
 
 ---
 
-## Database Schema
+## Schema do Banco de Dados
 
-**Extensions to agents table:**
-- `role` (TEXT) — role/function identifier
-- `function` (TEXT) — organizational function
-- `is_active` (BOOLEAN) — whether agent is active
+**Extensões à tabela agents:**
+- `role` (TEXT) — identificador de role/função
+- `function` (TEXT) — função organizacional
+- `is_active` (BOOLEAN) — se agente está ativo
 
-**No new tables needed.** Reuse `agent_providers` from PRD-01 for credentials.
+**Nenhuma tabela nova necessária.** Reutilizar `agent_providers` de PRD-01 para credenciais.
 
 ---
 
-## Technical Decisions
+## Decisões Técnicas
 
-### 1. Use Mastra Workflow (like External Agents)
-**Decision:** Hiring workflow creates agents via Mastra workflow
+### 1. Usar Workflow Mastra (como Agentes Externos)
+**Decisão:** Workflow de contratação cria agentes via workflow Mastra
 
-**Rationale:**
-- Consistent with external agent creation
-- Reuses existing agent creation patterns
-- Simpler than separate hiring infrastructure
+**Justificativa:**
+- Consistente com criação de agentes externos
+- Reutiliza padrões existentes de criação de agentes
+- Mais simples que infraestrutura separada de contratação
 
-### 2. Role-Based Tool Injection
-**Decision:** Tools loaded from role configuration at agent creation
+### 2. Injeção de Ferramentas Baseada em Role
+**Decisão:** Ferramentas carregadas a partir de configuração de role na criação do agente
 
-**Rationale:**
-- Tools determined by role/function
-- Simple role → tools mapping
-- No dynamic tool loading needed
+**Justificativa:**
+- Ferramentas determinadas por role/função
+- Mapeamento role → ferramentas simples
+- Sem carregamento dinâmico de ferramentas necessário
 
-### 3. Reuse Provider System (PRD-01)
-**Decision:** Provider credentials stored/encrypted same way as PRD-01
+### 3. Reutilizar Sistema de Provedor (PRD-01)
+**Decisão:** Credenciais de provedor armazenados/criptografados da mesma forma que PRD-01
 
-**Rationale:**
-- Consistent encryption
-- No duplication
-- Centralized credential management
+**Justificativa:**
+- Criptografia consistente
+- Sem duplicação
+- Gerenciamento centralizado de credenciais
 
-### 4. Persistent Agents
-**Decision:** Hired agents persistent (unlike external agents)
+### 4. Agentes Persistentes
+**Decisão:** Agentes contratados persistentes (ao contrário de agentes externos)
 
-**Rationale:**
-- Hired agents expected to run indefinitely
-- No auto-termination
-- Termination is explicit admin action
+**Justificativa:**
+- Agentes contratados esperados para rodar indefinidamente
+- Sem auto-terminação
+- Terminação é ação explícita de admin
