@@ -14,18 +14,17 @@ Implement basic payment processing for subscriptions using Stripe, enabling the 
 
 ### Core Features
 1. **Stripe Integration** - Process payments and manage subscriptions
-2. **Webhook Handling** - Handle payment events from Stripe
-3. **Transaction Logging** - Track payment history
-4. **Subscription Management** - Create, update, cancel subscriptions
+2. **Subscription Management** - Create, update, cancel subscriptions
+3. **Basic Transaction History** - Log successful payments
 
 ### Out of Scope
-- Multiple payment providers (Assas, etc.)
+- Multiple payment providers
 - ERP reconciliation
 - Admin dashboard
-- Advanced retry logic
-- Multi-currency support
-- Refunds & disputes
-- PCI compliance details
+- Refunds & disputes handling
+- Advanced error recovery
+- Webhook event processing
+- PCI compliance details (Stripe handles this)
 
 ---
 
@@ -38,13 +37,10 @@ subscriptions {
   customer_id: UUID (foreign key)
   stripe_subscription_id: string (Stripe reference)
   product_id: string
-  status: 'active' | 'paused' | 'cancelled'
+  status: 'active' | 'cancelled'
   amount: decimal
-  currency: string (default 'USD')
   billing_cycle: 'monthly' | 'annual'
   start_date: timestamp
-  renewal_date: timestamp
-  cancelled_date: timestamp (optional)
   created_at: timestamp
   updated_at: timestamp
 }
@@ -58,23 +54,7 @@ transactions {
   customer_id: UUID (foreign key)
   stripe_payment_id: string (Stripe reference)
   amount: decimal
-  currency: string
-  status: 'pending' | 'completed' | 'failed'
-  description: string (optional)
-  created_at: timestamp
-  updated_at: timestamp
-}
-```
-
-### Webhooks (for logging)
-```typescript
-webhook_events {
-  id: UUID
-  stripe_event_id: string (Stripe reference)
-  event_type: string (e.g., 'charge.succeeded')
-  status: 'processed' | 'failed'
-  payload: JSON
-  processed_at: timestamp (optional)
+  status: 'completed' | 'failed'
   created_at: timestamp
 }
 ```
@@ -86,16 +66,12 @@ webhook_events {
 ### Subscriptions
 - `POST /api/billing/subscriptions` — Create subscription
 - `GET /api/billing/subscriptions/:id` — Get subscription
-- `PUT /api/billing/subscriptions/:id` — Update subscription
-- `DELETE /api/billing/subscriptions/:id` — Cancel subscription
+- `PUT /api/billing/subscriptions/:id` — Update subscription (cancel)
 - `GET /api/billing/subscriptions` — List customer subscriptions
 
 ### Transactions
 - `GET /api/billing/transactions` — List transactions
 - `GET /api/billing/transactions/:id` — Get transaction details
-
-### Webhooks
-- `POST /api/billing/webhooks/stripe` — Stripe webhook receiver
 
 ---
 
@@ -103,25 +79,19 @@ webhook_events {
 
 ### Database
 - Use existing Drizzle ORM + LibSQL
-- Create tables: `subscriptions`, `transactions`, `webhook_events`
-- Index stripe_*_id fields for quick lookups
+- Create tables: `subscriptions`, `transactions`
+- Index stripe_subscription_id field
 
 ### Stripe Integration
 - Use Stripe SDK (`stripe` npm package)
 - Store Stripe keys in environment variables
-- Create subscriptions via Stripe API
-- Handle webhook events asynchronously
-
-### Webhook Processing
-- Verify Stripe webhook signatures (critical for security)
-- Process these events: `charge.succeeded`, `customer.subscription.created`, `customer.subscription.deleted`
-- Log all events for debugging
-- Simple in-memory queue or async handlers (no external queue system)
+- Create/cancel subscriptions via Stripe API
+- Store subscription state locally for reference
 
 ### Error Handling
-- Failed payments logged but not retried automatically
-- Webhook failures logged with basic retry (e.g., respond 500 to Stripe to retry)
-- Validation errors returned to caller
+- Log failed payments
+- Return meaningful validation errors
+- No retry logic needed (Stripe handles this)
 
 ### Validation
 - Use Zod for request validation
@@ -130,10 +100,10 @@ webhook_events {
 ---
 
 ## Success Criteria
-- Subscriptions can be created/updated/cancelled in Stripe
-- Webhook events processed and stored
+- Subscriptions can be created and cancelled in Stripe
 - Transaction history queryable
-- No crashes on webhook failures
+- Basic error handling for Stripe failures
+- Data persists correctly
 
 ---
 
@@ -154,12 +124,12 @@ webhook_events {
 ---
 
 ## Timeline
-- **Week 1:** Database schema + Stripe setup
-- **Week 2:** Subscription endpoints
-- **Week 3:** Webhook handling + testing
-- **Week 4:** Documentation + edge cases
+- **Week 1:** Database schema + Stripe SDK setup
+- **Week 2:** Subscription CRUD endpoints
+- **Week 3:** Transaction logging + testing
+- **Week 4:** Documentation
 
-Total: ~35 hours for solo developer
+Total: ~25 hours for solo developer
 
 ---
 

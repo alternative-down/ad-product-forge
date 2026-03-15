@@ -13,21 +13,19 @@
 Implement a basic ticketing system for tracking and resolving support issues, with simple routing and status tracking.
 
 ### Core Features
-1. **Ticket Creation** - Users/agents can create tickets
-2. **Status Tracking** - Track ticket progress (open, in-progress, closed)
-3. **Priority Levels** - Simple priority assignment
-4. **Comments** - Add notes/updates to tickets
-5. **Basic Routing** - Assign to agent or category
+1. **Ticket Creation** - Create support tickets
+2. **Status Tracking** - Track ticket progress (open, closed)
+3. **Simple Listing** - View all tickets
 
 ### Out of Scope
-- Intelligent routing/SLA tracking
-- Multi-provider integration (Discord, Email, etc.)
+- Routing and assignment
+- Comments/notes
+- Priority levels
+- Multi-provider integration
 - Automation/workflows
-- Custom fields
 - Time tracking
-- Knowledge base integration
+- SLA tracking
 - Customer portal
-- Advanced reporting
 
 ---
 
@@ -39,25 +37,10 @@ tickets {
   id: UUID
   title: string
   description: string
-  status: 'open' | 'in-progress' | 'closed'
-  priority: 'low' | 'medium' | 'high'
-  category: string (optional)
-  assigned_to: string (agent_id, optional)
-  created_by: string (customer_id or agent_id)
+  status: 'open' | 'closed'
+  created_by: string (creator_id)
   created_at: timestamp
   updated_at: timestamp
-  closed_at: timestamp (optional)
-}
-```
-
-### Ticket Comments
-```typescript
-ticket_comments {
-  id: UUID
-  ticket_id: UUID (foreign key)
-  author_id: string
-  comment: string
-  created_at: timestamp
 }
 ```
 
@@ -67,19 +50,14 @@ ticket_comments {
 
 ### Tickets
 - `POST /api/tickets` — Create ticket
-- `GET /api/tickets` — List tickets (with status/priority filters)
+- `GET /api/tickets` — List tickets
 - `GET /api/tickets/:id` — Get ticket details
-- `PUT /api/tickets/:id` — Update ticket (status, priority, assignee)
-- `DELETE /api/tickets/:id` — Delete ticket (optional)
-
-### Ticket Comments
-- `POST /api/tickets/:id/comments` — Add comment
-- `GET /api/tickets/:id/comments` — Get ticket comments
+- `PUT /api/tickets/:id` — Update ticket (status)
+- `DELETE /api/tickets/:id` — Delete ticket
 
 ### Filtering
 - `GET /api/tickets?status=open` — Filter by status
-- `GET /api/tickets?assigned_to=agent_id` — Filter by assignee
-- `GET /api/tickets?priority=high` — Filter by priority
+- `GET /api/tickets?created_by=creator_id` — Filter by creator
 
 ---
 
@@ -87,34 +65,28 @@ ticket_comments {
 
 ### Database
 - Use existing Drizzle ORM + LibSQL
-- Create tables: `tickets`, `ticket_comments`
-- Index on status, assigned_to, created_at
+- Create tables: `tickets`
+- Index on status and created_at
 
 ### API Design
 - Simple REST endpoints
 - All updates via PUT
-- Comments are immutable (no delete/edit)
 
 ### Validation
 - Use Zod for schema validation
-- Required: title, description, status
-- Valid statuses: open, in-progress, closed
-
-### Simple Routing
-- Manual assignment via API (no intelligent routing)
-- Optional category field for future use
+- Required: title, description
+- Valid statuses: open, closed
 
 ### Testing
-- CRUD tests for tickets and comments
+- CRUD tests for tickets
 - API endpoint tests
-- Filter tests
+- Status filter tests
 
 ---
 
 ## Success Criteria
-- Tickets can be created, listed, updated, closed
-- Comments can be added and retrieved
-- Filtering by status, priority, assignee works
+- Tickets can be created, listed, updated, and closed
+- Filtering by status works
 - All data persists correctly
 
 ---
@@ -127,12 +99,10 @@ ticket_comments {
 ---
 
 ## Timeline
-- **Week 1:** Database schema + migrations
-- **Week 2:** Ticket endpoints
-- **Week 3:** Comments + filtering
-- **Week 4:** Testing + documentation
+- **Week 1:** Database schema + all endpoints
+- **Week 2:** Testing + documentation
 
-Total: ~30 hours for solo developer
+Total: ~15 hours for solo developer
 
 ---
 

@@ -36,8 +36,6 @@ customers {
   name: string
   email: string
   phone: string
-  status: 'active' | 'inactive'
-  segment: string (optional)
   created_at: timestamp
   updated_at: timestamp
 }
@@ -63,10 +61,7 @@ opportunities {
   id: UUID
   customer_id: UUID (foreign key)
   title: string
-  value: decimal (optional)
   stage: string (prospecting | qualification | proposal | closed-won | closed-lost)
-  probability: integer (0-100, optional)
-  close_date: date (optional)
   created_at: timestamp
   updated_at: timestamp
 }
@@ -135,9 +130,9 @@ interactions {
 
 ## Success Criteria
 - Agents can CRUD customers and opportunities
-- Pipeline API returns accurate counts and values
+- Pipeline API returns stage counts
 - All data persists in database
-- Simple filtering/search works
+- Basic filtering by stage/customer works
 
 ---
 

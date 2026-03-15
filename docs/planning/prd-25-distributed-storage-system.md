@@ -10,55 +10,37 @@
 ## Executive Summary
 
 ### Goal
-Implement a simple file storage system using MinIO for agents and applications to persist files and artifacts.
+Implement a simple local file storage system for agents to persist artifacts and files.
 
 ### Core Features
-1. **MinIO Integration** - Use MinIO as object storage backend
+1. **Local Storage** - Store files on local filesystem
 2. **File Upload/Download** - Basic file operations
 3. **Agent Storage** - Agents can store and retrieve artifacts
-4. **Metadata Tracking** - Track file information in database
-5. **Simple Access Control** - Basic permissions (owner access)
+4. **Metadata Tracking** - Track file paths and info in database
 
 ### Out of Scope
 - Backup/recovery systems
-- Multi-region deployment
+- Cloud storage integration
 - Advanced encryption
 - Versioning
-- Quotas and billing
 - Share links/public access
 - Virus scanning
 - Full-text search
-- Compression
 
 ---
 
 ## Data Model
 
-### Storage Configuration
-```typescript
-storage_configs {
-  id: UUID
-  application_type: 'agent' | 'application'
-  application_id: UUID
-  bucket_name: string
-  access_level: 'private' (only)
-  created_at: timestamp
-  updated_at: timestamp
-}
-```
-
 ### File Metadata
 ```typescript
 file_metadata {
   id: UUID
-  config_id: UUID (foreign key)
-  object_id: string (MinIO reference)
+  file_path: string (relative to storage dir)
   file_name: string
   size_bytes: bigint
   content_type: string (optional)
   uploaded_at: timestamp
   uploaded_by: string (agent_id)
-  access_count: integer (default 0)
 }
 ```
 
@@ -68,57 +50,54 @@ file_metadata {
 
 ### File Operations
 - `POST /api/storage/upload` — Upload file
-- `GET /api/storage/:object_id` — Download file
-- `GET /api/storage/metadata/:object_id` — Get file metadata
-- `DELETE /api/storage/:object_id` — Delete file
-- `GET /api/storage/list` — List files (for agent)
+- `GET /api/storage/:file_id` — Download file
+- `GET /api/storage/metadata/:file_id` — Get file metadata
+- `DELETE /api/storage/:file_id` — Delete file
+- `GET /api/storage/list` — List files for agent
 
 ### Agent Storage API (in agent context)
 ```typescript
-agent.storage.uploadFile(filePath: string, content: Buffer): Promise<{
-  objectId: string
+agent.storage.uploadFile(fileName: string, content: Buffer): Promise<{
+  fileId: string
   fileName: string
   sizeBytes: number
-  uploadedAt: string
 }>
 
-agent.storage.downloadFile(objectId: string): Promise<Buffer>
+agent.storage.downloadFile(fileId: string): Promise<Buffer>
 
-agent.storage.deleteFile(objectId: string): Promise<void>
+agent.storage.deleteFile(fileId: string): Promise<void>
 
-agent.storage.listFiles(): Promise<StoredFile[]>
+agent.storage.listFiles(): Promise<FileInfo[]>
 ```
 
 ---
 
 ## Implementation Notes
 
-### MinIO Setup
-- Deploy MinIO via Docker (docker-compose)
-- Create buckets per agent or application
-- Store MinIO credentials in environment variables
-- Basic health checks
+### Local Storage Setup
+- Store files in a local directory (e.g., `./storage/files/`)
+- Organize by agent_id subdirectories
+- Create directory if missing on startup
 
 ### Database
 - Use existing Drizzle ORM + LibSQL
-- Create tables: `storage_configs`, `file_metadata`
-- Index on uploaded_by and created_at
+- Create table: `file_metadata`
+- Index on uploaded_by and file_path
 
 ### File Operations
-- Use MinIO SDK for Node.js
-- Simple in-memory buffering (no streaming initially)
+- Use Node.js fs module for file I/O
+- Simple file operations (read/write)
 - File size limit: 500MB per file
 - Store uploaded_by for basic access control
 
 ### Access Control
 - Simple owner-only access (agent can only access their files)
 - Check uploaded_by on all downloads
-- No sharing or public access (Phase 2)
 
 ### Error Handling
-- Handle MinIO connection errors gracefully
+- Handle file I/O errors gracefully
 - Return meaningful error messages
-- Log all storage operations
+- Log storage operations
 
 ### Testing
 - Unit tests for upload/download
@@ -128,7 +107,7 @@ agent.storage.listFiles(): Promise<StoredFile[]>
 ---
 
 ## Success Criteria
-- Files can be uploaded to MinIO
+- Files can be uploaded to local storage
 - Files can be downloaded by owner
 - File metadata stored and queryable
 - Delete operations work
@@ -137,27 +116,24 @@ agent.storage.listFiles(): Promise<StoredFile[]>
 ---
 
 ## Dependencies
-- MinIO SDK (`minio` npm package)
 - Drizzle ORM (existing)
 - LibSQL (existing)
-- Docker (for MinIO deployment)
+- Node.js fs module (built-in)
 
 ---
 
 ## Timeline
-- **Week 1:** MinIO setup + Docker config
-- **Week 2:** Database schema + file metadata
-- **Week 3:** Upload/download endpoints
-- **Week 4:** Agent integration + testing
+- **Week 1:** Database schema + file operations
+- **Week 2:** Upload/download endpoints
+- **Week 3:** Agent integration + testing
 
-Total: ~35 hours for solo developer
+Total: ~20 hours for solo developer
 
 ---
 
 ## Future Enhancements
-- Share links with expiration
+- Cloud storage integration (AWS S3, etc.)
 - Versioning support
-- Quota enforcement
 - Backup to external storage
 - File preview generation
 

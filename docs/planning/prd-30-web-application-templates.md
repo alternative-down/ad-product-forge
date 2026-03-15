@@ -76,39 +76,20 @@ agent-scaffold configure --app-path ./apps/my-api
 ## Core Templates
 
 ### Template 1: REST API Backend
-- **Stack:** Node.js/Express, TypeScript, PostgreSQL
+- **Stack:** Node.js/Express, TypeScript, SQLite
 - **Includes:**
-  - JWT authentication
   - Basic CRUD routes
   - Database schema setup
   - Error handling
-  - Docker configuration
   - .env template
 
 ### Template 2: Full-Stack Web Application
-- **Stack:** React, Node.js, PostgreSQL, TypeScript
+- **Stack:** React, Node.js, SQLite, TypeScript
 - **Includes:**
-  - Login/signup UI
+  - Basic login/signup
   - User dashboard
   - Backend API
-  - Authentication flow
   - Responsive design (Tailwind)
-
-### Template 3: Python API
-- **Stack:** FastAPI, SQLAlchemy, PostgreSQL
-- **Includes:**
-  - Async endpoints
-  - JWT auth
-  - Database ORM
-  - API documentation
-
-### Template 4: Next.js Application
-- **Stack:** Next.js, TypeScript, Tailwind CSS
-- **Includes:**
-  - Authentication
-  - Database integration
-  - Mobile-responsive UI
-  - Deployment config
 
 ---
 
@@ -141,19 +122,11 @@ templates/
 - [ ] Template engine and CLI
 - [ ] REST API Backend template
 - [ ] Full-Stack Web template
-- [ ] SDK integration
 - [ ] Basic documentation
 
-### Phase 2: Additional Templates (1 week)
-- [ ] Python API template
-- [ ] Next.js template
-- [ ] E-commerce template
-
-### Phase 3: Enhancement (Future)
+### Phase 2: Enhancement (Future)
 - [ ] Template customization wizard
-- [ ] Template versioning
-- [ ] Integration templates (Stripe, Jira, etc.)
-- [ ] Community template sharing
+- [ ] Additional templates
 
 ---
 
@@ -177,11 +150,6 @@ templates/
 
 ## Future Enhancements
 
-- Stripe payment integration template
-- Jira ticketing integration
 - Admin dashboard template
-- Multi-tenant template
-- Mobile app template
 - GraphQL API template
-- Serverless template (AWS Lambda)
 - Custom template creation framework

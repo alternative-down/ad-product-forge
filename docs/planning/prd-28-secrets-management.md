@@ -41,11 +41,8 @@ Currently, secrets are:
 // Get a secret
 await agent.secrets.get('stripe_api_key'): Promise<string>;
 
-// Get multiple secrets
-await agent.secrets.getMultiple(['api_key', 'token']): Promise<Record<string, string>>;
-
 // List available secrets (metadata only, no values)
-await agent.secrets.list(): Promise<Array<{ name: string; type: string; }>>;
+await agent.secrets.list(): Promise<Array<{ name: string; }>>;
 ```
 
 ### 3. Admin Operations
@@ -53,18 +50,14 @@ await agent.secrets.list(): Promise<Array<{ name: string; type: string; }>>;
 // Create/update secret
 createSecret(input: {
   name: string;
-  type: 'api_key' | 'token' | 'password' | 'connection_string';
   value: string;
 }): Promise<{ secretId: string; }>;
-
-// Rotate secret
-rotateSecret(secretId: string, newValue: string): Promise<void>;
 
 // Delete secret
 deleteSecret(secretId: string): Promise<void>;
 
 // List secrets
-listSecrets(): Promise<Array<{ secretId: string; name: string; type: string; }>>;
+listSecrets(): Promise<Array<{ secretId: string; name: string; }>>;
 ```
 
 ---
@@ -75,32 +68,9 @@ listSecrets(): Promise<Array<{ secretId: string; name: string; type: string; }>>
 ```
 - secretId (TEXT, PRIMARY KEY)
 - name (TEXT, NOT NULL, UNIQUE)
-- type (TEXT)  -- api_key, token, password, etc
 - encryptedValue (TEXT, NOT NULL)
 - iv (TEXT)    -- initialization vector for encryption
-- salt (TEXT)
-- status (TEXT)  -- active, inactive, revoked
 - createdAt (TEXT)
-- updatedAt (TEXT)
-```
-
-**secret_versions**
-```
-- versionId (TEXT, PRIMARY KEY)
-- secretId (TEXT, FOREIGN KEY)
-- encryptedValue (TEXT)
-- status (TEXT)  -- active, superseded
-- createdAt (TEXT)
-- supersededAt (TEXT)
-```
-
-**secret_access_logs**
-```
-- logId (TEXT, PRIMARY KEY)
-- secretId (TEXT)
-- action (TEXT)  -- retrieval, creation, rotation, deletion
-- timestamp (TEXT)
-- result (TEXT)  -- success, denied, error
 ```
 
 ---
@@ -120,14 +90,10 @@ listSecrets(): Promise<Array<{ secretId: string; name: string; type: string; }>>
 - [ ] Encryption/decryption layer
 - [ ] Secrets storage and retrieval
 - [ ] Agent API for secret access
-- [ ] Basic audit logging
 - [ ] Encryption key management
 
 ### Phase 2: Enhancement (Future)
-- [ ] Secret rotation workflows
 - [ ] In-memory caching with TTL
-- [ ] RBAC for secret access
-- [ ] CLI tools for secret management
 
 ---
 
@@ -136,8 +102,6 @@ listSecrets(): Promise<Array<{ secretId: string; name: string; type: string; }>>
 - [ ] Secrets are encrypted at rest
 - [ ] Agents can retrieve secrets via API
 - [ ] Secrets never appear in logs
-- [ ] Basic audit trail works
-- [ ] Encryption key rotation possible
 
 ---
 
@@ -151,8 +115,4 @@ listSecrets(): Promise<Array<{ secretId: string; name: string; type: string; }>>
 
 ## Future Enhancements
 
-- Integration with external vaults (HashiCorp Vault, AWS Secrets Manager)
-- Secret rotation automation
 - In-memory caching with TTL
-- Role-based access control
-- Hardware security module (HSM) support

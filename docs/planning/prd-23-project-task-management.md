@@ -53,8 +53,6 @@ tasks {
   title: string
   description: string (optional)
   status: 'to-do' | 'in-progress' | 'done'
-  priority: 'low' | 'medium' | 'high' (optional)
-  due_date: date (optional)
   created_at: timestamp
   updated_at: timestamp
 }
@@ -80,7 +78,7 @@ tasks {
 
 ### Filtering
 - `GET /api/tasks?status=in-progress` — List tasks by status
-- `GET /api/tasks?project_id=X` — List tasks by project
+- `GET /api/tasks?project_id=X` — List tasks by project (via GET /api/projects/:project_id/tasks)
 
 ---
 
@@ -93,9 +91,9 @@ tasks {
 - Index on status for filtering
 
 ### API Design
-- Simple REST endpoints, no GraphQL
-- All field updates done via PUT (no PATCH)
-- Soft deletes optional (permanent delete is fine for simplicity)
+- Simple REST endpoints
+- All field updates via PUT
+- Permanent delete is fine
 
 ### Validation
 - Use Zod for schema validation
@@ -125,12 +123,10 @@ tasks {
 ---
 
 ## Timeline
-- **Week 1:** Database schema + migrations
-- **Week 2:** Project endpoints
-- **Week 3:** Task endpoints + filtering
-- **Week 4:** Testing + documentation
+- **Week 1:** Database schema + all endpoints
+- **Week 2:** Testing + documentation
 
-Total: ~30 hours for solo developer
+Total: ~15 hours for solo developer
 
 ---
 

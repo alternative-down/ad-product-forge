@@ -31,9 +31,8 @@ Currently, agents cannot:
 ## Key Features
 
 ### 1. Document Storage
-- Store documents with metadata (title, category, date)
+- Store documents with title and content
 - Support text content (markdown, plain text)
-- Basic versioning (current version + previous versions)
 
 ### 2. Semantic Search
 - Convert documents to embeddings using Mastra
@@ -46,8 +45,6 @@ Currently, agents cannot:
 storeDocument(input: {
   title: string;
   content: string;
-  category?: string;
-  metadata?: Record<string, any>;
 }): Promise<{ documentId: string; }>;
 
 // Search documents
@@ -56,13 +53,6 @@ searchDocuments(query: string, limit?: number): Promise<Array<{
   title: string;
   content: string;
   similarity: number;
-}>>;
-
-// List documents
-listDocuments(category?: string): Promise<Array<{
-  documentId: string;
-  title: string;
-  category?: string;
 }>>;
 
 // Delete document
@@ -78,20 +68,8 @@ deleteDocument(documentId: string): Promise<{ success: boolean; }>;
 - documentId (TEXT, PRIMARY KEY)
 - title (TEXT, NOT NULL)
 - content (TEXT, NOT NULL)
-- category (TEXT)
 - embedding (BLOB)  -- stored embeddings
 - createdAt (TEXT, NOT NULL)
-- updatedAt (TEXT, NOT NULL)
-- metadata (TEXT)   -- JSON
-```
-
-**knowledge_base_document_versions**
-```
-- versionId (TEXT, PRIMARY KEY)
-- documentId (TEXT, FOREIGN KEY)
-- content (TEXT)
-- createdAt (TEXT)
-- metadata (TEXT)
 ```
 
 ---
@@ -103,13 +81,10 @@ deleteDocument(documentId: string): Promise<{ success: boolean; }>;
 - [ ] Embedding generation using Mastra
 - [ ] Basic semantic search
 - [ ] Agent API integration
-- [ ] Simple versioning
 
 ### Phase 2: Enhancement (Future)
 - [ ] Full-text search (BM25)
 - [ ] Hybrid search (semantic + keyword)
-- [ ] Document categories and organization
-- [ ] Bulk import/export
 
 ---
 
@@ -118,7 +93,6 @@ deleteDocument(documentId: string): Promise<{ success: boolean; }>;
 - [ ] Agent can store documents
 - [ ] Agent can search and retrieve relevant documents by meaning
 - [ ] Embeddings are generated and stored
-- [ ] Simple versioning works
 - [ ] API is accessible from agent tools
 
 ---
@@ -134,7 +108,4 @@ deleteDocument(documentId: string): Promise<{ success: boolean; }>;
 ## Future Enhancements
 
 - Hybrid search (BM25 + semantic)
-- GraphRAG for relationship-aware discovery
-- Document categories and hierarchies
 - Bulk import from files
-- Integration with ERP systems
