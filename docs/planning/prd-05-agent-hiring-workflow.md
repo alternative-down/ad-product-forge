@@ -97,120 +97,75 @@ As a newly hired agent, I need communication providers configured so that I can 
 - System validates request against hiring agent's permissions
 
 #### FR2: Agent Account Creation
-- System generates unique agent ID (UUID format)
-- Creates agent record in database with:
-  - Agent metadata (name, display name, type, function, role)
-  - Credentials and authentication tokens
-  - Encryption of sensitive data at rest
-- Allocates storage and resource quotas
-- Records creation audit trail (who hired, when, why)
+- System generates unique agent ID (UUID)
+- Creates agent record with metadata
+- Records creation audit trail
 
 #### FR3: Communication Provider Configuration
 - System supports configurable provider list per agent
-- For each selected provider:
-  - Create or allocate provider-specific account (Discord bot user, email account, etc.)
-  - Generate provider credentials (tokens, passwords, keys)
-  - Encrypt and store credentials in secure storage
-  - Return provider connection configuration to agent
-- System handles provider-specific setup (channel joins, permission grants, etc.)
-- Validates provider availability and capacity before assignment
+- For each provider:
+  - Generate provider credentials
+  - Encrypt and store
+  - Return configuration to agent
+- Validates provider availability
 
 #### FR4: Agent Parameter Configuration
-- Support configurable parameters for agent instantiation:
-  - `model` (LLM provider and model)
-  - `temperature` (inference parameter)
-  - `tools` (list of tools agent can access)
-  - `providers` (enabled communication providers)
-  - `maxDailyOperations` (rate limiting)
-  - `financialBudget` (spending limits if applicable)
-  - `permissions` (granular capability flags)
+- Support configurable parameters:
+  - `model` (LLM)
+  - `temperature`
+  - `tools`
+  - `providers`
+  - `permissions`
 - Parameters can be templated by role
-- Hiring agent can override template parameters
-- System validates parameter ranges and compatibility
+- System validates parameters
 
-#### FR5: Agent Provisioning Process
-- System orchestrates complete provisioning:
-  1. Create agent account and database record
-  2. Configure communication providers (sequentially or parallel)
-  3. Generate and store credentials
-  4. Initialize agent runtime/context
-  5. Send activation message to hiring agent
-  6. Emit agent-ready event for system integration
-- Process includes error handling and rollback on provider failures
-- Timeout protection (30s per provider, 2m total)
-- Detailed logging of each provisioning step
+#### FR5: Agent Provisioning
+- System orchestrates provisioning:
+  1. Create agent account
+  2. Configure communication providers
+  3. Store credentials
+  4. Initialize agent runtime
+  5. Send activation message
+- Error handling and rollback on failures
 
 #### FR6: Agent Activation & Notification
-- After successful provisioning, agent becomes available
-- Hiring agent receives confirmation with:
-  - Agent ID and credentials
-  - Provider connection details
-  - Initial instructions or context
-  - Dashboard link to manage new agent
-- Agent receives initialization message via internal messaging
-- Optional: Master agent notified of new hiring event
+- After provisioning, agent becomes available
+- Hiring agent receives confirmation with agent ID
+- Agent receives initialization message
 
 #### FR7: Permission & Authorization
-- Only agents with hiring role/permission can create agents
-- Master agent has unrestricted hiring rights
-- Standard agents require explicit hiring permission
-- Permission scopes:
-  - `hiring:agents:create` (can create)
-  - `hiring:agents:manage` (can manage existing)
-  - `hiring:agents:delete` (can terminate)
-  - `hiring:agents:configure` (can modify parameters)
-- System enforces permission checks before any hiring operation
+- Only agents with hiring permission can create agents
+- Master agent has unrestricted rights
+- System enforces permission checks
 
 #### FR8: Configuration Validation
-- Validate agent parameters before creation:
-  - Unique agent name within system
-  - Valid role exists in system
-  - Valid function exists in system
-  - All specified providers available
-  - Agent name follows naming conventions (alphanumeric, hyphens)
-  - System resources available for new agent
-  - Financial constraints satisfied (if applicable)
-  - Duration validity for temporary agents
-- Return detailed validation errors to hiring agent
+- Validate agent parameters:
+  - Unique agent name
+  - Valid role exists
+  - Valid function exists
+  - Providers available
+  - Resources available
+- Return validation errors
 
 #### FR9: Agent Status Tracking
-- Track agent lifecycle states:
-  - `provisioning` (in creation process)
-  - `active` (ready for work)
-  - `inactive` (temporarily disabled)
-  - `terminating` (removal in progress)
-  - `terminated` (removed from system)
-- Expose status via agent management API
-- Emit status change events for system listeners
+- Track lifecycle states: provisioning, active, inactive, terminating, terminated
+- Expose status via API
 
 #### FR10: Batch Agent Hiring
-- Support hiring multiple agents in single operation
-- Request includes array of agent configurations
-- System processes sequentially with transaction semantics
-- Partial failure handling (some succeed, some fail)
-- Return detailed report of successful/failed hires
-- Atomic operation preferred (all succeed or all fail)
+- Support hiring multiple agents
+- Process sequentially
+- Partial failure handling
+- Atomic operation preferred
 
 ### Non-Functional Requirements
 
-#### NFR1: Security
 - Encrypt credentials at rest
-- Sanitize logs (no credential exposure)
-- Require authorization check before credential access
-
-#### NFR2: Reliability
-- Idempotent operations (retry-safe)
-- Rollback on partial failures
-- Provider timeout protection
-- Detailed error logging
-
-#### NFR3: Performance
-- Agent creation within 30 seconds total
-- Support multiple hiring operations in parallel
-
-#### NFR4: Auditability
-- Log all hiring operations (who, when, what)
-- Maintain audit trail
+- Sanitize logs (no credentials)
+- Authorize before credential access
+- Idempotent operations
+- Rollback on failures
+- Agent creation within 30 seconds
+- Log all hiring operations
 
 ---
 
@@ -512,136 +467,69 @@ Acceptance Criteria:
 ## 10. Out of Scope
 
 - Agent specialization templates (future)
-- Advanced resource allocation and quota enforcement
-- Multi-region or multi-cloud provisioning
-- Automated team structure optimization
-- Agent skill assessment and matching
-- Cross-organization agent lending
+- Advanced resource allocation
+- Multi-region provisioning
+- Automated team optimization (future)
+- Agent skill assessment (future)
 
 ---
 
 ## 11. Future Enhancements
 
-### Phase 2: Agent Management & Optimization
-- Agent performance monitoring and metrics
+- Agent performance monitoring
 - Automatic scaling based on workload
-- Agent team organization (hierarchies, groups)
+- Agent team organization
 - Skills inventory and matching
-- Hiring agent dashboard with hiring analytics
-
-### Phase 3: Advanced Provisioning
-- Infrastructure-as-Code (IaC) for agent configuration
 - Configuration templates library
-- Team structure blueprints
-- Multi-stage approval workflows for high-tier agents
-- Cost-aware agent creation (budget optimization)
-
-### Phase 4: Integration & Automation
-- Integration with ERP for financial tracking
-- Agent creation triggered by external events (webhooks)
-- Automated team formation based on project needs
-- Feedback loops to improve hiring process
+- Cost-aware agent creation
 
 ---
 
-## 12. Implementation Plan & Phases
+## 12. Implementation Plan
 
 ### Phase 1: Core Hiring Workflow
-**Deliverables:**
-- Agent creation request API endpoint
-- Agent account creation and database storage
-- Permission validation and authorization
-- Basic error handling and validation
-
-**Tasks:**
-1. Design database schema (agents, credentials tables)
-2. Implement authorization checks
-3. Create agent creation service
-4. Implement validation logic
-5. Implement error handling and rollback
-6. Write unit tests
-7. Documentation of API contract
+- Design database schema
+- Implement authorization checks
+- Create agent creation service
+- Implement validation logic
+- Basic error handling
 
 ### Phase 2: Provider Configuration
-**Deliverables:**
-- Provider credential management
-- Encrypted credential storage
-- Provider setup validation
-
-**Tasks:**
-1. Implement provider registry integration
-2. Create credential encryption/decryption
-3. Create Discord provider setup
-4. Create Email provider setup
-5. Write provider integration tests
+- Implement provider registry integration
+- Create credential encryption/decryption
+- Provider setup
 
 ### Phase 3: Agent Runtime & Activation
-**Deliverables:**
-- Agent runtime initialization
-- Communication module setup
-- Agent activation
-
-**Tasks:**
-1. Integrate with createForgeAgent() factory
-2. Initialize communication module with providers
-3. Load permissions and tools
-4. Implement activation notifications
+- Integrate with createForgeAgent() factory
+- Initialize communication module
+- Implement activation notifications
 
 ### Phase 4: Testing & Documentation
-**Deliverables:**
 - End-to-end testing
-- Documentation completion
-
-**Tasks:**
-1. Comprehensive end-to-end testing
-2. Security testing
-3. Create deployment procedures
-4. User documentation
+- Documentation
 
 ---
 
 ## 13. Success Criteria & Validation
 
 ### Functional Validation
-- [ ] Agent can be created via API request from authorized agent
-- [ ] Agent account stored in database with unique ID
-- [ ] Agent parameters validated before creation
-- [ ] Provider credentials encrypted and securely stored
+- [ ] Agent can be created via API request
+- [ ] Agent account stored in database
+- [ ] Agent parameters validated
+- [ ] Provider credentials encrypted
 - [ ] Agent receives provider configuration
-- [ ] Agent successfully connects to configured providers
-- [ ] Agent participates in team communications
-- [ ] Audit trail records all hiring operations
-- [ ] Batch hiring creates multiple agents atomically
-- [ ] Permissions enforced (unauthorized agents cannot hire)
+- [ ] Agent connects to configured providers
+- [ ] Agent participates in communications
+- [ ] Audit trail records all operations
+- [ ] Permissions enforced
 
 ### Non-Functional Validation
 - [ ] Agent creation completes within 30 seconds
-- [ ] Provider configuration within 30 seconds each
-- [ ] Batch of 10 agents created within 60 seconds
-- [ ] 99.5% successful provisioning rate
 - [ ] Zero credential exposure in logs
-- [ ] Automatic rollback on provider failures
-- [ ] System handles 1000+ agents without degradation
-- [ ] All errors logged and traceable
-- [ ] Audit logs queryable and exportable
-
-### User Acceptance
-- [ ] Documentation clear and complete
-- [ ] API contract well-defined and documented
-- [ ] Error messages actionable and helpful
-- [ ] Hiring workflow intuitive for agents
-- [ ] Configuration templates reduce errors
-- [ ] Admin dashboard provides visibility
-- [ ] Audit reports available for compliance
-
-### Security Validation
-- [ ] All credentials encrypted at rest
-- [ ] No credentials in logs or error messages
+- [ ] Automatic rollback on failures
+- [ ] All errors logged
+- [ ] Credentials encrypted at rest
 - [ ] Authorization enforcement verified
-- [ ] Rate limiting prevents abuse
-- [ ] Audit trail immutable and tamper-evident
-- [ ] Credential rotation working
-- [ ] No unauthorized credential access possible
 
 ---
 

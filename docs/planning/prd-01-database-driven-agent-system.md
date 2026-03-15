@@ -42,10 +42,10 @@ The application currently:
 - Lacks a centralized agent registry or configuration repository
 
 ### Pain Points
-1. **Scalability Limitation:** Cannot dynamically create agents without modifying code and restarting
-2. **Credential Security:** Credentials in environment variables are not encrypted at rest
-3. **Configuration Inflexibility:** Cannot bind different providers to different agents at runtime
-4. **Scattered Configuration:** Agent configuration scattered across environment, code, and per-agent databases
+1. **No Dynamic Agent Creation:** Cannot create agents at runtime without code changes
+2. **Credentials in Plain Text:** Credentials stored in env vars without encryption
+3. **No Runtime Flexibility:** Cannot change provider bindings without restart
+4. **Scattered Configuration:** Config spread across environment and code
 
 ### Key Assumptions
 - SQLite with Drizzle ORM is sufficient for this single-instance system
@@ -111,29 +111,12 @@ The application currently:
 ### Non-Functional Requirements
 
 #### NFR1: Security
-- Encryption key managed securely (environment variable)
-- Encryption/decryption overhead < 10ms per operation
+- Encryption key managed via environment variable
 - No sensitive data logged by default
 
-#### NFR2: Performance
-- Agent lookup from database < 50ms
-- Credential retrieval/decryption < 100ms
-- Database initialization < 2 seconds at startup
-
-#### NFR3: Reliability
-- Graceful degradation if encryption key unavailable
-- Transaction support for atomic credential updates
-- Schema integrity validation on startup
-
-#### NFR4: Usability
-- Clear error messages for configuration/credential issues
-- Type-safe APIs using TypeScript/Zod validation
-- Intuitive database schema matching domain concepts
-
-#### NFR5: Maintainability
-- Clear separation between encryption layer and business logic
-- Drizzle ORM provides type safety and query generation
-- Documented schema and field purposes
+#### NFR2: Reliability
+- Fallback to hardcoded config if database unavailable
+- Schema validation on startup
 
 ---
 
@@ -333,75 +316,27 @@ for (const ap of agentProviders) {
 
 ## Implementation Plan
 
-### Phase 1: Core Infrastructure (2 weeks)
+### Phase 1: Core Infrastructure (1 week)
 
-#### Week 1: Database & Encryption
 - [ ] Set up Drizzle ORM with SQLite
 - [ ] Design and implement database schema
 - [ ] Implement encryption/decryption layer
-- [ ] Create migration system (basic SQL scripts)
+- [ ] Create basic migrations
 - [ ] Add database initialization at startup
 
-**Deliverables:**
-- Database schema file
-- Drizzle definitions and migrations
-- Encryption utility functions
-- Updated startup sequence
+### Phase 2: Agent Loader (1 week)
 
-#### Week 2: Agent Loader & Provider Credential Manager
 - [ ] Implement Agent Loader to read from database
-- [ ] Implement Provider Credential Manager
 - [ ] Create fallback to hardcoded config
-- [ ] Add type-safe API for agent/credential queries
-- [ ] Basic error handling and logging
+- [ ] Basic error handling
+- [ ] Simple unit tests
 
-**Deliverables:**
-- Agent Loader module
-- Credential Manager module
-- Fallback mechanisms
-- Type definitions (TypeScript interfaces)
+### Phase 3: API & Testing (1 week)
 
-### Phase 2: API & Testing (1.5 weeks)
-
-#### Week 3: Runtime Agent Creation API
-- [ ] Implement agent creation tool/endpoint
+- [ ] Implement agent creation/update APIs
 - [ ] Implement credential storage API
-- [ ] Add input validation (Zod schemas)
-- [ ] Implement agent deletion/update APIs
-- [ ] Add basic admin tools for managing agents
-
-**Deliverables:**
-- Agent CRUD APIs
-- Credential management APIs
-- Zod validation schemas
-- Basic admin CLI commands
-
-#### Week 4: Testing & Fallback Verification
-- [ ] Unit tests for encryption/decryption
-- [ ] Integration tests for agent loading
-- [ ] Test fallback to hardcoded config
-- [ ] Test credential encryption/decryption
-- [ ] Verify error scenarios
-
-**Deliverables:**
-- Test suite covering core functionality
-- Documentation for manual testing
-- Error handling examples
-
-### Phase 3: Polish & Documentation (1 week)
-
-#### Week 5: Documentation & Cleanup
-- [ ] Document database schema and fields
-- [ ] Document encryption strategy
-- [ ] Document API signatures
-- [ ] Add code comments to complex sections
-- [ ] Migration guide for existing hardcoded setup
-
-**Deliverables:**
-- Schema documentation
-- API documentation
-- Migration guide
-- Code comments
+- [ ] Basic integration tests
+- [ ] Documentation
 
 ---
 
@@ -438,38 +373,14 @@ for (const ap of agentProviders) {
 
 **Rationale:**
 - Simple for solo developer
-- Standard DevOps practice
 - Works with `.env` file loading
-
-**Future Enhancement:**
-- Could migrate to encrypted key storage if needed
 
 ### 4. Fallback to Hardcoded Config
 **Decision:** Keep hardcoded agent configuration as fallback
 
 **Rationale:**
-- Allows gradual migration from static to dynamic
 - System works even if database is unavailable
-- Reduces deployment risk
-
-**Note:** In production use, you'd use database exclusively. Fallback is for transition period.
-
-### 5. No Migration Versioning System
-**Decision:** Simple SQL script migration approach (no version tracking)
-
-**Rationale:**
-- Solo developer, no complex deployment pipeline
-- Simpler to understand and maintain
-- Can track migrations via version control
-- Easy to add versioning if needed later
-
-### 6. No Key Rotation
-**Decision:** No key rotation support in Phase 1
-
-**Rationale:**
-- Adds significant complexity
-- Not critical for solo developer use case
-- Can be added in future if needed
+- Allows gradual migration
 
 ---
 
@@ -501,27 +412,18 @@ for (const ap of agentProviders) {
 
 ### Unit Tests
 - Encryption/decryption functions
-- Zod validation schemas
-- Database query builders
+- Database queries
 
 ### Integration Tests
 - Agent loading from database
-- Credential encryption/decryption lifecycle
-- Provider initialization with persisted credentials
+- Credential encryption/decryption
 - Fallback to hardcoded config
 
 ### Manual Testing
-- Verify agents load on startup
-- Verify credentials are encrypted in database (cannot read raw)
-- Create agent via API, verify in database
-- Stop database, verify fallback works
-- Change provider credentials, verify agent uses new ones
-
-### Error Scenario Testing
-- Missing encryption key
-- Corrupted credential
-- Invalid agent configuration
-- Database query failures
+- Agents load on startup
+- Credentials are encrypted (not readable in DB)
+- Create agent via API
+- Fallback works when database unavailable
 
 ---
 
@@ -566,12 +468,9 @@ for (const ap of agentProviders) {
 
 ## Future Enhancements
 
-- Credential rotation with timestamp tracking
-- Agent scheduling and recurring tasks
-- Agent hiring (dynamic tool-based agent creation)
-- Specialist agent support
-- Basic audit logging for agent/credential changes
-- Admin dashboard for managing agents and credentials
+- Credential rotation
+- Agent scheduling
+- Audit logging for changes
 
 ---
 

@@ -29,26 +29,18 @@ Currently, agents in the Forge platform have flat capability structures. Tools, 
 
 ### Problems This Solves
 
-1. **Lack of Organizational Structure**
-   - Agents cannot be grouped by function or role
-   - No clear representation of agent positions within the company
-   - Difficult to manage large agent networks with diverse responsibilities
+1. **Lack of Organization Structure**
+   - Agents cannot be grouped by role
+   - No clear permissions for different agents
 
 2. **Uncontrolled Permission Model**
    - All agents have access to all capabilities
-   - No mechanism to restrict sensitive operations (e.g., billing, user management)
-   - No audit trail for permission changes
-   - No delegation mechanism between agents
+   - No mechanism to restrict sensitive operations
+   - No audit trail for changes
 
-3. **Scalability Issues**
-   - Manual capability assignment becomes unmanageable as agent count grows
-   - No template-based role system for rapid agent onboarding
-   - Difficulty enforcing consistent security policies across the organization
-
-4. **Operational Risk**
-   - Agents can access tools/providers they shouldn't
-   - No escalation path for temporary permission elevation
-   - No mechanism to revoke permissions when agent responsibilities change
+3. **Operational Risk**
+   - Agents can access tools they shouldn't
+   - No way to revoke permissions when needed
 
 ---
 
@@ -56,26 +48,21 @@ Currently, agents in the Forge platform have flat capability structures. Tools, 
 
 ### Primary Goals
 
-1. **Implement Hierarchical Role System**
+1. **Implement Role System**
    - Define roles (Manager, Specialist, Worker, Admin)
-   - Assign capabilities to roles (not directly to agents)
-   - Support role inheritance and composition
+   - Assign capabilities to roles
 
 2. **Implement Function Classification**
-   - Group agents by operational function (Marketing, Sales, Ops, Finance, etc.)
-   - Use function as organizational context for permission decisions
-   - Enable function-based capability templates
+   - Group agents by function (Marketing, Sales, Ops, etc.)
+   - Use function as organizational context
 
 3. **Enable Safe Delegation**
    - Master agent can grant/revoke permissions
-   - Authorized agents can modify their own role configurations (within bounds)
-   - Support escalation workflows for temporary elevation
-   - Maintain audit trail of all permission changes
+   - Maintain audit trail
 
-4. **Provide Clear Permission Boundaries**
-   - Define which tools, providers, and workflows each role can access
-   - Implement checking before agent actions
-   - Support granular permission scoping (function-level, tool-level, workflow-level)
+4. **Provide Permission Boundaries**
+   - Define which tools, providers, workflows each role can access
+   - Implement permission checks
 
 ### Success Metrics
 
@@ -686,24 +673,21 @@ class EscalationRejectedError extends Error {
 
 ---
 
-## 9. Rollout & Implementation Strategy
+## 9. Implementation Strategy
 
 ### Phase 1: Foundation
-- Create database schema (roles, functions, assignments)
+- Create database schema
 - Implement Role and Function managers (CRUD APIs)
 - Implement master agent initialization
-- Unit tests
 
 ### Phase 2: Runtime Integration
 - Implement PermissionChecker
-- Integrate permission checks into agent execution pipeline
-- Implement tool/provider/workflow access control
-- Integration tests
+- Integrate permission checks into execution pipeline
+- Implement access control
 
 ### Phase 3: Testing & Documentation
-- Write documentation
-- Create role templates for common scenarios
-- Security testing
+- Write tests and documentation
+- Create role templates
 
 ---
 
@@ -711,9 +695,9 @@ class EscalationRejectedError extends Error {
 
 | Risk | Mitigation |
 | --- | --- |
-| **Master agent compromise** | Master agent cannot have role revoked (system constraint) |
-| **Permission bypass** | Atomic permission checks; cache invalidation on role changes |
-| **Performance degradation** | Permission check caching; indexed database queries |
+| **Master agent compromise** | Master agent cannot have role revoked |
+| **Permission bypass** | Atomic permission checks |
+| **Performance degradation** | Permission caching |
 
 ---
 
@@ -751,27 +735,13 @@ class EscalationRejectedError extends Error {
 
 ---
 
-## 12. Open Questions & Decisions
+## 12. Design Decisions
 
-1. **Wildcard Resource Access**
-   - Should roles support `"*"` for "all tools" or require explicit lists?
-   - **Decision Pending:** Explicit lists preferred for security audit; wildcard for admin roles only
-
-2. **Role Inheritance Depth**
-   - Should roles support multi-level inheritance?
-   - **Decision Pending:** Start with single-level; revisit if complexity demands it
-
-3. **Escalation Auto-Approval**
-   - Should escalations auto-approve for brief durations (< 1 hour)?
-   - **Decision Pending:** Require explicit approval for all escalations initially
-
-4. **Cross-Organization Delegation**
-   - Should roles be organization-scoped or global?
-   - **Decision Pending:** Start global; add org scoping in future iteration
-
-5. **Self-Service Role Changes**
-   - Which role changes should agents be able to request without master approval?
-   - **Decision Pending:** Only escalation requests; role changes require master approval
+- Roles support wildcard `"*"` for admin roles only
+- Start with single-level role hierarchy
+- All escalations require explicit approval
+- Roles are global (not organization-scoped)
+- Role changes require master approval
 
 ---
 

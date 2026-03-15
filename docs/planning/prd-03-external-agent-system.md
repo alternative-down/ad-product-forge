@@ -65,7 +65,6 @@ This limitation reduces flexibility in agent-based workflows and prevents design
 - [ ] Communication works between internal and external agents
 - [ ] External agents terminate cleanly
 - [ ] Interactions are logged
-- [ ] System supports 50+ concurrent external agents
 
 ---
 
@@ -202,17 +201,10 @@ Internal Agent
 
 ### 5.3 Key Design Principles
 
-1. **Delegation, Not Integration** — External agents are autonomous units, not library functions. They operate via messages, not shared data structures.
-
-2. **Zero Trust** — External agents start with zero permissions. Only messaging capability is granted by default.
-
-3. **Wake Queue Efficiency** — External agents consume no CPU while idle. Wake queue ensures minimal latency when messages arrive.
-
-4. **Audit Trail** — All external agent interactions are logged with creator context.
-
-5. **Graceful Cleanup** — Termination is explicit but cleanup is automatic.
-
-6. **Scope Isolation** — Each external agent's conversation is isolated from other agents and internal data.
+1. **Delegation** — External agents are autonomous units that operate via messages
+2. **Zero Trust** — External agents start with zero permissions (messaging only)
+3. **Isolation** — Each external agent's conversation is isolated
+4. **Cleanup** — Termination is explicit and automatic
 
 ---
 
@@ -411,25 +403,20 @@ External agents have access to:
 ## 7. Implementation Plan
 
 ### Phase 1: Foundation
-- [ ] Create `ExternalAgent` types and interfaces
-- [ ] Implement `createExternalAgent()` tool
-- [ ] Add `forge_external_agents` table schema
-- [ ] Implement basic tool filtering
+- [ ] Create ExternalAgent types and interfaces
+- [ ] Implement createExternalAgent() tool
+- [ ] Add database schema
+- [ ] Basic tool filtering
 
 ### Phase 2: Communication
-- [ ] Integrate communication module for external agents
-- [ ] Implement `sendMessageToExternalAgent()` tool
-- [ ] Implement `getExternalAgentMessages()` tool
-- [ ] Add wake queue integration
+- [ ] Integrate communication module
+- [ ] Implement sendMessageToExternalAgent() tool
+- [ ] Implement getExternalAgentMessages() tool
 
 ### Phase 3: Lifecycle Management
-- [ ] Implement `terminateExternalAgent()` tool
-- [ ] Implement resource cleanup
-- [ ] Basic testing
-
-### Phase 4: Testing & Documentation
-- [ ] Integration tests
-- [ ] Documentation and examples
+- [ ] Implement terminateExternalAgent() tool
+- [ ] Resource cleanup
+- [ ] Testing and documentation
 
 ---
 
@@ -602,37 +589,16 @@ tool.terminateExternalAgent({
 
 ## 10. Configuration & Deployment
 
-### Agent Configuration
-
-External agents are created dynamically, so no static configuration needed. However, system defaults can be configured:
-
 **Environment Variables:**
 ```bash
-# External Agent Defaults
 EXTERNAL_AGENT_MAX_TOKENS=2000
 EXTERNAL_AGENT_DEFAULT_MODEL=claude-haiku
 EXTERNAL_AGENT_TERMINATION_TTL_SECONDS=3600
-EXTERNAL_AGENT_CONVERSATION_RETENTION_DAYS=30
-EXTERNAL_AGENT_CLEANUP_BATCH_SIZE=100
 ```
 
-### Monitoring & Observability
-
-**Metrics:**
-- `external_agent_created_total` — counter, labeled with role
-- `external_agent_terminated_total` — counter, labeled with reason
-- `external_agent_active_count` — gauge
-- `external_agent_message_latency_ms` — histogram
-- `external_agent_creation_latency_ms` — histogram
-- `external_agent_wake_queue_backlog_size` — gauge per agent
-
-**Logs:**
-- Creation: `[EXTERNAL_AGENT] Created {externalAgentId} for {creatorAgentId}`
-- Termination: `[EXTERNAL_AGENT] Terminated {externalAgentId}, reason: {reason}`
-- Error: `[EXTERNAL_AGENT_ERROR] {externalAgentId}: {error}`
-
-**Audit Trail:**
-All events logged to `forge_external_agent_audit_log` with full context.
+**Logging:**
+- Creation, termination, and errors logged simply
+- Full context in logs for debugging
 
 ---
 
@@ -711,32 +677,14 @@ All events logged to `forge_external_agent_audit_log` with full context.
 | --- | --- |
 | **Security Breach** | Tool filtering at creation; runtime validation |
 | **Resource Leak** | Explicit cleanup of terminated agents |
-| **Message Backlog** | Async message delivery with timeouts |
-
----
 
 ## 13. Future Enhancements
 
-### Short Term (1-2 Sprints)
-- [ ] Self-termination via signal strings (e.g., "TASK_COMPLETE")
-- [ ] Conversation export (JSON/markdown) after termination
-- [ ] Metrics dashboard for external agent activity
-- [ ] Template library for common roles (engineer, analyst, qa, etc.)
-
-### Medium Term (2-3 Sprints)
-- [ ] Multi-party conversations (multiple external agents + creator)
-- [ ] External agent memory access to sanitized creator memory
-- [ ] Tool whitelisting (external agents can call approved tools)
-- [ ] Scheduled termination (auto-terminate after N hours)
-- [ ] Cost tracking per external agent instance
-
-### Long Term (3+ Sprints)
-- [ ] Nested external agents (external agent creates another external agent)
-- [ ] Persistent external agent roles (reusable templates)
-- [ ] Approval workflows for external agent creation
-- [ ] GraphQL API for external agent management
-- [ ] Web UI for external agent orchestration
-- [ ] Integration with external services (APIs available to specific external agents)
+- Self-termination via signal strings
+- Conversation export (JSON/markdown)
+- Template library for common roles
+- Tool whitelisting for external agents (future)
+- Cost tracking (future)
 
 ---
 

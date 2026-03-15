@@ -14,26 +14,22 @@
 Persistir, gerenciar e criptografar credenciais de provedores de comunicação (email, Discord, Slack, etc.) em banco de dados centralizado, permitindo que múltiplos agentes utilizem múltiplos provedores simultamente com configuração dinâmica e segura.
 
 ### Proposta de Valor
-1. **Segurança:** Credenciais criptografadas e isoladas por agente
-2. **Escalabilidade:** Suportar N agentes × M provedores sem limites hardcoded
-3. **Dinamismo:** Adicionar/remover provedores sem redeployed código
-4. **Manutenibilidade:** Migração de raw SQL (LibSQL Client) para Drizzle ORM para melhor type-safety e auditoria
+1. **Segurança:** Credenciais criptografadas no banco de dados
+2. **Dinamismo:** Adicionar/remover provedores sem redeploy
+3. **Simplicidade:** Migração de raw SQL para Drizzle ORM para melhor type-safety
 
 ### Escopo da Feature
-- Criar tabelas de banco de dados para armazenar credenciais de providers
-- Implementar criptografia de credenciais sensíveis (IMAP/SMTP passwords, tokens, API keys)
-- Migrar módulo de comunicação de SQLClient direto para Drizzle ORM
+- Criar tabelas para armazenar credenciais de providers
+- Implementar criptografia de credenciais sensíveis
+- Migrar para Drizzle ORM
 - Persistir configurações de provider por agente
 - Suportar múltiplos provedores por agente
-- Versionamento de credenciais para auditoria
-- Revogar/reatualizar credenciais sem cortar fluxo ativo
 
 ### Não está no Escopo
-- Integração com OAuth2/OIDC (nice-to-have futura)
-- Interface UI de gerenciamento de providers
+- OAuth2/OIDC (futuro)
+- Interface UI
 - Sincronização entre múltiplas instâncias
-- Backup/restore automatizado
-- Secret management services externos (AWS Secrets Manager, Vault)
+- Secret management externos
 
 ---
 
@@ -96,92 +92,38 @@ Runtime (createAgent/createForgeAgent)
   - Created/updated timestamps
 
 **RF-2: Criptografia de credenciais sensíveis**
-- Criptografar valores sensíveis antes de persistir:
-  - Passwords (IMAP, SMTP, SSH)
-  - API tokens (Discord, Slack, etc)
-  - OAuth refresh tokens
-  - Private keys
-- Deixar não-sensível em plaintext (hosts, ports, usernames)
-- Usar AES-256-GCM com IV aleatório por record
-- Armazenar chave de criptografia via ambiente (ENV)
+- Criptografar valores sensíveis (passwords, tokens, API keys)
+- Usar AES-256-GCM
+- Chave via ambiente (ENV)
 
 **RF-3: Multi-provider por agente**
 - Um agente pode ter N provedores configurados
-- Exemplo: Agent A com email + Discord + Slack
-- Exemplo: Agent B com email only
-- Exemplo: Agent C com Slack + custom provider
-- Sistema deve suportar add/remove sem afetar outros
+- Add/remove sem afetar outros
 
 
 ### 3.2 Migração para Drizzle ORM
 
-**RF-5: Migração de SQLClient para Drizzle**
-- Converter queries raw do módulo de comunicação para Drizzle ORM
-- Manter API compatível
-- Type-safe queries via Drizzle schema
-
-**RF-6: Schema revisado com Drizzle**
-- Definir schema em `packages/mastra-engine/src/db/schema.ts`
-- Adicionar tabelas para credenciais:
-  - `provider_configurations` — Config do provider por agente
-  - `provider_credentials` — Credenciais criptografadas
-- Manter tabelas existentes: accounts, contacts, conversations, messages
+**RF-4: Migração para Drizzle**
+- Converter queries para Drizzle ORM
+- Type-safe queries
 
 ### 3.3 Interface de Configuração
 
-**RF-7: API de registro dinâmico de provider**
+**RF-5: API de provider**
 ```typescript
-// Na runtime, antes de criar Agent:
-const providerConfig = {
-  providerId: 'email-smtp-1',
-  type: 'email',
-  agentId: 'agent-123',
-  config: {
-    imap: { host: 'imap.gmail.com', port: 993, secure: true },
-    smtp: { host: 'smtp.gmail.com', port: 587, secure: false },
-  },
-  secrets: {
-    imapPassword: 'encrypted-value',
-    smtpPassword: 'encrypted-value',
-  },
-  status: 'active',
-};
-
-await communication.registerProviderConfig(providerConfig);
-```
-
-**RF-8: API de lookup dinâmico de credenciais**
-- Quando provider é inicializado, chamar:
-```typescript
+await communication.registerProviderConfig(config);
 const credentials = await communication.getProviderCredentials(providerId);
-// Retorna: { decrypted secrets } + plaintext config
-```
-- Se provider tiver múltiplas versões, usar `status=current`
-- Cache em memória com TTL (60s) para evitar queries constantemente
-
-**RF-9: Rotação de credenciais**
-```typescript
 await communication.rotateProviderCredentials(providerId, newSecrets);
-// Steps:
-// 1. Update credential com novo valor
-// 2. Provider recarrega com nova credencial
 ```
 
 ---
 
 ## 4. Requisitos Não-Funcionais
 
-### 4.1 Performance
-- **RNF-1:** Lookup de credenciais < 100ms (suficiente para solo dev)
-- **RNF-2:** Criptografia/decriptografia funcional
-
-### 4.2 Segurança
-- **RNF-3:** Chave de criptografia isolada por ambiente (ENV)
-- **RNF-4:** Logging seguro: não logar valores de credenciais
-- **RNF-5:** SQL injection prevention via Drizzle
-
-### 4.3 Compatibilidade
-- **RNF-6:** API de communication module não quebrada
+- Criptografia/decriptografia funcional
+- Chave via ambiente (ENV)
+- Logging seguro (sem credenciais)
+- API backwards compatible
 
 ---
 
@@ -483,24 +425,18 @@ export async function rotateProviderCredentials(
 ## 6. Plano de Implementação
 
 ### Fase 1: Setup e Infraestrutura
-- [ ] Definir schema simplificado (2 tabelas: configurations, credentials)
-- [ ] Implementar módulo de criptografia (encrypt/decrypt functions)
-- [ ] Criar migrations para adicionar novas tabelas
+- [ ] Definir schema (2 tabelas: configurations, credentials)
+- [ ] Implementar módulo de criptografia
+- [ ] Criar migrations
 
-### Fase 2: API de Provider Configuration
-- [ ] Implementar `registerProviderConfig()` function
-- [ ] Implementar `getProviderCredentials()` com cache simples
-- [ ] Implementar `rotateProviderCredentials()` function
-- [ ] Testes unitários básicos
+### Fase 2: API de Provider
+- [ ] Implementar register/get/rotate functions
+- [ ] Testes básicos
 
-### Fase 3: Integração com Communication Module
-- [ ] Converter queries raw para Drizzle ORM
-- [ ] Integrar provider config lookup na inicialização de providers
-- [ ] Testes de integração com providers reais
-
-### Fase 4: Validação
-- [ ] Testes end-to-end com múltiplos agentes
-- [ ] Documentação de setup
+### Fase 3: Integração
+- [ ] Converter queries para Drizzle ORM
+- [ ] Integrar com providers
+- [ ] Testes
 
 ---
 
@@ -547,72 +483,36 @@ export async function rotateProviderCredentials(
 ## 10. Estimativas
 
 ### Tamanho da Feature
-**Esforço total:** ~80-100 horas (sprints de 4 semanas)
-
-### Breakdown por Fase
-1. **Phase 1 (Setup):** 20h (Drizzle setup, schema, crypto, tests)
-2. **Phase 2 (API):** 25h (registerProviderConfig, rotate, audit)
-3. **Phase 3 (Integration):** 30h (Converter queries, integrar com module)
-4. **Phase 4 (Validation):** 15h (E2E tests, docs, performance)
-
-### Story Points (Fibonacci)
-- [ ] Epic PRD-02: 40 story points (4 sprints, 1 dev full-time)
+**Esforço total:** ~40-50 horas (2-3 semanas)
 
 ---
 
 ## 11. Documentação Necessária
 
-### Para Desenvolvedores
-1. `docs/implementation/drizzle-orm-setup.md` — Como configurar Drizzle
-2. `docs/implementation/provider-config-api.md` — API reference completa
-3. `docs/implementation/encryption-key-setup.md` — Como gerar chave (base64)
-4. `docs/implementation/migration-sql-to-drizzle.md` — Guia de conversão
-
-### Para Operadores
-1. `docs/operations/provider-configuration.md` — Como adicionar novos provedores
-2. `docs/operations/credential-rotation.md` — Como rotacionar credenciais
-3. `docs/operations/troubleshooting-providers.md` — Debugging de problemas
-
-### Para Usuários/Agentes
-- API de agent-facing tools não muda (backwards compatible)
+- API reference para functions
+- Como gerar encryption key
+- Como adicionar novos provedores
 
 ---
 
 ## 12. Critérios de Aceitação
 
 - [ ] Schema Drizzle definido e migrations criadas
-- [ ] Criptografia implementada com testes (encrypt/decrypt roundtrip)
-- [ ] API de provider config implementada e testada
-- [ ] Todas as queries do communication module migradas para Drizzle
-- [ ] Múltiplos provedores por agente funcionando em teste
-- [ ] Rotação de credenciais sem downtime validada
-- [ ] Auditoria completa (logs de todas as mudanças)
-- [ ] Documentação completa
-- [ ] Performance benchmark passou (< 50ms lookup)
+- [ ] Criptografia implementada (encrypt/decrypt)
+- [ ] API de provider config implementada
+- [ ] Queries migradas para Drizzle
+- [ ] Múltiplos provedores por agente funcionando
+- [ ] Rotação de credenciais funcionando
 - [ ] Zero plain-text secrets em banco de dados
-- [ ] Backwards compatibility verificada
 
 ---
 
-## 13. Próximos Passos Recomendados
+## 13. Próximos Passos
 
-### Imediato (Antes de iniciar Phase 1)
-1. **Revisar com time:** Apresentar PRD para architectural review
-2. **Decidir Drizzle version:** Qual versão usar? Verificar compatibility com LibSQL
-3. **Gerar encryption key:** Setup de como teams geram chave base64 256-bit
-4. **Ambiente de teste:** Criar branch/environment para desenvolvimento
-
-### Após Phase 1
-1. **OAuth2 integration:** Fase 2 pode incluir suporte a OAuth (rotation automática)
-2. **KMS/HSM integration:** Considerar AWS Secrets Manager, HashiCorp Vault
-3. **Multi-region replication:** Replicar credenciais entre regiões (se necessário)
-4. **Sync entre instâncias:** Se múltiplas instâncias de runtime, sincronizar configs
-
-### Longo Prazo
-1. Integrar com sistema de auditoria centralizado
-2. Dashboard de gerenciamento de providers (UI)
-3. Webhooks para notificação de rotação/revogação
-4. Backup/restore automatizado com criptografia
+- Gerar encryption key (base64 256-bit)
+- Criar branch para desenvolvimento
+- OAuth2 integration (futuro)
+- Dashboard de gerenciamento (futuro)
 
 ---
 
