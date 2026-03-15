@@ -1,8 +1,18 @@
 # PRD-11: Framework de Ferramenta Customizada
 
-**Status:** Planejamento
+**Status:** ⏸️ Adiado - Necessária Revisão Arquitetural
 **Data:** 2026-03-15
 **Versão:** 1.0
+
+---
+
+## ⏸️ Nota de Adiamento
+
+**Decisão:** Adiado para segundo momento. Necessária revisão arquitetural e alinhamento com sistema de Skills.
+
+**Contexto:** Agentes já possuem Skills e podem criar Skills dinamicamente. Conceitual customização de ferramentas pode ser integrada ao sistema de Skills existente em vez de ser um framework separado. Potencial: local centralizado de Skills criadas por agentes, disponíveis para todos.
+
+**Próximas Etapas:** Reavaliar após implementação de PRDs posteriores e consolidar com arquitetura de Skills.
 
 ---
 
