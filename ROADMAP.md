@@ -20,9 +20,23 @@
   - Ensure provider credentials are encrypted before storage
   - Support multiple communication providers per agent
 
-## 2. Role & Permission Management
+## 2. External Specialist Agents
 
-### 2.1 Role and Function Schema
+### 2.1 External Agent System
+- **Objective**: Enable creation of temporary specialist agents for specific tasks
+- **Requirements**:
+  - Support external specialist agents (consultants, personas, subject matter experts)
+  - Create agents on-demand for internal agent requests
+  - Examples: pre-interview with personas, expert explanations, research support
+  - External agents have restricted permissions (messaging only)
+  - External agents cannot access internal company resources or data
+  - Communication via internal messaging system
+  - Agents only wake up when receiving messages
+  - Can be terminated when task is complete
+
+## 3. Role & Permission Management
+
+### 3.1 Role and Function Schema
 - **Objective**: Define granular access control and capabilities for each agent
 - **Requirements**:
   - Implement Function schema - acts as grouper/classifier for agents
@@ -35,9 +49,9 @@
   - Master agent grants/revokes permissions to other agents as they are hired
   - Support permission escalation and delegation
 
-## 3. Agent Lifecycle Management
+## 4. Agent Lifecycle Management
 
-### 3.1 Agent Hiring Workflow
+### 4.1 Agent Hiring Workflow
 - **Objective**: Enable agents to autonomously create and provision new agents
 - **Requirements**:
   - Create workflow for agent contraction (hiring)
@@ -46,14 +60,14 @@
   - Define configurable parameters for agent instantiation
   - Implement agent provisioning process
 
-### 3.2 Agent Termination Workflow
+### 4.2 Agent Termination Workflow
 - **Objective**: Gracefully remove agents from the system
 - **Requirements**:
   - Create workflow for agent removal (demissão/termination)
   - Handle cleanup of agent-related resources and data
   - Define deactivation procedures
 
-### 3.3 Heartbeat and Scheduling System
+### 4.3 Heartbeat and Scheduling System
 - **Objective**: Keep inactive agents active and enable autonomous scheduling
 - **Requirements**:
   - Implement heartbeat scheduling to periodically wake agents
@@ -61,7 +75,7 @@
   - Allow agents to create their own cron jobs via internal messaging
   - Enable agents to check pending tasks and resume interrupted executions
 
-### 3.4 Cron/Scheduling Tool
+### 4.4 Cron/Scheduling Tool
 - **Objective**: Enable agents to create and manage scheduled tasks
 - **Requirements**:
   - Implement cron tool for agents to define scheduling rules
@@ -72,9 +86,9 @@
   - Agent receives own-created instructions and executes them
   - Support recurring and one-time schedules
 
-## 4. Communication System
+## 5. Communication System
 
-### 4.1 Internal Group Chat Implementation
+### 5.1 Internal Group Chat Implementation
 - **Objective**: Enable agents to collaborate and coordinate through group messaging
 - **Requirements**:
   - Extend internal communication module to support group conversations
@@ -83,7 +97,7 @@
   - Support multiple agents within a single group
   - Enable group-based communication for all agents
 
-### 4.2 Multi-Provider Group Support
+### 5.2 Multi-Provider Group Support
 - **Objective**: Extend group capabilities to all communication providers
 - **Requirements**:
   - Implement groups for Discord provider (channels, mentions)
@@ -92,16 +106,16 @@
   - Support email distribution and CC functionality
   - Maintain consistency across all providers
 
-### 4.3 Research as Workflow
+### 5.3 Research as Workflow
 - **Objective**: Transform research from tool to workflow
 - **Requirements**:
   - Convert current Research tool to workflow implementation
   - Maintain research functionality with workflow benefits
   - Enable more complex research orchestration
 
-## 5. External Integration & Event Handling
+## 6. External Integration & Event Handling
 
-### 5.1 Webhook & Event Routing System
+### 6.1 Webhook & Event Routing System
 - **Objective**: Enable external systems to trigger agent actions
 - **Requirements**:
   - Implement webhook infrastructure for external triggers
@@ -113,9 +127,9 @@
   - Support event queue and message passing
   - Handle various event types (repository events, deployment events, payment notifications, ad events)
 
-## 6. Version Control & Repository Management
+## 7. Version Control & Repository Management
 
-### 6.1 GitHub Integration
+### 7.1 GitHub Integration
 - **Objective**: Enable agents to manage repositories and respond to events
 - **Requirements**:
   - Provide agents access to GitHub organization
@@ -124,16 +138,16 @@
   - Define workflow for triggering agent actions based on GitHub events
   - Support agent-driven repository management
 
-## 7. Deployment & Infrastructure
+## 8. Deployment & Infrastructure
 
-### 7.1 Application Deployment
+### 8.1 Application Deployment
 - **Objective**: Allow agents to deploy created applications
 - **Requirements**:
   - Integrate with Coolify on Hertzner infrastructure
   - Enable agents to configure and deploy applications via Coolify
   - Ensure deployed applications are immediately accessible
 
-### 7.2 Domain Management
+### 8.2 Domain Management
 - **Objective**: Provide wildcard domain configuration for agent applications
 - **Requirements**:
   - Configure wildcard DNS pointing to Hertzner machine
@@ -141,7 +155,7 @@
   - Enable automatic domain assignment for deployed applications
   - Support subdomain provisioning per agent application
 
-### 7.3 Email Service Integration
+### 8.3 Email Service Integration
 - **Objective**: Provide organizational email for each agent
 - **Requirements**:
   - Define and integrate email service provider
@@ -150,9 +164,9 @@
   - Provide email inbox and sending capabilities per agent
   - Integrate existing SMTP/IMAP provider with chosen email service
 
-## 8. Community & Marketing
+## 9. Community & Marketing
 
-### 8.1 Social Media & Community Integration
+### 9.1 Social Media & Community Integration
 - **Objective**: Enable agents to promote creations and identify opportunities
 - **Requirements**:
   - Integrate with social media platforms
@@ -160,16 +174,16 @@
   - Enable agents to publish and share work
   - Provide opportunity identification from community interactions
 
-### 8.2 Marketing Platform Integration
+### 9.2 Marketing Platform Integration
 - **Objective**: Enable campaign execution and marketing automation
 - **Requirements**:
   - Integrate with marketing platforms
   - Enable agents to execute marketing campaigns
   - Support campaign management and automation
 
-## 9. Financial Management & ERP
+## 10. Financial Management & ERP
 
-### 9.1 Micro-ERP System
+### 10.1 Micro-ERP System
 - **Objective**: Provide comprehensive financial tracking and management
 - **Requirements**:
   - Implement expense tracking and recording
@@ -179,7 +193,7 @@
   - Enable flow control based on financial data
   - Provide agents access to their own financial data
 
-### 9.2 Cash Flow Control
+### 10.2 Cash Flow Control
 - **Objective**: Control and prioritize agent actions based on financial status
 - **Requirements**:
   - Implement cash flow analysis and monitoring
@@ -187,9 +201,34 @@
   - Support prioritization based on cash flow status
   - Integrate financial data into agent decision-making
 
-## 10. Customer Support & Communication
+### 10.3 CRM System
+- **Objective**: Provide customer relationship management capabilities
+- **Requirements**:
+  - Implement CRM system alongside ERP
+  - Track customer interactions and relationships
+  - Support sales pipeline management
+  - Enable customer data management
 
-### 10.1 Ticketing System
+### 10.4 Billing & Payment Integration
+- **Objective**: Integrate payment processing with platform
+- **Requirements**:
+  - Integrate Stripe for payment processing
+  - Integrate Assas for payment processing
+  - Support recurring billing and subscriptions
+  - Track payment transactions
+  - Connect to ERP for financial reconciliation
+
+### 10.5 Project & Task Management
+- **Objective**: Provide project and task tracking system
+- **Requirements**:
+  - Implement project management system
+  - Support task creation and assignment
+  - Enable task tracking and status management
+  - Support collaboration on projects and tasks
+
+## 11. Customer Support & Communication
+
+### 11.1 Ticketing System
 - **Objective**: Provide support infrastructure for agent-created applications
 - **Requirements**:
   - Implement ticketing system for customer support
@@ -197,9 +236,58 @@
   - Enable agents to handle support tickets for their created systems
   - Provide ticket management and routing capabilities
 
-## 11. Application Templates & Development
+## 12. Data Storage & Knowledge Management
 
-### 11.1 Web Application Templates
+### 12.1 Distributed Storage System
+- **Objective**: Provide scalable storage for agents and applications
+- **Requirements**:
+  - Implement Minio for object storage
+  - Enable agents to use Minio for file storage
+  - Support per-application or shared storage models
+  - Enable storage for generated artifacts and data
+  - Support backup and data management
+
+### 12.2 Task Queue & Event Processing
+- **Objective**: Provide asynchronous task processing capabilities
+- **Requirements**:
+  - Integrate BullMQ for job queuing
+  - Support trigger.dev for workflow orchestration
+  - Enable agents to queue and execute tasks
+  - Support per-application or shared queues
+  - Enable event-driven task processing
+
+### 12.3 Knowledge Base System
+- **Objective**: Provide semantic search and knowledge retrieval
+- **Requirements**:
+  - Integrate knowledge base with ERP system
+  - Use Mastra workspace for embeddings generation
+  - Implement semantic fulltext search
+  - Support GraphRAG (Graph Retrieval-Augmented Generation)
+  - Similar implementation to agent long-term memory
+  - Enable agents to search and retrieve knowledge
+  - Support knowledge organization and management
+
+### 12.4 Secrets Management
+- **Objective**: Securely store and manage sensitive credentials
+- **Status**: Optional/Under evaluation
+- **Requirements**:
+  - Implement vault system for agent secrets
+  - Store API keys, tokens, and credentials securely
+  - Support secret rotation and management
+  - Enable agents to access secrets securely
+  - Audit secret access
+
+### 12.5 Electronic Signature System
+- **Objective**: Enable document signing capabilities
+- **Requirements**:
+  - Implement electronic document signing
+  - Support legal signature verification
+  - Enable agents to sign documents
+  - Store signed document audit trails
+
+## 13. Application Templates & Development
+
+### 13.1 Web Application Templates
 - **Objective**: Accelerate agent application development
 - **Requirements**:
   - Create pre-built application templates with common features
@@ -208,9 +296,9 @@
   - Include ticketing system integration
   - Support agents to rapidly scaffold new applications
 
-## 12. Agent Capabilities & Tools
+## 14. Agent Capabilities & Tools
 
-### 12.1 Custom Tool Framework
+### 14.1 Custom Tool Framework
 - **Objective**: Enable agents to create and use specialized tools
 - **Requirements**:
   - Implement framework for custom tool creation
@@ -219,7 +307,7 @@
   - Enable agents to evolve and create their own integrations/utilities
   - Agents can extend their capabilities independently
 
-### 12.2 Marketing Artifact Generation Tools
+### 14.2 Marketing Artifact Generation Tools
 - **Objective**: Provide agents with tools for creating marketing materials
 - **Requirements**:
   - Integration with Nanobanana for image generation
@@ -229,7 +317,7 @@
   - Support for multiple artifact types (images, animations, videos)
   - Enable agents to create and deploy marketing materials
 
-### 12.3 Browser Service
+### 14.3 Browser Service
 - **Objective**: Provide agents with browser automation capabilities
 - **Requirements**:
   - Implement browser service integration (external service, not sandbox-bound)
@@ -238,7 +326,7 @@
   - Enable agents to interact with web interfaces
   - Support web scraping and browser automation tasks
 
-### 12.4 Sub-Agent Capability (Optional Investigation)
+### 14.4 Sub-Agent Capability (Optional Investigation)
 - **Objective**: Explore using cheaper LLM models for internal agent tasks
 - **Status**: Exploratory, needs further evaluation
 - **Considerations**:
@@ -247,7 +335,7 @@
   - Potential concern: confusion with existing multi-agent system
   - May not be suitable depending on actual implementation needs
 
-### 11.2 Advanced Capabilities
+### 14.5 Advanced Capabilities
 - **Objective**: Provide agents with diverse operational capabilities
 - **Requirements**:
   - Browser service integration (potentially external service like OpenClaw)
