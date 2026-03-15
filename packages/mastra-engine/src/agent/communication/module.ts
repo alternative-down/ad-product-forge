@@ -323,10 +323,19 @@ export async function createCommunicationModule(config: {
       throw new Error(`No destination provided for provider: ${input.provider}`);
     }
 
-    const contactExternalId = await getContactExternalId(input.provider, input.contactSlug);
+    let contactExternalId = await getContactExternalId(input.provider, input.contactSlug);
 
     if (!contactExternalId) {
-      throw new Error(`No direct identity found for contact: ${input.contactSlug}`);
+      // No registered identity found — treat the slug as the external ID directly
+      // (natural for email where slug = address, or any provider where the agent
+      // uses the external ID as the slug). Auto-register so future lookups work.
+      contactExternalId = input.contactSlug;
+      await store.upsertContact({
+        slug: input.contactSlug,
+        displayName: input.contactSlug,
+        provider: input.provider,
+        externalUserId: input.contactSlug,
+      });
     }
 
     const sent = await provider.sendMessage({
