@@ -1,48 +1,48 @@
-# PRD 25: Distributed Storage System
+# PRD-12: Sistema de Armazenamento Distribuído
 
-**Status:** Draft - Simplified for Solo Developer
-**Date:** 2026-03-15
-**Version:** 1.0
-**Note:** Personal project by solo developer. Scope limited to core functionality (KISS + YAGNI).
-
----
-
-## Executive Summary
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes file storage infrastructure specific to ad-product-forge.** Storage system enables Nicolas' agents to persist generated artifacts (code, documents, reports). This is application-specific, not framework infrastructure.
-
-### Goal
-Implement a simple local file storage system for agents to persist artifacts and files.
-
-### Core Features
-1. **Local Storage** - Store files on local filesystem
-2. **File Upload/Download** - Basic file operations
-3. **Agent Storage** - Agents can store and retrieve artifacts
-4. **Metadata Tracking** - Track file paths and info in database
-
-### Out of Scope
-- Backup/recovery systems
-- Cloud storage integration
-- Advanced encryption
-- Versioning
-- Share links/public access
-- Virus scanning
-- Full-text search
+**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Data:** 2026-03-15
+**Versão:** 1.0
+**Nota:** Projeto pessoal por desenvolvedor solo. Escopo limitado a funcionalidade principal (KISS + YAGNI).
 
 ---
 
-## Data Model
+## Sumário Executivo
 
-### File Metadata
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
+
+**Este PRD descreve infraestrutura de armazenamento de arquivo específica para ad-product-forge.** Sistema de armazenamento permite que agentes de Nicolas persistam artefatos gerados (código, documentos, relatórios). Isto é específico da aplicação, não infraestrutura do framework.
+
+### Objetivo
+Implementar um sistema simples de armazenamento de arquivo local para agentes persistirem artefatos e arquivos.
+
+### Recursos Principais
+1. **Armazenamento Local** - Armazenar arquivos no sistema de arquivo local
+2. **Upload/Download de Arquivo** - Operações básicas de arquivo
+3. **Armazenamento de Agente** - Agentes podem armazenar e recuperar artefatos
+4. **Rastreamento de Metadados** - Rastrear caminhos de arquivo e info no banco de dados
+
+### Fora do Escopo
+- Sistemas de backup/recuperação
+- Integração com armazenamento em nuvem
+- Criptografia avançada
+- Versionamento
+- Links de compartilhamento/acesso público
+- Scanning de vírus
+- Busca de texto completo
+
+---
+
+## Modelo de Dados
+
+### Metadados de Arquivo
 ```typescript
 file_metadata {
   id: UUID
-  file_path: string (relative to storage dir)
+  file_path: string (relativo ao diretório de armazenamento)
   file_name: string
   size_bytes: bigint
-  content_type: string (optional)
+  content_type: string (opcional)
   uploaded_at: timestamp
   uploaded_by: string (agent_id)
 }
@@ -50,16 +50,16 @@ file_metadata {
 
 ---
 
-## API Endpoints
+## Endpoints da API
 
-### File Operations
-- `POST /api/storage/upload` — Upload file
-- `GET /api/storage/:file_id` — Download file
-- `GET /api/storage/metadata/:file_id` — Get file metadata
-- `DELETE /api/storage/:file_id` — Delete file
-- `GET /api/storage/list` — List files for agent
+### Operações de Arquivo
+- `POST /api/storage/upload` — Fazer upload de arquivo
+- `GET /api/storage/:file_id` — Fazer download de arquivo
+- `GET /api/storage/metadata/:file_id` — Obter metadados de arquivo
+- `DELETE /api/storage/:file_id` — Deletar arquivo
+- `GET /api/storage/list` — Listar arquivos para agente
 
-### Agent Storage API (in agent context)
+### API de Armazenamento de Agente (em contexto de agente)
 ```typescript
 agent.storage.uploadFile(fileName: string, content: Buffer): Promise<{
   fileId: string
@@ -76,72 +76,72 @@ agent.storage.listFiles(): Promise<FileInfo[]>
 
 ---
 
-## Implementation Notes
+## Notas de Implementação
 
-### Local Storage Setup
-- Store files in a local directory (e.g., `./storage/files/`)
-- Organize by agent_id subdirectories
-- Create directory if missing on startup
+### Setup de Armazenamento Local
+- Armazenar arquivos em diretório local (ex: `./storage/files/`)
+- Organizar por subdiretórios agent_id
+- Criar diretório se faltando na inicialização
 
-### Database
-- Use existing Drizzle ORM + LibSQL
-- Create table: `file_metadata`
-- Index on uploaded_by and file_path
+### Banco de Dados
+- Usar Drizzle ORM + LibSQL existente
+- Criar tabela: `file_metadata`
+- Indexar em uploaded_by e file_path
 
-### File Operations
-- Use Node.js fs module for file I/O
-- Simple file operations (read/write)
-- File size limit: 500MB per file
-- Store uploaded_by for basic access control
+### Operações de Arquivo
+- Usar módulo fs do Node.js para I/O de arquivo
+- Operações simples de arquivo (leitura/escrita)
+- Limite de tamanho de arquivo: 500MB por arquivo
+- Armazenar uploaded_by para controle de acesso básico
 
-### Access Control
-- Simple owner-only access (agent can only access their files)
-- Check uploaded_by on all downloads
+### Controle de Acesso
+- Acesso simples apenas do proprietário (agente pode acessar apenas seus arquivos)
+- Verificar uploaded_by em todos os downloads
 
-### Error Handling
-- Handle file I/O errors gracefully
-- Return meaningful error messages
-- Log storage operations
+### Tratamento de Erros
+- Lidar com erros de I/O de arquivo graciosamente
+- Retornar mensagens de erro significativas
+- Registrar operações de armazenamento
 
-### Testing
-- Unit tests for upload/download
-- MinIO integration tests (with test container)
-- Access control tests
-
----
-
-## Success Criteria
-- Files can be uploaded to local storage
-- Files can be downloaded by owner
-- File metadata stored and queryable
-- Delete operations work
-- Access control enforced (owner only)
+### Testes
+- Testes unitários para upload/download
+- Testes de integração MinIO (com container de teste)
+- Testes de controle de acesso
 
 ---
 
-## Dependencies
-- Drizzle ORM (existing)
-- LibSQL (existing)
-- Node.js fs module (built-in)
+## Critérios de Sucesso
+- Arquivos podem ser feitos upload para armazenamento local
+- Arquivos podem ser baixados pelo proprietário
+- Metadados de arquivo armazenados e consultáveis
+- Operações de deleção funcionam
+- Controle de acesso executado (apenas proprietário)
+
+---
+
+## Dependências
+- Drizzle ORM (existente)
+- LibSQL (existente)
+- Módulo fs do Node.js (built-in)
 
 ---
 
 ## Timeline
-- **Week 1:** Database schema + file operations
-- **Week 2:** Upload/download endpoints
-- **Week 3:** Agent integration + testing
+- **Semana 1:** Schema de banco de dados + operações de arquivo
+- **Semana 2:** Endpoints de upload/download
+- **Semana 3:** Integração de agente + testes
 
-Total: ~20 hours for solo developer
-
----
-
-## Future Enhancements
-- Cloud storage integration (AWS S3, etc.)
-- Versioning support
-- Backup to external storage
-- File preview generation
+Total: ~20 horas para desenvolvedor solo
 
 ---
 
-**Document History:**
-- v1.0 (2026-03-15): Simplified for personal solo developer project
+## Melhorias Futuras
+- Integração de armazenamento em nuvem (AWS S3, etc)
+- Suporte a versionamento
+- Backup para armazenamento externo
+- Geração de preview de arquivo
+
+---
+
+**Histórico do Documento:**
+- v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo

@@ -1,138 +1,138 @@
-# PRD-31: Custom Tool Framework
+# PRD-11: Framework de Ferramenta Customizada
 
-**Status:** Planning
-**Date:** 2026-03-15
-**Version:** 1.0
-
----
-
-## Personal Project Note
-
-This is a personal development project. Features follow KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles. Scope focuses on core functionality for a solo developer workflow.
+**Status:** Planejamento
+**Data:** 2026-03-15
+**Versão:** 1.0
 
 ---
 
-## 1. Overview
+## Nota de Projeto Pessoal
 
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes tool extensibility infrastructure specific to ad-product-forge.** Custom tool framework enables Nicolas' agents to dynamically create specialized tools for specific products and domains. This is application-specific capability extension, not core framework infrastructure.
-
-**Goal:** Allow agents to create and use custom tools dynamically without restarting the application.
-
-**Why (for ad-product-forge):** Agents should be able to extend their capabilities at runtime by wrapping Skills or defining simple HTTP integrations to new products and services.
-
-**Priority:** High
-**Timeline:** 3-4 weeks
+Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It). Escopo focado em funcionalidade principal para fluxo de trabalho de desenvolvedor solo.
 
 ---
 
-## 2. Problem
+## 1. Visão Geral
 
-- Tools are static (defined at startup)
-- Agents can't create new tools when needed
-- Adding a new tool requires code changes and restart
-- No mechanism for agents to share tools with each other
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
----
+**Este PRD descreve infraestrutura de extensibilidade de ferramentas específica para ad-product-forge.** Framework de ferramenta customizada permite que agentes de Nicolas criem dinamicamente ferramentas especializadas para produtos e domínios específicos. Esta é extensão de capacidade específica da aplicação, não infraestrutura principal do framework.
 
-## 3. Use Cases
+**Objetivo:** Permitir que agentes criem e usem ferramentas customizadas dinamicamente sem reiniciar a aplicação.
 
-1. **Agent wraps a Skill:** Research agent creates a tool that calls a Skill to fetch data
-2. **Agent defines HTTP integration:** Agent creates a tool for a simple API endpoint
-3. **Agent discovers tools:** Agent finds and reuses tools created by other agents
+**Por quê (para ad-product-forge):** Agentes devem ser capazes de estender suas capacidades em tempo de execução envolvendo Skills ou definindo integrações HTTP simples para novos produtos e serviços.
+
+**Prioridade:** Alta
+**Timeline:** 3-4 semanas
 
 ---
 
-## 4. Requirements
+## 2. Problema
 
-### Core Features
-
-**FR1: Tool Creation**
-- Agents can create custom tools with name, description, and implementation
-- Tool creation specifies: name, description, type, implementation details
-- System validates tool definitions before saving
-
-**FR2: Tool Implementation Methods**
-- **Skills wrapper:** Reference an existing Skill by ID
-- **HTTP integration:** Call an external API endpoint
-
-**FR3: Tool Storage & Persistence**
-- Custom tools stored in simple database table
-- Tools persist across agent restarts
-- Tools include metadata: creation timestamp, creator
-
-**FR4: Tool Access & Execution**
-- Agents can call custom tools like system tools
-- Tools execute with timeout protection (30 second default)
-- Tool execution is logged
-- Input validation against tool schema
+- Ferramentas são estáticas (definidas na inicialização)
+- Agentes não conseguem criar novas ferramentas quando necessário
+- Adicionar uma nova ferramenta requer mudanças de código e reinicialização
+- Nenhum mecanismo para agentes compartilharem ferramentas entre si
 
 ---
 
-## 5. Success Criteria
+## 3. Casos de Uso
 
-- Agents can create, persist, and use custom tools
-- Tool creation takes <5 seconds
-- Custom tool execution works reliably
-- Tool execution is logged for debugging
-- Tool schema validation prevents invalid definitions
+1. **Agente envolve uma Skill:** Agente de pesquisa cria uma ferramenta que chama uma Skill para obter dados
+2. **Agente define integração HTTP:** Agente cria uma ferramenta para um endpoint de API simples
+3. **Agente descobre ferramentas:** Agente encontra e reutiliza ferramentas criadas por outros agentes
 
 ---
 
-## 6. Non-Functional Requirements
+## 4. Requisitos
+
+### Recursos Principais
+
+**FR1: Criação de Ferramenta**
+- Agentes podem criar ferramentas customizadas com nome, descrição e implementação
+- Criação de ferramenta especifica: nome, descrição, tipo, detalhes de implementação
+- Sistema valida definições de ferramenta antes de salvar
+
+**FR2: Métodos de Implementação de Ferramenta**
+- **Wrapper de Skill:** Referenciar uma Skill existente por ID
+- **Integração HTTP:** Chamar um endpoint de API externo
+
+**FR3: Armazenamento & Persistência de Ferramenta**
+- Ferramentas customizadas armazenadas em tabela simples de banco de dados
+- Ferramentas persistem através de reinicializações de agente
+- Ferramentas incluem metadados: timestamp de criação, criador
+
+**FR4: Acesso & Execução de Ferramenta**
+- Agentes podem chamar ferramentas customizadas como ferramentas de sistema
+- Ferramentas executam com proteção de timeout (padrão 30 segundos)
+- Execução de ferramenta é registrada
+- Validação de entrada contra schema de ferramenta
+
+---
+
+## 5. Critérios de Sucesso
+
+- Agentes podem criar, persistir e usar ferramentas customizadas
+- Criação de ferramenta leva <5 segundos
+- Execução de ferramenta customizada funciona confiável
+- Execução de ferramenta é registrada para debugging
+- Validação de schema de ferramenta previne definições inválidas
+
+---
+
+## 6. Requisitos Não-Funcionais
 
 **Performance:**
-- Tool creation: <5 seconds
-- Tool execution works reliably
+- Criação de ferramenta: <5 segundos
+- Execução de ferramenta funciona confiável
 
-**Reliability:**
-- Tool execution failure doesn't crash agent
-- Failed calls are logged; agent can retry
-- Tool persistence survives agent restart
+**Confiabilidade:**
+- Falha de execução de ferramenta não derruba agente
+- Chamadas falhadas são registradas; agente pode retornar
+- Persistência de ferramenta sobrevive reinicialização de agente
 
-**Security:**
-- HTTP integrations only for public APIs (no credential leakage)
-- All modifications logged with timestamp and creator
-
----
-
-## 7. Scope
-
-### In Scope
-- Tool creation and validation
-- Skill wrapper implementation
-- HTTP integration implementation
-- Tool persistence
-- Tool execution with logging
-
-### Out of Scope
-- Tool versioning and lifecycle management
-- Tool discovery/search API
-- Tool composition (combining tools)
-- Visual tool builder UI
-- Advanced analytics
+**Segurança:**
+- Integrações HTTP apenas para APIs públicas (sem vazamento de credenciais)
+- Todas as modificações registradas com timestamp e criador
 
 ---
 
-## 8. Dependencies
+## 7. Escopo
 
-- **Skills System:** Must reference existing Skills
-- **Agent Database:** Must support tool tables
-- **Agent Execution:** Tools must integrate with tool calling
-- **Permission System:** Needs `tool:create` permission
+### Incluído
+- Criação e validação de ferramenta
+- Implementação de wrapper de Skill
+- Implementação de integração HTTP
+- Persistência de ferramenta
+- Execução de ferramenta com logging
+
+### Não Incluído
+- Versionamento e gerenciamento de ciclo de vida de ferramenta
+- API de descoberta/busca de ferramenta
+- Composição de ferramentas (combinando ferramentas)
+- UI de construtor visual de ferramenta
+- Análise avançada
 
 ---
 
-## 9. Technical Approach
+## 8. Dependências
 
-### Database Schema
+- **Sistema de Skills:** Deve referenciar Skills existentes
+- **Banco de Dados de Agente:** Deve suportar tabelas de ferramentas
+- **Execução de Agente:** Ferramentas devem integrar com tool calling
+- **Sistema de Permissão:** Precisa de permissão `tool:create`
 
-**`forge_custom_tools` table:**
+---
+
+## 9. Abordagem Técnica
+
+### Schema do Banco de Dados
+
+**Tabela `forge_custom_tools`:**
 ```
-- tool_id (UUID, primary key)
+- tool_id (UUID, chave primária)
 - agent_id (UUID)
-- tool_name (VARCHAR, unique per agent)
+- tool_name (VARCHAR, único por agente)
 - tool_description (TEXT)
 - tool_type (ENUM: skill, http)
 - implementation_type (ENUM: skill, http)
@@ -141,58 +141,58 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 - created_at (TIMESTAMP)
 ```
 
-### Implementation Phases
+### Fases de Implementação
 
-**Phase 1: Core Framework (1-2 weeks)**
-1. Define tool data model
-2. Implement tool creation and storage
-3. Integrate with agent tool system
-4. Skill wrapper implementation
-5. HTTP integration implementation
-6. Error handling and logging
-
----
-
-## 10. Risks & Mitigation
-
-| Risk | Mitigation |
-|------|-----------|
-| HTTP API errors | Proper error handling and retry logic |
-| Tool execution timeout | Configurable timeout, clear error messages |
-| Database persistence issues | Simple schema, regular backups |
+**Fase 1: Framework Principal (1-2 semanas)**
+1. Definir modelo de dados de ferramenta
+2. Implementar criação e armazenamento de ferramenta
+3. Integrar com sistema de ferramentas de agente
+4. Implementação de wrapper de Skill
+5. Implementação de integração HTTP
+6. Tratamento de erros e logging
 
 ---
 
-## 11. Metrics
+## 10. Riscos & Mitigação
 
-**Simple Tracking:**
-- Number of custom tools created (one developer, so basic usage tracking is enough)
-- Tool execution success rate
-- Errors and failures for debugging
-
----
-
-## 12. Testing Strategy
-
-- **Unit Tests:** Validation logic, basic functionality
-- **Integration Tests:** End-to-end creation, execution
-- **Error Handling Tests:** Timeout, HTTP failures, invalid input
+| Risco | Mitigação |
+|-------|-----------|
+| Erros de API HTTP | Tratamento adequado de erros e lógica de retry |
+| Timeout de execução de ferramenta | Timeout configurável, mensagens de erro claras |
+| Problemas de persistência de banco de dados | Schema simples, backups regulares |
 
 ---
 
-## Glossary
+## 11. Métricas
 
-| Term | Definition |
-|------|-----------|
-| Custom Tool | Tool created by agent to extend capabilities |
-| Tool Type | Classification: skill (wrapper), http (API) |
-| Skill Wrapper | Custom tool that wraps existing Skill |
+**Rastreamento Simples:**
+- Número de ferramentas customizadas criadas (um desenvolvedor, então rastreamento básico de uso é suficiente)
+- Taxa de sucesso de execução de ferramenta
+- Erros e falhas para debugging
 
 ---
 
-## Example Tool Definitions
+## 12. Estratégia de Testes
 
-### Skill Wrapper Tool
+- **Testes Unitários:** Lógica de validação, funcionalidade básica
+- **Testes de Integração:** Criação e execução de ponta a ponta
+- **Testes de Tratamento de Erro:** Timeout, falhas HTTP, entrada inválida
+
+---
+
+## Glossário
+
+| Termo | Definição |
+|-------|-----------|
+| Ferramenta Customizada | Ferramenta criada por agente para estender capacidades |
+| Tipo de Ferramenta | Classificação: skill (wrapper), http (API) |
+| Wrapper de Skill | Ferramenta customizada que envolve Skill existente |
+
+---
+
+## Exemplos de Definições de Ferramenta
+
+### Ferramenta Wrapper de Skill
 ```json
 {
   "toolName": "send_slack_message",
@@ -218,7 +218,7 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 }
 ```
 
-### HTTP Integration Tool
+### Ferramenta de Integração HTTP
 ```json
 {
   "toolName": "weather_lookup",
@@ -251,4 +251,4 @@ This is a personal development project. Features follow KISS (Keep It Simple, St
 
 ---
 
-**Next Steps:** Feasibility review and architecture decision
+**Próximos Passos:** Análise de viabilidade e decisão de arquitetura

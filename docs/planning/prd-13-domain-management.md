@@ -1,92 +1,92 @@
-# PRD-15: Domain Management
+# PRD-13: Gerenciamento de Domínio
 
-**Status:** Planning
+**Status:** Planejamento
 
-**Note:** This is a personal project from a solo developer. Built with KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles in mind.
-
----
-
-## 1. Overview
-
-### Classification: AD-PRODUCT-FORGE APPLICATION
-
-**This PRD describes domain management infrastructure specific to ad-product-forge.** Automatic subdomain provisioning enables Nicolas' agents to launch applications with unique, publicly accessible URLs without manual DNS management. This is application-specific infrastructure for autonomous product deployment.
-
-Automatic subdomain provisioning for deployed agent applications. Each deployed app gets a unique subdomain under a wildcard domain configuration.
-
-**Core flow (for ad-product-forge):**
-1. Development agents deploy applications
-2. Domain system automatically creates unique subdomain
-3. DNS A record points to Hetzner IP
-4. Wildcard TLS certificate covers subdomain
-5. App accessible at unique URL (e.g., agent-sales-tool.domain.com)
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com os princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
-## 2. Use Cases
+## 1. Visão Geral
 
-### 2.1 New Agent Deployment
-Agent deploys → domain system auto-creates subdomain → app accessible at unique URL.
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-### 2.2 Subdomain Management
-List, get status, delete subdomains for agents.
+**Este PRD descreve infraestrutura de gerenciamento de domínio específica para ad-product-forge.** Provisionamento automático de subdomínio permite que agentes de Nicolas façam launch de aplicações com URLs exclusivas e publicamente acessíveis sem gerenciamento de DNS manual. Esta é infraestrutura específica da aplicação para deployment de produto autônomo.
 
-### 2.3 DNS Status Check
-Query if DNS resolves correctly, certificate validity.
+Provisionamento automático de subdomínio para aplicações de agentes implantadas. Cada app implantada recebe um subdomínio único sob configuração de domínio wildcard.
 
----
-
-## 3. Core Concepts
-
-**Wildcard Domain:** Single domain (domain.com) with wildcard DNS record (*.domain.com) pointing to Hetzner IP.
-
-**Subdomain:** Unique DNS name per agent app (e.g., agent-sales-01.domain.com). Auto-created on deployment.
-
-**DNS Provider:** Cloudflare or Route53 for API-based record management.
-
-**SSL Certificate:** Wildcard certificate (*.domain.com) covers all subdomains.
+**Fluxo principal (para ad-product-forge):**
+1. Agentes de desenvolvimento fazem deploy de aplicações
+2. Sistema de domínio cria automaticamente subdomínio único
+3. Registro A de DNS aponta para IP de Hetzner
+4. Certificado TLS wildcard cobre subdomínio
+5. App acessível em URL única (ex: app-sales-tool.domain.com)
 
 ---
 
-## 4. Tools
+## 2. Casos de Uso
 
-**Subdomain Management:**
-- `createSubdomain(appName)` — Create subdomain, return FQDN
-- `deleteSubdomain(subdomain)` — Delete subdomain
+### 2.1 Deploy de Novo Agente
+Agente faz deploy → sistema de domínio cria automaticamente subdomínio → app acessível em URL única.
+
+### 2.2 Gerenciamento de Subdomínio
+Listar, obter status, deletar subdomínios para agentes.
+
+### 2.3 Verificação de Status de DNS
+Consultar se DNS resolve corretamente, validade de certificado.
 
 ---
 
-## 5. Storage
+## 3. Conceitos Principais
 
-Simple database schema:
+**Domínio Wildcard:** Domínio único (domain.com) com registro de DNS wildcard (*.domain.com) apontando para IP de Hetzner.
 
-- `domain_config` — primary_domain, dns_provider, hetzner_ip, api_key (encrypted)
+**Subdomínio:** Nome de DNS único por app de agente (ex: app-sales-01.domain.com). Auto-criado em deployment.
+
+**Provedor de DNS:** Cloudflare ou Route53 para gerenciamento de registro baseado em API.
+
+**Certificado SSL:** Certificado wildcard (*.domain.com) cobre todos os subdomínios.
+
+---
+
+## 4. Ferramentas
+
+**Gerenciamento de Subdomínio:**
+- `createSubdomain(appName)` — Criar subdomínio, retornar FQDN
+- `deleteSubdomain(subdomain)` — Deletar subdomínio
+
+---
+
+## 5. Armazenamento
+
+Schema de banco de dados simples:
+
+- `domain_config` — primary_domain, dns_provider, hetzner_ip, api_key (criptografado)
 - `subdomains` — subdomain_id, subdomain, fqdn, status, created_at
 
 ---
 
-## 6. Implementation
+## 6. Implementação
 
-- **Week 1:** DNS provider API client + subdomain CRUD operations
-- **Week 2:** Certificate provisioning via Let's Encrypt
-- **Week 3:** Integration tests + error handling
-
----
-
-## 7. Out of Scope
-
-- Multiple domain registrars
-- DNS failover to secondary provider
-- Advanced monitoring dashboards
-- DNSSEC signing
-- Multi-cloud DNS management
-- Domain renewal automation
-- Custom domain support per agent
-- IP change monitoring/failover
-- Certificate renewal automation (Let's Encrypt handles this)
-- TTL management
+- **Semana 1:** Cliente de API de provedor de DNS + operações CRUD de subdomínio
+- **Semana 2:** Provisionamento de certificado via Let's Encrypt
+- **Semana 3:** Testes de integração + tratamento de erros
 
 ---
 
-**Document Version:** 0.1 (Simplified)
-**Last Updated:** 2026-03-15
+## 7. Fora do Escopo
+
+- Múltiplos registradores de domínio
+- Failover de DNS para provedor secundário
+- Dashboards de monitoramento avançado
+- Assinatura DNSSEC
+- Gerenciamento de DNS multi-nuvem
+- Automação de renovação de domínio
+- Suporte a domínio customizado por agente
+- Monitoramento de mudança de IP/failover
+- Automação de renovação de certificado (Let's Encrypt lida com isso)
+- Gerenciamento de TTL
+
+---
+
+**Versão do Documento:** 0.1 (Simplificado)
+**Última Atualização:** 2026-03-15
