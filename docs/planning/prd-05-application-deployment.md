@@ -14,20 +14,29 @@ Permitir que agentes de desenvolvimento façam deploy autônomo de aplicações 
 
 ## Requisitos Funcionais
 
-**FR1: Fazer Deploy de Aplicação**
-- Agente fornece: nome da app, repositório Git, Dockerfile
-- Sistema retorna: ID de deployment, URL completa, status
+**FR1: Fazer Deploy de Aplicação via Workflow**
+- Agente invoca workflow de deployment (similar a hireAgent/terminateAgent)
+- Entrada: nome da app, repositório Git, Dockerfile
+- Mastra workflow executa deployment
+- Retorna: ID de deployment, URL completa, status inicial
 - Subdomínio único é criado automaticamente (ex: `https://app-{nome}.domain.com`)
 
 **FR2: Monitorar Status de Deployment**
 - Agente consulta status via `getDeploymentStatus(deploymentId)`
 - Retorna: estado atual (building, deploying, running, failed), logs, mensagens de erro
+- Webhook do Coolify atualiza status automaticamente
 
-**FR3: Remover Aplicação**
-- Agente invoca `deleteApplication(deploymentId)`
+**FR3: Notificações via Webhook**
+- Coolify envia webhook ao completar deployment (sucesso ou erro)
+- Webhook inclui: deployment_id, status (success/error), logs resumidos, erro (se houver)
+- Sistema atualiza tabela deployments com novo status
+- Agente de ops pode ser notificado automaticamente
+
+**FR4: Remover Aplicação**
+- Agente invoca deletar via ferramenta ou workflow
 - Sistema para container, remove app do Coolify, marca como deletada
 
-**FR4: Integração com Gerenciamento de Domínio**
+**FR5: Integração com Gerenciamento de Domínio**
 - Na criação do deployment, sistema:
   - Cria subdomínio único via sistema de gerenciamento de domínios
   - Aponta para IP da instância Coolify
@@ -39,17 +48,23 @@ Permitir que agentes de desenvolvimento façam deploy autônomo de aplicações 
 ## Arquitetura
 
 ```
-Agente de Desenvolvimento
+Agente de Desenvolvimento invoca workflow
         ↓
-   deployApplication()
+Mastra workflow: deployApplication({app_name, repo_url, dockerfile})
         ↓
-API Coolify + Gerenciador de Domínios
+   API Coolify + Gerenciador de Domínios
         ↓
    [Build Docker]
    [Deploy Container]
    [Criar Subdomínio]
         ↓
-URL Acessível + ID Deployment
+URL Acessível + ID Deployment retornado
+        ↓
+Coolify executa build/deploy
+        ↓
+Coolify dispara webhook com status (success/error)
+        ↓
+Sistema recebe webhook, atualiza deployment status
         ↓
 Agente de Operações monitora via getDeploymentStatus()
 ```
@@ -67,6 +82,39 @@ Agente de Operações monitora via getDeploymentStatus()
 - `subdomain` — Subdomínio atribuído (ex: app-invoice-1)
 - `coolify_app_id` — ID da app no Coolify
 - `deployed_at` — Timestamp do deployment
+
+---
+
+## Webhook de Notificação do Coolify
+
+**Endpoint:** `POST /api/webhooks/coolify/deployment`
+
+**Payload recebido do Coolify:**
+```json
+{
+  "deploymentId": "coolify-app-id",
+  "deployment_id": "id-deployment-interno",
+  "status": "success" | "error",
+  "logs": "últimas 500 caracteres do log de build",
+  "error": "mensagem de erro (se aplicável)",
+  "url": "https://app-nome.domain.com",
+  "timestamp": "ISO 8601 timestamp"
+}
+```
+
+**Ações ao receber webhook:**
+1. Validar assinatura de webhook do Coolify
+2. Localizar deployment por `deployment_id`
+3. Atualizar status em tabela deployments
+4. Se error: armazenar mensagem de erro
+5. Se success: marcar como running, armazenar URL final
+6. Disparar notificação para agente de ops (opcional: via internal chat)
+
+**Adição ao schema deployments:**
+- `coolify_webhook_signature` — para validação de webhook (opcional, se Coolify suportar)
+- `error_message` — mensagem de erro se deployment falhar
+- `completed_at` — timestamp quando deployment se completou
+- `final_url` — URL final do app deployado
 
 ---
 
