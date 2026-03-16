@@ -30,18 +30,26 @@ export type CreateAgentOptions = {
   longTermMemory?: boolean;
 };
 
+export interface CreateAgentConfig<
+  TAgentId extends string = string,
+  TTools extends ToolsInput = ToolsInput,
+  TOutput = undefined,
+  TRequestContext extends Record<string, unknown> | unknown = unknown,
+> extends Pick<
+    CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
+    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'agents' | 'omModel' | 'providers'
+  > {
+  workspace?: Exclude<CreateForgeAgentConfig['workspace'], Function>;
+  workspaceBasePath?: string;
+}
+
 export async function createAgent<
   TAgentId extends string = string,
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
-  config: Pick<
-    CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'agents' | 'omModel' | 'providers'
-  > & {
-    workspace?: Exclude<CreateForgeAgentConfig['workspace'], Function>;
-  },
+  config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const { client, storage, vector } = createAgentStorage(config.id);
@@ -51,7 +59,7 @@ export async function createAgent<
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
     return path.resolve(currentDir, '../../workspace');
   };
-  const workspacePath = (config.workspace?.filesystem as any)?._basePath || getDefaultWorkspacePath();
+  const workspacePath = config.workspaceBasePath || (config.workspace?.filesystem as any)?._basePath || getDefaultWorkspacePath();
   const communicationDbPath = path.resolve(workspacePath, 'communications.db');
   const communicationClient = createClient({ url: `file:${communicationDbPath}` });
 
@@ -116,12 +124,7 @@ export async function createForgeAgent<
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
-  config: Pick<
-    CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'agents' | 'omModel' | 'providers'
-  > & {
-    workspace?: Exclude<CreateForgeAgentConfig['workspace'], Function>;
-  },
+  config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   return createAgent(config, { longTermMemory: true });
 }

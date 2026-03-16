@@ -3,17 +3,18 @@ import type { Database } from '../database/index.js';
 import { agents } from '../database/schema.js';
 import { createAgent } from './create-forge-agent.js';
 import type { CreateForgeAgentConfig } from './create-forge-agent.js';
+import type { CommunicationProvider } from '@mastra-engine/core';
 
 export interface AgentLoaderConfig {
   agentId: string;
-  workspace?: Exclude<CreateForgeAgentConfig['workspace'], Function>;
+  workspaceBasePath?: string;
 }
 
 /**
  * Load agent configuration from database and create agent instance
  *
  * @param db - Database connection
- * @param config - Agent loader configuration with agentId and optional workspace
+ * @param config - Agent loader configuration with agentId and optional workspaceBasePath
  * @returns Configured agent instance
  * @throws Error if agent not found in database
  */
@@ -31,7 +32,7 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
 
   // TODO: Load providers from agent_providers table and decrypt credentials
   // For now, we'll use empty providers array and handle provider configuration separately
-  const providers = [];
+  const providers: CommunicationProvider[] = [];
 
   // Create agent from database configuration
   const agent = await createAgent(
@@ -45,7 +46,7 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
       tools: agentConfig.tools ? JSON.parse(agentConfig.tools) : undefined,
       workflows: agentConfig.workflows ? JSON.parse(agentConfig.workflows) : undefined,
       providers,
-      workspace: config.workspace,
+      workspaceBasePath: config.workspaceBasePath,
     },
     { longTermMemory: true }
   );
@@ -77,7 +78,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
     try {
       const agent = await loadAgent(db, {
         agentId: agentConfig.id,
-        workspace: config.workspace,
+        workspaceBasePath: config.workspaceBasePath,
       });
       agents.set(agentConfig.id, agent);
     } catch (error) {
