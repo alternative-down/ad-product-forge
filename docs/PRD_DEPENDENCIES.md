@@ -112,10 +112,6 @@
 - ⬆️ Depende de: PRD-01 (opcional, para armazenar templates)
 - **Razão:** Pode ser criado com independência relativa
 
-**PRD-30: Task Queue & Event Processing (BullMQ)**
-- ⬆️ Depende de: (nenhuma crítica, mas útil com PRD-05)
-- **Razão:** Async queue para tarefas longas
-
 ---
 
 ## P6 - Presença Pública e Extensibilidade
@@ -148,8 +144,9 @@
 - **Status:** Questão em aberto (GitHub App vs conta por agente)
 - **Nota:** Tratado como config + investigação em PRD-33 (webhooks)
 
-**PRD-12: MinIO Storage**
+**PRD-12: Serviços de Infraestrutura Compartilhada (MinIO + BullMQ)**
 - **Status:** Em aberto, esperar necessidade surgir
+- **Nota:** Recursos compartilhados que agentes podem usar em suas aplicações, não features da plataforma
 
 ---
 
@@ -184,17 +181,16 @@
 
 ### Fase 6: Capacidades Avançadas
 18. **PRD-32** - Web Application Templates
-19. **PRD-30** - Task Queue & Event Processing
-20. **PRD-24** - Project & Task Management (Integração)
-21. **PRD-28** - Social Media & Community (Buffer + investigação)
+19. **PRD-24** - Project & Task Management (Integração)
+20. **PRD-28** - Social Media & Community (Buffer + investigação)
 
 ### Fase 7: Investigação/Aberto
-22. **PRD-07** - Browser Service (investigação)
-23. **PRD-16** - GitHub Integration (investigação)
-24. **PRD-11** - Custom Tool Framework (adiado)
-25. **PRD-21** - Marketing Platform Integration (adiado)
-26. **PRD-29** - Sub-agent Capability (opcional)
-27. **PRD-12** - MinIO Storage (em aberto)
+21. **PRD-07** - Browser Service (investigação)
+22. **PRD-16** - GitHub Integration (investigação)
+23. **PRD-11** - Custom Tool Framework (adiado)
+24. **PRD-21** - Marketing Platform Integration (adiado)
+25. **PRD-29** - Sub-agent Capability (opcional)
+26. **PRD-12** - Serviços de Infraestrutura Compartilhada (em aberto)
 
 ---
 
@@ -207,6 +203,7 @@
 5. **PRD-22 é core para accountability** - Implementar cedo (Fase 3)
 6. **PRD-33 é importante para automação** - Webhooks necessários para eventos
 7. **PRD-02 é mais avançado que PRD-03/04** - Agentes externos vêm depois dos internos
+8. **PRD-12 não é uma feature** - É infraestrutura compartilhada que fica disponível, sem timeline urgente
 
 ---
 

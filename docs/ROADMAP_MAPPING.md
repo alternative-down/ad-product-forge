@@ -129,16 +129,16 @@
 - **PRD-32:** Web Application Templates ✅
 - **PRD-05:** Application Deployment (Coolify) ✅
 - **PRD-07:** Browser Service ⚠️ (investigação necessária)
-- **PRD-30:** Task Queue & Event Processing (BullMQ) ✅
-- **PRD-12:** MinIO Storage ⏸️ (em aberto)
+- **PRD-12:** Serviços de Infraestrutura Compartilhada (MinIO + BullMQ) ⏸️ (em aberto)
 
 **Escopo:**
 - Templates web com auth, pagamento, tickets
 - Deploy via Coolify em Hetzner
 - Domínio wildcard e DNS management (configuração)
 - Browser externo (serviço) - investigação necessária
-- MinIO para storage - **em aberto, esperar necessidade surgir**
-- BullMQ/trigger.dev para async
+- **Serviços compartilhados em aberto:**
+  - MinIO para storage (agentes usam em suas aplicações)
+  - BullMQ/trigger.dev para async (agentes usam em suas aplicações)
 - Configuração de aplicação pós-deploy
 
 ---
@@ -242,7 +242,6 @@
 - PRD-25: Research as Workflow (refatorado)
 - PRD-26: Role and Function Schema
 - PRD-27: Secrets Management
-- PRD-30: Task Queue & Event Processing
 - PRD-31: Ticketing System as Provider
 - PRD-32: Web Application Templates
 - PRD-33: Webhook Event Routing

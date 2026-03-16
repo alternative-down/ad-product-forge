@@ -19,7 +19,7 @@
 | PRD-08 | cash-flow-control | Cash Flow Control | 9 |
 | PRD-10 | cron-scheduling-tool | Cron/Scheduling Tool + Heartbeat | 6 |
 | PRD-11 | custom-tool-framework | Custom Tool Framework | 12 |
-| PRD-12 | distributed-storage-system | MinIO Storage (Em Aberto) | 8 |
+| PRD-12 | distributed-storage-system | Serviços de Infraestrutura Compartilhada (MinIO + BullMQ - Em Aberto) | 8 |
 | PRD-16 | github-integration | GitHub Integration (Config) | 7 |
 | PRD-18 | internal-group-chat-implementation | Internal Group Chat (Participants) | 5 |
 | PRD-19 | knowledge-base-system | Knowledge Base (Mastra Workspace) | 10 |
@@ -33,7 +33,6 @@
 | PRD-27 | secrets-management | Secrets Management | 2 |
 | PRD-28 | social-media-community-integration | Social Media & Community Integration | 11 |
 | PRD-29 | sub-agent-capability | Sub-agent Capability (Opcional) | 12 |
-| PRD-30 | task-queue-event-processing | Task Queue & Event Processing (BullMQ) | 8 |
 | PRD-31 | ticketing-system | Ticketing System as Provider | 5 |
 | PRD-32 | web-application-templates | Web Application Templates | 8 |
 | PRD-33 | webhook-event-routing-system | Webhook Event Routing System | 7 |
@@ -49,19 +48,20 @@
 | PRD-14 | electronic-signature | Descartado |
 | PRD-15 | email-service-integration | Config (SMTP/IMAP existente) |
 | PRD-17 | heartbeat-system | Integrado a PRD-10 |
+| PRD-30 | task-queue-event-processing | **Não existe** - Task Queue é parte de PRD-12 (Infraestrutura Compartilhada) |
 
 ---
 
-## Erros Encontrados no ROADMAP_MAPPING.md
+## Erros Encontrados e Corrigidos
 
-1. **Frente 1:** PRD-02 listado como "Communication Provider Integration"
-   - **Correto:** PRD-02 é "External Agent System" (deve estar em Frente 4)
+1. **PRD-02:** Estava listado como "Communication Provider Integration"
+   - **Correto:** PRD-02 é "External Agent System" (está em Frente 4)
 
-2. **Frente 8:** PRD-30 vs PRD-32 confundidos
-   - **Correto:** PRD-32 = Web Templates, PRD-30 = Task Queue
+2. **PRD-30:** Não deveria existir
+   - **Correto:** Task Queue é parte de PRD-12 (Infraestrutura Compartilhada)
 
-3. **Status alinhados:** Listava PRD-26 como "Task Queue"
-   - **Correto:** PRD-26 = Role and Function Schema
+3. **PRD-12:** Deveria descrever serviços compartilhados (MinIO + BullMQ)
+   - **Correto:** PRD-12 = Serviços de Infraestrutura Compartilhada (em aberto)
 
 ---
 
