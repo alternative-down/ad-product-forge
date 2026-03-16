@@ -47,11 +47,14 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     this.searchIndexName = config.searchIndexName;
   }
 
-  static async create(config: { agentId: string; om: ObservationalMemory }) {
+  static async create(config: { agentId: string; om: ObservationalMemory; memoryBasePath?: string }) {
     const indexName = `${config.agentId}_memory_search`.replace(/[^a-zA-Z0-9_]/g, '_');
+    const memoryPath = config.memoryBasePath || path.resolve(process.cwd(), MEMORY_WORKSPACE_ROOT, config.agentId);
+    const vectorStorePath = path.resolve(path.dirname(memoryPath), `${config.agentId}-memory-workspace.db`);
+
     const vectorStore = new LibSQLVector({
       id: `${config.agentId}-memory-workspace-vector`,
-      url: `file:${path.resolve(process.cwd(), `${config.agentId}-memory-workspace.db`)}`,
+      url: `file:${vectorStorePath}`,
     });
     const workspace = new WorkspaceRuntime({
       bm25: true,
@@ -59,10 +62,10 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       autoIndexPaths: ['/'],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({
-        basePath: path.resolve(process.cwd(), MEMORY_WORKSPACE_ROOT, config.agentId),
+        basePath: memoryPath,
       }),
       sandbox: new LocalSandbox({
-        workingDirectory: path.resolve(process.cwd(), MEMORY_WORKSPACE_ROOT, config.agentId),
+        workingDirectory: memoryPath,
       }),
       vectorStore,
       searchIndexName: indexName,

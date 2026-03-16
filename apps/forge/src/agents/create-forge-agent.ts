@@ -52,16 +52,22 @@ export async function createAgent<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
-  const { client, storage, vector } = createAgentStorage(config.id);
+  // Build agent workspace structure from workspaceBasePath
+  // Structure: workspaceBasePath/{agentId}/[workspace, database.db, workspace-memory]
+  if (!config.workspaceBasePath) {
+    throw new Error('workspaceBasePath is required to create an agent');
+  }
 
-  // Create communication database client from workspace path
-  const getDefaultWorkspacePath = () => {
-    const currentDir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(currentDir, '../../workspace');
-  };
-  const workspacePath = config.workspaceBasePath || getDefaultWorkspacePath();
-  const communicationDbPath = path.resolve(workspacePath, 'communications.db');
-  const communicationClient = createClient({ url: `file:${communicationDbPath}` });
+  const agentWorkspacePath = path.resolve(config.workspaceBasePath, config.id);
+  const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
+  const agentWorkspaceDir = path.resolve(agentWorkspacePath, 'workspace');
+  const agentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
+
+  // Create agent storage with custom database path
+  const { client, storage, vector } = createAgentStorage(config.id, agentDatabasePath);
+
+  // Create communication database client from agent database
+  const communicationClient = createClient({ url: `file:${agentDatabasePath}` });
 
   const communication = await createCommunicationModule({
     client: communicationClient,
@@ -84,6 +90,7 @@ export async function createAgent<
     const longTermMemory = await LongTermMemory.create({
       agentId: config.id,
       om,
+      memoryBasePath: agentMemoryPath,
     });
     inputProcessors.push(longTermMemory);
     outputProcessors.push(longTermMemory);

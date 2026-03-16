@@ -3,9 +3,9 @@ import path from 'node:path';
 import { createClient } from '@libsql/client';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 
-export function createAgentStorage(agentId: string) {
-  const dbPath = path.resolve(process.cwd(), `${agentId}.db`);
-  const dbUrl = `file:${dbPath}`;
+export function createAgentStorage(agentId: string, dbPath?: string) {
+  const databasePath = dbPath || path.resolve(process.cwd(), `${agentId}.db`);
+  const dbUrl = `file:${databasePath}`;
   const client = createClient({ url: dbUrl });
 
   return {
