@@ -1,87 +1,160 @@
-# PRD-22: Sistema Micro-ERP (Simplificado)
+# PRD-22: Sistema de Fluxo de Caixa e Micro-ERP
 
-**Status:** Rascunho - Simplificado para Desenvolvedor Solo
-**Data:** 2026-03-15
-**Nota:** Projeto de desenvolvedor pessoal. Aplicar princípios KISS + YAGNI.
+> **Nota:** Este é um projeto pessoal para desenvolvedor solo. Aplicar KISS + YAGNI. Este PRD é o mecanismo **core** que traz controle e accountability aos agentes.
+
+**Classificação:** APLICAÇÃO AD-PRODUCT-FORGE
 
 ---
 
-## 1. Resumo
-
-### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
-
-**Este PRD descreve infraestrutura de operações comerciais específica do ad-product-forge.** Rastreamento financeiro permite que Nicolas entenda a economia da sua plataforma de agente autônomo (custos vs. receita). Isto é específico da aplicação, não infraestrutura de framework.
+## 1. Visão Geral
 
 ### Objetivo
-Rastrear métricas financeiras simples (despesas, receitas).
 
-### Valor (para ad-product-forge)
-- Entender custos de executar agentes e serviços
-- Rastrear receita gerada por aplicações
-- Previsão simples para planejamento de negócio
+Estruturar um **"caixa da empresa"** centralizado que permite:
+- Nicolas (proprietário) controlar os recursos da plataforma
+- Agentes gerenciarem a empresa digital e serem responsáveis por ter lucro
+- Rastrear e visualizar os dados financeiros para tomadas de decisão
 
-### Nota Importante
-Este é um projeto pessoal. Pular recursos complexos como:
-- Fluxos de trabalho de aprovação
-- Limites de orçamento
-- Relatório de conformidade
-- Integração com software de contabilidade externa
+### Dinâmica Operacional
+
+1. **Nicolas faz aportes iniciais** → libera saldo para agentes operarem
+2. **Agentes gerenciam com saldo disponível** → responsáveis por gastos e receitas
+3. **Com tração** → agentes ficam por conta própria
+4. **Nicolas faz saques** → quando há lucro para retirar
+
+### Impacto
+
+Este é o mecanismo que traz **controle e accountability** aos agentes. Eles precisam gerenciar recursos reais e ter lucro, não é simulação.
 
 ---
 
 ## 2. Escopo
 
-### Incluído
-- Registrar despesas (categoria de custo, valor, descrição)
-- Registrar receitas (fonte, valor, descrição)
-- Calcular custos de agente (simples)
-- Relatório básico
+### Rastreado no Caixa
+
+**Custos:**
+- Contratação de novos agentes (salário inicial/setup)
+- Custos operacionais diários de cada agente (quanto custa rodar cada um em $)
+- Custos de APIs e serviços externos
+- Custos base de infraestrutura (servidor, domínio, etc.)
+
+**Receitas:**
+- Recebimentos de clientes/aplicações (Stripe, Asaas)
+- Previsões de receitas futuras
+
+**Fluxo:**
+- Contas a pagar com histórico
+- Contas a receber com histórico
+- Saldo disponível
+- Previsões
+
+### Acesso para Agentes
+
+- **Visualizar dados**: Agentes podem ver dados financeiros relevantes
+- **Views customizadas**: Agentes criam suas próprias visualizações de dados
+- **Queries diretas**: Agentes rodam queries diretas para coletar informações que querem
+- **Folha de pagamento**: Cada agente sabe quanto custa (em $) para rodar
 
 ### Não Incluído
-- Fluxos de trabalho de aprovação
-- Aplicação de orçamento
-- Algoritmos de previsão
-- Análise de cenário
+
+- Fluxos de trabalho de aprovação complexos
+- Algoritmos preditivos avançados
+- Integração com software de contabilidade externa (QuickBooks, Xero, etc.)
 - Dashboard UI
-- Integração com QuickBooks/Xero
-- Gerenciamento de folha de pagamento
 - Suporte a múltiplas moedas
-- Relatório de imposto/conformidade
 
 ---
 
 ## 3. Requisitos
 
-### RF-1: Ferramenta logExpense
+### RF-1: Registrar Transação
 ```typescript
-interface LogExpenseParams {
+interface LogTransactionParams {
+  type: 'expense' | 'revenue';
+  category: string; // ex: 'agent_salary', 'api_cost', 'infrastructure', 'customer_payment'
   amount: number;
   description: string;
+  relatedAgentId?: string; // opcional, para rastrear custos por agente
+  relatedApplicationId?: string; // opcional, para receitas de apps
+  scheduledFor?: Date; // para previsões/contas futuras
 }
 
-// Retorna: success: boolean
+// Retorna: { transactionId, success }
 ```
 
-### RF-2: Ferramenta logRevenue
+### RF-2: Consultar Saldo e Resumo
 ```typescript
-interface LogRevenueParams {
-  amount: number;
-  description: string;
-}
-
-// Retorna: success: boolean
-```
-
-### RF-3: Ferramenta getSummary
-```typescript
-interface GetSummaryParams {
-  // Sem params - retornar resumo do mês atual
+interface GetCashFlowSummaryParams {
+  periodStart?: Date; // padrão: início do mês
+  periodEnd?: Date; // padrão: hoje
 }
 
 // Retorna: {
 //   totalExpenses: number;
 //   totalRevenues: number;
 //   netProfit: number;
+//   balance: number; // saldo disponível
+//   expectedRevenues: number; // previsões
+//   expectedExpenses: number; // previsões
+// }
+```
+
+### RF-3: Listar Transações
+```typescript
+interface ListTransactionsParams {
+  filters?: {
+    type?: 'expense' | 'revenue';
+    category?: string;
+    agentId?: string;
+    applicationId?: string;
+    dateRange?: { start: Date; end: Date };
+  };
+  limit?: number; // padrão: 100
+  offset?: number; // padrão: 0
+}
+
+// Retorna: array de transações com detalhes
+```
+
+### RF-4: Criar View Customizada (por agente)
+```typescript
+interface CreateCustomViewParams {
+  agentId: string;
+  name: string; // ex: "Meus custos mensais"
+  query: string; // SQL para executar
+  description?: string;
+}
+
+// Retorna: { viewId, success }
+```
+
+### RF-5: Executar Query Direta (por agente)
+```typescript
+interface ExecuteQueryParams {
+  agentId: string;
+  query: string; // SQL com scope limitado ao agente
+}
+
+// Retorna: { results: array, success }
+// Nota: Query é validada para não acessar dados de outros agentes
+```
+
+### RF-6: Calcular Custo de Agente
+```typescript
+interface GetAgentCostParams {
+  agentId: string;
+  period?: 'daily' | 'weekly' | 'monthly'; // padrão: monthly
+}
+
+// Retorna: {
+//   agentId: string;
+//   totalCost: number; // em $
+//   breakdown: {
+//     salary: number;
+//     apiUsage: number;
+//     infrastructure: number;
+//     // ...
+//   };
 // }
 ```
 
@@ -89,32 +162,67 @@ interface GetSummaryParams {
 
 ## 4. Banco de Dados
 
-```sql
-CREATE TABLE financial_log (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL, -- 'expense' ou 'revenue'
-  amount DECIMAL(10, 2) NOT NULL,
-  description TEXT,
-  logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+**Tabela: financial_transactions**
+```typescript
+{
+  id: UUID (primary key)
+  type: 'expense' | 'revenue'
+  category: string
+  amount: decimal(12, 2)
+  description: string
+  related_agent_id?: UUID
+  related_application_id?: UUID
+  scheduled_for?: timestamp (para previsões)
+  created_at: timestamp
+  recorded_by: UUID (quem registrou - Nicolas ou sistema)
+}
+```
+
+**Tabela: agent_costs** (cache/historical)
+```typescript
+{
+  id: UUID
+  agent_id: UUID
+  period_start: date
+  period_end: date
+  total_cost: decimal(12, 2)
+  breakdown: JSON (detalhamento: salary, api, infrastructure, etc.)
+  calculated_at: timestamp
+}
+```
+
+**Tabela: financial_views** (customizadas por agentes)
+```typescript
+{
+  id: UUID
+  agent_id: UUID
+  name: string
+  query: string
+  description?: string
+  created_at: timestamp
+  last_executed_at?: timestamp
+}
 ```
 
 ---
 
-## 5. Critérios de Sucesso
+## 5. Segurança e Isolamento
+
+- Agentes **não podem** acessar dados financeiros de outros agentes
+- Queries são validadas e scopadas para apenas dados visíveis ao agente
+- Registros de transações são auditados (quem registrou, quando)
+- Apenas Nicolas pode fazer aportes e saques
+
+---
+
+## 6. Critérios de Sucesso
+
 - [ ] Consegue registrar despesas e receitas
-- [ ] Consegue visualizar resumo mensal
-- [ ] Retorna totais corretos
-
----
-
-## 8. Status
-**Adiado** - Bom ter, não essencial para MVP.
-
----
-
-## 7. Esforço
-- **Total: ~4 horas**
+- [ ] Agentes conseguem visualizar dados relevantes
+- [ ] Agentes conseguem criar views customizadas
+- [ ] Cálculo de custos por agente está correto
+- [ ] Saldo e previsões são calculados corretamente
+- [ ] Isolamento de dados entre agentes funciona
 
 ---
 

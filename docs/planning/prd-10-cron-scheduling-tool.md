@@ -22,7 +22,7 @@ O **Sistema de Heartbeat** é a infraestrutura de base que executa independentem
 
 ### Responsabilidades do Heartbeat:
 
-1. **Verificação Periódica de Saúde:** Heartbeat periódico (padrão: 5 min) por agente
+1. **Verificação Periódica de Saúde:** Heartbeat periódico (intervalo a definir) por agente
    - Atualiza `lastHeartbeatAt` na metadata do agente
    - Detecta agentes "obsoletos" (sem heartbeat > 2x intervalo)
 
@@ -41,7 +41,7 @@ O **Sistema de Heartbeat** é a infraestrutura de base que executa independentem
 
 ### Configuração do Heartbeat:
 
-- `agentConfig.heartbeat.interval` — Intervalo em ms (padrão: 300000 = 5 min)
+- `agentConfig.heartbeat.interval` — Intervalo em ms (definir durante implementação)
 - `agentConfig.heartbeat.debounceMs` — Janela de debounce (padrão: 1000)
 - `agentConfig.heartbeat.timeoutMs` — Duração máxima de execução (padrão: 3600000 = 1 hora)
 

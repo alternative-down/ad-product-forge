@@ -1,130 +1,101 @@
-# PRD-24: Gerenciamento de Projeto & Tarefa
+# PRD-24: Integração de Sistema de Projetos & Tarefas
 
-**Status:** Rascunho - Simplificado para Desenvolvedor Solo
-**Data:** 2026-03-15
-**Versão:** 1.0
-**Nota:** Projeto pessoal por desenvolvedor solo. Escopo limitado a funcionalidade core (KISS + YAGNI).
+> **Nota:** Este PRD é sobre **integração** com uma ferramenta existente, não desenvolvimento de um sistema próprio.
+
+**Classificação:** APLICAÇÃO AD-PRODUCT-FORGE
 
 ---
 
-## Resumo Executivo
-
-### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
-
-**Este PRD descreve infraestrutura de gerenciamento de projeto específica do ad-product-forge.** Rastreamento de tarefa permite que Nicolas organize e monitore trabalho de agente através de múltiplos projetos. Isto é específico da aplicação, não infraestrutura de framework.
+## 1. Visão Geral
 
 ### Objetivo
-Implementar um sistema simples de gerenciamento de tarefa para organizar trabalho em projetos com rastreamento de status, sem dependências complexas, hierarquias ou recursos de colaboração.
 
-### Características Core
-1. **Projetos** - Criar e organizar trabalho em projetos
-2. **Tarefas** - Criar tarefas dentro de projetos com status básico
-3. **Rastreamento de Status** - Rastrear progresso de tarefa (to-do, in-progress, done)
-4. **Listagem Simples** - Visualizar tarefas filtradas por projeto ou status
+Fornecer aos agentes um sistema de **gerenciamento de projetos e tarefas** que eles possam usar para organizar e rastrear trabalho.
 
-### Fora do Escopo
-- Dependências de tarefa
-- Subtarefas/hierarquias
-- Atribuições/recursos de equipe
-- Comentários/discussões
-- Anexos de arquivo
-- Notificações
-- Feeds de atividade
-- Filtragem avançada
-- Dashboards
+### Abordagem
 
----
+**Não desenvolver do zero.** Usar uma ferramenta existente que:
+- Tenha **MCP (Model Context Protocol) pronto** para integração com LLMs
+- Ou tenha **CLIs (Command-Line Interfaces)** bem documentadas
+- Seja facilmente integrada como Tool/Workflow Mastra
 
-## Modelo de Dados
+### Candidatas
 
-### Projetos
-```typescript
-projects {
-  id: UUID
-  name: string
-  description: string (opcional)
-  status: 'active' | 'archived'
-  created_at: timestamp
-  updated_at: timestamp
-}
-```
+Exemplos de ferramentas que poderiam funcionar:
+- **Linear** (tem MCP, GraphQL API, bom para agentes)
+- **Airtable** (API forte, automações)
+- **Notion** (MCP disponível, bases de dados)
+- **GitHub Projects** (integrado com GitHub, CLI disponível)
+- **Todoist** (API simples, CLI)
 
-### Tarefas
-```typescript
-tasks {
-  id: UUID
-  project_id: UUID (chave estrangeira)
-  title: string
-  description: string (opcional)
-  status: 'to-do' | 'in-progress' | 'done'
-  created_at: timestamp
-  updated_at: timestamp
-}
-```
+### Critério de Seleção
+
+Escolher ferramenta que:
+1. Tenha integração pronta (MCP ou CLI robusto)
+2. Suporte criar projetos e tarefas programaticamente
+3. Permita rastreamento de status
+4. Tenha API para consultas (listar, filtrar)
+5. Seja razoavelmente simples de usar
 
 ---
 
-## Endpoints de API
+## 2. Funcionalidades Esperadas
 
-### Projetos
-- `POST /api/projects` — Criar projeto
-- `GET /api/projects` — Listar projetos
-- `GET /api/projects/:id` — Obter detalhes do projeto
-- `PUT /api/projects/:id` — Atualizar projeto
-- `DELETE /api/projects/:id` — Deletar projeto
+Os agentes devem conseguir:
 
-### Tarefas
-- `POST /api/projects/:project_id/tasks` — Criar tarefa
-- `GET /api/projects/:project_id/tasks` — Listar tarefas do projeto
-- `GET /api/tasks/:id` — Obter detalhes da tarefa
-- `PUT /api/tasks/:id` — Atualizar tarefa (incluindo mudanças de status)
-- `DELETE /api/tasks/:id` — Deletar tarefa
-
-### Filtragem
-- `GET /api/tasks?status=in-progress` — Listar tarefas por status
-- `GET /api/tasks?project_id=X` — Listar tarefas por projeto (via GET /api/projects/:project_id/tasks)
+- **Criar projetos** — Organizar trabalho em grupos
+- **Criar tarefas** — Dentro de projetos, com descrição
+- **Rastrear status** — to-do, in-progress, done (ou equivalente)
+- **Listar/filtrar** — Por projeto, status, data
+- **Atualizar tarefas** — Mudar status, descrição, prioridade
+- **Consultar dados** — Para usar em relatórios ou decisões
 
 ---
 
-## Notas de Implementação
+## 3. Integração com Mastra
 
-### Banco de Dados
-- Usar ORM Drizzle + LibSQL existentes
-- Criar tabelas: `projects`, `tasks`
-- Índice em project_id para queries rápidas de tarefa
-- Índice em status para filtragem
+### Como Será Exposto aos Agentes
 
-### Design de API
-- Endpoints REST simples
-- Todas atualizações de campo via PUT
-- Delete permanente é aceitável
+**Opção A: Via MCP**
+- Se a ferramenta tiver MCP, expor diretamente como Tool via MCP integration
+- Mastra consome MCP e disponibiliza ao agente
 
-### Validação
-- Usar Zod para validação de schema
-- Obrigatório: nome de projeto, título de tarefa
-- Status válidos aplicados em nível de API
+**Opção B: Via CLI com Wrapper**
+- Se tiver CLI, criar wrapper Tool que executa comandos CLI
+- Exemplo: `runTaskCLI("linear create-task --title 'X' --project 'Y'")`
 
-### Testes
-- Testes unitários para operações CRUD
-- Testes de endpoint de API
-- Testes de transição de status
+**Opção C: Via API com Tool Custom**
+- Se tiver API, criar Tool que chama endpoints
+- Validar e sanitizar inputs
 
 ---
 
-## Critérios de Sucesso
-- Projetos conseguem ser criados, listados, atualizados, deletados
-- Tarefas conseguem ser criadas e movidas entre statuses
-- Filtragem por projeto e status funciona
-- Dados persistem corretamente
+## 4. Processo de Decisão
+
+1. **Pesquisar** ferramentas que atendem os critérios
+2. **Avaliar** qual tem melhor integração (MCP vs CLI vs API)
+3. **Testar** integração com Mastra
+4. **Documentar** como agentes usam
+5. **Treinar** agentes a usar
 
 ---
 
-## Dependências
-- Drizzle ORM (existente)
-- LibSQL (existente)
-- Zod (existente)
+## 5. Não Fazer
+
+- ❌ **Não desenvolver sistema próprio** de projetos/tarefas
+- ❌ **Não replicar** funcionalidades de ferramentas existentes
+- ❌ **Não criar API** proprietária desnecessária
 
 ---
 
-**Histórico do Documento:**
-- v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo
+## 6. Critério de Sucesso
+
+- [ ] Ferramenta escolhida e avaliada
+- [ ] Integração com Mastra funciona
+- [ ] Agentes conseguem criar/listar/atualizar projetos e tarefas
+- [ ] Dados persistem na ferramenta (não localmente)
+- [ ] Documentação clara para agentes
+
+---
+
+**Fim do documento**
