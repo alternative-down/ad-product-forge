@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
 
-import type { Client } from '@libsql/client';
 import { z } from 'zod';
+import { eq, and, inArray, or, isNotNull } from 'drizzle-orm';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import * as schema from './schema';
 
 const attachmentSchema = z.object({
   id: z.string().optional(),
@@ -55,16 +57,7 @@ type Conversation = z.infer<typeof conversationSchema>;
 type MessageRecord = z.infer<typeof messageSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
 
-export async function createCommunicationStore(client: Client) {
-  /**
-   * NOTE: Database tables are now created via Drizzle migrations
-   * See: packages/mastra-engine/migrations/
-   * Tables are initialized by runMigrations() during database setup
-   *
-   * This function now only initializes the store operations,
-   * no longer responsible for table creation
-   */
-
+export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>) {
   function slugify(value: string) {
     return (
       value
@@ -78,112 +71,71 @@ export async function createCommunicationStore(client: Client) {
   }
 
   async function loadContact(slug: string) {
-    const contactResult = await client.execute({
-      sql: `
-        SELECT slug, display_name, description
-        FROM forge_communication_contacts
-        WHERE slug = ?
-      `,
-      args: [slug],
+    const contact = await db.query.communicationContacts.findFirst({
+      where: eq(schema.communicationContacts.slug, slug),
+      with: {
+        accounts: true,
+      },
     });
 
-    if (!contactResult.rows[0]) {
+    if (!contact) {
       return null;
     }
 
-    const accountResult = await client.execute({
-      sql: `
-        SELECT provider, external_user_id, username
-        FROM forge_communication_contact_accounts
-        WHERE slug = ?
-      `,
-      args: [slug],
-    });
-
     return contactSchema.parse({
-      slug: String(contactResult.rows[0].slug),
-      displayName: String(contactResult.rows[0].display_name),
-      description:
-        typeof contactResult.rows[0].description === 'string' ? String(contactResult.rows[0].description) : undefined,
-      accounts: accountResult.rows.map((row) => ({
-        provider: String(row.provider),
-        externalUserId: typeof row.external_user_id === 'string' ? String(row.external_user_id) : undefined,
-        username: typeof row.username === 'string' ? String(row.username) : undefined,
+      slug: contact.slug,
+      displayName: contact.displayName,
+      description: contact.description ?? undefined,
+      accounts: contact.accounts.map((account) => ({
+        provider: account.provider,
+        externalUserId: account.externalUserId ?? undefined,
+        username: account.username ?? undefined,
       })),
     });
   }
 
   async function loadConversation(conversationId: string) {
-    const result = await client.execute({
-      sql: `
-        SELECT conversation_id, provider, provider_conversation_key, name, contact_slug, created_at, updated_at
-        FROM forge_communication_conversations
-        WHERE conversation_id = ?
-      `,
-      args: [conversationId],
+    const conversation = await db.query.communicationConversations.findFirst({
+      where: eq(schema.communicationConversations.conversationId, conversationId),
     });
 
-    if (!result.rows[0]) {
+    if (!conversation) {
       return null;
     }
 
     return conversationSchema.parse({
-      conversationId: String(result.rows[0].conversation_id),
-      provider: String(result.rows[0].provider),
-      providerConversationKey: String(result.rows[0].provider_conversation_key),
-      name: typeof result.rows[0].name === 'string' ? String(result.rows[0].name) : undefined,
-      contactSlug: typeof result.rows[0].contact_slug === 'string' ? String(result.rows[0].contact_slug) : undefined,
-      createdAt: String(result.rows[0].created_at),
-      updatedAt: String(result.rows[0].updated_at),
+      conversationId: conversation.conversationId,
+      provider: conversation.provider,
+      providerConversationKey: conversation.providerConversationKey,
+      name: conversation.name ?? undefined,
+      contactSlug: conversation.contactSlug ?? undefined,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
     });
   }
 
   async function loadMessage(messageId: string) {
-    const result = await client.execute({
-      sql: `
-        SELECT
-          message_id,
-          conversation_id,
-          provider,
-          provider_message_id,
-          author_external_id,
-          author_display_name,
-          author_username,
-          content,
-          attachments_json,
-          unread,
-          created_at,
-          metadata_json
-        FROM forge_communication_messages
-        WHERE message_id = ?
-      `,
-      args: [messageId],
+    const message = await db.query.communicationMessages.findFirst({
+      where: eq(schema.communicationMessages.messageId, messageId),
     });
 
-    if (!result.rows[0]) {
+    if (!message) {
       return null;
     }
 
     return messageSchema.parse({
-      messageId: String(result.rows[0].message_id),
-      conversationId: String(result.rows[0].conversation_id),
-      provider: String(result.rows[0].provider),
-      providerMessageId:
-        typeof result.rows[0].provider_message_id === 'string' ? String(result.rows[0].provider_message_id) : undefined,
-      authorExternalId:
-        typeof result.rows[0].author_external_id === 'string' ? String(result.rows[0].author_external_id) : undefined,
-      authorDisplayName:
-        typeof result.rows[0].author_display_name === 'string' ? String(result.rows[0].author_display_name) : undefined,
-      authorUsername:
-        typeof result.rows[0].author_username === 'string' ? String(result.rows[0].author_username) : undefined,
-      content: String(result.rows[0].content),
-      attachments: attachmentSchema.array().parse(JSON.parse(String(result.rows[0].attachments_json))),
-      unread: Number(result.rows[0].unread) === 1,
-      createdAt: String(result.rows[0].created_at),
-      metadata:
-        typeof result.rows[0].metadata_json === 'string'
-          ? z.record(z.string(), z.unknown()).parse(JSON.parse(String(result.rows[0].metadata_json)))
-          : undefined,
+      messageId: message.messageId,
+      conversationId: message.conversationId,
+      provider: message.provider,
+      providerMessageId: message.providerMessageId ?? undefined,
+      authorExternalId: message.authorExternalId ?? undefined,
+      authorDisplayName: message.authorDisplayName ?? undefined,
+      authorUsername: message.authorUsername ?? undefined,
+      content: message.content,
+      attachments: JSON.parse(message.attachmentsJson),
+      unread: message.unread === 1,
+      createdAt: message.createdAt,
+      metadata: message.metadataJson ? JSON.parse(message.metadataJson) : undefined,
     });
   }
 
@@ -195,27 +147,22 @@ export async function createCommunicationStore(client: Client) {
   }) {
     const accountId = `${input.provider}:${input.externalAccountId}`;
 
-    await client.execute({
-      sql: `
-        INSERT INTO forge_communication_accounts (
-          account_id,
-          provider,
-          external_account_id,
-          display_name,
-          metadata_json
-        ) VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(account_id) DO UPDATE SET
-          display_name = COALESCE(excluded.display_name, forge_communication_accounts.display_name),
-          metadata_json = COALESCE(excluded.metadata_json, forge_communication_accounts.metadata_json)
-      `,
-      args: [
+    await db
+      .insert(schema.communicationAccounts)
+      .values({
         accountId,
-        input.provider,
-        input.externalAccountId,
-        input.displayName ?? null,
-        input.metadata ? JSON.stringify(input.metadata) : null,
-      ],
-    });
+        provider: input.provider,
+        externalAccountId: input.externalAccountId,
+        displayName: input.displayName ?? null,
+        metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
+      })
+      .onConflictDoUpdate({
+        target: schema.communicationAccounts.accountId,
+        set: {
+          displayName: input.displayName ?? null,
+          metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
+        },
+      });
 
     return {
       accountId,
@@ -227,29 +174,39 @@ export async function createCommunicationStore(client: Client) {
   }
 
   async function listContacts() {
-    const result = await client.execute(`
-      SELECT slug
-      FROM forge_communication_contacts
-      ORDER BY display_name ASC, slug ASC
-    `);
+    const contacts = await db.query.communicationContacts.findMany({
+      orderBy: (table) => [schema.communicationContacts.displayName, schema.communicationContacts.slug],
+      with: {
+        accounts: true,
+      },
+    });
 
-    const contacts = await Promise.all(result.rows.map((row) => loadContact(String(row.slug))));
-
-    return contacts.filter((contact): contact is Contact => Boolean(contact));
+    return Promise.all(
+      contacts.map(async (contact) => {
+        return contactSchema.parse({
+          slug: contact.slug,
+          displayName: contact.displayName,
+          description: contact.description ?? undefined,
+          accounts: contact.accounts.map((account) => ({
+            provider: account.provider,
+            externalUserId: account.externalUserId ?? undefined,
+            username: account.username ?? undefined,
+          })),
+        });
+      }),
+    );
   }
 
   async function listSelfAccounts() {
-    const result = await client.execute(`
-      SELECT account_id, provider, external_account_id, display_name, metadata_json
-      FROM forge_communication_accounts
-      ORDER BY provider ASC
-    `);
+    const accounts = await db.query.communicationAccounts.findMany({
+      orderBy: (table) => schema.communicationAccounts.provider,
+    });
 
-    return result.rows.map((row) => ({
-      accountId: String(row.account_id),
-      provider: String(row.provider),
-      externalAccountId: String(row.external_account_id),
-      displayName: typeof row.display_name === 'string' ? row.display_name : undefined,
+    return accounts.map((account) => ({
+      accountId: account.accountId,
+      provider: account.provider,
+      externalAccountId: account.externalAccountId,
+      displayName: account.displayName ?? undefined,
     }));
   }
 
@@ -262,25 +219,21 @@ export async function createCommunicationStore(client: Client) {
       return null;
     }
 
-    const result = await client.execute({
-      sql: `
-        SELECT slug
-        FROM forge_communication_contact_accounts
-        WHERE provider = ?
-          AND (
-            (? IS NOT NULL AND external_user_id = ?)
-            OR (? IS NOT NULL AND username = ?)
-          )
-        LIMIT 1
-      `,
-      args: [provider, externalUserId ?? null, externalUserId ?? null, username ?? null, username ?? null],
+    const contactAccount = await db.query.communicationContactAccounts.findFirst({
+      where: and(
+        eq(schema.communicationContactAccounts.provider, provider),
+        or(
+          externalUserId ? eq(schema.communicationContactAccounts.externalUserId, externalUserId) : undefined,
+          username ? eq(schema.communicationContactAccounts.username, username) : undefined,
+        ),
+      ),
     });
 
-    if (!result.rows[0]?.slug || typeof result.rows[0].slug !== 'string') {
+    if (!contactAccount) {
       return null;
     }
 
-    return loadContact(String(result.rows[0].slug));
+    return loadContact(contactAccount.slug);
   }
 
   async function upsertContact(input: {
@@ -293,30 +246,31 @@ export async function createCommunicationStore(client: Client) {
   }) {
     const slug = slugify(input.slug);
 
-    await client.execute({
-      sql: `
-        INSERT INTO forge_communication_contacts (slug, display_name, description)
-        VALUES (?, ?, ?)
-        ON CONFLICT(slug) DO UPDATE SET
-          display_name = excluded.display_name,
-          description = excluded.description
-      `,
-      args: [slug, input.displayName, input.description ?? null],
-    });
+    await db
+      .insert(schema.communicationContacts)
+      .values({
+        slug,
+        displayName: input.displayName,
+        description: input.description ?? null,
+      })
+      .onConflictDoUpdate({
+        target: schema.communicationContacts.slug,
+        set: {
+          displayName: input.displayName,
+          description: input.description ?? null,
+        },
+      });
 
     if (input.provider && (input.externalUserId || input.username)) {
-      await client.execute({
-        sql: `
-          INSERT INTO forge_communication_contact_accounts (
-            slug,
-            provider,
-            external_user_id,
-            username
-          ) VALUES (?, ?, ?, ?)
-          ON CONFLICT(slug, provider, external_user_id, username) DO NOTHING
-        `,
-        args: [slug, input.provider, input.externalUserId ?? null, input.username ?? null],
-      });
+      await db
+        .insert(schema.communicationContactAccounts)
+        .values({
+          slug,
+          provider: input.provider,
+          externalUserId: input.externalUserId ?? null,
+          username: input.username ?? null,
+        })
+        .onConflictDoNothing();
     }
 
     return loadContact(slug);
@@ -330,57 +284,37 @@ export async function createCommunicationStore(client: Client) {
     createdAt?: string;
   }) {
     const now = input.createdAt ?? new Date().toISOString();
-    const existingResult = await client.execute({
-      sql: `
-        SELECT conversation_id
-        FROM forge_communication_conversations
-        WHERE provider = ? AND provider_conversation_key = ?
-        LIMIT 1
-      `,
-      args: [input.provider, input.providerConversationKey],
+
+    const existing = await db.query.communicationConversations.findFirst({
+      where: and(
+        eq(schema.communicationConversations.provider, input.provider),
+        eq(schema.communicationConversations.providerConversationKey, input.providerConversationKey),
+      ),
     });
 
-    if (existingResult.rows[0]?.conversation_id && typeof existingResult.rows[0].conversation_id === 'string') {
-      const conversationId = String(existingResult.rows[0].conversation_id);
+    if (existing) {
+      await db
+        .update(schema.communicationConversations)
+        .set({
+          name: input.name ?? existing.name,
+          contactSlug: input.contactSlug ?? existing.contactSlug,
+          updatedAt: now,
+        })
+        .where(eq(schema.communicationConversations.conversationId, existing.conversationId));
 
-      await client.execute({
-        sql: `
-          UPDATE forge_communication_conversations
-          SET
-            name = COALESCE(?, name),
-            contact_slug = COALESCE(?, contact_slug),
-            updated_at = ?
-          WHERE conversation_id = ?
-        `,
-        args: [input.name ?? null, input.contactSlug ?? null, now, conversationId],
-      });
-
-      return loadConversation(conversationId);
+      return loadConversation(existing.conversationId);
     }
 
     const conversationId = `conv_${crypto.randomUUID()}`;
 
-    await client.execute({
-      sql: `
-        INSERT INTO forge_communication_conversations (
-          conversation_id,
-          provider,
-          provider_conversation_key,
-          name,
-          contact_slug,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `,
-      args: [
-        conversationId,
-        input.provider,
-        input.providerConversationKey,
-        input.name ?? null,
-        input.contactSlug ?? null,
-        now,
-        now,
-      ],
+    await db.insert(schema.communicationConversations).values({
+      conversationId,
+      provider: input.provider,
+      providerConversationKey: input.providerConversationKey,
+      name: input.name ?? null,
+      contactSlug: input.contactSlug ?? null,
+      createdAt: now,
+      updatedAt: now,
     });
 
     return loadConversation(conversationId);
@@ -418,55 +352,25 @@ export async function createCommunicationStore(client: Client) {
 
     const messageId = `msg_${crypto.randomUUID()}`;
 
-    await client.execute({
-      sql: `
-        INSERT INTO forge_communication_messages (
-          message_id,
-          conversation_id,
-          provider,
-          provider_message_id,
-          author_external_id,
-          author_display_name,
-          author_username,
-          content,
-          attachments_json,
-          unread,
-          created_at,
-          metadata_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(provider, provider_message_id) DO NOTHING
-      `,
-      args: [
+    await db
+      .insert(schema.communicationMessages)
+      .values({
         messageId,
-        conversation.conversationId,
-        input.provider,
-        input.providerMessageId,
-        input.authorExternalId ?? null,
-        input.authorDisplayName ?? null,
-        input.authorUsername ?? null,
-        input.content,
-        JSON.stringify(input.attachments ?? []),
-        1,
-        input.createdAt,
-        input.metadata ? JSON.stringify(input.metadata) : null,
-      ],
-    });
+        conversationId: conversation.conversationId,
+        provider: input.provider,
+        providerMessageId: input.providerMessageId,
+        authorExternalId: input.authorExternalId ?? null,
+        authorDisplayName: input.authorDisplayName ?? null,
+        authorUsername: input.authorUsername ?? null,
+        content: input.content,
+        attachmentsJson: JSON.stringify(input.attachments ?? []),
+        unread: 1,
+        createdAt: input.createdAt,
+        metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
+      })
+      .onConflictDoNothing();
 
-    const existingResult = await client.execute({
-      sql: `
-        SELECT message_id
-        FROM forge_communication_messages
-        WHERE provider = ? AND provider_message_id = ?
-        LIMIT 1
-      `,
-      args: [input.provider, input.providerMessageId],
-    });
-
-    if (!existingResult.rows[0]?.message_id || typeof existingResult.rows[0].message_id !== 'string') {
-      throw new Error('Failed to save inbound message');
-    }
-
-    return loadMessage(String(existingResult.rows[0].message_id));
+    return loadMessage(messageId);
   }
 
   async function saveOutboundMessage(input: {
@@ -493,31 +397,19 @@ export async function createCommunicationStore(client: Client) {
 
     const messageId = `msg_${crypto.randomUUID()}`;
 
-    await client.execute({
-      sql: `
-        INSERT INTO forge_communication_messages (
-          message_id,
-          conversation_id,
-          provider,
-          provider_message_id,
-          content,
-          attachments_json,
-          unread,
-          created_at,
-          metadata_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      args: [
-        messageId,
-        conversation.conversationId,
-        input.provider,
-        input.providerMessageId ?? null,
-        input.content,
-        JSON.stringify([]),
-        0,
-        input.createdAt ?? new Date().toISOString(),
-        input.metadata ? JSON.stringify(input.metadata) : null,
-      ],
+    await db.insert(schema.communicationMessages).values({
+      messageId,
+      conversationId: conversation.conversationId,
+      provider: input.provider,
+      providerMessageId: input.providerMessageId ?? null,
+      authorExternalId: null,
+      authorDisplayName: null,
+      authorUsername: null,
+      content: input.content,
+      attachmentsJson: JSON.stringify([]),
+      unread: 0,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+      metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
     });
 
     return loadMessage(messageId);
@@ -532,129 +424,115 @@ export async function createCommunicationStore(client: Client) {
       return;
     }
 
-    for (const messageId of messageIds) {
-      await client.execute({
-        sql: `
-          UPDATE forge_communication_messages
-          SET unread = 0
-          WHERE message_id = ? AND unread = 1
-        `,
-        args: [messageId],
-      });
-    }
+    await db
+      .update(schema.communicationMessages)
+      .set({ unread: 0 })
+      .where(and(inArray(schema.communicationMessages.messageId, messageIds), eq(schema.communicationMessages.unread, 1)));
   }
 
   async function listConversations(options: { provider?: string; contactSlug?: string; unread?: boolean; limit: number }) {
-    const conversationResult = await client.execute(`
-      SELECT conversation_id
-      FROM forge_communication_conversations
-    `);
-
-    const conversationIds = conversationResult.rows.map((row) => String(row.conversation_id));
-
-    if (conversationIds.length === 0) {
-      return [];
-    }
-
-    // Load all messages in bulk using IN clause
-    const placeholders = conversationIds.map(() => '?').join(',');
-    const messagesResult = await client.execute({
-      sql: `
-        SELECT message_id
-        FROM forge_communication_messages
-        WHERE conversation_id IN (${placeholders})
-        ORDER BY created_at ASC
-      `,
-      args: conversationIds,
+    const conversations = await db.query.communicationConversations.findMany({
+      with: {
+        messages: {
+          orderBy: (table) => schema.communicationMessages.createdAt,
+        },
+      },
     });
 
-    const allMessages = await Promise.all(
-      messagesResult.rows.map((row) => loadMessage(String(row.message_id)))
+    const filteredConversations = conversations
+      .map((conv) => {
+        const recentMessages = conv.messages.slice(-5);
+
+        if (options.provider && conv.provider !== options.provider) {
+          return null;
+        }
+
+        if (options.contactSlug && conv.contactSlug !== options.contactSlug) {
+          return null;
+        }
+
+        if (recentMessages.length === 0) {
+          return null;
+        }
+
+        const unreadCount = recentMessages.filter((msg) => msg.unread === 1).length;
+
+        if (options.unread !== undefined && (unreadCount > 0) !== options.unread) {
+          return null;
+        }
+
+        return {
+          ...conv,
+          unreadCount,
+          latestMessageAt: recentMessages[recentMessages.length - 1]!.createdAt,
+          recentMessages,
+        };
+      })
+      .filter((c): c is typeof conversations[number] & { unreadCount: number; latestMessageAt: string; recentMessages: typeof conversations[number]['messages'] } =>
+        Boolean(c),
+      )
+      .sort((left, right) => new Date(right.latestMessageAt).getTime() - new Date(left.latestMessageAt).getTime());
+
+    // Mark messages as read
+    const messageIdsToMarkRead = filteredConversations.flatMap((conv) =>
+      conv.recentMessages.filter((msg) => msg.unread === 1).map((msg) => msg.messageId),
     );
 
-    const messagesByConversation = new Map<string, MessageRecord[]>();
-    for (const message of allMessages) {
-      if (message) {
-        if (!messagesByConversation.has(message.conversationId)) {
-          messagesByConversation.set(message.conversationId, []);
-        }
-        messagesByConversation.get(message.conversationId)!.push(message);
-      }
+    if (messageIdsToMarkRead.length > 0) {
+      await markMessagesRead(messageIdsToMarkRead);
     }
 
-    const conversations = (
-      await Promise.all(
-        conversationIds.map(async (conversationId) => {
-          const conversation = await loadConversation(conversationId);
-
-          if (!conversation) {
-            return null;
-          }
-
-          if (options.provider && conversation.provider !== options.provider) {
-            return null;
-          }
-
-          if (options.contactSlug && conversation.contactSlug !== options.contactSlug) {
-            return null;
-          }
-
-          const messages = messagesByConversation.get(conversationId) || [];
-          const recentMessages = messages.slice(-5);
-
-          if (recentMessages.length === 0) {
-            return null;
-          }
-
-          const unreadCount = recentMessages.filter((message) => message.unread).length;
-
-          if (options.unread !== undefined && (unreadCount > 0) !== options.unread) {
-            return null;
-          }
-
-          // Mark messages as read
-          await markMessagesRead(recentMessages.filter((message) => message.unread).map((message) => message.messageId));
-
-          return {
-            ...conversation,
-            unreadCount,
-            latestMessageAt: recentMessages[recentMessages.length - 1]!.createdAt,
-            messages: recentMessages,
-          };
-        }),
-      )
-    ).filter(
-      (
-        conversation,
-      ): conversation is Conversation & { unreadCount: number; latestMessageAt: string; messages: MessageRecord[] } =>
-        Boolean(conversation),
-    );
-
-    conversations.sort((left, right) => new Date(right.latestMessageAt).getTime() - new Date(left.latestMessageAt).getTime());
-
-    return conversations.slice(0, options.limit);
+    return filteredConversations.slice(0, options.limit).map((conv) => ({
+      conversationId: conv.conversationId,
+      provider: conv.provider,
+      providerConversationKey: conv.providerConversationKey,
+      name: conv.name ?? undefined,
+      contactSlug: conv.contactSlug ?? undefined,
+      createdAt: conv.createdAt,
+      updatedAt: conv.updatedAt,
+      unreadCount: conv.unreadCount,
+      latestMessageAt: conv.latestMessageAt,
+      messages: conv.recentMessages.map((msg) => ({
+        messageId: msg.messageId,
+        conversationId: msg.conversationId,
+        provider: msg.provider,
+        providerMessageId: msg.providerMessageId ?? undefined,
+        authorExternalId: msg.authorExternalId ?? undefined,
+        authorDisplayName: msg.authorDisplayName ?? undefined,
+        authorUsername: msg.authorUsername ?? undefined,
+        content: msg.content,
+        attachments: JSON.parse(msg.attachmentsJson),
+        unread: msg.unread === 1,
+        createdAt: msg.createdAt,
+        metadata: msg.metadataJson ? JSON.parse(msg.metadataJson) : undefined,
+      })),
+    }));
   }
 
   async function getMessages(conversationId: string, limit: number) {
-    const result = await client.execute({
-      sql: `
-        SELECT message_id
-        FROM forge_communication_messages
-        WHERE conversation_id = ?
-        ORDER BY created_at ASC
-      `,
-      args: [conversationId],
+    const messages = await db.query.communicationMessages.findMany({
+      where: eq(schema.communicationMessages.conversationId, conversationId),
+      orderBy: (table) => schema.communicationMessages.createdAt,
     });
-
-    const messages = (
-      await Promise.all(result.rows.map((row) => loadMessage(String(row.message_id))))
-    ).filter((message): message is MessageRecord => Boolean(message));
 
     const recentMessages = messages.slice(-limit);
 
-    await markMessagesRead(recentMessages.filter((message) => message.unread).map((message) => message.messageId));
+    await markMessagesRead(recentMessages.filter((msg) => msg.unread === 1).map((msg) => msg.messageId));
 
-    return recentMessages;
+    return recentMessages.map((msg) => ({
+      messageId: msg.messageId,
+      conversationId: msg.conversationId,
+      provider: msg.provider,
+      providerMessageId: msg.providerMessageId ?? undefined,
+      authorExternalId: msg.authorExternalId ?? undefined,
+      authorDisplayName: msg.authorDisplayName ?? undefined,
+      authorUsername: msg.authorUsername ?? undefined,
+      content: msg.content,
+      attachments: JSON.parse(msg.attachmentsJson),
+      unread: msg.unread === 1,
+      createdAt: msg.createdAt,
+      metadata: msg.metadataJson ? JSON.parse(msg.metadataJson) : undefined,
+    }));
   }
 
   return {

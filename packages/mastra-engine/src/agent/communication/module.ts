@@ -12,11 +12,11 @@ export async function createCommunicationModule(config: {
   client: Client;
   providers: CommunicationProvider[];
 }) {
-  // Initialize database (run migrations)
-  await initializeCommunicationDatabase(config.client);
+  // Initialize database (run migrations) and get Drizzle instance
+  const db = await initializeCommunicationDatabase(config.client);
 
   // Create store for data operations
-  const store = await createCommunicationStore(config.client);
+  const store = await createCommunicationStore(db);
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: (() => void) | null = null;
 

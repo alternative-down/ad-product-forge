@@ -17,9 +17,12 @@ type CommunicationDatabase = LibSQLDatabase<typeof communicationSchema>;
  * This should be called once during application startup before using the store
  *
  * @param client - The libSQL client (already created)
+ * @returns Drizzle database instance for use with store operations
  * @throws Error if migrations fail
  */
-export async function initializeCommunicationDatabase(client: Client): Promise<void> {
+export async function initializeCommunicationDatabase(
+  client: Client,
+): Promise<CommunicationDatabase> {
   try {
     console.log('[Communication] Initializing communication database...');
 
@@ -30,6 +33,7 @@ export async function initializeCommunicationDatabase(client: Client): Promise<v
     await runMigrations(db as any);
 
     console.log('[Communication] Database initialized successfully');
+    return db;
   } catch (error) {
     console.error('[Communication] Failed to initialize database:', error);
     throw error;
