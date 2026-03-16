@@ -1,9 +1,10 @@
-# PRD-31: Sistema de Emissão de Bilhetes
+# PRD-31: Sistema de Tickets como Provider de Comunicação
 
-**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Status:** Planejamento
+
 **Data:** 2026-03-15
-**Versão:** 1.0
-**Nota:** Projeto pessoal por desenvolvedor solo. Escopo limitado a funcionalidade core (KISS + YAGNI).
+
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
@@ -11,96 +12,104 @@
 
 ### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**Este PRD descreve infraestrutura de suporte ao cliente específica do ad-product-forge.** Sistema de emissão de bilhetes permite que agentes de suporte de Nicolas rastreiem e resolvam problemas de cliente. Isto é específico da aplicação, não infraestrutura de framework.
+**Integrar ticketing como provider de comunicação** que permite aos agentes receber, responder e gerenciar tickets abertos nos sistemas criados por eles (via templates web).
 
-### Objetivo
-Implementar um sistema básico de emissão de bilhetes para rastrear e resolver problemas de suporte, com roteamento simples e rastreamento de status.
+Tickets são tratados como canal de comunicação, integrado com outros providers (chat interno, Discord, email).
 
-### Características Core
-1. **Criação de Bilhete** - Criar bilhetes de suporte
-2. **Rastreamento de Status** - Rastrear progresso de bilhete (aberto, fechado)
-3. **Listagem Simples** - Visualizar todos bilhetes
-
-### Fora do Escopo
-- Roteamento e atribuição
-- Comentários/notas
-- Níveis de prioridade
-- Integração multi-provedor
-- Automação/fluxos de trabalho
-- Rastreamento de tempo
-- Rastreamento de SLA
-- Portal de cliente
+**Objetivo:** Permitir que agentes prestem suporte aos usuários de suas aplicações através de um sistema de tickets integrado à plataforma.
 
 ---
 
-## Modelo de Dados
+## Problema
 
-### Bilhetes
-```typescript
-tickets {
-  id: UUID
-  title: string
-  description: string
-  status: 'open' | 'closed'
-  created_by: string (creator_id)
-  created_at: timestamp
-  updated_at: timestamp
-}
+- Templates web incluem sistema de tickets
+- Precisa integração entre app criada e plataforma de execução dos agentes
+- Agentes precisam receber e responder tickets como parte de suas operações
+- Tickets devem ser tratados como canal de comunicação
+
+---
+
+## Solução
+
+Implementar ticketing como **provider de comunicação** (como Discord, email):
+
+1. **Receber tickets** das aplicações criadas pelos agentes
+2. **Armazenar tickets** no sistema centralizado
+3. **Notificar agentes** quando novo ticket chega
+4. **Permitir resposta** via interface de agente
+5. **Integrar com chat interno** como mais um provider
+
+---
+
+## Integração entre App Template e Plataforma
+
+**Fluxo:**
+1. Usuário abre ticket em app criada pelo agente
+2. Ticket é enviado para platform (via API)
+3. Platform recebe e armazena
+4. Agente é notificado (como mensagem no chat interno)
+5. Agente responde
+6. Resposta retorna para usuário na app
+
+---
+
+## Schema do Banco de Dados
+
+**Tabela: `tickets`**
+```
+- ticket_id (UUID, primary key)
+- app_id (UUID) - qual aplicação gerou o ticket
+- agent_id (UUID) - qual agente deve responder
+- user_id (string) - quem abriu o ticket
+- title (TEXT)
+- description (TEXT)
+- status (ENUM: open, in_progress, resolved, closed)
+- priority (ENUM: low, medium, high)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+- resolved_at (TIMESTAMP, nullable)
+```
+
+**Tabela: `ticket_messages`**
+```
+- message_id (UUID)
+- ticket_id (UUID)
+- sender_id (string) - agente ou usuário
+- sender_type (ENUM: agent, user)
+- message (TEXT)
+- created_at (TIMESTAMP)
 ```
 
 ---
 
-## Endpoints de API
+## Como Provider de Comunicação
 
-### Bilhetes
-- `POST /api/tickets` — Criar bilhete
-- `GET /api/tickets` — Listar bilhetes
-- `GET /api/tickets/:id` — Obter detalhes do bilhete
-- `PUT /api/tickets/:id` — Atualizar bilhete (status)
-- `DELETE /api/tickets/:id` — Deletar bilhete
+Tickets funcionam como provider integrado ao PRD-18 (comunicação interna):
 
-### Filtragem
-- `GET /api/tickets?status=open` — Filtrar por status
-- `GET /api/tickets?created_by=creator_id` — Filtrar por criador
-
----
-
-## Notas de Implementação
-
-### Banco de Dados
-- Usar ORM Drizzle + LibSQL existentes
-- Criar tabelas: `tickets`
-- Índice em status e created_at
-
-### Design de API
-- Endpoints REST simples
-- Todas atualizações via PUT
-
-### Validação
-- Usar Zod para validação de schema
-- Obrigatório: título, descrição
-- Status válidos: open, closed
-
-### Testes
-- Testes CRUD para bilhetes
-- Testes de endpoint de API
-- Testes de filtro de status
+- Novo ticket = nova mensagem no chat interno do agente
+- Resposta de agente = atualiza ticket na app
+- Histórico de ticket = histórico de mensagens
 
 ---
 
 ## Critérios de Sucesso
-- Bilhetes conseguem ser criados, listados, atualizados e fechados
-- Filtragem por status funciona
-- Todos dados persistem corretamente
+
+- [ ] Tickets criados em apps chegam à plataforma
+- [ ] Agentes recebem notificação de novo ticket
+- [ ] Agentes conseguem responder tickets
+- [ ] Respostas retornam para usuário na app
+- [ ] Histórico mantido
+- [ ] Integração com chat interno funciona
 
 ---
 
 ## Dependências
-- Drizzle ORM (existente)
-- LibSQL (existente)
-- Zod (existente)
+
+- PRD-18: Internal Group Chat (como provider)
+- PRD-30: Web Application Templates (tickets inclusos)
+- PRD-05: Application Deployment (apps comunicam com plataforma)
 
 ---
 
 **Histórico do Documento:**
-- v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo
+- v1.0 (2026-03-15): Ticketing como provider de comunicação integrado ao PRD-18

@@ -1,26 +1,10 @@
 # PRD-19: Sistema de Base de Conhecimento
 
-**Status:** ❌ Não Alinhado - Interpretação Incorreta
+**Status:** Planejamento
+
 **Data:** 2026-03-15
-**Escopo:** Projeto pessoal de desenvolvedor - Princípios KISS & YAGNI
 
----
-
-## ❌ Nota de Desalinhamento
-
-**Problema:** PRD propõe construir um novo sistema de base de conhecimento, mas Mastra já fornece isso nativamente.
-
-**Intenção Original:**
-Aproveitar o workspace/sandbox do Mastra que já tem:
-- Acesso a arquivos
-- Embeddings
-- Busca semântica
-
-Ideia: Montar um Path compartilhado entre todos agentes (pasta compartilhada) usando o próprio workspace do Mastra, só adicionando um Path extra.
-
-**Diferença:** Não precisa de novo PRD de feature. É questão de configuração do workspace Mastra e exposição como tool para agentes.
-
-**Status:** Não é um PRD de desenvolvimento. Será necessário pensar em como expor o workspace compartilhado aos agentes como tool.
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
@@ -28,78 +12,63 @@ Ideia: Montar um Path compartilhado entre todos agentes (pasta compartilhada) us
 
 ### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**Este PRD descreve infraestrutura de gerenciamento de conhecimento específica do ad-product-forge.** A base de conhecimento permite que agentes de Nicolas construam memória institucional e pesquisem por significado. Isto é específico da aplicação, não infraestrutura de framework.
+**Usar o workspace do Mastra para fornecer base de conhecimento compartilhada** com embeddings, busca semântica e GraphRAG. Aproveitar infraestrutura existente do Mastra em vez de construir sistema próprio.
 
-Implementar uma base de conhecimento simples que permita agentes armazenar e recuperar documentos usando busca semântica (baseada em embeddings).
-
-**Objetivo Principal (para ad-product-forge):** Agentes conseguem armazenar documentos de texto e buscar conteúdo relevante por significado, não apenas keywords. Permite agentes de pesquisa construir conhecimento ao longo do tempo.
+**Objetivo:** Fornecer aos agentes uma base de conhecimento compartilhada, integrada ao ERP, que permita embeddings, busca semântica full-text e GraphRAG.
 
 ---
 
-## Declaração do Problema
+## Problema
 
-Atualmente, agentes não conseguem:
-- Armazenar e recuperar documentos entre conversas
-- Buscar conhecimento por significado (busca semântica)
-- Organizar informação para reutilização
-
-**Cenários Alvo:**
-1. Agente armazena melhores práticas de cliente e as encontra depois via busca semântica
-2. Agente faz upload de documentação de produto e recupera seções relevantes
-3. Agente constrói conhecimento institucional que persiste entre conversas
+- Agentes precisam de base de conhecimento compartilhada
+- Necessidade de busca semântica e embeddings
+- Memória institucional entre agentes
 
 ---
 
-## Características Principais
+## Solução
 
-### 1. Armazenamento de Documento
-- Armazenar documentos com título e conteúdo
-- Suportar conteúdo de texto (markdown, texto simples)
+Aproveitar o **workspace do Mastra** que já fornece:
+- Acesso a arquivos
+- Embeddings
+- Busca semântica
+- Suporte a GraphRAG
 
-### 2. Busca Semântica
-- Converter documentos para embeddings usando Mastra
-- Encontrar documentos por similaridade com consulta
-- Retornar resultados classificados por relevância
-
-### 3. API de Gerenciamento de Conhecimento
-```typescript
-// Armazenar documento
-storeDocument(input: {
-  title: string;
-  content: string;
-}): Promise<{ documentId: string; }>;
-
-// Buscar documentos
-searchDocuments(query: string, limit?: number): Promise<Array<{
-  documentId: string;
-  title: string;
-  content: string;
-  similarity: number;
-}>>;
-
-// Deletar documento
-deleteDocument(documentId: string): Promise<{ success: boolean; }>;
-```
+**Abordagem:**
+- Usar workspace como base de conhecimento
+- Path compartilhado entre agentes (pasta/storage unificado)
+- Integração com embeddings e busca semântica
+- GraphRAG para análise relacional de conhecimento
 
 ---
 
-## Schema do Banco de Dados
+## Arquitetura
 
-**knowledge_base_documents**
-```
-- documentId (TEXT, PRIMARY KEY)
-- title (TEXT, NOT NULL)
-- content (TEXT, NOT NULL)
-- embedding (BLOB)  -- embeddings armazenados
-- createdAt (TEXT, NOT NULL)
-```
+- **Armazenamento:** Workspace do Mastra
+- **Embeddings:** Modelo de embeddings do Mastra
+- **Busca:** Semântica + full-text
+- **Análise:** GraphRAG para relações entre documentos
+- **Integração:** ERP como backend de persistência de metadados
 
 ---
 
 ## Critérios de Sucesso
 
-- [ ] Agente consegue armazenar documentos
-- [ ] Agente consegue buscar e recuperar documentos relevantes por significado
-- [ ] Embeddings são gerados e armazenados
-- [ ] API é acessível de ferramentas de agente
+- [ ] Agentes conseguem armazenar documentos no workspace
+- [ ] Busca semântica funciona
+- [ ] GraphRAG consegue mapear relações
+- [ ] Metadados persistem no ERP
+- [ ] Acesso compartilhado entre agentes
 
+---
+
+## Dependências
+
+- Mastra workspace
+- ERP (PRD-22)
+- Modelo de embeddings
+
+---
+
+**Histórico do Documento:**
+- v1.0 (2026-03-15): Abordagem via Mastra workspace com embeddings e GraphRAG
