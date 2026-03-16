@@ -42,12 +42,7 @@ export const agentProviders = sqliteTable(
     providerType: text('provider_type').notNull(),
     encryptedCredentials: text('encrypted_credentials').notNull(),
     createdAt: integer('created_at').notNull(),
-  },
-  (table) => ({
-    agentProviderUnique: primaryKey({
-      columns: [table.agentId, table.providerType],
-    }),
-  })
+  }
 );
 
 export type AgentProvider = typeof agentProviders.$inferSelect;

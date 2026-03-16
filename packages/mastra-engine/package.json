@@ -22,6 +22,7 @@
     "@mastra/libsql": "^1.7.0",
     "@mastra/memory": "^1.6.2",
     "@mendable/firecrawl-js": "^4.15.4",
+    "drizzle-kit": "^0.31.9",
     "drizzle-orm": "^0.45.1",
     "zod": "^3.25.76"
   },
