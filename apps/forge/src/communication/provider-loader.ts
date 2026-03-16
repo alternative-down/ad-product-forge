@@ -1,8 +1,14 @@
 import type { CommunicationProvider } from '@mastra-engine/core';
 import { createInternalChatPreset } from '@mastra-engine/core';
+import { createEmailProvider } from '../email-account.js';
 
 export type ProviderCredentialsMap = {
   'internal-chat'?: { agentId: string };
+  email?: {
+    imap: { host: string; port: number; secure: boolean; user: string; password: string };
+    smtp: { host: string; port: number; secure: boolean; user: string; password: string };
+    bcc?: string;
+  };
 };
 
 // Global internal chat preset instance (singleton)
@@ -10,7 +16,7 @@ const internalChatPreset = createInternalChatPreset();
 
 /**
  * Load communication providers from credentials map
- * Supports: internal-chat (uses mastra-engine preset)
+ * Supports: internal-chat (preset), email (IMAP/SMTP)
  */
 export function loadCommunicationProviders(credentials: ProviderCredentialsMap): CommunicationProvider[] {
   const providers: CommunicationProvider[] = [];
@@ -24,6 +30,11 @@ export function loadCommunicationProviders(credentials: ProviderCredentialsMap):
         displayName: agentId,
       })
     );
+  }
+
+  // Load email provider if configured
+  if (credentials.email) {
+    providers.push(createEmailProvider(credentials.email));
   }
 
   return providers;
