@@ -15,6 +15,13 @@
       "when": 1773698593367,
       "tag": "0001_mean_silvermane",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773701855693,
+      "tag": "0002_solid_guardsmen",
+      "breakpoints": true
     }
   ]
 }

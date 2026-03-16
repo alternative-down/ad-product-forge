@@ -27,6 +27,12 @@ export const agents = sqliteTable('agents', {
   instructions: text('instructions').notNull(),
   tools: text('tools'), // JSON array de tool IDs ou configuração
   workflows: text('workflows'), // JSON array de workflow IDs
+  // Workspace configuration
+  workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1), // boolean as 0/1
+  workspaceBm25: integer('workspace_bm25').notNull().default(1), // boolean as 0/1
+  workspaceEmbedder: text('workspace_embedder').notNull().default('fastembed'),
+  workspaceFilesystem: text('workspace_filesystem'), // JSON config
+  workspaceSandbox: text('workspace_sandbox'), // JSON config
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
