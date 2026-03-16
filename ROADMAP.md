@@ -1,301 +1,282 @@
-# Roadmap - Mastra Framework & ad-product-forge Application
+# Roadmap - ad-product-forge
+
+**Última Atualização:** 2026-03-15
+**Referência:** VISION.md, ROADMAP_MAPPING.md
 
 ---
 
-## PART 1: MASTRA FRAMEWORK CORE
+## Objetivo Geral
 
-**Classification:** Framework infrastructure for autonomous multi-agent orchestration. These features are reusable across any Mastra deployment and enable sophisticated agent-based systems.
-
-### 1. Agent Registry & Persistence
-
-#### 1.1 Database-Driven Agent System (PRD-01)
-- **Objective**: Transform from static agent configuration to runtime agent creation and management
-- **Requirements**:
-  - Migrate from fixed agent creation to database-backed dynamic spawning
-  - Implement SQLite with Drizzle ORM for agent and credential storage
-  - Create database schemas for agent configuration, credentials, and provider settings
-  - Implement database migrations for schema versioning and management
-  - Encrypt sensitive data (tokens, passwords) at rest
-  - Define encryption strategy for data protection
-
-#### 1.2 Communication Provider Integration (PRD-02)
-- **Objective**: Persist and manage communication provider credentials and configuration
-- **Requirements**:
-  - Store communication provider credentials in database
-  - Migrate to Drizzle ORM for type-safe queries
-  - Ensure provider credentials are encrypted before storage
-  - Support multiple communication providers per agent
-
-### 2. Multi-Agent Orchestration
-
-#### 2.1 External Agent System (PRD-03)
-- **Objective**: Enable creation of temporary specialist agents for specific tasks
-- **Requirements**:
-  - Support external specialist agents (consultants, personas, subject matter experts)
-  - Create agents on-demand for internal agent requests
-  - External agents have restricted permissions (messaging only)
-  - External agents cannot access internal resources
-  - Communication via internal messaging system
-  - Agents only wake up when receiving messages
-  - Can be terminated when task is complete
-
-### 3. Access Control & Organization
-
-#### 3.1 Role and Function Schema (PRD-04)
-- **Objective**: Define granular access control and capabilities for each agent
-- **Requirements**:
-  - Implement Function schema - acts as grouper/classifier for agents
-  - Implement Role schema - defines specific capabilities and permissions
-  - Role configuration includes: Tools, Providers, Workflows access
-  - Implement master agent with unrestricted permissions
-  - Master agent initializes base configurations
-  - Master agent grants/revokes permissions to other agents
-  - Support permission escalation and delegation
-
-### 4. Agent Lifecycle Management
-
-#### 4.1 Agent Hiring Workflow (PRD-05)
-- **Objective**: Enable agents to autonomously create and provision new agents
-- **Requirements**:
-  - Create workflow for agent creation and provisioning
-  - Allow agents to define account creation parameters
-  - Enable agents to select communication providers for new agents
-  - Define configurable parameters for agent instantiation
-  - Implement agent provisioning process
-
-#### 4.2 Agent Termination Workflow (PRD-06)
-- **Objective**: Gracefully remove agents from the system
-- **Requirements**:
-  - Create workflow for agent removal
-  - Handle cleanup of agent-related resources and data
-  - Define deactivation procedures
-
-#### 4.3 Heartbeat and Scheduling System (PRD-07)
-- **Objective**: Keep agents active and enable autonomous scheduling
-- **Requirements**:
-  - Implement heartbeat scheduling to periodically wake agents
-  - Prevent agents from indefinite stand-by periods
-  - Allow agents to create their own cron jobs
-  - Enable agents to check for pending tasks
-  - Support resume of interrupted executions
-
-#### 4.4 Cron/Scheduling Tool (PRD-08)
-- **Objective**: Enable agents to create and manage scheduled tasks
-- **Requirements**:
-  - Implement cron tool for agents to define scheduling rules
-  - Support scheduling configuration and repetition patterns
-  - Generate internal messages for scheduled events
-  - Trigger wake events on scheduled time
-  - Support recurring and one-time schedules
-
-### 5. Multi-Agent Communication
-
-#### 5.1 Internal Group Chat Implementation (PRD-09)
-- **Objective**: Enable agents to collaborate and coordinate through group messaging
-- **Requirements**:
-  - Extend internal communication module to support group conversations
-  - Enable agents to create coordination groups
-  - Support multiple agents within a single group
-  - Enable group-based communication for all agents
-
-#### 5.2 Multi-Provider Group Support (PRD-10)
-- **Objective**: Extend group capabilities to all communication providers
-- **Requirements**:
-  - Implement groups for Discord provider (channels, mentions)
-  - Implement groups for Email provider (CC, BCC, mailing lists)
-  - Support channel creation per agent
-  - Support email distribution functionality
-  - Maintain consistency across all providers
+Estruturar uma plataforma em que agentes possam operar como uma empresa digital: serem criados e geridos dinamicamente, executar tarefas, interagir entre si e com sistemas externos, desenvolver produtos, operar canais de comunicação, controlar recursos da operação e evoluir com autonomia controlada.
 
 ---
 
-## PART 2: AD-PRODUCT-FORGE APPLICATION
+## 12 Frentes de Desenvolvimento
 
-**Classification:** Application-specific features tailored to Nicolas' autonomous product development platform. These are not framework infrastructure but implementation-specific to ad-product-forge's business model.
+### Frente 1: Persistência e Configuração Dinâmica de Agentes
 
-### 1. Product Development & Research
+**Objetivo:** Migrar de agentes fixa em código para dinâmica, persistida em banco de dados e carregada em runtime.
 
-#### 1.1 Research as Workflow (PRD-11)
-- **Objective**: Transform research from tool to workflow for complex analysis
-- **Requirements**:
-  - Convert current Research tool to workflow implementation
-  - Support sequential research queries
-  - Enable conditional branching based on results
-  - Support parallel research streams
-  - Maintain backward compatibility with tool calls
+**PRDs:**
+- PRD-01: Database-Driven Agent System
+- PRD-02: Communication Provider Integration
 
-### 2. External Integration
+**Escopo:**
+- SQLite + Drizzle ORM
+- Schemas de agentes e providers de comunicação
+- Migrations e versionamento de dados
+- Carregamento dinâmico em runtime
+- Refatoração de módulos SMTP/IMAP para Drizzle
 
-#### 2.1 Webhook & Event Routing System (PRD-12)
-- **Objective**: Enable external systems to trigger agent actions
-- **Requirements**:
-  - Implement webhook infrastructure for external triggers
-  - Support agent-created custom webhook routes
-  - Support pre-configured routes (GitHub, Coolify, Payments, Ads, etc.)
-  - Route incoming events to appropriate agents
-  - Trigger agent wakeup on external events
+**Status:** 📋 Planejamento
 
-#### 2.2 GitHub Integration (PRD-13)
-- **Objective**: Enable agents to manage repositories and respond to events
-- **Requirements**:
-  - Provide agents access to GitHub organization
-  - Enable repository creation and manipulation by agents
-  - Implement GitHub event webhooks
-  - Define workflow for triggering agent actions based on GitHub events
-  - Support agent-driven repository management
+---
 
-### 3. Deployment & Infrastructure
+### Frente 2: Segurança e Gestão de Credenciais
 
-#### 3.1 Application Deployment (PRD-14)
-- **Objective**: Allow agents to deploy created applications
-- **Requirements**:
-  - Integrate with Coolify on Hetzner infrastructure
-  - Enable agents to configure and deploy applications via Coolify
-  - Ensure deployed applications are immediately accessible
+**Objetivo:** Proteger dados sensíveis (tokens, senhas, credenciais de provedores)
 
-#### 3.2 Domain Management (PRD-15)
-- **Objective**: Provide wildcard domain configuration for agent applications
-- **Requirements**:
-  - Configure wildcard DNS pointing to Hetzner machine
-  - Enable automatic domain assignment for deployed applications
-  - Support subdomain provisioning per agent application
+**PRDs:**
+- PRD-01: Database-Driven Agent System (criptografia AES-256-GCM)
+- PRD-27: Secrets Management
 
-#### 3.3 Email Service Integration (PRD-16)
-- **Objective**: Provide organizational email for agents
-- **Requirements**:
-  - Support domain-based email configuration
-  - Enable SMTP/IMAP access for agents
-  - Provide email inbox and sending capabilities per agent
+**Escopo:**
+- Criptografia de credenciais em repouso
+- Vault/secrets centralizado para agentes
+- Rotação de credenciais
+- Acesso seguro aos dados sensíveis
 
-### 4. Business Operations
+**Status:** 📋 Planejamento
 
-#### 4.1 Micro-ERP System (PRD-19)
-- **Objective**: Provide financial tracking and management
-- **Requirements**:
-  - Implement expense tracking and recording
-  - Implement revenue tracking and recording
-  - Support financial forecasting and projections
+---
 
-#### 4.2 CRM System (PRD-21)
-- **Objective**: Provide customer relationship management capabilities
-- **Requirements**:
-  - Implement customer and contact management
-  - Support sales pipeline management
-  - Enable interaction history tracking
-  - Provide simple reporting on pipeline and activity
+### Frente 3: Papéis, Funções e Governança Organizacional
 
-#### 4.3 Billing & Payment Integration (PRD-22)
-- **Objective**: Integrate payment processing with platform
-- **Requirements**:
-  - Integrate Stripe for payment processing
-  - Support recurring billing and subscriptions
-  - Track payment transactions
-  - Connect to ERP for financial reconciliation
+**Objetivo:** Schema de papéis e funções para controle de acesso e organização interna
 
-#### 4.4 Project & Task Management (PRD-23)
-- **Objective**: Provide project and task tracking system
-- **Requirements**:
-  - Implement project management system
-  - Support task creation with status tracking
-  - Enable task listing and filtering
+**PRDs:**
+- PRD-26: Role and Function Schema
 
-#### 4.5 Ticketing System (PRD-24)
-- **Objective**: Provide support infrastructure for agent-created applications
-- **Requirements**:
-  - Implement ticketing system for customer support
-  - Support basic ticket creation and status tracking
-  - Enable agents to handle support tickets
+**Conceitos:**
+- **Função:** agrupador organizacional ao qual o agente está vinculado
+- **Papel:** definição efetiva de permissões (Tools, Providers, Workflows)
 
-### 5. Data Storage & Knowledge
+**Escopo:**
+- Master agent com permissão irrestrita
+- Agentes podem criar/alterar papéis e funções
+- Controle de acesso granular por papel
+- Trilha de auditoria de mudanças
 
-#### 5.1 Distributed Storage System (PRD-25)
-- **Objective**: Provide scalable storage for agents and applications
-- **Requirements**:
-  - Implement local file storage for agents
-  - Enable agents to use storage for artifacts
-  - Support metadata tracking in database
+**Status:** 📋 Planejamento
 
-#### 5.2 Task Queue & Event Processing (PRD-26)
-- **Objective**: Provide asynchronous task processing capabilities
-- **Requirements**:
-  - Integrate BullMQ for job queuing
-  - Enable agents to queue and execute tasks
-  - Support automatic retries on failure
+---
 
-#### 5.3 Knowledge Base System (PRD-27)
-- **Objective**: Provide semantic search and knowledge retrieval
-- **Requirements**:
-  - Implement document storage with semantic search
-  - Use embeddings for similarity-based retrieval
-  - Enable agents to search and retrieve knowledge
+### Frente 4: Workflows de Contratação, Demissão e Operação
 
-#### 5.4 Secrets Management (PRD-28)
-- **Objective**: Securely store and manage sensitive credentials
-- **Requirements**:
-  - Implement vault system for agent secrets
-  - Store API keys, tokens, and credentials securely
-  - Support secret rotation and management
-  - Enable agents to access secrets securely
+**Objetivo:** Ciclo de vida estruturado de agentes
 
-#### 5.5 Electronic Signature System (PRD-29)
-- **Objective**: Enable document signing capabilities
-- **Requirements**:
-  - Implement electronic document signing
-  - Support cryptographic verification
-  - Enable agents to sign documents
-  - Store signed document audit trails
+**PRDs:**
+- PRD-03: Agent Hiring Workflow
+- PRD-04: Agent Termination Workflow
+- PRD-02: External Agent System
 
-### 6. Application Development Tools
+**Escopo:**
+- Workflow de contratação com definição de account, providers, permissões
+- Workflow de demissão com limpeza de recursos
+- Agentes externos sob demanda (consultores, personas)
+- Agentes externos com permissões restritas (apenas mensagens)
 
-#### 6.1 Web Application Templates (PRD-30)
-- **Objective**: Accelerate agent application development
-- **Requirements**:
-  - Create pre-built application templates with common features
-  - Include authentication system in templates
-  - Include payment gateway integration
-  - Support agents to rapidly scaffold new applications
+**Status:** 📋 Planejamento
 
-#### 6.2 Custom Tool Framework (PRD-31)
-- **Objective**: Enable agents to create and use specialized tools
-- **Requirements**:
-  - Implement framework for custom tool creation
-  - Allow agents to build specialized tools for their operations
-  - Support tool creation using Skills or custom interfaces
-  - Enable agents to evolve and create their own integrations
+---
 
-#### 6.3 Marketing Artifact Generation Tools (PRD-32)
-- **Objective**: Provide agents with tools for creating marketing materials
-- **Requirements**:
-  - Integration with image generation services
-  - Text-to-Speech (TTS) capabilities
-  - Support for multiple artifact types (images, audio)
-  - Enable agents to create and deploy marketing materials
+### Frente 5: Comunicação Interna e Externa
 
-#### 6.4 Browser Service (PRD-33)
-- **Objective**: Provide agents with browser automation capabilities
-- **Requirements**:
-  - Implement browser service integration (external service)
-  - Enable agents to interact with web interfaces
-  - Support web scraping and browser automation tasks
+**Objetivo:** Evolução de comunicação para suportar grupos, múltiplos provedores e canais de suporte
 
-#### 6.5 Sub-Agent Capability (PRD-34, Optional)
-- **Objective**: Explore using cheaper LLM models for internal agent tasks
-- **Status**: Exploratory, needs further evaluation
-- **Considerations**:
-  - Use sub-agents for information gathering tasks
-  - Primary agent acts as supervisor/orchestrator
-  - Cost optimization for at-scale deployments
+**PRDs:**
+- PRD-18: Internal Group Chat Implementation (suporte a participants/grupos)
+- PRD-23: Multi-Provider Group Support (Discord, Email)
+- Ticketing system (como provider de comunicação)
 
-### 7. Optional/Deferred Features
+**Escopo:**
+- Chat interno com suporte a grupos/channels
+- Email por agente com configuração de domínio
+- Discord: integração com criação de canals
+- Ticketing como provider (receber tickets, atender usuários)
+- Configuração de email organizacional (SMTP/IMAP)
 
-#### 7.1 Social Media & Community Integration (PRD-17, DEFERRED)
-- **Status**: Deprioritized in favor of core product development
-- **Reason**: Solo dev prefers manual control over automated social posting
+**Status:** 📋 Planejamento
 
-#### 7.2 Marketing Platform Integration (PRD-18, DEFERRED)
-- **Status**: Deferred, use PRD-16 (simple email) instead
-- **Reason**: Basic email sufficient for current needs
+---
 
-#### 7.3 Cash Flow Control (PRD-20, OPTIONAL)
-- **Status**: Optional, deferred until multiple agents require budget management
-- **Reason**: Value-to-effort ratio too low for MVP
+### Frente 6: Despertadores, Agendamentos e Continuidade
+
+**Objetivo:** Heartbeat e agendamentos para manter agentes ativos e permitting execução contínua
+
+**PRDs:**
+- PRD-10: Cron/Scheduling Tool + Heartbeat System
+
+**Escopo:**
+- Heartbeat periódico (padrão 5 min) por agente
+- Tools para criação de crons/agendamentos pelos agentes
+- Detecção de tarefas pendentes e retomada
+- Debounce de wake-ups
+- Integração com chat interno para messaging de eventos agendados
+
+**Status:** ✅ Alinhado
+
+---
+
+### Frente 7: Eventos Externos e Automação Orientada a Gatilhos
+
+**Objetivo:** Receber eventos externos e rotear para agentes corretos, com wake-up
+
+**PRDs:**
+- PRD-33: Webhook Event Routing System
+- PRD-05: Application Deployment (webhook Coolify)
+- PRD-06: Billing/Payment Integration (webhooks Stripe/Asaas)
+
+**Escopo:**
+- Webhooks para eventos externos
+- Roteamento de eventos para agentes
+- Eventos GitHub (push, PR, issues)
+- Eventos Coolify (deploy status)
+- Eventos de pagamento (Stripe, Asaas)
+- Ads e plataformas de marketing
+- Wake-up de agentes em eventos
+
+**Status:** 📋 Planejamento
+
+---
+
+### Frente 8: Desenvolvimento, Deploy e Infraestrutura Base
+
+**Objetivo:** Templates, deploy automatizado e infraestrutura necessária para aplicações
+
+**PRDs:**
+- PRD-30: Web Application Templates
+- PRD-05: Application Deployment (Coolify)
+- PRD-07: Browser Service (investigação necessária)
+- PRD-26: Task Queue & Event Processing (BullMQ/trigger.dev)
+- Storage: MinIO (não existe PRD específico)
+
+**Escopo:**
+- Templates web com auth, gateway de pagamento, integração com tickets
+- Deploy automatizado via Coolify em Hetzner
+- Domínio wildcard e DNS management
+- Browser como serviço externo (openclaw-like)
+- MinIO para storage (decidir se único ou por app)
+- BullMQ/trigger.dev para execução assíncrona
+
+**Status:** 📋 Planejamento
+
+---
+
+### Frente 9: Operação de Negócio via ERP/CRM/Financeiro
+
+**Objetivo:** Gestão operacional da empresa digital
+
+**PRDs:**
+- PRD-22: Micro-ERP System
+- PRD-24: Project & Task Management
+- PRD-06: Billing & Payment Integration
+- PRD-08: Cash Flow Control (deferred)
+
+**Escopo:**
+- Micro ERP: registrar gastos, recebimentos, previsões, folha de pagamento
+- CRM integrado
+- Projetos/tarefas
+- Fluxo de caixa e governança (limitar ações, priorizar)
+- Integração Stripe + Asaas
+- Acesso de agentes aos dados financeiros
+
+**Status:** 📋 Planejamento (PRD-08 deferred)
+
+---
+
+### Frente 10: Conhecimento, Memória e Busca Semântica
+
+**Objetivo:** Base de conhecimento compartilhada com busca semântica
+
+**Escopo:**
+- Workspace do Mastra: embeddings, busca semântica, GraphRAG
+- Base de conhecimento no ERP
+- Memória de longo prazo de agentes
+- Subagentes com LLM mais barato (opcional, precisa avaliação)
+
+**Status:** 🔍 Investigação
+
+---
+
+### Frente 11: Marketing, Presença Pública e Canais de Divulgação
+
+**Objetivo:** Artefatos de marketing e integração com plataformas públicas
+
+**PRDs:**
+- PRD-20: Marketing Artifact Generation Tools
+- PRD-28: Social Media & Community Integration
+- PRD-21: Marketing Platform Integration (deferred)
+
+**Escopo:**
+- Tools para criação de artefatos (imagens, vídeos, áudio)
+- TTS/STT (ElevenLabs, OpenAI Whisper, etc)
+- Nanobanana para geração de imagens
+- Integração com redes sociais
+- Fóruns e canais públicos
+- Plataformas de marketing (campanhas)
+
+**Status:** 📋 Planejamento
+
+---
+
+### Frente 12: Autonomia Progressiva - Criação de Ferramentas
+
+**Objetivo:** Agentes criam suas próprias tools e integrações
+
+**PRDs:**
+- PRD-11: Custom Tool Framework (deferred)
+- PRD-25: Research as Workflow
+
+**Escopo:**
+- Tools customizadas por agentes (via Skills ou framework próprio)
+- Research: transformar de Tool para Workflow
+- Criação de integrações sob demanda
+- Evolução autônoma de capacidades
+
+**Status:** 📋 Planejamento (PRD-11 deferred)
+
+---
+
+## Integração e Dependências
+
+### Fundamentações que habilitam múltiplas frentes:
+- **Frente 1+2:** Base para toda comunicação, autenticação e acesso a dados
+- **Frente 3:** Habilitador para controle em Frentes 4-12
+- **Frente 6:** Habilitador para continuidade em Frentes 5, 7, 9
+
+### Sequência recomendada:
+
+**Fase 1 (Fundação):** Frentes 1, 2, 3
+**Fase 2 (Operação Básica):** Frentes 4, 6, 9
+**Fase 3 (Extensão):** Frentes 5, 7, 8
+**Fase 4 (Especialização):** Frentes 10, 11, 12
+
+---
+
+## Status Geral
+
+- **Alinhadas:** 16 PRDs
+- **Precisam Alinhamento:** 5 PRDs
+- **Adiadas para Depois:** 3 PRDs
+- **Descartadas:** 9 PRDs
+
+**Total Ativo:** 21 PRDs mapeados às 12 Frentes
+
+---
+
+## Referências
+
+- VISION.md: Anotações originais da plataforma
+- ROADMAP_MAPPING.md: Mapeamento detalhado de PRDs às frentes
+- docs/planning/: PRDs individuais
