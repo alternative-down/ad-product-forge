@@ -1,8 +1,26 @@
 # PRD-19: Sistema de Base de Conhecimento
 
-**Status:** Planejamento - Design Técnico
+**Status:** ❌ Não Alinhado - Interpretação Incorreta
 **Data:** 2026-03-15
 **Escopo:** Projeto pessoal de desenvolvedor - Princípios KISS & YAGNI
+
+---
+
+## ❌ Nota de Desalinhamento
+
+**Problema:** PRD propõe construir um novo sistema de base de conhecimento, mas Mastra já fornece isso nativamente.
+
+**Intenção Original:**
+Aproveitar o workspace/sandbox do Mastra que já tem:
+- Acesso a arquivos
+- Embeddings
+- Busca semântica
+
+Ideia: Montar um Path compartilhado entre todos agentes (pasta compartilhada) usando o próprio workspace do Mastra, só adicionando um Path extra.
+
+**Diferença:** Não precisa de novo PRD de feature. É questão de configuração do workspace Mastra e exposição como tool para agentes.
+
+**Status:** Não é um PRD de desenvolvimento. Será necessário pensar em como expor o workspace compartilhado aos agentes como tool.
 
 ---
 
