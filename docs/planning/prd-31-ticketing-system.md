@@ -102,13 +102,5 @@ tickets {
 
 ---
 
-## Timeline
-- **Semana 1:** Schema de banco de dados + todos endpoints
-- **Semana 2:** Testes + documentação
-
-Total: ~15 horas para desenvolvedor solo
-
----
-
 **Histórico do Documento:**
 - v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo

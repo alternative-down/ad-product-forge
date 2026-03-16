@@ -88,35 +88,9 @@ listSecrets(): Promise<Array<{ secretId: string; name: string; }>>;
 
 ---
 
-## Implementação
-
-### Fase 1: Core (2 semanas)
-- [ ] Camada de criptografia/descriptografia
-- [ ] Armazenamento e recuperação de segredos
-- [ ] API de agente para acesso de segredo
-- [ ] Gerenciamento de chave de criptografia
-
-### Fase 2: Aprimoramento (Futuro)
-- [ ] Cache em memória com TTL
-
----
-
 ## Critérios de Sucesso
 
 - [ ] Segredos são criptografados em repouso
 - [ ] Agentes conseguem recuperar segredos via API
 - [ ] Segredos nunca aparecem em logs
 
----
-
-## Riscos
-
-- Compromisso de chave de criptografia é crítico
-- Exposição de plaintext em memória se não for cuidadoso
-- Impacto de performance de criptografia/descriptografia (mitigar com cache)
-
----
-
-## Aprimoramentos Futuros
-
-- Cache em memória com TTL

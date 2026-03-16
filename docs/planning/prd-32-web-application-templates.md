@@ -120,20 +120,6 @@ templates/
 
 ---
 
-## Implementação
-
-### Fase 1: Foundation (2 semanas)
-- [ ] Motor de template e CLI
-- [ ] Template de Backend de REST API
-- [ ] Template de Web Full-Stack
-- [ ] Documentação básica
-
-### Fase 2: Aprimoramento (Futuro)
-- [ ] Wizard de customização de template
-- [ ] Templates adicionais
-
----
-
 ## Critérios de Sucesso
 
 - [ ] Agente consegue listar templates
@@ -141,22 +127,6 @@ templates/
 - [ ] Aplicação gerada é executável sem modificações
 - [ ] Templates são bem documentados
 - [ ] Instruções de setup são claras
-
----
-
-## Riscos
-
-- Templates podem ficar obsoletos conforme frameworks evoluem
-- Código gerado deve seguir melhores práticas
-- Segurança deve ser embutida em templates
-
----
-
-## Aprimoramentos Futuros
-
-- Template de dashboard de admin
-- Template de API GraphQL
-- Framework de criação de template customizado
 
 ---
 

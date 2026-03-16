@@ -82,24 +82,5 @@ Se viável, espera-se:
 
 ---
 
-## Próximos Passos
-
-1. **Investigar openclaw** — Entender como implementam browser automation
-2. **Testar Playwright** — Com diferentes configurações de sandbox
-3. **Documentar soluções alternativas** — Pesquisar opções
-4. **POC (Proof of Concept)** — Testar a abordagem mais promissora
-5. **Decidir** — Qual solução seguir
-
----
-
-## Notas
-
-- Não implementar até investigação ser concluída
-- Não usar a solução descrita em versões anteriores (foi inventada sem teste)
-- Priorizar baseado no que já funciona (openclaw)
-- Considerar simplicidade para solo dev
-
----
-
 **Status do Documento:** Aguardando Investigação
 **Última Atualização:** 2026-03-15

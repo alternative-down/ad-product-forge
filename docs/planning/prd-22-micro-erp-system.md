@@ -101,16 +101,7 @@ CREATE TABLE financial_log (
 
 ---
 
-## 5. Implementação
-
-### Fase 1: Tabela + Ferramentas (4h)
-- Criar tabela financial_log
-- Implementar: logExpense, logRevenue, getSummary
-- Cálculos de soma simples
-
----
-
-## 6. Critérios de Sucesso
+## 5. Critérios de Sucesso
 - [ ] Consegue registrar despesas e receitas
 - [ ] Consegue visualizar resumo mensal
 - [ ] Retorna totais corretos
