@@ -23,7 +23,10 @@ export const agents = sqliteTable('agents', {
   name: text('name').notNull(),
   description: text('description'),
   model: text('model').notNull(),
-  instructions: text('instructions'),
+  omModel: text('om_model'), // Modelo para observational memory
+  instructions: text('instructions').notNull(),
+  tools: text('tools'), // JSON array de tool IDs ou configuração
+  workflows: text('workflows'), // JSON array de workflow IDs
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });

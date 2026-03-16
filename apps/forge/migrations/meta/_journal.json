@@ -8,6 +8,13 @@
       "when": 1773682342446,
       "tag": "0000_yellow_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1773698593367,
+      "tag": "0001_mean_silvermane",
+      "breakpoints": true
     }
   ]
 }
