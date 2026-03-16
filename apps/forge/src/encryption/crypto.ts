@@ -52,8 +52,6 @@ export function decryptSecret(encrypted: string): string {
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
   decipher.setAuthTag(authTag);
 
-  let plaintext = decipher.update(ciphertext, 'hex', 'utf8');
-  plaintext += decipher.final('utf8');
-
-  return plaintext;
+  const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return plaintext.toString('utf8');
 }

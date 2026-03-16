@@ -7,8 +7,8 @@
 
 import { createClient } from '@libsql/client';
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
-import * as schema from './schema';
-import { getAppDatabasePath } from './config';
+import * as schema from './schema.js';
+import { getAppDatabasePath } from './config.js';
 
 type Database = LibSQLDatabase<typeof schema>;
 
