@@ -2,7 +2,6 @@ import type { Client } from '@libsql/client';
 
 import { initializeCommunicationDatabase } from './database';
 import { createCommunicationStore } from './store';
-import { getCommunicationClient } from './client';
 import type {
   CommunicationConversationView,
   CommunicationMessageView,
@@ -10,17 +9,14 @@ import type {
 } from './provider-types';
 
 export async function createCommunicationModule(config: {
-  client?: Client;
+  client: Client;
   providers: CommunicationProvider[];
 }) {
-  // Get or create libSQL client
-  const client = config.client || getCommunicationClient();
-
   // Initialize database (run migrations)
-  await initializeCommunicationDatabase(client);
+  await initializeCommunicationDatabase(config.client);
 
   // Create store for data operations
-  const store = await createCommunicationStore(client);
+  const store = await createCommunicationStore(config.client);
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: (() => void) | null = null;
 
