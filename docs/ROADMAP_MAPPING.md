@@ -10,14 +10,14 @@
 **Objetivo:** Migrar de agentes fixa para dinâmica, persistida em banco de dados
 
 **PRDs Relacionados:**
-- **PRD-01:** Database-Driven Agent System ✅ (alinhado)
-- **PRD-02:** Communication Provider Integration ✅ (alinhado)
+- **PRD-01:** Database-Driven Agent System ✅
 
 **Escopo:**
 - SQLite + Drizzle ORM
 - Schemas de agentes e providers
 - Migrations e versionamento de dados
 - Carregamento dinâmico em runtime
+- Persistência de configurações de providers de comunicação
 
 ---
 
@@ -229,7 +229,7 @@
 
 ### ✅ Alinhados (implementar conforme planejado)
 - PRD-01: Database-Driven Agent System
-- PRD-02: Communication Provider Integration
+- PRD-02: External Agent System
 - PRD-03: Agent Hiring Workflow
 - PRD-04: Agent Termination Workflow
 - PRD-05: Application Deployment
@@ -243,6 +243,7 @@
 - PRD-26: Role and Function Schema
 - PRD-27: Secrets Management
 - PRD-30: Task Queue & Event Processing
+- PRD-31: Ticketing System as Provider
 - PRD-32: Web Application Templates
 - PRD-33: Webhook Event Routing
 
