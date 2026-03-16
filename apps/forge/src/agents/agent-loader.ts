@@ -7,7 +7,7 @@ import type { CommunicationProvider } from '@mastra-engine/core';
 
 export interface AgentLoaderConfig {
   agentId: string;
-  workspaceBasePath?: string;
+  workspaceBasePath: string;
 }
 
 /**

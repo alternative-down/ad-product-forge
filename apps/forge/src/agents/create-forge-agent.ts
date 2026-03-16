@@ -1,9 +1,8 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
 import { createClient } from '@libsql/client';
+import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import {
   createCommunicationModule,
   type CommunicationProvider,
@@ -12,7 +11,6 @@ import {
   LongTermMemory,
   createAgentMemory,
   createObservationalMemory,
-  createAgentStorage,
   appendWorkingMemoryInstructions,
 } from '@mastra-engine/core';
 
@@ -39,8 +37,7 @@ export interface CreateAgentConfig<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
     'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'agents' | 'omModel' | 'providers'
   > {
-  workspace?: Exclude<CreateForgeAgentConfig['workspace'], Function>;
-  workspaceBasePath?: string;
+  workspaceBasePath: string;
 }
 
 export async function createAgent<
@@ -54,20 +51,19 @@ export async function createAgent<
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   // Build agent workspace structure from workspaceBasePath
   // Structure: workspaceBasePath/{agentId}/[workspace, database.db, workspace-memory]
-  if (!config.workspaceBasePath) {
-    throw new Error('workspaceBasePath is required to create an agent');
-  }
-
   const agentWorkspacePath = path.resolve(config.workspaceBasePath, config.id);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
   const agentWorkspaceDir = path.resolve(agentWorkspacePath, 'workspace');
   const agentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
 
-  // Create agent storage with custom database path
-  const { client, storage, vector } = createAgentStorage(config.id, agentDatabasePath);
+  // Create agent database client and storage
+  const dbUrl = `file:${agentDatabasePath}`;
+  const client = createClient({ url: dbUrl });
+  const storage = new LibSQLStore({ id: `${config.id}-storage`, client });
+  const vector = new LibSQLVector({ id: `${config.id}-vector`, url: dbUrl });
 
   // Create communication database client from agent database
-  const communicationClient = createClient({ url: `file:${agentDatabasePath}` });
+  const communicationClient = createClient({ url: dbUrl });
 
   const communication = await createCommunicationModule({
     client: communicationClient,
@@ -104,7 +100,6 @@ export async function createAgent<
     model: config.model,
     tools,
     workflows: config.workflows,
-    workspace: config.workspace,
     agents: config.agents,
     memory,
     inputProcessors,

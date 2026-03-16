@@ -11,5 +11,4 @@ export type { Attachment } from './agent/communication/store';
 export { LongTermMemory } from './agent/memory/long-term-memory';
 export { createAgentMemory } from './agent/memory/memory';
 export { createObservationalMemory } from './agent/memory/observational-memory';
-export { createAgentStorage } from './agent/memory/storage';
 export { appendWorkingMemoryInstructions } from './agent/memory/working-memory';
