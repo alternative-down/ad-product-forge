@@ -1,6 +1,6 @@
 import type { Client } from '@libsql/client';
 
-import { createCommunicationStore } from './store';
+import { initializeCommunicationDatabase } from './database';
 import type {
   CommunicationConversationView,
   CommunicationMessageView,
@@ -11,7 +11,8 @@ export async function createCommunicationModule(config: {
   client: Client;
   providers: CommunicationProvider[];
 }) {
-  const store = await createCommunicationStore(config.client);
+  // Initialize database with migrations and create store
+  const { db, store } = await initializeCommunicationDatabase(config.client);
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: (() => void) | null = null;
 

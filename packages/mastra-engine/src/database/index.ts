@@ -4,12 +4,13 @@
  * Provides:
  * - Configuration helpers for libsql (getLibsqlUrl, getLibsqlToken)
  * - Path helpers for agent databases (getAgentDatabasePath)
- * - Database initialization (initializeCommunicationDatabase)
- * - Migration runner (runMigrations)
+ * - Migration runner (runMigrations) - used internally by communication module
  * - Communication schema and types
+ *
+ * NOTE: Database initialization is now handled by:
+ * - packages/mastra-engine/src/agent/communication/database.ts
  */
 
-export { initializeCommunicationDatabase } from './init';
 export { runMigrations } from './migrate';
 export {
   getLibsqlUrl,
