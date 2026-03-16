@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm';
 import type { Database } from '../database/index.js';
-import { agents } from '../database/schema.js';
+import { agents, agentProviders } from '../database/schema.js';
 import { createAgent } from './create-forge-agent.js';
 import type { CreateForgeAgentConfig } from './create-forge-agent.js';
 import type { CommunicationProvider } from '@mastra-engine/core';
+import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
 
 export interface AgentLoaderConfig {
   agentId: string;
@@ -30,9 +31,24 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
-  // TODO: Load providers from agent_providers table and decrypt credentials
-  // For now, we'll use empty providers array and handle provider configuration separately
-  const providers: CommunicationProvider[] = [];
+  // Load providers from agent_providers table
+  const providerConfigs = await db.query.agentProviders.findMany({
+    where: eq(agentProviders.agentId, config.agentId),
+  });
+
+  const providerCredentials: ProviderCredentialsMap = {};
+
+  for (const providerConfig of providerConfigs) {
+    try {
+      // Parse credentials from encrypted_credentials field (no decryption yet)
+      const credentials = JSON.parse(providerConfig.encryptedCredentials);
+      providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials;
+    } catch (error) {
+      console.warn(`[AgentLoader] Failed to parse credentials for provider ${providerConfig.providerType}:`, error);
+    }
+  }
+
+  const providers = loadCommunicationProviders(providerCredentials);
 
   // Create agent from database configuration
   const agent = await createAgent(

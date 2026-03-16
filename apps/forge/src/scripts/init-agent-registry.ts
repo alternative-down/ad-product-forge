@@ -5,11 +5,12 @@ import path from 'node:path';
 
 import { drizzle } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 
 import * as schema from '../database/schema.js';
 import { getDatabase, runMigrations } from '../database/index.js';
+import { createId } from '@paralleldrive/cuid2';
 
 const envSchema = z.object({
   FORGE_MODEL_PROVIDER: z.enum(['openai-codex', 'claude-max']),
@@ -128,6 +129,60 @@ async function initAgentRegistry() {
         });
 
         console.log(`  ✓ Created agent: ${config.id}`);
+      }
+    }
+
+    // Register communication providers for agents
+    console.log('[Init] Registering communication providers...');
+    const forgeAgentId = env.FORGE_AGENT_ID;
+    const helperAgentId = env.FORGE_HELPER_AGENT_ID || 'forge-helper';
+
+    // Configure internal-chat provider for both agents
+    const agentProviderConfigs = [
+      {
+        agentId: forgeAgentId,
+        providerType: 'internal-chat',
+        credentials: { agentId: forgeAgentId },
+      },
+      {
+        agentId: helperAgentId,
+        providerType: 'internal-chat',
+        credentials: { agentId: helperAgentId },
+      },
+    ];
+
+    for (const providerConfig of agentProviderConfigs) {
+      // Check if provider already exists for this agent
+      const existing = await db.query.agentProviders.findFirst({
+        where: and(
+          eq(schema.agentProviders.agentId, providerConfig.agentId),
+          eq(schema.agentProviders.providerType, providerConfig.providerType)
+        ),
+      });
+
+      const now = Date.now();
+
+      if (existing) {
+        // Update existing provider (credentials)
+        await db
+          .update(schema.agentProviders)
+          .set({
+            encryptedCredentials: JSON.stringify(providerConfig.credentials),
+          })
+          .where(eq(schema.agentProviders.id, existing.id));
+
+        console.log(`  ✓ Updated provider: ${providerConfig.agentId}/${providerConfig.providerType}`);
+      } else {
+        // Insert new provider
+        await db.insert(schema.agentProviders).values({
+          id: createId(),
+          agentId: providerConfig.agentId,
+          providerType: providerConfig.providerType,
+          encryptedCredentials: JSON.stringify(providerConfig.credentials),
+          createdAt: now,
+        });
+
+        console.log(`  ✓ Created provider: ${providerConfig.agentId}/${providerConfig.providerType}`);
       }
     }
 
