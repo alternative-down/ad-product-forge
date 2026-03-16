@@ -1,282 +1,95 @@
 # Roadmap - ad-product-forge
 
-**Última Atualização:** 2026-03-15
-**Referência:** VISION.md, ROADMAP_MAPPING.md
+**Última Atualização:** 2026-03-16
+**Versão:** 2.0 (Consolidada)
 
 ---
 
-## Objetivo Geral
+## 📌 Quick Summary
 
-Estruturar uma plataforma em que agentes possam operar como uma empresa digital: serem criados e geridos dinamicamente, executar tarefas, interagir entre si e com sistemas externos, desenvolver produtos, operar canais de comunicação, controlar recursos da operação e evoluir com autonomia controlada.
+**28 PRDs válidos** organizados em **6 fases de implementação**
 
----
-
-## 12 Frentes de Desenvolvimento
-
-### Frente 1: Persistência e Configuração Dinâmica de Agentes
-
-**Objetivo:** Migrar de agentes fixa em código para dinâmica, persistida em banco de dados e carregada em runtime.
-
-**PRDs:**
-- PRD-01: Database-Driven Agent System
-- PRD-02: Communication Provider Integration
-
-**Escopo:**
-- SQLite + Drizzle ORM
-- Schemas de agentes e providers de comunicação
-- Migrations e versionamento de dados
-- Carregamento dinâmico em runtime
-- Refatoração de módulos SMTP/IMAP para Drizzle
-
-**Status:** 📋 Planejamento
+- **Fase 1:** Fundação (PRD-01, PRD-27)
+- **Fase 2:** Agendamentos + Ferramentas (PRD-10, PRD-02, PRD-25)
+- **Fase 3:** Comunicação + Browser (PRD-18, PRD-07)
+- **Fase 4:** Agentes + Conhecimento (PRD-03, PRD-04, PRD-19)
+- **Fase 5:** Accountability ⭐ (PRD-22, PRD-26)
+- **Fase 6+:** Integrações (PRD-33, PRD-06, PRD-05, PRD-23, ...)
 
 ---
 
-### Frente 2: Segurança e Gestão de Credenciais
+## 📚 Documentação Completa
 
-**Objetivo:** Proteger dados sensíveis (tokens, senhas, credenciais de provedores)
+Toda a documentação detalhada está em **`docs/`**:
 
-**PRDs:**
-- PRD-01: Database-Driven Agent System (criptografia AES-256-GCM)
-- PRD-27: Secrets Management
-
-**Escopo:**
-- Criptografia de credenciais em repouso
-- Vault/secrets centralizado para agentes
-- Rotação de credenciais
-- Acesso seguro aos dados sensíveis
-
-**Status:** 📋 Planejamento
+| Arquivo | Conteúdo |
+|---------|----------|
+| **[docs/VISION.md](./docs/VISION.md)** | Anotações originais detalhadas (visão raw + organizada) |
+| **[docs/ROADMAP.md](./docs/ROADMAP.md)** | Roadmap consolidado (este é o documento principal) |
+| **[docs/PRD_REFERENCE.md](./docs/PRD_REFERENCE.md)** | Referência de todos os 28 PRDs |
+| **[docs/PRD_DEPENDENCIES.md](./docs/PRD_DEPENDENCIES.md)** | Ordem de implementação + dependências |
+| **[docs/ROADMAP_MAPPING.md](./docs/ROADMAP_MAPPING.md)** | Mapeamento PRDs → 12 Frentes Estratégicas |
 
 ---
 
-### Frente 3: Papéis, Funções e Governança Organizacional
+## 🎯 Começar Aqui
 
-**Objetivo:** Schema de papéis e funções para controle de acesso e organização interna
-
-**PRDs:**
-- PRD-26: Role and Function Schema
-
-**Conceitos:**
-- **Função:** agrupador organizacional ao qual o agente está vinculado
-- **Papel:** definição efetiva de permissões (Tools, Providers, Workflows)
-
-**Escopo:**
-- Master agent com permissão irrestrita
-- Agentes podem criar/alterar papéis e funções
-- Controle de acesso granular por papel
-- Trilha de auditoria de mudanças
-
-**Status:** 📋 Planejamento
+1. **Novo no projeto?** → Leia [docs/VISION.md](./docs/VISION.md)
+2. **Quer ver o plano geral?** → Leia [docs/ROADMAP.md](./docs/ROADMAP.md)
+3. **Quer implementar?** → Consulte [docs/PRD_DEPENDENCIES.md](./docs/PRD_DEPENDENCIES.md) para ordem das fases
+4. **Precisa de referência de PRDs?** → Veja [docs/PRD_REFERENCE.md](./docs/PRD_REFERENCE.md)
 
 ---
 
-### Frente 4: Workflows de Contratação, Demissão e Operação
+## 🔑 Conceitos-Chave
 
-**Objetivo:** Ciclo de vida estruturado de agentes
+### 12 Frentes Estratégicas
+1. Persistência e Configuração Dinâmica
+2. Segurança e Gestão de Credenciais
+3. Papéis, Funções e Governança
+4. Workflows de Contratação/Demissão
+5. Comunicação Interna e Externa
+6. Despertadores, Agendamentos e Continuidade
+7. Eventos Externos e Automação
+8. Desenvolvimento, Deploy e Infraestrutura
+9. Operação de Negócio (ERP/Financeiro) ⭐
+10. Conhecimento, Memória e Busca Semântica
+11. Marketing, Presença Pública e Divulgação
+12. Autonomia Progressiva - Criação de Ferramentas
 
-**PRDs:**
-- PRD-03: Agent Hiring Workflow
-- PRD-04: Agent Termination Workflow
-- PRD-02: External Agent System
-
-**Escopo:**
-- Workflow de contratação com definição de account, providers, permissões
-- Workflow de demissão com limpeza de recursos
-- Agentes externos sob demanda (consultores, personas)
-- Agentes externos com permissões restritas (apenas mensagens)
-
-**Status:** 📋 Planejamento
-
----
-
-### Frente 5: Comunicação Interna e Externa
-
-**Objetivo:** Evolução de comunicação para suportar grupos, múltiplos provedores e canais de suporte
-
-**PRDs:**
-- PRD-18: Internal Group Chat Implementation (suporte a participants/grupos)
-- PRD-23: Multi-Provider Group Support (Discord, Email)
-- Ticketing system (como provider de comunicação)
-
-**Escopo:**
-- Chat interno com suporte a grupos/channels
-- Email por agente com configuração de domínio
-- Discord: integração com criação de canals
-- Ticketing como provider (receber tickets, atender usuários)
-- Configuração de email organizacional (SMTP/IMAP)
-
-**Status:** 📋 Planejamento
+### PRD Prioritário
+- **PRD-22: Micro-ERP System (Fluxo de Caixa)** - Fase 5
+- Mecanismo core que traz accountability aos agentes
+- "Caixa da empresa" centralizado com contas a pagar/receber
 
 ---
 
-### Frente 6: Despertadores, Agendamentos e Continuidade
+## ⚠️ Decisões Importantes
 
-**Objetivo:** Heartbeat e agendamentos para manter agentes ativos e permitting execução contínua
-
-**PRDs:**
-- PRD-10: Cron/Scheduling Tool + Heartbeat System
-
-**Escopo:**
-- Heartbeat periódico (padrão 5 min) por agente
-- Tools para criação de crons/agendamentos pelos agentes
-- Detecção de tarefas pendentes e retomada
-- Debounce de wake-ups
-- Integração com chat interno para messaging de eventos agendados
-
-**Status:** ✅ Alinhado
+- ✅ **PRD-26 (Roles) adiado para Fase 5** - Muito complexo
+- ✅ **PRD-10 inclui refactoring de notificações** - Tabela nova, tirar Read/Unread do chat
+- ✅ **Email organizacional é CONFIG** (domínio + SMTP), não PRD
+- ✅ **GitHub é CONFIG + investigação** (GitHub App vs conta por agente)
+- ✅ **MinIO + BullMQ em aberto** - Serviços compartilhados, não imediato
+- ✅ **5 PRDs descartados** - PRD-09, 13, 14, 15, 17, 30
 
 ---
 
-### Frente 7: Eventos Externos e Automação Orientada a Gatilhos
+## 📊 Status
 
-**Objetivo:** Receber eventos externos e rotear para agentes corretos, com wake-up
-
-**PRDs:**
-- PRD-33: Webhook Event Routing System
-- PRD-05: Application Deployment (webhook Coolify)
-- PRD-06: Billing/Payment Integration (webhooks Stripe/Asaas)
-
-**Escopo:**
-- Webhooks para eventos externos
-- Roteamento de eventos para agentes
-- Eventos GitHub (push, PR, issues)
-- Eventos Coolify (deploy status)
-- Eventos de pagamento (Stripe, Asaas)
-- Ads e plataformas de marketing
-- Wake-up de agentes em eventos
-
-**Status:** 📋 Planejamento
+| Categoria | Quantidade |
+|-----------|-----------|
+| PRDs Válidos | 28 |
+| Descartados | 5 |
+| Fases | 6 |
+| Frentes | 12 |
 
 ---
 
-### Frente 8: Desenvolvimento, Deploy e Infraestrutura Base
+## 🚀 Próximas Ações
 
-**Objetivo:** Templates, deploy automatizado e infraestrutura necessária para aplicações
-
-**PRDs:**
-- PRD-30: Web Application Templates
-- PRD-05: Application Deployment (Coolify)
-- PRD-07: Browser Service (investigação necessária)
-- PRD-26: Task Queue & Event Processing (BullMQ/trigger.dev)
-- Storage: MinIO (não existe PRD específico)
-
-**Escopo:**
-- Templates web com auth, gateway de pagamento, integração com tickets
-- Deploy automatizado via Coolify em Hetzner
-- Domínio wildcard e DNS management
-- Browser como serviço externo (openclaw-like)
-- MinIO para storage (decidir se único ou por app)
-- BullMQ/trigger.dev para execução assíncrona
-
-**Status:** 📋 Planejamento
+Veja [docs/PRD_DEPENDENCIES.md](./docs/PRD_DEPENDENCIES.md) para começar a implementação com a Fase 1.
 
 ---
 
-### Frente 9: Operação de Negócio via ERP/CRM/Financeiro
-
-**Objetivo:** Gestão operacional da empresa digital
-
-**PRDs:**
-- PRD-22: Micro-ERP System
-- PRD-24: Project & Task Management
-- PRD-06: Billing & Payment Integration
-- PRD-08: Cash Flow Control (deferred)
-
-**Escopo:**
-- Micro ERP: registrar gastos, recebimentos, previsões, folha de pagamento
-- CRM integrado
-- Projetos/tarefas
-- Fluxo de caixa e governança (limitar ações, priorizar)
-- Integração Stripe + Asaas
-- Acesso de agentes aos dados financeiros
-
-**Status:** 📋 Planejamento (PRD-08 deferred)
-
----
-
-### Frente 10: Conhecimento, Memória e Busca Semântica
-
-**Objetivo:** Base de conhecimento compartilhada com busca semântica
-
-**Escopo:**
-- Workspace do Mastra: embeddings, busca semântica, GraphRAG
-- Base de conhecimento no ERP
-- Memória de longo prazo de agentes
-- Subagentes com LLM mais barato (opcional, precisa avaliação)
-
-**Status:** 🔍 Investigação
-
----
-
-### Frente 11: Marketing, Presença Pública e Canais de Divulgação
-
-**Objetivo:** Artefatos de marketing e integração com plataformas públicas
-
-**PRDs:**
-- PRD-20: Marketing Artifact Generation Tools
-- PRD-28: Social Media & Community Integration
-- PRD-21: Marketing Platform Integration (deferred)
-
-**Escopo:**
-- Tools para criação de artefatos (imagens, vídeos, áudio)
-- TTS/STT (ElevenLabs, OpenAI Whisper, etc)
-- Nanobanana para geração de imagens
-- Integração com redes sociais
-- Fóruns e canais públicos
-- Plataformas de marketing (campanhas)
-
-**Status:** 📋 Planejamento
-
----
-
-### Frente 12: Autonomia Progressiva - Criação de Ferramentas
-
-**Objetivo:** Agentes criam suas próprias tools e integrações
-
-**PRDs:**
-- PRD-11: Custom Tool Framework (deferred)
-- PRD-25: Research as Workflow
-
-**Escopo:**
-- Tools customizadas por agentes (via Skills ou framework próprio)
-- Research: transformar de Tool para Workflow
-- Criação de integrações sob demanda
-- Evolução autônoma de capacidades
-
-**Status:** 📋 Planejamento (PRD-11 deferred)
-
----
-
-## Integração e Dependências
-
-### Fundamentações que habilitam múltiplas frentes:
-- **Frente 1+2:** Base para toda comunicação, autenticação e acesso a dados
-- **Frente 3:** Habilitador para controle em Frentes 4-12
-- **Frente 6:** Habilitador para continuidade em Frentes 5, 7, 9
-
-### Sequência recomendada:
-
-**Fase 1 (Fundação):** Frentes 1, 2, 3
-**Fase 2 (Operação Básica):** Frentes 4, 6, 9
-**Fase 3 (Extensão):** Frentes 5, 7, 8
-**Fase 4 (Especialização):** Frentes 10, 11, 12
-
----
-
-## Status Geral
-
-- **Alinhadas:** 16 PRDs
-- **Precisam Alinhamento:** 5 PRDs
-- **Adiadas para Depois:** 3 PRDs
-- **Descartadas:** 9 PRDs
-
-**Total Ativo:** 21 PRDs mapeados às 12 Frentes
-
----
-
-## Referências
-
-- VISION.md: Anotações originais da plataforma
-- ROADMAP_MAPPING.md: Mapeamento detalhado de PRDs às frentes
-- docs/planning/: PRDs individuais
+**Para documentação detalhada, consulte os arquivos em `docs/`**
