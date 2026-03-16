@@ -35,18 +35,16 @@ export async function createAgent<
 >(
   config: Pick<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'workspace' | 'agents' | 'omModel' | 'providers'
-  >,
+    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'agents' | 'omModel' | 'providers'
+  > & {
+    workspace?: Exclude<CreateForgeAgentConfig['workspace'], Function>;
+  },
   options: CreateAgentOptions = {},
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const { client, storage, vector } = createAgentStorage(config.id);
 
-  // Create communication database client from workspace path
-  const getWorkspacePath = () => {
-    const workspace = typeof config.workspace === 'function' ? undefined : config.workspace;
-    return (workspace?.filesystem as any)?._basePath || process.cwd();
-  };
-  const workspacePath = getWorkspacePath();
+  // Create communication database client from workspace path (default to cwd if not provided)
+  const workspacePath = (config.workspace?.filesystem as any)?._basePath || process.cwd();
   const communicationDbPath = path.resolve(workspacePath, 'communications.db');
   const communicationClient = createClient({ url: `file:${communicationDbPath}` });
 
@@ -113,8 +111,10 @@ export async function createForgeAgent<
 >(
   config: Pick<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'workspace' | 'agents' | 'omModel' | 'providers'
-  >,
+    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'agents' | 'omModel' | 'providers'
+  > & {
+    workspace?: Exclude<CreateForgeAgentConfig['workspace'], Function>;
+  },
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   return createAgent(config, { longTermMemory: true });
 }
