@@ -5,6 +5,7 @@ import { createAgent } from './create-forge-agent.js';
 import type { CreateForgeAgentConfig } from './create-forge-agent.js';
 import type { CommunicationProvider } from '@mastra-engine/core';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
+import { decryptSecret } from '../encryption/crypto.js';
 
 export interface AgentLoaderConfig {
   agentId: string;
@@ -40,11 +41,12 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
 
   for (const providerConfig of providerConfigs) {
     try {
-      // Parse credentials from encrypted_credentials field (no decryption yet)
-      const credentials = JSON.parse(providerConfig.encryptedCredentials);
+      // Decrypt and parse credentials from encrypted_credentials field
+      const decrypted = decryptSecret(providerConfig.encryptedCredentials);
+      const credentials = JSON.parse(decrypted);
       providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials;
     } catch (error) {
-      console.warn(`[AgentLoader] Failed to parse credentials for provider ${providerConfig.providerType}:`, error);
+      console.warn(`[AgentLoader] Failed to decrypt/parse credentials for provider ${providerConfig.providerType}:`, error);
     }
   }
 

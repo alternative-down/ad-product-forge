@@ -11,6 +11,7 @@ import { z } from 'zod';
 import * as schema from '../database/schema.js';
 import { getDatabase, runMigrations } from '../database/index.js';
 import { createId } from '@paralleldrive/cuid2';
+import { encryptSecret } from '../encryption/crypto.js';
 
 const envSchema = z.object({
   FORGE_MODEL_PROVIDER: z.enum(['openai-codex', 'claude-max']),
@@ -162,12 +163,14 @@ async function initAgentRegistry() {
 
       const now = Date.now();
 
+      const encryptedCreds = encryptSecret(JSON.stringify(providerConfig.credentials));
+
       if (existing) {
         // Update existing provider (credentials)
         await db
           .update(schema.agentProviders)
           .set({
-            encryptedCredentials: JSON.stringify(providerConfig.credentials),
+            encryptedCredentials: encryptedCreds,
           })
           .where(eq(schema.agentProviders.id, existing.id));
 
@@ -178,7 +181,7 @@ async function initAgentRegistry() {
           id: createId(),
           agentId: providerConfig.agentId,
           providerType: providerConfig.providerType,
-          encryptedCredentials: JSON.stringify(providerConfig.credentials),
+          encryptedCredentials: encryptedCreds,
           createdAt: now,
         });
 
