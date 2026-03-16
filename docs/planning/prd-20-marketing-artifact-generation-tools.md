@@ -151,17 +151,6 @@ deleteArtifact(artifactId: string): Promise<void>
 - created_at (TIMESTAMP)
 ```
 
-### Fases de Implementação
-
-**Fase 1: Implementação Core (2-3 semanas)**
-1. Configurar integrações de serviço externo
-2. Implementar ferramenta de geração de imagem
-3. Implementar integração de TTS
-4. Implementar integração de STT
-5. Construir camada de armazenamento de artefato
-6. Tratamento de erro e logging
-7. Testes básicos
-
 ---
 
 ## 9. Serviços Externos
@@ -172,34 +161,3 @@ deleteArtifact(artifactId: string): Promise<void>
 
 Todas credenciais armazenadas em variáveis de ambiente e criptografadas em banco de dados.
 
----
-
-## 10. Riscos & Mitigação
-
-| Risco | Mitigação |
-|------|-----------|
-| Downtime de API externa | Tratamento gracioso de erro, mensagens de erro claras |
-| Geração falhada | Lógica de retry, fallback para resposta de erro |
-| Quota de API excedida | Monitorar uso, ajustar conforme necessário |
-
----
-
-## 11. Estratégia de Teste
-
-- **Testes Unitários:** Funcionalidade básica, validação
-- **Testes de Integração:** Geração end-to-end, armazenamento, recuperação
-- **Tratamento de Erro:** Falhas de API, input inválido
-
----
-
-## Glossário
-
-| Termo | Definição |
-|------|-----------|
-| Artefato | Mídia gerada (imagem, áudio) com metadados |
-| Fonte | Serviço externo que gerou o artefato |
-| Prompt | Descrição de texto para geração de imagem |
-
----
-
-**Próximos Passos:** Começar implementação da Fase 1

@@ -140,22 +140,5 @@ agent.storage.listFiles(): Promise<FileInfo[]>
 
 ---
 
-## Timeline
-- **Semana 1:** Schema de banco de dados + operações de arquivo
-- **Semana 2:** Endpoints de upload/download
-- **Semana 3:** Integração de agente + testes
-
-Total: ~20 horas para desenvolvedor solo
-
----
-
-## Melhorias Futuras
-- Integração de armazenamento em nuvem (AWS S3, etc)
-- Suporte a versionamento
-- Backup para armazenamento externo
-- Geração de preview de arquivo
-
----
-
 **Histórico do Documento:**
 - v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo

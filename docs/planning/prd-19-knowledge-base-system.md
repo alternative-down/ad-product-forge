@@ -96,20 +96,6 @@ deleteDocument(documentId: string): Promise<{ success: boolean; }>;
 
 ---
 
-## Implementação
-
-### Fase 1: Core (2 semanas)
-- [ ] Armazenamento e recuperação de documento
-- [ ] Geração de embedding usando Mastra
-- [ ] Busca semântica básica
-- [ ] Integração com API de agente
-
-### Fase 2: Aprimoramento (Futuro)
-- [ ] Busca de texto completo (BM25)
-- [ ] Busca híbrida (semântica + keyword)
-
----
-
 ## Critérios de Sucesso
 
 - [ ] Agente consegue armazenar documentos
@@ -117,17 +103,3 @@ deleteDocument(documentId: string): Promise<{ success: boolean; }>;
 - [ ] Embeddings são gerados e armazenados
 - [ ] API é acessível de ferramentas de agente
 
----
-
-## Riscos
-
-- Qualidade de embedding depende de serviço Mastra
-- Documentos grandes podem ser lentos para embeddings
-- Armazenamento de vetor em SQLite pode não escalar (consegue migrar para DB de vetor depois)
-
----
-
-## Aprimoramentos Futuros
-
-- Busca híbrida (BM25 + semântica)
-- Importação em massa de arquivos

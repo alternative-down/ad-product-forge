@@ -151,53 +151,6 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 - created_at (TIMESTAMP)
 ```
 
-### Fases de Implementação
-
-**Fase 1: Framework Principal (1-2 semanas)**
-1. Definir modelo de dados de ferramenta
-2. Implementar criação e armazenamento de ferramenta
-3. Integrar com sistema de ferramentas de agente
-4. Implementação de wrapper de Skill
-5. Implementação de integração HTTP
-6. Tratamento de erros e logging
-
----
-
-## 10. Riscos & Mitigação
-
-| Risco | Mitigação |
-|-------|-----------|
-| Erros de API HTTP | Tratamento adequado de erros e lógica de retry |
-| Timeout de execução de ferramenta | Timeout configurável, mensagens de erro claras |
-| Problemas de persistência de banco de dados | Schema simples, backups regulares |
-
----
-
-## 11. Métricas
-
-**Rastreamento Simples:**
-- Número de ferramentas customizadas criadas (um desenvolvedor, então rastreamento básico de uso é suficiente)
-- Taxa de sucesso de execução de ferramenta
-- Erros e falhas para debugging
-
----
-
-## 12. Estratégia de Testes
-
-- **Testes Unitários:** Lógica de validação, funcionalidade básica
-- **Testes de Integração:** Criação e execução de ponta a ponta
-- **Testes de Tratamento de Erro:** Timeout, falhas HTTP, entrada inválida
-
----
-
-## Glossário
-
-| Termo | Definição |
-|-------|-----------|
-| Ferramenta Customizada | Ferramenta criada por agente para estender capacidades |
-| Tipo de Ferramenta | Classificação: skill (wrapper), http (API) |
-| Wrapper de Skill | Ferramenta customizada que envolve Skill existente |
-
 ---
 
 ## Exemplos de Definições de Ferramenta
@@ -258,7 +211,3 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
   }
 }
 ```
-
----
-
-**Próximos Passos:** Análise de viabilidade e decisão de arquitetura
