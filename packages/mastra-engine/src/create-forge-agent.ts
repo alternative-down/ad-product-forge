@@ -49,7 +49,7 @@ export async function createAgent<
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
     return path.resolve(currentDir, '../../workspace');
   };
-  const workspacePath = (config.workspace?.filesystem as any)?._basePath || getDefaultWorkspacePath();
+  const workspacePath = getDefaultWorkspacePath();
   const communicationDbPath = path.resolve(workspacePath, 'communications.db');
   const communicationClient = createClient({ url: `file:${communicationDbPath}` });
 
