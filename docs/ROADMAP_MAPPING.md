@@ -126,11 +126,11 @@
 **Objetivo:** Templates, deploy automatizado e infraestrutura base
 
 **PRDs Relacionados:**
-- **PRD-30:** Web Application Templates ✅
+- **PRD-32:** Web Application Templates ✅
 - **PRD-05:** Application Deployment (Coolify) ✅
-- **PRD-32:** Domain Management ❌ (removido - config)
 - **PRD-07:** Browser Service ⚠️ (investigação necessária)
-- **PRD-26:** Task Queue & Event Processing (BullMQ) ✅
+- **PRD-30:** Task Queue & Event Processing (BullMQ) ✅
+- **PRD-12:** MinIO Storage ⏸️ (em aberto)
 
 **Escopo:**
 - Templates web com auth, pagamento, tickets
@@ -240,13 +240,14 @@
 - PRD-22: Micro-ERP System
 - PRD-24: Project & Task Management
 - PRD-25: Research as Workflow (refatorado)
-- PRD-26: Task Queue & Event Processing
+- PRD-26: Role and Function Schema
 - PRD-27: Secrets Management
-- PRD-30: Web Application Templates
+- PRD-30: Task Queue & Event Processing
+- PRD-32: Web Application Templates
 - PRD-33: Webhook Event Routing
 
 ### ⚠️ Precisa Alinhamento
-- PRD-16: GitHub Integration (não é PRD, é config)
+- PRD-16: GitHub Integration (config + investigação necessária)
 - PRD-23: Multi-Provider Group Support (alinhamento com PRD-18)
 - PRD-26: Role and Function Schema (detalhar permissões)
 - PRD-28: Social Media & Community Integration (detalhar escopo)
@@ -257,15 +258,17 @@
 - PRD-11: Custom Tool Framework
 - PRD-21: Marketing Platform Integration
 
+### ⏸️ Em Aberto / Investigação
+- PRD-12: MinIO Storage (em aberto, esperar necessidade surgir)
+
 ### ❌ Descartado/Removido
 - PRD-09: CRM System (descartado)
-- PRD-12: Distributed Storage (misaligned, será MinIO)
 - PRD-13: Domain Management (config, não PRD)
 - PRD-14: Electronic Signature (descartado)
 - PRD-15: Email Service Integration (config)
 - PRD-17: Heartbeat System (integrado a PRD-10)
-- PRD-19: Knowledge Base (será via Mastra workspace)
-- PRD-31: Ticketing System (será integrado como provider em PRD-18)
+- PRD-19: Knowledge Base (será via Mastra workspace) - **alinhado**
+- PRD-31: Ticketing System (será integrado como provider em PRD-18/23) - **alinhado**
 
 ---
 

@@ -1,22 +1,30 @@
 # PRD-16: Integração com GitHub
 
-**Status:** ❌ Não Alinhado - Interpretação Incorreta
+**Status:** ⏸️ Configuração + Investigação Necessária
 
 **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
-## ❌ Nota de Desalinhamento
+## O que é Necessário
 
-**Problema:** PRD apresenta ferramentas de agente para GitHub, mas a intenção era diferente.
+### Parte 1: Configuração (Você Configura)
+- Setup de GitHub App (ou autenticação alternativa)
+- Acesso para agentes à organização do GitHub
 
-**Intenção Original:**
-1. **Configuração de GitHub APP:** Setup de GitHub App
-2. **Cliente Local:** Escutar eventos do GitHub via webhooks
+### Parte 2: Tooling para Agentes (PRD em Frente 7)
+- Usar `gh` (GitHub CLI) se possível com GitHub App
+- Criar Tools customizadas se `gh` não funcionar com a configuração
 
-**Abordagem Correta:** Para tooling de agentes com GitHub, usar `gh` (GitHub CLI) se possível com GitHub App. Apenas criar Tools customizadas se `gh` não puder ser usado com GitHub App.
+### Questão em Aberto
+**Como lidar com agentes sem user real?**
+- Opção A: GitHub App (se suportar operações via app)
+- Opção B: Criar conta GitHub por agente usando email do agente
+- Definir em PRD-33 (Webhook Event Routing) como receber eventos
 
-**Status:** Não é um PRD de feature. Será necessário investigar viabilidade de usar `gh` com GitHub App.
+**Status:** Não é PRD isolado. Será tratado em:
+- **PRD-33 (Webhook Event Routing)** - Como receber eventos do GitHub
+- **PRD-7 ou investigação** - Tooling para agentes manipularem repos
 
 ---
 

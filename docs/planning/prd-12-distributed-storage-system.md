@@ -1,23 +1,20 @@
 # PRD-12: Sistema de Armazenamento Distribuído
 
-**Status:** ❌ Não Alinhado - Interpretação Incorreta
+**Status:** ⏸️ Em Aberto - Esperar Necessidade Surgir
 **Data:** 2026-03-15
 **Versão:** 1.0
-**Nota:** Projeto pessoal por desenvolvedor solo. Escopo limitado a funcionalidade principal (KISS + YAGNI).
+**Nota:** Projeto pessoal por desenvolvedor solo. MinIO é um "serviço externo compartilhado" a ser implementado quando a necessidade surgir.
 
 ---
 
-## ❌ Nota de Desalinhamento
+## Propósito
 
-**Problema:** PRD não corresponde à intenção original. Este documento apresenta um sistema de armazenamento local em disco, mas a ideia original era sobre **MinIO (S3-like object storage)** com dois propósitos distintos.
+**MinIO (S3-like Object Storage)** para que agentes usem como storage:
+- Armazenar artefatos gerados (código, documentos, relatórios, imagens, vídeos)
+- Compartilhado entre aplicações ou por aplicação (a definir)
+- Acesso programático via S3 API
 
-**Intenção Original:**
-1. **Attachments de Fontes Externas:** Receber e armazenar anexos/arquivos de meios externos
-2. **Acesso para Aplicações:** Permitir que agentes usem MinIO para suas aplicações quando necessário
-
-**Diferença:** O documento atual não corresponde a essa visão. Upload/download em disco local não faz sentido para o caso de uso.
-
-**Status:** Descartado. Será necessário repensar este PRD com foco em MinIO.
+**Decisão:** Em aberto. Implementar quando surgir a necessidade real de storage para agentes.
 
 ---
 
