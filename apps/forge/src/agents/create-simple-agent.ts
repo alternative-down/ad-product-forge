@@ -1,7 +1,7 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 
 import type { CommunicationProvider } from '@mastra-engine/core';
-import { createAgent } from './create-forge-agent.js';
+import { createAgent, type CreateAgentConfig } from './create-forge-agent.js';
 
 export type CreateSimpleAgentConfig<
   TAgentId extends string = string,
@@ -15,8 +15,8 @@ export type CreateSimpleAgentConfig<
   workspaceAutoSync?: boolean;
   workspaceBm25?: boolean;
   workspaceEmbedder?: string;
-  workspaceFilesystem?: Record<string, any>;
-  workspaceSandbox?: Record<string, any>;
+  workspaceFilesystem?: Record<string, unknown>;
+  workspaceSandbox?: Record<string, unknown>;
 };
 
 export async function createSimpleAgent<
@@ -25,25 +25,7 @@ export async function createSimpleAgent<
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
-  config: Pick<
-    CreateSimpleAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    | 'id'
-    | 'name'
-    | 'description'
-    | 'instructions'
-    | 'model'
-    | 'tools'
-    | 'workflows'
-    | 'agents'
-    | 'omModel'
-    | 'providers'
-    | 'workspaceBasePath'
-    | 'workspaceAutoSync'
-    | 'workspaceBm25'
-    | 'workspaceEmbedder'
-    | 'workspaceFilesystem'
-    | 'workspaceSandbox'
-  >,
+  config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
-  return createAgent(config as any, { longTermMemory: false });
+  return createAgent(config, { longTermMemory: false });
 }

@@ -25,8 +25,8 @@ export type CreateForgeAgentConfig<
   workspaceAutoSync?: boolean;
   workspaceBm25?: boolean;
   workspaceEmbedder?: string;
-  workspaceFilesystem?: Record<string, any>;
-  workspaceSandbox?: Record<string, any>;
+  workspaceFilesystem?: Record<string, unknown>;
+  workspaceSandbox?: Record<string, unknown>;
 };
 
 export type CreateAgentOptions = {
