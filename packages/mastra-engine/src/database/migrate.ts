@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
@@ -10,10 +12,16 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
  */
 export async function runMigrations(db: LibSQLDatabase): Promise<void> {
   try {
-    console.log('[Migrations] Running pending migrations...');
+    console.log('[Migrations] Running pending migrations for communication database...');
+
+    // Get absolute path to migrations folder
+    // migrations/ is at the root of packages/mastra-engine/
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    const packageRoot = join(currentDir, '../../..');
+    const migrationsPath = join(packageRoot, 'migrations');
 
     await migrate(db, {
-      migrationsFolder: './migrations',
+      migrationsFolder: migrationsPath,
     });
 
     console.log('[Migrations] Migrations completed successfully');

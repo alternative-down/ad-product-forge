@@ -1,8 +1,8 @@
 /**
- * Exports do módulo de database
+ * Exports do módulo de database - APP
  */
 
 export { getDatabase, schema } from './client';
-export { getAppDatabasePath, getAgentDatabasePath, getLibsqlUrl, getLibsqlToken } from './config';
+export { getAppDatabasePath } from './config';
 export * from './schema';
 export type { Database } from './client';
