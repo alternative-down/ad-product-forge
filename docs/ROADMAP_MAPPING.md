@@ -74,15 +74,14 @@
 **PRDs Relacionados:**
 - **PRD-18:** Internal Group Chat Implementation (participants) ✅ (reescrito)
 - **PRD-23:** Multi-Provider Group Support ⚠️ (precisa alinhamento)
-- **PRD-15:** Email Service Integration ❌ (removido)
-- **PRD-21:** Marketing Platform Integration ⏸️ (deferred)
+- **PRD-31:** Ticketing System as Provider ✅
 
 **Escopo:**
 - Chat interno: suporte a grupos/participants
-- Email por agente (SMTP/IMAP)
 - Discord: integração com groups
+- Email: múltiplos destinatários e CC
 - Ticketing system como provider de comunicação
-- Email organizacional com configuração de domínio
+- **Nota:** Email organizacional por agente é configuração de infra (domínio, SMTP/IMAP), não PRD
 
 ---
 
@@ -94,10 +93,11 @@
 - **PRD-10:** Cron/Scheduling Tool + Heartbeat System ✅ (complementado)
 
 **Escopo:**
-- Heartbeat periódico (padrão 5 min)
-- Crons/agendamentos criados por agentes
+- Heartbeat periódico (intervalo a definir na implementação)
+- Crons/agendamentos criados por agentes (node-schedule + database)
 - Detecção de tarefas pendentes e retomada
 - Debounce e wake-up no chat interno
+- Mensagem de cron inserida no provider chat interno (notificação/evento wakeQueue)
 
 ---
 
@@ -112,11 +112,12 @@
 
 **Escopo:**
 - Webhooks e roteamento interno
-- Eventos GitHub (push, PR, issues)
-- Eventos Coolify (deploy status)
+- Eventos GitHub (push, PR, issues) - **investigação necessária: GitHub App vs account por agente**
+- Eventos Coolify (deploy status, erros) - **integrado com sistema de notificações**
 - Eventos de pagamento (Stripe, Asaas)
 - Ads e plataformas de marketing
 - Wake-up de agentes em eventos
+- **Questão aberta:** Sistema de notificações para agentes (não existe ainda)
 
 ---
 
@@ -130,37 +131,45 @@
 - **PRD-32:** Domain Management ❌ (removido - config)
 - **PRD-07:** Browser Service ⚠️ (investigação necessária)
 - **PRD-26:** Task Queue & Event Processing (BullMQ) ✅
-- **PRD-25:** MinIO Storage (não existe PRD específico)
 
 **Escopo:**
 - Templates web com auth, pagamento, tickets
 - Deploy via Coolify em Hetzner
-- Domínio wildcard e DNS management
-- Browser externo (serviço)
-- MinIO para storage
+- Domínio wildcard e DNS management (configuração)
+- Browser externo (serviço) - investigação necessária
+- MinIO para storage - **em aberto, esperar necessidade surgir**
 - BullMQ/trigger.dev para async
 - Configuração de aplicação pós-deploy
 
 ---
 
-## Frente 9: Operação de Negócio via ERP/CRM/Financeiro
+## Frente 9: Operação de Negócio - Fluxo de Caixa e ERP
 
-**Objetivo:** Gestão operacional da empresa digital
+**Objetivo:** Gestão operacional da empresa digital com responsabilidade e accountability dos agentes
 
 **PRDs Relacionados:**
-- **PRD-22:** Micro-ERP System ✅
-- **PRD-31:** CRM System ❌ (descartado)
+- **PRD-22:** Micro-ERP System ✅ (integrado com fluxo de caixa)
 - **PRD-24:** Project & Task Management ✅
 - **PRD-06:** Billing & Payment Integration ✅
-- **PRD-08:** Cash Flow Control ⏸️ (deferred)
+- **PRD-08:** Cash Flow Control (parte de PRD-22) ⏸️
 
 **Escopo:**
-- Micro ERP: gastos, recebimentos, previsões, folha de pagamento
-- CRM integrado
-- Projetos/tarefas
-- Fluxo de caixa e governança
-- Integração Stripe + Asaas
-- Acesso de agentes aos dados financeiros
+- **Caixa da empresa:** controle centralizado de recursos
+  - Custos de contratação de agentes
+  - Custos operacionais diários (quanto custa rodar cada agente)
+  - Custos de APIs e serviços externos
+  - Custos base de infraestrutura
+  - Recebimentos
+  - Previsões/futuros
+- Contas a pagar e receber com histórico
+- **Agentes** podem criar views customizadas dos dados
+- **Agentes** podem rodar queries diretas para coletar informações
+- Folha de pagamento (custo de cada agente em $)
+- Integração Stripe + Asaas para recebimentos
+- **Dinâmica:** Você faz aportes iniciais → agentes gerenciam dentro do saldo → com tração ficam por conta própria → você faz saques
+- **Impacto:** Mecanismo que traz controle e accountability aos agentes
+- **Nota:** CRM descartado (agentes usam seus próprios apps)
+- **Nota:** Projetos/tarefas deve usar ferramenta existente com MCP pronto ou CLIs (não desenvolver do zero)
 
 ---
 
@@ -190,12 +199,13 @@
 - **PRD-21:** Marketing Platform Integration ⏸️
 
 **Escopo:**
-- Tools para criação de artefatos (imagens, vídeos, áudio, TTS/STT)
-- Nanobanana, Vimeo, ElevenLabs, Whisper
-- Integração com redes sociais
-- Fóruns e canais públicos
+- **Tools para criação de artefatos** (imagens, vídeos, áudio, TTS/STT)
+  - Nanobanana, Vimeo, ElevenLabs, Whisper
+- **Social media scheduling:** Buffer como ponto de partida, depois explorar outras ferramentas
+- Integração com redes sociais - **investigação necessária**
+- Fóruns e canais públicos - **investigação necessária**
 - Presença pública e divulgação
-- Plataformas de marketing (campanhas)
+- **Marketing pago/publicidade:** Em aberto (você não tem experiência, precisa investigar)
 
 ---
 
@@ -264,17 +274,30 @@
 1. **PRDs com duplicação ou sobreposição:**
    - PRD-10 (cron+heartbeat) absorveu PRD-17
    - PRD-18 (participants) deve ser base para PRD-23
-   - Ticketing será como provider em PRD-18
+   - PRD-31 (ticketing) será como provider em PRD-18/23
 
 2. **Configuração vs PRD:**
-   - PRD-13 (domínios), PRD-15 (email), PRD-16 (GitHub) são configurações, não features
+   - Email organizacional por agente: configuração (domínio + SMTP/IMAP)
+   - Domínio wildcard: configuração (você configura)
+   - GitHub access: configuração (GitHub App ou criar account por agente)
 
-3. **Investigação necessária:**
-   - PRD-07 (Browser): serviço externo como openclaw
-   - PRD-29 (Subagents): viabilidade com múltiplos agentes
+3. **Questões em aberto / Investigação necessária:**
+   - **GitHub:** Como lidar com agentes sem user real? GitHub App vs account por agente?
+   - **Notificações:** Sistema ainda não existe. GitHub + Coolify webhooks precisam de notificações
+   - **Browser (PRD-07):** Serviço externo como openclaw
+   - **Subagents (PRD-29):** Viabilidade com múltiplos agentes
+   - **Redes sociais:** Integração, como começar
+   - **Fóruns:** Como integrar
+   - **Marketing pago:** Sem experiência, precisa investigar
+   - **MinIO:** Em aberto, esperar necessidade surgir
 
-4. **Priorização sugerida:**
+4. **Decisões fechadas:**
+   - CRM: Descartado (agentes usam seus próprios apps)
+   - Assinatura eletrônica: Descartada
+   - Projetos/tarefas: Usar ferramenta existente com MCP/CLI (não desenvolver)
+
+5. **Priorização sugerida:**
    - P0: PRD-01, 02, 03, 04, 10, 18, 22, 26, 27, 30
-   - P1: PRD-05, 06, 20, 24, 25, 33
+   - P1: PRD-05, 06, 20, 24, 25, 31, 33
    - P2: PRD-23, 28
    - P3+: PRD-08, 11, 21, 07, 29
