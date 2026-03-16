@@ -1,5 +1,7 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
+import { createClient } from '@libsql/client';
+import path from 'node:path';
 
 import { createCommunicationModule } from './agent/communication/module';
 import type { CommunicationProvider } from './agent/communication/provider-types';
@@ -38,8 +40,18 @@ export async function createAgent<
   options: CreateAgentOptions = {},
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const { client, storage, vector } = createAgentStorage(config.id);
+
+  // Create communication database client from workspace path
+  const getWorkspacePath = () => {
+    const workspace = typeof config.workspace === 'function' ? undefined : config.workspace;
+    return (workspace?.filesystem as any)?._basePath || process.cwd();
+  };
+  const workspacePath = getWorkspacePath();
+  const communicationDbPath = path.resolve(workspacePath, 'communications.db');
+  const communicationClient = createClient({ url: `file:${communicationDbPath}` });
+
   const communication = await createCommunicationModule({
-    client,
+    client: communicationClient,
     providers: config.providers ?? [],
   });
   const tools = {
