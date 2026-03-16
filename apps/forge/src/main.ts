@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import { Mastra } from '@mastra/core';
 import { ConsoleLogger } from '@mastra/core/logger';
+import { LocalFilesystem, LocalSandbox, Workspace } from '@mastra/core/workspace';
 import {
   CLAUDE_MAX_MODELS,
   OPENAI_CODEX_MODELS,
@@ -48,6 +49,12 @@ const envSchema = z.object({
 export async function main() {
   const env = envSchema.parse(process.env);
   const systemPrompt = await readFile(path.resolve(import.meta.dirname, './forge-system.md'), 'utf8');
+  const workspace = new Workspace({
+    autoSync: true,
+    bm25: true,
+    filesystem: new LocalFilesystem({ basePath: path.resolve(process.cwd(), 'workspace') }),
+    sandbox: new LocalSandbox({ workingDirectory: path.resolve(process.cwd(), 'workspace') }),
+  });
   const helperAgentId = env.FORGE_HELPER_AGENT_ID?.trim() || 'forge-helper';
   const helperAgentName = env.FORGE_HELPER_AGENT_NAME?.trim() || 'Forge Helper';
   const helperInstructions = [
@@ -57,6 +64,8 @@ export async function main() {
     'When the main agent contacts you through internal-chat, help with analysis, planning, review, and focused execution support.',
     'Reply through internal-chat when appropriate.',
   ].join('\n\n');
+
+  await workspace.init();
 
   const internalChat = createInternalChatPreset();
 
@@ -110,6 +119,7 @@ export async function main() {
     name: env.FORGE_AGENT_NAME,
     instructions: systemPrompt,
     model,
+    workspace,
     providers,
   });
   const helperAgent = await createSimpleAgent({
