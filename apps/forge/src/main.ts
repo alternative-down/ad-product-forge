@@ -9,12 +9,13 @@ import { LocalFilesystem, LocalSandbox, Workspace } from '@mastra/core/workspace
 import {
   CLAUDE_MAX_MODELS,
   OPENAI_CODEX_MODELS,
-  createForgeAgent,
-  createInternalChatPreset,
   createOAuthGateway,
-  createSimpleAgent,
   OAUTH_GATEWAY_ID,
 } from '@mastra-engine/core';
+
+import { createForgeAgent } from './agents/create-forge-agent.js';
+import { createSimpleAgent } from './agents/create-simple-agent.js';
+import { createInternalChatPreset } from './presets/internal-chat.js';
 
 import { createDiscordProvider } from './discord-account.js';
 import { createEmailProvider } from './email-account.js';

@@ -1,6 +1,3 @@
-export * from './create-forge-agent';
-export * from './create-simple-agent';
-export * from './presets/internal-chat';
 export * from './llm/model-ids';
 export * from './llm/oauth-gateway';
 export * from './llm/openai-codex';
@@ -11,3 +8,8 @@ export * from './agent/wake-queue';
 export * from './agent/tools/market-research';
 export * from './agent/communication/provider-types';
 export type { Attachment } from './agent/communication/store';
+export { LongTermMemory } from './agent/memory/long-term-memory';
+export { createAgentMemory } from './agent/memory/memory';
+export { createObservationalMemory } from './agent/memory/observational-memory';
+export { createAgentStorage } from './agent/memory/storage';
+export { appendWorkingMemoryInstructions } from './agent/memory/working-memory';
