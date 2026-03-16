@@ -1,11 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "node",
     "baseUrl": ".",
-    "noImplicitAny": true,
     "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src",
