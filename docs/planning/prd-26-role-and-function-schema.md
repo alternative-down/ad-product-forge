@@ -1,115 +1,97 @@
-# PRD-26: Schema de Função e Papel
+# PRD-26: Schema de Papel e Função
 
-**Status:** Em Progresso
-**Última Atualização:** 2026-03-15
+**Status:** Planejamento
 
-> **Nota:** Este é um projeto pessoal de desenvolvedor solo. Requisitos focam em funcionalidade, não robustez corporativa.
+**Data:** 2026-03-15
+
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
-## 1. Resumo Executivo
+## Resumo Executivo
 
 ### Classificação: FRAMEWORK MASTRA
 
-**Este PRD descreve controle de acesso core e estrutura organizacional para o framework de orquestração de agente Mastra.** Controle de acesso baseado em papel e organização baseada em função são padrões fundamentais para qualquer sistema multi-agente sofisticado. Esta é infraestrutura nível de framework que permite delegação segura e hierarquia organizacional em qualquer deployment Mastra.
+**Implementar sistema de papéis e funções para controle de acesso e organização interna de agentes.**
 
-O **Schema de Papel e Função** permite que agentes tenham papéis definidos com permissões específicas. Isto permite que um agente mestre inicialize o sistema e gerencie grants/revokes de permissão para outros agentes através de um padrão de delegação simples.
-
-**Valor Principal (Framework):**
-- **Seguro por Padrão:** Definir controle de acesso granular para sistemas multi-agente
-- **Organização Funcional:** Agrupar agentes por função operacional - padrão aplicável a qualquer domínio
-- **Delegação Segura:** Padrão de agente mestre para bootstrap e gerenciamento de hierarquia de agente
-- **Pronto para Auditoria:** Mudanças de permissão registradas para conformidade e debugging
-
-**Valor Principal (ad-product-forge):**
-- **Estrutura Operacional:** Organizar agentes por função (pesquisa, desenvolvimento, marketing, operações)
-- **Limites de Permissão:** Garantir que cada agente tem acesso apenas a ferramentas/provedores necessários
-- **Crescimento Escalável:** Adicionar novos agentes com papéis pré-definidos sem setup de permissão manual
+**Objetivo:** Determinar o que cada agente pode fazer (Tools, Providers, Workflows, Operações).
 
 ---
 
-## 2. Declaração do Problema
+## Conceitos
 
-### Estado Atual
-Atualmente, agentes na plataforma Forge têm estruturas de capacidade plana. Ferramentas, provedores e fluxos de trabalho são atribuídos sem framework estruturado que reflete:
-- Papéis funcionais de agente (agente de marketing, agente de vendas, agente de operações, etc.)
-- Estrutura hierárquica organizacional e de relatório
-- Controles de acesso granular para operações sensíveis
-- Limites de permissão claros e caminhos de escalação
+**Função:** Agrupador organizacional (Marketing, Sales, Ops, Development, Research)
+- Agente está vinculado a UMA função
 
-### Problemas que Isto Resolve
-
-1. **Falta de Estrutura Organizacional**
-   - Agentes não conseguem ser agrupados por papel
-   - Nenhuma permissão clara para diferentes agentes
-
-2. **Modelo de Permissão Não Controlado**
-   - Todos agentes têm acesso a todas capacidades
-   - Nenhum mecanismo para restringir operações sensíveis
-   - Nenhuma trilha de auditoria para mudanças
-
-3. **Risco Operacional**
-   - Agentes conseguem acessar ferramentas que não devem
-   - Nenhuma forma de revogar permissões quando necessário
+**Papel:** Definição de permissões e capacidades
+- Acesso a Tools
+- Acesso a Providers
+- Acesso a Workflows
+- Operações permitidas
 
 ---
 
-## 3. Objetivos & Métricas de Sucesso
+## Fluxo
 
-### Objetivos Primários
+1. **Master Agent:** Tem permissão irrestrita
+   - Inicializa sistema
+   - Cria funções base
+   - Cria papéis base
 
-1. **Implementar Sistema de Papel**
-   - Definir papéis (Manager, Specialist, Worker, Admin)
-   - Atribuir capacidades a papéis
+2. **Master Agent libera acesso:**
+   - Cria novos agentes com papel específico
+   - Atribui função organizacional
 
-2. **Implementar Classificação de Função**
-   - Agrupar agentes por função (Marketing, Sales, Ops, etc.)
-   - Usar função como contexto organizacional
-
-3. **Permitir Delegação Segura**
-   - Agente mestre consegue grant/revoke permissões
-   - Manter trilha de auditoria
-
-4. **Fornecer Limites de Permissão**
-   - Definir quais ferramentas, provedores, fluxos de trabalho cada papel consegue acessar
-   - Implementar verificações de permissão
-
-### Métricas de Sucesso
-
-| Métrica | Alvo |
-| --- | --- |
-| **Cobertura de Atribuição de Papel** | Agentes têm papel explícito |
-| **Grant de Permissão Funciona** | Agente mestre consegue atribuir papéis |
-| **Verificações de Permissão Funcionam** | Verificações de permissão antes de acesso de ferramenta |
-| **Trilha de Auditoria** | Mudanças de permissão registradas |
+3. **Agentes com permissão:**
+   - Conseguem criar/modificar papéis e funções
+   - Conseguem atribuir papéis a outros agentes
+   - Conseguem mudar função de agente
 
 ---
 
-## 4. Critérios de Sucesso
+## Schema Básico
 
-- [ ] Papéis conseguem ser criados e atribuídos
-- [ ] Permissões conseguem ser verificadas antes de acesso de ferramenta
-- [ ] Trilha de auditoria é mantida
-- [ ] Sistema funciona sem impacto em operações existentes
+**agents:**
+- agent_id
+- function_id (FK)
+- role_id (FK)
+- is_active
+
+**functions:**
+- function_id
+- name (Marketing, Sales, Ops, etc)
+- description
+
+**roles:**
+- role_id
+- name
+- description
+
+**role_permissions:**
+- role_id (FK)
+- tool_id
+- provider_id
+- workflow_id
+- operation (can_create, can_read, can_update, can_delete)
 
 ---
 
-## 5. Dependências
+## Critérios de Sucesso
 
-- Mastra Framework (PRD-02)
-- Sistema de armazenamento de agente
-- Módulo de comunicação interna
+- [ ] Master agent criado com permissão irrestrita
+- [ ] Agentes conseguem ter papéis/funções
+- [ ] Permissões verificadas em acesso a tools/providers
+- [ ] Agentes com permissão conseguem gerenciar papéis/funções
+- [ ] Sem impacto em operações existentes
 
 ---
 
-## 6. Timeline
+## Dependências
 
-- **Semana 1-2**: Implementação de papel e função
-- **Semana 3**: Testes e documentação
-
-Total: ~20 horas para desenvolvedor solo
+- PRD-01: Agent system (agentes persistidos)
+- Banco de dados (papéis, funções, permissões)
 
 ---
 
 **Histórico do Documento:**
-- v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo
+- v1.0 (2026-03-15): Sistema de papéis (permissões) e funções (agrupador)

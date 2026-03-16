@@ -1,106 +1,63 @@
 # PRD-23: Suporte de Grupo Multi-Provedor
 
-> **Nota:** Este é um projeto pessoal para um desenvolvedor solo usando agentes LLM. Simplificado para facilidade e praticidade (KISS + YAGNI). Recursos corporativos como sincronização em tempo real, permissões baseadas em função e webhooks estão fora do escopo.
+**Status:** Planejamento
 
-**Status:** Rascunho - Análise & Planejamento
 **Data:** 2026-03-15
-**Versão:** 0.1
-**ID de Recurso:** prd-23
+
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
-## 1. Resumo Executivo
+## Resumo Executivo
 
-### Classificação: FRAMEWORK MASTRA
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**Este PRD descreve infraestrutura avançada de comunicação multi-provedor para o framework Mastra.** Suportar mensagens de grupo através de múltiplos provedores (Discord, Email, Slack, etc.) é capacidade fundamental para sistemas multi-agente sofisticados. Esta é infraestrutura nível de framework que estende PRD-18 com implementações específicas de provedor.
+**Estender PRD-18 (participants internos) para suportar grupos em provedores externos:** Discord (canals) e Email (CC/BCC).
 
-**Objetivo:** Estender o sistema de comunicação de agente para suportar mensagens baseadas em grupo através de todos provedores (Discord, Email).
-
-**Proposição de Valor (Framework):**
-- Qualquer deployment Mastra consegue usar agentes com mensagens em grupo através de múltiplos provedores
-- API unificada para operações de grupo através de implementações de provedor
-- Suportar canais de comunicação diversos (canais Discord, listas Email, canais Slack)
-- Manter consistência em associação de grupo e histórico de comunicação
-
-**Proposição de Valor (ad-product-forge):**
-- Agentes de Nicolas conseguem coordenar via Discord, Email, ou Slack sem problemas
-- Criar equipes de pesquisa, desenvolvimento, operações através de diferentes provedores
-- Interface unificada esconde detalhes específicos de provedor
-
-**Escopo:**
-- Discord: Criação de canal, mensagens de grupo via canais (framework)
-- Email: Funcionalidade CC/BCC, histórico de mensagem de grupo (framework)
-- Core: Entidade de grupo em armazenamento de comunicação, ferramentas voltadas para agente para gerenciamento de grupo (framework)
+**Objetivo:** Depois que chat interno suportar grupos, estender mesma lógica para Discord e Email.
 
 ---
 
-## 2. Declaração do Problema
+## Problema
 
-### Estado Atual
-- Conversas individuais são suportadas (mensagens 1-para-1)
-- Canais Discord existem mas sem gerenciamento explícito de grupo
-- Provedor de email carece de suporte CC/BCC
-- Nenhuma interface unificada para grupos através de provedores
-
-### Pontos de Dor
-1. Agentes devem enviar mensagens individuais para múltiplos destinatários
-2. Canais Discord e grupos email têm semânticas inconsistentes
-3. Não conseguem criar ou gerenciar grupos programaticamente
-4. Lógica diferente necessária para cada provedor
-
-### Impacto Sem Solução
-- Capacidade reduzida de agente para coordenação
-- Complexidade maior para comunicação multi-destinatário
-- Dados de grupo fragmentados através de provedores
+- PRD-18 adiciona participants ao chat interno
+- Provedores externos (Discord, Email) não têm conceito de grupos
+- Agentes precisam criar grupos em Discord e enviar email para múltiplos
 
 ---
 
-## 3. Objetivos & Métricas de Sucesso
+## Solução
 
-### 3.1 Objetivos Primários
-1. Criar grupos em Discord (agentes conseguem criar canais e convidar membros)
-2. Gerenciar associação de grupo (adicionar/remover membros)
-3. Enviar mensagens de grupo para canais Discord
-4. Armazenar metadados de grupo
-5. API de agente unificada para operações de grupo
+Implementar grupos como extensão de PRD-18:
 
-### 3.2 Métricas de Sucesso
-| Métrica | Alvo |
-|---|---|
-| Criação de grupo | Funciona confiávelmente |
-| Entrega de mensagem | Grupos recebem mensagens |
-| Compatibilidade de API | 100% compatível com versões anteriores |
-| Implementação simples | Desenvolvedor solo consegue manter em 2-3 semanas |
+**Discord:**
+- Agentes conseguem criar canals
+- Enviar mensagens para channels
+- Gerenciar membros do canal
+
+**Email:**
+- Agentes conseguem enviar para múltiplos via CC/BCC
+- Histórico de email em grupo
 
 ---
 
-## 4. Critérios de Sucesso
+## Critérios de Sucesso
 
-- [ ] Grupos conseguem ser criados em Discord
-- [ ] Membros conseguem ser adicionados e removidos de grupos
-- [ ] Mensagens conseguem ser enviadas para grupos
-- [ ] Histórico de mensagem é mantido
-- [ ] Sem impacto em operações DM existentes
-
----
-
-## 5. Dependências
-
-- Infraestrutura de Comunicação Mastra (PRD-02)
-- Biblioteca Discord.js ou equivalente
-- Sistema de Contato existente
+- [ ] Agentes criam canals em Discord
+- [ ] Mensagens Discord chegam em múltiplos
+- [ ] Email com CC/BCC funciona
+- [ ] Histórico mantido
+- [ ] Integrado com PRD-18
 
 ---
 
-## 6. Timeline
+## Dependências
 
-- **Semana 1-2**: Implementação core
-- **Semana 3**: Testes e documentação
-
-**Total**: ~20 horas para desenvolvedor solo
+- PRD-18: Internal Group Chat (participants)
+- Discord API
+- Email (SMTP/IMAP com CC/BCC)
 
 ---
 
 **Histórico do Documento:**
-- v1.0 (2026-03-15): Simplificado para projeto pessoal de desenvolvedor solo
+- v1.0 (2026-03-15): Extensão de PRD-18 para Discord e Email

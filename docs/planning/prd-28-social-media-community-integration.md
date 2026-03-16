@@ -1,44 +1,68 @@
-# PRD-28: Integração de Mídia Social & Comunidade (Simplificado)
+# PRD-28: Integração com Redes Sociais e Comunidade
 
-**Status:** Rascunho - Simplificado para Desenvolvedor Solo
+**Status:** Planejamento
+
 **Data:** 2026-03-15
-**Nota:** Projeto de desenvolvedor pessoal. Aplicar princípios KISS + YAGNI.
+
+**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
 
-## 1. Resumo
+## Resumo Executivo
 
-### Classificação: APLICAÇÃO AD-PRODUCT-FORGE (ADIADO)
+### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
-**Este PRD descreve recursos opcionais de mídia social específicos do ad-product-forge.** Se implementado, permitiria que agentes de Nicolas publiquem em plataformas sociais. Atualmente deprioritizado em favor de recursos core de desenvolvimento de produto.
+**Integrar agentes com redes sociais, fóruns e canais públicos para divulgação, interação com comunidade e identificação de oportunidades.**
 
-### Objetivo
-**NÃO PLANEJADO** - Publicação em mídia social para agentes.
-
-### Por Que Deprioritizado
-- Desenvolvedor solo não precisa de postagem social automatizada
-- Controle manual preferido para marca/reputação
-- Consegue ser adicionado depois se necessário
+**Objetivo:** Agentes divulgarem o que criam, interagirem com público, captar sinais de oportunidades.
 
 ---
 
-## 2. Status
+## Escopo
 
-**ADIADO INDEFINIDAMENTE** - Não parte de MVP ou roadmap de curto prazo.
+**Redes Sociais:**
+- Instagram
+- Twitter/X
+- LinkedIn
 
-Razão: Desenvolvedor solo prefere controle manual sobre postagem social automatizada.
+**Fóruns e Comunidades:**
+- Reddit
+- Hacker News
+- Comunidades temáticas
+
+**Plataformas Públicas:**
+- Medium, Dev.to, Hashnode (blogs)
+- Outras relevantes
 
 ---
 
-## 3. Justificativa
+## Capacidades
 
-Automação de mídia social adiciona mínimo valor para desenvolvedor solo:
-- Controle de marca é melhor com postagem manual
-- Volume muito baixo para beneficiar de automação
-- Risco de conteúdo automatizado dano a reputação
-
-Se necessário depois, consegue construir integração simples (2-3h de esforço).
+- Agentes conseguem postar/compartilhar
+- Agentes conseguem monitorar menções
+- Agentes conseguem interagir (comentar, responder)
+- Agentes conseguem coletar sinais públicos
+- Integração com chat interno para notificações
 
 ---
 
-**Fim do documento**
+## Critérios de Sucesso
+
+- [ ] Agentes conseguem postar em rede social
+- [ ] Menções monitoradas
+- [ ] Interações capturadas
+- [ ] Oportunidades identificadas
+- [ ] Integração com plataforma
+
+---
+
+## Dependências
+
+- PRD-02: Communication providers (para armazenar credentials)
+- APIs de redes sociais
+- Ferramentas de monitoramento
+
+---
+
+**Histórico do Documento:**
+- v1.0 (2026-03-15): Integração com redes sociais, fóruns e comunidades públicas
