@@ -1,27 +1,29 @@
 import type { CommunicationProvider } from '@mastra-engine/core';
-import { createEmailProvider, type EmailProviderConfig } from './providers/email';
-import { createInternalChatProvider, type InternalChatProviderConfig } from './providers/internal-chat';
+import { createInternalChatPreset } from '@mastra-engine/core';
 
 export type ProviderCredentialsMap = {
-  email?: EmailProviderConfig;
-  'internal-chat'?: InternalChatProviderConfig;
+  'internal-chat'?: { agentId: string };
 };
+
+// Global internal chat preset instance (singleton)
+const internalChatPreset = createInternalChatPreset();
 
 /**
  * Load communication providers from credentials map
- * Supports: email, internal-chat (no encryption yet)
+ * Supports: internal-chat (uses mastra-engine preset)
  */
 export function loadCommunicationProviders(credentials: ProviderCredentialsMap): CommunicationProvider[] {
   const providers: CommunicationProvider[] = [];
 
-  // Load email provider if configured
-  if (credentials.email) {
-    providers.push(createEmailProvider(credentials.email));
-  }
-
   // Load internal chat provider if configured
   if (credentials['internal-chat']) {
-    providers.push(createInternalChatProvider(credentials['internal-chat']));
+    const { agentId } = credentials['internal-chat'];
+    providers.push(
+      internalChatPreset.createProvider({
+        id: agentId,
+        displayName: agentId,
+      })
+    );
   }
 
   return providers;
