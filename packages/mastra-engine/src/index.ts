@@ -12,4 +12,3 @@ export { LongTermMemory } from './agent/memory/long-term-memory';
 export { createAgentMemory } from './agent/memory/memory';
 export { createObservationalMemory } from './agent/memory/observational-memory';
 export { appendWorkingMemoryInstructions } from './agent/memory/working-memory';
-export { createInternalChatPreset } from './presets/internal-chat';

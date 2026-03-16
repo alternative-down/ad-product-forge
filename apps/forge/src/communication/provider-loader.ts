@@ -1,6 +1,6 @@
 import type { CommunicationProvider } from '@mastra-engine/core';
-import { createInternalChatPreset } from '@mastra-engine/core';
 import { createEmailProvider } from '../email-account.js';
+import { createInternalChatPreset } from './presets/internal-chat.js';
 
 export type ProviderCredentialsMap = {
   'internal-chat'?: { agentId: string };
