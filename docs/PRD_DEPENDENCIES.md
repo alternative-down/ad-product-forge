@@ -112,6 +112,15 @@
     - Master agent com permissão irrestrita
     - Complexidade: **MUITO ALTA** (governança complexa)
 
+**Nota Adicional:**
+
+16. **PRD-23** - Gerenciamento de Grupos por Provedor
+    - Tools para agentes criarem/gerenciarem grupos em cada provedor
+    - Discord: Criar canais, gerenciar membros
+    - Email: Listas de distribuição, CC/BCC
+    - Depende de PRD-18 (participants definido no chat interno)
+    - Complexidade: MÉDIA
+
 ---
 
 ### **Fase 6+: Integrações Complexas e Resto**

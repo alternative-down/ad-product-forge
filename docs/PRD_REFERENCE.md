@@ -26,7 +26,7 @@
 | PRD-20 | marketing-artifact-generation-tools | Marketing Artifact Generation Tools | 11 |
 | PRD-21 | marketing-platform-integration | Marketing Platform Integration | 11 |
 | PRD-22 | micro-erp-system | Micro-ERP System (Fluxo de Caixa) | 9 |
-| PRD-23 | multi-provider-group-support | Multi-Provider Group Support | 5 |
+| PRD-23 | multi-provider-group-support | Gerenciamento de Grupos por Provedor | 5 |
 | PRD-24 | project-task-management | Project & Task Management (Integração) | 9 |
 | PRD-25 | research-as-workflow | Research as Workflow | 12 |
 | PRD-26 | role-and-function-schema | Role and Function Schema | 3 |
