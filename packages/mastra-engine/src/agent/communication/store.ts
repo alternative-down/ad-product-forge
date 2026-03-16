@@ -56,6 +56,15 @@ type MessageRecord = z.infer<typeof messageSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
 
 export async function createCommunicationStore(client: Client) {
+  /**
+   * NOTE: Database tables are now created via Drizzle migrations
+   * See: packages/mastra-engine/migrations/
+   * Tables are initialized by runMigrations() during database setup
+   *
+   * This function now only initializes the store operations,
+   * no longer responsible for table creation
+   */
+
   function slugify(value: string) {
     return (
       value
@@ -67,67 +76,6 @@ export async function createCommunicationStore(client: Client) {
         .replace(/\s+/g, '-') || 'contact'
     );
   }
-
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS forge_communication_accounts (
-      account_id TEXT PRIMARY KEY,
-      provider TEXT NOT NULL,
-      external_account_id TEXT NOT NULL,
-      display_name TEXT,
-      metadata_json TEXT
-    )
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS forge_communication_contacts (
-      slug TEXT PRIMARY KEY,
-      display_name TEXT NOT NULL,
-      description TEXT
-    )
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS forge_communication_contact_accounts (
-      slug TEXT NOT NULL,
-      provider TEXT NOT NULL,
-      external_user_id TEXT,
-      username TEXT,
-      UNIQUE (slug, provider, external_user_id, username)
-    )
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS forge_communication_conversations (
-      conversation_id TEXT PRIMARY KEY,
-      provider TEXT NOT NULL,
-      provider_conversation_key TEXT NOT NULL,
-      name TEXT,
-      contact_slug TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      UNIQUE (provider, provider_conversation_key)
-    )
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS forge_communication_messages (
-      message_id TEXT PRIMARY KEY,
-      conversation_id TEXT NOT NULL,
-      provider TEXT NOT NULL,
-      provider_message_id TEXT,
-      author_external_id TEXT,
-      author_display_name TEXT,
-      author_username TEXT,
-      content TEXT NOT NULL,
-      attachments_json TEXT NOT NULL,
-      unread INTEGER NOT NULL,
-      created_at TEXT NOT NULL,
-      metadata_json TEXT,
-      UNIQUE (provider, provider_message_id)
-    )
-  `);
-  // Ensure unique index exists on existing tables that predate the UNIQUE constraint
-  await client.execute(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_provider_message_id
-    ON forge_communication_messages (provider, provider_message_id)
-    WHERE provider_message_id IS NOT NULL
-  `);
 
   async function loadContact(slug: string) {
     const contactResult = await client.execute({
