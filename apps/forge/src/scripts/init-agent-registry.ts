@@ -46,6 +46,11 @@ async function initAgentRegistry() {
         instructions: systemPrompt,
         tools: null,
         workflows: null,
+        workspaceAutoSync: 1,
+        workspaceBm25: 1,
+        workspaceEmbedder: 'fastembed',
+        workspaceFilesystem: null,
+        workspaceSandbox: null,
       },
       {
         id: env.FORGE_HELPER_AGENT_ID || 'forge-helper',
@@ -62,6 +67,11 @@ async function initAgentRegistry() {
         ].join('\n\n'),
         tools: null,
         workflows: null,
+        workspaceAutoSync: 1,
+        workspaceBm25: 1,
+        workspaceEmbedder: 'fastembed',
+        workspaceFilesystem: null,
+        workspaceSandbox: null,
       },
     ];
 
@@ -87,6 +97,11 @@ async function initAgentRegistry() {
             instructions: config.instructions,
             tools: config.tools,
             workflows: config.workflows,
+            workspaceAutoSync: config.workspaceAutoSync,
+            workspaceBm25: config.workspaceBm25,
+            workspaceEmbedder: config.workspaceEmbedder,
+            workspaceFilesystem: config.workspaceFilesystem,
+            workspaceSandbox: config.workspaceSandbox,
             updatedAt: now,
           })
           .where(eq(schema.agents.id, config.id));
@@ -103,6 +118,11 @@ async function initAgentRegistry() {
           instructions: config.instructions,
           tools: config.tools,
           workflows: config.workflows,
+          workspaceAutoSync: config.workspaceAutoSync,
+          workspaceBm25: config.workspaceBm25,
+          workspaceEmbedder: config.workspaceEmbedder,
+          workspaceFilesystem: config.workspaceFilesystem,
+          workspaceSandbox: config.workspaceSandbox,
           createdAt: now,
           updatedAt: now,
         });

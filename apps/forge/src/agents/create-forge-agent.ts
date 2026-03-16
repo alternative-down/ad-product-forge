@@ -22,6 +22,11 @@ export type CreateForgeAgentConfig<
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
   omModel?: AgentConfig['model'];
   providers?: CommunicationProvider[];
+  workspaceAutoSync?: boolean;
+  workspaceBm25?: boolean;
+  workspaceEmbedder?: string;
+  workspaceFilesystem?: Record<string, any>;
+  workspaceSandbox?: Record<string, any>;
 };
 
 export type CreateAgentOptions = {
@@ -35,7 +40,21 @@ export interface CreateAgentConfig<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > extends Pick<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'agents' | 'omModel' | 'providers'
+    | 'id'
+    | 'name'
+    | 'description'
+    | 'instructions'
+    | 'model'
+    | 'tools'
+    | 'workflows'
+    | 'agents'
+    | 'omModel'
+    | 'providers'
+    | 'workspaceAutoSync'
+    | 'workspaceBm25'
+    | 'workspaceEmbedder'
+    | 'workspaceFilesystem'
+    | 'workspaceSandbox'
   > {
   workspaceBasePath: string;
 }

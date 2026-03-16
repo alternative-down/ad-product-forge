@@ -12,6 +12,11 @@ export type CreateSimpleAgentConfig<
   omModel?: AgentConfig['model'];
   providers?: CommunicationProvider[];
   workspaceBasePath: string;
+  workspaceAutoSync?: boolean;
+  workspaceBm25?: boolean;
+  workspaceEmbedder?: string;
+  workspaceFilesystem?: Record<string, any>;
+  workspaceSandbox?: Record<string, any>;
 };
 
 export async function createSimpleAgent<
@@ -22,7 +27,22 @@ export async function createSimpleAgent<
 >(
   config: Pick<
     CreateSimpleAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    'id' | 'name' | 'description' | 'instructions' | 'model' | 'tools' | 'workflows' | 'agents' | 'omModel' | 'providers' | 'workspaceBasePath'
+    | 'id'
+    | 'name'
+    | 'description'
+    | 'instructions'
+    | 'model'
+    | 'tools'
+    | 'workflows'
+    | 'agents'
+    | 'omModel'
+    | 'providers'
+    | 'workspaceBasePath'
+    | 'workspaceAutoSync'
+    | 'workspaceBm25'
+    | 'workspaceEmbedder'
+    | 'workspaceFilesystem'
+    | 'workspaceSandbox'
   >,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   return createAgent(config as any, { longTermMemory: false });

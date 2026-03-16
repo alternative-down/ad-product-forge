@@ -47,6 +47,11 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
       workflows: agentConfig.workflows ? JSON.parse(agentConfig.workflows) : undefined,
       providers,
       workspaceBasePath: config.workspaceBasePath,
+      workspaceAutoSync: agentConfig.workspaceAutoSync === 1,
+      workspaceBm25: agentConfig.workspaceBm25 === 1,
+      workspaceEmbedder: agentConfig.workspaceEmbedder || undefined,
+      workspaceFilesystem: agentConfig.workspaceFilesystem ? JSON.parse(agentConfig.workspaceFilesystem) : undefined,
+      workspaceSandbox: agentConfig.workspaceSandbox ? JSON.parse(agentConfig.workspaceSandbox) : undefined,
     },
     { longTermMemory: true }
   );
