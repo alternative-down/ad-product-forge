@@ -1,192 +1,212 @@
-# Mapa de Dependências entre PRDs
+# Mapa de Dependências entre PRDs (Corrigido)
 
 **Data:** 2026-03-16
-**Propósito:** Identificar quais PRDs precisam ser implementados antes de outros
+**Propósito:** Identificar ordem correta de implementação baseada em dependências
+**Referência:** PRD_REFERENCE.md
 
 ---
 
-## Dependências Críticas (Deve-Fazer Primeiro)
+## Dependências Críticas (Bloqueadores)
 
 ### P0 - Fundação Absoluta
-Estes DEVEM ser feitos primeiro. Sem eles, nada funciona.
 
 **PRD-01: Database-Driven Agent System**
 - ✅ Nenhuma dependência anterior
-- ⬇️ Depende disso: PRD-02, PRD-03, PRD-04, PRD-22, PRD-23, PRD-24, PRD-26, PRD-27
+- ⬇️ Bloqueador para: PRD-02, PRD-03, PRD-04, PRD-22, PRD-23, PRD-24, PRD-26, PRD-27
 - **Razão:** Toda persistência depende de banco de dados
 
-**PRD-02: Communication Provider Integration**
-- ⬆️ Depende de: PRD-01 (database)
-- ⬇️ Depende disso: PRD-18, PRD-23, PRD-31
-- **Razão:** Base para comunicação interna/externa
-
 **PRD-27: Secrets Management**
-- ⬆️ Depende de: PRD-01 (database)
-- ⬇️ Depende disso: PRD-02 (armazenar credenciais)
+- ⬆️ Depende de: PRD-01 (database para armazenar credenciais criptografadas)
+- ⬇️ Bloqueador para: Todos os PRDs que usam credenciais/providers
 - **Razão:** Segurança de credenciais necessária cedo
 
 ---
 
-## P1 - Infraestrutura Core de Agentes
+## P1 - Infraestrutura Core de Comunicação e Agentes
 
-**PRD-03: Agent Hiring Workflow**
-- ⬆️ Depende de: PRD-01, PRD-02, PRD-26
-- **Razão:** Precisa de database, providers, e roles definidos
-
-**PRD-04: Agent Termination Workflow**
-- ⬆️ Depende de: PRD-01, PRD-02, PRD-26
-- **Razão:** Análogo ao hiring, mesmas dependências
+**PRD-18: Internal Group Chat Implementation (Participants)**
+- ⬆️ Depende de: PRD-01, PRD-27 (se armazenar credenciais)
+- ⬇️ Bloqueador para: PRD-10, PRD-23, PRD-31
+- **Razão:** Chat interno é base para notificações e comunicação entre agentes
 
 **PRD-26: Role and Function Schema**
 - ⬆️ Depende de: PRD-01
-- ⬇️ Depende disso: PRD-03, PRD-04
-- **Razão:** Estrutura de permissões precisa estar definida
+- ⬇️ Bloqueador para: PRD-03, PRD-04 (workflows precisam de roles definidos)
+- **Razão:** Estrutura de permissões/funções para agentes
 
-**PRD-10: Cron/Scheduling + Heartbeat System**
-- ⬆️ Depende de: PRD-01, PRD-02 (chat interno para mensagens)
-- **Razão:** Precisa do chat interno para notificações
+**PRD-03: Agent Hiring Workflow**
+- ⬆️ Depende de: PRD-01, PRD-26
+- **Razão:** Precisa de database e roles definidos
 
-**PRD-18: Internal Group Chat Implementation**
-- ⬆️ Depende de: PRD-01, PRD-02
-- ⬇️ Depende disso: PRD-10, PRD-23, PRD-31
-- **Razão:** Base para comunicação e notificações
+**PRD-04: Agent Termination Workflow**
+- ⬆️ Depende de: PRD-01, PRD-26
+- **Razão:** Análogo ao hiring, mesmas dependências
+
+**PRD-02: External Agent System**
+- ⬆️ Depende de: PRD-01, PRD-18 (usa chat interno para comunicação)
+- **Razão:** Criação de agentes externos para tarefas específicas
+
+**PRD-10: Cron/Scheduling Tool + Heartbeat System**
+- ⬆️ Depende de: PRD-01, PRD-18 (chat interno para notificações)
+- **Razão:** Precisa enviar mensagens via chat interno
 
 ---
 
-## P2 - Operação e Gestão
+## P2 - Operação e Gestão Financeira
 
 **PRD-22: Micro-ERP System (Fluxo de Caixa)**
-- ⬆️ Depende de: PRD-01 (database)
-- **Razão:** Core para accountability dos agentes
+- ⬆️ Depende de: PRD-01
+- ⬇️ Bloqueador para: PRD-06 (integração de pagamentos)
+- **Razão:** Core para accountability dos agentes, gestão de recursos
+
+**PRD-06: Billing & Payment Integration**
+- ⬆️ Depende de: PRD-01, PRD-22 (registrar transações)
+- **Razão:** Integração com Stripe/Asaas precisa registrar no ERP
 
 **PRD-23: Multi-Provider Group Support**
-- ⬆️ Depende de: PRD-18 (participants base), PRD-02 (providers)
+- ⬆️ Depende de: PRD-18 (participants base)
 - **Razão:** Extensão de PRD-18 para múltiplos providers
 
 **PRD-31: Ticketing System as Provider**
-- ⬆️ Depende de: PRD-18 (participants), PRD-02 (provider registration)
+- ⬆️ Depende de: PRD-18 (participants), PRD-01 (database)
 - **Razão:** Integração como provider de comunicação
 
-**PRD-24: Project & Task Management (via ferramenta externa)**
-- ⬆️ Depende de: PRD-01 (para armazenar credenciais/configs)
-- **Razão:** Integração com ferramenta existente
+**PRD-24: Project & Task Management (Integração com Ferramenta Externa)**
+- ⬆️ Depende de: PRD-01 (armazenar credenciais)
+- **Razão:** Integração com Linear, Airtable, Notion, etc.
 
 ---
 
-## P3 - Desenvolvimento e Deploy
+## P3 - Automação e Eventos
+
+**PRD-33: Webhook Event Routing System**
+- ⬆️ Depende de: PRD-01, PRD-18 (rotear para agentes via chat interno)
+- ⬇️ Bloqueador para: PRD-05, PRD-06 (webhooks de deploy, pagamentos)
+- **Razão:** Infraestrutura de eventos/webhooks
 
 **PRD-05: Application Deployment (Coolify)**
-- ⬆️ Depende de: PRD-01, PRD-02 (workflow Mastra), PRD-33 (webhooks)
-- **Razão:** Precisa workflows e webhook support
+- ⬆️ Depende de: PRD-01, PRD-33 (webhooks), workflows Mastra
+- **Razão:** Deploy precisa de webhook support
+
+**PRD-25: Research as Workflow**
+- ⬆️ Depende de: PRD-01 (framework Mastra)
+- **Razão:** Transformação de Tool para Workflow Mastra
+
+---
+
+## P4 - Conhecimento e Inteligência
+
+**PRD-19: Knowledge Base System (Mastra Workspace)**
+- ⬆️ Depende de: PRD-01, PRD-22 (ERP como backend)
+- **Razão:** Base de conhecimento integrada com ERP
+
+**PRD-20: Marketing Artifact Generation Tools**
+- ⬆️ Depende de: PRD-01, PRD-27 (credenciais de APIs)
+- **Razão:** Tools para imagens, vídeos, áudio
+
+---
+
+## P5 - Deploy e Templates
 
 **PRD-32: Web Application Templates**
 - ⬆️ Depende de: PRD-01 (opcional, para armazenar templates)
-- **Razão:** Pode ser criado independentemente, mas templates podem referenciar recursos
+- **Razão:** Pode ser criado com independência relativa
 
-**PRD-06: Billing & Payment Integration**
-- ⬆️ Depende de: PRD-01, PRD-22 (ERP, para registrar transações)
-- **Razão:** Integração com fluxo financeiro
-
-**PRD-20: Marketing Artifact Generation Tools**
-- ⬆️ Depende de: PRD-01 (armazenar credenciais de APIs)
-- **Razão:** Ferramentas precisam de credenciais gerenciadas
+**PRD-30: Task Queue & Event Processing (BullMQ)**
+- ⬆️ Depende de: (nenhuma crítica, mas útil com PRD-05)
+- **Razão:** Async queue para tarefas longas
 
 ---
 
-## P4 - Automação e Eventos
-
-**PRD-33: Webhook Event Routing System**
-- ⬆️ Depende de: PRD-01, PRD-02 (roteador para agentes)
-- ⬇️ Depende disso: PRD-05 (webhooks de deploy), PRD-06 (webhooks de pagamento)
-- **Razão:** Infraestrutura de eventos
-
-**PRD-25: Research as Workflow**
-- ⬆️ Depende de: PRD-01 (framework Mastra, workflows)
-- **Razão:** Transformação de Tool para Workflow
-
-**PRD-19: Knowledge Base System (Mastra Workspace)**
-- ⬆️ Depende de: PRD-22 (ERP como backend), PRD-01 (framework)
-- **Razão:** Base de conhecimento integrada com ERP
-
----
-
-## P5 - Investigação / Aberto
-
-**PRD-07: Browser Service**
-- ⬆️ Depende de: (investigação necessária)
-- **Status:** Investigação necessária (OpenClaw ou serviço externo)
-
-**PRD-16: GitHub Integration**
-- ⬆️ Depende de: (investigação necessária sobre GitHub App vs conta por agente)
-- **Status:** Questão em aberto
+## P6 - Presença Pública e Extensibilidade
 
 **PRD-28: Social Media & Community Integration**
-- ⬆️ Depende de: PRD-02 (providers), PRD-27 (credenciais)
-- **Status:** Buffer como P1, investigação necessária para monitoramento/fóruns
+- ⬆️ Depende de: PRD-01, PRD-27 (credenciais)
+- **Nota:** Buffer (P1), Monitoramento/Fóruns (investigação)
+- **Razão:** Integração com redes sociais
+
+**PRD-21: Marketing Platform Integration**
+- ⬆️ Depende de: PRD-01, PRD-27
+- **Status:** Adiado, investigação necessária
+
+**PRD-11: Custom Tool Framework**
+- ⬆️ Depende de: PRD-01
+- **Status:** Adiado, investigação necessária
 
 **PRD-29: Sub-agent Capability**
 - ⬆️ Depende de: PRD-01, PRD-02
 - **Status:** Opcional, avaliar viabilidade
 
-**PRD-12: MinIO Storage**
-- ⬆️ Depende de: (nenhuma, serviço externo compartilhado)
-- **Status:** Em aberto, esperar necessidade surgir
+---
 
-**PRD-30: Task Queue & Event Processing**
-- ⬆️ Depende de: PRD-01 (opcional, para persistência)
-- **Status:** Pode usar Redis local ou investigate BullMQ
+## P7 - Investigação / Em Aberto
+
+**PRD-07: Browser Service**
+- **Status:** Investigação necessária (OpenClaw ou serviço externo)
+
+**PRD-16: GitHub Integration**
+- **Status:** Questão em aberto (GitHub App vs conta por agente)
+- **Nota:** Tratado como config + investigação em PRD-33 (webhooks)
+
+**PRD-12: MinIO Storage**
+- **Status:** Em aberto, esperar necessidade surgir
 
 ---
 
 ## Ordem Recomendada de Implementação
 
-### Fase 1: Fundação (Bloqueadores)
+### Fase 1: Fundação (BLOQUEADORES CRÍTICOS)
 1. **PRD-01** - Database-Driven Agent System
 2. **PRD-27** - Secrets Management
-3. **PRD-02** - Communication Provider Integration
 
-### Fase 2: Agentes e Estrutura
+### Fase 2: Comunicação e Agentes
+3. **PRD-18** - Internal Group Chat Implementation (Participants)
 4. **PRD-26** - Role and Function Schema
 5. **PRD-03** - Agent Hiring Workflow
 6. **PRD-04** - Agent Termination Workflow
-7. **PRD-18** - Internal Group Chat Implementation
+7. **PRD-02** - External Agent System
+8. **PRD-10** - Cron/Scheduling + Heartbeat
 
 ### Fase 3: Operação Core
-8. **PRD-10** - Cron/Scheduling + Heartbeat
-9. **PRD-22** - Micro-ERP (Fluxo de Caixa)
+9. **PRD-22** - Micro-ERP System (Fluxo de Caixa) ⭐ PRIORITÁRIO
 10. **PRD-23** - Multi-Provider Group Support
 11. **PRD-31** - Ticketing System as Provider
 
-### Fase 4: Deploy e Produção
-12. **PRD-33** - Webhook Event Routing
-13. **PRD-05** - Application Deployment
-14. **PRD-32** - Web Application Templates
-15. **PRD-06** - Billing & Payment Integration
+### Fase 4: Automação e Integração
+12. **PRD-33** - Webhook Event Routing System
+13. **PRD-06** - Billing & Payment Integration
+14. **PRD-05** - Application Deployment (Coolify)
 
-### Fase 5: Capacidades Avançadas
-16. **PRD-24** - Project & Task Management (integração)
-17. **PRD-25** - Research as Workflow
-18. **PRD-19** - Knowledge Base System
-19. **PRD-20** - Marketing Artifact Generation
-20. **PRD-28** - Social Media (Buffer + investigação)
+### Fase 5: Inteligência e Conhecimento
+15. **PRD-25** - Research as Workflow
+16. **PRD-19** - Knowledge Base System
+17. **PRD-20** - Marketing Artifact Generation
 
-### Fase 6: Investigação/Aberto
-21. **PRD-07** - Browser Service (investigação)
-22. **PRD-16** - GitHub Integration (investigação)
-23. **PRD-29** - Sub-agent Capability (opcional)
-24. **PRD-12** - MinIO Storage (em aberto)
-25. **PRD-30** - Task Queue (conforme necessário)
+### Fase 6: Capacidades Avançadas
+18. **PRD-32** - Web Application Templates
+19. **PRD-30** - Task Queue & Event Processing
+20. **PRD-24** - Project & Task Management (Integração)
+21. **PRD-28** - Social Media & Community (Buffer + investigação)
+
+### Fase 7: Investigação/Aberto
+22. **PRD-07** - Browser Service (investigação)
+23. **PRD-16** - GitHub Integration (investigação)
+24. **PRD-11** - Custom Tool Framework (adiado)
+25. **PRD-21** - Marketing Platform Integration (adiado)
+26. **PRD-29** - Sub-agent Capability (opcional)
+27. **PRD-12** - MinIO Storage (em aberto)
 
 ---
 
 ## Notas Críticas
 
-1. **PRD-01 é bloqueador absoluto** - Nada funciona sem database
-2. **PRD-02 é bloqueador para comunicação** - Chat interno necessário cedo
-3. **PRD-26 deve vir antes de PRD-03/04** - Roles precisam estar definidos
-4. **PRD-18 é bloqueador para notificações** - PRD-10 depende disso
-5. **PRD-22 é core para accountability** - Deve ser implementado cedo
-6. **PRD-33 importante para automação** - Webhooks necessários para eventos
+1. **PRD-01 é bloqueador absoluto** - Base de tudo
+2. **PRD-27 é bloqueador crítico** - Segurança necessária cedo
+3. **PRD-18 é bloqueador para comunicação** - Chat interno necessário para notificações
+4. **PRD-26 precisa vir antes de PRD-03/04** - Roles precisam estar definidos
+5. **PRD-22 é core para accountability** - Implementar cedo (Fase 3)
+6. **PRD-33 é importante para automação** - Webhooks necessários para eventos
+7. **PRD-02 é mais avançado que PRD-03/04** - Agentes externos vêm depois dos internos
 
 ---
 
