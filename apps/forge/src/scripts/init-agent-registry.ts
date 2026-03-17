@@ -14,7 +14,6 @@ import { createId } from '@paralleldrive/cuid2';
 import { encryptSecret } from '../encryption/crypto.js';
 
 const envSchema = z.object({
-  FORGE_MODEL_PROVIDER: z.enum(['openai-codex', 'claude-max']),
   FORGE_MODEL_ID: z.string().min(1),
   FORGE_AGENT_ID: z.string().min(1),
   FORGE_AGENT_NAME: z.string().min(1),

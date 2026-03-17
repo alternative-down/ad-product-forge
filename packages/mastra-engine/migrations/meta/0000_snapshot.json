@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "73890973-036b-43bc-a54f-a2e15c668bb5",
+  "id": "39989c0f-d17e-4bc9-bee5-5b346590f1ba",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "forge_communication_accounts": {

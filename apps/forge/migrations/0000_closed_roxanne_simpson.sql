@@ -12,7 +12,15 @@ CREATE TABLE `agents` (
 	`name` text NOT NULL,
 	`description` text,
 	`model` text NOT NULL,
-	`instructions` text,
+	`om_model` text,
+	`instructions` text NOT NULL,
+	`tools` text,
+	`workflows` text,
+	`workspace_auto_sync` integer DEFAULT 1 NOT NULL,
+	`workspace_bm25` integer DEFAULT 1 NOT NULL,
+	`workspace_embedder` text DEFAULT 'fastembed' NOT NULL,
+	`workspace_filesystem` text,
+	`workspace_sandbox` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );
