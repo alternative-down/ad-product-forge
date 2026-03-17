@@ -1,12 +1,11 @@
 import { eq } from 'drizzle-orm';
 import type { Database } from '../database/index.js';
-import { agents, agentProviders, parseAgentWorkspaceConfig } from '../database/schema.js';
+import { agents, agentProviders } from '../database/schema.js';
 import { createAgent } from './create-forge-agent.js';
 import type { CreateForgeAgentConfig } from './create-forge-agent.js';
 import type { CommunicationProvider } from '@mastra-engine/core';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
 import { decryptSecret } from '../encryption/crypto.js';
-import { parseWorkspaceFilesystem, parseWorkspaceSandbox } from './workspace-config.js';
 
 export interface AgentLoaderConfig {
   agentId: string;
@@ -33,9 +32,6 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
-  // Parse workspace configuration from JSON strings
-  const parsedConfig = parseAgentWorkspaceConfig(agentConfig, parseWorkspaceFilesystem, parseWorkspaceSandbox);
-
   // Load providers from agent_providers table
   const providerConfigs = await db.query.agentProviders.findMany({
     where: eq(agentProviders.agentId, config.agentId),
@@ -56,24 +52,25 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
 
   const providers = loadCommunicationProviders(providerCredentials);
 
-  // Create agent from parsed database configuration
+  // Create agent from database configuration
+  // Note: workspaceFilesystem and workspaceSandbox are already parsed as JSON objects by Drizzle
   const agent = await createAgent(
     {
-      id: parsedConfig.id,
-      name: parsedConfig.name,
-      description: parsedConfig.description || undefined,
-      instructions: parsedConfig.instructions,
-      model: parsedConfig.model,
-      omModel: parsedConfig.omModel || undefined,
-      tools: parsedConfig.tools ? JSON.parse(parsedConfig.tools) : undefined,
-      workflows: parsedConfig.workflows ? JSON.parse(parsedConfig.workflows) : undefined,
+      id: agentConfig.id,
+      name: agentConfig.name,
+      description: agentConfig.description || undefined,
+      instructions: agentConfig.instructions,
+      model: agentConfig.model,
+      omModel: agentConfig.omModel || undefined,
+      tools: agentConfig.tools ? JSON.parse(agentConfig.tools) : undefined,
+      workflows: agentConfig.workflows ? JSON.parse(agentConfig.workflows) : undefined,
       providers,
       workspaceBasePath: config.workspaceBasePath,
-      workspaceAutoSync: parsedConfig.workspaceAutoSync === 1,
-      workspaceBm25: parsedConfig.workspaceBm25 === 1,
-      workspaceEmbedder: parsedConfig.workspaceEmbedder || undefined,
-      workspaceFilesystem: parsedConfig.workspaceFilesystem,
-      workspaceSandbox: parsedConfig.workspaceSandbox,
+      workspaceAutoSync: agentConfig.workspaceAutoSync === 1,
+      workspaceBm25: agentConfig.workspaceBm25 === 1,
+      workspaceEmbedder: agentConfig.workspaceEmbedder || undefined,
+      workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
+      workspaceSandbox: agentConfig.workspaceSandbox ?? undefined,
     },
     { longTermMemory: true }
   );

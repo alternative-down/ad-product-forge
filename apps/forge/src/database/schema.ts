@@ -32,8 +32,8 @@ export const agents = sqliteTable('agents', {
   workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1), // boolean as 0/1
   workspaceBm25: integer('workspace_bm25').notNull().default(1), // boolean as 0/1
   workspaceEmbedder: text('workspace_embedder').notNull().default('fastembed'),
-  workspaceFilesystem: text('workspace_filesystem'), // JSON config
-  workspaceSandbox: text('workspace_sandbox'), // JSON config
+  workspaceFilesystem: text('workspace_filesystem', { mode: 'json' }).$type<WorkspaceFilesystemConfig>(),
+  workspaceSandbox: text('workspace_sandbox', { mode: 'json' }).$type<WorkspaceSandboxConfig>(),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
@@ -41,28 +41,6 @@ export const agents = sqliteTable('agents', {
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
 
-/**
- * Agent configuration after parsing workspace configs from JSON strings
- */
-export type ParsedAgentConfig = Omit<Agent, 'workspaceFilesystem' | 'workspaceSandbox'> & {
-  workspaceFilesystem: WorkspaceFilesystemConfig | undefined;
-  workspaceSandbox: WorkspaceSandboxConfig | undefined;
-};
-
-/**
- * Parse agent workspace configuration from raw database values
- */
-export function parseAgentWorkspaceConfig(
-  agent: Agent,
-  parseFS: (json: string | null | undefined) => WorkspaceFilesystemConfig | undefined,
-  parseSandbox: (json: string | null | undefined) => WorkspaceSandboxConfig | undefined,
-): ParsedAgentConfig {
-  return {
-    ...agent,
-    workspaceFilesystem: parseFS(agent.workspaceFilesystem),
-    workspaceSandbox: parseSandbox(agent.workspaceSandbox),
-  };
-}
 
 /**
  * Tabela: agent_providers
