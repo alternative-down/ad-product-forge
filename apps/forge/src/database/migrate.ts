@@ -7,10 +7,10 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
  * Executes pending database migrations for application database
  * This function should be called during application initialization
  *
- * @param db - The Drizzle database instance
+ * @param db - The Drizzle database instance with schema
  * @throws Error if migration fails
  */
-export async function runMigrations<T extends Record<string, unknown>>(db: LibSQLDatabase<T>): Promise<void> {
+export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
   try {
     console.log('[Migrations] Running pending migrations for application database...');
 

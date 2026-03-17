@@ -7,10 +7,10 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
  * Executes pending database migrations
  * This function should be called when initializing the communication module
  *
- * @param db - The Drizzle database instance
+ * @param db - The Drizzle database instance with schema
  * @throws Error if migration fails
  */
-export async function runMigrations(db: LibSQLDatabase): Promise<void> {
+export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
   try {
     console.log('[Migrations] Running pending migrations for communication database...');
 
