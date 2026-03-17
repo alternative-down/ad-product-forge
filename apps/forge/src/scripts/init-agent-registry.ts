@@ -3,27 +3,34 @@ import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from '@libsql/client';
 import { eq, and } from 'drizzle-orm';
-import { z } from 'zod';
 
 import * as schema from '../database/schema.js';
 import { getDatabase, runMigrations } from '../database/index.js';
 import { createId } from '@paralleldrive/cuid2';
 import { encryptSecret } from '../encryption/crypto.js';
 
-const envSchema = z.object({
-  FORGE_MODEL_ID: z.string().min(1),
-  FORGE_AGENT_ID: z.string().min(1),
-  FORGE_AGENT_NAME: z.string().min(1),
-  FORGE_HELPER_AGENT_ID: z.string().optional(),
-  FORGE_HELPER_AGENT_NAME: z.string().optional(),
-});
+/**
+ * Agent configuration - hardcoded once, then managed via database
+ * Modify here to change initial agent setup, then future changes are via database
+ */
+const AGENTS_CONFIG = {
+  forge: {
+    id: 'forge-agent',
+    name: 'Forge Agent',
+    description: 'Main Forge agent for task execution',
+    modelId: 'claude-opus-4-1',
+  },
+  helper: {
+    id: 'forge-helper',
+    name: 'Forge Helper',
+    description: 'Helper agent for analysis and support',
+    modelId: 'claude-opus-4-1',
+  },
+};
 
 async function initAgentRegistry() {
   try {
-    const env = envSchema.parse(process.env);
     const systemPrompt = await readFile(
       path.resolve(import.meta.dirname, '../forge-system.md'),
       'utf8'
@@ -39,11 +46,11 @@ async function initAgentRegistry() {
     // Prepare agent configs
     const agentConfigs = [
       {
-        id: env.FORGE_AGENT_ID,
-        name: env.FORGE_AGENT_NAME,
-        description: 'Main Forge agent for task execution',
-        model: `oauth-gateway/claude-max/${env.FORGE_MODEL_ID}`,
-        omModel: env.FORGE_MODEL_ID,
+        id: AGENTS_CONFIG.forge.id,
+        name: AGENTS_CONFIG.forge.name,
+        description: AGENTS_CONFIG.forge.description,
+        model: `oauth-gateway/claude-max/${AGENTS_CONFIG.forge.modelId}`,
+        omModel: AGENTS_CONFIG.forge.modelId,
         instructions: systemPrompt,
         tools: null,
         workflows: null,
@@ -54,11 +61,11 @@ async function initAgentRegistry() {
         workspaceSandbox: null,
       },
       {
-        id: env.FORGE_HELPER_AGENT_ID || 'forge-helper',
-        name: env.FORGE_HELPER_AGENT_NAME || 'Forge Helper',
-        description: 'Helper agent for analysis and support',
-        model: `oauth-gateway/claude-max/${env.FORGE_MODEL_ID}`,
-        omModel: env.FORGE_MODEL_ID,
+        id: AGENTS_CONFIG.helper.id,
+        name: AGENTS_CONFIG.helper.name,
+        description: AGENTS_CONFIG.helper.description,
+        model: `oauth-gateway/claude-max/${AGENTS_CONFIG.helper.modelId}`,
+        omModel: AGENTS_CONFIG.helper.modelId,
         instructions: [
           systemPrompt,
           'You are the helper agent for the main Forge agent.',
@@ -134,20 +141,18 @@ async function initAgentRegistry() {
 
     // Register communication providers for agents
     console.log('[Init] Registering communication providers...');
-    const forgeAgentId = env.FORGE_AGENT_ID;
-    const helperAgentId = env.FORGE_HELPER_AGENT_ID || 'forge-helper';
 
     // Configure internal-chat provider for both agents
     const agentProviderConfigs = [
       {
-        agentId: forgeAgentId,
+        agentId: AGENTS_CONFIG.forge.id,
         providerType: 'internal-chat',
-        credentials: { agentId: forgeAgentId },
+        credentials: { agentId: AGENTS_CONFIG.forge.id },
       },
       {
-        agentId: helperAgentId,
+        agentId: AGENTS_CONFIG.helper.id,
         providerType: 'internal-chat',
-        credentials: { agentId: helperAgentId },
+        credentials: { agentId: AGENTS_CONFIG.helper.id },
       },
     ];
 
