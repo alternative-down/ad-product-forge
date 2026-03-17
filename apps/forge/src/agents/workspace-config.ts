@@ -1,14 +1,15 @@
-/**
- * Workspace configuration types for agent filesystem and sandbox
- */
+import { z } from 'zod';
 
-export interface WorkspaceFilesystemConfig {
-  basePath: string;
-}
+const WorkspaceFilesystemConfigSchema = z.object({
+  basePath: z.string(),
+});
 
-export interface WorkspaceSandboxConfig {
-  workingDirectory: string;
-}
+const WorkspaceSandboxConfigSchema = z.object({
+  workingDirectory: z.string(),
+});
+
+export type WorkspaceFilesystemConfig = z.infer<typeof WorkspaceFilesystemConfigSchema>;
+export type WorkspaceSandboxConfig = z.infer<typeof WorkspaceSandboxConfigSchema>;
 
 /**
  * Parse and validate workspace filesystem configuration from JSON string
@@ -16,11 +17,7 @@ export interface WorkspaceSandboxConfig {
 export function parseWorkspaceFilesystem(json: string | null | undefined): WorkspaceFilesystemConfig | undefined {
   if (!json) return undefined;
   try {
-    const parsed = JSON.parse(json);
-    if (typeof parsed === 'object' && parsed !== null && 'basePath' in parsed && typeof parsed.basePath === 'string') {
-      return parsed as WorkspaceFilesystemConfig;
-    }
-    return undefined;
+    return WorkspaceFilesystemConfigSchema.parse(JSON.parse(json));
   } catch {
     return undefined;
   }
@@ -32,11 +29,7 @@ export function parseWorkspaceFilesystem(json: string | null | undefined): Works
 export function parseWorkspaceSandbox(json: string | null | undefined): WorkspaceSandboxConfig | undefined {
   if (!json) return undefined;
   try {
-    const parsed = JSON.parse(json);
-    if (typeof parsed === 'object' && parsed !== null && 'workingDirectory' in parsed && typeof parsed.workingDirectory === 'string') {
-      return parsed as WorkspaceSandboxConfig;
-    }
-    return undefined;
+    return WorkspaceSandboxConfigSchema.parse(JSON.parse(json));
   } catch {
     return undefined;
   }
