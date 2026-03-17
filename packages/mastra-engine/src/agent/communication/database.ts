@@ -30,7 +30,7 @@ export async function initializeCommunicationDatabase(
     const db = drizzle(client, { schema: communicationSchema });
 
     // Run all pending migrations
-    await runMigrations(db as any);
+    await runMigrations(db);
 
     console.log('[Communication] Database initialized successfully');
     return db;
