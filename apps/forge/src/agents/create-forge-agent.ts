@@ -13,6 +13,7 @@ import {
   createObservationalMemory,
   appendWorkingMemoryInstructions,
 } from '@mastra-engine/core';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from './workspace-config.js';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -25,8 +26,8 @@ export type CreateForgeAgentConfig<
   workspaceAutoSync?: boolean;
   workspaceBm25?: boolean;
   workspaceEmbedder?: string;
-  workspaceFilesystem?: Record<string, unknown>;
-  workspaceSandbox?: Record<string, unknown>;
+  workspaceFilesystem?: WorkspaceFilesystemConfig;
+  workspaceSandbox?: WorkspaceSandboxConfig;
 };
 
 export type CreateAgentOptions = {

@@ -2,6 +2,7 @@ import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 
 import type { CommunicationProvider } from '@mastra-engine/core';
 import { createAgent, type CreateAgentConfig } from './create-forge-agent.js';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from './workspace-config.js';
 
 export type CreateSimpleAgentConfig<
   TAgentId extends string = string,
@@ -15,8 +16,8 @@ export type CreateSimpleAgentConfig<
   workspaceAutoSync?: boolean;
   workspaceBm25?: boolean;
   workspaceEmbedder?: string;
-  workspaceFilesystem?: Record<string, unknown>;
-  workspaceSandbox?: Record<string, unknown>;
+  workspaceFilesystem?: WorkspaceFilesystemConfig;
+  workspaceSandbox?: WorkspaceSandboxConfig;
 };
 
 export async function createSimpleAgent<

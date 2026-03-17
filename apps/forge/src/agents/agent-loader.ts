@@ -6,6 +6,7 @@ import type { CreateForgeAgentConfig } from './create-forge-agent.js';
 import type { CommunicationProvider } from '@mastra-engine/core';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
 import { decryptSecret } from '../encryption/crypto.js';
+import { parseWorkspaceFilesystem, parseWorkspaceSandbox } from './workspace-config.js';
 
 export interface AgentLoaderConfig {
   agentId: string;
@@ -68,8 +69,8 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
       workspaceAutoSync: agentConfig.workspaceAutoSync === 1,
       workspaceBm25: agentConfig.workspaceBm25 === 1,
       workspaceEmbedder: agentConfig.workspaceEmbedder || undefined,
-      workspaceFilesystem: agentConfig.workspaceFilesystem ? JSON.parse(agentConfig.workspaceFilesystem) : undefined,
-      workspaceSandbox: agentConfig.workspaceSandbox ? JSON.parse(agentConfig.workspaceSandbox) : undefined,
+      workspaceFilesystem: parseWorkspaceFilesystem(agentConfig.workspaceFilesystem),
+      workspaceSandbox: parseWorkspaceSandbox(agentConfig.workspaceSandbox),
     },
     { longTermMemory: true }
   );
