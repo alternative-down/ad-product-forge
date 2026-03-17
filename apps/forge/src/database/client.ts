@@ -1,8 +1,7 @@
 /**
  * Client Drizzle + libsql - APP
  *
- * Gerencia conexão com banco de dados agents.db via libsql.
- * Preparado para local (SQLite) e remoto (Turso).
+ * Gerencia conexão com banco de dados local via libsql (SQLite).
  */
 
 import { createClient } from '@libsql/client';
@@ -15,39 +14,13 @@ type Database = LibSQLDatabase<typeof schema>;
 let dbInstance: Database | null = null;
 
 /**
- * Constrói URL de conexão libsql
- * Para local: file:path
- * Para Turso: https://...
- */
-function getLibsqlUrl(databasePath: string): string {
-  // Local development
-  if (!process.env.TURSO_CONNECTION_URL) {
-    return `file:${databasePath}`;
-  }
-
-  // Production with Turso
-  return process.env.TURSO_CONNECTION_URL;
-}
-
-/**
- * Token de autenticação (para Turso)
- */
-function getLibsqlToken(): string | undefined {
-  return process.env.TURSO_AUTH_TOKEN;
-}
-
-/**
- * Inicializa a conexão com o banco de dados
+ * Inicializa a conexão com o banco de dados local
  */
 function initializeDatabase(): Database {
   const databasePath = getAppDatabasePath();
-  const url = getLibsqlUrl(databasePath);
-  const token = getLibsqlToken();
+  const url = `file:${databasePath}`;
 
-  const client = createClient({
-    url,
-    authToken: token,
-  });
+  const client = createClient({ url });
 
   return drizzle(client, { schema });
 }
