@@ -11,6 +11,29 @@ import { createId } from '@paralleldrive/cuid2';
 import { encryptSecret } from '../encryption/crypto.js';
 
 /**
+ * Determines the gateway and provider for a given model ID
+ * Supports: claude-* for Claude/Anthropic, gpt-*-codex for OpenAI Codex
+ */
+function resolveModelGateway(modelId: string): { provider: string; gateway: string } {
+  if (modelId.includes('claude') || modelId.includes('anthropic')) {
+    return { provider: 'claude-max', gateway: 'account-oauth' };
+  }
+  if (modelId.includes('codex')) {
+    return { provider: 'openai-codex', gateway: 'account-oauth' };
+  }
+  throw new Error(`Unsupported model: ${modelId}. Expected 'claude-*' or '*-codex' format`);
+}
+
+/**
+ * Builds the full model string for agent initialization
+ * Format: {gateway}/{provider}/{modelId}
+ */
+function buildModelString(modelId: string): string {
+  const { gateway, provider } = resolveModelGateway(modelId);
+  return `${gateway}/${provider}/${modelId}`;
+}
+
+/**
  * Agent configuration - hardcoded once, then managed via database
  * Modify here to change initial agent setup, then future changes are via database
  */
@@ -49,7 +72,7 @@ async function initAgentRegistry() {
         id: AGENTS_CONFIG.forge.id,
         name: AGENTS_CONFIG.forge.name,
         description: AGENTS_CONFIG.forge.description,
-        model: `oauth-gateway/claude-max/${AGENTS_CONFIG.forge.modelId}`,
+        model: buildModelString(AGENTS_CONFIG.forge.modelId),
         omModel: AGENTS_CONFIG.forge.modelId,
         instructions: systemPrompt,
         tools: null,
@@ -64,7 +87,7 @@ async function initAgentRegistry() {
         id: AGENTS_CONFIG.helper.id,
         name: AGENTS_CONFIG.helper.name,
         description: AGENTS_CONFIG.helper.description,
-        model: `oauth-gateway/claude-max/${AGENTS_CONFIG.helper.modelId}`,
+        model: buildModelString(AGENTS_CONFIG.helper.modelId),
         omModel: AGENTS_CONFIG.helper.modelId,
         instructions: [
           systemPrompt,
