@@ -2,7 +2,7 @@ import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 
 import type { CommunicationProvider } from '@mastra-engine/core';
 import { createAgent, type CreateAgentConfig } from './create-forge-agent.js';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from './workspace-config.js';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
 
 export type CreateSimpleAgentConfig<
   TAgentId extends string = string,

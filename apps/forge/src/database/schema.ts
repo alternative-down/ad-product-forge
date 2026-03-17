@@ -13,7 +13,18 @@
 
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../agents/workspace-config.js';
+import { z } from 'zod';
+
+const WorkspaceFilesystemConfigSchema = z.object({
+  basePath: z.string(),
+});
+
+const WorkspaceSandboxConfigSchema = z.object({
+  workingDirectory: z.string(),
+});
+
+export type WorkspaceFilesystemConfig = z.infer<typeof WorkspaceFilesystemConfigSchema>;
+export type WorkspaceSandboxConfig = z.infer<typeof WorkspaceSandboxConfigSchema>;
 
 /**
  * Tabela: agents
@@ -26,8 +37,8 @@ export const agents = sqliteTable('agents', {
   model: text('model').notNull(),
   omModel: text('om_model'), // Modelo para observational memory
   instructions: text('instructions').notNull(),
-  tools: text('tools'), // JSON array de tool IDs ou configuração
-  workflows: text('workflows'), // JSON array de workflow IDs
+  tools: text('tools', { mode: 'json' }).$type<unknown>(),
+  workflows: text('workflows', { mode: 'json' }).$type<unknown>(),
   // Workspace configuration
   workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1), // boolean as 0/1
   workspaceBm25: integer('workspace_bm25').notNull().default(1), // boolean as 0/1

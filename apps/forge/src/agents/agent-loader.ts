@@ -53,7 +53,8 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
   const providers = loadCommunicationProviders(providerCredentials);
 
   // Create agent from database configuration
-  // Note: workspaceFilesystem and workspaceSandbox are already parsed as JSON objects by Drizzle
+  // Note: All JSON fields (tools, workflows, workspaceFilesystem, workspaceSandbox)
+  // are already parsed as objects by Drizzle - no manual JSON.parse needed
   const agent = await createAgent(
     {
       id: agentConfig.id,
@@ -62,8 +63,8 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
       instructions: agentConfig.instructions,
       model: agentConfig.model,
       omModel: agentConfig.omModel || undefined,
-      tools: agentConfig.tools ? JSON.parse(agentConfig.tools) : undefined,
-      workflows: agentConfig.workflows ? JSON.parse(agentConfig.workflows) : undefined,
+      tools: (agentConfig.tools ?? undefined) as any,
+      workflows: (agentConfig.workflows ?? undefined) as any,
       providers,
       workspaceBasePath: config.workspaceBasePath,
       workspaceAutoSync: agentConfig.workspaceAutoSync === 1,
