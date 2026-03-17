@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { Database } from '../database/index.js';
-import { agents, agentProviders } from '../database/schema.js';
+import { agents, agentProviders, parseAgentWorkspaceConfig } from '../database/schema.js';
 import { createAgent } from './create-forge-agent.js';
 import type { CreateForgeAgentConfig } from './create-forge-agent.js';
 import type { CommunicationProvider } from '@mastra-engine/core';
@@ -33,6 +33,9 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
+  // Parse workspace configuration from JSON strings
+  const parsedConfig = parseAgentWorkspaceConfig(agentConfig, parseWorkspaceFilesystem, parseWorkspaceSandbox);
+
   // Load providers from agent_providers table
   const providerConfigs = await db.query.agentProviders.findMany({
     where: eq(agentProviders.agentId, config.agentId),
@@ -53,24 +56,24 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
 
   const providers = loadCommunicationProviders(providerCredentials);
 
-  // Create agent from database configuration
+  // Create agent from parsed database configuration
   const agent = await createAgent(
     {
-      id: agentConfig.id,
-      name: agentConfig.name,
-      description: agentConfig.description || undefined,
-      instructions: agentConfig.instructions,
-      model: agentConfig.model,
-      omModel: agentConfig.omModel || undefined,
-      tools: agentConfig.tools ? JSON.parse(agentConfig.tools) : undefined,
-      workflows: agentConfig.workflows ? JSON.parse(agentConfig.workflows) : undefined,
+      id: parsedConfig.id,
+      name: parsedConfig.name,
+      description: parsedConfig.description || undefined,
+      instructions: parsedConfig.instructions,
+      model: parsedConfig.model,
+      omModel: parsedConfig.omModel || undefined,
+      tools: parsedConfig.tools ? JSON.parse(parsedConfig.tools) : undefined,
+      workflows: parsedConfig.workflows ? JSON.parse(parsedConfig.workflows) : undefined,
       providers,
       workspaceBasePath: config.workspaceBasePath,
-      workspaceAutoSync: agentConfig.workspaceAutoSync === 1,
-      workspaceBm25: agentConfig.workspaceBm25 === 1,
-      workspaceEmbedder: agentConfig.workspaceEmbedder || undefined,
-      workspaceFilesystem: parseWorkspaceFilesystem(agentConfig.workspaceFilesystem),
-      workspaceSandbox: parseWorkspaceSandbox(agentConfig.workspaceSandbox),
+      workspaceAutoSync: parsedConfig.workspaceAutoSync === 1,
+      workspaceBm25: parsedConfig.workspaceBm25 === 1,
+      workspaceEmbedder: parsedConfig.workspaceEmbedder || undefined,
+      workspaceFilesystem: parsedConfig.workspaceFilesystem,
+      workspaceSandbox: parsedConfig.workspaceSandbox,
     },
     { longTermMemory: true }
   );

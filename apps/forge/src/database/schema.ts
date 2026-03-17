@@ -13,6 +13,7 @@
 
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../agents/workspace-config.js';
 
 /**
  * Tabela: agents
@@ -39,6 +40,29 @@ export const agents = sqliteTable('agents', {
 
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
+
+/**
+ * Agent configuration after parsing workspace configs from JSON strings
+ */
+export type ParsedAgentConfig = Omit<Agent, 'workspaceFilesystem' | 'workspaceSandbox'> & {
+  workspaceFilesystem: WorkspaceFilesystemConfig | undefined;
+  workspaceSandbox: WorkspaceSandboxConfig | undefined;
+};
+
+/**
+ * Parse agent workspace configuration from raw database values
+ */
+export function parseAgentWorkspaceConfig(
+  agent: Agent,
+  parseFS: (json: string | null | undefined) => WorkspaceFilesystemConfig | undefined,
+  parseSandbox: (json: string | null | undefined) => WorkspaceSandboxConfig | undefined,
+): ParsedAgentConfig {
+  return {
+    ...agent,
+    workspaceFilesystem: parseFS(agent.workspaceFilesystem),
+    workspaceSandbox: parseSandbox(agent.workspaceSandbox),
+  };
+}
 
 /**
  * Tabela: agent_providers
