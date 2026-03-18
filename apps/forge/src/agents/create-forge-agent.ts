@@ -97,10 +97,8 @@ export async function createAgent<
 
   await workspace.init();
 
-  const communicationClient = createClient({ url: dbUrl });
-
   const communication = await createCommunicationModule({
-    client: communicationClient,
+    client,
     providers: config.providers ?? [],
   });
   const tools = {

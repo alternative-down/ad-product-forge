@@ -20,7 +20,6 @@ export async function main() {
   const db = getDatabase();
   await runMigrations(db);
   const agents = await loadAgents(db, {
-    agentId: 'unused', // loadAgents loads all agents
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
   });
 

@@ -6,8 +6,11 @@ import { loadCommunicationProviders, type ProviderCredentialsMap } from '../comm
 import { decryptSecret } from '../encryption/crypto.js';
 
 export interface AgentLoaderConfig {
-  agentId: string;
   workspaceBasePath: string;
+}
+
+export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
+  agentId: string;
 }
 
 /**
@@ -18,7 +21,7 @@ export interface AgentLoaderConfig {
  * @returns Configured agent instance
  * @throws Error if agent not found in database
  */
-export async function loadAgent(db: Database, config: AgentLoaderConfig) {
+export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   // Fetch agent configuration from database
   const agentConfig = await db.query.agents.findFirst({
     where: eq(agents.id, config.agentId),
@@ -92,8 +95,8 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
   for (const agentConfig of agentConfigs) {
     try {
       const agent = await loadAgent(db, {
-        agentId: agentConfig.id,
         workspaceBasePath: config.workspaceBasePath,
+        agentId: agentConfig.id,
       });
       agents.set(agentConfig.id, agent);
     } catch (error) {
