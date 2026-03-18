@@ -23,7 +23,7 @@ export async function main() {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
   });
 
-  const mastra = new Mastra({
+  new Mastra({
     agents: Object.fromEntries(agents),
     gateways: {
       oauth: createOAuthGateway(),
