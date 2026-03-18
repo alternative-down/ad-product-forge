@@ -37,8 +37,6 @@ export const agents = sqliteTable('agents', {
   model: text('model').notNull(),
   omModel: text('om_model'), // Modelo para observational memory
   instructions: text('instructions').notNull(),
-  tools: text('tools', { mode: 'json' }).$type<unknown>(),
-  workflows: text('workflows', { mode: 'json' }).$type<unknown>(),
   // Workspace configuration
   workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1), // boolean as 0/1
   workspaceBm25: integer('workspace_bm25').notNull().default(1), // boolean as 0/1
