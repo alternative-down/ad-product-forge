@@ -1,22 +1,11 @@
 import crypto from 'node:crypto';
 
-import type { CommunicationProvider } from '../agent/communication/provider-types';
+import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
 type RegisteredAgent = {
   id: string;
   displayName: string;
-  onMessage(message: {
-    providerConversationKey: string;
-    providerMessageId: string;
-    conversationName?: string;
-    authorExternalId?: string;
-    authorDisplayName?: string;
-    authorUsername?: string;
-    content: string;
-    attachments?: [];
-    createdAt: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<void>;
+  onMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null;
 };
 
 export function createInternalChatPreset() {
@@ -24,6 +13,14 @@ export function createInternalChatPreset() {
 
   return {
     createProvider(config: { id: string; displayName: string }): CommunicationProvider {
+      const agent: RegisteredAgent = {
+        id: config.id,
+        displayName: config.displayName,
+        onMessage: null,
+      };
+
+      agents.set(config.id, agent);
+
       return {
         id: 'internal-chat',
         async getAccount() {
@@ -32,21 +29,17 @@ export function createInternalChatPreset() {
             displayName: config.displayName,
           };
         },
-        async onMessage(callback) {
-          agents.set(config.id, {
-            id: config.id,
-            displayName: config.displayName,
-            onMessage: callback,
-          });
+        onMessage(callback) {
+          agent.onMessage = callback;
         },
         async syncContacts() {
           return Array.from(agents.values())
-            .filter((agent) => agent.id !== config.id)
-            .map((agent) => ({
-              slug: agent.id,
-              displayName: agent.displayName,
-              externalUserId: agent.id,
-              username: agent.id,
+            .filter((currentAgent) => currentAgent.id !== config.id)
+            .map((currentAgent) => ({
+              slug: currentAgent.id,
+              displayName: currentAgent.displayName,
+              externalUserId: currentAgent.id,
+              username: currentAgent.id,
             }));
         },
         async sendMessage(input) {
@@ -55,6 +48,10 @@ export function createInternalChatPreset() {
 
           if (!recipient) {
             throw new Error(`Internal chat target not found: ${recipientId}`);
+          }
+
+          if (!recipient.onMessage) {
+            throw new Error(`Internal chat target is not listening: ${recipientId}`);
           }
 
           const providerMessageId = `internal:${crypto.randomUUID()}`;

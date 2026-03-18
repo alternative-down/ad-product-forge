@@ -1,5 +1,6 @@
 import type { Client } from '@libsql/client';
 
+import { initializeCommunicationDatabase } from './database';
 import { createCommunicationStore } from './store';
 import type {
   CommunicationConversationView,
@@ -11,7 +12,11 @@ export async function createCommunicationModule(config: {
   client: Client;
   providers: CommunicationProvider[];
 }) {
-  const store = await createCommunicationStore(config.client);
+  // Initialize database (run migrations) and get Drizzle instance
+  const db = await initializeCommunicationDatabase(config.client);
+
+  // Create store for data operations
+  const store = await createCommunicationStore(db);
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: (() => void) | null = null;
 

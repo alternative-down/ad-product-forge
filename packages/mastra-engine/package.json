@@ -11,7 +11,10 @@
     "build": "NODE_OPTIONS=--max-old-space-size=8192 tsc",
     "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
     "smoke:openai-codex": "tsx examples/openai-codex-smoke.ts",
-    "smoke:claude-max": "tsx examples/claude-max-smoke.ts"
+    "smoke:claude-max": "tsx examples/claude-max-smoke.ts",
+    "drizzle:generate": "drizzle-kit generate",
+    "drizzle:migrate": "drizzle-kit migrate",
+    "drizzle:push": "drizzle-kit push"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
@@ -22,6 +25,8 @@
     "@mastra/libsql": "^1.7.0",
     "@mastra/memory": "^1.6.2",
     "@mendable/firecrawl-js": "^4.15.4",
+    "drizzle-kit": "^0.31.9",
+    "drizzle-orm": "^0.45.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
