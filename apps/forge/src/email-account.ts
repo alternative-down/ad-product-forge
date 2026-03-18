@@ -11,19 +11,18 @@ type EmailProviderConfig = {
   bcc?: string;
 };
 
-function resolveThreadKey(messageId: string, references: string): string {
-  const refs = references?.trim().split(/\s+/).filter(Boolean) ?? [];
-  return refs[0] ?? messageId;
-}
-
 export function createEmailProvider(config: EmailProviderConfig): CommunicationProvider {
-  let listening = false;
   let client: ImapFlow | null = null;
-  let reconnectAttempts = 0;
-  const maxReconnectDelay = 30000; // 30 seconds
+  let reconnectDelayMs = 1000;
+  let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
 
-  async function connectImap(): Promise<ImapFlow> {
-    const newClient = new ImapFlow({
+  function resolveConversationKey(messageId: string, references?: string | null) {
+    const firstReference = references?.trim().split(/\s+/).find(Boolean);
+    return firstReference ?? messageId;
+  }
+
+  async function connectImap() {
+    const nextClient = new ImapFlow({
       host: config.imap.host,
       port: config.imap.port,
       secure: config.imap.secure,
@@ -34,121 +33,119 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       logger: false,
     });
 
-    await newClient.connect();
-    await newClient.mailboxOpen('INBOX');
+    await nextClient.connect();
+    await nextClient.mailboxOpen('INBOX');
 
-    reconnectAttempts = 0;
-    return newClient;
+    client = nextClient;
+    reconnectDelayMs = 1000;
+    console.log('[email] Connected to IMAP server');
+
+    nextClient.on('close', () => {
+      if (client === nextClient) {
+        client = null;
+      }
+
+      console.log('[email] Connection closed');
+      void reconnect();
+    });
+
+    nextClient.on('exists', () => {
+      void processUnseenMessages(nextClient);
+    });
+
+    return nextClient;
   }
 
-  async function processMessage(uid: number, client: ImapFlow, callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> {
+  async function processMessage(uid: number, currentClient: ImapFlow) {
+    const inboundCallback = onInboundMessage;
+
+    if (!inboundCallback) {
+      return;
+    }
+
     try {
-      const fetchResult = await client.fetch(String(uid), { source: true });
+      const fetchResult = await currentClient.fetch(String(uid), { source: true });
 
       for await (const message of fetchResult) {
-        if (message.source instanceof Uint8Array || typeof message.source === 'string') {
-          const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
-          const parsed = await PostalMime.parse(source);
-
-          // Skip self-messages
-          if (parsed.from?.address?.toLowerCase() === config.imap.user.toLowerCase()) {
-            continue;
-          }
-
-          const attachments: Attachment[] = (parsed.attachments ?? []).map((a) => ({
-            id: a.contentId ?? String(Math.random()),
-            name: a.filename ?? undefined,
-            url: '',
-            contentType: a.mimeType ?? undefined,
-            sizeBytes: typeof a.content === 'string' ? Buffer.byteLength(a.content, 'utf8') : a.content.byteLength,
-          }));
-
-          const providerMessageId = parsed.messageId ?? `${uid}-${Date.now()}`;
-          const inboundMessage: CommunicationInboundMessage = {
-            providerMessageId,
-            providerConversationKey: resolveThreadKey(providerMessageId, parsed.references ?? ''),
-            conversationName: parsed.subject ?? undefined,
-            authorExternalId: parsed.from?.address ?? 'unknown',
-            authorUsername: parsed.from?.address ?? 'unknown',
-            authorDisplayName: parsed.from?.name ?? parsed.from?.address ?? 'unknown',
-            content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
-            attachments,
-            createdAt: parsed.date ?? new Date().toISOString(),
-          };
-
-          await callback(inboundMessage);
+        if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
+          continue;
         }
+
+        const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
+        const parsed = await PostalMime.parse(source);
+
+        if (parsed.from?.address?.toLowerCase() === config.imap.user.toLowerCase()) {
+          continue;
+        }
+
+        const providerMessageId = parsed.messageId ?? `${uid}-${Date.now()}`;
+        const attachments: Attachment[] = (parsed.attachments ?? []).map((attachment, index) => ({
+          id: attachment.contentId ?? `${providerMessageId}:${index}`,
+          name: attachment.filename ?? undefined,
+          url: '',
+          contentType: attachment.mimeType ?? undefined,
+          sizeBytes:
+            typeof attachment.content === 'string'
+              ? Buffer.byteLength(attachment.content, 'utf8')
+              : attachment.content.byteLength,
+        }));
+
+        await inboundCallback({
+          providerMessageId,
+          providerConversationKey: resolveConversationKey(providerMessageId, parsed.references),
+          conversationName: parsed.subject ?? undefined,
+          authorExternalId: parsed.from?.address ?? 'unknown',
+          authorUsername: parsed.from?.address ?? 'unknown',
+          authorDisplayName: parsed.from?.name ?? parsed.from?.address ?? 'unknown',
+          content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
+          attachments,
+          createdAt: parsed.date ?? new Date().toISOString(),
+        });
       }
     } catch (error) {
       console.error('[email] Error processing message:', error);
     }
   }
 
-  async function startIdleLoop(callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> {
-    if (!client) {
-      return;
-    }
-
+  async function processUnseenMessages(currentClient: ImapFlow) {
     try {
-      // Listen for new messages
-      client.on('exists', async (data) => {
-        try {
-          if (!data.count) {
-            return;
-          }
+      const unseenUids = await currentClient.search({ seen: false });
 
-          const unseenUids = await client!.search({ seen: false });
-          if (!Array.isArray(unseenUids)) {
-            return;
-          }
+      if (!Array.isArray(unseenUids) || unseenUids.length === 0) {
+        return;
+      }
 
-          for (const uid of unseenUids) {
-            await processMessage(uid, client!, callback);
-          }
-        } catch (error) {
-          console.error('[email] Error handling new message notification:', error);
-        }
-      });
-
-      // Enter IDLE loop
-      while (listening && client) {
-        try {
-          await client.idle();
-        } catch (error) {
-          console.error('[email] IDLE error:', error);
-          break;
-        }
+      for (const uid of unseenUids) {
+        await processMessage(uid, currentClient);
       }
     } catch (error) {
-      console.error('[email] Error in IDLE loop:', error);
+      console.error('[email] Error fetching unseen messages:', error);
     }
   }
 
-  async function reconnectWithBackoff(callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> {
-    if (!listening) {
-      return;
-    }
+  async function reconnect() {
+    await new Promise((resolve) => setTimeout(resolve, reconnectDelayMs));
+    reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30000);
+    void listen();
+  }
 
-    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
-    reconnectAttempts++;
-
-    console.log(`[email] Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
-
-    await new Promise((resolve) => setTimeout(resolve, delay));
-
-    if (!listening) {
-      return;
-    }
-
+  async function listen() {
     try {
-      client = await connectImap();
-      console.log('[email] Reconnected to IMAP server');
-      void startIdleLoop(callback);
+      const currentClient = await connectImap();
+      await processUnseenMessages(currentClient);
+
+      while (client === currentClient) {
+        await currentClient.idle();
+      }
     } catch (error) {
-      console.error('[email] Reconnection failed:', error);
-      await reconnectWithBackoff(callback);
+      console.error('[email] Listener error:', error);
+      if (!client) {
+        void reconnect();
+      }
     }
   }
+
+  void listen();
 
   return {
     id: config.id ?? 'email',
@@ -158,50 +155,16 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         displayName: config.imap.user,
       };
     },
-    async onMessage(callback) {
-      if (listening) {
-        return;
-      }
-
-      listening = true;
-
-      try {
-        client = await connectImap();
-        console.log(`[email] Connected to IMAP server`);
-
-        // Fetch unread messages on startup
-        try {
-          const unseenUids = await client.search({ seen: false });
-          if (unseenUids && Array.isArray(unseenUids)) {
-            for (const uid of unseenUids) {
-              await processMessage(uid, client, callback);
-            }
-          }
-        } catch (error) {
-          console.error('[email] Error fetching unseen messages:', error);
-        }
-
-        // Start IDLE loop
-        client.on('close', async () => {
-          console.log('[email] Connection closed');
-          if (listening) {
-            await reconnectWithBackoff(callback);
-          }
-        });
-
-        void startIdleLoop(callback);
-      } catch (error) {
-        console.error('[email] Error in onMessage:', error);
-        if (listening) {
-          await reconnectWithBackoff(callback);
-        }
-      }
+    onMessage(callback) {
+      onInboundMessage = callback;
     },
-    // TODO: The current sendMessage interface supports only a single recipient.
-    // Future enhancement: extend CommunicationProvider.sendMessage to support
-    // multiple TO recipients, CC, and explicit BCC fields. This would require
-    // changes to the provider-types contract and the agent-facing tooling.
     async sendMessage(input) {
+      const recipientAddress = input.contactExternalId;
+
+      if (!recipientAddress) {
+        throw new Error(`[email] Cannot send: no recipient address resolved for conversation ${input.providerConversationKey}`);
+      }
+
       const transporter = nodemailer.createTransport({
         host: config.smtp.host,
         port: config.smtp.port,
@@ -213,23 +176,16 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       });
 
       try {
-        const recipientAddress = input.contactExternalId;
-        if (!recipientAddress) {
-          throw new Error(`[email] Cannot send: no recipient address resolved for conversation ${input.providerConversationKey}`);
-        }
-
-        const isReply = !!input.providerConversationKey;
-        const subject = isReply ? `Re: ${input.providerConversationKey}` : 'Message from agent';
-
+        const isReply = Boolean(input.providerConversationKey);
         const mailOptions: Record<string, unknown> = {
           from: config.smtp.user,
           to: recipientAddress,
-          subject,
+          subject: isReply ? `Re: ${input.providerConversationKey}` : 'Message from agent',
           text: input.content,
           bcc: config.bcc,
         };
 
-        if (isReply && input.providerConversationKey) {
+        if (input.providerConversationKey) {
           mailOptions.inReplyTo = input.providerConversationKey;
           mailOptions.references = input.providerConversationKey;
         }
