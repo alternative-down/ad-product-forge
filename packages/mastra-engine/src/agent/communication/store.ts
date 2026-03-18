@@ -146,6 +146,11 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     metadata?: Record<string, unknown>;
   }) {
     const accountId = `${input.provider}:${input.externalAccountId}`;
+    const existing = await db.query.communicationAccounts.findFirst({
+      where: eq(schema.communicationAccounts.accountId, accountId),
+    });
+    const displayName = input.displayName ?? existing?.displayName ?? undefined;
+    const metadataJson = input.metadata ? JSON.stringify(input.metadata) : existing?.metadataJson ?? null;
 
     await db
       .insert(schema.communicationAccounts)
@@ -153,14 +158,14 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
         accountId,
         provider: input.provider,
         externalAccountId: input.externalAccountId,
-        displayName: input.displayName ?? null,
-        metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
+        displayName: displayName ?? null,
+        metadataJson,
       })
       .onConflictDoUpdate({
         target: schema.communicationAccounts.accountId,
         set: {
-          displayName: input.displayName ?? null,
-          metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
+          displayName: displayName ?? null,
+          metadataJson,
         },
       });
 
@@ -168,8 +173,8 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       accountId,
       provider: input.provider,
       externalAccountId: input.externalAccountId,
-      displayName: input.displayName,
-      metadata: input.metadata,
+      displayName,
+      metadata: metadataJson ? JSON.parse(metadataJson) : undefined,
     };
   }
 
@@ -350,25 +355,33 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       throw new Error('Failed to create inbound conversation');
     }
 
+    const existing = await db.query.communicationMessages.findFirst({
+      where: and(
+        eq(schema.communicationMessages.provider, input.provider),
+        eq(schema.communicationMessages.providerMessageId, input.providerMessageId),
+      ),
+    });
+
+    if (existing) {
+      return loadMessage(existing.messageId);
+    }
+
     const messageId = `msg_${crypto.randomUUID()}`;
 
-    await db
-      .insert(schema.communicationMessages)
-      .values({
-        messageId,
-        conversationId: conversation.conversationId,
-        provider: input.provider,
-        providerMessageId: input.providerMessageId,
-        authorExternalId: input.authorExternalId ?? null,
-        authorDisplayName: input.authorDisplayName ?? null,
-        authorUsername: input.authorUsername ?? null,
-        content: input.content,
-        attachmentsJson: JSON.stringify(input.attachments ?? []),
-        unread: 1,
-        createdAt: input.createdAt,
-        metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
-      })
-      .onConflictDoNothing();
+    await db.insert(schema.communicationMessages).values({
+      messageId,
+      conversationId: conversation.conversationId,
+      provider: input.provider,
+      providerMessageId: input.providerMessageId,
+      authorExternalId: input.authorExternalId ?? null,
+      authorDisplayName: input.authorDisplayName ?? null,
+      authorUsername: input.authorUsername ?? null,
+      content: input.content,
+      attachmentsJson: JSON.stringify(input.attachments ?? []),
+      unread: 1,
+      createdAt: input.createdAt,
+      metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
+    });
 
     return loadMessage(messageId);
   }
@@ -473,16 +486,16 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       )
       .sort((left, right) => new Date(right.latestMessageAt).getTime() - new Date(left.latestMessageAt).getTime());
 
-    // Mark messages as read
-    const messageIdsToMarkRead = filteredConversations.flatMap((conv) =>
-      conv.recentMessages.filter((msg) => msg.unread === 1).map((msg) => msg.messageId),
+    const visibleConversations = filteredConversations.slice(0, options.limit);
+    const messageIdsToMarkRead = visibleConversations.flatMap((conversation) =>
+      conversation.recentMessages.filter((message) => message.unread === 1).map((message) => message.messageId),
     );
 
     if (messageIdsToMarkRead.length > 0) {
       await markMessagesRead(messageIdsToMarkRead);
     }
 
-    return filteredConversations.slice(0, options.limit).map((conv) => ({
+    return visibleConversations.map((conv) => ({
       conversationId: conv.conversationId,
       provider: conv.provider,
       providerConversationKey: conv.providerConversationKey,
