@@ -15,6 +15,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   let client: ImapFlow | null = null;
   let reconnectDelayMs = 1000;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
+  const pendingMessages: CommunicationInboundMessage[] = [];
 
   function resolveConversationKey(messageId: string, references?: string | null) {
     const firstReference = references?.trim().split(/\s+/).find(Boolean);
@@ -56,13 +57,32 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     return nextClient;
   }
 
-  async function processMessage(uid: number, currentClient: ImapFlow) {
-    const inboundCallback = onInboundMessage;
-
-    if (!inboundCallback) {
+  async function deliverMessage(message: CommunicationInboundMessage) {
+    if (!onInboundMessage) {
+      pendingMessages.push(message);
       return;
     }
 
+    await onInboundMessage(message);
+  }
+
+  async function flushPendingMessages() {
+    if (!onInboundMessage || pendingMessages.length === 0) {
+      return;
+    }
+
+    while (pendingMessages.length > 0) {
+      const message = pendingMessages.shift();
+
+      if (!message) {
+        return;
+      }
+
+      await onInboundMessage(message);
+    }
+  }
+
+  async function processMessage(uid: number, currentClient: ImapFlow) {
     try {
       const fetchResult = await currentClient.fetch(String(uid), { source: true });
 
@@ -90,7 +110,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
               : attachment.content.byteLength,
         }));
 
-        await inboundCallback({
+        await deliverMessage({
           providerMessageId,
           providerConversationKey: resolveConversationKey(providerMessageId, parsed.references),
           conversationName: parsed.subject ?? undefined,
@@ -157,6 +177,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     },
     onMessage(callback) {
       onInboundMessage = callback;
+      void flushPendingMessages();
     },
     async sendMessage(input) {
       const recipientAddress = input.contactExternalId;

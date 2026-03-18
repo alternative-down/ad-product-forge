@@ -19,6 +19,7 @@ export function createDiscordProvider(config: {
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
+  const pendingMessages: CommunicationInboundMessage[] = [];
 
   async function withTyping<T extends { sendTyping(): Promise<unknown> }>(
     channel: T,
@@ -89,6 +90,31 @@ export function createDiscordProvider(config: {
     };
   }
 
+  async function deliverMessage(message: CommunicationInboundMessage) {
+    if (!onInboundMessage) {
+      pendingMessages.push(message);
+      return;
+    }
+
+    await onInboundMessage(message);
+  }
+
+  async function flushPendingMessages() {
+    if (!onInboundMessage || pendingMessages.length === 0) {
+      return;
+    }
+
+    while (pendingMessages.length > 0) {
+      const message = pendingMessages.shift();
+
+      if (!message) {
+        return;
+      }
+
+      await onInboundMessage(message);
+    }
+  }
+
   const ready = client.login(config.token).then(() => {
     if (!client.user) {
       throw new Error('Discord client did not become ready after login');
@@ -108,7 +134,7 @@ export function createDiscordProvider(config: {
           return;
         }
 
-        await callback(inboundMessage);
+        await deliverMessage(inboundMessage);
       } catch (error) {
         console.error('[discord] Error handling MessageCreate event:', error);
       }
@@ -134,6 +160,7 @@ export function createDiscordProvider(config: {
     },
     onMessage(callback) {
       onInboundMessage = callback;
+      void flushPendingMessages();
     },
     async sendMessage(input) {
       await ensureClient();
