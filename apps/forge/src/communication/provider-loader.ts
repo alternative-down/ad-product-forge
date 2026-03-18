@@ -1,9 +1,45 @@
+import { z } from 'zod';
+
 import type { CommunicationProvider } from '@mastra-engine/core';
+import { createDiscordProvider } from '../discord-account.js';
 import { createEmailProvider } from '../email-account.js';
 import { createInternalChatPreset } from './presets/internal-chat.js';
 
+const internalChatCredentialsSchema = z.object({
+  agentId: z.string(),
+});
+
+const discordCredentialsSchema = z.object({
+  token: z.string(),
+  allowedChannelIds: z.array(z.string()).optional(),
+  respondToMentionsOnly: z.boolean().optional(),
+});
+
+const emailCredentialsSchema = z.object({
+  imap: z.object({
+    host: z.string(),
+    port: z.number(),
+    secure: z.boolean(),
+    user: z.string(),
+    password: z.string(),
+  }),
+  smtp: z.object({
+    host: z.string(),
+    port: z.number(),
+    secure: z.boolean(),
+    user: z.string(),
+    password: z.string(),
+  }),
+  bcc: z.string().optional(),
+});
+
 export type ProviderCredentialsMap = {
   'internal-chat'?: { agentId: string };
+  discord?: {
+    token: string;
+    allowedChannelIds?: string[];
+    respondToMentionsOnly?: boolean;
+  };
   email?: {
     imap: { host: string; port: number; secure: boolean; user: string; password: string };
     smtp: { host: string; port: number; secure: boolean; user: string; password: string };
@@ -21,9 +57,8 @@ const internalChatPreset = createInternalChatPreset();
 export function loadCommunicationProviders(credentials: ProviderCredentialsMap): CommunicationProvider[] {
   const providers: CommunicationProvider[] = [];
 
-  // Load internal chat provider if configured
   if (credentials['internal-chat']) {
-    const { agentId } = credentials['internal-chat'];
+    const { agentId } = internalChatCredentialsSchema.parse(credentials['internal-chat']);
     providers.push(
       internalChatPreset.createProvider({
         id: agentId,
@@ -32,9 +67,13 @@ export function loadCommunicationProviders(credentials: ProviderCredentialsMap):
     );
   }
 
-  // Load email provider if configured
+  if (credentials.discord) {
+    const discord = discordCredentialsSchema.parse(credentials.discord);
+    providers.push(createDiscordProvider(discord));
+  }
+
   if (credentials.email) {
-    providers.push(createEmailProvider(credentials.email));
+    providers.push(createEmailProvider(emailCredentialsSchema.parse(credentials.email)));
   }
 
   return providers;

@@ -11,7 +11,7 @@
  * - Este schema é APENAS para a aplicação central
  */
 
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -63,7 +63,9 @@ export const agentProviders = sqliteTable('agent_providers', {
   providerType: text('provider_type').notNull(),
   encryptedCredentials: text('encrypted_credentials').notNull(),
   createdAt: integer('created_at').notNull(),
-});
+}, (table) => ({
+  agentProviderUnique: uniqueIndex('agent_provider_unique').on(table.agentId, table.providerType),
+}));
 
 export type AgentProvider = typeof agentProviders.$inferSelect;
 export type NewAgentProvider = typeof agentProviders.$inferInsert;
