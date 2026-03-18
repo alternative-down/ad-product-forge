@@ -2,8 +2,6 @@ import { eq } from 'drizzle-orm';
 import type { Database } from '../database/index.js';
 import { agents, agentProviders } from '../database/schema.js';
 import { createAgent } from './create-forge-agent.js';
-import type { CreateForgeAgentConfig } from './create-forge-agent.js';
-import type { CommunicationProvider } from '@mastra-engine/core';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
 import { decryptSecret } from '../encryption/crypto.js';
 
@@ -52,14 +50,6 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
 
   const providers = loadCommunicationProviders(providerCredentials);
 
-  // Create agent from database configuration
-  // Note: All JSON fields (tools, workflows, workspaceFilesystem, workspaceSandbox)
-  // are already parsed as objects by Drizzle - no manual JSON.parse needed
-  // Build configuration without using 'as any' - tools/workflows are explicitly handled
-  // since they come from database JSON and may not match the type signature perfectly
-  const toolsValue = agentConfig.tools === null ? undefined : agentConfig.tools;
-  const workflowsValue = agentConfig.workflows === null ? undefined : agentConfig.workflows;
-
   const agent = await createAgent(
     {
       id: agentConfig.id,
@@ -68,8 +58,6 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
       instructions: agentConfig.instructions,
       model: agentConfig.model,
       omModel: agentConfig.omModel || undefined,
-      tools: toolsValue,
-      workflows: workflowsValue,
       providers,
       workspaceBasePath: config.workspaceBasePath,
       workspaceAutoSync: agentConfig.workspaceAutoSync === 1,
@@ -77,7 +65,7 @@ export async function loadAgent(db: Database, config: AgentLoaderConfig) {
       workspaceEmbedder: agentConfig.workspaceEmbedder || undefined,
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
       workspaceSandbox: agentConfig.workspaceSandbox ?? undefined,
-    } as Parameters<typeof createAgent>[0],
+    },
     { longTermMemory: true }
   );
 
