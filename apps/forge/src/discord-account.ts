@@ -1,6 +1,6 @@
 import { ChannelType, Client, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
 
-import type { CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
 export function createDiscordProvider(config: {
   token: string;
@@ -18,25 +18,16 @@ export function createDiscordProvider(config: {
   });
   const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
-  let listening = false;
+  let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
 
-  async function ensureClient() {
-    if (!client.isReady()) {
-      await client.login(config.token);
-    }
-
-    if (!client.user) {
-      throw new Error('Discord client did not become ready after login');
-    }
-
-    return client.user;
-  }
-
-  async function withTyping<T extends { sendTyping(): Promise<unknown> }>(channel: T, run: () => Promise<{
-    providerConversationKey: string;
-    providerMessageId?: string;
-    conversationName?: string;
-  }>) {
+  async function withTyping<T extends { sendTyping(): Promise<unknown> }>(
+    channel: T,
+    run: () => Promise<{
+      providerConversationKey: string;
+      providerMessageId?: string;
+      conversationName?: string;
+    }>,
+  ) {
     await channel.sendTyping();
 
     const typingTimer = setInterval(() => {
@@ -50,6 +41,87 @@ export function createDiscordProvider(config: {
     }
   }
 
+  async function toInboundMessage(message: Message, botUserId: string): Promise<CommunicationInboundMessage | null> {
+    if (message.author.bot) {
+      return null;
+    }
+
+    if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
+      return null;
+    }
+
+    if (
+      message.channel.type !== ChannelType.DM &&
+      respondToMentionsOnly &&
+      !message.mentions.users.has(botUserId)
+    ) {
+      return null;
+    }
+
+    const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
+    const content = message.content
+      .replaceAll(`<@${botUserId}>`, '')
+      .replaceAll(`<@!${botUserId}>`, '')
+      .trim();
+    const attachments = Array.from(message.attachments.values()).map((attachment) => ({
+      id: attachment.id,
+      name: attachment.name,
+      url: attachment.url,
+      contentType: attachment.contentType ?? undefined,
+      sizeBytes: attachment.size,
+      description: attachment.description ?? undefined,
+    }));
+
+    return {
+      providerConversationKey: message.channelId,
+      providerMessageId: message.id,
+      conversationName:
+        message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
+      authorExternalId: message.author.id,
+      authorDisplayName,
+      authorUsername: message.author.username,
+      content: content || '[no text content]',
+      attachments,
+      createdAt: new Date(message.createdTimestamp).toISOString(),
+      metadata: {
+        serverName: message.guild?.name ?? 'direct-message',
+      },
+    };
+  }
+
+  const ready = client.login(config.token).then(() => {
+    if (!client.user) {
+      throw new Error('Discord client did not become ready after login');
+    }
+
+    client.on(Events.MessageCreate, async (message) => {
+      const callback = onInboundMessage;
+
+      if (!callback) {
+        return;
+      }
+
+      try {
+        const inboundMessage = await toInboundMessage(message, client.user!.id);
+
+        if (!inboundMessage) {
+          return;
+        }
+
+        await callback(inboundMessage);
+      } catch (error) {
+        console.error('[discord] Error handling MessageCreate event:', error);
+      }
+    });
+
+    console.log(`[discord] logged in as ${client.user.tag}`);
+    return client.user;
+  });
+
+  async function ensureClient() {
+    return ready;
+  }
+
   return {
     id: 'discord',
     async getAccount() {
@@ -60,67 +132,8 @@ export function createDiscordProvider(config: {
         displayName: user.tag,
       };
     },
-    async onMessage(callback) {
-      if (listening) {
-        return;
-      }
-
-      const user = await ensureClient();
-
-      client.on(Events.MessageCreate, async (message: Message) => {
-        try {
-          if (message.author.bot) {
-            return;
-          }
-
-          if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
-            return;
-          }
-
-          if (
-            message.channel.type !== ChannelType.DM &&
-            respondToMentionsOnly &&
-            !message.mentions.users.has(user.id)
-          ) {
-            return;
-          }
-
-          const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
-          const content = message.content
-            .replaceAll(`<@${user.id}>`, '')
-            .replaceAll(`<@!${user.id}>`, '')
-            .trim();
-          const attachments = Array.from(message.attachments.values()).map((attachment) => ({
-            id: attachment.id,
-            name: attachment.name,
-            url: attachment.url,
-            contentType: attachment.contentType ?? undefined,
-            sizeBytes: attachment.size,
-            description: attachment.description ?? undefined,
-          }));
-
-          await callback({
-            providerConversationKey: message.channelId,
-            providerMessageId: message.id,
-            conversationName:
-              message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
-            authorExternalId: message.author.id,
-            authorDisplayName,
-            authorUsername: message.author.username,
-            content: content || '[no text content]',
-            attachments,
-            createdAt: new Date(message.createdTimestamp).toISOString(),
-            metadata: {
-              serverName: message.guild?.name ?? 'direct-message',
-            },
-          });
-        } catch (error) {
-          console.error('[discord] Error handling MessageCreate event:', error);
-        }
-      });
-
-      listening = true;
-      console.log(`[discord] logged in as ${user.tag}`);
+    onMessage(callback) {
+      onInboundMessage = callback;
     },
     async sendMessage(input) {
       await ensureClient();
