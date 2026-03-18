@@ -2,7 +2,6 @@
  * Database module exports - mastra-engine LIB
  *
  * Provides:
- * - Path helpers for agent databases (getAgentDatabasePath)
  * - Migration runner (runMigrations) - used internally by communication module
  * - Communication schema and types
  *
@@ -11,10 +10,6 @@
  */
 
 export { runMigrations } from './migrate';
-export {
-  getAgentDatabasePath,
-  getCommunicationDatabasePath,
-} from './config';
 export {
   communicationAccounts,
   communicationContacts,
