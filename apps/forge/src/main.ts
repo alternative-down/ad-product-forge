@@ -1,13 +1,11 @@
 import 'dotenv/config';
 
-import path from 'node:path';
-
 import { Mastra } from '@mastra/core';
 import { ConsoleLogger } from '@mastra/core/logger';
 import { createOAuthGateway, OAUTH_GATEWAY_ID } from '@mastra-engine/core';
 import { z } from 'zod';
 
-import { getDatabase } from './database/index.js';
+import { getDatabase, runMigrations } from './database/index.js';
 import { loadAgents } from './agents/agent-loader.js';
 
 const envSchema = z.object({
@@ -20,6 +18,7 @@ export async function main() {
 
   // Load database and agents from registry
   const db = getDatabase();
+  await runMigrations(db);
   const agents = await loadAgents(db, {
     agentId: 'unused', // loadAgents loads all agents
     workspaceBasePath: env.WORKSPACE_BASE_PATH,

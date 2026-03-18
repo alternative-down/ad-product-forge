@@ -13,9 +13,6 @@ export type CreateSimpleAgentConfig<
   omModel?: AgentConfig['model'];
   providers?: CommunicationProvider[];
   workspaceBasePath: string;
-  workspaceAutoSync?: boolean;
-  workspaceBm25?: boolean;
-  workspaceEmbedder?: string;
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
 };

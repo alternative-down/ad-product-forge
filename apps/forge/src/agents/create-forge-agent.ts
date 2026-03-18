@@ -23,9 +23,6 @@ export type CreateForgeAgentConfig<
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
   omModel?: AgentConfig['model'];
   providers?: CommunicationProvider[];
-  workspaceAutoSync?: boolean;
-  workspaceBm25?: boolean;
-  workspaceEmbedder?: string;
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
 };
@@ -51,9 +48,6 @@ export interface CreateAgentConfig<
     | 'agents'
     | 'omModel'
     | 'providers'
-    | 'workspaceAutoSync'
-    | 'workspaceBm25'
-    | 'workspaceEmbedder'
     | 'workspaceFilesystem'
     | 'workspaceSandbox'
   > {
@@ -69,20 +63,15 @@ export async function createAgent<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
-  // Build agent workspace structure from workspaceBasePath
-  // Structure: workspaceBasePath/{agentId}/[workspace, database.db, workspace-memory]
   const agentWorkspacePath = path.resolve(config.workspaceBasePath, config.id);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
-  const agentWorkspaceDir = path.resolve(agentWorkspacePath, 'workspace');
   const agentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
 
-  // Create agent database client and storage
   const dbUrl = `file:${agentDatabasePath}`;
   const client = createClient({ url: dbUrl });
   const storage = new LibSQLStore({ id: `${config.id}-storage`, client });
   const vector = new LibSQLVector({ id: `${config.id}-vector`, url: dbUrl });
 
-  // Create communication database client from agent database
   const communicationClient = createClient({ url: dbUrl });
 
   const communication = await createCommunicationModule({
