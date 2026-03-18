@@ -1,5 +1,6 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
+import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { createClient } from '@libsql/client';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import path from 'node:path';
@@ -12,6 +13,7 @@ import {
   createAgentMemory,
   createObservationalMemory,
   appendWorkingMemoryInstructions,
+  embedTextWithFastembed,
 } from '@mastra-engine/core';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
 
@@ -65,12 +67,35 @@ export async function createAgent<
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   const agentWorkspacePath = path.resolve(config.workspaceBasePath, config.id);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
+  const agentWorkspaceDir = config.workspaceFilesystem?.basePath
+    ? path.resolve(agentWorkspacePath, config.workspaceFilesystem.basePath)
+    : path.resolve(agentWorkspacePath, 'workspace');
   const agentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
+  const sandboxWorkingDirectory = config.workspaceSandbox?.workingDirectory
+    ? path.resolve(agentWorkspacePath, config.workspaceSandbox.workingDirectory)
+    : agentWorkspaceDir;
 
   const dbUrl = `file:${agentDatabasePath}`;
   const client = createClient({ url: dbUrl });
   const storage = new LibSQLStore({ id: `${config.id}-storage`, client });
   const vector = new LibSQLVector({ id: `${config.id}-vector`, url: dbUrl });
+  const workspaceVector = new LibSQLVector({ id: `${config.id}-workspace-vector`, url: dbUrl });
+  const workspaceSearchIndex = `${config.id}_workspace_search`.replace(/[^a-zA-Z0-9_]/g, '_');
+  const workspace = new WorkspaceRuntime({
+    autoSync: true,
+    bm25: true,
+    vectorStore: workspaceVector,
+    embedder: embedTextWithFastembed,
+    searchIndexName: workspaceSearchIndex,
+    filesystem: new LocalFilesystem({
+      basePath: agentWorkspaceDir,
+    }),
+    sandbox: new LocalSandbox({
+      workingDirectory: sandboxWorkingDirectory,
+    }),
+  });
+
+  await workspace.init();
 
   const communicationClient = createClient({ url: dbUrl });
 
@@ -109,6 +134,7 @@ export async function createAgent<
     model: config.model,
     tools,
     workflows: config.workflows,
+    workspace,
     agents: config.agents,
     memory,
     inputProcessors,
