@@ -12,10 +12,8 @@ type EmailProviderConfig = {
 };
 
 function resolveThreadKey(messageId: string, references: string): string {
-  // References header is a space-separated list of Message-IDs, oldest first
-  // The first one is the thread root
   const refs = references?.trim().split(/\s+/).filter(Boolean) ?? [];
-  return refs[0] ?? messageId; // if no references, this email starts a new thread
+  return refs[0] ?? messageId;
 }
 
 export function createEmailProvider(config: EmailProviderConfig): CommunicationProvider {
@@ -65,9 +63,11 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
             sizeBytes: typeof a.content === 'string' ? Buffer.byteLength(a.content, 'utf8') : a.content.byteLength,
           }));
 
+          const providerMessageId = parsed.messageId ?? `${uid}-${Date.now()}`;
           const inboundMessage: CommunicationInboundMessage = {
-            providerMessageId: parsed.messageId ?? String(Date.now()),
-            providerConversationKey: resolveThreadKey(parsed.messageId ?? '', parsed.references ?? ''),
+            providerMessageId,
+            providerConversationKey: resolveThreadKey(providerMessageId, parsed.references ?? ''),
+            conversationName: parsed.subject ?? undefined,
             authorExternalId: parsed.from?.address ?? 'unknown',
             authorUsername: parsed.from?.address ?? 'unknown',
             authorDisplayName: parsed.from?.name ?? parsed.from?.address ?? 'unknown',
@@ -93,14 +93,17 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       // Listen for new messages
       client.on('exists', async (data) => {
         try {
-          if (data.count && data.count > 0) {
-            // Fetch the latest message (newest UID)
-            const status = await client!.status('INBOX', { messages: true });
-            if (status.messages && status.messages > 0) {
-              // Use the latest UID which would be approximately equal to messages count in a fresh mailbox
-              // For proper implementation, we'd need to fetch with a UID range
-              await processMessage(status.messages, client!, callback);
-            }
+          if (!data.count) {
+            return;
+          }
+
+          const unseenUids = await client!.search({ seen: false });
+          if (!Array.isArray(unseenUids)) {
+            return;
+          }
+
+          for (const uid of unseenUids) {
+            await processMessage(uid, client!, callback);
           }
         } catch (error) {
           console.error('[email] Error handling new message notification:', error);
@@ -140,7 +143,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     try {
       client = await connectImap();
       console.log('[email] Reconnected to IMAP server');
-      await startIdleLoop(callback);
+      void startIdleLoop(callback);
     } catch (error) {
       console.error('[email] Reconnection failed:', error);
       await reconnectWithBackoff(callback);
@@ -186,7 +189,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           }
         });
 
-        await startIdleLoop(callback);
+        void startIdleLoop(callback);
       } catch (error) {
         console.error('[email] Error in onMessage:', error);
         if (listening) {
