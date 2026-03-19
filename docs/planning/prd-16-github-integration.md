@@ -1,121 +1,224 @@
-# PRD-16: Integração com GitHub
+# PRD-16: GitHub Organization Integration
 
-**Status:** ⏸️ Configuração + Investigação Necessária
+**Status:** Planned
+**Classification:** FORGE APP
 
-**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
+## 1. Goal
 
----
+Connect the company to a GitHub Organization so internal agents can create and operate repositories for company applications.
 
-## O que é Necessário
+This PRD is about:
+- the company's connection to GitHub
+- company applications having repositories
+- internal agents requesting repository creation and repository operations through the system
 
-### Parte 1: Configuração (Você Configura)
-- Setup de GitHub App (ou autenticação alternativa)
-- Acesso para agentes à organização do GitHub
+It is not about deployment, monitoring, or arbitrary webhook routing.
 
-### Parte 2: Tooling para Agentes (PRD em Frente 7)
-- Usar `gh` (GitHub CLI) se possível com GitHub App
-- Criar Tools customizadas se `gh` não funcionar com a configuração
+## 2. Why This Exists
 
-### Questão em Aberto
-**Como lidar com agentes sem user real?**
-- Opção A: GitHub App (se suportar operações via app)
-- Opção B: Criar conta GitHub por agente usando email do agente
-- Definir em PRD-33 (Webhook Event Routing) como receber eventos
+The company needs a real source-code home for the applications created by internal agents.
 
-**Status:** Não é PRD isolado. Será tratado em:
-- **PRD-33 (Webhook Event Routing)** - Como receber eventos do GitHub
-- **PRD-7 ou investigação** - Tooling para agentes manipularem repos
+Before deployment exists, the system needs to know:
+- what an application is
+- whether it has a repository
+- which GitHub Organization owns that repository
+- how the system performs repository operations in the company's name
 
----
+Without this layer, deployment would have no stable source-of-truth for code.
 
-## 1. Visão Geral
+## 3. Scope
 
-### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
+### Included
+- connect the company to one GitHub Organization
+- store organization/repository metadata in the app
+- create repositories for company applications
+- retrieve repository details for an application
+- allow internal agents to operate company repositories through explicit system operations
+- keep repository ownership at the company level, not per-agent
 
-**Este PRD descreve infraestrutura de integração específica do ad-product-forge.** A integração com GitHub permite que agentes de desenvolvimento autônomos de Nicolas gerenciem repositórios de código, criem pull requests e respondam a eventos de repositório. Esta é infraestrutura específica da aplicação para fluxos de trabalho de desenvolvimento autônomo.
+### Excluded
+- deployment to infrastructure
+- application runtime monitoring
+- generic webhook event bus
+- arbitrary GitHub query tooling
+- advanced Git operations
+- organization/team administration
+- branch protection automation
+- CI/CD workflow management
 
-Permitir que agentes leiam/escrevam repositórios GitHub, criem commits, abram PRs e respondam a eventos GitHub via webhooks.
+## 4. Core Concepts
 
-**Capacidades principais (para ad-product-forge):**
-- Agentes de desenvolvimento leem/escrevem código da aplicação
-- Criam commits para novos recursos e correções
-- Criam branches e PRs para revisão de código
-- Respondem a eventos GitHub (push, PR, issue) via webhooks
-- Gerenciam repositórios sob a organização GitHub de Nicolas
+### 4.1 Company GitHub Connection
+A single company-level GitHub connection used by the app to operate inside one GitHub Organization.
 
----
+This is a company integration, not a per-agent identity model.
 
-## 2. Casos de Uso
+### 4.2 Company Application
+A persistent business/application record inside Forge.
 
-### 2.1 Criar Repositório
-Agente provisiona um novo repositório GitHub sob organização/conta autenticada.
+At minimum, an application must have:
+- `id`
+- `name`
+- `description?`
+- `createdByAgentId?`
+- `createdAt`
+- `updatedAt`
 
-### 2.2 Fazer Push de Código
-Agente faz commit de código para repositório (novos commits, push de alterações).
+### 4.3 Application Repository
+A repository linked to one company application.
 
-### 2.3 Abrir Pull Request
-Agente cria pull request com código/alterações geradas.
+At minimum, repository metadata should include:
+- `applicationId`
+- `provider` = `github`
+- `organizationName`
+- `repositoryName`
+- `repositoryUrl`
+- `defaultBranch`
+- `isPrivate`
+- `githubRepositoryId?`
+- `createdAt`
 
-### 2.4 Escutar Eventos
-Agente recebe eventos GitHub push/PR/issue via webhooks.
+## 5. Initial Functional Surface
 
----
+### 5.1 Connect Company to GitHub Organization
+The app stores the company-level GitHub integration configuration.
 
-## 3. Ferramentas Principais
+The first implementation can assume:
+- one GitHub Organization
+- one authentication strategy for the company
 
-**Gerenciamento de Repositório:**
-- `readFile(repo, path)` — Ler arquivo do repositório
-- `writeFile(repo, path, content)` — Criar/atualizar arquivo
-- `listFiles(repo, path)` — Listar arquivos do repositório
+The system should not model one GitHub identity per internal agent.
 
-**Commits & Branches:**
-- `createCommit(repo, branch, message, files)` — Criar commit
-- `createPullRequest(repo, title, body, changes)` — Abrir PR para main
+### 5.2 Create Application
+Create a company application record in Forge.
 
-**Eventos:**
-- Webhook recebe eventos GitHub
-- Agente processa via `listQueuedEvents()` e `processWebhookEvent(eventId)`
+Example output shape:
+```ts
+{
+  applicationId: string;
+}
+```
 
----
+### 5.3 Create Application Repository
+Create a GitHub repository for one application under the company organization.
 
-## 4. Armazenamento
+Example output shape:
+```ts
+{
+  applicationId: string;
+  repositoryName: string;
+  repositoryUrl: string;
+  defaultBranch: string;
+}
+```
 
-Configuração simples:
+### 5.4 Get Application Repository
+Return repository metadata for one application.
 
-- Token de acesso pessoal GitHub armazenado em variáveis de ambiente (não banco de dados)
-- Agente mantém contexto único de repositório padrão
+Example output shape:
+```ts
+{
+  applicationId: string;
+  repositoryName: string;
+  repositoryUrl: string;
+  defaultBranch: string;
+  organizationName: string;
+  isPrivate: boolean;
+} | null
+```
 
----
+### 5.5 Basic Repository Operations
+The app should expose explicit internal operations for:
+- reading repository metadata
+- creating branches
+- committing changes
+- opening pull requests
 
-## 5. Autenticação
+These should happen through the app in the company context.
 
-Token de acesso pessoal GitHub via variáveis de ambiente:
-- `repo` — Controle total de repositórios privados
-- `webhooks` — Gerenciar webhooks
+They should not start as free-form GitHub tools.
 
----
+## 6. Authentication Direction
 
-## 6. Implementação
+The integration should use one company-level GitHub authentication method.
 
-- **Semana 1:** Cliente da API GitHub + operações de ler/escrever/commit de arquivo
-- **Semana 2:** Criação de PR + integração com webhook
-- **Semana 3:** Tratamento de erro + testes
+The important rule is:
+- the system acts in the company's GitHub context
+- internal agents do not get separate GitHub accounts or identities
 
----
+The concrete authentication mechanism can be chosen during implementation.
 
-## 7. Fora do Escopo
+## 7. Data Model Direction
 
-- Criação de repositório (usar UI do GitHub)
-- Configuração do GitHub Actions
-- Fluxos de trabalho de revisão de issue/PR
-- Operações Git avançadas
-- Gerenciamento de equipe/organização
-- Regras de proteção de branch
-- Busca/consulta de código
-- Gerenciamento de release
-- Suporte a múltiplos repositórios por agente
+### `applications`
+Suggested minimum fields:
+- `id`
+- `name`
+- `description`
+- `createdByAgentId`
+- `createdAt`
+- `updatedAt`
 
----
+### `application_repositories`
+Suggested minimum fields:
+- `id`
+- `applicationId`
+- `provider`
+- `organizationName`
+- `repositoryName`
+- `repositoryUrl`
+- `defaultBranch`
+- `isPrivate`
+- `externalRepositoryId`
+- `createdAt`
 
-**Versão do Documento:** 0.1 (Simplificado)
-**Última Atualização:** 2026-03-15
+### `company_integrations`
+Suggested minimum fields:
+- `id`
+- `provider`
+- `configuration`
+- `createdAt`
+- `updatedAt`
+
+The first version can remain GitHub-specific internally if that keeps implementation simpler.
+
+## 8. Design Rules
+
+- repository ownership belongs to the company
+- internal agents operate repositories through the app
+- application-to-repository linkage must be explicit and persistent
+- no per-agent GitHub identities
+- no deployment logic in this PRD
+- no monitoring logic in this PRD
+
+## 9. Dependency Boundary
+
+This PRD should be completed before the deployment PRD.
+
+Deployment should depend on:
+- an existing application record
+- an existing linked repository
+- repository metadata already known by the app
+
+## 10. Success Criteria
+
+- the company can connect to one GitHub Organization
+- the app can create application records
+- the app can create repositories for applications
+- repository metadata is stored and retrievable
+- internal agents can work through explicit company-controlled repository operations
+- the deployment system can later consume this repository linkage as a dependency
+
+## 11. Implementation Status
+
+**Status:** Planned
+
+Already available today:
+- none of this layer is implemented yet in the app
+
+Still missing:
+- company GitHub integration configuration
+- application registry
+- application repository registry
+- repository creation flow
+- explicit repository operations through the app

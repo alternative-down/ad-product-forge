@@ -1,131 +1,193 @@
-# PRD-05: Implantação de Aplicações
+# PRD-05: Company Application Deployment
 
-**Status:** Planejamento
+**Status:** Planned
+**Classification:** FORGE APP
 
-**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com os princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
+## 1. Goal
 
----
+Deploy company applications to the company's infrastructure after those applications already exist in Forge and already have a linked source repository.
 
-## Objetivo
+This PRD is about:
+- deployment records
+- deployment execution
+- deployment status
+- deployment monitoring
+- deployment cleanup
 
-Permitir que agentes de desenvolvimento façam deploy autônomo de aplicações da empresa (ad-product-forge) para Coolify (auto-hospedado em Hetzner), com URLs de subdomínio gerado automaticamente. Os agentes geram código, fazem deploy em nome da empresa via API Coolify, e agentes de operações monitoram o status.
+It is not about creating repositories or defining application ownership.
 
----
+## 2. Dependency
 
-## Requisitos Funcionais
+This PRD depends on the GitHub/application layer being in place first.
 
-**FR1: Fazer Deploy de Aplicação via Workflow**
-- Agente invoca workflow de deployment (similar a hireAgent/terminateAgent)
-- Entrada: nome da app, repositório Git, Dockerfile
-- Mastra workflow executa deployment
-- Retorna: ID de deployment, URL completa, status inicial
-- Subdomínio único é criado automaticamente (ex: `https://app-{nome}.domain.com`)
+A deployment must start from:
+- an existing application record
+- an existing linked repository
+- known repository metadata inside the app
 
-**FR2: Monitorar Status de Deployment**
-- Agente consulta status via `getDeploymentStatus(deploymentId)`
-- Retorna: estado atual (building, deploying, running, failed), logs, mensagens de erro
-- Webhook do Coolify atualiza status automaticamente
+Deployment should not accept raw ad-hoc repository input as its source of truth.
 
-**FR3: Notificações via Webhook**
-- Coolify envia webhook ao completar deployment (sucesso ou erro)
-- Webhook inclui: deployment_id, status (success/error), logs resumidos, erro (se houver)
-- Sistema atualiza tabela deployments com novo status
-- Agente de ops pode ser notificado automaticamente
+## 3. Scope
 
-**FR4: Remover Aplicação**
-- Agente invoca deletar via ferramenta ou workflow
-- Sistema para container, remove app do Coolify, marca como deletada
+### Included
+- deploy one company application
+- store deployment records in the app
+- track deployment status
+- receive deployment status updates
+- expose deployment status for internal agents
+- remove or deactivate deployed applications
 
-**FR5: Integração com Gerenciamento de Domínio**
-- Na criação do deployment, sistema:
-  - Cria subdomínio único via sistema de gerenciamento de domínios
-  - Aponta para IP da instância Coolify
-  - Retorna FQDN ao agente
-  - Certificado SSL wildcard cobre o subdomínio
+### Excluded
+- repository creation
+- source-code authoring workflows
+- organization/repository ownership rules
+- billing and customer-facing hosting plans
+- advanced infra orchestration across many providers
 
----
+## 4. Core Concepts
 
-## Arquitetura
+### 4.1 Company Application
+A persistent application record owned by the company.
 
-```
-Agente de Desenvolvimento invoca workflow
-        ↓
-Mastra workflow: deployApplication({app_name, repo_url, dockerfile})
-        ↓
-   API Coolify + Gerenciador de Domínios
-        ↓
-   [Build Docker]
-   [Deploy Container]
-   [Criar Subdomínio]
-        ↓
-URL Acessível + ID Deployment retornado
-        ↓
-Coolify executa build/deploy
-        ↓
-Coolify dispara webhook com status (success/error)
-        ↓
-Sistema recebe webhook, atualiza deployment status
-        ↓
-Agente de Operações monitora via getDeploymentStatus()
-```
+### 4.2 Deployment Target
+The infrastructure target where the application is deployed.
 
----
+The first version can support one target only.
 
-## Schema do Banco de Dados
+### 4.3 Deployment Record
+A persistent deployment record stored in Forge.
 
-**Tabela: deployments**
-- `deployment_id` — Identificador único
-- `agent_id` — Qual agente fez o deploy
-- `app_name` — Nome da aplicação
-- `repo_url` — URL do repositório Git
-- `status` — Estado atual (building, deploying, running, failed)
-- `subdomain` — Subdomínio atribuído (ex: app-invoice-1)
-- `coolify_app_id` — ID da app no Coolify
-- `deployed_at` — Timestamp do deployment
+This represents one deployment attempt or active deployment for a company application.
 
----
+## 5. Initial Functional Surface
 
-## Webhook de Notificação do Coolify
+### 5.1 Create Deployment
+Deploy one existing company application.
 
-**Endpoint:** `POST /api/webhooks/coolify/deployment`
-
-**Payload recebido do Coolify:**
-```json
+Example input shape:
+```ts
 {
-  "deploymentId": "coolify-app-id",
-  "deployment_id": "id-deployment-interno",
-  "status": "success" | "error",
-  "logs": "últimas 500 caracteres do log de build",
-  "error": "mensagem de erro (se aplicável)",
-  "url": "https://app-nome.domain.com",
-  "timestamp": "ISO 8601 timestamp"
+  applicationId: string;
+  requestedByAgentId?: string;
+  branch?: string;
+  commitSha?: string;
 }
 ```
 
-**Ações ao receber webhook:**
-1. Validar assinatura de webhook do Coolify
-2. Localizar deployment por `deployment_id`
-3. Atualizar status em tabela deployments
-4. Se error: armazenar mensagem de erro
-5. Se success: marcar como running, armazenar URL final
-6. Disparar notificação para agente de ops (opcional: via internal chat)
+Example output shape:
+```ts
+{
+  deploymentId: string;
+  applicationId: string;
+  status: 'queued' | 'building' | 'deploying' | 'running' | 'failed';
+  url?: string;
+}
+```
 
-**Adição ao schema deployments:**
-- `coolify_webhook_signature` — para validação de webhook (opcional, se Coolify suportar)
-- `error_message` — mensagem de erro se deployment falhar
-- `completed_at` — timestamp quando deployment se completou
-- `final_url` — URL final do app deployado
+### 5.2 Get Deployment Status
+Return one deployment with its current status.
 
----
+Example output shape:
+```ts
+{
+  deploymentId: string;
+  applicationId: string;
+  status: 'queued' | 'building' | 'deploying' | 'running' | 'failed';
+  url?: string;
+  errorMessage?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+```
 
-## Decisões Técnicas
+### 5.3 List Application Deployments
+Return deployments for one application.
 
-1. **Apenas Coolify:** Suportar somente Coolify como alvo de deployment. Sem multi-cloud.
-2. **Subdomínio Automático:** Sistema gera subdomínios únicos baseado em nome da app + timestamp para evitar conflitos.
-3. **Estados Simples:** Quatro estados básicos (building, deploying, running, failed) sem transições complexas.
-4. **SSL Wildcard:** Certificado wildcard cobre todos os subdomínios, sem provisioning individual.
+### 5.4 Remove Deployment
+Stop or remove a deployed application from the target and update the deployment record.
 
----
+## 6. URL and Domain Direction
 
-**Versão do Documento:** 0.1 (Simplificado)
-**Última Atualização:** 2026-03-15
+The deployment layer may generate one company-owned URL/subdomain per deployed application.
+
+This should be derived from the application record and the deployment target.
+
+The first version can stay simple:
+- one generated subdomain
+- one deployment target
+- one final application URL
+
+## 7. Monitoring Direction
+
+Monitoring in this PRD should stay deployment-focused.
+
+That means:
+- current deployment status
+- last deployment error
+- deployment URL
+- timestamps
+
+It should not try to become a full application observability platform in the first version.
+
+## 8. Data Model Direction
+
+### `application_deployments`
+Suggested minimum fields:
+- `id`
+- `applicationId`
+- `requestedByAgentId`
+- `status`
+- `targetProvider`
+- `targetResourceId`
+- `branch`
+- `commitSha`
+- `url`
+- `errorMessage`
+- `createdAt`
+- `updatedAt`
+- `completedAt`
+
+### `deployment_targets` (optional)
+If needed later, deployment target configuration can be separated.
+
+The first version can remain simple if there is only one target.
+
+## 9. Webhook / Status Update Direction
+
+If the deployment platform can push status updates, the app should accept them and update the deployment record.
+
+This should only update deployment state.
+
+It should not be treated as a general-purpose event-routing system in this PRD.
+
+## 10. Design Rules
+
+- deployment starts from an application, not from raw repo input
+- deployment state is persisted in the app
+- deployment status is explicit and queryable
+- monitoring stays small and deployment-focused
+- deployment should not redefine application/repository ownership
+
+## 11. Success Criteria
+
+- an existing company application can be deployed
+- deployment records are stored in Forge
+- deployment status can be queried later
+- deployment errors are persisted clearly
+- deployed application URL is available when successful
+- deployment logic sits cleanly on top of the GitHub/application layer
+
+## 12. Implementation Status
+
+**Status:** Planned
+
+Already available today:
+- none of the deployment layer is implemented yet
+
+Still missing:
+- application registry
+- repository linkage from the GitHub integration layer
+- deployment records
+- deployment execution flow
+- deployment status tracking
+- deployment monitoring surface
