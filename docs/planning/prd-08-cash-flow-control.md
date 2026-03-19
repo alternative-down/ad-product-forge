@@ -1,117 +1,247 @@
-# PRD-08: Controle de Fluxo de Caixa (Budget Global de LLM)
+# PRD-08: Company Cash Ledger
 
-**Status:** ⏸️ Adiado - Para Depois
-**Data:** 2026-03-15
-**Versão:** 1.0
+**Status:** Draft
+**Data:** 2026-03-18
+**Versão:** 2.0
 
----
+## Objective
 
-## Objetivo
+Define the financial record structure that composes the company cash position.
 
-Implementar um sistema de budget global para controlar o ritmo de execução de LLM na plataforma. A plataforma deve respeitar um limite mensal de tokens/custos e throttle (desacelerar) execuções de agentes quando aproximando-se do limite.
+This document is only about company cash registration.
+It does not define budgets, pacing, throttling, or other controls derived from the cash balance.
 
----
+## Scope
 
-## Conceito
+This PRD covers:
+- financial entries
+- financial outflows
+- future obligations
+- current cash balance
+- projected cash balance
+- balance snapshots for efficient reads
 
-**Budget Global = Limite mensal de custos de LLM para toda a plataforma**
+This PRD does not cover:
+- agent contract pacing
+- global LLM usage throttling
+- execution limits
+- permission rules
+- billing provider integrations
 
-Não é limite por agente, mas sim limite agregado que controla:
-- Quantos tokens LLM a plataforma pode gastar por mês
-- Quando throttle/desacelerar execuções (reduzir concorrência, aumentar retry delays)
-- Quando parar completamente (se atingir hard limit)
+## Core Idea
 
----
+The company cash should be represented by a ledger.
 
-## Requisitos Funcionais
+The ledger is the source of truth.
+Each financial movement is recorded as an entry in the ledger.
+The company balance is derived from those records.
 
-**FR1: Rastrear Gastos Totais**
-- Monitorar consumo total de tokens de todos os agentes
-- Atualizar contador em tempo real
-- Registrar custo por provedor (OpenAI, Claude, etc)
+A balance snapshot may exist as an optimization, but it is not the source of truth.
 
-**FR2: Definir Budget Mensal**
-- Configurar limite mensal global (ex: $100 USD/mês)
-- Reset automático a cada novo mês
-- Threshold para alertas (ex: 80% → aviso)
+## Main Concepts
 
-**FR3: Throttle Automático**
-- Se 70% do budget: reduzir concorrência, aumentar delays entre execuções
-- Se 85% do budget: modo lento, priorizar apenas tarefas críticas
-- Se 95% do budget: apenas leitura, sem novos processamentos
-- Se 100%: parar completamente
+### Cash Ledger
 
-**FR4: Visibilidade**
-- Ferramenta para consultar: gastos totais, % usado, remaining
-- Logs de quando throttle foi ativado
-- Histórico de gastos por dia/semana/mês
+A chronological record of company financial movements.
 
----
+Each record represents one movement that affects or may affect company cash.
 
-## Schema do Banco de Dados
+Examples:
+- incoming payment
+- operating expense
+- salary or contractor payout
+- software subscription
+- agent contract funding
+- agent contract renewal
+- agent contract top-up
 
-**Tabela: budget_config**
-```typescript
-{
-  id: 'global',
-  monthly_budget_usd: number,
-  reset_day: number, // dia do mês (1-31)
-  alert_threshold_percent: number, // ex: 80
-  throttle_threshold_percent: number, // ex: 70
-  updated_at: timestamp
-}
-```
+### Present and Future Records
 
-**Tabela: budget_usage**
-```typescript
-{
-  id: UUID,
-  date: date,
-  provider: string, // 'openai', 'anthropic', etc
-  tokens_used: number,
-  cost_usd: number,
-  agent_id: string,
-  timestamp: timestamp
-}
-```
+The ledger must support both:
+- movements that already happened
+- movements expected to happen in the future
 
-**Cache/Estado Runtime:**
-```typescript
-{
-  current_month_cost_usd: number,
-  last_updated: timestamp,
-  throttle_status: 'normal' | 'slow' | 'critical' | 'paused'
-}
-```
+This allows the system to represent:
+- current balance
+- upcoming obligations
+- simple cash projection
 
----
+### Balance
 
-## Decisões Técnicas
+The current company balance is derived from ledger entries that are already effective.
 
-1. **Custos calculados em tempo real** — Cada chamada LLM registra uso imediato
-2. **Reset automático** — Primeiro dia do mês ou data configurada
-3. **Throttle gracioso** — Não falha abruptamente, degrada performance
-4. **Sem billing externo** — Apenas controle interno, não integra com Stripe/Asaas
+### Projected Balance
 
----
+A projected balance can be calculated by including future scheduled entries.
 
-## Exemplo de Fluxo
+### Balance Snapshot
 
-```
-Agente A tenta executar LLM
-  ↓
-Sistema checa budget atual
-  ↓
-Se 70%: reduzir concorrência (queue delay +500ms)
-Se 85%: modo crítico only (rejeita tasks não essenciais)
-Se 95%: pausa (rejeita todas as execuções)
-  ↓
-Registra gastos em budget_usage
-  ↓
-Atualiza counter total
-```
+A snapshot may be stored to avoid recalculating the entire ledger repeatedly.
 
----
+The snapshot is an optimization only.
+If needed, it must always be possible to recompute balance from the ledger.
 
-**Versão:** 0.1
-**Última Atualização:** 2026-03-15
+## Data Model Direction
+
+### `company_cash_ledger`
+
+Suggested fields:
+- `id`
+- `type`
+- `direction`
+- `amountUsd`
+- `description`
+- `referenceType`
+- `referenceId`
+- `status`
+- `dueAt`
+- `effectiveAt`
+- `createdAt`
+
+### Field Notes
+
+#### `type`
+A simple business classification of the movement.
+
+Examples:
+- `revenue`
+- `expense`
+- `agent-contract-funding`
+- `agent-contract-renewal`
+- `agent-contract-topup`
+- `manual-adjustment`
+
+#### `direction`
+Defines whether the movement adds to or removes from company cash.
+
+Values:
+- `in`
+- `out`
+
+#### `amountUsd`
+The monetary amount in USD.
+
+All values in this financial model should be stored in USD.
+
+#### `referenceType` and `referenceId`
+Optional fields used to connect a cash movement to another business object.
+
+Examples:
+- contract
+- invoice
+- subscription
+- agent
+- payment
+
+This keeps the ledger generic while still allowing traceability.
+
+#### `status`
+Defines whether the record is only planned or already effective.
+
+Initial simple values:
+- `planned`
+- `posted`
+- `canceled`
+
+#### `dueAt`
+The expected date/time of the movement.
+Useful for future obligations.
+
+#### `effectiveAt`
+The date/time when the movement actually affected company cash.
+Useful for posted records.
+
+## Balance Rules
+
+### Current Balance
+
+Current balance should be derived from ledger entries where:
+- `status = posted`
+- and the movement is already effective
+
+### Future Projection
+
+Projected balance may include:
+- `planned` future entries
+- `posted` future-dated entries if that becomes necessary later
+
+For the first version, it is enough to support a simple projection from planned future entries.
+
+## Snapshot Model
+
+### `company_cash_balance_snapshot`
+
+Suggested fields:
+- `id`
+- `balanceUsd`
+- `asOf`
+- `createdAt`
+
+Purpose:
+- speed up reads
+- avoid recalculating the entire ledger every time
+
+Rule:
+- snapshot is a cache/optimization
+- ledger remains the source of truth
+
+## Example Flows
+
+### Incoming Revenue
+
+1. create ledger entry
+2. `type = revenue`
+3. `direction = in`
+4. `status = posted`
+5. set `effectiveAt`
+6. balance increases
+
+### Future Expense
+
+1. create ledger entry
+2. `type = expense`
+3. `direction = out`
+4. `status = planned`
+5. set `dueAt`
+6. this affects projected cash, not current cash yet
+
+### Agent Contract Funding
+
+1. create ledger entry
+2. `type = agent-contract-funding`
+3. `direction = out`
+4. `status = posted`
+5. set `effectiveAt`
+6. reference the agent contract
+
+## Design Rules
+
+- The ledger is the source of truth.
+- Balance is derived from the ledger.
+- Snapshot is optional and only an optimization.
+- The ledger must support present and future entries.
+- The ledger should remain generic and not encode execution-control logic.
+- Derived controls such as budgets, pacing, throttling, and execution policy belong in other modules and PRDs.
+
+## What This Enables
+
+This structure is enough to support later features such as:
+- agent contract funding
+- contract renewal
+- contract top-up
+- future payable obligations
+- financial reporting
+- simple cash forecasting
+
+Without forcing those derived systems into the cash ledger itself.
+
+## Summary
+
+The company cash should be modeled as a financial ledger.
+
+Every relevant money movement is recorded there.
+The current balance is derived from posted records.
+Future obligations are represented as planned records.
+A balance snapshot may exist for efficiency, but the ledger remains the source of truth.
+
+This keeps the financial model simple, extensible, and independent from the execution-control systems that will use it later.
