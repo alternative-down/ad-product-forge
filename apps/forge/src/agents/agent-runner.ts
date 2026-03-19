@@ -130,7 +130,7 @@ export function createAgentRunner(
         return;
       }
 
-      const contract = await store.getActiveContract(runtime.id);
+      const contract = await store.getRunnableContract(runtime.id);
 
       if (!contract || contract.id !== contractId) {
         await queueNextStep();
@@ -166,7 +166,7 @@ export function createAgentRunner(
   }
 
   async function planNextAttempt() {
-    const contract = await store.getActiveContract(runtime.id);
+    const contract = await store.getRunnableContract(runtime.id);
 
     if (!contract) {
       return {

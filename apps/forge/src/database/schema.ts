@@ -58,6 +58,7 @@ export const agentExecutionContracts = sqliteTable('agent_execution_contracts', 
     .references(() => agents.id, { onDelete: 'cascade' }),
   budgetUsd: real('budget_usd').notNull(),
   autoRenew: integer('auto_renew').notNull().default(1),
+  fundedAt: integer('funded_at'),
   startsAt: integer('starts_at').notNull(),
   endsAt: integer('ends_at').notNull(),
   createdAt: integer('created_at').notNull(),
@@ -104,6 +105,26 @@ export const llmModelPrices = sqliteTable('llm_model_prices', {
 
 export type LlmModelPrice = typeof llmModelPrices.$inferSelect;
 export type NewLlmModelPrice = typeof llmModelPrices.$inferInsert;
+
+export const companyCashLedger = sqliteTable('company_cash_ledger', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  direction: text('direction').notNull(),
+  amountUsd: real('amount_usd').notNull(),
+  description: text('description'),
+  referenceType: text('reference_type'),
+  referenceId: text('reference_id'),
+  status: text('status').notNull(),
+  dueAt: integer('due_at'),
+  effectiveAt: integer('effective_at'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  companyCashLedgerStatusIdx: index('company_cash_ledger_status_idx').on(table.status),
+  companyCashLedgerEffectiveAtIdx: index('company_cash_ledger_effective_at_idx').on(table.effectiveAt),
+}));
+
+export type CompanyCashLedgerEntry = typeof companyCashLedger.$inferSelect;
+export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
 
 
 /**
