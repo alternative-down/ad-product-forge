@@ -40,7 +40,7 @@
     ]
   },
   "dependencies": {
-    "@mastra/core": "^1.11.0",
+    "@mastra/core": "^1.14.0",
     "@mastra/rag": "^2.1.2",
     "ai": "^6.0.116"
   }
