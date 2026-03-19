@@ -9,7 +9,8 @@
     "build": "npm run -w @mastra-engine/core build && tsc",
     "typecheck": "npm run -w @mastra-engine/core build && tsc --noEmit",
     "init-registry": "tsx src/scripts/init-agent-registry.ts",
-    "fund-cash": "tsx src/scripts/fund-company-cash.ts"
+    "fund-cash": "tsx src/scripts/fund-company-cash.ts",
+    "top-up-contract": "tsx src/scripts/top-up-agent-contract.ts"
   },
   "dependencies": {
     "@mastra-engine/core": "0.1.0",

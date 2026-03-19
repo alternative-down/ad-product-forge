@@ -18,7 +18,7 @@ import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../datab
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-type HireInternalAgentInput = {
+export type HireInternalAgentInput = {
   agentId?: string;
   name: string;
   description?: string;

@@ -2,10 +2,7 @@ import { z } from 'zod';
 import { createStep, createWorkflow, type AnyWorkflow } from '@mastra/core/workflows';
 
 import type { Database } from '../database/index.js';
-import { buildHiredAgentProfile } from '../agents/hiring-profile.js';
-import { generateHiredAgentInstructions } from '../agents/hiring-rh.js';
-import { hireInternalAgent } from '../agents/hire-agent.js';
-import { terminateInternalAgent } from '../agents/terminate-agent.js';
+import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle.js';
 
 const hireInternalAgentInputSchema = z.object({
   requestedFunction: z.string().min(1),
@@ -41,13 +38,8 @@ export function createInternalAgentWorkflows(config: {
     inputSchema: hireInternalAgentInputSchema,
     outputSchema: hireInternalAgentOutputSchema,
     execute: async ({ inputData }) => {
-      const profile = buildHiredAgentProfile(inputData);
-      const hiringRh = await generateHiredAgentInstructions(config.db, inputData);
-
-      return hireInternalAgent(config.db, {
-        ...profile,
-        instructions: hiringRh.instructions,
-        weeklyBudgetUsd: inputData.weeklyBudgetUsd,
+      return runInternalHiring(config.db, {
+        ...inputData,
         workspaceBasePath: config.workspaceBasePath,
         workflows,
       });
@@ -59,7 +51,7 @@ export function createInternalAgentWorkflows(config: {
     inputSchema: terminateInternalAgentInputSchema,
     outputSchema: terminateInternalAgentOutputSchema,
     execute: async ({ inputData }) => {
-      return terminateInternalAgent(config.db, {
+      return runInternalTermination(config.db, {
         ...inputData,
         workspaceBasePath: config.workspaceBasePath,
       });
