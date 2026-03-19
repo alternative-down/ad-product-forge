@@ -23,7 +23,7 @@
     "@mastra/core": "^1.14.0",
     "@mastra/fastembed": "^1.0.0",
     "@mastra/libsql": "^1.7.0",
-    "@mastra/memory": "^1.6.2",
+    "@mastra/memory": "^1.8.3",
     "@mendable/firecrawl-js": "^4.15.4",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.1",
