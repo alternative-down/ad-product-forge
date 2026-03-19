@@ -1,6 +1,6 @@
 import type { AgentConfig } from '@mastra/core/agent';
 import type { LibSQLStore } from '@mastra/libsql';
-import { ObservationalMemory } from '@mastra/memory/processors';
+import { ObservationalMemory, type ObservationDebugEvent } from '@mastra/memory/processors';
 
 export const OBSERVATIONAL_MEMORY_CONFIG = {
   observation: { messageTokens: 15000 },
@@ -10,6 +10,7 @@ export const OBSERVATIONAL_MEMORY_CONFIG = {
 export function createObservationalMemory(config: {
   storage: LibSQLStore;
   model: AgentConfig['model'];
+  onDebugEvent?: (event: ObservationDebugEvent) => void;
 }) {
   return new ObservationalMemory({
     storage: config.storage.stores.memory!,
@@ -17,5 +18,6 @@ export function createObservationalMemory(config: {
     scope: 'thread',
     observation: OBSERVATIONAL_MEMORY_CONFIG.observation,
     reflection: OBSERVATIONAL_MEMORY_CONFIG.reflection,
+    onDebugEvent: config.onDebugEvent,
   });
 }

@@ -10,11 +10,12 @@ import {
   createExternalAccountTools,
   LongTermMemory,
   createAgentMemory,
-  createObservationalMemory,
   appendWorkingMemoryInstructions,
   embedTextWithFastembed,
 } from '@mastra-engine/core';
+import type { Database } from '../database/index.js';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
+import { createTrackedObservationalMemory } from './tracked-observational-memory.js';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -64,6 +65,7 @@ export interface CreateAgentConfig<
     | 'workspaceFilesystem'
     | 'workspaceSandbox'
   > {
+  db: Database;
   workspaceBasePath: string;
 }
 
@@ -134,9 +136,17 @@ export async function createInternalAgentRuntime<
     ...(config.tools ?? {}),
   } as TTools;
   const memory = createAgentMemory({ storage, vector });
-  const om = createObservationalMemory({
+  const omModelKey = config.omModel ?? config.model;
+
+  if (typeof omModelKey !== 'string') {
+    throw new Error('Internal agent runtime requires a string OM model id');
+  }
+
+  const om = createTrackedObservationalMemory({
+    db: config.db,
+    agentId: config.id,
     storage,
-    model: config.omModel ?? config.model,
+    modelKey: omModelKey,
   });
 
   const inputProcessors: InputProcessorOrWorkflow[] = [om];

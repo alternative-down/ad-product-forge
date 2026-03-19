@@ -336,6 +336,7 @@ Implemented today:
   - wakes through the existing wake queue
   - runs `generate([], { maxSteps: 1 })`
   - records step cost
+  - records OM cost from internal observational-memory events
   - returns to `idle` on text-only completion
   - stays in `running` on tool-call continuation
 - first-step `instant` behavior is implemented in memory
@@ -350,7 +351,7 @@ Current implementation notes:
 - if no funded runnable contract is available, the runner stays in backoff
 
 Still pending:
-- OM and future LTM cost registration into `agent_execution_steps`
+- future LTM cost registration into `agent_execution_steps`
 - richer reporting or management views over contract history and spend
 
 ## Idle Wake Without Budget

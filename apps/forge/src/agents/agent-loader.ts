@@ -56,6 +56,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
 
   const runtime = await createInternalAgentRuntime(
     {
+      db,
       id: agentConfig.id,
       name: agentConfig.name,
       description: agentConfig.description || undefined,
