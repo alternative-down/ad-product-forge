@@ -121,6 +121,15 @@ After the record and first contract exist, the workflow instantiates the hired a
 The current likely direction is:
 - a singleton/registry in memory with the active instantiated agents
 
+This registry is specifically for hired internal collaborators.
+
+It is not a global registry for every possible agent instance in the system.
+
+Rules for the first version:
+- all internal collaborators stored in the agent table are instantiated on application boot
+- hiring adds the new internal collaborator to this registry
+- termination removes the internal collaborator from this registry
+
 This runtime detail can evolve later, but for now the workflow is responsible for making the hired agent available after successful hiring.
 
 ## Financial Boundary
@@ -186,6 +195,10 @@ The simple rule for now is:
 The current understanding is that the only meaningfully costly external part of this workflow is the LLM work involved in the hiring process itself.
 The rest is mostly internal system work.
 
+This cost should be registered only as a financial movement.
+
+It should not be recorded in `agent_execution_steps`, because that table is reserved for agent execution only and the hiring workflow is not an agent.
+
 ## Design Rules
 
 - Hiring creates both the agent and the first contract.
@@ -193,6 +206,7 @@ The rest is mostly internal system work.
 - New hired agents start with `autoRenew = true`.
 - Hiring process cost belongs to the hiring workflow.
 - Contract funding does not belong to the hiring workflow.
+- Hiring workflow cost is recorded only as a financial movement.
 - Requesters describe the professional function needed, not the technical provisioning details.
 - Tool assignment and role-capability mapping do not belong in this PRD.
 

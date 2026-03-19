@@ -90,6 +90,10 @@ Suggested fields:
 ### `agent_execution_steps`
 Tracks step-level cost consumption.
 
+This table is only for agent execution and agent-owned internal LLM work.
+
+It does not include workflow-only costs such as the hiring workflow from `PRD-03`.
+
 Suggested fields:
 - `id`
 - `contractId`
@@ -169,6 +173,10 @@ The agent is running when:
 - the current logical run has not finished yet
 - the most recent step still produced tool calls
 - or the run is waiting for budget to continue
+
+`running` and `idle` belong only to the logical run state.
+
+They do not describe contract state.
 
 ## Core Execution Rule
 
@@ -297,6 +305,8 @@ If the contract ends while the agent is still `running`:
 - renew the contract at period end
 - continue the loop
 
+The renewed contract becomes the active contract immediately for the next loop calculation.
+
 ### if `autoRenew = false`
 - keep the agent in `running`
 - do not execute new steps until there is a valid contract condition again
@@ -354,6 +364,7 @@ A simple mental model for the runtime loop is:
 - Budget insufficiency does not end the run.
 - Waiting and retrying is part of `running`.
 - Pacing is recalculated at every step.
+- `running` / `idle` belong to the logical run, not to the contract lifecycle.
 
 ## Summary
 
