@@ -8,7 +8,6 @@ import {
   createCommunicationModule,
   type CommunicationProvider,
   createExternalAccountTools,
-  createAgentWakeQueue,
   LongTermMemory,
   createAgentMemory,
   createObservationalMemory,
@@ -31,6 +30,18 @@ export type CreateForgeAgentConfig<
 
 export type CreateAgentOptions = {
   longTermMemory?: boolean;
+};
+
+export type InternalAgentRuntime<
+  TAgentId extends string = string,
+  TTools extends ToolsInput = ToolsInput,
+  TOutput = undefined,
+  TRequestContext extends Record<string, unknown> | unknown = unknown,
+> = {
+  id: TAgentId;
+  modelKey: string;
+  agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
+  onReceiveMessage(handler: () => void): void;
 };
 
 export interface CreateAgentConfig<
@@ -65,6 +76,23 @@ export async function createAgent<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
+  const runtime = await createInternalAgentRuntime(config, options);
+  return runtime.agent;
+}
+
+export async function createInternalAgentRuntime<
+  TAgentId extends string = string,
+  TTools extends ToolsInput = ToolsInput,
+  TOutput = undefined,
+  TRequestContext extends Record<string, unknown> | unknown = unknown,
+>(
+  config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
+  options: CreateAgentOptions = {},
+): Promise<InternalAgentRuntime<TAgentId, TTools, TOutput, TRequestContext>> {
+  if (typeof config.model !== 'string') {
+    throw new Error('Internal agent runtime requires a string model id');
+  }
+
   const agentWorkspacePath = path.resolve(config.workspaceBasePath, config.id);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
   const agentWorkspaceDir = config.workspaceFilesystem?.basePath
@@ -138,19 +166,13 @@ export async function createAgent<
     inputProcessors,
     outputProcessors,
   });
-  const wakeQueue = createAgentWakeQueue({
-    run: () =>
-      agent.generate('Pending external activity detected.\n\nCheck your messages, inspect what is pending, and process what matters.', {
-        memory: {
-          thread: config.id,
-          resource: config.id,
-        },
-        maxSteps: 1000,
-      }),
-  });
-  communication.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
-  return agent;
+  return {
+    id: config.id,
+    modelKey: config.model,
+    agent,
+    onReceiveMessage: communication.onReceiveMessage,
+  };
 }
 
 export async function createForgeAgent<

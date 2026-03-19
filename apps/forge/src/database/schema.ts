@@ -11,7 +11,7 @@
  * - Este schema é APENAS para a aplicação central
  */
 
-import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -37,6 +37,7 @@ export const agents = sqliteTable('agents', {
   model: text('model').notNull(),
   omModel: text('om_model'), // Modelo para observational memory
   instructions: text('instructions').notNull(),
+  executionState: text('execution_state').notNull().default('idle'),
   // Workspace configuration
   workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1), // boolean as 0/1
   workspaceBm25: integer('workspace_bm25').notNull().default(1), // boolean as 0/1
@@ -49,6 +50,60 @@ export const agents = sqliteTable('agents', {
 
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
+
+export const agentExecutionContracts = sqliteTable('agent_execution_contracts', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  budgetUsd: real('budget_usd').notNull(),
+  autoRenew: integer('auto_renew').notNull().default(1),
+  startsAt: integer('starts_at').notNull(),
+  endsAt: integer('ends_at').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  agentContractsAgentIdIdx: index('agent_execution_contracts_agent_id_idx').on(table.agentId),
+  agentContractsEndsAtIdx: index('agent_execution_contracts_ends_at_idx').on(table.endsAt),
+}));
+
+export type AgentExecutionContract = typeof agentExecutionContracts.$inferSelect;
+export type NewAgentExecutionContract = typeof agentExecutionContracts.$inferInsert;
+
+export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
+  id: text('id').primaryKey(),
+  contractId: text('contract_id')
+    .notNull()
+    .references(() => agentExecutionContracts.id, { onDelete: 'cascade' }),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  modelKey: text('model_key').notNull(),
+  kind: text('kind').notNull(),
+  inputTokens: integer('input_tokens').notNull(),
+  cachedInputTokens: integer('cached_input_tokens').notNull().default(0),
+  outputTokens: integer('output_tokens').notNull(),
+  costUsd: real('cost_usd').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  agentExecutionStepsAgentIdIdx: index('agent_execution_steps_agent_id_idx').on(table.agentId),
+  agentExecutionStepsContractIdIdx: index('agent_execution_steps_contract_id_idx').on(table.contractId),
+  agentExecutionStepsCreatedAtIdx: index('agent_execution_steps_created_at_idx').on(table.createdAt),
+}));
+
+export type AgentExecutionStep = typeof agentExecutionSteps.$inferSelect;
+export type NewAgentExecutionStep = typeof agentExecutionSteps.$inferInsert;
+
+export const llmModelPrices = sqliteTable('llm_model_prices', {
+  modelKey: text('model_key').primaryKey(),
+  inputPerMillionUsd: real('input_per_million_usd').notNull(),
+  inputCachePerMillionUsd: real('input_cache_per_million_usd').notNull(),
+  outputPerMillionUsd: real('output_per_million_usd').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type LlmModelPrice = typeof llmModelPrices.$inferSelect;
+export type NewLlmModelPrice = typeof llmModelPrices.$inferInsert;
 
 
 /**
@@ -75,11 +130,32 @@ export type NewAgentProvider = typeof agentProviders.$inferInsert;
  */
 export const agentsRelations = relations(agents, ({ many }) => ({
   providers: many(agentProviders),
+  executionContracts: many(agentExecutionContracts),
+  executionSteps: many(agentExecutionSteps),
 }));
 
 export const agentProvidersRelations = relations(agentProviders, ({ one }) => ({
   agent: one(agents, {
     fields: [agentProviders.agentId],
     references: [agents.id],
+  }),
+}));
+
+export const agentExecutionContractsRelations = relations(agentExecutionContracts, ({ one, many }) => ({
+  agent: one(agents, {
+    fields: [agentExecutionContracts.agentId],
+    references: [agents.id],
+  }),
+  steps: many(agentExecutionSteps),
+}));
+
+export const agentExecutionStepsRelations = relations(agentExecutionSteps, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentExecutionSteps.agentId],
+    references: [agents.id],
+  }),
+  contract: one(agentExecutionContracts, {
+    fields: [agentExecutionSteps.contractId],
+    references: [agentExecutionContracts.id],
   }),
 }));

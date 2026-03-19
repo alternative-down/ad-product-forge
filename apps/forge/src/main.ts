@@ -2,11 +2,11 @@ import 'dotenv/config';
 
 import { Mastra } from '@mastra/core';
 import { ConsoleLogger } from '@mastra/core/logger';
-import { createOAuthGateway, OAUTH_GATEWAY_ID } from '@mastra-engine/core';
+import { createOAuthGateway } from '@mastra-engine/core';
 import { z } from 'zod';
 
 import { getDatabase, runMigrations } from './database/index.js';
-import { loadAgents } from './agents/agent-loader.js';
+import { getInternalAgentRegistry } from './agents/internal-agent-registry.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -19,12 +19,13 @@ export async function main() {
   // Load database and agents from registry
   const db = getDatabase();
   await runMigrations(db);
-  const agents = await loadAgents(db, {
+  const registry = getInternalAgentRegistry();
+  const agents = await registry.loadAll(db, {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
   });
 
   new Mastra({
-    agents: Object.fromEntries(agents),
+    agents: Object.fromEntries(agents.map(({ runtime }) => [runtime.id, runtime.agent])),
     gateways: {
       oauth: createOAuthGateway(),
     },
