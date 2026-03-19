@@ -62,6 +62,7 @@ export class OAuthGateway extends MastraModelGateway {
             ...openaiOptions,
             store: openaiOptions.store ?? false,
             instructions: openaiOptions.instructions ?? (instructions || undefined),
+            reasoningEffort: openaiOptions.reasoningEffort ?? 'medium',
           },
         },
       };
@@ -167,6 +168,7 @@ export class OAuthGateway extends MastraModelGateway {
   private readonly claudeCodeMiddleware: LanguageModelMiddleware = {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
+      const anthropicOptions = params.providerOptions?.anthropic ?? {};
       const prompt = [{ role: 'system' as const, content: CLAUDE_CODE_IDENTITY }, ...params.prompt];
 
       if (params.temperature) {
@@ -176,6 +178,13 @@ export class OAuthGateway extends MastraModelGateway {
       return {
         ...params,
         prompt,
+        providerOptions: {
+          ...params.providerOptions,
+          anthropic: {
+            ...anthropicOptions,
+            effort: anthropicOptions.effort ?? 'medium',
+          },
+        },
       };
     },
   };

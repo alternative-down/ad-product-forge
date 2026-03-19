@@ -6,22 +6,24 @@ import path from 'node:path';
 import { eq, and } from 'drizzle-orm';
 
 import * as schema from '../database/schema.js';
-import { getDatabase, runMigrations } from '../database/index.js';
+import { getDatabase, runMigrations, seedModelPrices } from '../database/index.js';
 import { createId } from '@paralleldrive/cuid2';
 import { encryptSecret } from '../encryption/crypto.js';
 
 /**
  * Determines the gateway and provider for a given model ID
- * Supports: claude-* for Claude/Anthropic, gpt-*-codex for OpenAI Codex
+ * Supports: claude-* for Claude/Anthropic, gpt-* for OpenAI
  */
 function resolveModelGateway(modelId: string): { provider: string; gateway: string } {
   if (modelId.includes('claude') || modelId.includes('anthropic')) {
     return { provider: 'claude-max', gateway: 'account-oauth' };
   }
-  if (modelId.includes('codex')) {
+
+  if (modelId.startsWith('gpt-')) {
     return { provider: 'openai-codex', gateway: 'account-oauth' };
   }
-  throw new Error(`Unsupported model: ${modelId}. Expected 'claude-*' or '*-codex' format`);
+
+  throw new Error(`Unsupported model: ${modelId}. Expected 'claude-*' or 'gpt-*' format`);
 }
 
 /**
@@ -42,13 +44,15 @@ const AGENTS_CONFIG = {
     id: 'forge-agent',
     name: 'Forge Agent',
     description: 'Main Forge agent for task execution',
-    modelId: 'claude-opus-4-1',
+    modelId: 'gpt-5.4',
+    omModelId: 'gpt-5.4-mini',
   },
   helper: {
     id: 'forge-helper',
     name: 'Forge Helper',
     description: 'Helper agent for analysis and support',
-    modelId: 'claude-opus-4-1',
+    modelId: 'gpt-5.4',
+    omModelId: 'gpt-5.4-mini',
   },
 };
 
@@ -64,6 +68,7 @@ async function initAgentRegistry() {
 
     console.log('[Init] Running database migrations...');
     await runMigrations(db);
+    await seedModelPrices(db);
     console.log('[Init] Migrations completed ✓');
 
     // Prepare agent configs
@@ -73,7 +78,7 @@ async function initAgentRegistry() {
         name: AGENTS_CONFIG.forge.name,
         description: AGENTS_CONFIG.forge.description,
         model: buildModelString(AGENTS_CONFIG.forge.modelId),
-        omModel: AGENTS_CONFIG.forge.modelId,
+        omModel: buildModelString(AGENTS_CONFIG.forge.omModelId),
         instructions: systemPrompt,
         workspaceAutoSync: 1,
         workspaceBm25: 1,
@@ -86,7 +91,7 @@ async function initAgentRegistry() {
         name: AGENTS_CONFIG.helper.name,
         description: AGENTS_CONFIG.helper.description,
         model: buildModelString(AGENTS_CONFIG.helper.modelId),
-        omModel: AGENTS_CONFIG.helper.modelId,
+        omModel: buildModelString(AGENTS_CONFIG.helper.omModelId),
         instructions: [
           systemPrompt,
           'You are the helper agent for the main Forge agent.',

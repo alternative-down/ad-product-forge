@@ -1,12 +1,13 @@
 import { eq } from 'drizzle-orm';
 import type { Database } from '../database/index.js';
 import { agents, agentProviders } from '../database/schema.js';
-import { createAgent } from './create-forge-agent.js';
+import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentRuntime } from './create-forge-agent.js';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
 import { decryptSecret } from '../encryption/crypto.js';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
+  workflows?: CreateAgentConfig['workflows'];
 }
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
@@ -53,7 +54,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
 
   const providers = loadCommunicationProviders(providerCredentials);
 
-  const agent = await createAgent(
+  const runtime = await createInternalAgentRuntime(
     {
       id: agentConfig.id,
       name: agentConfig.name,
@@ -62,6 +63,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       model: agentConfig.model,
       omModel: agentConfig.omModel || undefined,
       providers,
+      workflows: config.workflows,
       workspaceBasePath: config.workspaceBasePath,
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
       workspaceSandbox: agentConfig.workspaceSandbox ?? undefined,
@@ -70,7 +72,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   );
 
   console.log(`[AgentLoader] Agent loaded successfully: ${agentConfig.id}`);
-  return agent;
+  return runtime;
 }
 
 /**
@@ -90,15 +92,16 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
 
   console.log(`[AgentLoader] Loading ${agentConfigs.length} agents from registry...`);
 
-  const agents = new Map();
+  const agents = new Map<string, InternalAgentRuntime>();
 
   for (const agentConfig of agentConfigs) {
     try {
-      const agent = await loadAgent(db, {
+      const runtime = await loadAgent(db, {
         workspaceBasePath: config.workspaceBasePath,
+        workflows: config.workflows,
         agentId: agentConfig.id,
       });
-      agents.set(agentConfig.id, agent);
+      agents.set(agentConfig.id, runtime);
     } catch (error) {
       console.error(`[AgentLoader] Failed to load agent ${agentConfig.id}:`, error);
       // Continue loading other agents even if one fails
