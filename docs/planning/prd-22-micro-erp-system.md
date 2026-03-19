@@ -209,14 +209,19 @@ Do not start with:
 
 ## 8. Implementation Status
 
-**Status:** Planned
+**Status:** Partially Implemented
 
 Already available in the system today:
 - `company_cash_ledger`
 - `agent_execution_contracts`
 - `agents`
+- micro ERP read module in the app
+- agent-facing tools for:
+  - company cash balance
+  - company cash movement list
+  - company cash summary
+  - active internal-agent contracts
+  - active contract by agent
 
 Still missing:
-- micro ERP read module in the app
-- agent-facing tools for these reads
-- summary/read functions over the existing financial tables
+- review of the final agent-facing wording/output shapes after real usage

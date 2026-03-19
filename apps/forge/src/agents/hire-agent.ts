@@ -15,6 +15,7 @@ import { encryptSecret } from '../encryption/crypto.js';
 import { createInternalAgentRuntime, type CreateAgentConfig } from './create-forge-agent.js';
 import { getInternalAgentRegistry } from './internal-agent-registry.js';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
+import { createMicroErpTools } from '../micro-erp/tools.js';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -96,6 +97,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       instructions: input.instructions,
       model: input.model,
       omModel: input.omModel,
+      tools: createMicroErpTools(db),
       providers: loadCommunicationProviders(providerCredentials),
       workflows: input.workflows,
       workspaceBasePath: input.workspaceBasePath,
