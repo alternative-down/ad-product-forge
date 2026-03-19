@@ -2,16 +2,13 @@ import { z } from 'zod';
 import { createStep, createWorkflow, type AnyWorkflow } from '@mastra/core/workflows';
 
 import type { Database } from '../database/index.js';
+import { buildHiredAgentProfile } from '../agents/hiring-profile.js';
 import { hireInternalAgent } from '../agents/hire-agent.js';
 import { terminateInternalAgent } from '../agents/terminate-agent.js';
 
 const hireInternalAgentInputSchema = z.object({
-  agentId: z.string().optional(),
-  name: z.string(),
-  description: z.string().optional(),
-  instructions: z.string(),
-  model: z.string(),
-  omModel: z.string().optional(),
+  requestedFunction: z.string().min(1),
+  additionalContext: z.string().optional(),
   weeklyBudgetUsd: z.number().positive(),
 });
 
@@ -43,8 +40,11 @@ export function createInternalAgentWorkflows(config: {
     inputSchema: hireInternalAgentInputSchema,
     outputSchema: hireInternalAgentOutputSchema,
     execute: async ({ inputData }) => {
+      const profile = buildHiredAgentProfile(inputData);
+
       return hireInternalAgent(config.db, {
-        ...inputData,
+        ...profile,
+        weeklyBudgetUsd: inputData.weeklyBudgetUsd,
         workspaceBasePath: config.workspaceBasePath,
         workflows,
       });
