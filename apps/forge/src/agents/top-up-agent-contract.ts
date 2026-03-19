@@ -3,12 +3,14 @@ import { and, eq, gte, lte } from 'drizzle-orm';
 import type { Database } from '../database/index.js';
 import { agentExecutionContracts } from '../database/schema.js';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
+import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
 
 export async function topUpActiveAgentContract(db: Database, input: {
   agentId: string;
   amountUsd: number;
 }) {
   const companyCash = createCompanyCashLedger(db);
+  const companyCashOperations = createCompanyCashOperations(db);
   const now = Date.now();
   const activeContract = await db.query.agentExecutionContracts.findFirst({
     where: and(
@@ -28,9 +30,8 @@ export async function topUpActiveAgentContract(db: Database, input: {
     throw new Error('Insufficient company cash for contract top-up');
   }
 
-  await companyCash.postEntry({
+  await companyCashOperations.recordCashOut({
     type: 'agent-contract-topup',
-    direction: 'out',
     amountUsd: input.amountUsd,
     description: `Contract top-up for ${input.agentId}`,
     referenceType: 'agent-execution-contract',
