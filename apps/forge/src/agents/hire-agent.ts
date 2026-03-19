@@ -12,7 +12,7 @@ import {
 import type { ProviderCredentialsMap } from '../communication/provider-loader.js';
 import { loadCommunicationProviders } from '../communication/provider-loader.js';
 import { encryptSecret } from '../encryption/crypto.js';
-import { createInternalAgentRuntime } from './create-forge-agent.js';
+import { createInternalAgentRuntime, type CreateAgentConfig } from './create-forge-agent.js';
 import { getInternalAgentRegistry } from './internal-agent-registry.js';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
 
@@ -30,6 +30,7 @@ type HireInternalAgentInput = {
   workspaceSandbox?: WorkspaceSandboxConfig;
   weeklyBudgetUsd: number;
   providerCredentials?: ProviderCredentialsMap;
+  workflows?: CreateAgentConfig['workflows'];
 };
 
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
@@ -96,6 +97,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       model: input.model,
       omModel: input.omModel,
       providers: loadCommunicationProviders(providerCredentials),
+      workflows: input.workflows,
       workspaceBasePath: input.workspaceBasePath,
       workspaceFilesystem: input.workspaceFilesystem,
       workspaceSandbox: input.workspaceSandbox,

@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { getDatabase, runMigrations } from './database/index.js';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry.js';
+import { createInternalAgentWorkflows } from './workflows/internal-agents.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -19,13 +20,19 @@ export async function main() {
   // Load database and agents from registry
   const db = getDatabase();
   await runMigrations(db);
+  const workflows = createInternalAgentWorkflows({
+    db,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+  });
   const registry = getInternalAgentRegistry();
   const agents = await registry.loadAll(db, {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    workflows,
   });
 
   new Mastra({
     agents: Object.fromEntries(agents.map(({ runtime }) => [runtime.id, runtime.agent])),
+    workflows,
     gateways: {
       oauth: createOAuthGateway(),
     },
