@@ -336,7 +336,7 @@ Implemented today:
   - wakes through the existing wake queue
   - runs `generate([], { maxSteps: 1 })`
   - records step cost
-  - records OM cost from internal observational-memory events
+  - records OM cost from OM data parts returned by the step result
   - returns to `idle` on text-only completion
   - stays in `running` on tool-call continuation
 - first-step `instant` behavior is implemented in memory

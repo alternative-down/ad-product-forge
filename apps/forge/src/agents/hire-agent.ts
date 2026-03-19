@@ -90,7 +90,6 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
 
   const runtime = await createInternalAgentRuntime(
     {
-      db,
       id: agentId,
       name: input.name,
       description: input.description,

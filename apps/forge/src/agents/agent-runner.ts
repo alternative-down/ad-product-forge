@@ -12,6 +12,15 @@ type AgentUsage = {
   outputTokens?: number;
   promptTokens?: number;
   completionTokens?: number;
+  cachedInputTokens?: number;
+};
+
+type OmObservationEndPart = {
+  type: 'data-om-observation-end';
+  data?: {
+    tokensObserved?: number;
+    observationTokens?: number;
+  };
 };
 
 export function createAgentRunner(
@@ -142,9 +151,11 @@ export function createAgentRunner(
       });
       const usage = result.usage as AgentUsage;
       const inputTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
+      const cachedInputTokens = usage.cachedInputTokens ?? 0;
       const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0;
 
-      await recordStep(contractId, inputTokens, outputTokens);
+      await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
+      await recordObservationalMemorySteps(contractId, result.steps);
 
       if (result.toolCalls.length === 0) {
         await store.setExecutionState(runtime.id, 'idle');
@@ -204,13 +215,13 @@ export function createAgentRunner(
 
     const averageStepUsd = recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
     const modelPrice = await store.getModelPrice(runtime.modelKey);
-    const lastStep = recentSteps[0];
+    const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
 
-    if (!modelPrice || !lastStep) {
+    if (!modelPrice || !lastAgentStep) {
       return averageStepUsd;
     }
 
-    const inputEstimatedUsd = (lastStep.inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd;
+    const inputEstimatedUsd = (lastAgentStep.inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd;
     return (inputEstimatedUsd + averageStepUsd) / 2;
   }
 
@@ -235,14 +246,19 @@ export function createAgentRunner(
     return delayMs;
   }
 
-  async function recordStep(contractId: string, inputTokens: number, outputTokens: number) {
+  async function recordAgentStep(
+    contractId: string,
+    inputTokens: number,
+    cachedInputTokens: number,
+    outputTokens: number,
+  ) {
     const modelPrice = await store.getModelPrice(runtime.modelKey);
-    const cachedInputTokens = 0;
     let costUsd = 0;
 
     if (modelPrice) {
       costUsd =
         (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
+        (cachedInputTokens / 1_000_000) * modelPrice.inputCachePerMillionUsd +
         (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
     }
 
@@ -256,6 +272,57 @@ export function createAgentRunner(
       outputTokens,
       costUsd,
     });
+  }
+
+  async function recordObservationalMemorySteps(contractId: string, steps: Array<{
+    response?: {
+      uiMessages?: Array<{
+        parts?: Array<unknown>;
+      }>;
+    };
+  }>) {
+    const modelPrice = await store.getModelPrice(runtime.omModelKey);
+    const parts = steps.flatMap((step) => step.response?.uiMessages ?? []).flatMap((message) => message.parts ?? []);
+
+    for (const part of parts) {
+      if (!isOmObservationEndPart(part)) {
+        continue;
+      }
+
+      const inputTokens = part.data?.tokensObserved ?? 0;
+      const outputTokens = part.data?.observationTokens ?? 0;
+
+      if (inputTokens <= 0 && outputTokens <= 0) {
+        continue;
+      }
+
+      let costUsd = 0;
+
+      if (modelPrice) {
+        costUsd =
+          (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
+          (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
+      }
+
+      await store.recordAgentStep({
+        agentId: runtime.id,
+        contractId,
+        modelKey: runtime.omModelKey,
+        kind: 'om',
+        inputTokens,
+        cachedInputTokens: 0,
+        outputTokens,
+        costUsd,
+      });
+    }
+  }
+
+  function isOmObservationEndPart(part: unknown): part is OmObservationEndPart {
+    if (!part || typeof part !== 'object') {
+      return false;
+    }
+
+    return 'type' in part && part.type === 'data-om-observation-end';
   }
 
   return {
