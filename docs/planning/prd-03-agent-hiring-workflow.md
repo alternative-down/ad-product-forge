@@ -12,7 +12,6 @@ This workflow should behave like a simplified internal HR process:
 - the hiring workflow validates whether the company can afford the process
 - the workflow creates the new agent
 - the workflow creates the first execution contract for that agent
-- the workflow funds that contract from company cash
 - the workflow instantiates the hired agent in the runtime
 
 ## Scope
@@ -22,7 +21,6 @@ This PRD covers:
 - the hiring workflow itself
 - initial agent creation
 - first contract creation
-- first contract funding
 - runtime instantiation of the hired agent
 
 This PRD does not cover:
@@ -43,7 +41,6 @@ It is a company workflow that includes:
 - paying for the hiring process itself
 - creating the hired agent
 - creating the first renewable weekly execution contract
-- funding that first contract from company cash
 - making the agent available in the runtime
 
 The requesting agent does not decide technical provisioning details.
@@ -82,15 +79,7 @@ Before continuing, the system checks whether the company can afford the hiring p
 
 This is separate from the future weekly contract budget.
 
-### 3. Check First Contract Affordability
-
-Before creating the hired agent, the system checks whether the company can fund the first weekly execution contract.
-
-This first contract:
-- is created immediately during hiring
-- already starts with `autoRenew = true`
-
-### 4. Generate the Hired Agent Prompt
+### 3. Create the Hired Agent Prompt
 
 The workflow generates the system prompt for the hired agent.
 
@@ -101,13 +90,13 @@ This prompt should be based on:
 
 This is part of the hiring process itself and can generate LLM cost.
 
-### 5. Create the Agent Record
+### 4. Create the Agent Record
 
 The workflow creates the hired agent record in the company registry.
 
 This is the moment where the new agent becomes a formal company entity.
 
-### 6. Create the First Contract
+### 5. Create the First Contract
 
 The workflow creates the first weekly execution contract for the hired agent.
 
@@ -115,18 +104,17 @@ Rules:
 - weekly amount is mandatory
 - auto-renew starts as `true`
 
-### 7. Register Cash Movements
+The hiring workflow does not fund this contract.
 
-The workflow records at least two distinct financial movements:
+Contract funding and budget capture belong to the contract process defined in `PRD-34`.
 
-1. hiring process cost
-2. first contract funding
+### 6. Register Hiring Process Cost
 
-These are separate records and should not be merged.
+The workflow records only the financial cost of the hiring process itself.
 
-Their detailed ledger behavior belongs to `PRD-08`.
+It does not register contract funding.
 
-### 8. Instantiate the Hired Agent
+### 7. Instantiate the Hired Agent
 
 After the record and first contract exist, the workflow instantiates the hired agent in the runtime.
 
@@ -148,6 +136,7 @@ Responsible for:
 ### PRD-34
 Responsible for:
 - the agent execution contract
+- contract budget capture/funding
 - contract budget consumption
 - pacing of future execution steps
 
@@ -167,7 +156,6 @@ Expected business objects involved in the workflow:
 - agent record
 - first execution contract
 - ledger entry for hiring process cost
-- ledger entry for first contract funding
 
 ## Initial Provisioning
 
@@ -203,7 +191,8 @@ The rest is mostly internal system work.
 - Hiring creates both the agent and the first contract.
 - Weekly amount is mandatory at hiring time.
 - New hired agents start with `autoRenew = true`.
-- Hiring process cost and first contract funding are separate financial movements.
+- Hiring process cost belongs to the hiring workflow.
+- Contract funding does not belong to the hiring workflow.
 - Requesters describe the professional function needed, not the technical provisioning details.
 - Tool assignment and role-capability mapping do not belong in this PRD.
 
@@ -211,6 +200,6 @@ The rest is mostly internal system work.
 
 This PRD defines hiring as a company workflow, not just a technical agent creation step.
 
-The workflow receives a hiring request, checks affordability, generates the hired agent prompt, creates the agent record, creates the first renewable weekly contract, records the required cash movements, and makes the hired agent available in the runtime.
+The workflow receives a hiring request, checks affordability for the hiring process itself, generates the hired agent prompt, creates the agent record, creates the first renewable weekly contract, records the hiring process cost, and makes the hired agent available in the runtime.
 
-This keeps hiring aligned with both the financial model of the company and the execution contract model of the hired agent.
+This keeps hiring aligned with both the financial model of the company and the execution contract model of the hired agent without mixing the hiring workflow with the contract funding process.
