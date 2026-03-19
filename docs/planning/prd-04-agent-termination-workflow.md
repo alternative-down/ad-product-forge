@@ -1,105 +1,148 @@
-# PRD-04: Workflow de Terminação de Agentes
+# PRD-04: Agent Termination Workflow
 
-**Status:** Planejamento
-**Data:** 2026-03-15
+**Status:** Draft
+**Data:** 2026-03-18
 
-> **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Os requisitos focam em funcionalidade e simplicidade.
+## Objective
 
----
+Define the workflow used to terminate a permanent agent from the company.
 
-## Objetivo
+Termination is simple:
+- remove the agent from the company
+- stop the agent in the runtime
+- delete the agent resources
+- clean up stored data that belongs to the agent runtime
 
-Permitir que agentes terminem autonomamente outros agentes (ou admin terminar qualquer agente). Workflow de terminação usa padrão de workflow Mastra para remover limpar o agente do sistema e limpar recursos.
+This is a hard termination workflow.
 
----
+## Scope
 
-## Requisitos
+This PRD covers:
+- terminating an agent by workflow
+- removing the agent from the runtime
+- deleting the agent record
+- deleting agent-owned runtime files and databases
+- cleaning provider credentials and related runtime data
 
-### FR1: Terminar Agente via Workflow
-- Agente solicita terminar agente via ferramenta (similar a contratação)
-- Entrada: agentId, motivo (opcional)
-- Usa padrão de workflow Mastra
-- Saída: confirmação com recursos deletados
+This PRD does not cover:
+- graceful shutdown logic
+- agent recovery
+- retention policies
+- compliance/audit requirements
+- financial reconciliation logic
 
-### FR2: Limpeza de Recursos
-- Deletar agente da tabela `agents`
-- Cascade delete da tabela `agent_providers` (via FK)
-- Deletar arquivos de banco de dados do agente (se houver: `{agentId}.db`)
-- Deletar arquivos de memória/estado do agente (`.forge-memory/{agentId}/`)
-- Limpar qualquer arquivo temporário específico do agente
+## Core Idea
 
-### FR3: Confirmação de Terminação
-- Retornar confirmação com lista de recursos deletados
-- Registrar evento de terminação (trilha de auditoria)
+If an agent is terminated, it leaves the company.
 
----
+The system should:
+- stop using that agent
+- remove it from the runtime
+- delete its operational data and files
+- clean the environment
 
-## Arquitetura
+This is not a soft archival process.
+It is a direct removal process.
 
-### Componentes
+## Main Flow
 
-1. **Workflow de Terminação** — Workflow Mastra invocado por agente
-2. **Deleção em Cascata** — Restrições de banco de dados fazem deletes de FK em cascata
-3. **Limpeza de Arquivo** — Encontrar e deletar arquivos específicos do agente
-4. **Logging** — Registrar evento de terminação
+### 1. Receive Termination Request
 
-### Fluxo
+A workflow receives a request to terminate an agent.
 
+Input:
+- `agentId`
+- optional reason
+
+### 2. Validate Agent Exists
+
+The workflow confirms that the target agent exists.
+
+### 3. Remove Agent from Runtime
+
+Before deleting persistent resources, the workflow removes the agent from the runtime registry / instantiated agent list.
+
+This ensures the agent is no longer active in memory.
+
+### 4. Delete Agent Registry Record
+
+The workflow deletes the agent from the company agent registry.
+
+This is a hard delete.
+
+### 5. Delete Provider Credentials and Related Records
+
+The workflow deletes provider configuration records related to the agent.
+
+This includes:
+- provider credentials
+- related provider records owned by the agent
+
+### 6. Delete Agent Runtime Files
+
+The workflow deletes the agent workspace directory.
+
+Current runtime layout:
+
+```text
+workspaces/
+  {agentId}/
+    database.db
+    workspace/
+    workspace-memory/
 ```
-Agente invoca workflow de terminação
-  │
-  ├─ Mastra workflow: terminateAgent({agentId, reason})
-  │
-  ├─ Workflow executa:
-  │  ├─ Validar agentId existe
-  │  ├─ Deletar da tabela agents
-  │  ├─ Cascade: deletar de agent_providers
-  │  ├─ Encontrar e deletar {agentId}.db
-  │  ├─ Encontrar e deletar .forge-memory/{agentId}/
-  │  ├─ Registrar evento de terminação
-  │  └─ Retornar confirmação
-  │
-  └─ Retornar lista de recursos deletados para agente
-```
 
----
+So termination should remove:
+- `workspaces/{agentId}/database.db`
+- `workspaces/{agentId}/workspace/`
+- `workspaces/{agentId}/workspace-memory/`
+- and finally `workspaces/{agentId}/`
 
-## Schema do Banco de Dados
+### 7. Return Confirmation
 
-**Nenhuma tabela nova necessária.**
+The workflow returns confirmation that the agent was terminated and its resources were removed.
 
-**Mudanças na tabela agents:**
-- Opcional: adicionar `terminated_at` (TIMESTAMP) para rastrear quando agente foi deletado
-- Ou: simplesmente deletar linha da tabela
+## Current Resource Model
 
-**Deletes em cascata:**
-- `agent_providers`: deletar todas as linhas onde `agent_id = {agentId}`
-- Isso limpa todas as credenciais automaticamente
+The workflow should assume the agent owns these runtime resources:
+- agent registry record
+- provider configuration records
+- runtime instance in memory
+- workspace directory
+- agent database file
+- workspace-memory directory
 
----
+If more agent-owned resources are added later, they can be included in the same cleanup workflow.
 
-## Decisões Técnicas
+## Database Direction
 
-### 1. Hard Delete vs Soft Delete
-**Decisão:** Hard delete (remover da tabela completamente)
+No new table is required for the first version.
 
-**Justificativa:**
-- Projeto dev solo, nenhuma compliance/retenção de auditoria necessária
-- Modelo de dados mais simples
-- Sem necessidade de recuperação de agente deletado
+The main records affected are:
+- `agents`
+- provider records related to the agent
 
-### 2. Deleção em Cascata
-**Decisão:** Deletar todos os registros relacionados (agent_providers, credenciais)
+Termination should remove those records completely.
 
-**Justificativa:**
-- Remoção limpa
-- Sem credenciais órfãs
-- Restrições de banco de dados garantem consistência
+## File System Direction
 
-### 3. Limpeza de Arquivo
-**Decisão:** Deletar arquivos de banco de dados do agente e diretórios de memória
+The workflow should delete the full agent workspace root:
+- `workspaces/{agentId}/`
 
-**Justificativa:**
-- Liberar espaço em disco
-- Estado de sistema limpo
-- Sem arquivos órfãos
+That keeps the cleanup simple and avoids leaving orphan files.
+
+## Design Rules
+
+- Termination is a hard delete.
+- The agent should be removed from the runtime before persistent cleanup finishes.
+- Agent-owned files should be deleted completely.
+- Cleanup should target the real runtime paths used by the application.
+- The workflow should stay simple and direct.
+
+## Summary
+
+This PRD defines agent termination as a direct removal workflow.
+
+The workflow receives an `agentId`, removes the agent from the runtime, deletes the registry and provider records, removes the full workspace directory under `workspaces/{agentId}/`, and returns confirmation.
+
+This keeps agent termination simple: terminate, clean up, and free the space.
