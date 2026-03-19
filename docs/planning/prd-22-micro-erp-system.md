@@ -1,229 +1,222 @@
-# PRD-22: Sistema de Fluxo de Caixa e Micro-ERP
+# PRD-22: Micro ERP for Internal Agents
 
-> **Nota:** Este é um projeto pessoal para desenvolvedor solo. Aplicar KISS + YAGNI. Este PRD é o mecanismo **core** que traz controle e accountability aos agentes.
+**Classification:** FORGE APP
 
-**Classificação:** APLICAÇÃO AD-PRODUCT-FORGE
+## 1. Goal
 
----
+Provide internal agents with a simple administrative view of the company.
 
-## 1. Visão Geral
+This module exists so agents can inspect:
+- company cash movements
+- current cash balance
+- scheduled future cash movements
+- active internal-agent contracts and their weekly value
 
-### Objetivo
+It does **not** exist to expose runtime internals, execution telemetry, or budget-control mechanics.
 
-Estruturar um **"caixa da empresa"** centralizado que permite:
-- Nicolas (proprietário) controlar os recursos da plataforma
-- Agentes gerenciarem a empresa digital e serem responsáveis por ter lucro
-- Rastrear e visualizar os dados financeiros para tomadas de decisão
+## 2. Scope
 
-### Dinâmica Operacional
+### Included
+- company cash ledger entries
+- current company cash balance
+- future ledger entries that are already scheduled
+- active internal-agent contracts
+- weekly contract value for each active internal agent
 
-1. **Nicolas faz aportes iniciais** → libera saldo para agentes operarem
-2. **Agentes gerenciam com saldo disponível** → responsáveis por gastos e receitas
-3. **Com tração** → agentes ficam por conta própria
-4. **Nicolas faz saques** → quando há lucro para retirar
+### Excluded
+- step-by-step LLM cost
+- OM/LTM execution cost details
+- contract funding state internals
+- remaining contract budget
+- pacing logic
+- free-form SQL/query execution by agents
+- custom agent-defined views
+- dashboard UI
+- accounting/export integrations
 
-### Impacto
+## 3. Agent-Facing Capabilities
 
-Este é o mecanismo que traz **controle e accountability** aos agentes. Eles precisam gerenciar recursos reais e ter lucro, não é simulação.
+### 3.1 Get Cash Balance
+Return the current company cash balance derived from the ledger.
 
----
-
-## 2. Escopo
-
-### Rastreado no Caixa
-
-**Custos:**
-- Contratação de novos agentes (salário inicial/setup)
-- Custos operacionais diários de cada agente (quanto custa rodar cada um em $)
-- Custos de APIs e serviços externos
-- Custos base de infraestrutura (servidor, domínio, etc.)
-
-**Receitas:**
-- Recebimentos de clientes/aplicações (Stripe, Asaas)
-- Previsões de receitas futuras
-
-**Fluxo:**
-- Contas a pagar com histórico
-- Contas a receber com histórico
-- Saldo disponível
-- Previsões
-
-### Acesso para Agentes
-
-- **Visualizar dados**: Agentes podem ver dados financeiros relevantes
-- **Views customizadas**: Agentes criam suas próprias visualizações de dados
-- **Queries diretas**: Agentes rodam queries diretas para coletar informações que querem
-- **Folha de pagamento**: Cada agente sabe quanto custa (em $) para rodar
-
-### Não Incluído
-
-- Fluxos de trabalho de aprovação complexos
-- Algoritmos preditivos avançados
-- Integração com software de contabilidade externa (QuickBooks, Xero, etc.)
-- Dashboard UI
-- Suporte a múltiplas moedas
-
----
-
-## 3. Requisitos
-
-### RF-1: Registrar Transação
-```typescript
-interface LogTransactionParams {
-  type: 'expense' | 'revenue';
-  category: string; // ex: 'agent_salary', 'api_cost', 'infrastructure', 'customer_payment'
-  amount: number;
-  description: string;
-  relatedAgentId?: string; // opcional, para rastrear custos por agente
-  relatedApplicationId?: string; // opcional, para receitas de apps
-  scheduledFor?: Date; // para previsões/contas futuras
-}
-
-// Retorna: { transactionId, success }
-```
-
-### RF-2: Consultar Saldo e Resumo
-```typescript
-interface GetCashFlowSummaryParams {
-  periodStart?: Date; // padrão: início do mês
-  periodEnd?: Date; // padrão: hoje
-}
-
-// Retorna: {
-//   totalExpenses: number;
-//   totalRevenues: number;
-//   netProfit: number;
-//   balance: number; // saldo disponível
-//   expectedRevenues: number; // previsões
-//   expectedExpenses: number; // previsões
-// }
-```
-
-### RF-3: Listar Transações
-```typescript
-interface ListTransactionsParams {
-  filters?: {
-    type?: 'expense' | 'revenue';
-    category?: string;
-    agentId?: string;
-    applicationId?: string;
-    dateRange?: { start: Date; end: Date };
-  };
-  limit?: number; // padrão: 100
-  offset?: number; // padrão: 0
-}
-
-// Retorna: array de transações com detalhes
-```
-
-### RF-4: Criar View Customizada (por agente)
-```typescript
-interface CreateCustomViewParams {
-  agentId: string;
-  name: string; // ex: "Meus custos mensais"
-  query: string; // SQL para executar
-  description?: string;
-}
-
-// Retorna: { viewId, success }
-```
-
-### RF-5: Executar Query Direta (por agente)
-```typescript
-interface ExecuteQueryParams {
-  agentId: string;
-  query: string; // SQL com scope limitado ao agente
-}
-
-// Retorna: { results: array, success }
-// Nota: Query é validada para não acessar dados de outros agentes
-```
-
-### RF-6: Calcular Custo de Agente
-```typescript
-interface GetAgentCostParams {
-  agentId: string;
-  period?: 'daily' | 'weekly' | 'monthly'; // padrão: monthly
-}
-
-// Retorna: {
-//   agentId: string;
-//   totalCost: number; // em $
-//   breakdown: {
-//     salary: number;
-//     apiUsage: number;
-//     infrastructure: number;
-//     // ...
-//   };
-// }
-```
-
----
-
-## 4. Banco de Dados
-
-**Tabela: financial_transactions**
-```typescript
+Example output shape:
+```ts
 {
-  id: UUID (primary key)
-  type: 'expense' | 'revenue'
-  category: string
-  amount: decimal(12, 2)
-  description: string
-  related_agent_id?: UUID
-  related_application_id?: UUID
-  scheduled_for?: timestamp (para previsões)
-  created_at: timestamp
-  recorded_by: UUID (quem registrou - Nicolas ou sistema)
+  balanceUsd: number;
 }
 ```
 
-**Tabela: agent_costs** (cache/historical)
-```typescript
+### 3.2 List Cash Movements
+Return ledger entries with optional filters.
+
+Supported filters:
+- date range
+- direction (`in` or `out`)
+- status
+- type
+- limit
+- offset
+
+Example output shape:
+```ts
 {
-  id: UUID
-  agent_id: UUID
-  period_start: date
-  period_end: date
-  total_cost: decimal(12, 2)
-  breakdown: JSON (detalhamento: salary, api, infrastructure, etc.)
-  calculated_at: timestamp
+  items: Array<{
+    id: string;
+    type: string;
+    direction: 'in' | 'out';
+    amountUsd: number;
+    description?: string;
+    status: string;
+    dueAt?: number;
+    effectiveAt?: number;
+    createdAt: number;
+  }>;
+  total: number;
 }
 ```
 
-**Tabela: financial_views** (customizadas por agentes)
-```typescript
+### 3.3 Get Cash Summary
+Return a compact summary for a period.
+
+Example output shape:
+```ts
 {
-  id: UUID
-  agent_id: UUID
-  name: string
-  query: string
-  description?: string
-  created_at: timestamp
-  last_executed_at?: timestamp
+  periodStart: number;
+  periodEnd: number;
+  totalInUsd: number;
+  totalOutUsd: number;
+  netUsd: number;
+  balanceUsd: number;
+  scheduledInUsd: number;
+  scheduledOutUsd: number;
 }
 ```
 
----
+### 3.4 List Active Agent Contracts
+Return active internal-agent contracts with their weekly value.
 
-## 5. Segurança e Isolamento
+Example output shape:
+```ts
+{
+  items: Array<{
+    contractId: string;
+    agentId: string;
+    agentName: string;
+    startsAt: number;
+    endsAt: number;
+    weeklyBudgetUsd: number;
+    autoRenew: boolean;
+  }>;
+}
+```
 
-- Agentes **não podem** acessar dados financeiros de outros agentes
-- Queries são validadas e scopadas para apenas dados visíveis ao agente
-- Registros de transações são auditados (quem registrou, quando)
-- Apenas Nicolas pode fazer aportes e saques
+### 3.5 Get Active Contract
+Return the active contract for one internal agent.
 
----
+Example output shape:
+```ts
+{
+  contractId: string;
+  agentId: string;
+  agentName: string;
+  startsAt: number;
+  endsAt: number;
+  weeklyBudgetUsd: number;
+  autoRenew: boolean;
+} | null
+```
 
-## 6. Critérios de Sucesso
+## 4. Data Sources
 
-- [ ] Consegue registrar despesas e receitas
-- [ ] Agentes conseguem visualizar dados relevantes
-- [ ] Agentes conseguem criar views customizadas
-- [ ] Cálculo de custos por agente está correto
-- [ ] Saldo e previsões são calculados corretamente
-- [ ] Isolamento de dados entre agentes funciona
+### 4.1 Company Cash Ledger
+Use the existing company ledger as the source of truth:
+- `company_cash_ledger`
 
----
+Relevant fields:
+- `id`
+- `type`
+- `direction`
+- `amountUsd`
+- `description`
+- `status`
+- `dueAt`
+- `effectiveAt`
+- `createdAt`
+- `referenceType`
+- `referenceId`
 
-**Fim do documento**
+### 4.2 Internal-Agent Contracts
+Use the existing execution contracts table only as an administrative contract source:
+- `agent_execution_contracts`
+- joined with `agents`
+
+Relevant fields:
+- `id`
+- `agentId`
+- `budgetUsd`
+- `autoRenew`
+- `startsAt`
+- `endsAt`
+
+Important:
+- `budgetUsd` is exposed here only as the weekly contract value
+- internal funding state and remaining budget are not part of the micro ERP surface
+
+## 5. Boundaries
+
+### What the Micro ERP can expose
+- financial movements
+- company balance
+- scheduled future movements
+- active contracts
+- weekly contract values
+
+### What must stay internal to the runtime
+- `agent_execution_steps`
+- per-step token usage
+- OM/LTM cost rows
+- runner pacing and backoff
+- contract executable/funded resolution
+- remaining budget calculations
+
+## 6. Initial Implementation Shape
+
+Start simple.
+
+The first implementation should provide only fixed read operations through application code.
+
+Suggested first surface:
+- `getCompanyCashBalance()`
+- `listCompanyCashMovements()`
+- `getCompanyCashSummary()`
+- `listActiveInternalAgentContracts()`
+- `getActiveInternalAgentContract(agentId)`
+
+These can later be exposed to agents as tools.
+
+Do not start with:
+- dynamic query builders
+- custom saved views
+- generalized reporting engine
+
+## 7. Success Criteria
+
+- internal agents can inspect the company cash balance
+- internal agents can inspect recent and scheduled cash movements
+- internal agents can inspect active contracts and weekly values
+- no runtime-internal execution telemetry leaks through this module
+- the surface stays small and explicit
+
+## 8. Implementation Status
+
+**Status:** Planned
+
+Already available in the system today:
+- `company_cash_ledger`
+- `agent_execution_contracts`
+- `agents`
+
+Still missing:
+- micro ERP read module in the app
+- agent-facing tools for these reads
+- summary/read functions over the existing financial tables
