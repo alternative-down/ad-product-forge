@@ -6,7 +6,7 @@ import path from 'node:path';
 import { eq, and } from 'drizzle-orm';
 
 import * as schema from '../database/schema.js';
-import { getDatabase, runMigrations, syncModelPrices } from '../database/index.js';
+import { getDatabase, runMigrations, seedModelPrices } from '../database/index.js';
 import { createId } from '@paralleldrive/cuid2';
 import { encryptSecret } from '../encryption/crypto.js';
 
@@ -64,7 +64,7 @@ async function initAgentRegistry() {
 
     console.log('[Init] Running database migrations...');
     await runMigrations(db);
-    await syncModelPrices(db);
+    await seedModelPrices(db);
     console.log('[Init] Migrations completed ✓');
 
     // Prepare agent configs

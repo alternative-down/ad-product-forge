@@ -5,7 +5,7 @@ import { ConsoleLogger } from '@mastra/core/logger';
 import { createOAuthGateway } from '@mastra-engine/core';
 import { z } from 'zod';
 
-import { getDatabase, runMigrations, syncModelPrices } from './database/index.js';
+import { getDatabase, runMigrations, seedModelPrices } from './database/index.js';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry.js';
 import { createInternalAgentWorkflows } from './workflows/internal-agents.js';
 
@@ -20,7 +20,7 @@ export async function main() {
   // Load database and agents from registry
   const db = getDatabase();
   await runMigrations(db);
-  await syncModelPrices(db);
+  await seedModelPrices(db);
   const workflows = createInternalAgentWorkflows({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
