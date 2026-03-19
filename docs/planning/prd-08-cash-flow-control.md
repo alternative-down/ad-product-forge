@@ -1,6 +1,6 @@
 # PRD-08: Company Cash Ledger
 
-**Status:** Draft
+**Status:** Partially Implemented
 **Data:** 2026-03-18
 **Versão:** 2.0
 
@@ -245,3 +245,35 @@ Future obligations are represented as planned records.
 A balance snapshot may exist for efficiency, but the ledger remains the source of truth.
 
 This keeps the financial model simple, extensible, and independent from the execution-control systems that will use it later.
+
+## Implementation Status
+
+Implemented today:
+- `company_cash_ledger` exists in the Forge app database
+- current balance is already derived from posted effective ledger records
+- the ledger is already used for:
+  - hiring process cost
+  - contract funding
+  - contract top-up
+  - manual cash funding
+
+Current implementation fields:
+- `id`
+- `type`
+- `direction`
+- `amountUsd`
+- `description`
+- `referenceType`
+- `referenceId`
+- `status`
+- `dueAt`
+- `effectiveAt`
+- `createdAt`
+
+Operational helpers already exist:
+- manual funding script for company cash
+- app-level ledger module used by hiring and contract runtime
+
+Still pending:
+- balance snapshot table
+- projected cash helpers built on planned future entries

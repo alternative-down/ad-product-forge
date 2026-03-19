@@ -1,6 +1,6 @@
 # PRD-03: Agent Hiring Workflow
 
-**Status:** Draft
+**Status:** Partially Implemented
 **Data:** 2026-03-18
 
 ## Objective
@@ -217,3 +217,29 @@ This PRD defines hiring as a company workflow, not just a technical agent creati
 The workflow receives a hiring request, checks affordability for the hiring process itself, generates the hired agent prompt, creates the agent record, creates the first renewable weekly contract, records the hiring process cost, and makes the hired agent available in the runtime.
 
 This keeps hiring aligned with both the financial model of the company and the execution contract model of the hired agent without mixing the hiring workflow with the contract funding process.
+
+## Implementation Status
+
+Implemented today:
+- internal hiring workflow exists in the Forge app
+- workflow input already matches the business shape:
+  - `requestedFunction`
+  - `additionalContext?`
+  - `weeklyBudgetUsd`
+- the workflow generates the hired agent system prompt through a dedicated RH LLM step
+- the RH generation cost is recorded in the company cash ledger
+- the workflow creates:
+  - the agent record
+  - the first weekly execution contract with `autoRenew = true`
+- the workflow instantiates the hired agent in the in-memory internal agent registry
+
+Current implementation notes:
+- the RH prompt generation currently uses a dedicated temporary internal RH agent with:
+  - `model = account-oauth/openai-codex/gpt-5.4-mini`
+- the first contract is created unfunded
+- contract funding remains owned by the contract runtime from `PRD-34`
+- hiring must happen inside the running Forge app process because it mutates the live in-memory agent registry
+
+Still pending:
+- richer hiring logic beyond the current prompt-generation step
+- broader provisioning derived from the requested function

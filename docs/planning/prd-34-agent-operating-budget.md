@@ -85,7 +85,7 @@ Suggested fields:
 - `endsAt`
 - `budgetUsd`
 - `autoRenew`
-- `status`
+- `fundedAt`
 
 ### `agent_execution_steps`
 Tracks step-level cost consumption.
@@ -320,6 +320,38 @@ If budget is added while the agent is already `running`:
 - nothing special happens immediately
 - on the next loop iteration, the delay is recalculated using the updated budget data
 - if conditions allow, execution continues normally
+
+## Implementation Status
+
+**Status:** Partially Implemented
+
+Implemented today:
+- `agent_execution_contracts` exists
+- `agent_execution_steps` exists
+- `llm_model_prices` exists
+- agent execution state is stored directly on the agent row as:
+  - `idle`
+  - `running`
+- the internal runner:
+  - wakes through the existing wake queue
+  - runs `generate([], { maxSteps: 1 })`
+  - records step cost
+  - returns to `idle` on text-only completion
+  - stays in `running` on tool-call continuation
+- first-step `instant` behavior is implemented in memory
+- funding of active contracts is implemented through the company cash ledger
+- auto-renew at period end is implemented in the runner/store flow
+- active contract top-up is implemented and debited from company cash
+
+Current implementation notes:
+- contract rows use `fundedAt` instead of a separate contract status
+- hiring creates the first contract but does not fund it directly
+- the runner resolves a runnable contract before each step
+- if no funded runnable contract is available, the runner stays in backoff
+
+Still pending:
+- OM and future LTM cost registration into `agent_execution_steps`
+- richer reporting or management views over contract history and spend
 
 ## Idle Wake Without Budget
 

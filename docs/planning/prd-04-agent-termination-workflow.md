@@ -1,6 +1,6 @@
 # PRD-04: Agent Termination Workflow
 
-**Status:** Draft
+**Status:** Implemented
 **Data:** 2026-03-18
 
 ## Objective
@@ -146,3 +146,15 @@ This PRD defines agent termination as a direct removal workflow.
 The workflow receives an `agentId`, removes the agent from the runtime, deletes the registry and provider records, removes the full workspace directory under `workspaces/{agentId}/`, and returns confirmation.
 
 This keeps agent termination simple: terminate, clean up, and free the space.
+
+## Implementation Status
+
+Implemented today:
+- internal termination workflow exists in the Forge app
+- the workflow removes the agent from the internal in-memory registry before cleanup
+- the agent row is hard-deleted from the database
+- provider records are removed through database cascade
+- the full `workspaces/{agentId}/` directory is deleted recursively
+
+Current implementation note:
+- like hiring, termination must happen inside the running Forge app process because it mutates the live in-memory agent registry
