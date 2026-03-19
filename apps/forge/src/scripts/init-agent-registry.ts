@@ -42,13 +42,13 @@ const AGENTS_CONFIG = {
     id: 'forge-agent',
     name: 'Forge Agent',
     description: 'Main Forge agent for task execution',
-    modelId: 'claude-opus-4-1',
+    modelId: 'claude-opus-4-6',
   },
   helper: {
     id: 'forge-helper',
     name: 'Forge Helper',
     description: 'Helper agent for analysis and support',
-    modelId: 'claude-opus-4-1',
+    modelId: 'claude-opus-4-6',
   },
 };
 
