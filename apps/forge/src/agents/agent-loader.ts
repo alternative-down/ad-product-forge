@@ -4,6 +4,7 @@ import { agents, agentProviders } from '../database/schema.js';
 import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentRuntime } from './create-forge-agent.js';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
 import { decryptSecret } from '../encryption/crypto.js';
+import { createMicroErpTools } from '../micro-erp/tools.js';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -53,6 +54,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   }
 
   const providers = loadCommunicationProviders(providerCredentials);
+  const tools = createMicroErpTools(db);
 
   const runtime = await createInternalAgentRuntime(
     {
@@ -62,6 +64,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       instructions: agentConfig.instructions,
       model: agentConfig.model,
       omModel: agentConfig.omModel || undefined,
+      tools,
       providers,
       workflows: config.workflows,
       workspaceBasePath: config.workspaceBasePath,
