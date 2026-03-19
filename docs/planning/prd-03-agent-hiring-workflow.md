@@ -1,122 +1,216 @@
-# PRD-03: Workflow de Contratação de Agentes
+# PRD-03: Agent Hiring Workflow
 
-**Status:** Planejamento
-**Data:** 2026-03-15
+**Status:** Draft
+**Data:** 2026-03-18
 
-> **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Os requisitos focam em funcionalidade e simplicidade.
+## Objective
 
----
+Define the internal hiring workflow used when one agent requests that the company hire a new permanent agent.
 
-## Objetivo
+This workflow should behave like a simplified internal HR process:
+- one agent requests a new hire
+- the hiring workflow validates whether the company can afford the process
+- the workflow creates the new agent
+- the workflow creates the first execution contract for that agent
+- the workflow funds that contract from company cash
+- the workflow instantiates the hired agent in the runtime
 
-Permitir que agentes internos criem e provisionem autonomamente agentes especialistas permanentes com roles específicas, provedores de comunicação e ferramentas. A contratação de agentes segue o padrão de workflow Mastra similar a agentes externos mas com configuração persistente.
+## Scope
 
----
+This PRD covers:
+- the hiring request
+- the hiring workflow itself
+- initial agent creation
+- first contract creation
+- first contract funding
+- runtime instantiation of the hired agent
 
-## Requisitos
+This PRD does not cover:
+- company cash ledger design in detail
+- contract pacing rules in detail
+- tools by role/function
+- permissions
+- advanced provisioning policies
 
-### FR1: Criar Agente com Role
-- Agente interno solicita contratar agente via ferramenta
-- Entrada: nome, role, função, systemPrompt, provedores (lista), contexto (opcional)
-- Criado usando workflow Mastra (similar a `createSimpleAgent()`)
-- Saída: agentId, conversationId
-- Agente salvo na tabela `agents` com metadados de role/função
+Related documents:
+- `PRD-08: Company Cash Ledger`
+- `PRD-34: Agent Operating Budget`
 
-### FR2: Configuração de Provedor
-- Sistema configura múltiplos provedores por agente (Discord, Email, Slack, etc)
-- Cada provedor recebe credenciais armazenadas criptografadas (via mecanismo PRD-01)
-- Agente inicializado com todas as credenciais de provedor na inicialização
-- Pode se comunicar via todos os provedores configurados
+## Core Idea
 
-### FR3: Ferramentas Baseadas em Role
-- Agente atribuído ferramentas baseado em role/função
-- Exemplo: role "pesquisa" recebe ferramentas de pesquisa, role "desenvolvedor" recebe ferramentas de desenvolvimento
-- Ferramentas carregadas do sistema de tooling baseado em role
-- System prompt + role determinam capacidades
+Hiring a new agent is not only agent creation.
+It is a company workflow that includes:
+- paying for the hiring process itself
+- creating the hired agent
+- creating the first renewable weekly execution contract
+- funding that first contract from company cash
+- making the agent available in the runtime
 
-### FR4: Rastreamento de Status do Agente
-- Rastrear ciclo de vida do agente: provisionando, ativo, terminado
-- Agente marcado como ativo após provisionamento bem-sucedido
-- Agente contratante recebe confirmação com agentId
+The requesting agent does not decide technical provisioning details.
+It requests a role/function and a weekly amount the company is willing to pay.
+The hiring workflow handles the rest.
 
----
+## Hiring Request Input
 
-## Arquitetura
+The requesting agent provides:
+- the function/professional type needed
+- the weekly amount the company is willing to pay
+- optional additional context for the hiring workflow
 
-### Componentes
+The requesting agent does not provide:
+- tools
+- provider list
+- direct provisioning instructions
+- low-level runtime configuration
 
-1. **Integração com Workflow** — Workflow Mastra para criar agente
-2. **Sistema de Role/Função** — Mapeia role para capacidades, ferramentas, restrições
-3. **Provisionamento de Provedor** — Configurar múltiplos provedores por agente (reutilizar PRD-01)
-4. **Injeção de Ferramentas** — Carregar ferramentas baseado em role do agente
-5. **Armazenamento de Agente** — Tabela agents com metadados de role/função
+The workflow should derive the rest.
 
-### Fluxo
+## Main Flow
 
-```
-Agente Interno invoca workflow de contratação
-  │
-  ├─ Mastra workflow: hireAgent({name, role, function, systemPrompt, providers, context})
-  │
-  ├─ Workflow executa:
-  │  ├─ Validar role existe
-  │  ├─ Criar agente:
-  │  │  ├─ agentId = UUID
-  │  │  ├─ instructions = systemPrompt + context
-  │  │  ├─ model = padrão ou específico de role
-  │  │  └─ Salvar em agents table com role/function
-  │  │
-  │  ├─ Configurar provedores:
-  │  │  └─ Para cada provedor: criptografar credenciais, armazenar em agent_providers
-  │  │
-  │  └─ Carregar ferramentas para role
-  │
-  └─ Retornar agentId + conversationId para agente contratante
-```
+### 1. Receive Hiring Request
 
----
+An internal agent asks the hiring workflow to hire a new permanent agent.
 
-## Schema do Banco de Dados
+Input includes:
+- requested function
+- weekly contract amount
+- optional additional hiring context
 
-**Extensões à tabela agents:**
-- `role` (TEXT) — identificador de role/função
-- `function` (TEXT) — função organizacional
-- `is_active` (BOOLEAN) — se agente está ativo
+### 2. Check Hiring Process Affordability
 
-**Nenhuma tabela nova necessária.** Reutilizar `agent_providers` de PRD-01 para credenciais.
+Before continuing, the system checks whether the company can afford the hiring process itself.
 
----
+This is separate from the future weekly contract budget.
 
-## Decisões Técnicas
+### 3. Check First Contract Affordability
 
-### 1. Usar Workflow Mastra (como Agentes Externos)
-**Decisão:** Workflow de contratação cria agentes via workflow Mastra
+Before creating the hired agent, the system checks whether the company can fund the first weekly execution contract.
 
-**Justificativa:**
-- Consistente com criação de agentes externos
-- Reutiliza padrões existentes de criação de agentes
-- Mais simples que infraestrutura separada de contratação
+This first contract:
+- is created immediately during hiring
+- already starts with `autoRenew = true`
 
-### 2. Injeção de Ferramentas Baseada em Role
-**Decisão:** Ferramentas carregadas a partir de configuração de role na criação do agente
+### 4. Generate the Hired Agent Prompt
 
-**Justificativa:**
-- Ferramentas determinadas por role/função
-- Mapeamento role → ferramentas simples
-- Sem carregamento dinâmico de ferramentas necessário
+The workflow generates the system prompt for the hired agent.
 
-### 3. Reutilizar Sistema de Provedor (PRD-01)
-**Decisão:** Credenciais de provedor armazenados/criptografados da mesma forma que PRD-01
+This prompt should be based on:
+- the requested function
+- the hiring context
+- the company's internal conventions
 
-**Justificativa:**
-- Criptografia consistente
-- Sem duplicação
-- Gerenciamento centralizado de credenciais
+This is part of the hiring process itself and can generate LLM cost.
 
-### 4. Agentes Persistentes
-**Decisão:** Agentes contratados persistentes (ao contrário de agentes externos)
+### 5. Create the Agent Record
 
-**Justificativa:**
-- Agentes contratados esperados para rodar indefinidamente
-- Sem auto-terminação
-- Terminação é ação explícita de admin
+The workflow creates the hired agent record in the company registry.
+
+This is the moment where the new agent becomes a formal company entity.
+
+### 6. Create the First Contract
+
+The workflow creates the first weekly execution contract for the hired agent.
+
+Rules:
+- weekly amount is mandatory
+- auto-renew starts as `true`
+
+### 7. Register Cash Movements
+
+The workflow records at least two distinct financial movements:
+
+1. hiring process cost
+2. first contract funding
+
+These are separate records and should not be merged.
+
+Their detailed ledger behavior belongs to `PRD-08`.
+
+### 8. Instantiate the Hired Agent
+
+After the record and first contract exist, the workflow instantiates the hired agent in the runtime.
+
+The current likely direction is:
+- a singleton/registry in memory with the active instantiated agents
+
+This runtime detail can evolve later, but for now the workflow is responsible for making the hired agent available after successful hiring.
+
+## Financial Boundary
+
+This workflow depends on two other systems:
+
+### PRD-08
+Responsible for:
+- recording company cash movements
+- current balance
+- future obligations
+
+### PRD-34
+Responsible for:
+- the agent execution contract
+- contract budget consumption
+- pacing of future execution steps
+
+This PRD only coordinates the hiring event that connects those systems.
+
+## Data Model Direction
+
+This PRD should not introduce a separate financial model.
+
+It should rely on:
+- company ledger records from `PRD-08`
+- execution contracts from `PRD-34`
+- agent registry records from the agent system
+
+Expected business objects involved in the workflow:
+- hiring request
+- agent record
+- first execution contract
+- ledger entry for hiring process cost
+- ledger entry for first contract funding
+
+## Initial Provisioning
+
+The hiring workflow is responsible for initial provisioning, but the requester does not control that provisioning directly.
+
+For the first version, the practical result is very small:
+- create the hired agent
+- instantiate it in the runtime
+- make it available for internal communication
+
+Future provisioning may include things such as:
+- email account
+- GitHub account
+- workspace preparation
+- seeded files
+- additional provider setup
+
+But these should be derived by the workflow, not manually specified by the hiring requester.
+
+## Cost Recording Rule
+
+The workflow should only register financial cost after a real cost-generating operation has effectively happened.
+
+The simple rule for now is:
+- if a costly LLM operation actually ran, its cost is recorded
+- if the process fails before any real costly operation happened, there is nothing to record yet
+
+The current understanding is that the only meaningfully costly external part of this workflow is the LLM work involved in the hiring process itself.
+The rest is mostly internal system work.
+
+## Design Rules
+
+- Hiring creates both the agent and the first contract.
+- Weekly amount is mandatory at hiring time.
+- New hired agents start with `autoRenew = true`.
+- Hiring process cost and first contract funding are separate financial movements.
+- Requesters describe the professional function needed, not the technical provisioning details.
+- Tool assignment and role-capability mapping do not belong in this PRD.
+
+## Summary
+
+This PRD defines hiring as a company workflow, not just a technical agent creation step.
+
+The workflow receives a hiring request, checks affordability, generates the hired agent prompt, creates the agent record, creates the first renewable weekly contract, records the required cash movements, and makes the hired agent available in the runtime.
+
+This keeps hiring aligned with both the financial model of the company and the execution contract model of the hired agent.
