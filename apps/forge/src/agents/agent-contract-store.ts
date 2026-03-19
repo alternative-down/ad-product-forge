@@ -1,12 +1,15 @@
-import { and, desc, eq, lte, gte, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, lte, gte, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
 import type { Database } from '../database/index.js';
-import { agents, agentExecutionContracts, agentExecutionSteps, companyCashLedger, llmModelPrices } from '../database/schema.js';
+import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices } from '../database/schema.js';
+import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function createAgentContractStore(db: Database) {
+  const companyCash = createCompanyCashLedger(db);
+
   async function getExecutionState(agentId: string) {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
@@ -137,7 +140,7 @@ export function createAgentContractStore(db: Database) {
       return contract;
     }
 
-    const cashBalanceUsd = await getCurrentCashBalanceUsd();
+    const cashBalanceUsd = await companyCash.getCurrentBalanceUsd();
 
     if (cashBalanceUsd < contract.budgetUsd) {
       return null;
@@ -145,18 +148,15 @@ export function createAgentContractStore(db: Database) {
 
     const now = Date.now();
 
-    await db.insert(companyCashLedger).values({
-      id: createId(),
+    await companyCash.postEntry({
       type: 'agent-contract-funding',
       direction: 'out',
       amountUsd: contract.budgetUsd,
       description: `Contract funding for ${contract.agentId}`,
       referenceType: 'agent-execution-contract',
       referenceId: contract.id,
-      status: 'posted',
       dueAt: now,
       effectiveAt: now,
-      createdAt: now,
     });
 
     await db
@@ -170,23 +170,6 @@ export function createAgentContractStore(db: Database) {
       ...contract,
       fundedAt: now,
     };
-  }
-
-  async function getCurrentCashBalanceUsd() {
-    const rows = await db
-      .select({
-        total: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = 'in' then ${companyCashLedger.amountUsd} else -${companyCashLedger.amountUsd} end), 0)`,
-      })
-      .from(companyCashLedger)
-      .where(
-        and(
-          eq(companyCashLedger.status, 'posted'),
-          isNotNull(companyCashLedger.effectiveAt),
-          lte(companyCashLedger.effectiveAt, Date.now()),
-        ),
-      );
-
-    return rows[0]?.total ?? 0;
   }
 
   return {
