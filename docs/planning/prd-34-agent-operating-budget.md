@@ -36,11 +36,12 @@ It does not define:
 
 The company has a single cash balance.
 
-This balance is affected by:
-- incoming money
-- outgoing money
-- agent contract funding
-- contract renewal funding
+The company cash ledger itself is defined in `PRD-08: Company Cash Ledger`.
+
+This PRD depends on that ledger for:
+- contract funding
+- contract renewal
+- contract top-up
 
 ### Agent Contract
 
@@ -73,16 +74,6 @@ This includes not only the agent execution itself, but also other LLM-backed int
 ## Data Model Direction
 
 A minimal model can be built around these records:
-
-### `company_cash_ledger`
-Tracks company-level money movements.
-
-Examples:
-- incoming funds
-- outgoing funds
-- contract funding
-- contract renewal funding
-- contract top-up funding
 
 ### `agent_execution_contracts`
 Tracks the active and historical contract periods for agents.
@@ -130,6 +121,26 @@ Suggested fields:
 - `outputPerMillionUsd`
 
 All values are stored in USD.
+
+## Boundary with PRD-08
+
+This PRD does not define the company ledger itself.
+
+`PRD-08` is responsible for:
+- company cash entries
+- company cash outflows
+- current balance
+- projected balance
+- financial snapshots
+
+`PRD-34` is responsible for:
+- reserving part of company cash into an agent contract
+- consuming that contract budget through execution
+- controlling pacing from the remaining contract budget
+
+In practice:
+- contract funding, renewal, and top-up should create ledger entries in `PRD-08`
+- the contract runtime described here consumes the budget reserved by those financial movements
 
 ## Agent Runtime State
 
