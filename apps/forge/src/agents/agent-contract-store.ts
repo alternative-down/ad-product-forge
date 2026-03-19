@@ -4,11 +4,13 @@ import { createId } from '@paralleldrive/cuid2';
 import type { Database } from '../database/index.js';
 import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices } from '../database/schema.js';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
+import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function createAgentContractStore(db: Database) {
   const companyCash = createCompanyCashLedger(db);
+  const companyCashOperations = createCompanyCashOperations(db);
 
   async function getExecutionState(agentId: string) {
     const agent = await db.query.agents.findFirst({
@@ -148,14 +150,12 @@ export function createAgentContractStore(db: Database) {
 
     const now = Date.now();
 
-    await companyCash.postEntry({
+    await companyCashOperations.recordCashOut({
       type: 'agent-contract-funding',
-      direction: 'out',
       amountUsd: contract.budgetUsd,
       description: `Contract funding for ${contract.agentId}`,
       referenceType: 'agent-execution-contract',
       referenceId: contract.id,
-      dueAt: now,
       effectiveAt: now,
     });
 

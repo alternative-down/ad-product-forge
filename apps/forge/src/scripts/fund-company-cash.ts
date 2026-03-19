@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { getDatabase, runMigrations } from '../database/index.js';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
+import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
 
 const cliInputSchema = z.object({
   amountUsd: z.coerce.number().positive(),
@@ -17,11 +18,11 @@ async function fundCompanyCash() {
   });
   const db = getDatabase();
   const companyCash = createCompanyCashLedger(db);
+  const companyCashOperations = createCompanyCashOperations(db);
 
   await runMigrations(db);
-  await companyCash.postEntry({
+  await companyCashOperations.recordCashIn({
     type: 'manual-adjustment',
-    direction: 'in',
     amountUsd: input.amountUsd,
     description: input.description ?? 'Manual company cash funding',
   });

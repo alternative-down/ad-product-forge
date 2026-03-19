@@ -251,6 +251,13 @@ This keeps the financial model simple, extensible, and independent from the exec
 Implemented today:
 - `company_cash_ledger` exists in the Forge app database
 - current balance is already derived from posted effective ledger records
+- explicit write operations already exist for:
+  - posted cash-in
+  - posted cash-out
+  - planned cash-in
+  - planned cash-out
+  - cancel planned entry
+  - post planned entry
 - the ledger is already used for:
   - hiring process cost
   - contract funding
