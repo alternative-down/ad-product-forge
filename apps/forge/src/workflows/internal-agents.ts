@@ -3,6 +3,7 @@ import { createStep, createWorkflow, type AnyWorkflow } from '@mastra/core/workf
 
 import type { Database } from '../database/index.js';
 import { buildHiredAgentProfile } from '../agents/hiring-profile.js';
+import { generateHiredAgentInstructions } from '../agents/hiring-rh.js';
 import { hireInternalAgent } from '../agents/hire-agent.js';
 import { terminateInternalAgent } from '../agents/terminate-agent.js';
 
@@ -41,9 +42,11 @@ export function createInternalAgentWorkflows(config: {
     outputSchema: hireInternalAgentOutputSchema,
     execute: async ({ inputData }) => {
       const profile = buildHiredAgentProfile(inputData);
+      const hiringRh = await generateHiredAgentInstructions(config.db, inputData);
 
       return hireInternalAgent(config.db, {
         ...profile,
+        instructions: hiringRh.instructions,
         weeklyBudgetUsd: inputData.weeklyBudgetUsd,
         workspaceBasePath: config.workspaceBasePath,
         workflows,
