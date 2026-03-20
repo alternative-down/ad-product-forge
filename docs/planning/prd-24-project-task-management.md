@@ -1,101 +1,209 @@
-# PRD-24: Integração de Sistema de Projetos & Tarefas
+# PRD-24: Linear Agent Integration
 
-> **Nota:** Este PRD é sobre **integração** com uma ferramenta existente, não desenvolvimento de um sistema próprio.
+**Status:** Planned
+**Classification:** FORGE APP
 
-**Classificação:** APLICAÇÃO AD-PRODUCT-FORGE
+## 1. Goal
 
----
+Integrate Forge with **Linear** so internal agents can manage work directly inside Linear using:
+- Linear's hosted **MCP server**
+- one **Linear agent app** per Forge agent
+- Linear webhook events for notifications and wake
 
-## 1. Visão Geral
+This PRD is about:
+- Linear as the external task/project/ticket system
+- agent identity inside Linear
+- MCP access to Linear objects
+- Linear webhooks feeding `agent_notifications`
 
-### Objetivo
+This PRD is not about:
+- creating a local project/task system in Forge
+- mirroring Linear issues/projects into Forge tables
+- building custom issue/project CRUD wrappers when MCP already provides them
 
-Fornecer aos agentes um sistema de **gerenciamento de projetos e tarefas** que eles possam usar para organizar e rastrear trabalho.
+## 2. Core Direction
 
-### Abordagem
+The first version stays small:
+- one Linear workspace
+- one Linear team
+- one Linear agent app per Forge agent
+- agents use Linear directly through the hosted MCP server
+- Forge only stores the integration credentials needed for each agent
 
-**Não desenvolver do zero.** Usar uma ferramenta existente que:
-- Tenha **MCP (Model Context Protocol) pronto** para integração com LLMs
-- Ou tenha **CLIs (Command-Line Interfaces)** bem documentadas
-- Seja facilmente integrada como Tool/Workflow Mastra
+Linear remains the source of truth for:
+- issues
+- projects
+- comments
+- agent sessions
 
-### Candidatas
+Forge remains responsible for:
+- provisioning the per-agent integration state
+- receiving webhooks
+- creating notifications
+- waking the agent runtime
 
-Exemplos de ferramentas que poderiam funcionar:
-- **Linear** (tem MCP, GraphQL API, bom para agentes)
-- **Airtable** (API forte, automações)
-- **Notion** (MCP disponível, bases de dados)
-- **GitHub Projects** (integrado com GitHub, CLI disponível)
-- **Todoist** (API simples, CLI)
+## 3. Workspace Assumption
 
-### Critério de Seleção
+The first version assumes:
+- one Linear workspace
+- one team only
 
-Escolher ferramenta que:
-1. Tenha integração pronta (MCP ou CLI robusto)
-2. Suporte criar projetos e tarefas programaticamente
-3. Permita rastreamento de status
-4. Tenha API para consultas (listar, filtrar)
-5. Seja razoavelmente simples de usar
+This avoids local routing complexity and avoids introducing any local mapping tables for teams or projects.
 
----
+## 4. Identity Model
 
-## 2. Funcionalidades Esperadas
+Each Forge agent should also exist as its own **Linear agent**.
 
-Os agentes devem conseguir:
+The model is:
+- one Forge agent
+- one Linear OAuth application
+- installed with `actor=app`
+- acting as that app user inside the Linear workspace
 
-- **Criar projetos** — Organizar trabalho em grupos
-- **Criar tarefas** — Dentro de projetos, com descrição
-- **Rastrear status** — to-do, in-progress, done (ou equivalente)
-- **Listar/filtrar** — Por projeto, status, data
-- **Atualizar tarefas** — Mudar status, descrição, prioridade
-- **Consultar dados** — Para usar em relatórios ou decisões
+This keeps the identity boundary clean:
+- GitHub identity belongs to the GitHub App
+- Linear identity belongs to the Linear app user
 
----
+## 5. Credential Boundary
 
-## 3. Integração com Mastra
+Linear credentials for one agent should live in encrypted `agent_providers` storage.
 
-### Como Será Exposto aos Agentes
+Suggested provider type:
+- `linear-agent`
 
-**Opção A: Via MCP**
-- Se a ferramenta tiver MCP, expor diretamente como Tool via MCP integration
-- Mastra consome MCP e disponibiliza ao agente
+Suggested stored values:
+- `clientId`
+- `clientSecret`
+- `accessToken`
+- `refreshToken` if issued
+- `viewerId`
+- `webhookSecret`
 
-**Opção B: Via CLI com Wrapper**
-- Se tiver CLI, criar wrapper Tool que executa comandos CLI
-- Exemplo: `runTaskCLI("linear create-task --title 'X' --project 'Y'")`
+These credentials:
+- are not communication `accounts`
+- are not exposed directly to agents
+- are runtime integration credentials for the Linear adapter
 
-**Opção C: Via API com Tool Custom**
-- Se tiver API, criar Tool que chama endpoints
-- Validar e sanitizar inputs
+## 6. Provisioning Direction
 
----
+The first version should assume that the Linear OAuth application itself is created manually.
 
-## 4. Processo de Decisão
+Reason:
+- the public Linear docs describe creating a new Application in settings
+- no public provisioning API was selected here for creating OAuth applications themselves
 
-1. **Pesquisar** ferramentas que atendem os critérios
-2. **Avaliar** qual tem melhor integração (MCP vs CLI vs API)
-3. **Testar** integração com Mastra
-4. **Documentar** como agentes usam
-5. **Treinar** agentes a usar
+So the initial provisioning flow is:
+1. create Forge agent
+2. create corresponding Linear application manually
+3. install it in the workspace with `actor=app`
+4. store the resulting credentials in Forge
+5. start the Linear integration for that agent
 
----
+This keeps the implementation grounded in the official surface that is already documented.
 
-## 5. Não Fazer
+## 7. MCP Direction
 
-- ❌ **Não desenvolver sistema próprio** de projetos/tarefas
-- ❌ **Não replicar** funcionalidades de ferramentas existentes
-- ❌ **Não criar API** proprietária desnecessária
+Forge should use **Linear's hosted remote MCP server**:
+- `https://mcp.linear.app/mcp`
 
----
+Authentication should use:
+- `Authorization: Bearer <token>`
 
-## 6. Critério de Sucesso
+That token can represent:
+- an app user token
+- a normal OAuth token
+- an API key
 
-- [ ] Ferramenta escolhida e avaliada
-- [ ] Integração com Mastra funciona
-- [ ] Agentes conseguem criar/listar/atualizar projetos e tarefas
-- [ ] Dados persistem na ferramenta (não localmente)
-- [ ] Documentação clara para agentes
+For this PRD, the intended mode is:
+- **app user token for the agent**
 
----
+The goal is to expose Linear's own MCP tools to the agent instead of building a parallel custom tool surface in Forge.
 
-**Fim do documento**
+Implementation note:
+- if Forge still lacks remote MCP client wiring, that wiring should be added first
+- the fallback should not be a large custom CRUD layer
+- if a temporary fallback is ever needed, it should stay thin and only cover the minimum gap until MCP wiring exists
+
+## 8. Webhook Direction
+
+Each Linear agent app should point to an adapter-specific webhook endpoint in Forge.
+
+Initial route direction:
+- `POST /webhooks/linear/{agentId}`
+
+This keeps the routing explicit and consistent with the one-app-per-agent model.
+
+Relevant webhook categories:
+- Agent session events
+- Inbox notifications
+- Permission changes
+
+The Linear webhook receiver should:
+1. verify signature from the raw request body
+2. verify freshness using `webhookTimestamp`
+3. persist a compact notification in `agent_notifications`
+4. trigger `wakeQueue`
+5. return quickly
+
+## 9. Notification Direction
+
+Linear webhook events should not become communication messages.
+
+They should become generic `agent_notifications` entries, similar to the GitHub integration pattern.
+
+The notification content should be compact and provider-shaped enough to be useful, for example:
+- `source: 'linear'`
+- `event`
+- `action`
+- `type`
+- `url`
+- `summary`
+- compact payload when needed
+
+## 10. Agent Session Direction
+
+The most important Linear-native flow is the **Agent Session** lifecycle.
+
+When a user:
+- mentions the agent
+- delegates an issue to the agent
+- continues an existing session
+
+Linear sends an `AgentSessionEvent` webhook to that agent.
+
+Forge should turn this into:
+- notification
+- wake
+- then the agent continues by operating through MCP and/or Linear Agent Activities
+
+## 11. Scope Constraints
+
+Important constraint from Linear:
+- `actor=app` integrations cannot also request `admin` scope
+
+This means:
+- the per-agent Linear identity should stay focused on agent work
+- admin-level workspace automation should not be mixed into this same credential
+
+That is acceptable for the first version because:
+- we are not trying to automate workspace administration here
+- we only need the agent to operate in Linear as an agent
+
+## 12. Design Rules
+
+- no local issue/project mirror tables
+- no custom CRUD tool layer when MCP already provides the surface
+- one Forge agent maps to one Linear agent app
+- one team only in the first version
+- webhook handling stays adapter-specific
+- webhook events become `agent_notifications`
+- agent wake happens from webhook intake
+
+## 13. Success Criteria
+
+- each Forge agent can be connected to its own Linear agent identity
+- the agent can use Linear through the hosted MCP server
+- the agent can work on issues/projects/comments without local Forge mirrors
+- Agent Session webhooks reach Forge
+- relevant webhook events create notifications and wake the agent
+- no extra project/task schema is introduced in Forge
