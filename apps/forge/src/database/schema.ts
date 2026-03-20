@@ -143,19 +143,6 @@ export const companyCashLedger = sqliteTable('company_cash_ledger', {
 export type CompanyCashLedgerEntry = typeof companyCashLedger.$inferSelect;
 export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
 
-export const systemProviders = sqliteTable('system_providers', {
-  id: text('id').primaryKey(),
-  providerType: text('provider_type').notNull(),
-  encryptedCredentials: text('encrypted_credentials').notNull(),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-}, (table) => ({
-  systemProviderUnique: uniqueIndex('system_provider_unique').on(table.providerType),
-}));
-
-export type SystemProvider = typeof systemProviders.$inferSelect;
-export type NewSystemProvider = typeof systemProviders.$inferInsert;
-
 /**
  * Tabela: agent_providers
  * Credenciais criptografadas de provedores por agente

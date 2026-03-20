@@ -237,7 +237,7 @@ Implemented today:
 - the workflow instantiates the hired agent in the in-memory internal agent registry
 - the workflow provisions a Migadu mailbox for the hired agent
 - the workflow stores the mailbox runtime credentials in encrypted agent provider storage
-- the workflow depends on the company-level Migadu provider config already existing in encrypted `system_providers` storage
+- the workflow depends on `MIGADU_API_USER` and `MIGADU_API_KEY` in the app env
 - the workflow provisions a pending GitHub App integration for the hired agent
 - the workflow returns:
   - `emailAddress`
