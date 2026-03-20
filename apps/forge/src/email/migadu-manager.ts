@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { Database } from '../database/index.js';
 import { agentProviders } from '../database/schema.js';
 import { decryptSecret } from '../encryption/crypto.js';
+import { createSystemProviderStore } from '../providers/system-provider-store.js';
 import type { ProviderCredentialsMap } from '../communication/provider-loader.js';
 
 const EMAIL_PROVIDER_TYPE = 'email';
@@ -40,18 +41,8 @@ export type AgentEmailManager = ReturnType<typeof createAgentEmailManager>;
 
 export function createAgentEmailManager(config: {
   db: Database;
-  apiBaseUrl: string;
-  apiUser: string;
-  apiKey: string;
-  domain: string;
-  imapHost: string;
-  imapPort: number;
-  imapSecure: boolean;
-  smtpHost: string;
-  smtpPort: number;
-  smtpSecure: boolean;
-  bcc?: string;
 }) {
+  const systemProviders = createSystemProviderStore(config.db);
   async function provisionMailbox(input: { agentId: string; agentName: string }) {
     const localPart = buildMailboxLocalPart(input.agentId);
     const password = createMailboxPassword();
@@ -70,11 +61,12 @@ export function createAgentEmailManager(config: {
       });
     }
 
-    const address = `${localPart}@${config.domain}`;
+    const providerConfig = await getProviderConfig();
+    const address = `${localPart}@${providerConfig.domain}`;
 
     return {
       address,
-      credentials: buildProviderCredentials(address, password),
+      credentials: buildProviderCredentials(providerConfig, address, password),
     };
   }
 
@@ -90,9 +82,10 @@ export function createAgentEmailManager(config: {
 
   async function deleteMailboxByAddress(address: string) {
     const localPart = getLocalPart(address);
-    const response = await fetch(buildUrl(`/domains/${config.domain}/mailboxes/${localPart}`), {
+    const providerConfig = await getProviderConfig();
+    const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
       method: 'DELETE',
-      headers: buildHeaders(),
+      headers: buildHeaders(providerConfig),
     });
 
     if (response.ok || response.status === 404) {
@@ -115,8 +108,9 @@ export function createAgentEmailManager(config: {
   }
 
   async function getMailbox(localPart: string) {
-    const response = await fetch(buildUrl(`/domains/${config.domain}/mailboxes/${localPart}`), {
-      headers: buildHeaders(),
+    const providerConfig = await getProviderConfig();
+    const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
+      headers: buildHeaders(providerConfig),
     });
 
     if (response.ok) {
@@ -131,9 +125,10 @@ export function createAgentEmailManager(config: {
   }
 
   async function createMailbox(input: { localPart: string; name: string; password: string }) {
-    const response = await fetch(buildUrl(`/domains/${config.domain}/mailboxes`), {
+    const providerConfig = await getProviderConfig();
+    const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes`), {
       method: 'POST',
-      headers: buildHeaders(),
+      headers: buildHeaders(providerConfig),
       body: JSON.stringify({
         local_part: input.localPart,
         name: input.name,
@@ -149,9 +144,10 @@ export function createAgentEmailManager(config: {
   }
 
   async function updateMailbox(localPart: string, input: { name: string; password: string }) {
-    const response = await fetch(buildUrl(`/domains/${config.domain}/mailboxes/${localPart}`), {
+    const providerConfig = await getProviderConfig();
+    const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
       method: 'PUT',
-      headers: buildHeaders(),
+      headers: buildHeaders(providerConfig),
       body: JSON.stringify({
         name: input.name,
         password: input.password,
@@ -165,33 +161,43 @@ export function createAgentEmailManager(config: {
     return migaduMailboxSchema.parse(await response.json());
   }
 
-  function buildProviderCredentials(address: string, password: string): ProviderCredentialsMap['email'] {
+  async function getProviderConfig() {
+    const providerConfig = await systemProviders.getMigadu();
+
+    if (!providerConfig) {
+      throw new Error('Migadu provider is not configured in system_providers');
+    }
+
+    return providerConfig;
+  }
+
+  function buildProviderCredentials(providerConfig: { imapHost: string; imapPort: number; imapSecure: boolean; smtpHost: string; smtpPort: number; smtpSecure: boolean; bcc?: string }, address: string, password: string): ProviderCredentialsMap['email'] {
     return {
       imap: {
-        host: config.imapHost,
-        port: config.imapPort,
-        secure: config.imapSecure,
+        host: providerConfig.imapHost,
+        port: providerConfig.imapPort,
+        secure: providerConfig.imapSecure,
         user: address,
         password,
       },
       smtp: {
-        host: config.smtpHost,
-        port: config.smtpPort,
-        secure: config.smtpSecure,
+        host: providerConfig.smtpHost,
+        port: providerConfig.smtpPort,
+        secure: providerConfig.smtpSecure,
         user: address,
         password,
       },
-      bcc: config.bcc,
+      bcc: providerConfig.bcc,
     };
   }
 
-  function buildUrl(path: string) {
-    return new URL(path.replace(/^\//, ''), ensureTrailingSlash(config.apiBaseUrl)).toString();
+  function buildUrl(providerConfig: { apiBaseUrl: string }, path: string) {
+    return new URL(path.replace(/^\//, ''), ensureTrailingSlash(providerConfig.apiBaseUrl)).toString();
   }
 
-  function buildHeaders() {
+  function buildHeaders(providerConfig: { apiUser: string; apiKey: string }) {
     return {
-      Authorization: `Basic ${Buffer.from(`${config.apiUser}:${config.apiKey}`).toString('base64')}`,
+      Authorization: `Basic ${Buffer.from(`${providerConfig.apiUser}:${providerConfig.apiKey}`).toString('base64')}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };

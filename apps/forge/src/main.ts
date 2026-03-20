@@ -12,8 +12,6 @@ import { createForgeHttpServer } from './http/server.js';
 import { createGitHubAppManager } from './github/manager.js';
 import { createAgentEmailManager } from './email/migadu-manager.js';
 
-const envBooleanSchema = z.enum(['true', 'false']).transform((value) => value === 'true');
-
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
   WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
@@ -21,17 +19,6 @@ const envSchema = z.object({
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
   GITHUB_ORGANIZATION: z.string().min(1),
   GITHUB_APP_HOME_URL: z.string().url().optional(),
-  MIGADU_API_BASE_URL: z.string().url().default('https://api.migadu.com/v1'),
-  MIGADU_API_USER: z.string().email().optional(),
-  MIGADU_API_KEY: z.string().min(1).optional(),
-  MIGADU_DOMAIN: z.string().min(1).optional(),
-  MIGADU_IMAP_HOST: z.string().default('imap.migadu.com'),
-  MIGADU_IMAP_PORT: z.coerce.number().int().positive().default(993),
-  MIGADU_IMAP_SECURE: envBooleanSchema.default('true'),
-  MIGADU_SMTP_HOST: z.string().default('smtp.migadu.com'),
-  MIGADU_SMTP_PORT: z.coerce.number().int().positive().default(465),
-  MIGADU_SMTP_SECURE: envBooleanSchema.default('true'),
-  MIGADU_BCC: z.string().email().optional(),
 });
 
 export async function main() {
@@ -46,29 +33,9 @@ export async function main() {
     port: env.FORGE_HTTP_PORT,
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
-  const hasAnyMigaduConfig = Boolean(env.MIGADU_API_USER || env.MIGADU_API_KEY || env.MIGADU_DOMAIN);
-  const hasFullMigaduConfig = Boolean(env.MIGADU_API_USER && env.MIGADU_API_KEY && env.MIGADU_DOMAIN);
-
-  if (hasAnyMigaduConfig && !hasFullMigaduConfig) {
-    throw new Error('Migadu email provisioning requires MIGADU_API_USER, MIGADU_API_KEY, and MIGADU_DOMAIN');
-  }
-
-  const emailMailboxes = hasFullMigaduConfig
-    ? createAgentEmailManager({
-        db,
-        apiBaseUrl: env.MIGADU_API_BASE_URL,
-        apiUser: env.MIGADU_API_USER!,
-        apiKey: env.MIGADU_API_KEY!,
-        domain: env.MIGADU_DOMAIN!,
-        imapHost: env.MIGADU_IMAP_HOST,
-        imapPort: env.MIGADU_IMAP_PORT,
-        imapSecure: env.MIGADU_IMAP_SECURE,
-        smtpHost: env.MIGADU_SMTP_HOST,
-        smtpPort: env.MIGADU_SMTP_PORT,
-        smtpSecure: env.MIGADU_SMTP_SECURE,
-        bcc: env.MIGADU_BCC,
-      })
-    : null;
+  const emailMailboxes = createAgentEmailManager({
+    db,
+  });
   const githubApps = createGitHubAppManager({
     db,
     httpServer,

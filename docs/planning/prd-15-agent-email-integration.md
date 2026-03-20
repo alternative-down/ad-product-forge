@@ -10,6 +10,7 @@ Give each hired internal agent a dedicated email address under the company domai
 The system must be able to:
 - create the mailbox when the agent is hired
 - store the mailbox credentials securely
+- load the company-level Migadu provider configuration from encrypted provider storage
 - use the mailbox to send and receive email
 - remove the mailbox when the agent is terminated
 
@@ -71,6 +72,7 @@ When a new internal agent is hired, the hiring flow should also:
 
 The mailbox should be derived by the system.
 The hiring requester does not manually specify SMTP/IMAP details.
+The company-level Migadu API configuration should already exist in encrypted system provider storage before hiring runs.
 
 ### On Termination
 
@@ -97,9 +99,10 @@ Mailbox credentials do **not** belong in communication `accounts`.
 
 Boundary:
 - communication `accounts` = identity records for messaging providers and contacts
-- encrypted agent provider storage = private credentials for external systems used by the agent runtime
+- encrypted `system_providers` storage = company-level provider credentials such as the Migadu admin API config
+- encrypted `agent_providers` storage = per-agent runtime credentials such as the actual mailbox login used by the email provider
 
-So the email mailbox credentials belong in encrypted agent provider storage, using the same direction already used for other private integrations.
+So the Migadu admin config belongs in `system_providers`, while the mailbox credentials used by one agent belong in `agent_providers`.
 
 ## Expected Credential Shape
 
@@ -140,6 +143,10 @@ Implemented today:
 - the runtime email provider continues to use IMAP and SMTP with the stored mailbox credentials
 
 Current implementation notes:
-- hiring requires Migadu configuration in the running Forge app process
+- hiring requires a `migadu` record in encrypted `system_providers` storage
 - existing seeded internal agents are not retroactively given mailboxes
 - inbound email still uses IMAP IDLE, not webhooks
+
+Bootstrap direction:
+- the app includes a bootstrap script to save the Migadu provider config into `system_providers`
+- the runtime itself no longer depends on Migadu env vars for provisioning

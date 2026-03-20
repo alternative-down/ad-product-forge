@@ -21,6 +21,7 @@ The email provider connects that mailbox to the agent communication system, so i
 Mailbox credentials are not entered manually by the hiring requester.
 They should be provisioned by the application through the Migadu API during hiring and stored in encrypted agent provider storage.
 
+The company-level Migadu admin config is stored separately in encrypted `system_providers` storage.
 The communication `accounts` tables continue to represent messaging identity only.
 The real IMAP/SMTP credentials belong in encrypted `agent_providers` storage.
 
@@ -135,21 +136,20 @@ The provider itself (`email-account.ts`) will also be usable standalone inside a
 
 ---
 
-## Environment Variables (.env.example)
+## System Provider Bootstrap
 
+The Migadu admin config is not loaded from app env vars anymore.
+It should be stored in encrypted `system_providers` storage.
+
+Bootstrap script:
+```bash
+npm run -w forge-app set-migadu-provider -- \
+  admin@yourdomain.com \
+  your-api-key \
+  yourdomain.com
 ```
-MIGADU_API_BASE_URL=https://api.migadu.com/v1
-MIGADU_API_USER=admin@yourdomain.com
-MIGADU_API_KEY=your-api-key
-MIGADU_DOMAIN=yourdomain.com
-MIGADU_IMAP_HOST=imap.migadu.com
-MIGADU_IMAP_PORT=993
-MIGADU_IMAP_SECURE=true
-MIGADU_SMTP_HOST=smtp.migadu.com
-MIGADU_SMTP_PORT=465
-MIGADU_SMTP_SECURE=true
-MIGADU_BCC=archive@yourdomain.com
-```
+
+Optional extra arguments allow overriding API base URL, IMAP host/port/secure, SMTP host/port/secure, and BCC.
 
 ---
 
