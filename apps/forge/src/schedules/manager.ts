@@ -32,7 +32,7 @@ const createScheduleSchema = z.object({
 });
 
 const HEARTBEAT_NAME = 'System heartbeat';
-const HEARTBEAT_CRON_EXPRESSION = '*/30 * * * *';
+const HEARTBEAT_CRON_EXPRESSION = '0 * * * *';
 const HEARTBEAT_TIMEZONE = 'UTC';
 
 const updateScheduleSchema = z.object({
@@ -142,12 +142,6 @@ export function createAgentScheduleManager(input: {
       scheduledDate,
     });
     assertFutureScheduledDate(parsed.scheduleType, scheduledDate);
-    previewSchedule({
-      scheduleType: parsed.scheduleType,
-      cronExpression: parsed.cronExpression,
-      scheduledDate,
-      timezone: parsed.timezone,
-    });
     const record = await store.createSchedule({
       agentId,
       kind: 'agent',
@@ -165,7 +159,13 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Failed to load created schedule: ${record.id}`);
     }
 
-    await registerSchedule(scheduleRecord);
+    try {
+      await registerSchedule(scheduleRecord);
+    } catch (error) {
+      await store.deleteAgentSchedule(agentId, record.id);
+      throw error;
+    }
+
     return toToolOutput(scheduleRecord);
   }
 
@@ -209,21 +209,22 @@ export function createAgentScheduleManager(input: {
       assertFutureScheduledDate(scheduleType, scheduledDate);
     }
 
-    if ((parsed.isActive ?? existing.isActive) === true) {
-      previewSchedule({
-        scheduleType,
-        cronExpression,
-        scheduledDate,
-        timezone: parsed.timezone ?? existing.timezone,
-      });
-    }
-
     const normalizedCronExpression = scheduleType === 'cron'
       ? cronExpression ?? null
       : null;
     const normalizedScheduledDate = scheduleType === 'date'
       ? scheduledDate ?? null
       : null;
+    const rollbackInput = {
+      name: existing.name,
+      description: existing.description ?? null,
+      scheduleType: existing.scheduleType,
+      cronExpression: existing.cronExpression ?? null,
+      scheduledDate: existing.scheduledDate ?? null,
+      timezone: existing.timezone,
+      content: existing.content,
+      isActive: existing.isActive,
+    } as const;
     const updated = await store.updateAgentSchedule(agentId, scheduleId, {
       name: parsed.name,
       description: parsed.description,
@@ -241,10 +242,20 @@ export function createAgentScheduleManager(input: {
 
     cancelJob(scheduleId);
 
-    if (updated.isActive) {
-      await registerSchedule(updated);
-    } else {
-      await store.setNextTriggerAt(scheduleId, null);
+    try {
+      if (updated.isActive) {
+        await registerSchedule(updated);
+      } else {
+        await store.setNextTriggerAt(scheduleId, null);
+      }
+    } catch (error) {
+      const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
+
+      if (existing.isActive && restored) {
+        await registerSchedule(restored);
+      }
+
+      throw error;
     }
 
     const reloaded = await store.getAgentSchedule(agentId, scheduleId);
@@ -421,28 +432,6 @@ function assertFutureScheduledDate(scheduleType: 'cron' | 'date', scheduledDate?
   if (scheduledDate <= Date.now()) {
     throw new Error('scheduledDate must be in the future');
   }
-}
-
-function previewSchedule(input: {
-  scheduleType: 'cron' | 'date';
-  cronExpression?: string;
-  scheduledDate?: number;
-  timezone: string;
-}) {
-  if (input.scheduleType === 'date') {
-    return;
-  }
-
-  if (!input.cronExpression) {
-    throw new Error('cronExpression is required when scheduleType is cron');
-  }
-
-  const preview = scheduleJob({
-    rule: input.cronExpression,
-    tz: input.timezone,
-  }, () => {});
-
-  preview.cancel();
 }
 
 function createNotificationContent(input: {
