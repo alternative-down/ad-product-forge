@@ -746,13 +746,7 @@ export function createGitHubAppManager(config: {
     await saveCredentials(agentId, activeCredentials);
     await notifications.createNotification({
       agentId,
-      content: JSON.stringify({
-        source: 'github',
-        type: 'github-app-installed',
-        appSlug: activeCredentials.appSlug,
-        installationId,
-        organization: config.organization,
-      }),
+      content: `GitHub App ${activeCredentials.appSlug} installed in organization ${config.organization}.`,
     });
     config.notifyAgent(agentId);
 
@@ -783,25 +777,24 @@ export function createGitHubAppManager(config: {
       const payloadRecord = payload as Record<string, unknown>;
       const repository =
         typeof payloadRecord.repository === 'object' && payloadRecord.repository && 'full_name' in payloadRecord.repository
-          ? payloadRecord.repository.full_name
+          ? (typeof payloadRecord.repository.full_name === 'string' ? payloadRecord.repository.full_name : undefined)
           : undefined;
       const sender =
         typeof payloadRecord.sender === 'object' && payloadRecord.sender && 'login' in payloadRecord.sender
-          ? payloadRecord.sender.login
+          ? (typeof payloadRecord.sender.login === 'string' ? payloadRecord.sender.login : undefined)
           : undefined;
       const action = typeof payloadRecord.action === 'string' ? payloadRecord.action : undefined;
+      const content = summarizeGitHubEvent({
+        event: name,
+        action,
+        repository,
+        sender,
+        payload,
+      });
 
       await notifications.createNotification({
         agentId,
-        content: JSON.stringify({
-          source: 'github',
-          deliveryId: id,
-          event: name,
-          action,
-          repository,
-          sender,
-          payload,
-        }),
+        content,
       });
       config.notifyAgent(agentId);
     });
@@ -958,6 +951,62 @@ function toIssueDetails(issue: GitHubIssueLike) {
     createdAt: issue.created_at,
     updatedAt: issue.updated_at,
   };
+}
+
+function summarizeGitHubEvent(input: {
+  event: string;
+  action?: string;
+  repository?: string;
+  sender?: string;
+  payload: unknown;
+}) {
+  const payloadRecord = isRecord(input.payload) ? input.payload : {};
+  const issue = isRecord(payloadRecord.issue) ? payloadRecord.issue : null;
+  const pullRequest = isRecord(payloadRecord.pull_request) ? payloadRecord.pull_request : null;
+  const review = isRecord(payloadRecord.review) ? payloadRecord.review : null;
+  const actionText = input.action ? ` ${input.action}` : '';
+  const repositoryText = input.repository ? ` in ${input.repository}` : '';
+  const senderText = input.sender ? ` by ${input.sender}` : '';
+
+  if (input.event === 'issues' && issue) {
+    const number = typeof issue.number === 'number' ? issue.number : null;
+    const title = typeof issue.title === 'string' ? issue.title : null;
+    return `Issue${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
+  }
+
+  if (input.event === 'issue_comment' && issue) {
+    const number = typeof issue.number === 'number' ? issue.number : null;
+    const title = typeof issue.title === 'string' ? issue.title : null;
+    return `Issue comment${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
+  }
+
+  if (input.event === 'pull_request' && pullRequest) {
+    const number = typeof pullRequest.number === 'number' ? pullRequest.number : null;
+    const title = typeof pullRequest.title === 'string' ? pullRequest.title : null;
+    return `Pull request${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
+  }
+
+  if (input.event === 'pull_request_review' && pullRequest) {
+    const number = typeof pullRequest.number === 'number' ? pullRequest.number : null;
+    const title = typeof pullRequest.title === 'string' ? pullRequest.title : null;
+    const reviewState = review && typeof review.state === 'string' ? ` (${review.state.toLowerCase()})` : '';
+    return `Pull request review${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${reviewState}${senderText}`.trim();
+  }
+
+  if (input.event === 'push') {
+    const ref = typeof payloadRecord.ref === 'string' ? payloadRecord.ref.replace('refs/heads/', '') : null;
+    return `Push${repositoryText}${ref ? ` on ${ref}` : ''}${senderText}`.trim();
+  }
+
+  if (input.event === 'repository') {
+    return `Repository event${actionText}${repositoryText}${senderText}`.trim();
+  }
+
+  return `GitHub event ${input.event}${actionText}${repositoryText}${senderText}`.trim();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function createAppName(agentName: string, agentId: string) {

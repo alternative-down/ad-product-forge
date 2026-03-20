@@ -61,7 +61,7 @@ Precisamos tbm dar Tool de criação de crons/agendamentos para os próprios age
 
 A ideia aqui é que o cron receba a configuração de agendamento/repetição e também uma mensagem.
 
-Essa mensagem vai ser inserida no provider chat-interno como uma mensagem dele para ele mesmo e fazer a notificação do evento que aciona o wakeQueue, assim o agente recebe a instrução que ele criou de atividade para ele mesmo e pode executar
+Essa mensagem deve virar uma entrada em `agent_notifications`, gerando o evento que aciona o `wakeQueue`, assim o agente recebe a instrução que ele criou para si mesmo e pode executar.
 
 Hoje o módulo de comunicação interno apenas permite mensagem direta, não permitindo grupos.
 
@@ -265,8 +265,8 @@ Esse recurso deve permitir informar:
 
 Fluxo esperado:
 
-* a mensagem será inserida no provider de chat interno como uma mensagem do agente para ele mesmo;
-* essa inserção irá gerar a notificação/evento que aciona o `wakeQueue`;
+* a mensagem será registrada em `agent_notifications`;
+* esse registro irá acionar o `wakeQueue`;
 * o agente receberá a instrução criada por ele próprio e poderá executá-la.
 
 ---
