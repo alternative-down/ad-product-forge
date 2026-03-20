@@ -107,7 +107,6 @@ export async function main() {
     coolify,
     schedules,
   });
-  await schedules.ensureHeartbeats(agents.map(({ runtime }) => runtime.id));
   await githubApps.loadAllAgents();
   await schedules.loadAll();
   await httpServer.start();

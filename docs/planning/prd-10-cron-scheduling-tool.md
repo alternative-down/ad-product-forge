@@ -25,6 +25,7 @@ Neste PRD:
 - heartbeat do sistema usa `kind = 'heartbeat'`;
 - heartbeat não aparece nas tools do agente;
 - heartbeat só chama `wakeQueue`, sem criar `agent_notifications`.
+- heartbeat é criado no hiring do agente, não no boot da aplicação.
 
 ### Controle de acesso
 
