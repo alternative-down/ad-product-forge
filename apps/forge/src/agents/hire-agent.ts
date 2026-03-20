@@ -138,6 +138,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     );
 
     await getInternalAgentRegistry().add(db, runtime);
+    await input.schedules.ensureHeartbeats([agentId]);
 
     return {
       agentId,

@@ -31,6 +31,10 @@ const createScheduleSchema = z.object({
   }
 });
 
+const HEARTBEAT_NAME = 'System heartbeat';
+const HEARTBEAT_CRON_EXPRESSION = '*/30 * * * *';
+const HEARTBEAT_TIMEZONE = 'UTC';
+
 const updateScheduleSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
@@ -56,6 +60,7 @@ export function createAgentScheduleManager(input: {
   const store = createAgentScheduleStore(input.db);
   const notifications = createAgentNotificationStore(input.db);
   const jobs = new Map<string, Job>();
+  type StoredSchedule = NonNullable<Awaited<ReturnType<typeof store.getScheduleByKind>>>;
 
   async function loadAll() {
     const schedules = await store.listActiveSchedules();
@@ -63,6 +68,68 @@ export function createAgentScheduleManager(input: {
     for (const scheduleRecord of schedules) {
       cancelJob(scheduleRecord.scheduleId);
       await registerSchedule(scheduleRecord);
+    }
+  }
+
+  async function ensureHeartbeats(agentIds: string[]) {
+    for (const agentId of agentIds) {
+      const existing = await store.getScheduleByKind(agentId, 'heartbeat');
+
+      if (!existing) {
+        const created = await store.createSchedule({
+          agentId,
+          kind: 'heartbeat',
+          name: HEARTBEAT_NAME,
+          description: null,
+          scheduleType: 'cron',
+          cronExpression: HEARTBEAT_CRON_EXPRESSION,
+          scheduledDate: undefined,
+          timezone: HEARTBEAT_TIMEZONE,
+          content: '',
+        });
+        const createdHeartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
+
+        if (!createdHeartbeat) {
+          throw new Error(`Failed to load heartbeat schedule for agent ${agentId}`);
+        }
+
+        cancelJob(createdHeartbeat.scheduleId);
+        await registerSchedule(createdHeartbeat);
+        continue;
+      }
+
+      const currentCron = existing.cronExpression;
+      const currentTimezone = existing.timezone;
+      const needsUpdate =
+        existing.scheduleType !== 'cron' ||
+        currentCron !== HEARTBEAT_CRON_EXPRESSION ||
+        currentTimezone !== HEARTBEAT_TIMEZONE ||
+        existing.isActive === false;
+
+      if (!needsUpdate) {
+        cancelJob(existing.scheduleId);
+        await registerSchedule(existing);
+        continue;
+      }
+
+      await store.updateAgentSchedule(agentId, existing.scheduleId, {
+        name: HEARTBEAT_NAME,
+        description: null,
+        scheduleType: 'cron',
+        cronExpression: HEARTBEAT_CRON_EXPRESSION,
+        scheduledDate: null,
+        timezone: HEARTBEAT_TIMEZONE,
+        content: '',
+        isActive: true,
+      });
+      const updatedHeartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
+
+      if (!updatedHeartbeat) {
+        throw new Error(`Failed to reload heartbeat schedule for agent ${agentId}`);
+      }
+
+      cancelJob(updatedHeartbeat.scheduleId);
+      await registerSchedule(updatedHeartbeat);
     }
   }
 
@@ -83,6 +150,7 @@ export function createAgentScheduleManager(input: {
     });
     const record = await store.createSchedule({
       agentId,
+      kind: 'agent',
       name: parsed.name,
       description: parsed.description,
       scheduleType: parsed.scheduleType,
@@ -212,7 +280,7 @@ export function createAgentScheduleManager(input: {
     await gracefulShutdown();
   }
 
-  async function registerSchedule(scheduleRecord: Awaited<ReturnType<typeof store.getAgentSchedule>>) {
+  async function registerSchedule(scheduleRecord: StoredSchedule | null) {
     if (!scheduleRecord || !scheduleRecord.isActive) {
       return;
     }
@@ -230,7 +298,7 @@ export function createAgentScheduleManager(input: {
       }
 
       const job = scheduleJob(scheduleRecord.scheduleId, scheduledDate, async (fireDate) => {
-        await triggerSchedule(scheduleRecord.scheduleId, scheduleRecord.agentId, scheduleRecord.name, scheduleRecord.description, scheduleRecord.content, fireDate, false);
+        await triggerSchedule(scheduleRecord, fireDate, false);
       });
 
       jobs.set(scheduleRecord.scheduleId, job);
@@ -250,11 +318,7 @@ export function createAgentScheduleManager(input: {
       const nextInvocation = jobs.get(scheduleRecord.scheduleId)?.nextInvocation();
 
       await triggerSchedule(
-        scheduleRecord.scheduleId,
-        scheduleRecord.agentId,
-        scheduleRecord.name,
-        scheduleRecord.description,
-        scheduleRecord.content,
+        scheduleRecord,
         fireDate,
         true,
         nextInvocation?.getTime() ?? null,
@@ -266,33 +330,32 @@ export function createAgentScheduleManager(input: {
   }
 
   async function triggerSchedule(
-    scheduleId: string,
-    agentId: string,
-    name: string,
-    description: string | undefined,
-    content: string,
+    scheduleRecord: StoredSchedule,
     fireDate: Date,
     remainsActive: boolean,
     nextTriggerAt: number | null = null,
   ) {
-    cancelCompletedDateJob(scheduleId, remainsActive);
+    cancelCompletedDateJob(scheduleRecord.scheduleId, remainsActive);
 
-    await notifications.createNotification({
-      agentId,
-      content: createNotificationContent({
-        name,
-        description,
-        content,
-        fireDate,
-      }),
-    });
+    if (scheduleRecord.kind === 'agent') {
+      await notifications.createNotification({
+        agentId: scheduleRecord.agentId,
+        content: createNotificationContent({
+          name: scheduleRecord.name,
+          description: scheduleRecord.description,
+          content: scheduleRecord.content,
+          fireDate,
+        }),
+      });
+    }
+
     await store.markTriggered({
-      scheduleId,
+      scheduleId: scheduleRecord.scheduleId,
       lastTriggeredAt: fireDate.getTime(),
       nextTriggerAt,
       isActive: remainsActive,
     });
-    input.notifyAgent(agentId);
+    input.notifyAgent(scheduleRecord.agentId);
   }
 
   function cancelCompletedDateJob(scheduleId: string, remainsActive: boolean) {
@@ -316,6 +379,7 @@ export function createAgentScheduleManager(input: {
 
   return {
     loadAll,
+    ensureHeartbeats,
     createSchedule,
     listSchedules,
     updateSchedule,

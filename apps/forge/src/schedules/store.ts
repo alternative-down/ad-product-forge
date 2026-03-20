@@ -5,11 +5,13 @@ import type { Database } from '../database/index.js';
 import { agentSchedules } from '../database/schema.js';
 
 type ScheduleType = 'cron' | 'date';
+type ScheduleKind = 'agent' | 'heartbeat';
 
 type CreateAgentScheduleInput = {
   agentId: string;
+  kind: ScheduleKind;
   name: string;
-  description?: string;
+  description?: string | null;
   scheduleType: ScheduleType;
   cronExpression?: string;
   scheduledDate?: number;
@@ -34,6 +36,7 @@ export function createAgentScheduleStore(db: Database) {
     const record = {
       id: createId(),
       agentId: input.agentId,
+      kind: input.kind,
       name: input.name,
       description: input.description ?? null,
       scheduleType: input.scheduleType,
@@ -58,7 +61,9 @@ export function createAgentScheduleStore(db: Database) {
       orderBy: [asc(agentSchedules.createdAt)],
     });
 
-    return rows.map(toScheduleSummary);
+    return rows
+      .filter((row) => row.kind === 'agent')
+      .map(toScheduleSummary);
   }
 
   async function listActiveSchedules() {
@@ -73,6 +78,22 @@ export function createAgentScheduleStore(db: Database) {
   async function getAgentSchedule(agentId: string, scheduleId: string) {
     const row = await db.query.agentSchedules.findFirst({
       where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    if (row.kind !== 'agent') {
+      return null;
+    }
+
+    return toScheduleRecord(row);
+  }
+
+  async function getScheduleByKind(agentId: string, kind: ScheduleKind) {
+    const row = await db.query.agentSchedules.findFirst({
+      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, kind)),
     });
 
     if (!row) {
@@ -167,6 +188,7 @@ export function createAgentScheduleStore(db: Database) {
     listAgentSchedules,
     listActiveSchedules,
     getAgentSchedule,
+    getScheduleByKind,
     updateAgentSchedule,
     deleteAgentSchedule,
     deactivateSchedule,
@@ -177,6 +199,7 @@ export function createAgentScheduleStore(db: Database) {
 
 function toScheduleRecord(row: typeof agentSchedules.$inferSelect) {
   return {
+    kind: row.kind as ScheduleKind,
     scheduleId: row.id,
     agentId: row.agentId,
     name: row.name,
@@ -196,6 +219,7 @@ function toScheduleRecord(row: typeof agentSchedules.$inferSelect) {
 
 function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
   return {
+    kind: row.kind as ScheduleKind,
     scheduleId: row.id,
     name: row.name,
     description: row.description ?? undefined,

@@ -116,6 +116,7 @@ export const agentSchedules = sqliteTable('agent_schedules', {
   agentId: text('agent_id')
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull().default('agent'),
   name: text('name').notNull(),
   description: text('description'),
   scheduleType: text('schedule_type').notNull(),

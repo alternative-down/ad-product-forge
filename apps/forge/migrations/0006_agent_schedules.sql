@@ -1,6 +1,7 @@
 CREATE TABLE `agent_schedules` (
   `id` text PRIMARY KEY NOT NULL,
   `agent_id` text NOT NULL,
+  `kind` text DEFAULT 'agent' NOT NULL,
   `name` text NOT NULL,
   `description` text,
   `schedule_type` text NOT NULL,

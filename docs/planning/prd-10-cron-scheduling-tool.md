@@ -18,12 +18,13 @@ A Ferramenta Cron/Agendamento permite que agentes criem wakes agendados com sint
 
 ## Heartbeat (Separado)
 
-Heartbeat continua sendo um conceito separado dos schedules criados pelos agentes.
+Heartbeat continua sendo um conceito separado no comportamento, mas usa a mesma tabela `agent_schedules`.
 
 Neste PRD:
-- o foco é apenas o agendamento manipulado pelo próprio agente;
-- heartbeat não entra como parte do schema nem das tools;
-- a implementação pode reutilizar a mesma infraestrutura base de scheduler depois, mas não deve misturar os dois conceitos.
+- schedules criados pelo agente usam `kind = 'agent'`;
+- heartbeat do sistema usa `kind = 'heartbeat'`;
+- heartbeat não aparece nas tools do agente;
+- heartbeat só chama `wakeQueue`, sem criar `agent_notifications`.
 
 ### Controle de acesso
 
@@ -133,6 +134,7 @@ Esta é uma tarefa agendada automatizada. Revise as instruções acima e execute
 agent_schedules {
   id: UUID (primary key)
   agent_id: UUID (foreign key -> agents)
+  kind: 'agent' | 'heartbeat'
   name: string
   description: string (opcional)
   schedule_type: 'cron' | 'date'
