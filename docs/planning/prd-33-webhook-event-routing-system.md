@@ -2,6 +2,8 @@
 
 **Status:** Planejamento
 
+**Boundary note:** GitHub usa endpoint adapter-specific próprio. Coolify está fora do escopo da primeira versão e também não passa por este PRD agora. Este PRD continua reservado para um bus genérico de webhook quando isso realmente fizer sentido.
+
 **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
 ---
@@ -19,7 +21,7 @@ Endpoint simples de webhook para sistemas externos dispararem ações de agente.
 **Casos de Uso de Aplicação:**
 - Webhooks GitHub disparam agentes de desenvolvimento
 - Webhooks de sistema de pagamento disparam agentes de billing
-- Webhooks de deployment notificam agentes de operações
+- Webhooks de deployment podem notificar agentes de operações quando não houver adapter-specific endpoint próprio
 - Webhooks de plataforma de ad alimentam sinais para agentes de pesquisa
 
 ---

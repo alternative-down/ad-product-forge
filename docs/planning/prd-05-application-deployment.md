@@ -1,193 +1,183 @@
-# PRD-05: Company Application Deployment
+# PRD-05: Coolify Integration
 
 **Status:** Planned
 **Classification:** FORGE APP
 
 ## 1. Goal
 
-Deploy company applications to the company's infrastructure after those applications already exist in Forge and already have a linked source repository.
+Integrate Forge directly with **Coolify** so internal agents can manage deployments through agent-facing tools.
 
 This PRD is about:
-- deployment records
-- deployment execution
-- deployment status
-- deployment monitoring
-- deployment cleanup
+- one direct Coolify integration
+- administration tools for internal agents
+- using the official Coolify HTTP API
 
-It is not about creating repositories or defining application ownership.
+This PRD is not about:
+- introducing new business entities such as `projects` or `applications`
+- storing local deployment records
+- webhook routing
+- modeling ownership or repository linkage inside Forge
 
-## 2. Dependency
+## 2. Core Direction
 
-This PRD depends on the GitHub/application layer being in place first.
+The first version is intentionally small:
+- Forge talks directly to one Coolify instance
+- authentication uses one company-level admin token
+- agents call Coolify through Forge tools
+- Forge does not create new local deployment tables for this integration
 
-A deployment must start from:
-- an existing application record
-- an existing linked repository
-- known repository metadata inside the app
+The deployment state remains in Coolify.
+Forge acts as the integration layer.
 
-Deployment should not accept raw ad-hoc repository input as its source of truth.
+## 3. Credential Boundary
 
-## 3. Scope
+Coolify uses one central company credential:
+- `COOLIFY_BASE_URL`
+- `COOLIFY_ADMIN_TOKEN`
+- `COOLIFY_APPLICATIONS_BASE_DOMAIN`
 
-### Included
-- deploy one company application
-- store deployment records in the app
-- track deployment status
-- receive deployment status updates
-- expose deployment status for internal agents
-- remove or deactivate deployed applications
+This credential:
+- is not stored in communication `accounts`
+- is not stored in `agent_providers`
+- is not exposed to agents
 
-### Excluded
-- repository creation
-- source-code authoring workflows
-- organization/repository ownership rules
-- billing and customer-facing hosting plans
-- advanced infra orchestration across many providers
+Agents only receive tool access through Forge.
 
-## 4. Core Concepts
+## 4. Repository Assumption
 
-### 4.1 Company Application
-A persistent application record owned by the company.
+Coolify deployment starts from repositories that already exist in the company GitHub organization.
 
-### 4.2 Deployment Target
-The infrastructure target where the application is deployed.
+The first version should use the Coolify flow based on its own GitHub App integration:
+- create or reuse a Coolify GitHub App entry
+- list repositories available through that GitHub App
+- create the Coolify application from that repository
 
-The first version can support one target only.
+Forge does not need a local repository-link table for the first version.
 
-### 4.3 Deployment Record
-A persistent deployment record stored in Forge.
+## 5. Tool Surface
 
-This represents one deployment attempt or active deployment for a company application.
+The first version should expose these tools:
 
-## 5. Initial Functional Surface
+1. `list_coolify_github_apps`
+2. `create_coolify_github_app`
+3. `list_coolify_github_app_repositories`
+4. `list_coolify_github_app_repository_branches`
+5. `list_coolify_applications`
+6. `create_coolify_application`
+7. `get_coolify_application`
+8. `update_coolify_application`
+9. `start_coolify_application`
+10. `stop_coolify_application`
+11. `restart_coolify_application`
+12. `delete_coolify_application`
+13. `list_coolify_application_deployments`
+14. `get_coolify_deployment_logs`
+15. `get_coolify_application_logs`
+16. `list_coolify_application_envs`
+17. `set_coolify_application_env`
+18. `delete_coolify_application_env`
 
-### 5.1 Create Deployment
-Deploy one existing company application.
+These tools are literal wrappers around the Coolify operational surface needed by agents.
+They should stay explicit and provider-specific.
 
-Example input shape:
-```ts
-{
-  applicationId: string;
-  requestedByAgentId?: string;
-  branch?: string;
-  commitSha?: string;
-}
-```
+## 6. Creation Direction
 
-Example output shape:
-```ts
-{
-  deploymentId: string;
-  applicationId: string;
-  status: 'queued' | 'building' | 'deploying' | 'running' | 'failed';
-  url?: string;
-}
-```
+`create_coolify_application` should be intentionally narrow.
 
-### 5.2 Get Deployment Status
-Return one deployment with its current status.
+The agent should provide only:
+- application name
+- application slug
+- port
+- build command
+- start command
 
-Example output shape:
-```ts
-{
-  deploymentId: string;
-  applicationId: string;
-  status: 'queued' | 'building' | 'deploying' | 'running' | 'failed';
-  url?: string;
-  errorMessage?: string;
-  createdAt: number;
-  updatedAt: number;
-}
-```
+Forge should fill the rest of the initial shape internally:
+- repository source through the Coolify GitHub App flow
+- domain as a subdomain of the company base domain from env
+- default Coolify project/environment/server/destination context
+- let Coolify keep its normal defaults for proxy and related configuration
 
-### 5.3 List Application Deployments
-Return deployments for one application.
+The first version should not expose broad creation-time configuration knobs.
 
-### 5.4 Remove Deployment
-Stop or remove a deployed application from the target and update the deployment record.
+## 7. Update Direction
 
-## 6. URL and Domain Direction
+`update_coolify_application` should support partial updates only.
 
-The deployment layer may generate one company-owned URL/subdomain per deployed application.
+That means an agent can change one thing without resending the full application shape.
 
-This should be derived from the application record and the deployment target.
+Examples:
+- change only the port
+- change only the build command
+- change only the start command
+- change one configuration field
 
-The first version can stay simple:
-- one generated subdomain
-- one deployment target
-- one final application URL
+## 8. Env Variable Direction
 
-## 7. Monitoring Direction
-
-Monitoring in this PRD should stay deployment-focused.
+Environment variables should be managed by partial update, not full replacement.
 
 That means:
-- current deployment status
-- last deployment error
-- deployment URL
-- timestamps
+- add one env var
+- update one env var
+- delete one env var
 
-It should not try to become a full application observability platform in the first version.
+This avoids accidental overwrites and keeps the operational flow safer for agents.
 
-## 8. Data Model Direction
+## 9. Logs
 
-### `application_deployments`
-Suggested minimum fields:
-- `id`
-- `applicationId`
-- `requestedByAgentId`
-- `status`
-- `targetProvider`
-- `targetResourceId`
-- `branch`
-- `commitSha`
-- `url`
-- `errorMessage`
-- `createdAt`
-- `updatedAt`
-- `completedAt`
+The first version must include:
+- deployment logs
+- application/runtime logs
 
-### `deployment_targets` (optional)
-If needed later, deployment target configuration can be separated.
+Agents need both to operate deployed systems without leaving Forge.
 
-The first version can remain simple if there is only one target.
+## 10. Webhooks
 
-## 9. Webhook / Status Update Direction
+Webhooks are explicitly out of scope for the first version.
 
-If the deployment platform can push status updates, the app should accept them and update the deployment record.
+This PRD does not define:
+- Coolify webhook endpoints
+- Coolify event persistence
+- Coolify-triggered agent notifications
 
-This should only update deployment state.
+Those can be added later if the direct tool-based operation proves insufficient.
 
-It should not be treated as a general-purpose event-routing system in this PRD.
+## 11. API Direction
 
-## 10. Design Rules
+Forge should use the **official Coolify HTTP API** directly.
 
-- deployment starts from an application, not from raw repo input
-- deployment state is persisted in the app
-- deployment status is explicit and queryable
-- monitoring stays small and deployment-focused
-- deployment should not redefine application/repository ownership
+Forge should not depend on:
+- `coolify-cli`
+- third-party Coolify wrappers
+- shelling out to external deployment tooling
 
-## 11. Success Criteria
+The CLI can still be useful for manual debugging, but it should not be the base of the application integration.
 
-- an existing company application can be deployed
-- deployment records are stored in Forge
-- deployment status can be queried later
-- deployment errors are persisted clearly
-- deployed application URL is available when successful
-- deployment logic sits cleanly on top of the GitHub/application layer
+## 12. Domain Direction
 
-## 12. Implementation Status
+The public domain of a new Coolify application should be derived inside Forge.
 
-**Status:** Planned
+The first version should always use:
+- subdomain of `COOLIFY_APPLICATIONS_BASE_DOMAIN`
 
-Already available today:
-- none of the deployment layer is implemented yet
+Agents do not choose arbitrary domains during creation.
 
-Still missing:
-- application registry
-- repository linkage from the GitHub integration layer
-- deployment records
-- deployment execution flow
-- deployment status tracking
-- deployment monitoring surface
+## 13. Design Rules
+
+- no new local business entity is introduced for this integration
+- no local deployment record is required in the first version
+- Coolify remains the source of truth for deployment state
+- Forge provides tool access and credential isolation
+- the integration stays Coolify-specific
+- tool names stay literal
+- creation stays narrow and default-heavy
+- update flows stay partial
+
+## 14. Success Criteria
+
+- agents can connect Coolify to GitHub through the Coolify GitHub App flow
+- agents can create applications in Coolify through Forge tools
+- agents can inspect status and logs through Forge tools
+- agents can update configuration and env vars through Forge tools
+- agents can start, stop, restart, and delete applications through Forge tools
+- the integration works with one company-level admin token
+- no extra deployment schema is introduced in Forge

@@ -21,6 +21,8 @@ import { createAgentNotificationTools } from '../notifications/tools.js';
 import { createGitHubTools } from '../github/tools.js';
 import type { GitHubAppManager } from '../github/manager.js';
 import type { AgentEmailManager } from '../email/migadu-manager.js';
+import type { CoolifyManager } from '../coolify/manager.js';
+import { createCoolifyTools } from '../coolify/tools.js';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -39,6 +41,7 @@ export type HireInternalAgentInput = {
   workflows?: CreateAgentConfig['workflows'];
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
+  coolify: CoolifyManager | null;
 };
 
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
@@ -119,6 +122,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
           ...createMicroErpTools(db),
           ...createAgentNotificationTools(db, agentId),
           ...createGitHubTools(agentId, input.githubApps),
+          ...(input.coolify ? createCoolifyTools(input.coolify) : {}),
         },
         providers: loadCommunicationProviders(providerCredentials),
         workflows: input.workflows,
@@ -142,4 +146,3 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     throw error;
   }
 }
-
