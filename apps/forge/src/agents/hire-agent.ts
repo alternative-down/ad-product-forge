@@ -108,7 +108,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       await db.insert(agentProviders).values(providerRecord);
     }
 
-    await input.schedules.ensureHeartbeats([agentId]);
+    await input.schedules.createHeartbeatSchedule(agentId);
     const runtime = await loadAgent(db, {
       agentId,
       workspaceBasePath: input.workspaceBasePath,

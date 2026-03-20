@@ -71,66 +71,28 @@ export function createAgentScheduleManager(input: {
     }
   }
 
-  async function ensureHeartbeats(agentIds: string[]) {
-    for (const agentId of agentIds) {
-      const existing = await store.getScheduleByKind(agentId, 'heartbeat');
+  async function createHeartbeatSchedule(agentId: string) {
+    const record = await store.createSchedule({
+      agentId,
+      kind: 'heartbeat',
+      name: HEARTBEAT_NAME,
+      description: null,
+      scheduleType: 'cron',
+      cronExpression: HEARTBEAT_CRON_EXPRESSION,
+      scheduledDate: undefined,
+      timezone: HEARTBEAT_TIMEZONE,
+      content: '',
+    });
+    const heartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
 
-      if (!existing) {
-        const created = await store.createSchedule({
-          agentId,
-          kind: 'heartbeat',
-          name: HEARTBEAT_NAME,
-          description: null,
-          scheduleType: 'cron',
-          cronExpression: HEARTBEAT_CRON_EXPRESSION,
-          scheduledDate: undefined,
-          timezone: HEARTBEAT_TIMEZONE,
-          content: '',
-        });
-        const createdHeartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
-
-        if (!createdHeartbeat) {
-          throw new Error(`Failed to load heartbeat schedule for agent ${agentId}`);
-        }
-
-        cancelJob(createdHeartbeat.scheduleId);
-        await registerSchedule(createdHeartbeat);
-        continue;
-      }
-
-      const currentCron = existing.cronExpression;
-      const currentTimezone = existing.timezone;
-      const needsUpdate =
-        existing.scheduleType !== 'cron' ||
-        currentCron !== HEARTBEAT_CRON_EXPRESSION ||
-        currentTimezone !== HEARTBEAT_TIMEZONE ||
-        existing.isActive === false;
-
-      if (!needsUpdate) {
-        cancelJob(existing.scheduleId);
-        await registerSchedule(existing);
-        continue;
-      }
-
-      await store.updateAgentSchedule(agentId, existing.scheduleId, {
-        name: HEARTBEAT_NAME,
-        description: null,
-        scheduleType: 'cron',
-        cronExpression: HEARTBEAT_CRON_EXPRESSION,
-        scheduledDate: null,
-        timezone: HEARTBEAT_TIMEZONE,
-        content: '',
-        isActive: true,
-      });
-      const updatedHeartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
-
-      if (!updatedHeartbeat) {
-        throw new Error(`Failed to reload heartbeat schedule for agent ${agentId}`);
-      }
-
-      cancelJob(updatedHeartbeat.scheduleId);
-      await registerSchedule(updatedHeartbeat);
+    if (!heartbeat) {
+      throw new Error(`Failed to load heartbeat schedule: ${record.id}`);
     }
+
+    await registerSchedule(heartbeat);
+    return {
+      scheduleId: heartbeat.scheduleId,
+    };
   }
 
   async function createSchedule(agentId: string, rawInput: z.input<typeof createScheduleSchema>) {
@@ -390,7 +352,7 @@ export function createAgentScheduleManager(input: {
 
   return {
     loadAll,
-    ensureHeartbeats,
+    createHeartbeatSchedule,
     createSchedule,
     listSchedules,
     updateSchedule,
