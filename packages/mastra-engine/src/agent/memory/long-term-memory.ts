@@ -72,7 +72,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     });
 
     await workspace.init();
-    await this.ensureWorkspaceVectorIndex(vectorStore, indexName);
+    await this.createWorkspaceVectorIndexIfMissing(vectorStore, indexName);
 
     return new LongTermMemory({
       om: config.om,
@@ -82,7 +82,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     });
   }
 
-  static async ensureWorkspaceVectorIndex(vectorStore: LibSQLVector, indexName: string) {
+  static async createWorkspaceVectorIndexIfMissing(vectorStore: LibSQLVector, indexName: string) {
     try {
       await vectorStore.describeIndex({ indexName });
     } catch {

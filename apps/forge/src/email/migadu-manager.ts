@@ -207,7 +207,7 @@ export function createAgentEmailManager(config: {
   }
 
   function buildUrl(providerConfig: { apiBaseUrl: string }, path: string) {
-    return new URL(path.replace(/^\//, ''), ensureTrailingSlash(providerConfig.apiBaseUrl)).toString();
+    return new URL(path.replace(/^\//, ''), withTrailingSlash(providerConfig.apiBaseUrl)).toString();
   }
 
   function buildHeaders(providerConfig: { apiUser: string; apiKey: string }) {
@@ -225,7 +225,7 @@ export function createAgentEmailManager(config: {
   };
 }
 
-function ensureTrailingSlash(value: string) {
+function withTrailingSlash(value: string) {
   return value.endsWith('/') ? value : `${value}/`;
 }
 

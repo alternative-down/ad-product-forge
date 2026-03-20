@@ -144,14 +144,14 @@ export function createDiscordProvider(config: {
     return client.user;
   });
 
-  async function ensureClient() {
+  async function getReadyClient() {
     return ready;
   }
 
   return {
     id: 'discord',
     async getAccount() {
-      const user = await ensureClient();
+      const user = await getReadyClient();
 
       return {
         externalAccountId: user.id,
@@ -163,7 +163,7 @@ export function createDiscordProvider(config: {
       void flushPendingMessages();
     },
     async sendMessage(input) {
-      await ensureClient();
+      await getReadyClient();
 
       if (input.contactExternalId && !input.providerConversationKey) {
         const targetUser = await client.users.fetch(input.contactExternalId);

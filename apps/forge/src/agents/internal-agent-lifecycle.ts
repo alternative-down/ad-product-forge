@@ -7,6 +7,7 @@ import { terminateInternalAgent } from './terminate-agent.js';
 import type { GitHubAppManager } from '../github/manager.js';
 import type { AgentEmailManager } from '../email/migadu-manager.js';
 import type { CoolifyManager } from '../coolify/manager.js';
+import type { createAgentScheduleManager } from '../schedules/manager.js';
 
 type RunInternalHiringInput = {
   requestedFunction: string;
@@ -17,6 +18,7 @@ type RunInternalHiringInput = {
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
+  schedules: ReturnType<typeof createAgentScheduleManager>;
 };
 
 export async function runInternalHiring(db: Database, input: RunInternalHiringInput) {
@@ -31,9 +33,10 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     githubApps: input.githubApps,
     emailMailboxes: input.emailMailboxes,
     coolify: input.coolify,
+    schedules: input.schedules,
   });
   try {
-    const githubApp = await input.githubApps.ensureAgentApp({
+    const githubApp = await input.githubApps.createAgentApp({
       agentId: hired.agentId,
       agentName: profile.name,
     });
@@ -49,6 +52,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       workspaceBasePath: input.workspaceBasePath,
       githubApps: input.githubApps,
       emailMailboxes: input.emailMailboxes,
+      schedules: input.schedules,
     });
     throw error;
   }
@@ -59,6 +63,7 @@ export async function runInternalTermination(db: Database, input: {
   workspaceBasePath: string;
   githubApps: RunInternalHiringInput['githubApps'];
   emailMailboxes: RunInternalHiringInput['emailMailboxes'];
+  schedules: RunInternalHiringInput['schedules'];
 }) {
   return terminateInternalAgent(db, input);
 }

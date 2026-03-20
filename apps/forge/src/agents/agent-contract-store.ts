@@ -34,7 +34,7 @@ export function createAgentContractStore(db: Database) {
     const activeContract = await getActiveContract(agentId);
 
     if (activeContract) {
-      return ensureFundedContract(activeContract);
+      return fundContractIfNeeded(activeContract);
     }
 
     const renewedContract = await renewContract(agentId);
@@ -43,7 +43,7 @@ export function createAgentContractStore(db: Database) {
       return null;
     }
 
-    return ensureFundedContract(renewedContract);
+    return fundContractIfNeeded(renewedContract);
   }
 
   async function getActiveContract(agentId: string) {
@@ -137,7 +137,7 @@ export function createAgentContractStore(db: Database) {
     return nextContract;
   }
 
-  async function ensureFundedContract(contract: typeof agentExecutionContracts.$inferSelect) {
+  async function fundContractIfNeeded(contract: typeof agentExecutionContracts.$inferSelect) {
     if (contract.fundedAt) {
       return contract;
     }

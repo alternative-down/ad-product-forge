@@ -11,18 +11,15 @@ import {
   type NewAgentProvider,
 } from '../database/schema.js';
 import type { ProviderCredentialsMap } from '../communication/provider-loader.js';
-import { loadCommunicationProviders } from '../communication/provider-loader.js';
 import { encryptSecret } from '../encryption/crypto.js';
-import { createInternalAgentRuntime, type CreateAgentConfig } from './create-forge-agent.js';
+import type { CreateAgentConfig } from './create-forge-agent.js';
 import { getInternalAgentRegistry } from './internal-agent-registry.js';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
-import { createMicroErpTools } from '../micro-erp/tools.js';
-import { createAgentNotificationTools } from '../notifications/tools.js';
-import { createGitHubTools } from '../github/tools.js';
 import type { GitHubAppManager } from '../github/manager.js';
 import type { AgentEmailManager } from '../email/migadu-manager.js';
 import type { CoolifyManager } from '../coolify/manager.js';
-import { createCoolifyTools } from '../coolify/tools.js';
+import type { createAgentScheduleManager } from '../schedules/manager.js';
+import { loadAgent } from './agent-loader.js';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -42,6 +39,7 @@ export type HireInternalAgentInput = {
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
+  schedules: ReturnType<typeof createAgentScheduleManager>;
 };
 
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
@@ -110,28 +108,15 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       await db.insert(agentProviders).values(providerRecord);
     }
 
-    const runtime = await createInternalAgentRuntime(
-      {
-        id: agentId,
-        name: input.name,
-        description: input.description,
-        instructions: input.instructions,
-        model: input.model,
-        omModel: input.omModel,
-        tools: {
-          ...createMicroErpTools(db),
-          ...createAgentNotificationTools(db, agentId),
-          ...createGitHubTools(agentId, input.githubApps),
-          ...(input.coolify ? createCoolifyTools(input.coolify) : {}),
-        },
-        providers: loadCommunicationProviders(providerCredentials),
-        workflows: input.workflows,
-        workspaceBasePath: input.workspaceBasePath,
-        workspaceFilesystem: input.workspaceFilesystem,
-        workspaceSandbox: input.workspaceSandbox,
-      },
-      { longTermMemory: true },
-    );
+    await input.schedules.createHeartbeatSchedule(agentId);
+    const runtime = await loadAgent(db, {
+      agentId,
+      workspaceBasePath: input.workspaceBasePath,
+      workflows: input.workflows,
+      githubApps: input.githubApps,
+      coolify: input.coolify,
+      schedules: input.schedules,
+    });
 
     await getInternalAgentRegistry().add(db, runtime);
 
