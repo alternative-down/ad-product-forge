@@ -94,6 +94,23 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
 export type AgentExecutionStep = typeof agentExecutionSteps.$inferSelect;
 export type NewAgentExecutionStep = typeof agentExecutionSteps.$inferInsert;
 
+export const agentNotifications = sqliteTable('agent_notifications', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  createdAt: integer('created_at').notNull(),
+  readAt: integer('read_at'),
+}, (table) => ({
+  agentNotificationsAgentIdIdx: index('agent_notifications_agent_id_idx').on(table.agentId),
+  agentNotificationsCreatedAtIdx: index('agent_notifications_created_at_idx').on(table.createdAt),
+  agentNotificationsReadAtIdx: index('agent_notifications_read_at_idx').on(table.readAt),
+}));
+
+export type AgentNotification = typeof agentNotifications.$inferSelect;
+export type NewAgentNotification = typeof agentNotifications.$inferInsert;
+
 export const llmModelPrices = sqliteTable('llm_model_prices', {
   modelKey: text('model_key').primaryKey(),
   inputPerMillionUsd: real('input_per_million_usd').notNull(),
@@ -153,6 +170,7 @@ export const agentsRelations = relations(agents, ({ many }) => ({
   providers: many(agentProviders),
   executionContracts: many(agentExecutionContracts),
   executionSteps: many(agentExecutionSteps),
+  notifications: many(agentNotifications),
 }));
 
 export const agentProvidersRelations = relations(agentProviders, ({ one }) => ({
@@ -178,5 +196,12 @@ export const agentExecutionStepsRelations = relations(agentExecutionSteps, ({ on
   contract: one(agentExecutionContracts, {
     fields: [agentExecutionSteps.contractId],
     references: [agentExecutionContracts.id],
+  }),
+}));
+
+export const agentNotificationsRelations = relations(agentNotifications, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentNotifications.agentId],
+    references: [agents.id],
   }),
 }));

@@ -36,6 +36,13 @@
       "when": 1773892000000,
       "tag": "0004_company_cash_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1773966482569,
+      "tag": "0005_agent_notifications",
+      "breakpoints": true
     }
   ]
 }

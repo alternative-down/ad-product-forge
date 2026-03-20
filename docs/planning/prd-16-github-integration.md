@@ -1,224 +1,178 @@
 # PRD-16: GitHub Organization Integration
 
-**Status:** Planned
+**Status:** Partially Implemented
 **Classification:** FORGE APP
 
 ## 1. Goal
 
-Connect the company to a GitHub Organization so internal agents can create and operate repositories for company applications.
+Connect internal agents to one GitHub Organization through one GitHub App per internal agent so they can operate repositories and receive GitHub events.
 
 This PRD is about:
-- the company's connection to GitHub
-- company applications having repositories
-- internal agents requesting repository creation and repository operations through the system
+- GitHub App identity for each internal agent
+- repository operations performed through the agent's own GitHub App
+- agent-specific GitHub webhook endpoints
+- agent notifications created from relevant GitHub events
 
-It is not about deployment, monitoring, or arbitrary webhook routing.
+It is not about deployment, monitoring, or a generic webhook routing bus.
 
-## 2. Why This Exists
+## 2. Core Direction
 
-The company needs a real source-code home for the applications created by internal agents.
+The system uses:
+- one GitHub App per internal agent
+- one installation of that app in the company organization
+- organization-wide repository access in the first version
+- GitHub App installation tokens for API and Git HTTPS operations
 
-Before deployment exists, the system needs to know:
-- what an application is
-- whether it has a repository
-- which GitHub Organization owns that repository
-- how the system performs repository operations in the company's name
-
-Without this layer, deployment would have no stable source-of-truth for code.
+This is not a per-user GitHub account model.
+It is a per-agent GitHub App identity model.
 
 ## 3. Scope
 
 ### Included
-- connect the company to one GitHub Organization
-- store organization/repository metadata in the app
-- create repositories for company applications
-- retrieve repository details for an application
-- allow internal agents to operate company repositories through explicit system operations
-- keep repository ownership at the company level, not per-agent
+- create one GitHub App per internal agent
+- install that GitHub App in the company organization
+- store GitHub App credentials in encrypted agent provider/integration storage
+- generate Git HTTPS credentials for the agent
+- perform basic GitHub API operations through the agent app
+- receive GitHub webhook events on an agent-specific endpoint
+- create generic agent notifications from relevant GitHub webhook events
 
 ### Excluded
 - deployment to infrastructure
-- application runtime monitoring
-- generic webhook event bus
-- arbitrary GitHub query tooling
-- advanced Git operations
-- organization/team administration
-- branch protection automation
-- CI/CD workflow management
+- runtime monitoring of deployed apps
+- generic webhook routing bus
+- repository-level access scoping
+- GitHub user accounts per agent
+- advanced GitHub administration
 
-## 4. Core Concepts
+## 4. Authentication Model
 
-### 4.1 Company GitHub Connection
-A single company-level GitHub connection used by the app to operate inside one GitHub Organization.
+Required persisted data for one agent GitHub App:
+- `appId`
+- `privateKey`
+- `installationId`
+- `webhookSecret`
+- `appSlug`
 
-This is a company integration, not a per-agent identity model.
+Authentication flow:
+1. authenticate as app with `appId + privateKey`
+2. request installation token for `installationId`
+3. use that token for GitHub API and Git HTTPS operations
 
-### 4.2 Company Application
-A persistent business/application record inside Forge.
+The preferred client layer is Octokit.
 
-At minimum, an application must have:
-- `id`
-- `name`
-- `description?`
-- `createdByAgentId?`
-- `createdAt`
-- `updatedAt`
+## 5. Webhook Model
 
-### 4.3 Application Repository
-A repository linked to one company application.
+Each agent GitHub App registers its own endpoint.
 
-At minimum, repository metadata should include:
-- `applicationId`
-- `provider` = `github`
-- `organizationName`
-- `repositoryName`
-- `repositoryUrl`
-- `defaultBranch`
-- `isPrivate`
-- `githubRepositoryId?`
-- `createdAt`
+Initial direction:
+- `GET /github/apps/{agentId}/register`
+- `GET /github/apps/{agentId}/manifest/callback`
+- `GET /github/apps/{agentId}/setup`
+- `POST /webhooks/github/{agentId}`
 
-## 5. Initial Functional Surface
+This means:
+- the endpoint path already identifies the agent
+- no extra app-to-agent routing table is needed for webhook delivery
+- webhook validation uses the `webhookSecret` stored in the agent's private GitHub integration credentials
 
-### 5.1 Connect Company to GitHub Organization
-The app stores the company-level GitHub integration configuration.
+Relevant GitHub events create generic agent notifications and trigger the wake flow.
 
-The first implementation can assume:
-- one GitHub Organization
-- one authentication strategy for the company
+## 6. Notification Model
 
-The system should not model one GitHub identity per internal agent.
+GitHub events do not create communication messages.
+They create generic agent notifications.
 
-### 5.2 Create Application
-Create a company application record in Forge.
-
-Example output shape:
-```ts
-{
-  applicationId: string;
-}
-```
-
-### 5.3 Create Application Repository
-Create a GitHub repository for one application under the company organization.
-
-Example output shape:
-```ts
-{
-  applicationId: string;
-  repositoryName: string;
-  repositoryUrl: string;
-  defaultBranch: string;
-}
-```
-
-### 5.4 Get Application Repository
-Return repository metadata for one application.
-
-Example output shape:
-```ts
-{
-  applicationId: string;
-  repositoryName: string;
-  repositoryUrl: string;
-  defaultBranch: string;
-  organizationName: string;
-  isPrivate: boolean;
-} | null
-```
-
-### 5.5 Basic Repository Operations
-The app should expose explicit internal operations for:
-- reading repository metadata
-- creating branches
-- committing changes
-- opening pull requests
-
-These should happen through the app in the company context.
-
-They should not start as free-form GitHub tools.
-
-## 6. Authentication Direction
-
-The integration should use one company-level GitHub authentication method.
-
-The important rule is:
-- the system acts in the company's GitHub context
-- internal agents do not get separate GitHub accounts or identities
-
-The concrete authentication mechanism can be chosen during implementation.
-
-## 7. Data Model Direction
-
-### `applications`
 Suggested minimum fields:
 - `id`
-- `name`
-- `description`
-- `createdByAgentId`
+- `agentId`
+- `content`
 - `createdAt`
-- `updatedAt`
+- `readAt`
 
-### `application_repositories`
-Suggested minimum fields:
-- `id`
-- `applicationId`
-- `provider`
-- `organizationName`
-- `repositoryName`
-- `repositoryUrl`
-- `defaultBranch`
-- `isPrivate`
-- `externalRepositoryId`
-- `createdAt`
+`content` may store compact JSON with:
+- `source`
+- `event`
+- `action`
+- `repository`
+- `sender`
+- `payload`
 
-### `company_integrations`
-Suggested minimum fields:
-- `id`
-- `provider`
-- `configuration`
-- `createdAt`
-- `updatedAt`
+This table is generic and can be reused by other notification-producing systems later.
 
-The first version can remain GitHub-specific internally if that keeps implementation simpler.
+## 7. Storage Boundary
 
-## 8. Design Rules
+GitHub App credentials do **not** belong in communication `accounts`.
 
-- repository ownership belongs to the company
-- internal agents operate repositories through the app
-- application-to-repository linkage must be explicit and persistent
-- no per-agent GitHub identities
-- no deployment logic in this PRD
-- no monitoring logic in this PRD
+Boundary:
+- communication `accounts` = identity for messaging providers and contacts
+- encrypted agent provider/integration storage = private credentials for external systems such as GitHub Apps
 
-## 9. Dependency Boundary
+So GitHub App credentials belong in the encrypted agent provider/integration storage already used by the app.
 
-This PRD should be completed before the deployment PRD.
+## 8. Initial Functional Surface
 
-Deployment should depend on:
-- an existing application record
-- an existing linked repository
-- repository metadata already known by the app
+### 8.1 Hiring Provisioning
+The hiring workflow provisions a pending GitHub App integration for the new agent and returns a registration URL.
+
+### 8.2 Git HTTPS Credentials
+The agent can request short-lived Git HTTPS credentials for its own GitHub App installation.
+
+### 8.3 Repository Operations
+Initial explicit operations:
+- list repositories
+- create repository
+- get repository
+- list pull requests
+- create pull request
+
+### 8.4 Webhook Event Intake
+Relevant webhook events create agent notifications and wake the agent.
+
+## 9. Design Rules
+
+- each internal agent has its own GitHub App
+- each GitHub App starts with organization-wide repository access
+- repository ownership still belongs to the company organization
+- Git operations use Git HTTPS with installation token, not SSH token
+- GitHub App credentials stay encrypted and internal to the app
+- GitHub webhook events become generic agent notifications
+- this PRD does not define deployment
 
 ## 10. Success Criteria
 
-- the company can connect to one GitHub Organization
-- the app can create application records
-- the app can create repositories for applications
-- repository metadata is stored and retrievable
-- internal agents can work through explicit company-controlled repository operations
-- the deployment system can later consume this repository linkage as a dependency
+- a hired internal agent receives a GitHub App provisioning flow
+- agent GitHub credentials are stored securely
+- the agent can generate Git HTTPS credentials for bash/git usage
+- the agent can perform the initial GitHub API operations through its own app
+- GitHub webhook events for that app reach the correct agent endpoint
+- those webhook events create notifications and trigger wake
 
 ## 11. Implementation Status
 
-**Status:** Planned
+Implemented today:
+- encrypted storage for GitHub App credentials can live in `agent_providers`
+- hiring now provisions a pending GitHub App integration per new agent
+- hiring returns `githubAppRegistrationUrl`
+- a per-agent GitHub App manager exists in the Forge app runtime
+- the app now starts an HTTP server for GitHub App and webhook endpoints
+- agent-specific routes exist for:
+  - registration page
+  - manifest callback
+  - install/setup callback
+  - webhook receipt
+- generic `agent_notifications` storage exists
+- agents now have tools for:
+  - listing/reading/marking notifications
+  - generating Git HTTPS credentials
+  - listing repositories
+  - creating repositories
+  - getting repository metadata
+  - listing pull requests
+  - creating pull requests
+- relevant GitHub webhooks create notifications and trigger wake
 
-Already available today:
-- none of this layer is implemented yet in the app
-
-Still missing:
-- company GitHub integration configuration
-- application registry
-- application repository registry
-- repository creation flow
-- explicit repository operations through the app
+Still pending:
+- completing the real GitHub manifest/install flow in a live configured environment
+- application registry and application-to-repository linkage
+- any deployment integration on top of repository ownership
