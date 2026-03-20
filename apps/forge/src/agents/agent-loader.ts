@@ -45,6 +45,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
 
+  if (!agentConfig.functionId) {
+    throw new Error(`Agent is missing functionId: ${config.agentId}`);
+  }
+
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
   // Load providers from agent_providers table
@@ -72,7 +76,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const providers = loadCommunicationProviders(providerCredentials);
   const capabilities = createCapabilityStore(db);
   const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
-  const allowedToolIds = capabilitySet?.toolIds ? new Set(capabilitySet.toolIds) : null;
+  const allowedToolIds = new Set(capabilitySet.toolIds);
   const tools = createMicroErpTools(db, allowedToolIds);
   const notificationTools = createAgentNotificationTools(db, agentConfig.id, allowedToolIds);
   const githubTools = createGitHubTools(agentConfig.id, config.githubApps, allowedToolIds);
@@ -87,7 +91,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...scheduleTools,
     ...capabilityTools,
   };
-  const filteredWorkflows = filterWorkflows(config.workflows, capabilitySet?.workflowIds ?? null);
+  const filteredWorkflows = filterWorkflows(config.workflows, capabilitySet.workflowIds);
 
   const runtime = await createInternalAgentRuntime(
     {
@@ -100,7 +104,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       tools: customTools,
       providers,
       workflows: filteredWorkflows,
-      allowedCustomToolIds: capabilitySet?.toolIds ?? null,
+      allowedCustomToolIds: capabilitySet.toolIds,
       workspaceBasePath: config.workspaceBasePath,
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
       workspaceSandbox: agentConfig.workspaceSandbox ?? undefined,

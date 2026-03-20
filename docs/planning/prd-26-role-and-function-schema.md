@@ -68,6 +68,7 @@ For the first version:
 - agent belongs to one function
 - function points to one role
 - role defines the allowed tools and workflows
+- every agent must have `functionId`
 
 This keeps the model linear.
 
@@ -103,7 +104,7 @@ This keeps one active role per function in the first version.
 
 ### agents
 Direction for the first version:
-- add `functionId`
+- add required `functionId`
 
 The role is derived from the function.
 There is no separate direct `roleId` assignment on the agent in v1.
@@ -162,13 +163,14 @@ The same permission model applies to these management tools too.
 ### Runtime boundary
 
 The correct runtime boundary is:
-- build all possible custom tools
-- filter by role/function
-- then give the filtered set to `ToolSearchProcessor`
+- resolve allowed tool ids first
+- build only the allowed custom and MCP tools
+- then give that set to `ToolSearchProcessor`
 
 Not:
 - build separate agent classes per role
 - dynamically deny tool calls after exposure
+- build every custom tool and discard most of them later
 - mix provider provisioning with capability permissions
 
 ### Stability rule

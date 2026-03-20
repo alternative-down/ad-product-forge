@@ -109,10 +109,10 @@ export function createCapabilityTools(db: Database, loaderConfig: AgentLoaderCon
   if (canCreateTool(allowedToolIds, 'assign_function_to_agent')) {
     tools.assign_function_to_agent = createTool({
       id: 'assign_function_to_agent',
-      description: 'Assign one function to one agent. Use null to remove the function assignment and restore unrestricted custom tool/workflow access.',
+      description: 'Assign one function to one agent.',
       inputSchema: z.object({
         agentId: z.string().min(1),
-        functionId: z.string().min(1).nullable(),
+        functionId: z.string().min(1),
       }),
       execute: async (input) => {
         const result = await capabilities.assignFunctionToAgent(input);

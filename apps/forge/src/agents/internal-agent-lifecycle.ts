@@ -8,6 +8,7 @@ import type { GitHubAppManager } from '../github/manager.js';
 import type { AgentEmailManager } from '../email/migadu-manager.js';
 import type { CoolifyManager } from '../coolify/manager.js';
 import type { createAgentScheduleManager } from '../schedules/manager.js';
+import { createCapabilityStore } from '../capabilities/store.js';
 
 type RunInternalHiringInput = {
   requestedFunction: string;
@@ -24,7 +25,13 @@ type RunInternalHiringInput = {
 export async function runInternalHiring(db: Database, input: RunInternalHiringInput) {
   const profile = buildHiredAgentProfile(input);
   const hiringRh = await generateHiredAgentInstructions(db, input);
+  const capabilities = createCapabilityStore(db);
+  const agentFunction = await capabilities.getOrCreateFunction({
+    name: input.requestedFunction,
+    description: input.additionalContext,
+  });
   const hired = await hireInternalAgent(db, {
+    functionId: agentFunction.functionId,
     ...profile,
     instructions: hiringRh.instructions,
     weeklyBudgetUsd: input.weeklyBudgetUsd,

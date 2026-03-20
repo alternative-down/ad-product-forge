@@ -54,6 +54,22 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
+  async function getOrCreateFunction(input: { name: string; description?: string }) {
+    const existing = await db.query.agentFunctions.findFirst({
+      where: eq(agentFunctions.name, input.name),
+    });
+
+    if (existing) {
+      return {
+        functionId: existing.id,
+        name: existing.name,
+        description: existing.description ?? undefined,
+      };
+    }
+
+    return createFunction(input);
+  }
+
   async function updateFunction(input: { functionId: string; name?: string; description?: string | null }) {
     const existing = await db.query.agentFunctions.findFirst({
       where: eq(agentFunctions.id, input.functionId),
@@ -161,7 +177,7 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
-  async function assignFunctionToAgent(input: { agentId: string; functionId: string | null }) {
+  async function assignFunctionToAgent(input: { agentId: string; functionId: string }) {
     const existing = await db.query.agents.findFirst({
       where: eq(agents.id, input.agentId),
     });
@@ -258,13 +274,17 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
-  async function getAgentCapabilities(agentId: string): Promise<CapabilitySet | null> {
+  async function getAgentCapabilities(agentId: string): Promise<CapabilitySet> {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
     });
 
-    if (!agent?.functionId) {
-      return null;
+    if (!agent) {
+      throw new Error(`Agent not found: ${agentId}`);
+    }
+
+    if (!agent.functionId) {
+      throw new Error(`Agent is missing functionId: ${agentId}`);
     }
 
     const functionRole = await db.query.functionRoles.findFirst({
@@ -292,6 +312,7 @@ export function createCapabilityStore(db: Database) {
   return {
     listFunctions,
     createFunction,
+    getOrCreateFunction,
     updateFunction,
     listRoles,
     createRole,

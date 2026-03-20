@@ -25,6 +25,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type HireInternalAgentInput = {
   agentId?: string;
+  functionId: string;
   name: string;
   description?: string;
   instructions: string;
@@ -65,6 +66,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     id: agentId,
     name: input.name,
     description: input.description,
+    functionId: input.functionId,
     model: input.model,
     omModel: input.omModel,
     instructions: input.instructions,
