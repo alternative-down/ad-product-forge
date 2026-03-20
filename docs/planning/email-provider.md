@@ -59,10 +59,12 @@ Returns:
 ```
 
 ### `onMessage(callback)`
-- Opens an IMAP connection to INBOX
+- Registers the inbound callback
+- The listener is already started when the provider is created
 - Uses IMAP IDLE for real-time notification of new messages
-- Falls back to polling every 60s if IDLE not supported
+- Falls back naturally to reconnecting and scanning unseen messages
 - On new email: parses with `postal-mime`, maps to `CommunicationInboundMessage`
+- Marks processed messages as `\Seen`
 - Skips emails sent by the agent itself (avoid loops)
 
 **Email → CommunicationInboundMessage mapping:**
@@ -76,16 +78,18 @@ Returns:
 | Attachments | `attachments[]` |
 | `Date` header | `createdAt` |
 
-**Thread key:** The `providerConversationKey` is the `Message-ID` of the first email in the thread. Resolved by walking the `References` header chain — if empty, the email itself is the root (new conversation).
+**Thread key:** The `providerConversationKey` is resolved from `References`, then `In-Reply-To`, then the message `Message-ID` itself.
 
 ### `syncContacts()`
 Not implemented initially. Returns empty array. Future: extract unique senders from INBOX.
 
 ### `sendMessage(input)`
-- If `providerConversationKey` is set: reply to that thread (sets `In-Reply-To` and `References` headers)
+- If `providerConversationKey` is set: reply to that thread
+- Uses `replyToProviderMessageId` as `In-Reply-To` when available
+- Uses `providerConversationKey` and `replyToProviderMessageId` to build `References`
 - If `contactExternalId` is set: compose new email to that address (starts new thread)
 - Sends via SMTP using `nodemailer`
-- Returns: `{ providerMessageId, providerConversationKey }`
+- Returns: `{ providerMessageId, providerConversationKey, conversationName }`
 
 ---
 
@@ -93,11 +97,10 @@ Not implemented initially. Returns empty array. Future: extract unique senders f
 
 ```
 createEmailProvider()
-  └─ [lazy] onMessage() called
-       └─ imapflow: connect + authenticate
-       └─ SELECT INBOX
-       └─ IDLE loop (or poll fallback)
-            └─ new email → parse → callback()
+  └─ imapflow: connect + authenticate
+  └─ SELECT INBOX
+  └─ IDLE loop
+       └─ unseen email → parse → callback()
 ```
 
 SMTP connection is created per-send (stateless). IMAP connection is persistent with auto-reconnect on disconnect.
@@ -122,15 +125,10 @@ This provider document describes the runtime adapter shape, not the provisioning
 ## File Location
 
 ```
-apps/
-  forge-email/          ← new app (mirrors forge-discord structure)
-    src/
-      email-account.ts  ← CommunicationProvider implementation
-      main.ts           ← agent setup + env config
-      forge-system.md   ← system prompt for the email agent
-    .env.example
-    package.json
-    tsconfig.json
+apps/forge/
+  src/
+    email-account.ts        ← CommunicationProvider implementation
+    email/migadu-manager.ts ← mailbox provisioning and deletion via Migadu API
 ```
 
 The provider itself (`email-account.ts`) will also be usable standalone inside any agent — same pattern as `discord-account.ts`.
@@ -140,22 +138,17 @@ The provider itself (`email-account.ts`) will also be usable standalone inside a
 ## Environment Variables (.env.example)
 
 ```
-FORGE_AGENT_ID=forge-email
-FORGE_AGENT_NAME=Forge Email Agent
-FORGE_MODEL_PROVIDER=claude-max
-FORGE_MODEL_ID=claude-opus-4-5
-
-IMAP_HOST=imap.migadu.com
-IMAP_PORT=993
-IMAP_SECURE=true
-IMAP_USER=agent@yourdomain.com
-IMAP_PASSWORD=your-mailbox-password
-
-SMTP_HOST=smtp.migadu.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=agent@yourdomain.com
-SMTP_PASSWORD=your-mailbox-password
+MIGADU_API_BASE_URL=https://api.migadu.com/v1
+MIGADU_API_USER=admin@yourdomain.com
+MIGADU_API_KEY=your-api-key
+MIGADU_DOMAIN=yourdomain.com
+MIGADU_IMAP_HOST=imap.migadu.com
+MIGADU_IMAP_PORT=993
+MIGADU_IMAP_SECURE=true
+MIGADU_SMTP_HOST=smtp.migadu.com
+MIGADU_SMTP_PORT=465
+MIGADU_SMTP_SECURE=true
+MIGADU_BCC=archive@yourdomain.com
 ```
 
 ---

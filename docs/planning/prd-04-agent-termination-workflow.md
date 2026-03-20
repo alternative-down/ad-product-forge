@@ -117,7 +117,7 @@ If more agent-owned resources are added later, they can be included in the same 
 
 Current external cleanup direction includes:
 - uninstalling the active GitHub App installation for the agent
-- deleting the agent mailbox in Migadu when email provisioning is implemented
+- deleting the agent mailbox in Migadu
 
 ## Database Direction
 
@@ -159,6 +159,8 @@ Implemented today:
 - the workflow removes the agent from the internal in-memory registry before cleanup
 - the agent row is hard-deleted from the database
 - provider records are removed through database cascade
+- the active GitHub App installation is uninstalled before deletion continues
+- the Migadu mailbox is deleted before local cleanup continues
 - the full `workspaces/{agentId}/` directory is deleted recursively
 
 Current implementation note:

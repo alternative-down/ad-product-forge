@@ -1,6 +1,6 @@
 # PRD-15: Agent Email Integration
 
-**Status:** Planned
+**Status:** Implemented
 **Date:** 2026-03-19
 
 ## Objective
@@ -128,3 +128,18 @@ The company will use Migadu as the agent email provider.
 Each hired internal agent should receive a real mailbox on the company domain. The mailbox is provisioned during hiring, used by the email communication provider through IMAP/SMTP, stored in encrypted agent provider storage, and deleted during termination.
 
 This keeps email simple, operational, and aligned with the current communication runtime.
+
+
+## Implementation Status
+
+Implemented today:
+- Migadu mailbox provisioning is wired into the internal hiring workflow
+- a hired agent now gets a real mailbox before runtime instantiation finishes
+- mailbox credentials are stored in encrypted `agent_providers` storage under the existing `email` provider record
+- termination now deletes the Migadu mailbox before local cleanup continues
+- the runtime email provider continues to use IMAP and SMTP with the stored mailbox credentials
+
+Current implementation notes:
+- hiring requires Migadu configuration in the running Forge app process
+- existing seeded internal agents are not retroactively given mailboxes
+- inbound email still uses IMAP IDLE, not webhooks

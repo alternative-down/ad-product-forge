@@ -1,4 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
+import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/index.js';
 import {
@@ -19,6 +20,7 @@ import { createMicroErpTools } from '../micro-erp/tools.js';
 import { createAgentNotificationTools } from '../notifications/tools.js';
 import { createGitHubTools } from '../github/tools.js';
 import type { GitHubAppManager } from '../github/manager.js';
+import type { AgentEmailManager } from '../email/migadu-manager.js';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -36,16 +38,27 @@ export type HireInternalAgentInput = {
   providerCredentials?: ProviderCredentialsMap;
   workflows?: CreateAgentConfig['workflows'];
   githubApps: GitHubAppManager;
+  emailMailboxes: AgentEmailManager | null;
 };
 
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
   const agentId = input.agentId ?? createId();
+
+  if (!input.emailMailboxes) {
+    throw new Error('Migadu email provisioning is required for hiring but is not configured');
+  }
+
   const now = Date.now();
+  const provisionedMailbox = await input.emailMailboxes.provisionMailbox({
+    agentId,
+    agentName: input.name,
+  });
   const providerCredentials: ProviderCredentialsMap = {
     'internal-chat': {
       agentId,
     },
     ...input.providerCredentials,
+    email: provisionedMailbox.credentials,
   };
   const agentRecord: NewAgent = {
     id: agentId,
@@ -73,51 +86,60 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     createdAt: now,
   };
 
-  await db.insert(agents).values(agentRecord);
+  try {
+    await db.insert(agents).values(agentRecord);
 
-  await db.insert(agentExecutionContracts).values(contractRecord);
+    await db.insert(agentExecutionContracts).values(contractRecord);
 
-  for (const [providerType, credentials] of Object.entries(providerCredentials)) {
-    if (!credentials) {
-      continue;
+    for (const [providerType, credentials] of Object.entries(providerCredentials)) {
+      if (!credentials) {
+        continue;
+      }
+
+      const providerRecord: NewAgentProvider = {
+        id: createId(),
+        agentId,
+        providerType,
+        encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
+        createdAt: now,
+      };
+
+      await db.insert(agentProviders).values(providerRecord);
     }
 
-    const providerRecord: NewAgentProvider = {
-      id: createId(),
-      agentId,
-      providerType,
-      encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
-      createdAt: now,
-    };
-
-    await db.insert(agentProviders).values(providerRecord);
-  }
-
-  const runtime = await createInternalAgentRuntime(
-    {
-      id: agentId,
-      name: input.name,
-      description: input.description,
-      instructions: input.instructions,
-      model: input.model,
-      omModel: input.omModel,
-      tools: {
-        ...createMicroErpTools(db),
-        ...createAgentNotificationTools(db, agentId),
-        ...createGitHubTools(agentId, input.githubApps),
+    const runtime = await createInternalAgentRuntime(
+      {
+        id: agentId,
+        name: input.name,
+        description: input.description,
+        instructions: input.instructions,
+        model: input.model,
+        omModel: input.omModel,
+        tools: {
+          ...createMicroErpTools(db),
+          ...createAgentNotificationTools(db, agentId),
+          ...createGitHubTools(agentId, input.githubApps),
+        },
+        providers: loadCommunicationProviders(providerCredentials),
+        workflows: input.workflows,
+        workspaceBasePath: input.workspaceBasePath,
+        workspaceFilesystem: input.workspaceFilesystem,
+        workspaceSandbox: input.workspaceSandbox,
       },
-      providers: loadCommunicationProviders(providerCredentials),
-      workflows: input.workflows,
-      workspaceBasePath: input.workspaceBasePath,
-      workspaceFilesystem: input.workspaceFilesystem,
-      workspaceSandbox: input.workspaceSandbox,
-    },
-    { longTermMemory: true },
-  );
+      { longTermMemory: true },
+    );
 
-  await getInternalAgentRegistry().add(db, runtime);
+    await getInternalAgentRegistry().add(db, runtime);
 
-  return {
-    agentId,
-  };
+    return {
+      agentId,
+      emailAddress: provisionedMailbox.address,
+    };
+  } catch (error) {
+    getInternalAgentRegistry().remove(agentId);
+    await db.delete(agents).where(eq(agents.id, agentId));
+    await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
+    throw error;
+  }
 }
+

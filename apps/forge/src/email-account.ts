@@ -1,6 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import nodemailer from 'nodemailer';
-import PostalMime from 'postal-mime';
+import PostalMime, { type Email } from 'postal-mime';
 
 import type { Attachment, CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
@@ -17,9 +17,25 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
 
-  function resolveConversationKey(messageId: string, references?: string | null) {
-    const firstReference = references?.trim().split(/\s+/).find(Boolean);
-    return firstReference ?? messageId;
+  function resolveConversationKey(messageId: string, email: Email) {
+    const firstReference = email.references?.trim().split(/\s+/).find(Boolean);
+    return firstReference ?? email.inReplyTo ?? messageId;
+  }
+
+  function resolveCreatedAt(email: Email) {
+    if (typeof email.date === 'string') {
+      return email.date;
+    }
+
+    if (email.date) {
+      const parsedDate = new Date(String(email.date));
+
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString();
+      }
+    }
+
+    return new Date().toISOString();
   }
 
   async function connectImap() {
@@ -95,6 +111,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         const parsed = await PostalMime.parse(source);
 
         if (parsed.from?.address?.toLowerCase() === config.imap.user.toLowerCase()) {
+          await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
           continue;
         }
 
@@ -112,15 +129,17 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
         await deliverMessage({
           providerMessageId,
-          providerConversationKey: resolveConversationKey(providerMessageId, parsed.references),
+          providerConversationKey: resolveConversationKey(providerMessageId, parsed),
           conversationName: parsed.subject ?? undefined,
           authorExternalId: parsed.from?.address ?? 'unknown',
           authorUsername: parsed.from?.address ?? 'unknown',
           authorDisplayName: parsed.from?.name ?? parsed.from?.address ?? 'unknown',
           content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
           attachments,
-          createdAt: parsed.date ?? new Date().toISOString(),
+          createdAt: resolveCreatedAt(parsed),
         });
+
+        await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
       }
     } catch (error) {
       console.error('[email] Error processing message:', error);
@@ -198,17 +217,22 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       try {
         const isReply = Boolean(input.providerConversationKey);
+        const replyTarget = input.replyToProviderMessageId ?? input.providerConversationKey;
+        const references = [input.providerConversationKey, input.replyToProviderMessageId].filter(Boolean);
         const mailOptions: Record<string, unknown> = {
           from: config.smtp.user,
           to: recipientAddress,
-          subject: isReply ? `Re: ${input.providerConversationKey}` : 'Message from agent',
+          subject: isReply ? 'Re: Conversation' : `Message from ${config.smtp.user}`,
           text: input.content,
           bcc: config.bcc,
         };
 
-        if (input.providerConversationKey) {
-          mailOptions.inReplyTo = input.providerConversationKey;
-          mailOptions.references = input.providerConversationKey;
+        if (replyTarget) {
+          mailOptions.inReplyTo = replyTarget;
+        }
+
+        if (references.length > 0) {
+          mailOptions.references = references.join(' ');
         }
 
         const info = await transporter.sendMail(mailOptions);
@@ -216,6 +240,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         return {
           providerMessageId: info.messageId,
           providerConversationKey: input.providerConversationKey ?? info.messageId,
+          conversationName: String(mailOptions.subject),
         };
       } finally {
         await transporter.close();

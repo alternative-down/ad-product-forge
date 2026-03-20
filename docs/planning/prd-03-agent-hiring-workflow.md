@@ -179,7 +179,7 @@ For the current implementation, the practical result is still small:
 
 Current provisioning direction includes:
 - GitHub App provisioning flow for source control integration
-- planned Migadu mailbox provisioning for agent email
+- Migadu mailbox provisioning for agent email
 
 These should be derived by the workflow, not manually specified by the hiring requester.
 
@@ -235,11 +235,12 @@ Implemented today:
   - the agent record
   - the first weekly execution contract with `autoRenew = true`
 - the workflow instantiates the hired agent in the in-memory internal agent registry
+- the workflow provisions a Migadu mailbox for the hired agent
+- the workflow stores the mailbox runtime credentials in encrypted agent provider storage
 - the workflow provisions a pending GitHub App integration for the hired agent
-- the workflow returns `githubAppRegistrationUrl`
-
-Planned next provisioning step:
-- create a Migadu mailbox for the hired agent and store its encrypted runtime credentials
+- the workflow returns:
+  - `emailAddress`
+  - `githubAppRegistrationUrl`
 
 Current implementation notes:
 - the RH prompt generation currently uses a dedicated temporary internal RH agent with:
