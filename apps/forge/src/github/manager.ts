@@ -237,6 +237,289 @@ export function createGitHubAppManager(config: {
     };
   }
 
+  async function listIssues(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    state?: 'open' | 'closed' | 'all';
+    labels?: string[];
+    assignee?: string;
+    creator?: string;
+    sort?: 'created' | 'updated' | 'comments';
+    direction?: 'asc' | 'desc';
+    limit?: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('GET /repos/{owner}/{repo}/issues', {
+      owner,
+      repo: input.repositoryName,
+      state: input.state ?? 'open',
+      labels: input.labels?.join(','),
+      assignee: input.assignee,
+      creator: input.creator,
+      sort: input.sort,
+      direction: input.direction,
+      per_page: Math.min(input.limit ?? 50, 100),
+    });
+
+    return response.data
+      .filter((issue) => !('pull_request' in issue))
+      .map((issue) => toIssueSummary(issue));
+  }
+
+  async function getIssue(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    issueNumber: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
+      owner,
+      repo: input.repositoryName,
+      issue_number: input.issueNumber,
+    });
+
+    return toIssueDetails(response.data);
+  }
+
+  async function createIssue(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    title: string;
+    body?: string;
+    labels?: string[];
+    assignees?: string[];
+    milestone?: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('POST /repos/{owner}/{repo}/issues', {
+      owner,
+      repo: input.repositoryName,
+      title: input.title,
+      body: input.body,
+      labels: input.labels,
+      assignees: input.assignees,
+      milestone: input.milestone,
+    });
+
+    return toIssueDetails(response.data);
+  }
+
+  async function updateIssue(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    issueNumber: number;
+    title?: string;
+    body?: string;
+    state?: 'open' | 'closed';
+    labels?: string[];
+    assignees?: string[];
+    milestone?: number | null;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
+      owner,
+      repo: input.repositoryName,
+      issue_number: input.issueNumber,
+      title: input.title,
+      body: input.body,
+      state: input.state,
+      labels: input.labels,
+      assignees: input.assignees,
+      milestone: input.milestone,
+    });
+
+    return toIssueDetails(response.data);
+  }
+
+  async function closeIssue(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    issueNumber: number;
+  }) {
+    return updateIssue(agentId, {
+      ...input,
+      state: 'closed',
+    });
+  }
+
+  async function reopenIssue(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    issueNumber: number;
+  }) {
+    return updateIssue(agentId, {
+      ...input,
+      state: 'open',
+    });
+  }
+
+  async function listIssueComments(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    issueNumber: number;
+    limit?: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+      owner,
+      repo: input.repositoryName,
+      issue_number: input.issueNumber,
+      per_page: Math.min(input.limit ?? 100, 100),
+    });
+
+    return response.data.map((comment) => ({
+      id: comment.id,
+      url: comment.html_url,
+      body: comment.body ?? '',
+      author: comment.user?.login ?? null,
+      createdAt: comment.created_at,
+      updatedAt: comment.updated_at,
+    }));
+  }
+
+  async function createIssueComment(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    issueNumber: number;
+    body: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+      owner,
+      repo: input.repositoryName,
+      issue_number: input.issueNumber,
+      body: input.body,
+    });
+
+    return {
+      id: response.data.id,
+      url: response.data.html_url,
+      body: response.data.body ?? '',
+      author: response.data.user?.login ?? null,
+      createdAt: response.data.created_at,
+      updatedAt: response.data.updated_at,
+    };
+  }
+
+  async function listLabels(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    limit?: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('GET /repos/{owner}/{repo}/labels', {
+      owner,
+      repo: input.repositoryName,
+      per_page: Math.min(input.limit ?? 100, 100),
+    });
+
+    return response.data.map((label) => ({
+      name: label.name,
+      description: label.description ?? null,
+      color: label.color,
+      default: label.default,
+    }));
+  }
+
+  async function addIssueLabels(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    issueNumber: number;
+    labels: string[];
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+      owner,
+      repo: input.repositoryName,
+      issue_number: input.issueNumber,
+      labels: input.labels,
+    });
+
+    return response.data.map((label) => ({
+      name: label.name,
+      description: label.description ?? null,
+      color: label.color,
+      default: label.default,
+    }));
+  }
+
+  async function removeIssueLabels(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    issueNumber: number;
+    labels: string[];
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+
+    for (const labelName of input.labels) {
+      await octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}', {
+        owner,
+        repo: input.repositoryName,
+        issue_number: input.issueNumber,
+        name: labelName,
+      }).catch((error) => {
+        if (
+          typeof error === 'object'
+          && error !== null
+          && 'status' in error
+          && error.status === 404
+        ) {
+          return;
+        }
+
+        throw error;
+      });
+    }
+
+    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+      owner,
+      repo: input.repositoryName,
+      issue_number: input.issueNumber,
+    });
+
+    return response.data.map((label) => ({
+      name: label.name,
+      description: label.description ?? null,
+      color: label.color,
+      default: label.default,
+    }));
+  }
+
+  async function listMilestones(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    state?: 'open' | 'closed' | 'all';
+    limit?: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = input.owner ?? config.organization;
+    const response = await octokit.request('GET /repos/{owner}/{repo}/milestones', {
+      owner,
+      repo: input.repositoryName,
+      state: input.state ?? 'open',
+      per_page: Math.min(input.limit ?? 100, 100),
+    });
+
+    return response.data.map((milestone) => ({
+      number: milestone.number,
+      title: milestone.title,
+      description: milestone.description ?? null,
+      state: milestone.state,
+      dueOn: milestone.due_on,
+      openIssues: milestone.open_issues,
+      closedIssues: milestone.closed_issues,
+    }));
+  }
+
   return {
     ensureAgentApp,
     loadAllAgents,
@@ -248,6 +531,18 @@ export function createGitHubAppManager(config: {
     getRepository,
     listPullRequests,
     createPullRequest,
+    listIssues,
+    getIssue,
+    createIssue,
+    updateIssue,
+    closeIssue,
+    reopenIssue,
+    listIssueComments,
+    createIssueComment,
+    listLabels,
+    addIssueLabels,
+    removeIssueLabels,
+    listMilestones,
   };
 
   function buildProvisioning(agentId: string, credentials: GitHubAppCredentials): GitHubAppProvisioning {
@@ -610,6 +905,59 @@ export function createGitHubAppManager(config: {
     const app = createGitHubApp(credentials);
     return app.getInstallationOctokit(credentials.installationId);
   }
+}
+
+type GitHubIssueLabel = string | {
+  name?: string | null;
+};
+
+type GitHubIssueLike = {
+  number: number;
+  title: string;
+  body?: string | null;
+  state: string;
+  html_url: string;
+  labels: GitHubIssueLabel[];
+  assignees?: Array<{ login: string }> | null;
+  milestone?: { number: number; title: string } | null;
+  comments?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+function toIssueSummary(issue: GitHubIssueLike) {
+  return {
+    number: issue.number,
+    title: issue.title,
+    state: issue.state,
+    url: issue.html_url,
+    labels: issue.labels.map((label) => typeof label === 'string' ? label : label.name),
+    assignees: issue.assignees?.map((assignee) => assignee.login) ?? [],
+    milestone: issue.milestone?.title ?? null,
+    createdAt: issue.created_at,
+    updatedAt: issue.updated_at,
+  };
+}
+
+function toIssueDetails(issue: GitHubIssueLike) {
+  return {
+    number: issue.number,
+    title: issue.title,
+    body: issue.body ?? '',
+    state: issue.state,
+    url: issue.html_url,
+    labels: issue.labels.map((label) => typeof label === 'string' ? label : label.name),
+    assignees: issue.assignees?.map((assignee) => assignee.login) ?? [],
+    milestone: issue.milestone
+      ? {
+        number: issue.milestone.number,
+        title: issue.milestone.title,
+      }
+      : null,
+    comments: 'comments' in issue ? issue.comments : 0,
+    createdAt: issue.created_at,
+    updatedAt: issue.updated_at,
+  };
 }
 
 function createAppName(agentName: string, agentId: string) {
