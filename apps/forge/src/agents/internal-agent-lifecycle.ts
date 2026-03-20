@@ -36,7 +36,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     schedules: input.schedules,
   });
   try {
-    const githubApp = await input.githubApps.ensureAgentApp({
+    const githubApp = await input.githubApps.createAgentApp({
       agentId: hired.agentId,
       agentName: profile.name,
     });

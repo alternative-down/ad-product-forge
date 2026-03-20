@@ -184,7 +184,7 @@ export function createCoolifyManager(config: {
     startCommand?: string;
     installCommand?: string;
   }) {
-    const deploymentContext = await ensureDefaultDeploymentContext();
+    const deploymentContext = await loadDefaultDeploymentContext();
     const domain = buildApplicationDomain(input.slug);
     const data = await requestJson('POST', '/applications/private-github-app', {
       project_uuid: deploymentContext.projectUuid,
@@ -408,9 +408,9 @@ export function createCoolifyManager(config: {
     deleteApplicationEnv,
   };
 
-  async function ensureDefaultDeploymentContext() {
-    const project = await ensureDefaultProject();
-    const environment = await ensureDefaultEnvironment(project.uuid);
+  async function loadDefaultDeploymentContext() {
+    const project = await getOrCreateDefaultProject();
+    const environment = await getOrCreateDefaultEnvironment(project.uuid);
     const server = await getDefaultServer();
     const destinationUuid = await getServerDestinationUuid(server.uuid, server);
 
@@ -423,7 +423,7 @@ export function createCoolifyManager(config: {
     };
   }
 
-  async function ensureDefaultProject() {
+  async function getOrCreateDefaultProject() {
     const data = await requestJson('GET', '/projects');
     const projects = extractCollection(data, ProjectSchema);
 
@@ -439,7 +439,7 @@ export function createCoolifyManager(config: {
     return extractItem(created, ProjectSchema);
   }
 
-  async function ensureDefaultEnvironment(projectUuid: string) {
+  async function getOrCreateDefaultEnvironment(projectUuid: string) {
     const data = await requestJson('GET', `/projects/${encodeURIComponent(projectUuid)}/environments`);
     const environments = extractCollection(data, EnvironmentSchema);
     const production = environments.find((environment) => environment.name === 'production');

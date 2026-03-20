@@ -40,24 +40,23 @@ export function createGitHubAppManager(config: {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
 
-  async function ensureAgentApp(input: { agentId: string; agentName: string }) {
+  async function createAgentApp(input: { agentId: string; agentName: string }) {
     const existing = await getCredentials(input.agentId);
 
-    if (!existing) {
-      const pendingCredentials = {
-        status: 'pending' as const,
-        state: crypto.randomUUID(),
-        appName: createAppName(input.agentName, input.agentId),
-        createdAt: Date.now(),
-      };
-
-      await saveCredentials(input.agentId, pendingCredentials);
-      registerAgentRoutes(input.agentId);
-      return buildProvisioning(input.agentId, pendingCredentials);
+    if (existing) {
+      throw new Error(`GitHub App already exists for agent ${input.agentId}`);
     }
 
+    const pendingCredentials = {
+      status: 'pending' as const,
+      state: crypto.randomUUID(),
+      appName: createAppName(input.agentName, input.agentId),
+      createdAt: Date.now(),
+    };
+
+    await saveCredentials(input.agentId, pendingCredentials);
     registerAgentRoutes(input.agentId);
-    return buildProvisioning(input.agentId, existing);
+    return buildProvisioning(input.agentId, pendingCredentials);
   }
 
   async function loadAllAgents() {
@@ -521,7 +520,7 @@ export function createGitHubAppManager(config: {
   }
 
   return {
-    ensureAgentApp,
+    createAgentApp,
     loadAllAgents,
     unloadAgent,
     deleteAgentApp,
