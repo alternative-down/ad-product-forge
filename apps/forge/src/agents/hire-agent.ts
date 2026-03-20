@@ -23,6 +23,8 @@ import type { GitHubAppManager } from '../github/manager.js';
 import type { AgentEmailManager } from '../email/migadu-manager.js';
 import type { CoolifyManager } from '../coolify/manager.js';
 import { createCoolifyTools } from '../coolify/tools.js';
+import type { createAgentScheduleManager } from '../schedules/manager.js';
+import { createAgentScheduleTools } from '../schedules/tools.js';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -42,6 +44,7 @@ export type HireInternalAgentInput = {
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
+  schedules: ReturnType<typeof createAgentScheduleManager>;
 };
 
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
@@ -123,6 +126,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
           ...createAgentNotificationTools(db, agentId),
           ...createGitHubTools(agentId, input.githubApps),
           ...(input.coolify ? createCoolifyTools(input.coolify) : {}),
+          ...createAgentScheduleTools(agentId, input.schedules),
         },
         providers: loadCommunicationProviders(providerCredentials),
         workflows: input.workflows,

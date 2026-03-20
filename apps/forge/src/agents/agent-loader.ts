@@ -10,12 +10,15 @@ import { createGitHubTools } from '../github/tools.js';
 import type { GitHubAppManager } from '../github/manager.js';
 import type { CoolifyManager } from '../coolify/manager.js';
 import { createCoolifyTools } from '../coolify/tools.js';
+import type { createAgentScheduleManager } from '../schedules/manager.js';
+import { createAgentScheduleTools } from '../schedules/tools.js';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
   workflows?: CreateAgentConfig['workflows'];
   githubApps: GitHubAppManager;
   coolify: CoolifyManager | null;
+  schedules: ReturnType<typeof createAgentScheduleManager>;
 }
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
@@ -69,6 +72,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const notificationTools = createAgentNotificationTools(db, agentConfig.id);
   const githubTools = createGitHubTools(agentConfig.id, config.githubApps);
   const coolifyTools = config.coolify ? createCoolifyTools(config.coolify) : {};
+  const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules);
 
   const runtime = await createInternalAgentRuntime(
     {
@@ -83,6 +87,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
         ...notificationTools,
         ...githubTools,
         ...coolifyTools,
+        ...scheduleTools,
       },
       providers,
       workflows: config.workflows,
@@ -129,6 +134,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         workflows: config.workflows,
         githubApps: config.githubApps,
         coolify: config.coolify,
+        schedules: config.schedules,
         agentId: agentConfig.id,
       });
       agents.set(agentConfig.id, runtime);

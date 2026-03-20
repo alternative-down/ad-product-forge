@@ -6,6 +6,7 @@ import { runInternalHiring, runInternalTermination } from '../agents/internal-ag
 import type { GitHubAppManager } from '../github/manager.js';
 import type { AgentEmailManager } from '../email/migadu-manager.js';
 import type { CoolifyManager } from '../coolify/manager.js';
+import type { createAgentScheduleManager } from '../schedules/manager.js';
 
 const hireInternalAgentInputSchema = z.object({
   requestedFunction: z.string().min(1),
@@ -38,6 +39,7 @@ export function createInternalAgentWorkflows(config: {
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
+  schedules: ReturnType<typeof createAgentScheduleManager>;
 }) {
   let workflows: InternalAgentWorkflows;
 
@@ -53,6 +55,7 @@ export function createInternalAgentWorkflows(config: {
         githubApps: config.githubApps,
         emailMailboxes: config.emailMailboxes,
         coolify: config.coolify,
+        schedules: config.schedules,
       });
     },
   });
@@ -67,6 +70,7 @@ export function createInternalAgentWorkflows(config: {
         workspaceBasePath: config.workspaceBasePath,
         githubApps: config.githubApps,
         emailMailboxes: config.emailMailboxes,
+        schedules: config.schedules,
       });
     },
   });

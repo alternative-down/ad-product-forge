@@ -111,6 +111,32 @@ export const agentNotifications = sqliteTable('agent_notifications', {
 export type AgentNotification = typeof agentNotifications.$inferSelect;
 export type NewAgentNotification = typeof agentNotifications.$inferInsert;
 
+export const agentSchedules = sqliteTable('agent_schedules', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  scheduleType: text('schedule_type').notNull(),
+  cronExpression: text('cron_expression'),
+  scheduledDate: integer('scheduled_date'),
+  timezone: text('timezone').notNull(),
+  content: text('content').notNull(),
+  isActive: integer('is_active').notNull().default(1),
+  lastTriggeredAt: integer('last_triggered_at'),
+  nextTriggerAt: integer('next_trigger_at'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  agentSchedulesAgentIdIdx: index('agent_schedules_agent_id_idx').on(table.agentId),
+  agentSchedulesIsActiveIdx: index('agent_schedules_is_active_idx').on(table.isActive),
+  agentSchedulesNextTriggerAtIdx: index('agent_schedules_next_trigger_at_idx').on(table.nextTriggerAt),
+}));
+
+export type AgentSchedule = typeof agentSchedules.$inferSelect;
+export type NewAgentSchedule = typeof agentSchedules.$inferInsert;
+
 export const llmModelPrices = sqliteTable('llm_model_prices', {
   modelKey: text('model_key').primaryKey(),
   inputPerMillionUsd: real('input_per_million_usd').notNull(),
@@ -170,6 +196,7 @@ export const agentsRelations = relations(agents, ({ many }) => ({
   executionContracts: many(agentExecutionContracts),
   executionSteps: many(agentExecutionSteps),
   notifications: many(agentNotifications),
+  schedules: many(agentSchedules),
 }));
 
 export const agentProvidersRelations = relations(agentProviders, ({ one }) => ({
@@ -201,6 +228,13 @@ export const agentExecutionStepsRelations = relations(agentExecutionSteps, ({ on
 export const agentNotificationsRelations = relations(agentNotifications, ({ one }) => ({
   agent: one(agents, {
     fields: [agentNotifications.agentId],
+    references: [agents.id],
+  }),
+}));
+
+export const agentSchedulesRelations = relations(agentSchedules, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentSchedules.agentId],
     references: [agents.id],
   }),
 }));

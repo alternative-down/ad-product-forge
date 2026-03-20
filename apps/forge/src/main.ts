@@ -12,6 +12,7 @@ import { createForgeHttpServer } from './http/server.js';
 import { createGitHubAppManager } from './github/manager.js';
 import { createAgentEmailManager } from './email/migadu-manager.js';
 import { createCoolifyManager } from './coolify/manager.js';
+import { createAgentScheduleManager } from './schedules/manager.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -56,6 +57,18 @@ export async function main() {
     apiUser: env.MIGADU_API_USER ?? null,
     apiKey: env.MIGADU_API_KEY ?? null,
   });
+  const schedules = createAgentScheduleManager({
+    db,
+    notifyAgent(agentId) {
+      const entry = registry.get(agentId);
+
+      if (!entry) {
+        return;
+      }
+
+      entry.runner.notifyExternalEvent();
+    },
+  });
   const githubApps = createGitHubAppManager({
     db,
     httpServer,
@@ -85,14 +98,17 @@ export async function main() {
     githubApps,
     emailMailboxes,
     coolify,
+    schedules,
   });
   const agents = await registry.loadAll(db, {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     workflows,
     githubApps,
     coolify,
+    schedules,
   });
   await githubApps.loadAllAgents();
+  await schedules.loadAll();
   await httpServer.start();
   console.log(`[Forge] HTTP server listening on ${publicBaseUrl}`);
 
@@ -111,9 +127,11 @@ export async function main() {
   // Graceful shutdown handlers
   const handleShutdown = (signal: string) => {
     console.log(`\n[${signal}] Shutting down gracefully...`);
-    void httpServer.stop().finally(() => {
-      process.exit(0);
-    });
+    void schedules.stop()
+      .finally(() => httpServer.stop())
+      .finally(() => {
+        process.exit(0);
+      });
   };
 
   process.on('SIGTERM', () => handleShutdown('SIGTERM'));
