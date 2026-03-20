@@ -10,6 +10,8 @@
 
 ### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
 
+**Dependency note:** This PRD is downstream of the application/repository layer and should not define GitHub organization ownership or deployment state.
+
 **Este PRD descreve infraestrutura de geração de código específica do ad-product-forge.** Templates de aplicação permitir que agentes de desenvolvimento de Nicolas façam scaffold de novos produtos em velocidade. Isto é tooling de desenvolvedor específica da aplicação, não infraestrutura de framework.
 
 Fornecer templates de aplicação pré-construídos para que agentes façam scaffold rapidamente de aplicações production-ready com padrões padrão para autenticação, banco de dados e deployment.
