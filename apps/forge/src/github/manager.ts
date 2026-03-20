@@ -2,13 +2,13 @@ import crypto from 'node:crypto';
 
 import { createId } from '@paralleldrive/cuid2';
 import { createAppAuth } from '@octokit/auth-app';
-import { Octokit } from 'octokit';
-import { eq, and } from 'drizzle-orm';
+import { App } from 'octokit';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { Database } from '../database/index.js';
 import { agentProviders, type NewAgentProvider } from '../database/schema.js';
-import { encryptSecret, decryptSecret } from '../encryption/crypto.js';
+import { decryptSecret, encryptSecret } from '../encryption/crypto.js';
 import type { createForgeHttpServer, HttpResponse } from '../http/server.js';
 import { createAgentNotificationStore } from '../notifications/store.js';
 import { githubAppCredentialsSchema, type GitHubAppCredentials } from './types.js';
@@ -44,16 +44,16 @@ export function createGitHubAppManager(config: {
     const existing = await getCredentials(input.agentId);
 
     if (!existing) {
-      const credentials = {
+      const pendingCredentials = {
         status: 'pending' as const,
         state: crypto.randomUUID(),
         appName: createAppName(input.agentName, input.agentId),
         createdAt: Date.now(),
       };
 
-      await saveCredentials(input.agentId, credentials);
+      await saveCredentials(input.agentId, pendingCredentials);
       registerAgentRoutes(input.agentId);
-      return buildProvisioning(input.agentId, credentials);
+      return buildProvisioning(input.agentId, pendingCredentials);
     }
 
     registerAgentRoutes(input.agentId);
@@ -65,14 +65,14 @@ export function createGitHubAppManager(config: {
       where: eq(agentProviders.providerType, GITHUB_PROVIDER_TYPE),
     });
 
-    for (const row of providerRows) {
-      const credentials = parseCredentials(row.encryptedCredentials);
+    for (const providerRow of providerRows) {
+      const credentials = parseCredentials(providerRow.encryptedCredentials);
 
       if (!credentials) {
         continue;
       }
 
-      registerAgentRoutes(row.agentId);
+      registerAgentRoutes(providerRow.agentId);
     }
   }
 
@@ -91,20 +91,14 @@ export function createGitHubAppManager(config: {
 
     unloadAgent(agentId);
 
-    if (!credentials) {
+    if (!credentials || credentials.status !== 'active') {
       return;
     }
 
-    if (credentials.status === 'active') {
-      const appOctokit = createAppOctokit({
-        appId: credentials.appId,
-        privateKey: credentials.privateKey,
-      });
-
-      await appOctokit.request('DELETE /app/installations/{installation_id}', {
-        installation_id: credentials.installationId,
-      });
-    }
+    const app = createGitHubApp(credentials);
+    await app.octokit.request('DELETE /app/installations/{installation_id}', {
+      installation_id: credentials.installationId,
+    });
   }
 
   async function getGitCredentials(input: {
@@ -113,15 +107,14 @@ export function createGitHubAppManager(config: {
   }) {
     const credentials = await getActiveCredentials(input.agentId);
     const token = await getInstallationToken(credentials);
-    const repositoryUrl = input.repositoryName
-      ? `https://github.com/${config.organization}/${input.repositoryName}.git`
-      : undefined;
 
     return {
       username: 'x-access-token',
       token: token.token,
       expiresAt: token.expiresAt,
-      repositoryUrl,
+      repositoryUrl: input.repositoryName
+        ? `https://github.com/${config.organization}/${input.repositoryName}.git`
+        : undefined,
       gitUserName: credentials.appName,
       gitUserEmail: `${credentials.appSlug}@forge.github-app.local`,
     };
@@ -298,7 +291,7 @@ export function createGitHubAppManager(config: {
       config.httpServer.registerRoute({
         method: 'POST',
         path: getWebhookPath(agentId),
-        handler: async (request) => handleWebhook(agentId, request.headers, request.body, request.bodyText),
+        handler: async (request) => handleWebhook(agentId, request.headers, request.bodyText),
       }),
     ];
 
@@ -313,7 +306,10 @@ export function createGitHubAppManager(config: {
     }
 
     if (credentials.status !== 'pending') {
-      return html(200, `<h1>GitHub App already created</h1><p>Status: ${escapeHtml(credentials.status)}</p><p><a href="${escapeHtml(buildProvisioning(agentId, credentials).installUrl ?? '#')}">Install app</a></p>`);
+      return html(
+        200,
+        `<h1>GitHub App already created</h1><p>Status: ${escapeHtml(credentials.status)}</p><p><a href="${escapeHtml(buildProvisioning(agentId, credentials).installUrl ?? '#')}">Install app</a></p>`,
+      );
     }
 
     const manifest = JSON.stringify({
@@ -342,7 +338,6 @@ export function createGitHubAppManager(config: {
         'repository',
       ],
     });
-
     const action = `https://github.com/organizations/${encodeURIComponent(config.organization)}/settings/apps/new?state=${encodeURIComponent(credentials.state)}`;
     const body = `<!doctype html>
 <html>
@@ -369,7 +364,7 @@ export function createGitHubAppManager(config: {
       return html(400, '<h1>Invalid GitHub App manifest callback</h1>');
     }
 
-    const conversionResponse = await fetch(`https://api.github.com/app-manifests/${code}/conversions`, {
+    const response = await fetch(`https://api.github.com/app-manifests/${code}/conversions`, {
       method: 'POST',
       headers: {
         Accept: 'application/vnd.github+json',
@@ -377,20 +372,25 @@ export function createGitHubAppManager(config: {
       },
     });
 
-    if (!conversionResponse.ok) {
-      const text = await conversionResponse.text();
+    if (!response.ok) {
+      const text = await response.text();
       return html(500, `<h1>Failed to convert GitHub App manifest</h1><pre>${escapeHtml(text)}</pre>`);
     }
 
-    const conversion = manifestConversionSchema.parse(await conversionResponse.json());
-    const appOctokit = createAppOctokit({
+    const conversion = manifestConversionSchema.parse(await response.json());
+    const app = createGitHubApp({
+      status: 'created',
       appId: conversion.id,
       privateKey: conversion.pem,
+      webhookSecret: conversion.webhook_secret,
+      appSlug: 'pending-slug',
+      appName: credentials.appName,
+      createdAt: credentials.createdAt,
     });
-    const appResponse = await appOctokit.request('GET /app');
-    const app = appResponse.data;
+    const appResponse = await app.octokit.request('GET /app');
+    const metadata = appResponse.data;
 
-    if (!app?.slug || !app.name) {
+    if (!metadata?.slug || !metadata.name) {
       return html(500, '<h1>GitHub App metadata is incomplete after manifest conversion</h1>');
     }
 
@@ -399,8 +399,8 @@ export function createGitHubAppManager(config: {
       appId: conversion.id,
       privateKey: conversion.pem,
       webhookSecret: conversion.webhook_secret,
-      appSlug: app.slug,
-      appName: app.name,
+      appSlug: metadata.slug,
+      appName: metadata.name,
       createdAt: credentials.createdAt,
     };
 
@@ -429,10 +429,10 @@ export function createGitHubAppManager(config: {
       return html(400, '<h1>Invalid installation_id</h1>');
     }
 
-    const octokit = createInstallationOctokit({
+    const octokit = await createInstallationOctokit({
       ...credentials,
-      installationId,
       status: 'active',
+      installationId,
     });
     await octokit.request('GET /installation');
 
@@ -466,8 +466,7 @@ export function createGitHubAppManager(config: {
   async function handleWebhook(
     agentId: string,
     headers: Record<string, string | string[] | undefined>,
-    body: Buffer,
-    bodyText: string,
+    payload: string,
   ): Promise<HttpResponse> {
     const credentials = await getCredentials(agentId);
 
@@ -475,32 +474,48 @@ export function createGitHubAppManager(config: {
       return { status: 404, body: 'GitHub App not active for agent' };
     }
 
-    const signature = getHeader(headers, 'x-hub-signature-256');
-    const event = getHeader(headers, 'x-github-event');
     const deliveryId = getHeader(headers, 'x-github-delivery');
+    const eventName = getHeader(headers, 'x-github-event');
+    const signature = getHeader(headers, 'x-hub-signature-256');
 
-    if (!signature || !verifyWebhook(body, credentials.webhookSecret, signature)) {
-      return { status: 401, body: 'Invalid signature' };
+    if (!deliveryId || !eventName || !signature) {
+      return { status: 400, body: 'Missing GitHub webhook headers' };
     }
 
-    if (!event) {
-      return { status: 400, body: 'Missing GitHub event header' };
-    }
+    const app = createGitHubApp(credentials);
+    app.webhooks.onAny(async ({ id, name, payload }) => {
+      const payloadRecord = payload as Record<string, unknown>;
+      const repository =
+        typeof payloadRecord.repository === 'object' && payloadRecord.repository && 'full_name' in payloadRecord.repository
+          ? payloadRecord.repository.full_name
+          : undefined;
+      const sender =
+        typeof payloadRecord.sender === 'object' && payloadRecord.sender && 'login' in payloadRecord.sender
+          ? payloadRecord.sender.login
+          : undefined;
+      const action = typeof payloadRecord.action === 'string' ? payloadRecord.action : undefined;
 
-    const payload = bodyText ? JSON.parse(bodyText) : {};
-    await notifications.createNotification({
-      agentId,
-      content: JSON.stringify({
-        source: 'github',
-        deliveryId,
-        event,
-        action: typeof payload.action === 'string' ? payload.action : undefined,
-        repository: payload.repository?.full_name,
-        sender: payload.sender?.login,
-        payload,
-      }),
+      await notifications.createNotification({
+        agentId,
+        content: JSON.stringify({
+          source: 'github',
+          deliveryId: id,
+          event: name,
+          action,
+          repository,
+          sender,
+          payload,
+        }),
+      });
+      config.notifyAgent(agentId);
     });
-    config.notifyAgent(agentId);
+
+    await app.webhooks.verifyAndReceive({
+      id: deliveryId,
+      name: eventName,
+      signature,
+      payload,
+    });
 
     return { status: 202, body: 'Accepted' };
   }
@@ -580,25 +595,19 @@ export function createGitHubAppManager(config: {
     };
   }
 
-  function createAppOctokit(input: { appId: number; privateKey: string }) {
-    return new Octokit({
-      authStrategy: createAppAuth,
-      auth: {
-        appId: input.appId,
-        privateKey: input.privateKey,
+  function createGitHubApp(credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>) {
+    return new App({
+      appId: credentials.appId,
+      privateKey: credentials.privateKey,
+      webhooks: {
+        secret: credentials.webhookSecret,
       },
     });
   }
 
-  function createInstallationOctokit(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {
-    return new Octokit({
-      authStrategy: createAppAuth,
-      auth: {
-        appId: credentials.appId,
-        privateKey: credentials.privateKey,
-        installationId: credentials.installationId,
-      },
-    });
+  async function createInstallationOctokit(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {
+    const app = createGitHubApp(credentials);
+    return app.getInstallationOctokit(credentials.installationId);
   }
 }
 
@@ -630,11 +639,6 @@ function getHeader(headers: Record<string, string | string[] | undefined>, name:
   }
 
   return value;
-}
-
-function verifyWebhook(body: Buffer, secret: string, signature: string) {
-  const digest = `sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`;
-  return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
 }
 
 function escapeHtml(value: string) {
