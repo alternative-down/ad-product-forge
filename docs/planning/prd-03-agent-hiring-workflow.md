@@ -21,6 +21,7 @@ This PRD covers:
 - the hiring workflow itself
 - initial agent creation
 - first contract creation
+- GitHub App provisioning for the hired agent
 - runtime instantiation of the hired agent
 
 This PRD does not cover:
@@ -172,6 +173,7 @@ The hiring workflow is responsible for initial provisioning, but the requester d
 
 For the first version, the practical result is very small:
 - create the hired agent
+- provision a pending GitHub App integration for it
 - instantiate it in the runtime
 - make it available for internal communication
 
@@ -183,6 +185,8 @@ Future provisioning may include things such as:
 - additional provider setup
 
 But these should be derived by the workflow, not manually specified by the hiring requester.
+
+For the current GitHub direction, the first version provisions a pending GitHub App integration and returns a registration URL so the app can be created and installed for that hired agent.
 
 ## Cost Recording Rule
 
@@ -232,6 +236,8 @@ Implemented today:
   - the agent record
   - the first weekly execution contract with `autoRenew = true`
 - the workflow instantiates the hired agent in the in-memory internal agent registry
+- the workflow provisions a pending GitHub App integration for the hired agent
+- the workflow returns `githubAppRegistrationUrl`
 
 Current implementation notes:
 - the RH prompt generation currently uses a dedicated temporary internal RH agent with:

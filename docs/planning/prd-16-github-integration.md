@@ -1,121 +1,178 @@
-# PRD-16: Integração com GitHub
+# PRD-16: GitHub Organization Integration
 
-**Status:** ⏸️ Configuração + Investigação Necessária
+**Status:** Partially Implemented
+**Classification:** FORGE APP
 
-**Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
+## 1. Goal
 
----
+Connect internal agents to one GitHub Organization through one GitHub App per internal agent so they can operate repositories and receive GitHub events.
 
-## O que é Necessário
+This PRD is about:
+- GitHub App identity for each internal agent
+- repository operations performed through the agent's own GitHub App
+- agent-specific GitHub webhook endpoints
+- agent notifications created from relevant GitHub events
 
-### Parte 1: Configuração (Você Configura)
-- Setup de GitHub App (ou autenticação alternativa)
-- Acesso para agentes à organização do GitHub
+It is not about deployment, monitoring, or a generic webhook routing bus.
 
-### Parte 2: Tooling para Agentes (PRD em Frente 7)
-- Usar `gh` (GitHub CLI) se possível com GitHub App
-- Criar Tools customizadas se `gh` não funcionar com a configuração
+## 2. Core Direction
 
-### Questão em Aberto
-**Como lidar com agentes sem user real?**
-- Opção A: GitHub App (se suportar operações via app)
-- Opção B: Criar conta GitHub por agente usando email do agente
-- Definir em PRD-33 (Webhook Event Routing) como receber eventos
+The system uses:
+- one GitHub App per internal agent
+- one installation of that app in the company organization
+- organization-wide repository access in the first version
+- GitHub App installation tokens for API and Git HTTPS operations
 
-**Status:** Não é PRD isolado. Será tratado em:
-- **PRD-33 (Webhook Event Routing)** - Como receber eventos do GitHub
-- **PRD-7 ou investigação** - Tooling para agentes manipularem repos
+This is not a per-user GitHub account model.
+It is a per-agent GitHub App identity model.
 
----
+## 3. Scope
 
-## 1. Visão Geral
+### Included
+- create one GitHub App per internal agent
+- install that GitHub App in the company organization
+- store GitHub App credentials in encrypted agent provider/integration storage
+- generate Git HTTPS credentials for the agent
+- perform basic GitHub API operations through the agent app
+- receive GitHub webhook events on an agent-specific endpoint
+- create generic agent notifications from relevant GitHub webhook events
 
-### Classificação: APLICAÇÃO AD-PRODUCT-FORGE
+### Excluded
+- deployment to infrastructure
+- runtime monitoring of deployed apps
+- generic webhook routing bus
+- repository-level access scoping
+- GitHub user accounts per agent
+- advanced GitHub administration
 
-**Este PRD descreve infraestrutura de integração específica do ad-product-forge.** A integração com GitHub permite que agentes de desenvolvimento autônomos de Nicolas gerenciem repositórios de código, criem pull requests e respondam a eventos de repositório. Esta é infraestrutura específica da aplicação para fluxos de trabalho de desenvolvimento autônomo.
+## 4. Authentication Model
 
-Permitir que agentes leiam/escrevam repositórios GitHub, criem commits, abram PRs e respondam a eventos GitHub via webhooks.
+Required persisted data for one agent GitHub App:
+- `appId`
+- `privateKey`
+- `installationId`
+- `webhookSecret`
+- `appSlug`
 
-**Capacidades principais (para ad-product-forge):**
-- Agentes de desenvolvimento leem/escrevem código da aplicação
-- Criam commits para novos recursos e correções
-- Criam branches e PRs para revisão de código
-- Respondem a eventos GitHub (push, PR, issue) via webhooks
-- Gerenciam repositórios sob a organização GitHub de Nicolas
+Authentication flow:
+1. authenticate as app with `appId + privateKey`
+2. request installation token for `installationId`
+3. use that token for GitHub API and Git HTTPS operations
 
----
+The preferred client layer is Octokit.
 
-## 2. Casos de Uso
+## 5. Webhook Model
 
-### 2.1 Criar Repositório
-Agente provisiona um novo repositório GitHub sob organização/conta autenticada.
+Each agent GitHub App registers its own endpoint.
 
-### 2.2 Fazer Push de Código
-Agente faz commit de código para repositório (novos commits, push de alterações).
+Initial direction:
+- `GET /github/apps/{agentId}/register`
+- `GET /github/apps/{agentId}/manifest/callback`
+- `GET /github/apps/{agentId}/setup`
+- `POST /webhooks/github/{agentId}`
 
-### 2.3 Abrir Pull Request
-Agente cria pull request com código/alterações geradas.
+This means:
+- the endpoint path already identifies the agent
+- no extra app-to-agent routing table is needed for webhook delivery
+- webhook validation uses the `webhookSecret` stored in the agent's private GitHub integration credentials
 
-### 2.4 Escutar Eventos
-Agente recebe eventos GitHub push/PR/issue via webhooks.
+Relevant GitHub events create generic agent notifications and trigger the wake flow.
 
----
+## 6. Notification Model
 
-## 3. Ferramentas Principais
+GitHub events do not create communication messages.
+They create generic agent notifications.
 
-**Gerenciamento de Repositório:**
-- `readFile(repo, path)` — Ler arquivo do repositório
-- `writeFile(repo, path, content)` — Criar/atualizar arquivo
-- `listFiles(repo, path)` — Listar arquivos do repositório
+Suggested minimum fields:
+- `id`
+- `agentId`
+- `content`
+- `createdAt`
+- `readAt`
 
-**Commits & Branches:**
-- `createCommit(repo, branch, message, files)` — Criar commit
-- `createPullRequest(repo, title, body, changes)` — Abrir PR para main
+`content` may store compact JSON with:
+- `source`
+- `event`
+- `action`
+- `repository`
+- `sender`
+- `payload`
 
-**Eventos:**
-- Webhook recebe eventos GitHub
-- Agente processa via `listQueuedEvents()` e `processWebhookEvent(eventId)`
+This table is generic and can be reused by other notification-producing systems later.
 
----
+## 7. Storage Boundary
 
-## 4. Armazenamento
+GitHub App credentials do **not** belong in communication `accounts`.
 
-Configuração simples:
+Boundary:
+- communication `accounts` = identity for messaging providers and contacts
+- encrypted agent provider/integration storage = private credentials for external systems such as GitHub Apps
 
-- Token de acesso pessoal GitHub armazenado em variáveis de ambiente (não banco de dados)
-- Agente mantém contexto único de repositório padrão
+So GitHub App credentials belong in the encrypted agent provider/integration storage already used by the app.
 
----
+## 8. Initial Functional Surface
 
-## 5. Autenticação
+### 8.1 Hiring Provisioning
+The hiring workflow provisions a pending GitHub App integration for the new agent and returns a registration URL.
 
-Token de acesso pessoal GitHub via variáveis de ambiente:
-- `repo` — Controle total de repositórios privados
-- `webhooks` — Gerenciar webhooks
+### 8.2 Git HTTPS Credentials
+The agent can request short-lived Git HTTPS credentials for its own GitHub App installation.
 
----
+### 8.3 Repository Operations
+Initial explicit operations:
+- list repositories
+- create repository
+- get repository
+- list pull requests
+- create pull request
 
-## 6. Implementação
+### 8.4 Webhook Event Intake
+Relevant webhook events create agent notifications and wake the agent.
 
-- **Semana 1:** Cliente da API GitHub + operações de ler/escrever/commit de arquivo
-- **Semana 2:** Criação de PR + integração com webhook
-- **Semana 3:** Tratamento de erro + testes
+## 9. Design Rules
 
----
+- each internal agent has its own GitHub App
+- each GitHub App starts with organization-wide repository access
+- repository ownership still belongs to the company organization
+- Git operations use Git HTTPS with installation token, not SSH token
+- GitHub App credentials stay encrypted and internal to the app
+- GitHub webhook events become generic agent notifications
+- this PRD does not define deployment
 
-## 7. Fora do Escopo
+## 10. Success Criteria
 
-- Criação de repositório (usar UI do GitHub)
-- Configuração do GitHub Actions
-- Fluxos de trabalho de revisão de issue/PR
-- Operações Git avançadas
-- Gerenciamento de equipe/organização
-- Regras de proteção de branch
-- Busca/consulta de código
-- Gerenciamento de release
-- Suporte a múltiplos repositórios por agente
+- a hired internal agent receives a GitHub App provisioning flow
+- agent GitHub credentials are stored securely
+- the agent can generate Git HTTPS credentials for bash/git usage
+- the agent can perform the initial GitHub API operations through its own app
+- GitHub webhook events for that app reach the correct agent endpoint
+- those webhook events create notifications and trigger wake
 
----
+## 11. Implementation Status
 
-**Versão do Documento:** 0.1 (Simplificado)
-**Última Atualização:** 2026-03-15
+Implemented today:
+- encrypted storage for GitHub App credentials can live in `agent_providers`
+- hiring now provisions a pending GitHub App integration per new agent
+- hiring returns `githubAppRegistrationUrl`
+- a per-agent GitHub App manager exists in the Forge app runtime
+- the app now starts an HTTP server for GitHub App and webhook endpoints
+- agent-specific routes exist for:
+  - registration page
+  - manifest callback
+  - install/setup callback
+  - webhook receipt
+- generic `agent_notifications` storage exists
+- agents now have tools for:
+  - listing/reading/marking notifications
+  - generating Git HTTPS credentials
+  - listing repositories
+  - creating repositories
+  - getting repository metadata
+  - listing pull requests
+  - creating pull requests
+- relevant GitHub webhooks create notifications and trigger wake
+
+Still pending:
+- completing the real GitHub manifest/install flow in a live configured environment
+- application registry and application-to-repository linkage
+- any deployment integration on top of repository ownership
