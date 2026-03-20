@@ -139,7 +139,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     });
   }
 
-  async function ensureAccount(input: {
+  async function upsertSelfAccount(input: {
     provider: string;
     externalAccountId: string;
     displayName?: string;
@@ -281,7 +281,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     return loadContact(slug);
   }
 
-  async function ensureConversation(input: {
+  async function upsertConversation(input: {
     provider: string;
     providerConversationKey: string;
     name?: string;
@@ -343,7 +343,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     createdAt: string;
     metadata?: Record<string, unknown>;
   }) {
-    const conversation = await ensureConversation({
+    const conversation = await upsertConversation({
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
       name: input.conversationName,
@@ -396,7 +396,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     createdAt?: string;
     metadata?: Record<string, unknown>;
   }) {
-    const conversation = await ensureConversation({
+    const conversation = await upsertConversation({
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
       name: input.conversationName,
@@ -549,13 +549,13 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
   }
 
   return {
-    ensureAccount,
+    upsertSelfAccount,
     listSelfAccounts,
     listContacts,
     getContact,
     findContactByIdentity,
     upsertContact,
-    ensureConversation,
+    upsertConversation,
     getConversation,
     saveInboundMessage,
     saveOutboundMessage,

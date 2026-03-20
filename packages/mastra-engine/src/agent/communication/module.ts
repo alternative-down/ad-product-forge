@@ -72,7 +72,7 @@ export async function createCommunicationModule(config: {
   for (const provider of config.providers) {
       const account = await provider.getAccount();
 
-      await store.ensureAccount({
+      await store.upsertSelfAccount({
         provider: provider.id,
         externalAccountId: account.externalAccountId,
         displayName: account.displayName,
