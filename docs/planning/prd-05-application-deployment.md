@@ -34,6 +34,7 @@ Forge acts as the integration layer.
 Coolify uses one central company credential:
 - `COOLIFY_BASE_URL`
 - `COOLIFY_ADMIN_TOKEN`
+- `COOLIFY_APPLICATIONS_BASE_DOMAIN`
 
 This credential:
 - is not stored in communication `accounts`
@@ -152,7 +153,7 @@ The CLI can still be useful for manual debugging, but it should not be the base 
 The public domain of a new Coolify application should be derived inside Forge.
 
 The first version should always use:
-- subdomain of one company base domain from env
+- subdomain of `COOLIFY_APPLICATIONS_BASE_DOMAIN`
 
 Agents do not choose arbitrary domains during creation.
 
