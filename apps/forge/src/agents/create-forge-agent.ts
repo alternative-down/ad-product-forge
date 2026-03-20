@@ -133,14 +133,11 @@ export async function createInternalAgentRuntime<
     client,
     providers: config.providers ?? [],
   });
-  const customTools = {
-    ...createExternalAccountTools(communication),
+  const allowedCustomToolIdSet = config.allowedCustomToolIds ? new Set(config.allowedCustomToolIds) : null;
+  const searchableTools = {
+    ...createExternalAccountTools(communication, allowedCustomToolIdSet),
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
-  const allowedCustomToolIdSet = config.allowedCustomToolIds ? new Set(config.allowedCustomToolIds) : null;
-  const searchableTools = allowedCustomToolIdSet
-    ? Object.fromEntries(Object.entries(customTools).filter(([, tool]) => allowedCustomToolIdSet.has(tool.id)))
-    : customTools;
   const memory = createAgentMemory({ storage, vector });
   const omModelKey = config.omModel ?? config.model;
 

@@ -1,4 +1,4 @@
-import { createTool } from '@mastra/core/tools';
+import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
 import type { createAgentScheduleManager } from './manager.js';
@@ -31,34 +31,52 @@ const scheduleIdInputSchema = z.object({
   scheduleId: z.string().min(1),
 });
 
+function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: string) {
+  return !allowedToolIds || allowedToolIds.has(toolId);
+}
+
 export function createAgentScheduleTools(
   agentId: string,
   schedules: ReturnType<typeof createAgentScheduleManager>,
+  allowedToolIds?: Set<string> | null,
 ) {
-  return {
-    create_agent_schedule: createTool({
+  const tools: Record<string, unknown> = {};
+
+  if (canCreateTool(allowedToolIds, 'create_agent_schedule')) {
+    tools.create_agent_schedule = createTool({
       id: 'create_agent_schedule',
       description: 'Create a scheduled wake for this agent. The schedule will later create a notification and wake this agent with the provided content.',
       inputSchema: createScheduleInputSchema,
       execute: async (input) => schedules.createSchedule(agentId, input),
-    }),
-    list_agent_schedules: createTool({
+    });
+  }
+
+  if (canCreateTool(allowedToolIds, 'list_agent_schedules')) {
+    tools.list_agent_schedules = createTool({
       id: 'list_agent_schedules',
       description: 'List this agent scheduled wakes.',
       inputSchema: z.object({}),
       execute: async () => schedules.listSchedules(agentId),
-    }),
-    update_agent_schedule: createTool({
+    });
+  }
+
+  if (canCreateTool(allowedToolIds, 'update_agent_schedule')) {
+    tools.update_agent_schedule = createTool({
       id: 'update_agent_schedule',
       description: 'Partially update one scheduled wake for this agent.',
       inputSchema: updateScheduleInputSchema,
       execute: async ({ scheduleId, ...input }) => schedules.updateSchedule(agentId, scheduleId, input),
-    }),
-    delete_agent_schedule: createTool({
+    });
+  }
+
+  if (canCreateTool(allowedToolIds, 'delete_agent_schedule')) {
+    tools.delete_agent_schedule = createTool({
       id: 'delete_agent_schedule',
       description: 'Delete one scheduled wake for this agent.',
       inputSchema: scheduleIdInputSchema,
       execute: async (input) => schedules.deleteSchedule(agentId, input.scheduleId),
-    }),
-  };
+    });
+  }
+
+  return tools as Record<string, Tool<unknown, unknown>>;
 }

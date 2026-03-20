@@ -1,14 +1,19 @@
-import { createTool } from '@mastra/core/tools';
+import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
 import type { Database } from '../database/index.js';
 import { createAgentNotificationStore } from './store.js';
 
-export function createAgentNotificationTools(db: Database, agentId: string) {
-  const notifications = createAgentNotificationStore(db);
+function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: string) {
+  return !allowedToolIds || allowedToolIds.has(toolId);
+}
 
-  return {
-    list_agent_notifications: createTool({
+export function createAgentNotificationTools(db: Database, agentId: string, allowedToolIds?: Set<string> | null) {
+  const notifications = createAgentNotificationStore(db);
+  const tools: Record<string, unknown> = {};
+
+  if (canCreateTool(allowedToolIds, 'list_agent_notifications')) {
+    tools.list_agent_notifications = createTool({
       id: 'list_agent_notifications',
       description: 'List the latest notifications for this agent.',
       inputSchema: z.object({
@@ -20,16 +25,22 @@ export function createAgentNotificationTools(db: Database, agentId: string) {
         unreadOnly: input.unreadOnly ?? false,
         limit: input.limit ?? 20,
       }),
-    }),
-    get_agent_notification: createTool({
+    });
+  }
+
+  if (canCreateTool(allowedToolIds, 'get_agent_notification')) {
+    tools.get_agent_notification = createTool({
       id: 'get_agent_notification',
       description: 'Get one notification for this agent by notificationId.',
       inputSchema: z.object({
         notificationId: z.string().min(1),
       }),
       execute: async (input) => notifications.getNotification(agentId, input.notificationId),
-    }),
-    mark_agent_notification_read: createTool({
+    });
+  }
+
+  if (canCreateTool(allowedToolIds, 'mark_agent_notification_read')) {
+    tools.mark_agent_notification_read = createTool({
       id: 'mark_agent_notification_read',
       description: 'Mark one notification for this agent as read.',
       inputSchema: z.object({
@@ -38,6 +49,8 @@ export function createAgentNotificationTools(db: Database, agentId: string) {
       execute: async (input) => ({
         success: await notifications.markNotificationRead(agentId, input.notificationId),
       }),
-    }),
-  };
+    });
+  }
+
+  return tools as Record<string, Tool<unknown, unknown>>;
 }

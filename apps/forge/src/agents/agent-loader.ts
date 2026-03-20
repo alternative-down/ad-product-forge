@@ -72,12 +72,13 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const providers = loadCommunicationProviders(providerCredentials);
   const capabilities = createCapabilityStore(db);
   const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
-  const tools = createMicroErpTools(db);
-  const notificationTools = createAgentNotificationTools(db, agentConfig.id);
-  const githubTools = createGitHubTools(agentConfig.id, config.githubApps);
-  const coolifyTools = config.coolify ? createCoolifyTools(config.coolify) : {};
-  const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules);
-  const capabilityTools = createCapabilityTools(db, config);
+  const allowedToolIds = capabilitySet?.toolIds ? new Set(capabilitySet.toolIds) : null;
+  const tools = createMicroErpTools(db, allowedToolIds);
+  const notificationTools = createAgentNotificationTools(db, agentConfig.id, allowedToolIds);
+  const githubTools = createGitHubTools(agentConfig.id, config.githubApps, allowedToolIds);
+  const coolifyTools = config.coolify ? createCoolifyTools(config.coolify, allowedToolIds) : {};
+  const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
+  const capabilityTools = createCapabilityTools(db, config, allowedToolIds);
   const customTools = {
     ...tools,
     ...notificationTools,
@@ -96,7 +97,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       instructions: agentConfig.instructions,
       model: agentConfig.model,
       omModel: agentConfig.omModel || undefined,
-      tools: filterCustomTools(customTools, capabilitySet?.toolIds ?? null),
+      tools: customTools,
       providers,
       workflows: filteredWorkflows,
       allowedCustomToolIds: capabilitySet?.toolIds ?? null,
@@ -109,24 +110,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
 
   console.log(`[AgentLoader] Agent loaded successfully: ${agentConfig.id}`);
   return runtime;
-}
-
-function filterCustomTools<TTools extends Record<string, unknown>>(tools: TTools, allowedToolIds: string[] | null) {
-  if (!allowedToolIds) {
-    return tools;
-  }
-
-  const allowedToolIdSet = new Set(allowedToolIds);
-
-  return Object.fromEntries(
-    Object.entries(tools).filter(([, tool]) => {
-      if (!tool || typeof tool !== 'object' || !('id' in tool) || typeof tool.id !== 'string') {
-        return false;
-      }
-
-      return allowedToolIdSet.has(tool.id);
-    }),
-  ) as TTools;
 }
 
 function filterWorkflows(
