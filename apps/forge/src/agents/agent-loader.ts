@@ -5,10 +5,14 @@ import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentR
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
 import { decryptSecret } from '../encryption/crypto.js';
 import { createMicroErpTools } from '../micro-erp/tools.js';
+import { createAgentNotificationTools } from '../notifications/tools.js';
+import { createGitHubTools } from '../github/tools.js';
+import type { GitHubAppManager } from '../github/manager.js';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
   workflows?: CreateAgentConfig['workflows'];
+  githubApps: GitHubAppManager;
 }
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
@@ -43,6 +47,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const providerCredentials: ProviderCredentialsMap = {};
 
   for (const providerConfig of providerConfigs) {
+    if (!(providerConfig.providerType in communicationProviderTypes)) {
+      continue;
+    }
+
     try {
       // Decrypt and parse credentials from encrypted_credentials field
       const decrypted = decryptSecret(providerConfig.encryptedCredentials);
@@ -55,6 +63,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
 
   const providers = loadCommunicationProviders(providerCredentials);
   const tools = createMicroErpTools(db);
+  const notificationTools = createAgentNotificationTools(db, agentConfig.id);
+  const githubTools = createGitHubTools(agentConfig.id, config.githubApps);
 
   const runtime = await createInternalAgentRuntime(
     {
@@ -64,7 +74,11 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       instructions: agentConfig.instructions,
       model: agentConfig.model,
       omModel: agentConfig.omModel || undefined,
-      tools,
+      tools: {
+        ...tools,
+        ...notificationTools,
+        ...githubTools,
+      },
       providers,
       workflows: config.workflows,
       workspaceBasePath: config.workspaceBasePath,
@@ -77,6 +91,12 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   console.log(`[AgentLoader] Agent loaded successfully: ${agentConfig.id}`);
   return runtime;
 }
+
+const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {
+  'internal-chat': true,
+  discord: true,
+  email: true,
+};
 
 /**
  * Load multiple agents from database
@@ -102,6 +122,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
       const runtime = await loadAgent(db, {
         workspaceBasePath: config.workspaceBasePath,
         workflows: config.workflows,
+        githubApps: config.githubApps,
         agentId: agentConfig.id,
       });
       agents.set(agentConfig.id, runtime);

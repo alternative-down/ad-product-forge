@@ -8,10 +8,16 @@ import { z } from 'zod';
 import { getDatabase, runMigrations, seedModelPrices } from './database/index.js';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry.js';
 import { createInternalAgentWorkflows } from './workflows/internal-agents.js';
+import { createForgeHttpServer } from './http/server.js';
+import { createGitHubAppManager } from './github/manager.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
   WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
+  FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
+  FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
+  GITHUB_ORGANIZATION: z.string().min(1),
+  GITHUB_APP_HOME_URL: z.string().url().optional(),
 });
 
 export async function main() {
@@ -21,15 +27,40 @@ export async function main() {
   const db = getDatabase();
   await runMigrations(db);
   await seedModelPrices(db);
+  const registry = getInternalAgentRegistry();
+  const httpServer = createForgeHttpServer({
+    port: env.FORGE_HTTP_PORT,
+  });
+  const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
+  const githubApps = createGitHubAppManager({
+    db,
+    httpServer,
+    publicBaseUrl,
+    organization: env.GITHUB_ORGANIZATION,
+    appHomeUrl: env.GITHUB_APP_HOME_URL ?? publicBaseUrl,
+    notifyAgent(agentId) {
+      const entry = registry.get(agentId);
+
+      if (!entry) {
+        return;
+      }
+
+      entry.runner.notifyExternalEvent();
+    },
+  });
   const workflows = createInternalAgentWorkflows({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    githubApps,
   });
-  const registry = getInternalAgentRegistry();
   const agents = await registry.loadAll(db, {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     workflows,
+    githubApps,
   });
+  await githubApps.loadAllAgents();
+  await httpServer.start();
+  console.log(`[Forge] HTTP server listening on ${publicBaseUrl}`);
 
   new Mastra({
     agents: Object.fromEntries(agents.map(({ runtime }) => [runtime.id, runtime.agent])),
@@ -46,7 +77,9 @@ export async function main() {
   // Graceful shutdown handlers
   const handleShutdown = (signal: string) => {
     console.log(`\n[${signal}] Shutting down gracefully...`);
-    process.exit(0);
+    void httpServer.stop().finally(() => {
+      process.exit(0);
+    });
   };
 
   process.on('SIGTERM', () => handleShutdown('SIGTERM'));

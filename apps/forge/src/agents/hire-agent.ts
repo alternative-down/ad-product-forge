@@ -16,6 +16,9 @@ import { createInternalAgentRuntime, type CreateAgentConfig } from './create-for
 import { getInternalAgentRegistry } from './internal-agent-registry.js';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
 import { createMicroErpTools } from '../micro-erp/tools.js';
+import { createAgentNotificationTools } from '../notifications/tools.js';
+import { createGitHubTools } from '../github/tools.js';
+import type { GitHubAppManager } from '../github/manager.js';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -32,6 +35,7 @@ export type HireInternalAgentInput = {
   weeklyBudgetUsd: number;
   providerCredentials?: ProviderCredentialsMap;
   workflows?: CreateAgentConfig['workflows'];
+  githubApps: GitHubAppManager;
 };
 
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
@@ -97,7 +101,11 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       instructions: input.instructions,
       model: input.model,
       omModel: input.omModel,
-      tools: createMicroErpTools(db),
+      tools: {
+        ...createMicroErpTools(db),
+        ...createAgentNotificationTools(db, agentId),
+        ...createGitHubTools(agentId, input.githubApps),
+      },
       providers: loadCommunicationProviders(providerCredentials),
       workflows: input.workflows,
       workspaceBasePath: input.workspaceBasePath,

@@ -3,6 +3,7 @@ import { createStep, createWorkflow, type AnyWorkflow } from '@mastra/core/workf
 
 import type { Database } from '../database/index.js';
 import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle.js';
+import type { GitHubAppManager } from '../github/manager.js';
 
 const hireInternalAgentInputSchema = z.object({
   requestedFunction: z.string().min(1),
@@ -12,6 +13,7 @@ const hireInternalAgentInputSchema = z.object({
 
 const hireInternalAgentOutputSchema = z.object({
   agentId: z.string(),
+  githubAppRegistrationUrl: z.string().url(),
 });
 
 const terminateInternalAgentInputSchema = z.object({
@@ -30,6 +32,7 @@ type InternalAgentWorkflows = {
 export function createInternalAgentWorkflows(config: {
   db: Database;
   workspaceBasePath: string;
+  githubApps: GitHubAppManager;
 }) {
   let workflows: InternalAgentWorkflows;
 
@@ -42,6 +45,7 @@ export function createInternalAgentWorkflows(config: {
         ...inputData,
         workspaceBasePath: config.workspaceBasePath,
         workflows,
+        githubApps: config.githubApps,
       });
     },
   });
@@ -54,6 +58,7 @@ export function createInternalAgentWorkflows(config: {
       return runInternalTermination(config.db, {
         ...inputData,
         workspaceBasePath: config.workspaceBasePath,
+        githubApps: config.githubApps,
       });
     },
   });

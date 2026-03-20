@@ -6,10 +6,12 @@ import { eq } from 'drizzle-orm';
 import type { Database } from '../database/index.js';
 import { agents } from '../database/schema.js';
 import { getInternalAgentRegistry } from './internal-agent-registry.js';
+import type { GitHubAppManager } from '../github/manager.js';
 
 export async function terminateInternalAgent(db: Database, input: {
   agentId: string;
   workspaceBasePath: string;
+  githubApps: GitHubAppManager;
 }) {
   const agent = await db.query.agents.findFirst({
     where: eq(agents.id, input.agentId),
@@ -20,6 +22,7 @@ export async function terminateInternalAgent(db: Database, input: {
   }
 
   getInternalAgentRegistry().remove(input.agentId);
+  input.githubApps.unloadAgent(input.agentId);
 
   await db.delete(agents).where(eq(agents.id, input.agentId));
 
