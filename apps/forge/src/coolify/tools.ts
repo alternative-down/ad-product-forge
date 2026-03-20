@@ -3,6 +3,10 @@ import { z } from 'zod';
 
 import type { CoolifyManager } from './manager.js';
 
+const coolifyApplicationSlugSchema = z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/, {
+  message: 'slug must be lowercase kebab-case and valid for subdomain use',
+});
+
 export function createCoolifyTools(coolify: CoolifyManager) {
   return {
     list_coolify_github_apps: createTool({
@@ -60,7 +64,7 @@ export function createCoolifyTools(coolify: CoolifyManager) {
         repositoryName: z.string().min(1),
         branch: z.string().min(1),
         name: z.string().min(1),
-        slug: z.string().min(1),
+        slug: coolifyApplicationSlugSchema,
         port: z.number().int().positive(),
         buildCommand: z.string().optional(),
         startCommand: z.string().optional(),
@@ -88,7 +92,7 @@ export function createCoolifyTools(coolify: CoolifyManager) {
         startCommand: z.string().optional(),
         installCommand: z.string().optional(),
         branch: z.string().optional(),
-        slug: z.string().optional(),
+        slug: coolifyApplicationSlugSchema.optional(),
       }).refine((input) => Object.keys(input).length > 1, {
         message: 'At least one field besides applicationUuid must be provided',
       }),

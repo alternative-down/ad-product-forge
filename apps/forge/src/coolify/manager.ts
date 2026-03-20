@@ -291,11 +291,13 @@ export function createCoolifyManager(config: {
     );
     const deployments = extractCollection(data, DeploymentSchema);
 
-    return deployments.map((deployment) => ({
+    return deployments
+      .map((deployment) => ({
       deploymentUuid: deployment.uuid ?? deployment.deployment_uuid ?? String(deployment.id ?? ''),
       status: deployment.status ?? null,
       createdAt: deployment.created_at ?? null,
-    }));
+      }))
+      .sort((left, right) => toTimestamp(right.createdAt) - toTimestamp(left.createdAt));
   }
 
   async function getDeploymentLogs(input: {
@@ -651,4 +653,23 @@ function safeJsonParse(text: string) {
 function buildRequestError(method: string, path: string, status: number, data: unknown) {
   const payload = typeof data === 'string' ? data : JSON.stringify(data);
   return `Coolify API ${method} ${path} failed with ${status}: ${payload}`;
+}
+
+function toTimestamp(value: string | number | null) {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const numeric = Number(value);
+
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
 }
