@@ -52,7 +52,7 @@ export interface CreateAgentConfig<
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
-> extends Pick<
+  > extends Pick<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
     | 'id'
     | 'name'
@@ -67,6 +67,7 @@ export interface CreateAgentConfig<
     | 'workspaceFilesystem'
     | 'workspaceSandbox'
   > {
+  allowedCustomToolIds?: string[] | null;
   workspaceBasePath: string;
 }
 
@@ -132,10 +133,14 @@ export async function createInternalAgentRuntime<
     client,
     providers: config.providers ?? [],
   });
-  const searchableTools = {
+  const customTools = {
     ...createExternalAccountTools(communication),
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
+  const allowedCustomToolIdSet = config.allowedCustomToolIds ? new Set(config.allowedCustomToolIds) : null;
+  const searchableTools = allowedCustomToolIdSet
+    ? Object.fromEntries(Object.entries(customTools).filter(([, tool]) => allowedCustomToolIdSet.has(tool.id)))
+    : customTools;
   const memory = createAgentMemory({ storage, vector });
   const omModelKey = config.omModel ?? config.model;
 

@@ -34,6 +34,8 @@ export const agents = sqliteTable('agents', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
+  functionId: text('function_id')
+    .references(() => agentFunctions.id, { onDelete: 'set null' }),
   model: text('model').notNull(),
   omModel: text('om_model'), // Modelo para observational memory
   instructions: text('instructions').notNull(),
@@ -50,6 +52,75 @@ export const agents = sqliteTable('agents', {
 
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
+
+export const agentFunctions = sqliteTable('agent_functions', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  agentFunctionsNameIdx: uniqueIndex('agent_functions_name_idx').on(table.name),
+}));
+
+export type AgentFunction = typeof agentFunctions.$inferSelect;
+export type NewAgentFunction = typeof agentFunctions.$inferInsert;
+
+export const agentRoles = sqliteTable('agent_roles', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  agentRolesNameIdx: uniqueIndex('agent_roles_name_idx').on(table.name),
+}));
+
+export type AgentRole = typeof agentRoles.$inferSelect;
+export type NewAgentRole = typeof agentRoles.$inferInsert;
+
+export const functionRoles = sqliteTable('function_roles', {
+  functionId: text('function_id')
+    .notNull()
+    .references(() => agentFunctions.id, { onDelete: 'cascade' }),
+  roleId: text('role_id')
+    .notNull()
+    .references(() => agentRoles.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  functionRolesFunctionIdIdx: uniqueIndex('function_roles_function_id_idx').on(table.functionId),
+}));
+
+export type FunctionRole = typeof functionRoles.$inferSelect;
+export type NewFunctionRole = typeof functionRoles.$inferInsert;
+
+export const roleToolPermissions = sqliteTable('role_tool_permissions', {
+  roleId: text('role_id')
+    .notNull()
+    .references(() => agentRoles.id, { onDelete: 'cascade' }),
+  toolId: text('tool_id').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  roleToolPermissionsUniqueIdx: uniqueIndex('role_tool_permissions_unique_idx').on(table.roleId, table.toolId),
+  roleToolPermissionsRoleIdIdx: index('role_tool_permissions_role_id_idx').on(table.roleId),
+}));
+
+export type RoleToolPermission = typeof roleToolPermissions.$inferSelect;
+export type NewRoleToolPermission = typeof roleToolPermissions.$inferInsert;
+
+export const roleWorkflowPermissions = sqliteTable('role_workflow_permissions', {
+  roleId: text('role_id')
+    .notNull()
+    .references(() => agentRoles.id, { onDelete: 'cascade' }),
+  workflowId: text('workflow_id').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  roleWorkflowPermissionsUniqueIdx: uniqueIndex('role_workflow_permissions_unique_idx').on(table.roleId, table.workflowId),
+  roleWorkflowPermissionsRoleIdIdx: index('role_workflow_permissions_role_id_idx').on(table.roleId),
+}));
+
+export type RoleWorkflowPermission = typeof roleWorkflowPermissions.$inferSelect;
+export type NewRoleWorkflowPermission = typeof roleWorkflowPermissions.$inferInsert;
 
 export const agentExecutionContracts = sqliteTable('agent_execution_contracts', {
   id: text('id').primaryKey(),
@@ -192,12 +263,55 @@ export type NewAgentProvider = typeof agentProviders.$inferInsert;
 /**
  * Relações
  */
-export const agentsRelations = relations(agents, ({ many }) => ({
+export const agentsRelations = relations(agents, ({ one, many }) => ({
+  function: one(agentFunctions, {
+    fields: [agents.functionId],
+    references: [agentFunctions.id],
+  }),
   providers: many(agentProviders),
   executionContracts: many(agentExecutionContracts),
   executionSteps: many(agentExecutionSteps),
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
+}));
+
+export const agentFunctionsRelations = relations(agentFunctions, ({ one, many }) => ({
+  roleLink: one(functionRoles, {
+    fields: [agentFunctions.id],
+    references: [functionRoles.functionId],
+  }),
+  agents: many(agents),
+}));
+
+export const agentRolesRelations = relations(agentRoles, ({ many }) => ({
+  functionLinks: many(functionRoles),
+  toolPermissions: many(roleToolPermissions),
+  workflowPermissions: many(roleWorkflowPermissions),
+}));
+
+export const functionRolesRelations = relations(functionRoles, ({ one }) => ({
+  function: one(agentFunctions, {
+    fields: [functionRoles.functionId],
+    references: [agentFunctions.id],
+  }),
+  role: one(agentRoles, {
+    fields: [functionRoles.roleId],
+    references: [agentRoles.id],
+  }),
+}));
+
+export const roleToolPermissionsRelations = relations(roleToolPermissions, ({ one }) => ({
+  role: one(agentRoles, {
+    fields: [roleToolPermissions.roleId],
+    references: [agentRoles.id],
+  }),
+}));
+
+export const roleWorkflowPermissionsRelations = relations(roleWorkflowPermissions, ({ one }) => ({
+  role: one(agentRoles, {
+    fields: [roleWorkflowPermissions.roleId],
+    references: [agentRoles.id],
+  }),
 }));
 
 export const agentProvidersRelations = relations(agentProviders, ({ one }) => ({
