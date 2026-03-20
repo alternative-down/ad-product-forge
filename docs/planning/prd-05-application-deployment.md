@@ -46,30 +46,67 @@ Agents only receive tool access through Forge.
 
 Coolify deployment starts from repositories that already exist in the company GitHub organization.
 
+The first version should use the Coolify flow based on its own GitHub App integration:
+- create or reuse a Coolify GitHub App entry
+- list repositories available through that GitHub App
+- create the Coolify application from that repository
+
 Forge does not need a local repository-link table for the first version.
-The agent provides the repository information required by the Coolify API when creating or updating the deployment target.
 
 ## 5. Tool Surface
 
 The first version should expose these tools:
 
-1. `list_coolify_applications`
-2. `create_coolify_application`
-3. `get_coolify_application`
-4. `update_coolify_application`
-5. `start_coolify_application`
-6. `stop_coolify_application`
-7. `restart_coolify_application`
-8. `delete_coolify_application`
-9. `get_coolify_application_logs`
-10. `list_coolify_application_envs`
-11. `set_coolify_application_env`
-12. `delete_coolify_application_env`
+1. `list_coolify_github_apps`
+2. `create_coolify_github_app`
+3. `list_coolify_github_app_repositories`
+4. `list_coolify_applications`
+5. `create_coolify_application`
+6. `get_coolify_application`
+7. `update_coolify_application`
+8. `start_coolify_application`
+9. `stop_coolify_application`
+10. `restart_coolify_application`
+11. `delete_coolify_application`
+12. `get_coolify_application_logs`
+13. `list_coolify_application_envs`
+14. `set_coolify_application_env`
+15. `delete_coolify_application_env`
 
 These tools are literal wrappers around the Coolify operational surface needed by agents.
 They should stay explicit and provider-specific.
 
-## 6. Env Variable Direction
+## 6. Creation Direction
+
+`create_coolify_application` should be intentionally narrow.
+
+The agent should provide only:
+- application name
+- application slug
+- port
+- build command
+- start command
+
+Forge should fill the rest of the initial shape internally:
+- repository source through the Coolify GitHub App flow
+- domain as a subdomain of the company base domain from env
+- let Coolify keep its normal defaults for proxy and related configuration
+
+The first version should not expose broad creation-time configuration knobs.
+
+## 7. Update Direction
+
+`update_coolify_application` should support partial updates only.
+
+That means an agent can change one thing without resending the full application shape.
+
+Examples:
+- change only the port
+- change only the build command
+- change only the start command
+- change one configuration field
+
+## 8. Env Variable Direction
 
 Environment variables should be managed by partial update, not full replacement.
 
@@ -80,7 +117,7 @@ That means:
 
 This avoids accidental overwrites and keeps the operational flow safer for agents.
 
-## 7. Logs
+## 9. Logs
 
 The first version must include:
 - deployment logs
@@ -88,7 +125,7 @@ The first version must include:
 
 Agents need both to operate deployed systems without leaving Forge.
 
-## 8. Webhooks
+## 10. Webhooks
 
 Webhooks are explicitly out of scope for the first version.
 
@@ -99,7 +136,7 @@ This PRD does not define:
 
 Those can be added later if the direct tool-based operation proves insufficient.
 
-## 9. API Direction
+## 11. API Direction
 
 Forge should use the **official Coolify HTTP API** directly.
 
@@ -110,7 +147,16 @@ Forge should not depend on:
 
 The CLI can still be useful for manual debugging, but it should not be the base of the application integration.
 
-## 10. Design Rules
+## 12. Domain Direction
+
+The public domain of a new Coolify application should be derived inside Forge.
+
+The first version should always use:
+- subdomain of one company base domain from env
+
+Agents do not choose arbitrary domains during creation.
+
+## 13. Design Rules
 
 - no new local business entity is introduced for this integration
 - no local deployment record is required in the first version
@@ -118,9 +164,12 @@ The CLI can still be useful for manual debugging, but it should not be the base 
 - Forge provides tool access and credential isolation
 - the integration stays Coolify-specific
 - tool names stay literal
+- creation stays narrow and default-heavy
+- update flows stay partial
 
-## 11. Success Criteria
+## 14. Success Criteria
 
+- agents can connect Coolify to GitHub through the Coolify GitHub App flow
 - agents can create applications in Coolify through Forge tools
 - agents can inspect status and logs through Forge tools
 - agents can update configuration and env vars through Forge tools
