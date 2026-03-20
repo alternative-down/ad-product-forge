@@ -177,29 +177,6 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
-  async function assignFunctionToAgent(input: { agentId: string; functionId: string }) {
-    const existing = await db.query.agents.findFirst({
-      where: eq(agents.id, input.agentId),
-    });
-
-    if (!existing) {
-      throw new Error(`Agent not found: ${input.agentId}`);
-    }
-
-    await db
-      .update(agents)
-      .set({
-        functionId: input.functionId,
-        updatedAt: Date.now(),
-      })
-      .where(eq(agents.id, input.agentId));
-
-    return {
-      agentId: input.agentId,
-      functionId: input.functionId,
-    };
-  }
-
   async function listRoleToolPermissions(roleId: string) {
     const rows = await db.query.roleToolPermissions.findMany({
       where: eq(roleToolPermissions.roleId, roleId),
@@ -318,7 +295,6 @@ export function createCapabilityStore(db: Database) {
     createRole,
     updateRole,
     assignRoleToFunction,
-    assignFunctionToAgent,
     listRoleToolPermissions,
     addRoleToolPermission,
     removeRoleToolPermission,

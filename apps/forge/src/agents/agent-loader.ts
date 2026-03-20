@@ -82,7 +82,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const githubTools = createGitHubTools(agentConfig.id, config.githubApps, allowedToolIds);
   const coolifyTools = config.coolify ? createCoolifyTools(config.coolify, allowedToolIds) : {};
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
-  const capabilityTools = createCapabilityTools(db, config, allowedToolIds);
+  const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
   const customTools = {
     ...tools,
     ...notificationTools,
@@ -104,7 +104,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       tools: customTools,
       providers,
       workflows: filteredWorkflows,
-      allowedCustomToolIds: capabilitySet.toolIds,
       workspaceBasePath: config.workspaceBasePath,
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
       workspaceSandbox: agentConfig.workspaceSandbox ?? undefined,

@@ -67,7 +67,6 @@ export interface CreateAgentConfig<
     | 'workspaceFilesystem'
     | 'workspaceSandbox'
   > {
-  allowedCustomToolIds?: string[] | null;
   workspaceBasePath: string;
 }
 
@@ -133,9 +132,8 @@ export async function createInternalAgentRuntime<
     client,
     providers: config.providers ?? [],
   });
-  const allowedCustomToolIdSet = config.allowedCustomToolIds ? new Set(config.allowedCustomToolIds) : null;
   const searchableTools = {
-    ...createExternalAccountTools(communication, allowedCustomToolIdSet),
+    ...createExternalAccountTools(communication),
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
   const memory = createAgentMemory({ storage, vector });

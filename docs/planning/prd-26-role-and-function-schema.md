@@ -59,6 +59,9 @@ The permission layer only applies to:
 - MCP tools
 - Forge workflows
 
+Internal chat tools are also always free.
+They stay outside the role filter because internal coordination is foundational to the runtime.
+
 ### 4. Function is organizational grouping
 
 A function is an organizational grouping.
@@ -148,6 +151,8 @@ Initial capability surface:
 - list roles
 - update role
 - assign role to function
+- change own function
+- change another agent function
 - list role tool permissions
 - add role tool permission
 - remove role tool permission
@@ -204,3 +209,15 @@ The goal is simply to control:
 - which workflows the agent can use
 
 Everything else should be postponed until there is real pressure for a more complex model.
+
+## Initial Seed Roles
+
+The first migration seeds initial roles grouped by context:
+- `finance`
+- `github`
+- `deployment`
+- `scheduling`
+- `capability-management`
+
+These seeded roles are just the starting capability groups.
+Functions can point to any one of them.

@@ -5,7 +5,7 @@ import type { Database } from '../database/index.js';
 import { forgeCustomToolIds, forgeWorkflowIds } from './catalog.js';
 import { createCapabilityStore } from './store.js';
 import type { AgentLoaderConfig } from '../agents/agent-loader.js';
-import { reloadAgentIfLoaded, reloadAgentsForFunction, reloadAgentsForRole } from './runtime.js';
+import { changeAgentFunction, reloadAgentsForFunction, reloadAgentsForRole } from './runtime.js';
 
 const toolIdSchema = z.enum(forgeCustomToolIds);
 const workflowIdSchema = z.enum(forgeWorkflowIds);
@@ -14,7 +14,12 @@ function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: s
   return !allowedToolIds || allowedToolIds.has(toolId);
 }
 
-export function createCapabilityTools(db: Database, loaderConfig: AgentLoaderConfig, allowedToolIds?: Set<string> | null) {
+export function createCapabilityTools(
+  db: Database,
+  loaderConfig: AgentLoaderConfig,
+  currentAgentId: string,
+  allowedToolIds?: Set<string> | null,
+) {
   const capabilities = createCapabilityStore(db);
   const tools: Record<string, unknown> = {};
 
@@ -106,18 +111,41 @@ export function createCapabilityTools(db: Database, loaderConfig: AgentLoaderCon
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'assign_function_to_agent')) {
-    tools.assign_function_to_agent = createTool({
-      id: 'assign_function_to_agent',
-      description: 'Assign one function to one agent.',
+  if (canCreateTool(allowedToolIds, 'change_agent_function')) {
+    tools.change_agent_function = createTool({
+      id: 'change_agent_function',
+      description: 'Change the function of another agent. This creates a notification for the target agent and wakes it.',
       inputSchema: z.object({
         agentId: z.string().min(1),
         functionId: z.string().min(1),
       }),
       execute: async (input) => {
-        const result = await capabilities.assignFunctionToAgent(input);
-        await reloadAgentIfLoaded(db, loaderConfig, input.agentId);
-        return result;
+        return changeAgentFunction({
+          db,
+          loaderConfig,
+          actorAgentId: currentAgentId,
+          targetAgentId: input.agentId,
+          functionId: input.functionId,
+        });
+      },
+    });
+  }
+
+  if (canCreateTool(allowedToolIds, 'change_own_function')) {
+    tools.change_own_function = createTool({
+      id: 'change_own_function',
+      description: 'Change your own function. This creates a notification and wakes you with the new function context.',
+      inputSchema: z.object({
+        functionId: z.string().min(1),
+      }),
+      execute: async (input) => {
+        return changeAgentFunction({
+          db,
+          loaderConfig,
+          actorAgentId: currentAgentId,
+          targetAgentId: currentAgentId,
+          functionId: input.functionId,
+        });
       },
     });
   }

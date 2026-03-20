@@ -26,6 +26,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export type HireInternalAgentInput = {
   agentId?: string;
   functionId: string;
+  functionDescription?: string;
   name: string;
   description?: string;
   instructions: string;
@@ -58,6 +59,8 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
   const providerCredentials: ProviderCredentialsMap = {
     'internal-chat': {
       agentId,
+      displayName: input.name,
+      description: input.functionDescription,
     },
     ...input.providerCredentials,
     email: provisionedMailbox.credentials,

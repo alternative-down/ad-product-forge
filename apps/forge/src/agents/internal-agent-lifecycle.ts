@@ -32,6 +32,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
   });
   const hired = await hireInternalAgent(db, {
     functionId: agentFunction.functionId,
+    functionDescription: agentFunction.description ?? agentFunction.name,
     ...profile,
     instructions: hiringRh.instructions,
     weeklyBudgetUsd: input.weeklyBudgetUsd,

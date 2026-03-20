@@ -5,6 +5,7 @@ import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra
 type RegisteredAgent = {
   id: string;
   displayName: string;
+  description?: string;
   onMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null;
 };
 
@@ -12,10 +13,11 @@ export function createInternalChatPreset() {
   const agents = new Map<string, RegisteredAgent>();
 
   return {
-    createProvider(config: { id: string; displayName: string }): CommunicationProvider {
+    createProvider(config: { id: string; displayName: string; description?: string }): CommunicationProvider {
       const agent: RegisteredAgent = {
         id: config.id,
         displayName: config.displayName,
+        description: config.description,
         onMessage: null,
       };
 
@@ -38,6 +40,7 @@ export function createInternalChatPreset() {
             .map((currentAgent) => ({
               slug: currentAgent.id,
               displayName: currentAgent.displayName,
+              description: currentAgent.description,
               externalUserId: currentAgent.id,
               username: currentAgent.id,
             }));
