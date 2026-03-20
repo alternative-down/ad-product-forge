@@ -1,68 +1,85 @@
-# PRD-05: Company Application Deployment
+# PRD-05: Coolify Application Deployment
 
 **Status:** Planned
 **Classification:** FORGE APP
 
 ## 1. Goal
 
-Deploy company applications to the company's infrastructure after those applications already exist in Forge and already have a linked source repository.
+Deploy company applications through **Coolify** after those applications already exist in Forge and already have a linked source repository.
 
 This PRD is about:
-- deployment records
-- deployment execution
-- deployment status
-- deployment monitoring
-- deployment cleanup
+- Coolify integration
+- deployment records inside Forge
+- deployment administration tools for internal agents
+- deployment status tracking
+- deployment webhook notifications
 
 It is not about creating repositories or defining application ownership.
 
 ## 2. Dependency
 
-This PRD depends on the GitHub/application layer being in place first.
+This PRD depends on the application and repository layer existing first.
 
 A deployment must start from:
-- an existing application record
+- an existing application record in Forge
 - an existing linked repository
 - known repository metadata inside the app
 
-Deployment should not accept raw ad-hoc repository input as its source of truth.
+Deployment does not start from raw ad-hoc Coolify or repository input.
 
 ## 3. Scope
 
 ### Included
-- deploy one company application
-- store deployment records in the app
-- track deployment status
-- receive deployment status updates
-- expose deployment status for internal agents
-- remove or deactivate deployed applications
+- connect Forge to one Coolify instance
+- create and manage deployed applications through Coolify
+- persist deployment records inside Forge
+- expose deployment administration tools to internal agents
+- receive Coolify webhook events
+- convert relevant Coolify events into generic agent notifications
+- wake the responsible agent when relevant deployment events arrive
 
 ### Excluded
-- repository creation
-- source-code authoring workflows
-- organization/repository ownership rules
-- billing and customer-facing hosting plans
-- advanced infra orchestration across many providers
+- multi-provider deployment orchestration
+- generic webhook bus design
+- customer billing and hosting plans
+- full observability platform
+- repository creation or source authoring workflows
 
-## 4. Core Concepts
+## 4. Core Direction
 
-### 4.1 Company Application
-A persistent application record owned by the company.
+The first version is **Coolify-specific**, not deployment-provider-agnostic.
 
-### 4.2 Deployment Target
-The infrastructure target where the application is deployed.
+That means:
+- one Forge deployment integration
+- one Coolify instance/company account
+- one set of company-level Coolify admin credentials
+- one direct adapter for Coolify API + Coolify webhooks
 
-The first version can support one target only.
+This keeps the first version small and avoids inventing an abstraction before there is a second deployment provider.
 
-### 4.3 Deployment Record
+## 5. Core Concepts
+
+### 5.1 Company Application
+A persistent application record in Forge.
+
+### 5.2 Coolify Application
+The application/resource created in Coolify for one Forge application.
+
+### 5.3 Deployment Record
 A persistent deployment record stored in Forge.
 
-This represents one deployment attempt or active deployment for a company application.
+This represents one deployment attempt or active deployment for one Forge application.
 
-## 5. Initial Functional Surface
+### 5.4 Deployment Notification
+A generic agent notification created from a relevant Coolify webhook event.
 
-### 5.1 Create Deployment
-Deploy one existing company application.
+Coolify webhook events do not become communication messages.
+They become `agent_notifications` entries and trigger wake.
+
+## 6. Initial Functional Surface
+
+### 6.1 Deploy Application
+Trigger deployment for one existing Forge application.
 
 Example input shape:
 ```ts
@@ -84,52 +101,78 @@ Example output shape:
 }
 ```
 
-### 5.2 Get Deployment Status
-Return one deployment with its current status.
+### 6.2 Get Deployment Status
+Return one deployment with current status.
 
-Example output shape:
-```ts
-{
-  deploymentId: string;
-  applicationId: string;
-  status: 'queued' | 'building' | 'deploying' | 'running' | 'failed';
-  url?: string;
-  errorMessage?: string;
-  createdAt: number;
-  updatedAt: number;
-}
-```
+### 6.3 List Application Deployments
+Return deployments for one Forge application.
 
-### 5.3 List Application Deployments
-Return deployments for one application.
+### 6.4 Remove Deployment
+Stop, remove, or deactivate the deployed application in Coolify and update Forge state.
 
-### 5.4 Remove Deployment
-Stop or remove a deployed application from the target and update the deployment record.
+### 6.5 Administration Tools
+Expose a small set of Coolify administration tools to internal agents.
 
-## 6. URL and Domain Direction
+Initial direction:
+- create Coolify application for one Forge application
+- trigger deployment
+- get deployment status
+- list deployments
+- get deployed URL
+- stop/remove deployment
 
-The deployment layer may generate one company-owned URL/subdomain per deployed application.
+These are administration tools for the company deployment layer.
+They are not raw generic Coolify API passthrough tools.
 
-This should be derived from the application record and the deployment target.
+## 7. Webhook Direction
 
-The first version can stay simple:
-- one generated subdomain
-- one deployment target
-- one final application URL
+Coolify webhook events should be treated the same way GitHub events are treated conceptually:
+- adapter-specific endpoint
+- signature validation if available
+- persist deployment state updates
+- create generic agent notification when relevant
+- wake the responsible agent
 
-## 7. Monitoring Direction
+Initial route direction:
+- `POST /webhooks/coolify/{applicationId}`
 
-Monitoring in this PRD should stay deployment-focused.
+Why `applicationId`:
+- deployment events belong to the company application lifecycle
+- the Forge application already knows which agent is responsible
+- this keeps routing explicit and simple
+
+This PRD does **not** depend on the generic webhook routing bus from `PRD-33`.
+
+## 8. Notification Direction
+
+Relevant Coolify webhook events create `agent_notifications` entries.
+
+Suggested content shape:
+- `source: 'coolify'`
+- `event`
+- `applicationId`
+- `deploymentId?`
+- `status?`
+- `url?`
+- `error?`
+- compact provider payload when necessary
+
+The notification table already exists and should be reused.
+
+## 9. Monitoring Direction
+
+Monitoring stays deployment-focused.
 
 That means:
 - current deployment status
+- latest deployment timestamps
 - last deployment error
-- deployment URL
-- timestamps
+- current deployed URL
+- whether the app is running or failed
 
-It should not try to become a full application observability platform in the first version.
+This is not application metrics, tracing, or logs platform design.
 
-## 8. Data Model Direction
+## 10. Data Model Direction
 
 ### `application_deployments`
 Suggested minimum fields:
@@ -137,8 +180,9 @@ Suggested minimum fields:
 - `applicationId`
 - `requestedByAgentId`
 - `status`
-- `targetProvider`
-- `targetResourceId`
+- `provider` = `coolify`
+- `providerApplicationId`
+- `providerDeploymentId?`
 - `branch`
 - `commitSha`
 - `url`
@@ -147,47 +191,61 @@ Suggested minimum fields:
 - `updatedAt`
 - `completedAt`
 
-### `deployment_targets` (optional)
-If needed later, deployment target configuration can be separated.
+### Application-side Coolify linkage
+One Forge application should also persist the minimum Coolify linkage needed to manage it later.
 
-The first version can remain simple if there is only one target.
+Suggested fields or related record:
+- `applicationId`
+- `coolifyApplicationId`
+- `coolifyProjectId?`
+- `coolifyEnvironmentId?`
+- `coolifyServerId?`
 
-## 9. Webhook / Status Update Direction
+The first version should keep this minimal and only store what the adapter really needs.
 
-If the deployment platform can push status updates, the app should accept them and update the deployment record.
+## 11. Company Credential Boundary
 
-This should only update deployment state.
+Coolify admin credentials are company-level integration credentials.
+They do not belong to agent communication accounts and do not belong to per-agent runtime provider credentials.
 
-It should not be treated as a general-purpose event-routing system in this PRD.
+Boundary:
+- communication `accounts` = messaging/contact identity only
+- `agent_providers` = per-agent runtime credentials
+- Coolify admin credentials = company integration secret used by the deployment adapter
 
-## 10. Design Rules
+This PRD does not yet define the final storage mechanism for that company credential. It only defines the integration boundary.
 
-- deployment starts from an application, not from raw repo input
-- deployment state is persisted in the app
-- deployment status is explicit and queryable
-- monitoring stays small and deployment-focused
-- deployment should not redefine application/repository ownership
+## 12. Design Rules
 
-## 11. Success Criteria
+- the first version is Coolify-specific
+- deployment starts from a Forge application, not raw provider IDs
+- deployment state is persisted in Forge
+- webhook handling stays adapter-specific
+- deployment webhook events create generic agent notifications
+- monitoring stays deployment-focused
+- this PRD does not redefine repository ownership
 
-- an existing company application can be deployed
+## 13. Success Criteria
+
+- an existing Forge application can be deployed through Coolify
 - deployment records are stored in Forge
-- deployment status can be queried later
-- deployment errors are persisted clearly
-- deployed application URL is available when successful
-- deployment logic sits cleanly on top of the GitHub/application layer
+- deployment status is queryable later
+- relevant Coolify webhook events update deployment state
+- relevant Coolify webhook events create notifications and wake the responsible agent
+- the deployment layer stays small and explicit
 
-## 12. Implementation Status
-
-**Status:** Planned
+## 14. Implementation Status
 
 Already available today:
-- none of the deployment layer is implemented yet
+- generic `agent_notifications` storage already exists
+- the runtime already supports wake from integration-driven notifications
+- GitHub webhook handling already established the pattern of adapter-specific webhook endpoints feeding generic notifications
 
 Still missing:
 - application registry
-- repository linkage from the GitHub integration layer
+- application-to-repository linkage
+- Coolify admin adapter
 - deployment records
-- deployment execution flow
-- deployment status tracking
-- deployment monitoring surface
+- deployment tools
+- Coolify webhook intake
+- deployment status tracking in Forge
