@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 
 import { createId } from '@paralleldrive/cuid2';
 import { createAppAuth } from '@octokit/auth-app';
-import { App } from 'octokit';
+import { App, Octokit } from 'octokit';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -364,20 +364,21 @@ export function createGitHubAppManager(config: {
       return html(400, '<h1>Invalid GitHub App manifest callback</h1>');
     }
 
-    const response = await fetch(`https://api.github.com/app-manifests/${code}/conversions`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'forge-app',
-      },
+    const anonymousOctokit = new Octokit({
+      userAgent: 'forge-app',
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      return html(500, `<h1>Failed to convert GitHub App manifest</h1><pre>${escapeHtml(text)}</pre>`);
-    }
+    let conversion;
 
-    const conversion = manifestConversionSchema.parse(await response.json());
+    try {
+      const response = await anonymousOctokit.request('POST /app-manifests/{code}/conversions', {
+        code,
+      });
+      conversion = manifestConversionSchema.parse(response.data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return html(500, `<h1>Failed to convert GitHub App manifest</h1><pre>${escapeHtml(message)}</pre>`);
+    }
     const app = createGitHubApp({
       status: 'created',
       appId: conversion.id,
