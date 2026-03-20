@@ -1,101 +1,171 @@
-# PRD-24: Integração de Sistema de Projetos & Tarefas
+# PRD-24: GitHub Work Organization
 
-> **Nota:** Este PRD é sobre **integração** com uma ferramenta existente, não desenvolvimento de um sistema próprio.
+**Status:** Planned
+**Classification:** FORGE APP
 
-**Classificação:** APLICAÇÃO AD-PRODUCT-FORGE
+## 1. Goal
 
----
+Use **GitHub** itself as the work organization system for agents.
 
-## 1. Visão Geral
+The first version should use:
+- repositories as the top-level work containers
+- issues for task and ticket tracking
+- comments for discussion and progress updates
+- labels and milestones when useful
 
-### Objetivo
+This PRD is about:
+- organizing agent work through GitHub
+- using the identities and webhooks that already exist in the GitHub integration
+- expanding the GitHub tool surface for issue-centered work
 
-Fornecer aos agentes um sistema de **gerenciamento de projetos e tarefas** que eles possam usar para organizar e rastrear trabalho.
+This PRD is not about:
+- integrating Linear
+- building a local issue/project system in Forge
+- introducing new project/task tables
 
-### Abordagem
+## 2. Core Direction
 
-**Não desenvolver do zero.** Usar uma ferramenta existente que:
-- Tenha **MCP (Model Context Protocol) pronto** para integração com LLMs
-- Ou tenha **CLIs (Command-Line Interfaces)** bem documentadas
-- Seja facilmente integrada como Tool/Workflow Mastra
+The simplest direction is:
+- `1 repository = 1 project`
+- GitHub remains the source of truth for work items
+- agents use their existing GitHub app identity
+- Forge receives GitHub webhook events and wakes the right agent
 
-### Candidatas
+This keeps the whole flow in the same platform that already owns:
+- repositories
+- branches
+- pull requests
+- code review
 
-Exemplos de ferramentas que poderiam funcionar:
-- **Linear** (tem MCP, GraphQL API, bom para agentes)
-- **Airtable** (API forte, automações)
-- **Notion** (MCP disponível, bases de dados)
-- **GitHub Projects** (integrado com GitHub, CLI disponível)
-- **Todoist** (API simples, CLI)
+## 3. Identity Model
 
-### Critério de Seleção
+No new identity model is needed.
 
-Escolher ferramenta que:
-1. Tenha integração pronta (MCP ou CLI robusto)
-2. Suporte criar projetos e tarefas programaticamente
-3. Permita rastreamento de status
-4. Tenha API para consultas (listar, filtrar)
-5. Seja razoavelmente simples de usar
+Agents already have:
+- their own GitHub App identity
+- repository access
+- webhook handling
 
----
+That same identity should now also own:
+- issue creation
+- issue updates
+- issue comments
+- milestone and label usage where appropriate
 
-## 2. Funcionalidades Esperadas
+## 4. Repository Assumption
 
-Os agentes devem conseguir:
+The first version assumes:
+- work is organized per repository
+- each repository is its own project boundary
 
-- **Criar projetos** — Organizar trabalho em grupos
-- **Criar tarefas** — Dentro de projetos, com descrição
-- **Rastrear status** — to-do, in-progress, done (ou equivalente)
-- **Listar/filtrar** — Por projeto, status, data
-- **Atualizar tarefas** — Mudar status, descrição, prioridade
-- **Consultar dados** — Para usar em relatórios ou decisões
+This means we do not need:
+- organization-level project modeling in Forge
+- local mappings between repositories and projects
 
----
+## 5. Work Item Direction
 
-## 3. Integração com Mastra
+The first version should use **issues** as the core work item.
 
-### Como Será Exposto aos Agentes
+Issues should cover:
+- research tasks
+- development tasks
+- bugs
+- support follow-up
+- coordination between agents
 
-**Opção A: Via MCP**
-- Se a ferramenta tiver MCP, expor diretamente como Tool via MCP integration
-- Mastra consome MCP e disponibiliza ao agente
+Comments on issues should be the main place for:
+- updates
+- reasoning summaries
+- handoff notes
 
-**Opção B: Via CLI com Wrapper**
-- Se tiver CLI, criar wrapper Tool que executa comandos CLI
-- Exemplo: `runTaskCLI("linear create-task --title 'X' --project 'Y'")`
+## 6. Tool Surface Direction
 
-**Opção C: Via API com Tool Custom**
-- Se tiver API, criar Tool que chama endpoints
-- Validar e sanitizar inputs
+The GitHub integration should be expanded with issue-centered tools.
 
----
+Suggested minimum additions:
+1. `list_github_issues`
+2. `get_github_issue`
+3. `create_github_issue`
+4. `update_github_issue`
+5. `close_github_issue`
+6. `reopen_github_issue`
+7. `list_github_issue_comments`
+8. `create_github_issue_comment`
+9. `list_github_labels`
+10. `add_github_issue_labels`
+11. `remove_github_issue_labels`
+12. `list_github_milestones`
 
-## 4. Processo de Decisão
+These tools should stay literal and provider-specific, following the same pattern already used for repository and pull request tools.
 
-1. **Pesquisar** ferramentas que atendem os critérios
-2. **Avaliar** qual tem melhor integração (MCP vs CLI vs API)
-3. **Testar** integração com Mastra
-4. **Documentar** como agentes usam
-5. **Treinar** agentes a usar
+## 7. Webhook Direction
 
----
+The existing GitHub adapter-specific webhook model should be reused.
 
-## 5. Não Fazer
+Relevant events for work organization:
+- `issues`
+- `issue_comment`
+- `pull_request`
+- `pull_request_review`
+- `push`
 
-- ❌ **Não desenvolver sistema próprio** de projetos/tarefas
-- ❌ **Não replicar** funcionalidades de ferramentas existentes
-- ❌ **Não criar API** proprietária desnecessária
+Relevant events should continue to become:
+- `agent_notifications`
+- `wakeQueue` triggers
 
----
+No new webhook system is required for this PRD.
 
-## 6. Critério de Sucesso
+## 8. Forge Data Model Direction
 
-- [ ] Ferramenta escolhida e avaliada
-- [ ] Integração com Mastra funciona
-- [ ] Agentes conseguem criar/listar/atualizar projetos e tarefas
-- [ ] Dados persistem na ferramenta (não localmente)
-- [ ] Documentação clara para agentes
+No new local schema should be introduced for work tracking in the first version.
 
----
+Forge should not create:
+- `projects`
+- `tasks`
+- `issues`
+- `issue_comments`
 
-**Fim do documento**
+GitHub already owns this data.
+
+Forge should only:
+- expose the operational tools
+- react to webhook events
+- create notifications
+
+## 9. Tool Volume Direction
+
+As the GitHub tool surface grows, the agent runtime should avoid injecting every tool into every turn upfront.
+
+The recommended direction is to adopt Mastra's `ToolSearchProcessor` so the agent can:
+- search tools
+- load the relevant tool on demand
+
+This is a good fit now because the total number of tools across:
+- GitHub
+- Coolify
+- communication
+- notifications
+- micro ERP
+
+is already becoming large.
+
+Reference:
+- [ToolSearchProcessor](https://mastra.ai/reference/processors/tool-search-processor)
+
+## 10. Design Rules
+
+- GitHub is the source of truth for work items
+- one repository is treated as one project boundary
+- no local issue/project schema is introduced
+- issue tools stay explicit
+- webhook handling stays inside the existing GitHub adapter model
+- agent identity stays the GitHub App identity already in use
+- tool search should be preferred once the expanded GitHub work tools are added
+
+## 11. Success Criteria
+
+- agents can organize work through GitHub issues
+- agents can comment and update progress inside GitHub
+- webhook events continue to wake the right agent
+- no extra planning/task schema is introduced in Forge
+- the system stays inside the GitHub platform already in use

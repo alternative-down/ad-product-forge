@@ -1,5 +1,7 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
+import { ToolSearchProcessor } from '@mastra/core/processors';
+import type { Tool } from '@mastra/core/tools';
 import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { createClient } from '@libsql/client';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
@@ -130,10 +132,10 @@ export async function createInternalAgentRuntime<
     client,
     providers: config.providers ?? [],
   });
-  const tools = {
+  const searchableTools = {
     ...createExternalAccountTools(communication),
     ...(config.tools ?? {}),
-  } as TTools;
+  } as Record<string, Tool<unknown, unknown>>;
   const memory = createAgentMemory({ storage, vector });
   const omModelKey = config.omModel ?? config.model;
 
@@ -146,7 +148,15 @@ export async function createInternalAgentRuntime<
     model: omModelKey,
   });
 
-  const inputProcessors: InputProcessorOrWorkflow[] = [om];
+  const toolSearch = new ToolSearchProcessor({
+    tools: searchableTools,
+    search: {
+      topK: 8,
+      minScore: 0.1,
+    },
+  });
+
+  const inputProcessors: InputProcessorOrWorkflow[] = [toolSearch, om];
   const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
@@ -165,7 +175,7 @@ export async function createInternalAgentRuntime<
     description: config.description,
     instructions: appendWorkingMemoryInstructions(config.instructions),
     model: config.model,
-    tools,
+    tools: {} as TTools,
     workflows: config.workflows,
     workspace,
     agents: config.agents,
