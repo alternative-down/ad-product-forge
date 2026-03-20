@@ -61,18 +61,21 @@ The first version should expose these tools:
 1. `list_coolify_github_apps`
 2. `create_coolify_github_app`
 3. `list_coolify_github_app_repositories`
-4. `list_coolify_applications`
-5. `create_coolify_application`
-6. `get_coolify_application`
-7. `update_coolify_application`
-8. `start_coolify_application`
-9. `stop_coolify_application`
-10. `restart_coolify_application`
-11. `delete_coolify_application`
-12. `get_coolify_application_logs`
-13. `list_coolify_application_envs`
-14. `set_coolify_application_env`
-15. `delete_coolify_application_env`
+4. `list_coolify_github_app_repository_branches`
+5. `list_coolify_applications`
+6. `create_coolify_application`
+7. `get_coolify_application`
+8. `update_coolify_application`
+9. `start_coolify_application`
+10. `stop_coolify_application`
+11. `restart_coolify_application`
+12. `delete_coolify_application`
+13. `list_coolify_application_deployments`
+14. `get_coolify_deployment_logs`
+15. `get_coolify_application_logs`
+16. `list_coolify_application_envs`
+17. `set_coolify_application_env`
+18. `delete_coolify_application_env`
 
 These tools are literal wrappers around the Coolify operational surface needed by agents.
 They should stay explicit and provider-specific.
@@ -91,6 +94,7 @@ The agent should provide only:
 Forge should fill the rest of the initial shape internally:
 - repository source through the Coolify GitHub App flow
 - domain as a subdomain of the company base domain from env
+- default Coolify project/environment/server/destination context
 - let Coolify keep its normal defaults for proxy and related configuration
 
 The first version should not expose broad creation-time configuration knobs.

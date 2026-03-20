@@ -11,6 +11,7 @@ import { createInternalAgentWorkflows } from './workflows/internal-agents.js';
 import { createForgeHttpServer } from './http/server.js';
 import { createGitHubAppManager } from './github/manager.js';
 import { createAgentEmailManager } from './email/migadu-manager.js';
+import { createCoolifyManager } from './coolify/manager.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -21,6 +22,9 @@ const envSchema = z.object({
   GITHUB_APP_HOME_URL: z.string().url().optional(),
   MIGADU_API_USER: z.string().email().optional(),
   MIGADU_API_KEY: z.string().min(1).optional(),
+  COOLIFY_BASE_URL: z.string().url().optional(),
+  COOLIFY_ADMIN_TOKEN: z.string().min(1).optional(),
+  COOLIFY_APPLICATIONS_BASE_DOMAIN: z.string().min(1).optional(),
 });
 
 export async function main() {
@@ -38,6 +42,13 @@ export async function main() {
 
   if ((env.MIGADU_API_USER && !env.MIGADU_API_KEY) || (!env.MIGADU_API_USER && env.MIGADU_API_KEY)) {
     throw new Error('Migadu email provisioning requires both MIGADU_API_USER and MIGADU_API_KEY');
+  }
+
+  const hasAnyCoolifyConfig = !!(env.COOLIFY_BASE_URL || env.COOLIFY_ADMIN_TOKEN || env.COOLIFY_APPLICATIONS_BASE_DOMAIN);
+  const hasAllCoolifyConfig = !!(env.COOLIFY_BASE_URL && env.COOLIFY_ADMIN_TOKEN && env.COOLIFY_APPLICATIONS_BASE_DOMAIN);
+
+  if (hasAnyCoolifyConfig && !hasAllCoolifyConfig) {
+    throw new Error('Coolify integration requires COOLIFY_BASE_URL, COOLIFY_ADMIN_TOKEN, and COOLIFY_APPLICATIONS_BASE_DOMAIN');
   }
 
   const emailMailboxes = createAgentEmailManager({
@@ -61,16 +72,25 @@ export async function main() {
       entry.runner.notifyExternalEvent();
     },
   });
+  const coolify = hasAllCoolifyConfig
+    ? createCoolifyManager({
+      baseUrl: env.COOLIFY_BASE_URL!,
+      adminToken: env.COOLIFY_ADMIN_TOKEN!,
+      applicationsBaseDomain: env.COOLIFY_APPLICATIONS_BASE_DOMAIN!,
+    })
+    : null;
   const workflows = createInternalAgentWorkflows({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     githubApps,
     emailMailboxes,
+    coolify,
   });
   const agents = await registry.loadAll(db, {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     workflows,
     githubApps,
+    coolify,
   });
   await githubApps.loadAllAgents();
   await httpServer.start();

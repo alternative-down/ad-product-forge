@@ -6,6 +6,7 @@ import { hireInternalAgent, type HireInternalAgentInput } from './hire-agent.js'
 import { terminateInternalAgent } from './terminate-agent.js';
 import type { GitHubAppManager } from '../github/manager.js';
 import type { AgentEmailManager } from '../email/migadu-manager.js';
+import type { CoolifyManager } from '../coolify/manager.js';
 
 type RunInternalHiringInput = {
   requestedFunction: string;
@@ -15,6 +16,7 @@ type RunInternalHiringInput = {
   workflows?: HireInternalAgentInput['workflows'];
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
+  coolify: CoolifyManager | null;
 };
 
 export async function runInternalHiring(db: Database, input: RunInternalHiringInput) {
@@ -28,6 +30,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     workflows: input.workflows,
     githubApps: input.githubApps,
     emailMailboxes: input.emailMailboxes,
+    coolify: input.coolify,
   });
   try {
     const githubApp = await input.githubApps.ensureAgentApp({

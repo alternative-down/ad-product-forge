@@ -8,11 +8,14 @@ import { createMicroErpTools } from '../micro-erp/tools.js';
 import { createAgentNotificationTools } from '../notifications/tools.js';
 import { createGitHubTools } from '../github/tools.js';
 import type { GitHubAppManager } from '../github/manager.js';
+import type { CoolifyManager } from '../coolify/manager.js';
+import { createCoolifyTools } from '../coolify/tools.js';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
   workflows?: CreateAgentConfig['workflows'];
   githubApps: GitHubAppManager;
+  coolify: CoolifyManager | null;
 }
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
@@ -65,6 +68,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const tools = createMicroErpTools(db);
   const notificationTools = createAgentNotificationTools(db, agentConfig.id);
   const githubTools = createGitHubTools(agentConfig.id, config.githubApps);
+  const coolifyTools = config.coolify ? createCoolifyTools(config.coolify) : {};
 
   const runtime = await createInternalAgentRuntime(
     {
@@ -78,6 +82,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
         ...tools,
         ...notificationTools,
         ...githubTools,
+        ...coolifyTools,
       },
       providers,
       workflows: config.workflows,
@@ -123,6 +128,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         workspaceBasePath: config.workspaceBasePath,
         workflows: config.workflows,
         githubApps: config.githubApps,
+        coolify: config.coolify,
         agentId: agentConfig.id,
       });
       agents.set(agentConfig.id, runtime);
