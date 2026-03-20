@@ -7,11 +7,13 @@ import type { Database } from '../database/index.js';
 import { agents } from '../database/schema.js';
 import { getInternalAgentRegistry } from './internal-agent-registry.js';
 import type { GitHubAppManager } from '../github/manager.js';
+import type { AgentEmailManager } from '../email/migadu-manager.js';
 
 export async function terminateInternalAgent(db: Database, input: {
   agentId: string;
   workspaceBasePath: string;
   githubApps: GitHubAppManager;
+  emailMailboxes: AgentEmailManager | null;
 }) {
   const agent = await db.query.agents.findFirst({
     where: eq(agents.id, input.agentId),
@@ -22,6 +24,12 @@ export async function terminateInternalAgent(db: Database, input: {
   }
 
   getInternalAgentRegistry().remove(input.agentId);
+
+  if (!input.emailMailboxes) {
+    throw new Error('Migadu email provisioning is required for termination but is not configured');
+  }
+
+  await input.emailMailboxes.deleteAgentMailbox(input.agentId);
   await input.githubApps.deleteAgentApp(input.agentId);
 
   await db.delete(agents).where(eq(agents.id, input.agentId));

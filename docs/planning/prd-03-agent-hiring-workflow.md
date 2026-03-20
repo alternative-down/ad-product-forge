@@ -171,22 +171,21 @@ Expected business objects involved in the workflow:
 
 The hiring workflow is responsible for initial provisioning, but the requester does not control that provisioning directly.
 
-For the first version, the practical result is very small:
+For the current implementation, the practical result is still small:
 - create the hired agent
 - provision a pending GitHub App integration for it
 - instantiate it in the runtime
 - make it available for internal communication
 
-Future provisioning may include things such as:
-- email account
-- GitHub account
-- workspace preparation
-- seeded files
-- additional provider setup
+Current provisioning direction includes:
+- GitHub App provisioning flow for source control integration
+- Migadu mailbox provisioning for agent email
 
-But these should be derived by the workflow, not manually specified by the hiring requester.
+These should be derived by the workflow, not manually specified by the hiring requester.
 
 For the current GitHub direction, the first version provisions a pending GitHub App integration and returns a registration URL so the app can be created and installed for that hired agent.
+
+For email, the chosen direction is a real mailbox per agent using Migadu, provisioned by API during hiring and stored in encrypted agent provider storage for the runtime email provider.
 
 ## Cost Recording Rule
 
@@ -236,8 +235,13 @@ Implemented today:
   - the agent record
   - the first weekly execution contract with `autoRenew = true`
 - the workflow instantiates the hired agent in the in-memory internal agent registry
+- the workflow provisions a Migadu mailbox for the hired agent
+- the workflow stores the mailbox runtime credentials in encrypted agent provider storage
+- the workflow depends on `MIGADU_API_USER` and `MIGADU_API_KEY` in the app env
 - the workflow provisions a pending GitHub App integration for the hired agent
-- the workflow returns `githubAppRegistrationUrl`
+- the workflow returns:
+  - `emailAddress`
+  - `githubAppRegistrationUrl`
 
 Current implementation notes:
 - the RH prompt generation currently uses a dedicated temporary internal RH agent with:

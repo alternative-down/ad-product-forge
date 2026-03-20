@@ -2,11 +2,27 @@
 
 ## Overview
 
-Each agent gets a dedicated email address. The email provider connects that mailbox to the agent's communication system — inbound emails become messages, and the agent can reply or compose new emails via the same interface used by other providers (Discord, internal chat).
+Each internal agent gets a dedicated mailbox on the company domain.
+
+The chosen provider is **Migadu**. The runtime direction stays simple:
+- inbound email via IMAP
+- outbound email via SMTP
+- mailbox provisioned on hiring
+- mailbox deleted on termination
+
+The email provider connects that mailbox to the agent communication system, so inbound emails become communication messages and the agent can reply using the same interface used by other providers.
 
 **Stack:** `imapflow` (IMAP receive + IDLE), `nodemailer` (SMTP send), `postal-mime` (email parsing)
 
 ---
+
+## Provisioning Direction
+
+Mailbox credentials are not entered manually by the hiring requester.
+They should be provisioned by the application through the Migadu API during hiring and stored in encrypted agent provider storage.
+
+The communication `accounts` tables continue to represent messaging identity only.
+The real IMAP/SMTP credentials belong in encrypted `agent_providers` storage.
 
 ## Configuration
 
@@ -14,14 +30,14 @@ Each agent gets a dedicated email address. The email provider connects that mail
 createEmailProvider({
   id: 'email',                         // provider id
   imap: {
-    host: string,                      // e.g. 'imap.gmail.com'
+    host: string,                      // e.g. 'imap.migadu.com'
     port: number,                      // 993 (TLS) or 143 (STARTTLS)
     secure: boolean,                   // true for port 993
     user: string,                      // agent's email address
-    password: string,                  // SMTP/IMAP password or App Password
+    password: string,                  // mailbox password
   },
   smtp: {
-    host: string,                      // e.g. 'smtp.gmail.com'
+    host: string,                      // e.g. 'smtp.migadu.com'
     port: number,                      // 587 (STARTTLS) or 465 (TLS)
     secure: boolean,                   // true for port 465
     user: string,
@@ -43,10 +59,12 @@ Returns:
 ```
 
 ### `onMessage(callback)`
-- Opens an IMAP connection to INBOX
+- Registers the inbound callback
+- The listener is already started when the provider is created
 - Uses IMAP IDLE for real-time notification of new messages
-- Falls back to polling every 60s if IDLE not supported
+- Falls back naturally to reconnecting and scanning unseen messages
 - On new email: parses with `postal-mime`, maps to `CommunicationInboundMessage`
+- Marks processed messages as `\Seen`
 - Skips emails sent by the agent itself (avoid loops)
 
 **Email → CommunicationInboundMessage mapping:**
@@ -60,16 +78,18 @@ Returns:
 | Attachments | `attachments[]` |
 | `Date` header | `createdAt` |
 
-**Thread key:** The `providerConversationKey` is the `Message-ID` of the first email in the thread. Resolved by walking the `References` header chain — if empty, the email itself is the root (new conversation).
+**Thread key:** The `providerConversationKey` is resolved from `References`, then `In-Reply-To`, then the message `Message-ID` itself.
 
 ### `syncContacts()`
 Not implemented initially. Returns empty array. Future: extract unique senders from INBOX.
 
 ### `sendMessage(input)`
-- If `providerConversationKey` is set: reply to that thread (sets `In-Reply-To` and `References` headers)
+- If `providerConversationKey` is set: reply to that thread
+- Uses `replyToProviderMessageId` as `In-Reply-To` when available
+- Uses `providerConversationKey` and `replyToProviderMessageId` to build `References`
 - If `contactExternalId` is set: compose new email to that address (starts new thread)
 - Sends via SMTP using `nodemailer`
-- Returns: `{ providerMessageId, providerConversationKey }`
+- Returns: `{ providerMessageId, providerConversationKey, conversationName }`
 
 ---
 
@@ -77,11 +97,10 @@ Not implemented initially. Returns empty array. Future: extract unique senders f
 
 ```
 createEmailProvider()
-  └─ [lazy] onMessage() called
-       └─ imapflow: connect + authenticate
-       └─ SELECT INBOX
-       └─ IDLE loop (or poll fallback)
-            └─ new email → parse → callback()
+  └─ imapflow: connect + authenticate
+  └─ SELECT INBOX
+  └─ IDLE loop
+       └─ unseen email → parse → callback()
 ```
 
 SMTP connection is created per-send (stateless). IMAP connection is persistent with auto-reconnect on disconnect.
@@ -97,51 +116,42 @@ SMTP connection is created per-send (stateless). IMAP connection is persistent w
 
 ---
 
+## Provider Notes
+
+Migadu is the chosen provider because it offers real mailboxes, API mailbox management, and straightforward IMAP/SMTP integration for many agent addresses on the same domain.
+
+This provider document describes the runtime adapter shape, not the provisioning workflow. Provisioning and deletion belong to the hiring and termination flows.
+
 ## File Location
 
 ```
-apps/
-  forge-email/          ← new app (mirrors forge-discord structure)
-    src/
-      email-account.ts  ← CommunicationProvider implementation
-      main.ts           ← agent setup + env config
-      forge-system.md   ← system prompt for the email agent
-    .env.example
-    package.json
-    tsconfig.json
+apps/forge/
+  src/
+    email-account.ts        ← CommunicationProvider implementation
+    email/migadu-manager.ts ← mailbox provisioning and deletion via Migadu API
 ```
 
 The provider itself (`email-account.ts`) will also be usable standalone inside any agent — same pattern as `discord-account.ts`.
 
 ---
 
-## Environment Variables (.env.example)
+## Provider Environment
 
+The Migadu admin credential is loaded from the Forge app env:
+
+```env
+MIGADU_API_USER=admin@yourdomain.com
+MIGADU_API_KEY=your-api-key
 ```
-FORGE_AGENT_ID=forge-email
-FORGE_AGENT_NAME=Forge Email Agent
-FORGE_MODEL_PROVIDER=claude-max
-FORGE_MODEL_ID=claude-opus-4-5
 
-IMAP_HOST=imap.gmail.com
-IMAP_PORT=993
-IMAP_SECURE=true
-IMAP_USER=agent@yourdomain.com
-IMAP_PASSWORD=your-app-password
-
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=agent@yourdomain.com
-SMTP_PASSWORD=your-app-password
-```
+The mailbox domain is derived from `MIGADU_API_USER`. IMAP and SMTP hosts stay fixed in code for Migadu.
 
 ---
 
 ## Out of Scope (for now)
 
 - Multiple IMAP folders (only INBOX)
-- OAuth2 (App Password is sufficient)
+- OAuth2
 - Contact sync from existing mailbox
 - HTML email composition (plain text only)
 - Email signatures

@@ -10,6 +10,7 @@ import { getInternalAgentRegistry } from './agents/internal-agent-registry.js';
 import { createInternalAgentWorkflows } from './workflows/internal-agents.js';
 import { createForgeHttpServer } from './http/server.js';
 import { createGitHubAppManager } from './github/manager.js';
+import { createAgentEmailManager } from './email/migadu-manager.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -18,6 +19,8 @@ const envSchema = z.object({
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
   GITHUB_ORGANIZATION: z.string().min(1),
   GITHUB_APP_HOME_URL: z.string().url().optional(),
+  MIGADU_API_USER: z.string().email().optional(),
+  MIGADU_API_KEY: z.string().min(1).optional(),
 });
 
 export async function main() {
@@ -32,6 +35,16 @@ export async function main() {
     port: env.FORGE_HTTP_PORT,
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
+
+  if ((env.MIGADU_API_USER && !env.MIGADU_API_KEY) || (!env.MIGADU_API_USER && env.MIGADU_API_KEY)) {
+    throw new Error('Migadu email provisioning requires both MIGADU_API_USER and MIGADU_API_KEY');
+  }
+
+  const emailMailboxes = createAgentEmailManager({
+    db,
+    apiUser: env.MIGADU_API_USER ?? null,
+    apiKey: env.MIGADU_API_KEY ?? null,
+  });
   const githubApps = createGitHubAppManager({
     db,
     httpServer,
@@ -52,6 +65,7 @@ export async function main() {
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     githubApps,
+    emailMailboxes,
   });
   const agents = await registry.loadAll(db, {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,

@@ -143,7 +143,6 @@ export const companyCashLedger = sqliteTable('company_cash_ledger', {
 export type CompanyCashLedgerEntry = typeof companyCashLedger.$inferSelect;
 export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
 
-
 /**
  * Tabela: agent_providers
  * Credenciais criptografadas de provedores por agente

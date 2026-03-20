@@ -77,6 +77,7 @@ The workflow deletes provider configuration records related to the agent.
 This includes:
 - provider credentials
 - related provider records owned by the agent
+- external integrations that must be deprovisioned before local cleanup finishes
 
 ### 6. Delete Agent Runtime Files
 
@@ -113,6 +114,10 @@ The workflow should assume the agent owns these runtime resources:
 - workspace-memory directory
 
 If more agent-owned resources are added later, they can be included in the same cleanup workflow.
+
+Current external cleanup direction includes:
+- uninstalling the active GitHub App installation for the agent
+- deleting the agent mailbox in Migadu
 
 ## Database Direction
 
@@ -154,6 +159,8 @@ Implemented today:
 - the workflow removes the agent from the internal in-memory registry before cleanup
 - the agent row is hard-deleted from the database
 - provider records are removed through database cascade
+- the active GitHub App installation is uninstalled before deletion continues
+- the Migadu mailbox is deleted before local cleanup continues
 - the full `workspaces/{agentId}/` directory is deleted recursively
 
 Current implementation note:
