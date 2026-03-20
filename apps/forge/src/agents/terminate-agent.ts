@@ -22,7 +22,7 @@ export async function terminateInternalAgent(db: Database, input: {
   }
 
   getInternalAgentRegistry().remove(input.agentId);
-  input.githubApps.unloadAgent(input.agentId);
+  await input.githubApps.deleteAgentApp(input.agentId);
 
   await db.delete(agents).where(eq(agents.id, input.agentId));
 

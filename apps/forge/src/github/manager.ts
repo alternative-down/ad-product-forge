@@ -86,6 +86,27 @@ export function createGitHubAppManager(config: {
     routeCleanups.delete(agentId);
   }
 
+  async function deleteAgentApp(agentId: string) {
+    const credentials = await getCredentials(agentId);
+
+    unloadAgent(agentId);
+
+    if (!credentials) {
+      return;
+    }
+
+    if (credentials.status === 'active') {
+      const appOctokit = createAppOctokit({
+        appId: credentials.appId,
+        privateKey: credentials.privateKey,
+      });
+
+      await appOctokit.request('DELETE /app/installations/{installation_id}', {
+        installation_id: credentials.installationId,
+      });
+    }
+  }
+
   async function getGitCredentials(input: {
     agentId: string;
     repositoryName?: string;
@@ -227,6 +248,7 @@ export function createGitHubAppManager(config: {
     ensureAgentApp,
     loadAllAgents,
     unloadAgent,
+    deleteAgentApp,
     getGitCredentials,
     listRepositories,
     createRepository,
