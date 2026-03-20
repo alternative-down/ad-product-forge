@@ -2,7 +2,7 @@
 
 **Status:** Planejamento
 
-**Boundary note:** GitHub e Coolify podem usar endpoints adapter-specific próprios e não precisam passar por este PRD na primeira versão. Este PRD continua reservado para um bus genérico de webhook quando isso realmente fizer sentido.
+**Boundary note:** GitHub usa endpoint adapter-specific próprio. Coolify está fora do escopo da primeira versão e também não passa por este PRD agora. Este PRD continua reservado para um bus genérico de webhook quando isso realmente fizer sentido.
 
 **Nota:** Este é um projeto pessoal de um desenvolvedor solo. Construído com princípios KISS (Keep It Simple, Stupid) e YAGNI (You Aren't Gonna Need It) em mente.
 
