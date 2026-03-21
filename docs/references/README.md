@@ -9,5 +9,6 @@ It includes:
 - older system descriptions kept as context
 - vision documents
 - research notes
+- high-level product or platform concept documents
 
 These files may still be valuable, but current implementation truth should be documented in `docs/current/`.

@@ -10,11 +10,11 @@ The current system has two main layers:
 
 - `apps/forge/`
   - The application layer.
-  - Owns the company database, agent registry, hiring and termination workflows, provider credential storage, and external integrations.
+  - Owns the company database, agent registry, hiring and termination workflows, provider credential storage, integrations, schedules, notifications, and HTTP routes.
 
 - `packages/mastra-engine/`
   - Shared runtime primitives.
-  - Owns communication abstractions, wake queue, memory layers, OAuth gateway pieces, and related engine concerns.
+  - Owns communication abstractions, wake queue, memory layers, and shared LLM gateway pieces.
 
 ## Main process startup
 
@@ -25,7 +25,7 @@ At boot, the application:
 1. loads environment configuration
 2. runs database migrations
 3. seeds model prices
-4. creates the in-memory internal agent registry
+4. creates the internal registry
 5. creates the HTTP server
 6. creates integration managers:
    - GitHub App manager
@@ -34,10 +34,25 @@ At boot, the application:
    - schedule manager
 7. creates internal workflows
 8. loads all persisted agents into the registry
-9. loads GitHub app routes for loaded agents
-10. loads persisted schedules
+9. loads GitHub routes for loaded agents
+10. loads persisted schedules into memory
 11. starts the HTTP server
 12. instantiates Mastra with the loaded agents, workflows, and OAuth gateway
+
+## Registry model
+
+The registry is not just a list of agents.
+
+Current registry entries contain:
+
+- the loaded internal runtime
+- the runner that owns wake and execution behavior for that runtime
+
+This means the application boundary is:
+
+- central process owns agent lifecycle
+- registry owns loaded runtime instances
+- runner owns execution pacing and wake handling per loaded agent
 
 ## Runtime construction boundary
 
@@ -51,11 +66,27 @@ That file currently owns:
 - per-agent workspace filesystem
 - per-agent local sandbox
 - communication module creation
-- tool search processor wiring
+- `ToolSearchProcessor` wiring
 - observational memory wiring
 - optional long-term memory wiring
 
 The current pattern is explicit construction at startup. The system does not rely on hidden lazy initialization for the agent runtime.
+
+## Tool exposure model
+
+A current architectural detail that matters:
+
+- the runtime builds a searchable tool set from communication tools plus Forge custom tools
+- that set is passed into `ToolSearchProcessor`
+- the agent itself is created with `tools: {}`
+
+So the live interaction model is not “inject every tool directly into the agent”.
+
+It is:
+
+- searchable tool catalog at runtime
+- tool discovery through the processor
+- progressive disclosure of tool access inside the agent loop
 
 ## Storage boundary
 
@@ -79,15 +110,16 @@ Each agent also has a per-agent workspace directory containing:
 
 Forge exposes its own HTTP server in [server.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/http/server.ts).
 
-Today this is used mainly for adapter-specific integration endpoints, especially GitHub App registration and webhook handling.
+Today this is used for provider-specific integration endpoints, especially GitHub App registration and GitHub webhook handling.
 
 ## Current architectural constraints
 
-- Providers are provisioned by the application, not granted by role.
-- Tool permissions only control custom Forge tools and workflows.
-- Mastra built-in tools are always available.
-- Communication tools are currently always available because they are injected by the engine communication module.
-- The current tool surface is still operationally split by action in several domains. The codebase has not yet been refactored into a more condensed surface.
+- providers are provisioned by the application, not granted by role
+- tool permissions only control custom Forge tools and workflows
+- Mastra built-in tools are always available
+- communication tools are always available through the communication module path
+- the current tool surface is still operationally split by action in several domains and has not yet been condensed
+- Coolify state is not mirrored into local business entities
 
 ## Authoritative code anchors
 
@@ -95,3 +127,4 @@ Today this is used mainly for adapter-specific integration endpoints, especially
 - [create-forge-agent.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/create-forge-agent.ts)
 - [agent-loader.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/agent-loader.ts)
 - [internal-agent-registry.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/internal-agent-registry.ts)
+- [agent-runner.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/agent-runner.ts)

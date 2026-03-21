@@ -1,18 +1,29 @@
 # Tools and Permissions
 
-## Built-in vs custom tools
+## Tool exposure model
 
-Current runtime behavior:
+Current runtime behavior is split into three layers:
 
-- Mastra built-in tools are always available.
-- Communication tools injected by the communication module are always available.
-- Forge custom tools are filtered by role permission.
-- Workflows are filtered by role permission.
-- Providers are provisioned by hiring and runtime load. They are not permission targets.
+1. Mastra built-in tools
+   - always available
+
+2. communication tools from the engine communication module
+   - always available when the communication module is loaded
+
+3. Forge custom tools
+   - filtered by role permission before runtime creation
+
+A current implementation detail that matters:
+
+- the runtime builds a searchable tool map
+- that map is passed into `ToolSearchProcessor`
+- the agent itself is created with an empty direct tool map
+
+So the live agent surface is currently based on processor-driven discovery, not eager direct injection of every custom tool.
 
 ## Communication tools
 
-These come from the engine communication module and are always available when the communication module is present:
+These come from the engine communication module and are not part of the Forge permission catalog:
 
 - `list_contacts`
 - `get_contact`
@@ -21,7 +32,9 @@ These come from the engine communication module and are always available when th
 - `get_messages`
 - `send_message`
 
-## Forge custom tool groups
+## Forge custom tool catalog
+
+These ids are the current permission targets stored in role permissions.
 
 ### Micro ERP
 
@@ -105,6 +118,15 @@ These come from the engine communication module and are always available when th
 - `list_available_custom_tools`
 - `list_available_workflows`
 
+## Workflow permissions
+
+Current workflow ids in the permission model:
+
+- `hire-internal-agent`
+- `terminate-internal-agent`
+
+Workflow filtering happens in the loader after resolving the role capability set.
+
 ## Current permission model
 
 Permissions are based on literal ids:
@@ -121,8 +143,12 @@ The role defines:
 - allowed custom tool ids
 - allowed workflow ids
 
-## Current runtime enforcement
+Providers are not permission targets.
+
+## Runtime enforcement
 
 The current loader resolves the capability set before runtime construction and builds only the custom tool groups allowed for the agent.
 
-This means the runtime does not expose denied custom tools in the first place.
+This means denied custom tools are not exposed in the runtime build at all.
+
+When role or function assignments change, loaded agents are reloaded so the runtime reflects the updated capability set.

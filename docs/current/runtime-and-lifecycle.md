@@ -17,6 +17,18 @@ The loader currently:
 
 This is the single runtime construction path. Hiring uses this same loader after persistence.
 
+## Registry and runner behavior
+
+The registry owns loaded runtime entries.
+
+When a runtime is added to the registry:
+
+- an agent runner is created for that runtime
+- any previously loaded runtime for the same agent is stopped and replaced
+- the runner starts immediately if the stored execution state is already `running`
+
+This gives Forge live reload behavior for agents without restarting the app process.
+
 ## Hiring
 
 Hiring orchestration is split across:
@@ -71,6 +83,7 @@ The current system can wake an idle agent from multiple sources:
 - GitHub webhook event
 - scheduled wake trigger
 - heartbeat trigger
+- function change notification when a loaded target agent is reassigned
 
 All of these converge on the agent runner through `notifyExternalEvent`.
 
@@ -86,6 +99,20 @@ Current behavior:
 - heartbeat schedules do not create notifications; they only wake the agent
 - heartbeat is created during hiring
 - schedules are loaded back into memory at boot
+
+## Capability changes at runtime
+
+Role and function changes are not just persisted.
+
+Current behavior:
+
+- changing a target agent function updates the agent row
+- updates the internal-chat provider description for that target agent
+- creates a notification for the target agent
+- reloads the target runtime if it is loaded
+- wakes the target agent after the change
+
+Role grants and function-role assignments also trigger runtime reload of affected loaded agents.
 
 ## Execution loop
 
