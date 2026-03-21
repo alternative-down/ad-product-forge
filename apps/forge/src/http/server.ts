@@ -1,4 +1,5 @@
 import http, { type IncomingHttpHeaders } from 'node:http';
+import { ZodError } from 'zod';
 
 export type HttpRequest = {
   method: string;
@@ -19,9 +20,7 @@ type HttpHandler = (request: HttpRequest) => Promise<HttpResponse> | HttpRespons
 
 type RouteKey = `${string} ${string}`;
 
-export function createForgeHttpServer(config: {
-  port: number;
-}) {
+export function createForgeHttpServer(config: { port: number }) {
   const routes = new Map<RouteKey, HttpHandler>();
   const server = http.createServer(async (req, res) => {
     if (!req.url || !req.method) {
@@ -53,16 +52,26 @@ export function createForgeHttpServer(config: {
       res.writeHead(response.status, response.headers ?? {});
       res.end(response.body);
     } catch (error) {
+      if (error instanceof ZodError) {
+        res.writeHead(400, {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        });
+        res.end(
+          JSON.stringify({
+            error: 'Invalid request',
+            details: error.flatten(),
+          }),
+        );
+        return;
+      }
+
       console.error(`[ForgeHttpServer] ${req.method} ${url.pathname} failed:`, error);
       res.writeHead(500).end('Internal server error');
     }
   });
 
-  function registerRoute(input: {
-    method: 'GET' | 'POST';
-    path: string;
-    handler: HttpHandler;
-  }) {
+  function registerRoute(input: { method: 'GET' | 'POST'; path: string; handler: HttpHandler }) {
     const key = `${input.method} ${input.path}` as RouteKey;
     routes.set(key, input.handler);
 
