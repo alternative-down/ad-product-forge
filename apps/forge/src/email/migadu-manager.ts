@@ -41,8 +41,6 @@ const emailProviderCredentialsSchema = z.object({
   bcc: z.string().email().optional(),
 });
 
-type EmailProviderCredentials = z.infer<typeof emailProviderCredentialsSchema>;
-
 export type AgentEmailManager = ReturnType<typeof createAgentEmailManager>;
 
 export function createAgentEmailManager(config: {

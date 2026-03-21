@@ -41,7 +41,7 @@ export function createInternalAgentWorkflows(config: {
   coolify: CoolifyManager | null;
   schedules: ReturnType<typeof createAgentScheduleManager>;
 }) {
-  let workflows: InternalAgentWorkflows;
+  const workflows = {} as InternalAgentWorkflows;
 
   const hireStep = createStep({
     id: 'hire-internal-agent',
@@ -91,10 +91,8 @@ export function createInternalAgentWorkflows(config: {
     .then(terminateStep)
     .commit();
 
-  workflows = {
-    hireInternalAgent: hireWorkflow,
-    terminateInternalAgent: terminateWorkflow,
-  };
+  workflows.hireInternalAgent = hireWorkflow;
+  workflows.terminateInternalAgent = terminateWorkflow;
 
   return workflows;
 }
