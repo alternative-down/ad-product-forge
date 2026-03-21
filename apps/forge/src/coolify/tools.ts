@@ -23,26 +23,6 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'create_coolify_github_app')) {
-    tools.create_coolify_github_app = createTool({
-      id: 'create_coolify_github_app',
-      description: 'Register a GitHub App inside Coolify so it can be used as a repository source.',
-      inputSchema: z.object({
-        name: z.string().min(1),
-        organization: z.string().min(1),
-        appId: z.string().min(1),
-        installationId: z.string().min(1),
-        clientId: z.string().min(1),
-        clientSecret: z.string().min(1),
-        webhookSecret: z.string().min(1),
-        privateKey: z.string().min(1),
-        apiUrl: z.string().url().optional(),
-        htmlUrl: z.string().url().optional(),
-      }),
-      execute: async (input) => coolify.createGitHubApp(input),
-    });
-  }
-
   if (canCreateTool(allowedToolIds, 'list_coolify_github_app_repositories')) {
     tools.list_coolify_github_app_repositories = createTool({
       id: 'list_coolify_github_app_repositories',

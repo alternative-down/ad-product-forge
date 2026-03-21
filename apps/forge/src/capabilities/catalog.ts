@@ -26,7 +26,6 @@ export const forgeCustomToolIds = [
   'remove_github_issue_labels',
   'list_github_milestones',
   'list_coolify_github_apps',
-  'create_coolify_github_app',
   'list_coolify_github_app_repositories',
   'list_coolify_github_app_repository_branches',
   'list_coolify_applications',

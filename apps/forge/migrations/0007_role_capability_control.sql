@@ -93,7 +93,6 @@ INSERT INTO `role_tool_permissions` (`role_id`, `tool_id`, `created_at`) VALUES
   ('deployment', 'get_agent_notification', strftime('%s','now') * 1000),
   ('deployment', 'mark_agent_notification_read', strftime('%s','now') * 1000),
   ('deployment', 'list_coolify_github_apps', strftime('%s','now') * 1000),
-  ('deployment', 'create_coolify_github_app', strftime('%s','now') * 1000),
   ('deployment', 'list_coolify_github_app_repositories', strftime('%s','now') * 1000),
   ('deployment', 'list_coolify_github_app_repository_branches', strftime('%s','now') * 1000),
   ('deployment', 'list_coolify_applications', strftime('%s','now') * 1000),

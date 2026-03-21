@@ -48,7 +48,7 @@ Agents only receive tool access through Forge.
 Coolify deployment starts from repositories that already exist in the company GitHub organization.
 
 The first version should use the Coolify flow based on its own GitHub App integration:
-- create or reuse a Coolify GitHub App entry
+- reuse a preconfigured Coolify GitHub App entry
 - list repositories available through that GitHub App
 - create the Coolify application from that repository
 
@@ -59,23 +59,22 @@ Forge does not need a local repository-link table for the first version.
 The first version should expose these tools:
 
 1. `list_coolify_github_apps`
-2. `create_coolify_github_app`
-3. `list_coolify_github_app_repositories`
-4. `list_coolify_github_app_repository_branches`
-5. `list_coolify_applications`
-6. `create_coolify_application`
-7. `get_coolify_application`
-8. `update_coolify_application`
-9. `start_coolify_application`
-10. `stop_coolify_application`
-11. `restart_coolify_application`
-12. `delete_coolify_application`
-13. `list_coolify_application_deployments`
-14. `get_coolify_deployment_logs`
-15. `get_coolify_application_logs`
-16. `list_coolify_application_envs`
-17. `set_coolify_application_env`
-18. `delete_coolify_application_env`
+2. `list_coolify_github_app_repositories`
+3. `list_coolify_github_app_repository_branches`
+4. `list_coolify_applications`
+5. `create_coolify_application`
+6. `get_coolify_application`
+7. `update_coolify_application`
+8. `start_coolify_application`
+9. `stop_coolify_application`
+10. `restart_coolify_application`
+11. `delete_coolify_application`
+12. `list_coolify_application_deployments`
+13. `get_coolify_deployment_logs`
+14. `get_coolify_application_logs`
+15. `list_coolify_application_envs`
+16. `set_coolify_application_env`
+17. `delete_coolify_application_env`
 
 These tools are literal wrappers around the Coolify operational surface needed by agents.
 They should stay explicit and provider-specific.
