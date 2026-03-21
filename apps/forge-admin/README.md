@@ -10,6 +10,8 @@ Current scope:
 - agent runtime visibility
 - agent hiring and termination
 - selected agent function reassignment
+- agent runtime config updates
+- external provider credential updates
 - agent wake and reload actions
 - agent schedule management
 - role custom tool grant management

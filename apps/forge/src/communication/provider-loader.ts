@@ -5,19 +5,19 @@ import { createDiscordProvider } from '../discord-account.js';
 import { createEmailProvider } from '../email-account.js';
 import { createInternalChatPreset } from './presets/internal-chat.js';
 
-const internalChatCredentialsSchema = z.object({
+export const internalChatCredentialsSchema = z.object({
   agentId: z.string(),
   displayName: z.string().min(1).optional(),
   description: z.string().optional(),
 });
 
-const discordCredentialsSchema = z.object({
+export const discordCredentialsSchema = z.object({
   token: z.string(),
   allowedChannelIds: z.array(z.string()).optional(),
   respondToMentionsOnly: z.boolean().optional(),
 });
 
-const emailCredentialsSchema = z.object({
+export const emailCredentialsSchema = z.object({
   imap: z.object({
     host: z.string(),
     port: z.number(),
@@ -80,4 +80,19 @@ export function loadCommunicationProviders(credentials: ProviderCredentialsMap):
   }
 
   return providers;
+}
+
+export function parseProviderCredentials(
+  providerType: keyof ProviderCredentialsMap,
+  credentials: unknown,
+) {
+  if (providerType === 'internal-chat') {
+    return internalChatCredentialsSchema.parse(credentials);
+  }
+
+  if (providerType === 'discord') {
+    return discordCredentialsSchema.parse(credentials);
+  }
+
+  return emailCredentialsSchema.parse(credentials);
 }

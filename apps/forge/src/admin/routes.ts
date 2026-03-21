@@ -1,11 +1,17 @@
 import { z } from 'zod';
+import { eq, and } from 'drizzle-orm';
 
 import type { Database } from '../database/index.js';
 import type { AgentLoaderConfig } from '../agents/agent-loader.js';
 import { loadAgent } from '../agents/agent-loader.js';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry.js';
 import { createCapabilityStore } from '../capabilities/store.js';
-import { changeAgentFunctionFromAdmin, reloadAgentsForRole } from '../capabilities/runtime.js';
+import {
+  changeAgentFunctionFromAdmin,
+  reloadAgentIfLoaded,
+  reloadAgentsForRole,
+  updateInternalChatProviderProfile,
+} from '../capabilities/runtime.js';
 import type { createForgeHttpServer } from '../http/server.js';
 import type { createAgentScheduleManager } from '../schedules/manager.js';
 import { createAdminReadModel } from './read-model.js';
@@ -13,6 +19,10 @@ import { runInternalHiring, runInternalTermination } from '../agents/internal-ag
 import type { AgentEmailManager } from '../email/migadu-manager.js';
 import type { CoolifyManager } from '../coolify/manager.js';
 import type { GitHubAppManager } from '../github/manager.js';
+import { agentFunctions, agents, agentProviders } from '../database/schema.js';
+import { encryptSecret } from '../encryption/crypto.js';
+import { parseProviderCredentials } from '../communication/provider-loader.js';
+import { createId } from '@paralleldrive/cuid2';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -69,6 +79,28 @@ const terminateAgentSchema = z.object({
 const changeAgentFunctionSchema = z.object({
   agentId: z.string().min(1),
   functionId: z.string().min(1),
+});
+
+const updateAgentConfigSchema = z.object({
+  agentId: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional().nullable(),
+  workspaceAutoSync: z.boolean(),
+  workspaceBm25: z.boolean(),
+  workspaceEmbedder: z.string().min(1),
+  workspaceFilesystemBasePath: z.string().optional().nullable(),
+  workspaceSandboxWorkingDirectory: z.string().optional().nullable(),
+});
+
+const upsertAgentProviderSchema = z.object({
+  agentId: z.string().min(1),
+  providerType: z.enum(['discord', 'email']),
+  credentials: z.unknown(),
+});
+
+const deleteAgentProviderSchema = z.object({
+  agentId: z.string().min(1),
+  providerType: z.enum(['discord', 'email']),
 });
 
 export function registerAdminRoutes(input: {
@@ -208,6 +240,113 @@ export function registerAdminRoutes(input: {
       });
 
       return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/update-config',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      await input.db
+        .update(agents)
+        .set({
+          name: body.name,
+          description: body.description ?? null,
+          workspaceAutoSync: body.workspaceAutoSync ? 1 : 0,
+          workspaceBm25: body.workspaceBm25 ? 1 : 0,
+          workspaceEmbedder: body.workspaceEmbedder,
+          workspaceFilesystem: body.workspaceFilesystemBasePath
+            ? { basePath: body.workspaceFilesystemBasePath }
+            : null,
+          workspaceSandbox: body.workspaceSandboxWorkingDirectory
+            ? { workingDirectory: body.workspaceSandboxWorkingDirectory }
+            : null,
+          updatedAt: Date.now(),
+        })
+        .where(eq(agents.id, body.agentId));
+
+      const agentFunction = agent.functionId
+        ? await input.db.query.agentFunctions.findFirst({
+            where: eq(agentFunctions.id, agent.functionId),
+          })
+        : null;
+
+      await updateInternalChatProviderProfile(input.db, {
+        agentId: body.agentId,
+        displayName: body.name,
+        description: agentFunction?.description ?? agentFunction?.name ?? body.name,
+      });
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-provider/upsert',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
+      const credentials = parseProviderCredentials(body.providerType, body.credentials);
+      const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
+      const existing = await input.db.query.agentProviders.findFirst({
+        where: and(
+          eq(agentProviders.agentId, body.agentId),
+          eq(agentProviders.providerType, body.providerType),
+        ),
+      });
+
+      if (existing) {
+        await input.db
+          .update(agentProviders)
+          .set({
+            encryptedCredentials,
+          })
+          .where(eq(agentProviders.id, existing.id));
+      } else {
+        await input.db.insert(agentProviders).values({
+          id: createId(),
+          agentId: body.agentId,
+          providerType: body.providerType,
+          encryptedCredentials,
+          createdAt: Date.now(),
+        });
+      }
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-provider/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
+
+      await input.db
+        .delete(agentProviders)
+        .where(
+          and(
+            eq(agentProviders.agentId, body.agentId),
+            eq(agentProviders.providerType, body.providerType),
+          ),
+        );
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
     },
   });
 

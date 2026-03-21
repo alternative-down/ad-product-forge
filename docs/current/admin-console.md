@@ -10,6 +10,8 @@ It exists for:
 - agent maintenance
 - agent hiring and termination
 - agent function reassignment
+- agent runtime config updates
+- external provider credential updates
 - schedule management
 - role tool grant maintenance
 
@@ -68,8 +70,8 @@ Shows:
 - persisted execution state
 - loaded status
 - runner snapshot from memory
-- provider types configured for the agent
-- workspace configuration summary
+- editable runtime config for the selected agent
+- editable external provider credentials for the selected agent
 - active execution contract
 - heartbeat schedule
 - editable agent schedules
@@ -80,6 +82,9 @@ Actions available:
 - hire agent
 - terminate agent
 - reassign the selected agent function
+- update agent runtime config
+- upsert agent provider credentials
+- delete external provider credentials
 - wake agent
 - reload agent runtime
 - create agent schedule
@@ -149,6 +154,9 @@ Mutation endpoints:
 - `POST /admin/agent/hire`
 - `POST /admin/agent/terminate`
 - `POST /admin/agent/change-function`
+- `POST /admin/agent/update-config`
+- `POST /admin/agent-provider/upsert`
+- `POST /admin/agent-provider/delete`
 - `POST /admin/agent/wake`
 - `POST /admin/agent/reload`
 - `POST /admin/agent-schedule/create`

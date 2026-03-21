@@ -99,7 +99,7 @@ export async function changeAgentFunction(input: {
     })
     .where(eq(agents.id, input.targetAgentId));
 
-  await updateInternalChatProviderDescription(input.db, {
+  await updateInternalChatProviderProfile(input.db, {
     agentId: input.targetAgentId,
     displayName: targetAgent.name,
     description: agentFunction.description ?? agentFunction.name,
@@ -156,7 +156,7 @@ export async function changeAgentFunctionFromAdmin(input: {
     })
     .where(eq(agents.id, input.targetAgentId));
 
-  await updateInternalChatProviderDescription(input.db, {
+  await updateInternalChatProviderProfile(input.db, {
     agentId: input.targetAgentId,
     displayName: targetAgent.name,
     description: agentFunction.description ?? agentFunction.name,
@@ -182,7 +182,7 @@ export async function changeAgentFunctionFromAdmin(input: {
   };
 }
 
-async function updateInternalChatProviderDescription(
+export async function updateInternalChatProviderProfile(
   db: Database,
   input: {
     agentId: string;

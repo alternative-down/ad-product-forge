@@ -99,6 +99,8 @@ export type AgentDetail = {
   providers: Array<{
     providerType: string;
     createdAt: number;
+    editable: boolean;
+    credentials: unknown;
   }>;
   activeContract: {
     contractId: string;
@@ -123,6 +125,23 @@ export type AgentDetail = {
   }>;
   createdAt: number;
   updatedAt: number;
+};
+
+export type UpdateAgentConfigInput = {
+  agentId: string;
+  name: string;
+  description?: string | null;
+  workspaceAutoSync: boolean;
+  workspaceBm25: boolean;
+  workspaceEmbedder: string;
+  workspaceFilesystemBasePath?: string | null;
+  workspaceSandboxWorkingDirectory?: string | null;
+};
+
+export type UpsertAgentProviderInput = {
+  agentId: string;
+  providerType: 'discord' | 'email';
+  credentials: unknown;
 };
 
 export type AgentFunction = {
@@ -268,6 +287,33 @@ export function changeAgentFunction(agentId: string, functionId: string) {
     method: 'POST',
     body: JSON.stringify({ agentId, functionId }),
   });
+}
+
+export function updateAgentConfig(input: UpdateAgentConfigInput) {
+  return request<{ success: true; agentId: string }>('/admin/agent/update-config', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function upsertAgentProvider(input: UpsertAgentProviderInput) {
+  return request<{ success: true; agentId: string; providerType: string }>(
+    '/admin/agent-provider/upsert',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function deleteAgentProvider(agentId: string, providerType: 'discord' | 'email') {
+  return request<{ success: true; agentId: string; providerType: string }>(
+    '/admin/agent-provider/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify({ agentId, providerType }),
+    },
+  );
 }
 
 export function createSchedule(input: CreateScheduleInput) {

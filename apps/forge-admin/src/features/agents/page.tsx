@@ -6,6 +6,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   changeAgentFunction,
   createSchedule,
+  deleteAgentProvider,
   deleteSchedule,
   getAgent,
   hireAgent,
@@ -13,12 +14,15 @@ import {
   listFunctions,
   reloadAgent,
   terminateAgent,
+  updateAgentConfig,
   updateSchedule,
+  upsertAgentProvider,
   wakeAgent,
   type AgentFunction,
   type AgentSchedule,
   type CreateScheduleInput,
   type HireAgentResult,
+  type AgentDetail,
   type UpdateScheduleInput,
 } from '../../lib/api';
 import { formatDateTime, formatInteger, formatUsd } from '../../lib/format';
@@ -49,6 +53,21 @@ type HireAgentDraft = {
   weeklyBudgetUsd: string;
 };
 
+type AgentConfigDraft = {
+  name: string;
+  description: string;
+  workspaceAutoSync: boolean;
+  workspaceBm25: boolean;
+  workspaceEmbedder: string;
+  workspaceFilesystemBasePath: string;
+  workspaceSandboxWorkingDirectory: string;
+};
+
+type ProviderDraft = {
+  providerType: 'discord' | 'email';
+  credentialsText: string;
+};
+
 export function AgentsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate({ from: '/agents' });
@@ -64,6 +83,15 @@ export function AgentsPage() {
     agentId: string;
     functionId: string;
   } | null>(null);
+  const [configDraft, setConfigDraft] = useState<{
+    agentId: string;
+    value: AgentConfigDraft;
+  } | null>(null);
+  const [providerDrafts, setProviderDrafts] = useState<Record<string, ProviderDraft>>({});
+  const [newProviderDraft, setNewProviderDraft] = useState<ProviderDraft>({
+    providerType: 'discord',
+    credentialsText: '{\n  "token": "",\n  "allowedChannelIds": [],\n  "respondToMentionsOnly": false\n}',
+  });
 
   const agentsQuery = useQuery({
     queryKey: ['admin', 'agents'],
@@ -97,6 +125,10 @@ export function AgentsPage() {
     agentDetailQuery.data && functionDraft?.agentId === agentDetailQuery.data.agentId
       ? functionDraft.functionId
       : (agentDetailQuery.data?.function?.functionId ?? '');
+  const selectedAgentConfig =
+    agentDetailQuery.data && configDraft?.agentId === agentDetailQuery.data.agentId
+      ? configDraft.value
+      : (agentDetailQuery.data ? createAgentConfigDraft(agentDetailQuery.data) : null);
 
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
@@ -177,6 +209,50 @@ export function AgentsPage() {
         },
         replace: true,
       });
+    },
+  });
+  const updateConfigMutation = useMutation({
+    mutationFn: updateAgentConfig,
+    onSuccess: async (_, input) => {
+      setConfigDraft(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
+      ]);
+    },
+  });
+  const upsertProviderMutation = useMutation({
+    mutationFn: async (input: {
+      agentId: string;
+      providerType: 'discord' | 'email';
+      credentialsText: string;
+    }) =>
+      upsertAgentProvider({
+        agentId: input.agentId,
+        providerType: input.providerType,
+        credentials: JSON.parse(input.credentialsText) as unknown,
+      }),
+    onSuccess: async (_, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
+      ]);
+    },
+  });
+  const deleteProviderMutation = useMutation({
+    mutationFn: ({ agentId, providerType }: { agentId: string; providerType: 'discord' | 'email' }) =>
+      deleteAgentProvider(agentId, providerType),
+    onSuccess: async (_, input) => {
+      setProviderDrafts((current) => {
+        const next = { ...current };
+        delete next[buildProviderDraftKey(input.agentId, input.providerType)];
+        return next;
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
+      ]);
     },
   });
   const createScheduleMutation = useMutation({
@@ -323,6 +399,82 @@ export function AgentsPage() {
                 terminateError={terminateMutation.error?.message ?? null}
               />
             )}
+            {selectedAgentConfig && (
+              <AgentConfigurationCard
+                draft={selectedAgentConfig}
+                pending={updateConfigMutation.isPending}
+                error={updateConfigMutation.error?.message ?? null}
+                onChange={(draft) => {
+                  if (!agentDetailQuery.data) {
+                    return;
+                  }
+
+                  setConfigDraft({
+                    agentId: agentDetailQuery.data.agentId,
+                    value: draft,
+                  });
+                }}
+                onSubmit={(draft) =>
+                  updateConfigMutation.mutate({
+                    agentId: agentDetailQuery.data!.agentId,
+                    name: draft.name,
+                    description: draft.description || null,
+                    workspaceAutoSync: draft.workspaceAutoSync,
+                    workspaceBm25: draft.workspaceBm25,
+                    workspaceEmbedder: draft.workspaceEmbedder,
+                    workspaceFilesystemBasePath: draft.workspaceFilesystemBasePath || null,
+                    workspaceSandboxWorkingDirectory:
+                      draft.workspaceSandboxWorkingDirectory || null,
+                  })
+                }
+              />
+            )}
+            <AgentProvidersCard
+              agent={agentDetailQuery.data}
+              draftByKey={providerDrafts}
+              newProviderDraft={newProviderDraft}
+              onChangeProviderDraft={(providerType, credentialsText) => {
+                const agentId = agentDetailQuery.data!.agentId;
+                const key = buildProviderDraftKey(agentId, providerType);
+
+                setProviderDrafts((current) => ({
+                  ...current,
+                  [key]: {
+                    providerType,
+                    credentialsText,
+                  },
+                }));
+              }}
+              onChangeNewProviderDraft={setNewProviderDraft}
+              onSaveProvider={(providerType, credentialsText) =>
+                upsertProviderMutation.mutate({
+                  agentId: agentDetailQuery.data!.agentId,
+                  providerType,
+                  credentialsText,
+                })
+              }
+              onDeleteProvider={(providerType) =>
+                deleteProviderMutation.mutate({
+                  agentId: agentDetailQuery.data!.agentId,
+                  providerType,
+                })
+              }
+              onCreateProvider={() =>
+                upsertProviderMutation.mutate({
+                  agentId: agentDetailQuery.data!.agentId,
+                  providerType: newProviderDraft.providerType,
+                  credentialsText: newProviderDraft.credentialsText,
+                })
+              }
+              pendingProviderType={
+                upsertProviderMutation.variables?.providerType ??
+                deleteProviderMutation.variables?.providerType ??
+                null
+              }
+              error={
+                upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
+              }
+            />
             <SchedulesCard
               schedules={agentDetailQuery.data.schedules}
               heartbeat={agentDetailQuery.data.heartbeat}
@@ -672,6 +824,275 @@ function AgentMaintenanceCard(input: {
   );
 }
 
+function AgentConfigurationCard(input: {
+  draft: AgentConfigDraft;
+  pending: boolean;
+  error: string | null;
+  onChange(draft: AgentConfigDraft): void;
+  onSubmit(draft: AgentConfigDraft): void;
+}) {
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-950">Agent runtime config</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Updates the stored agent record and reloads the runtime if the agent is loaded.
+        </p>
+      </div>
+
+      <form
+        className="mt-5 grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          input.onSubmit(input.draft);
+        }}
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <LabeledField label="Name">
+            <Input
+              value={input.draft.name}
+              onChange={(event) => input.onChange({ ...input.draft, name: event.target.value })}
+              required
+            />
+          </LabeledField>
+          <LabeledField label="Workspace embedder">
+            <Input
+              value={input.draft.workspaceEmbedder}
+              onChange={(event) =>
+                input.onChange({ ...input.draft, workspaceEmbedder: event.target.value })
+              }
+              required
+            />
+          </LabeledField>
+        </div>
+
+        <LabeledField label="Description">
+          <Textarea
+            value={input.draft.description}
+            onChange={(event) =>
+              input.onChange({ ...input.draft, description: event.target.value })
+            }
+          />
+        </LabeledField>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <LabeledField label="Workspace filesystem base path">
+            <Input
+              value={input.draft.workspaceFilesystemBasePath}
+              onChange={(event) =>
+                input.onChange({
+                  ...input.draft,
+                  workspaceFilesystemBasePath: event.target.value,
+                })
+              }
+              placeholder="repo"
+            />
+          </LabeledField>
+          <LabeledField label="Sandbox working directory">
+            <Input
+              value={input.draft.workspaceSandboxWorkingDirectory}
+              onChange={(event) =>
+                input.onChange({
+                  ...input.draft,
+                  workspaceSandboxWorkingDirectory: event.target.value,
+                })
+              }
+              placeholder="repo"
+            />
+          </LabeledField>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={input.draft.workspaceAutoSync}
+              onChange={(event) =>
+                input.onChange({ ...input.draft, workspaceAutoSync: event.target.checked })
+              }
+            />
+            Workspace auto sync
+          </label>
+          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={input.draft.workspaceBm25}
+              onChange={(event) =>
+                input.onChange({ ...input.draft, workspaceBm25: event.target.checked })
+              }
+            />
+            BM25 retrieval
+          </label>
+        </div>
+
+        {input.error && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {input.error}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button type="submit" disabled={input.pending}>
+            {input.pending ? (
+              <>
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save config'
+            )}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+function AgentProvidersCard(input: {
+  agent: AgentDetail;
+  draftByKey: Record<string, ProviderDraft>;
+  newProviderDraft: ProviderDraft;
+  onChangeProviderDraft(providerType: 'discord' | 'email', credentialsText: string): void;
+  onChangeNewProviderDraft(draft: ProviderDraft): void;
+  onSaveProvider(providerType: 'discord' | 'email', credentialsText: string): void;
+  onDeleteProvider(providerType: 'discord' | 'email'): void;
+  onCreateProvider(): void;
+  pendingProviderType: string | null;
+  error: string | null;
+}) {
+  const editableProviders = input.agent.providers.filter(
+    (provider): provider is AgentDetail['providers'][number] & {
+      providerType: 'discord' | 'email';
+    } => provider.editable && (provider.providerType === 'discord' || provider.providerType === 'email'),
+  );
+
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-950">Providers</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          External provider credentials are editable here. Internal chat remains system-managed.
+        </p>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {input.agent.providers.map((provider) => {
+          const editableProviderType =
+            provider.providerType === 'discord' || provider.providerType === 'email'
+              ? provider.providerType
+              : null;
+          const key =
+            editableProviderType
+              ? buildProviderDraftKey(input.agent.agentId, editableProviderType)
+              : null;
+          const draft =
+            key && input.draftByKey[key]
+              ? input.draftByKey[key]
+              : {
+                  providerType: editableProviderType ?? 'discord',
+                  credentialsText: toPrettyJson(provider.credentials),
+                };
+
+          return (
+            <div key={provider.providerType} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="font-medium text-slate-950">{provider.providerType}</div>
+                  <div className="text-xs text-slate-500">
+                    Created at {formatDateTime(provider.createdAt)}
+                  </div>
+                </div>
+                <Badge>{provider.editable ? 'editable' : 'read-only'}</Badge>
+              </div>
+
+              {provider.editable && editableProviderType ? (
+                <>
+                  <Textarea
+                    className="mt-4 min-h-44 font-mono text-xs"
+                    value={draft.credentialsText}
+                    onChange={(event) => input.onChangeProviderDraft(editableProviderType, event.target.value)}
+                  />
+                  <div className="mt-3 flex gap-3">
+                    <Button
+                      variant="secondary"
+                      disabled={input.pendingProviderType === editableProviderType}
+                      onClick={() => input.onSaveProvider(editableProviderType, draft.credentialsText)}
+                    >
+                      Save provider
+                    </Button>
+                    <Button
+                      variant="danger"
+                      disabled={input.pendingProviderType === editableProviderType}
+                      onClick={() => input.onDeleteProvider(editableProviderType)}
+                    >
+                      Delete provider
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-4 rounded-xl bg-white px-3 py-3 text-sm text-slate-500">
+                  This provider is not editable from the admin console.
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {editableProviders.length < 2 && (
+          <div className="rounded-2xl border border-dashed border-slate-300 p-4">
+            <div className="text-sm font-medium text-slate-900">Add provider</div>
+            <div className="mt-4 grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
+              <LabeledField label="Provider type">
+                <Select
+                  value={input.newProviderDraft.providerType}
+                  onChange={(event) =>
+                    input.onChangeNewProviderDraft({
+                      providerType: event.target.value as 'discord' | 'email',
+                      credentialsText: createProviderTemplate(
+                        event.target.value as 'discord' | 'email',
+                      ),
+                    })
+                  }
+                >
+                  <option value="discord">discord</option>
+                  <option value="email">email</option>
+                </Select>
+              </LabeledField>
+              <LabeledField label="Credentials JSON">
+                <Textarea
+                  className="min-h-44 font-mono text-xs"
+                  value={input.newProviderDraft.credentialsText}
+                  onChange={(event) =>
+                    input.onChangeNewProviderDraft({
+                      ...input.newProviderDraft,
+                      credentialsText: event.target.value,
+                    })
+                  }
+                />
+              </LabeledField>
+            </div>
+            <div className="mt-4">
+              <Button
+                variant="secondary"
+                disabled={input.pendingProviderType === input.newProviderDraft.providerType}
+                onClick={input.onCreateProvider}
+              >
+                Add provider
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {input.error && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {input.error}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function SchedulesCard(input: {
   schedules: AgentSchedule[];
   heartbeat: AgentSchedule | null;
@@ -1016,6 +1437,18 @@ function createScheduleDraftFromRecord(schedule: AgentSchedule): ScheduleDraft {
   };
 }
 
+function createAgentConfigDraft(agent: AgentDetail): AgentConfigDraft {
+  return {
+    name: agent.name,
+    description: agent.description ?? '',
+    workspaceAutoSync: agent.workspace.autoSync,
+    workspaceBm25: agent.workspace.bm25,
+    workspaceEmbedder: agent.workspace.embedder,
+    workspaceFilesystemBasePath: getWorkspaceFilesystemBasePath(agent),
+    workspaceSandboxWorkingDirectory: getRawSandboxWorkingDirectory(agent),
+  };
+}
+
 function toCreateScheduleInput(agentId: string, draft: ScheduleDraft): CreateScheduleInput {
   return {
     agentId,
@@ -1058,15 +1491,66 @@ function toDateTimeLocalValue(timestamp: number) {
 }
 
 function getSandboxWorkingDirectory(agent: NonNullable<Awaited<ReturnType<typeof getAgent>>>) {
+  return getRawSandboxWorkingDirectory(agent) || '—';
+}
+
+function getRawSandboxWorkingDirectory(agent: NonNullable<Awaited<ReturnType<typeof getAgent>>>) {
   const sandbox = agent.workspace.sandbox;
 
   if (!sandbox || typeof sandbox !== 'object') {
-    return '—';
+    return '';
   }
 
   if (!('workingDirectory' in sandbox) || typeof sandbox.workingDirectory !== 'string') {
-    return '—';
+    return '';
   }
 
   return sandbox.workingDirectory;
+}
+
+function getWorkspaceFilesystemBasePath(agent: AgentDetail) {
+  const filesystem = agent.workspace.filesystem;
+
+  if (!filesystem || typeof filesystem !== 'object') {
+    return '';
+  }
+
+  if (!('basePath' in filesystem) || typeof filesystem.basePath !== 'string') {
+    return '';
+  }
+
+  return filesystem.basePath;
+}
+
+function buildProviderDraftKey(agentId: string, providerType: 'discord' | 'email') {
+  return `${agentId}:${providerType}`;
+}
+
+function createProviderTemplate(providerType: 'discord' | 'email') {
+  if (providerType === 'discord') {
+    return '{\n  "token": "",\n  "allowedChannelIds": [],\n  "respondToMentionsOnly": false\n}';
+  }
+
+  return (
+    '{\n' +
+    '  "imap": {\n' +
+    '    "host": "",\n' +
+    '    "port": 993,\n' +
+    '    "secure": true,\n' +
+    '    "user": "",\n' +
+    '    "password": ""\n' +
+    '  },\n' +
+    '  "smtp": {\n' +
+    '    "host": "",\n' +
+    '    "port": 465,\n' +
+    '    "secure": true,\n' +
+    '    "user": "",\n' +
+    '    "password": ""\n' +
+    '  }\n' +
+    '}'
+  );
+}
+
+function toPrettyJson(value: unknown) {
+  return JSON.stringify(value ?? {}, null, 2);
 }

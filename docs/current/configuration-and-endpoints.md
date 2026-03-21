@@ -90,6 +90,9 @@ Mutation surface:
 - `POST /admin/agent/hire`
 - `POST /admin/agent/terminate`
 - `POST /admin/agent/change-function`
+- `POST /admin/agent/update-config`
+- `POST /admin/agent-provider/upsert`
+- `POST /admin/agent-provider/delete`
 - `POST /admin/agent/wake`
 - `POST /admin/agent/reload`
 - `POST /admin/agent-schedule/create`

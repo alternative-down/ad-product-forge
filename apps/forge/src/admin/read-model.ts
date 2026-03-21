@@ -6,6 +6,7 @@ import { getInternalAgentRegistry } from '../agents/internal-agent-registry.js';
 import { createMicroErpReadModel } from '../micro-erp/read-model.js';
 import { createCapabilityStore } from '../capabilities/store.js';
 import { forgeCustomToolIds } from '../capabilities/catalog.js';
+import { decryptSecret } from '../encryption/crypto.js';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -152,6 +153,11 @@ export function createAdminReadModel(db: Database) {
         .map((provider) => ({
           providerType: provider.providerType,
           createdAt: provider.createdAt,
+          editable: provider.providerType !== 'internal-chat',
+          credentials:
+            provider.providerType === 'internal-chat'
+              ? null
+              : parseProviderCredentials(provider.encryptedCredentials),
         }))
         .sort((left, right) => left.providerType.localeCompare(right.providerType)),
       activeContract,
@@ -254,6 +260,16 @@ export function createAdminReadModel(db: Database) {
     listFunctions,
     listRoles,
   };
+}
+
+function parseProviderCredentials(encryptedCredentials: string) {
+  const decrypted = decryptSecret(encryptedCredentials);
+
+  try {
+    return JSON.parse(decrypted) as unknown;
+  } catch {
+    return decrypted;
+  }
 }
 
 function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {

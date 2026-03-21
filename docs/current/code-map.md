@@ -152,6 +152,7 @@ It does not try to explain every detail. It explains where each main responsibil
 
 - [admin/routes.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/routes.ts)
   - admin endpoint registration for the separate maintenance UI
+  - agent lifecycle, runtime config, provider updates, schedules, and role tool grants
 
 ## Admin UI layer: `apps/forge-admin/src`
 
