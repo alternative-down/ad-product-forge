@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@mastra-engine/core": "0.1.0",
-    "@mastra/core": "^1.14.0",
+    "@mastra/core": "^1.15.0",
     "@octokit/auth-app": "^8.1.1",
     "@types/node-schedule": "^2.1.8",
     "discord.js": "^14.24.2",
@@ -24,12 +24,12 @@
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.3",
     "octokit": "^5.0.3",
-    "postal-mime": "^2.7.3",
+    "postal-mime": "^2.7.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "@types/nodemailer": "^6.4.14",
+    "@types/nodemailer": "^7.0.11",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
