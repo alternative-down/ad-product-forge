@@ -17,6 +17,7 @@ import { registerAdminRoutes } from './admin/routes.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+  FORGE_DATA_PATH: z.string().default('./data'),
   WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
   FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),

@@ -23,6 +23,10 @@ Current application environment is defined primarily in [main.ts](/home/nicolas/
 - `WORKSPACE_BASE_PATH`
   - defaults to `./workspaces`
 
+- `FORGE_DATA_PATH`
+  - defaults to `./data`
+  - the main Forge SQLite database is stored at `{FORGE_DATA_PATH}/agents.db`
+
 - `FORGE_HTTP_PORT`
   - defaults to `3011`
 
