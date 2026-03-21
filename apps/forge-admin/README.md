@@ -12,6 +12,9 @@ Current scope:
 - selected agent function reassignment
 - agent runtime config updates
 - external provider credential updates
+- read-only prompt inspection
+- read-only notification inspection
+- read-only communication previews
 - agent wake and reload actions
 - agent schedule management
 - role custom tool grant management

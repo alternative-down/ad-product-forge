@@ -12,6 +12,9 @@ It exists for:
 - agent function reassignment
 - agent runtime config updates
 - external provider credential updates
+- read-only prompt inspection
+- read-only notification inspection
+- read-only communication inspection
 - schedule management
 - role tool grant maintenance
 
@@ -72,6 +75,9 @@ Shows:
 - runner snapshot from memory
 - editable runtime config for the selected agent
 - editable external provider credentials for the selected agent
+- persisted agent instructions
+- recent agent notifications
+- recent agent conversations and message previews
 - active execution contract
 - heartbeat schedule
 - editable agent schedules

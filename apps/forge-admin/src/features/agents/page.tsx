@@ -475,6 +475,11 @@ export function AgentsPage() {
                 upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
               }
             />
+            <AgentPromptCard instructions={agentDetailQuery.data.instructions} />
+            <AgentInboxCard
+              notifications={agentDetailQuery.data.recentNotifications}
+              conversations={agentDetailQuery.data.recentConversations}
+            />
             <SchedulesCard
               schedules={agentDetailQuery.data.schedules}
               heartbeat={agentDetailQuery.data.heartbeat}
@@ -1093,6 +1098,106 @@ function AgentProvidersCard(input: {
   );
 }
 
+function AgentPromptCard(input: { instructions: string }) {
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-950">Agent instructions</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Read-only prompt currently persisted for the selected agent.
+        </p>
+      </div>
+      <pre className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm whitespace-pre-wrap text-slate-700">
+        {input.instructions}
+      </pre>
+    </Card>
+  );
+}
+
+function AgentInboxCard(input: {
+  notifications: AgentDetail['recentNotifications'];
+  conversations: AgentDetail['recentConversations'];
+}) {
+  return (
+    <div className="grid gap-6 xl:grid-cols-2">
+      <Card className="p-6">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950">Recent notifications</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Latest notifications recorded in the central Forge database.
+          </p>
+        </div>
+        <div className="mt-5 space-y-3">
+          {input.notifications.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+              No notifications for this agent.
+            </div>
+          )}
+          {input.notifications.map((notification) => (
+            <div key={notification.notificationId} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <Badge>{notification.read ? 'read' : 'unread'}</Badge>
+                <div className="text-xs text-slate-500">{formatDateTime(notification.timestamp)}</div>
+              </div>
+              <div className="mt-3 text-sm text-slate-700">{notification.content}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="p-6">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950">Recent conversations</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Read-only communication preview from the selected agent workspace database.
+          </p>
+        </div>
+        <div className="mt-5 space-y-4">
+          {input.conversations.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+              No conversations for this agent.
+            </div>
+          )}
+          {input.conversations.map((conversation) => (
+            <div
+              key={conversation.conversationId}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="font-medium text-slate-950">
+                  {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? 'Conversation'}
+                </div>
+                <Badge>{conversation.provider}</Badge>
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Updated at {formatDateTimeText(conversation.updatedAt)}
+              </div>
+              <div className="mt-4 space-y-3">
+                {conversation.messages.map((message) => (
+                  <div key={message.messageId} className="rounded-xl bg-white px-3 py-3 text-sm text-slate-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-medium text-slate-900">
+                        {message.authorDisplayName ?? 'Unknown author'}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {message.unread && <Badge>unread</Badge>}
+                        <span className="text-xs text-slate-500">
+                          {formatDateTimeText(message.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 whitespace-pre-wrap">{message.content}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function SchedulesCard(input: {
   schedules: AgentSchedule[];
   heartbeat: AgentSchedule | null;
@@ -1553,4 +1658,18 @@ function createProviderTemplate(providerType: 'discord' | 'email') {
 
 function toPrettyJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
+}
+
+function formatDateTimeText(value?: string | null) {
+  if (!value) {
+    return '—';
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return formatDateTime(parsed.getTime());
 }

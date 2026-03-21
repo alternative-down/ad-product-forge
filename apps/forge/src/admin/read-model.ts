@@ -1,4 +1,12 @@
+import path from 'node:path';
+
 import { desc, eq, sql } from 'drizzle-orm';
+import { createClient } from '@libsql/client';
+import {
+  communicationConversations,
+  communicationMessages,
+  initializeCommunicationDatabase,
+} from '@mastra-engine/core';
 
 import type { Database } from '../database/index.js';
 import { agents, agentExecutionSteps, agentProviders, agentSchedules } from '../database/schema.js';
@@ -7,13 +15,22 @@ import { createMicroErpReadModel } from '../micro-erp/read-model.js';
 import { createCapabilityStore } from '../capabilities/store.js';
 import { forgeCustomToolIds } from '../capabilities/catalog.js';
 import { decryptSecret } from '../encryption/crypto.js';
+import { createAgentNotificationStore } from '../notifications/store.js';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
+const RECENT_NOTIFICATION_LIMIT = 10;
+const RECENT_CONVERSATION_LIMIT = 5;
+const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
 
-export function createAdminReadModel(db: Database) {
+export function createAdminReadModel(input: {
+  db: Database;
+  workspaceBasePath: string;
+}) {
+  const db = input.db;
   const finance = createMicroErpReadModel(db);
   const capabilities = createCapabilityStore(db);
+  const notifications = createAgentNotificationStore(db);
 
   async function getDashboard() {
     const [agentRows, balance, summary, activeContracts, cashMovements, functions, roles] =
@@ -98,7 +115,16 @@ export function createAdminReadModel(db: Database) {
       return null;
     }
 
-    const [functions, roleRows, providerRows, recentSteps, agentScheduleRows, activeContract] =
+    const [
+      functions,
+      roleRows,
+      providerRows,
+      recentSteps,
+      agentScheduleRows,
+      activeContract,
+      recentNotifications,
+      recentConversations,
+    ] =
       await Promise.all([
         capabilities.listFunctions(),
         capabilities.listRoles(),
@@ -115,6 +141,11 @@ export function createAdminReadModel(db: Database) {
           orderBy: [desc(agentSchedules.createdAt)],
         }),
         finance.getActiveInternalAgentContract(agentId),
+        notifications.listNotifications({
+          agentId,
+          limit: RECENT_NOTIFICATION_LIMIT,
+        }),
+        listRecentConversations(input.workspaceBasePath, agentId),
       ]);
     const registry = getInternalAgentRegistry();
     const loadedAgent = registry.get(agentId);
@@ -128,6 +159,7 @@ export function createAdminReadModel(db: Database) {
       agentId: agent.id,
       name: agent.name,
       description: agent.description ?? undefined,
+      instructions: agent.instructions,
       executionState: agent.executionState,
       model: agent.model,
       omModel: agent.omModel ?? undefined,
@@ -175,6 +207,8 @@ export function createAdminReadModel(db: Database) {
         costUsd: step.costUsd,
         createdAt: step.createdAt,
       })),
+      recentNotifications,
+      recentConversations,
       createdAt: agent.createdAt,
       updatedAt: agent.updatedAt,
     };
@@ -260,6 +294,47 @@ export function createAdminReadModel(db: Database) {
     listFunctions,
     listRoles,
   };
+}
+
+async function listRecentConversations(workspaceBasePath: string, agentId: string) {
+  try {
+    const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
+    const client = createClient({
+      url: `file:${agentDatabasePath}`,
+    });
+    const db = await initializeCommunicationDatabase(client);
+    const rows = await db.query.communicationConversations.findMany({
+      orderBy: [desc(communicationConversations.updatedAt)],
+      limit: RECENT_CONVERSATION_LIMIT,
+      with: {
+        contact: true,
+        messages: {
+          orderBy: [desc(communicationMessages.createdAt)],
+          limit: RECENT_CONVERSATION_MESSAGE_LIMIT,
+        },
+      },
+    });
+
+    return rows.map((conversation) => ({
+      conversationId: conversation.conversationId,
+      provider: conversation.provider,
+      name: conversation.name ?? undefined,
+      contactSlug: conversation.contactSlug ?? undefined,
+      contactDisplayName: conversation.contact?.displayName ?? undefined,
+      updatedAt: conversation.updatedAt,
+      messages: [...conversation.messages]
+        .reverse()
+        .map((message) => ({
+          messageId: message.messageId,
+          content: message.content,
+          unread: message.unread === 1,
+          authorDisplayName: message.authorDisplayName ?? undefined,
+          createdAt: message.createdAt,
+        })),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function parseProviderCredentials(encryptedCredentials: string) {

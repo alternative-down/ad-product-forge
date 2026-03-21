@@ -77,6 +77,7 @@ export type AgentDetail = {
   agentId: string;
   name: string;
   description?: string;
+  instructions: string;
   executionState: 'idle' | 'running';
   model: string;
   omModel?: string;
@@ -122,6 +123,27 @@ export type AgentDetail = {
     outputTokens: number;
     costUsd: number;
     createdAt: number;
+  }>;
+  recentNotifications: Array<{
+    notificationId: string;
+    content: string;
+    timestamp: number;
+    read: boolean;
+  }>;
+  recentConversations: Array<{
+    conversationId: string;
+    provider: string;
+    name?: string;
+    contactSlug?: string;
+    contactDisplayName?: string;
+    updatedAt: string;
+    messages: Array<{
+      messageId: string;
+      content: string;
+      unread: boolean;
+      authorDisplayName?: string;
+      createdAt: string;
+    }>;
   }>;
   createdAt: number;
   updatedAt: number;

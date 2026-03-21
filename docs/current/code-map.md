@@ -148,7 +148,7 @@ It does not try to explain every detail. It explains where each main responsibil
   - minimal route registry and request handling
 
 - [admin/read-model.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/read-model.ts)
-  - read-only admin-facing aggregation over runtime, schedules, roles, and finance
+  - read-only admin-facing aggregation over runtime, schedules, roles, finance, notifications, and agent workspace communication data
 
 - [admin/routes.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/routes.ts)
   - admin endpoint registration for the separate maintenance UI

@@ -113,7 +113,10 @@ export function registerAdminRoutes(input: {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
 }) {
-  const readModel = createAdminReadModel(input.db);
+  const readModel = createAdminReadModel({
+    db: input.db,
+    workspaceBasePath: input.workspaceBasePath,
+  });
   const capabilities = createCapabilityStore(input.db);
   const registry = getInternalAgentRegistry();
 
