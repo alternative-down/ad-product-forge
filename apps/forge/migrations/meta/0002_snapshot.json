@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4fbcf749-ed5d-4437-ae6c-2b4b3915bcc9",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "ea3a9115-d54a-424d-9823-0e75f5122493",
+  "prevId": "54e3b999-1810-4b1f-8868-4383d691271c",
   "tables": {
     "agent_providers": {
       "name": "agent_providers",
@@ -43,7 +43,16 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "agent_provider_unique": {
+          "name": "agent_provider_unique",
+          "columns": [
+            "agent_id",
+            "provider_type"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "agent_providers_agent_id_agents_id_fk": {
           "name": "agent_providers_agent_id_agents_id_fk",
@@ -106,20 +115,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "tools": {
-          "name": "tools",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "workflows": {
-          "name": "workflows",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         },
         "workspace_auto_sync": {

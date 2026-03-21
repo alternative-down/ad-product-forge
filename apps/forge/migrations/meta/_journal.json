@@ -5,8 +5,57 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1774131370797,
-      "tag": "0000_familiar_boomerang",
+      "when": 1773743423147,
+      "tag": "0000_closed_roxanne_simpson",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1773865742114,
+      "tag": "0001_noisy_maelstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773867153552,
+      "tag": "0002_true_sentinels",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1773887303963,
+      "tag": "0003_internal_agent_runtime",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1773892000000,
+      "tag": "0004_company_cash_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1773966482569,
+      "tag": "0005_agent_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1774042830603,
+      "tag": "0006_agent_schedules",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1774048052712,
+      "tag": "0007_role_capability_control",
       "breakpoints": true
     }
   ]

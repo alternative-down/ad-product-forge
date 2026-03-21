@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "build": "npm run -w @mastra-engine/core build && rm -rf dist && tsc --noCheck --declaration false",
-    "typecheck": "npm run -w @mastra-engine/core build:types && tsc --noEmit",
+    "build": "npm run -w @mastra-engine/core build && tsc",
+    "typecheck": "npm run -w @mastra-engine/core build && tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "init-registry": "tsx src/scripts/init-agent-registry.ts",
     "fund-cash": "tsx src/scripts/fund-company-cash.ts",

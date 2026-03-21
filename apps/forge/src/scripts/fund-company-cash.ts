@@ -20,7 +20,7 @@ async function fundCompanyCash() {
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
 
-  await runMigrations();
+  await runMigrations(db);
   await companyCashOperations.recordCashIn({
     type: 'manual-adjustment',
     amountUsd: input.amountUsd,

@@ -1,58 +1,33 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { readFile } from 'node:fs/promises';
-
-import { getDatabaseClient } from './client.js';
+import { migrate } from 'drizzle-orm/libsql/migrator';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 /**
- * Initializes the application schema on an empty database.
- * This project is still pre-production, so the runtime uses a single
- * baseline schema instead of replaying a long migration history.
+ * Executes pending database migrations for application database
+ * This function should be called during application initialization
+ *
+ * @param db - The Drizzle database instance with schema
+ * @throws Error if migration fails
  */
-export async function runMigrations(): Promise<void> {
-  const client = getDatabaseClient();
-
+export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
   try {
-    const agentsTable = await client.execute(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'agents' LIMIT 1",
-    );
+    console.log('[Migrations] Running pending migrations for application database...');
 
-    if (agentsTable.rows.length > 0) {
-      console.log('[Migrations] Schema already initialized');
-      return;
-    }
-
-    console.log('[Migrations] Initializing application database schema...');
-
+    // Get absolute path to migrations folder
+    // migrations/ is at the root of apps/forge/
     const currentFile = fileURLToPath(import.meta.url);
-    const currentDir = dirname(currentFile);
-    const appRoot = dirname(dirname(currentDir));
-    const baselinePath = join(appRoot, 'migrations', '0000_familiar_boomerang.sql');
-    const baselineSql = await readFile(baselinePath, 'utf8');
-    const statements = baselineSql
-      .split('--> statement-breakpoint')
-      .map((statement) => statement.trim())
-      .filter((statement) => statement.length > 0);
+    const currentDir = dirname(currentFile); // src/database/
+    const appRoot = dirname(dirname(currentDir)); // apps/forge/
+    const migrationsPath = join(appRoot, 'migrations');
 
-    await client.execute('PRAGMA foreign_keys = OFF');
-    await client.execute('BEGIN');
+    await migrate(db, {
+      migrationsFolder: migrationsPath,
+    });
 
-    try {
-      for (const statement of statements) {
-        await client.execute(statement);
-      }
-
-      await client.execute('COMMIT');
-    } catch (error) {
-      await client.execute('ROLLBACK');
-      throw error;
-    } finally {
-      await client.execute('PRAGMA foreign_keys = ON');
-    }
-
-    console.log('[Migrations] Schema initialized successfully');
+    console.log('[Migrations] Migrations completed successfully');
   } catch (error) {
-    console.error('[Migrations] Failed to initialize schema:', error);
+    console.error('[Migrations] Failed to run migrations:', error);
     throw error;
   }
 }
