@@ -52,7 +52,7 @@ export interface CreateAgentConfig<
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
-> extends Pick<
+  > extends Pick<
     CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
     | 'id'
     | 'name'

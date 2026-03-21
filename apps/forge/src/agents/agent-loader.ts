@@ -12,6 +12,8 @@ import type { CoolifyManager } from '../coolify/manager.js';
 import { createCoolifyTools } from '../coolify/tools.js';
 import type { createAgentScheduleManager } from '../schedules/manager.js';
 import { createAgentScheduleTools } from '../schedules/tools.js';
+import { createCapabilityStore } from '../capabilities/store.js';
+import { createCapabilityTools } from '../capabilities/tools.js';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -43,6 +45,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
 
+  if (!agentConfig.functionId) {
+    throw new Error(`Agent is missing functionId: ${config.agentId}`);
+  }
+
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
   // Load providers from agent_providers table
@@ -68,11 +74,24 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   }
 
   const providers = loadCommunicationProviders(providerCredentials);
-  const tools = createMicroErpTools(db);
-  const notificationTools = createAgentNotificationTools(db, agentConfig.id);
-  const githubTools = createGitHubTools(agentConfig.id, config.githubApps);
-  const coolifyTools = config.coolify ? createCoolifyTools(config.coolify) : {};
-  const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules);
+  const capabilities = createCapabilityStore(db);
+  const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
+  const allowedToolIds = new Set(capabilitySet.toolIds);
+  const tools = createMicroErpTools(db, allowedToolIds);
+  const notificationTools = createAgentNotificationTools(db, agentConfig.id, allowedToolIds);
+  const githubTools = createGitHubTools(agentConfig.id, config.githubApps, allowedToolIds);
+  const coolifyTools = config.coolify ? createCoolifyTools(config.coolify, allowedToolIds) : {};
+  const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
+  const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
+  const customTools = {
+    ...tools,
+    ...notificationTools,
+    ...githubTools,
+    ...coolifyTools,
+    ...scheduleTools,
+    ...capabilityTools,
+  };
+  const filteredWorkflows = filterWorkflows(config.workflows, capabilitySet.workflowIds);
 
   const runtime = await createInternalAgentRuntime(
     {
@@ -82,15 +101,9 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       instructions: agentConfig.instructions,
       model: agentConfig.model,
       omModel: agentConfig.omModel || undefined,
-      tools: {
-        ...tools,
-        ...notificationTools,
-        ...githubTools,
-        ...coolifyTools,
-        ...scheduleTools,
-      },
+      tools: customTools,
       providers,
-      workflows: config.workflows,
+      workflows: filteredWorkflows,
       workspaceBasePath: config.workspaceBasePath,
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
       workspaceSandbox: agentConfig.workspaceSandbox ?? undefined,
@@ -100,6 +113,31 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
 
   console.log(`[AgentLoader] Agent loaded successfully: ${agentConfig.id}`);
   return runtime;
+}
+
+function filterWorkflows(
+  workflows: CreateAgentConfig['workflows'],
+  allowedWorkflowIds: string[] | null,
+): CreateAgentConfig['workflows'] {
+  if (!workflows || !allowedWorkflowIds) {
+    return workflows;
+  }
+
+  const allowedWorkflowIdSet = new Set(allowedWorkflowIds);
+
+  if (typeof workflows === 'function') {
+    return async (context) => {
+      const resolvedWorkflows = await workflows(context);
+
+      return Object.fromEntries(
+        Object.entries(resolvedWorkflows).filter(([, workflow]) => allowedWorkflowIdSet.has(workflow.id)),
+      );
+    };
+  }
+
+  return Object.fromEntries(
+    Object.entries(workflows).filter(([, workflow]) => allowedWorkflowIdSet.has(workflow.id)),
+  );
 }
 
 const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {

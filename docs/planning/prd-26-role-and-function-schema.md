@@ -59,6 +59,9 @@ The permission layer only applies to:
 - MCP tools
 - Forge workflows
 
+Internal chat tools are also always free.
+They stay outside the role filter because internal coordination is foundational to the runtime.
+
 ### 4. Function is organizational grouping
 
 A function is an organizational grouping.
@@ -68,6 +71,7 @@ For the first version:
 - agent belongs to one function
 - function points to one role
 - role defines the allowed tools and workflows
+- every agent must have `functionId`
 
 This keeps the model linear.
 
@@ -103,7 +107,7 @@ This keeps one active role per function in the first version.
 
 ### agents
 Direction for the first version:
-- add `functionId`
+- add required `functionId`
 
 The role is derived from the function.
 There is no separate direct `roleId` assignment on the agent in v1.
@@ -140,20 +144,24 @@ They are not filtered by the permission system.
 The system should expose management capabilities for authorized agents.
 
 Initial capability surface:
-- create function
-- list functions
-- update function
-- create role
-- list roles
-- update role
-- assign role to function
-- list role tool permissions
-- add role tool permission
-- remove role tool permission
-- list role workflow permissions
-- add role workflow permission
-- remove role workflow permission
-- assign function to agent
+- `list_agent_functions`
+- `get_agent_function`
+- `manage_agent_function`
+- `list_agent_roles`
+- `get_agent_role`
+- `manage_agent_role`
+- `change_own_function`
+- `change_agent_function`
+- `list_role_tool_permissions`
+- `manage_role_tool_permissions`
+- `list_role_workflow_permissions`
+- `manage_role_workflow_permissions`
+- `list_available_capabilities`
+
+Direction:
+- `list_*` and `get_*` return richer views
+- `manage_*` groups `create | update | delete`
+- separate `toggle_*` is only needed when there is a reciprocal state pair
 
 The same permission model applies to these management tools too.
 
@@ -162,13 +170,14 @@ The same permission model applies to these management tools too.
 ### Runtime boundary
 
 The correct runtime boundary is:
-- build all possible custom tools
-- filter by role/function
-- then give the filtered set to `ToolSearchProcessor`
+- resolve allowed tool ids first
+- build only the allowed custom and MCP tools
+- then give that set to `ToolSearchProcessor`
 
 Not:
 - build separate agent classes per role
 - dynamically deny tool calls after exposure
+- build every custom tool and discard most of them later
 - mix provider provisioning with capability permissions
 
 ### Stability rule
@@ -202,3 +211,15 @@ The goal is simply to control:
 - which workflows the agent can use
 
 Everything else should be postponed until there is real pressure for a more complex model.
+
+## Initial Seed Roles
+
+The first migration seeds initial roles grouped by context:
+- `finance`
+- `github`
+- `deployment`
+- `scheduling`
+- `capability-management`
+
+These seeded roles are just the starting capability groups.
+Functions can point to any one of them.

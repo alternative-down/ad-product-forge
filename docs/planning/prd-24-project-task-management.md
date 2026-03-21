@@ -80,23 +80,70 @@ Comments on issues should be the main place for:
 
 ## 6. Tool Surface Direction
 
-The GitHub integration should be expanded with issue-centered tools.
+The GitHub surface should be condensed by entity.
 
-Suggested minimum additions:
-1. `list_github_issues`
-2. `get_github_issue`
-3. `create_github_issue`
-4. `update_github_issue`
-5. `close_github_issue`
-6. `reopen_github_issue`
-7. `list_github_issue_comments`
-8. `create_github_issue_comment`
-9. `list_github_labels`
-10. `add_github_issue_labels`
-11. `remove_github_issue_labels`
-12. `list_github_milestones`
+Rules:
+- `list_*` returns subitems when relevant
+- `get_*` also returns subitems when relevant
+- `manage_*` owns `create | update | delete`
+- reciprocal state changes use `toggle_*`
+- subitems can be truncated when large
 
-These tools should stay literal and provider-specific, following the same pattern already used for repository and pull request tools.
+Planned GitHub surface:
+
+1. `get_github_git_credentials`
+   - remains separate because it is credential generation, not entity CRUD
+
+2. `list_github_repositories`
+   - returns repositories with optional embedded subitems:
+     - issues
+     - pull requests
+     - labels
+     - milestones
+
+3. `get_github_repository`
+   - returns one repository with the same embedded subitem direction
+
+4. `manage_github_repository`
+   - `action: create | update | delete`
+
+5. `list_github_issues`
+   - returns issues with embedded subitems when requested:
+     - comments
+     - labels
+     - milestone
+     - assignees
+
+6. `get_github_issue`
+   - returns one issue with the same embedded subitem direction
+
+7. `manage_github_issue`
+   - `action: create | update | delete`
+
+8. `toggle_github_issue`
+   - `state: open | closed`
+
+9. `manage_github_issue_comment`
+   - `action: create | update | delete`
+
+10. `list_github_pull_requests`
+    - returns pull requests with embedded subitems when relevant
+
+11. `get_github_pull_request`
+    - returns one pull request with embedded subitems when relevant
+
+12. `manage_github_pull_request`
+    - `action: create | update | delete`
+
+13. `list_github_labels`
+14. `get_github_label`
+15. `manage_github_label`
+    - `action: create | update | delete`
+
+16. `list_github_milestones`
+17. `get_github_milestone`
+18. `manage_github_milestone`
+    - `action: create | update | delete`
 
 ## 7. Webhook Direction
 
@@ -157,7 +204,7 @@ Reference:
 - GitHub is the source of truth for work items
 - one repository is treated as one project boundary
 - no local issue/project schema is introduced
-- issue tools stay explicit
+- issue/repository/PR tools stay provider-specific but should be grouped by entity
 - webhook handling stays inside the existing GitHub adapter model
 - agent identity stays the GitHub App identity already in use
 - tool search should be preferred once the expanded GitHub work tools are added

@@ -186,11 +186,15 @@ Start simple.
 The first implementation should provide only fixed read operations through application code.
 
 Suggested first surface:
-- `getCompanyCashBalance()`
-- `listCompanyCashMovements()`
-- `getCompanyCashSummary()`
-- `listActiveInternalAgentContracts()`
-- `getActiveInternalAgentContract(agentId)`
+- `list_company_cash`
+- `get_company_cash`
+- `list_internal_agent_contracts`
+- `get_internal_agent_contract`
+
+Direction:
+- `list_*` returns embedded subitems or summaries when relevant
+- `get_*` returns one richer item or summary view
+- there is no `manage_*` here because the micro ERP is read-only for agents
 
 These can later be exposed to agents as tools.
 
@@ -217,11 +221,8 @@ Already available in the system today:
 - `agents`
 - micro ERP read module in the app
 - agent-facing tools for:
-  - company cash balance
-  - company cash movement list
-  - company cash summary
-  - active internal-agent contracts
-  - active contract by agent
+  - company cash read operations
+  - active internal-agent contract read operations
 
 Still missing:
 - review of the final agent-facing wording/output shapes after real usage

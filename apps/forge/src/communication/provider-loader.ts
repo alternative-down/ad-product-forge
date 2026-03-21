@@ -7,6 +7,8 @@ import { createInternalChatPreset } from './presets/internal-chat.js';
 
 const internalChatCredentialsSchema = z.object({
   agentId: z.string(),
+  displayName: z.string().min(1).optional(),
+  description: z.string().optional(),
 });
 
 const discordCredentialsSchema = z.object({
@@ -34,7 +36,7 @@ const emailCredentialsSchema = z.object({
 });
 
 export type ProviderCredentialsMap = {
-  'internal-chat'?: { agentId: string };
+  'internal-chat'?: { agentId: string; displayName?: string; description?: string };
   discord?: {
     token: string;
     allowedChannelIds?: string[];
@@ -58,11 +60,12 @@ export function loadCommunicationProviders(credentials: ProviderCredentialsMap):
   const providers: CommunicationProvider[] = [];
 
   if (credentials['internal-chat']) {
-    const { agentId } = internalChatCredentialsSchema.parse(credentials['internal-chat']);
+    const { agentId, displayName, description } = internalChatCredentialsSchema.parse(credentials['internal-chat']);
     providers.push(
       internalChatPreset.createProvider({
         id: agentId,
-        displayName: agentId,
+        displayName: displayName ?? agentId,
+        description,
       })
     );
   }

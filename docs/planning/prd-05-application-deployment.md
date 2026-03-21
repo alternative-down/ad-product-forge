@@ -48,7 +48,7 @@ Agents only receive tool access through Forge.
 Coolify deployment starts from repositories that already exist in the company GitHub organization.
 
 The first version should use the Coolify flow based on its own GitHub App integration:
-- create or reuse a Coolify GitHub App entry
+- reuse a preconfigured Coolify GitHub App entry
 - list repositories available through that GitHub App
 - create the Coolify application from that repository
 
@@ -56,33 +56,55 @@ Forge does not need a local repository-link table for the first version.
 
 ## 5. Tool Surface
 
-The first version should expose these tools:
+The Coolify surface should follow the same compression rule:
+- `list_*` returns subitems when relevant
+- `get_*` also returns subitems when relevant
+- `manage_*` owns `create | update | delete`
+- reciprocal state changes use `toggle_*`
+- large outputs such as logs may stay dedicated tools
+
+Planned surface:
 
 1. `list_coolify_github_apps`
-2. `create_coolify_github_app`
-3. `list_coolify_github_app_repositories`
-4. `list_coolify_github_app_repository_branches`
-5. `list_coolify_applications`
-6. `create_coolify_application`
-7. `get_coolify_application`
-8. `update_coolify_application`
-9. `start_coolify_application`
-10. `stop_coolify_application`
-11. `restart_coolify_application`
-12. `delete_coolify_application`
-13. `list_coolify_application_deployments`
-14. `get_coolify_deployment_logs`
-15. `get_coolify_application_logs`
-16. `list_coolify_application_envs`
-17. `set_coolify_application_env`
-18. `delete_coolify_application_env`
 
-These tools are literal wrappers around the Coolify operational surface needed by agents.
-They should stay explicit and provider-specific.
+2. `list_coolify_github_app_repositories`
+   - may return branch previews as subitems when useful
+
+3. `get_coolify_github_app_repository`
+   - returns one repository source view with subitems
+
+4. `list_coolify_applications`
+   - returns applications with optional embedded subitems:
+     - deployments
+     - env previews
+     - domain/status summary
+
+5. `get_coolify_application`
+   - returns one application with the same embedded subitem direction
+
+6. `manage_coolify_application`
+   - `action: create | update | delete | restart`
+
+7. `toggle_coolify_application`
+   - `state: running | stopped`
+
+8. `get_coolify_deployment_logs`
+   - remains separate because logs are large and operationally distinct
+
+9. `get_coolify_application_logs`
+   - remains separate for the same reason
+
+10. `get_coolify_application_envs`
+    - returns the current env set for one application
+
+11. `manage_coolify_application_env`
+    - `action: create | update | delete`
+
+These tools remain provider-specific, but should be grouped by entity instead of split into many tiny CRUD tools.
 
 ## 6. Creation Direction
 
-`create_coolify_application` should be intentionally narrow.
+`manage_coolify_application` in `create` mode should be intentionally narrow.
 
 The agent should provide only:
 - application name
@@ -101,7 +123,7 @@ The first version should not expose broad creation-time configuration knobs.
 
 ## 7. Update Direction
 
-`update_coolify_application` should support partial updates only.
+`manage_coolify_application` in `update` mode should support partial updates only.
 
 That means an agent can change one thing without resending the full application shape.
 
@@ -113,7 +135,7 @@ Examples:
 
 ## 8. Env Variable Direction
 
-Environment variables should be managed by partial update, not full replacement.
+Environment variables should be managed by `manage_coolify_application_env` with partial update, not full replacement.
 
 That means:
 - add one env var
@@ -169,6 +191,7 @@ Agents do not choose arbitrary domains during creation.
 - Forge provides tool access and credential isolation
 - the integration stays Coolify-specific
 - tool names stay literal
+- tool surfaces should be grouped by entity
 - creation stays narrow and default-heavy
 - update flows stay partial
 

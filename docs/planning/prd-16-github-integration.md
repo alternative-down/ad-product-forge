@@ -165,11 +165,9 @@ Implemented today:
 - agents now have tools for:
   - listing/reading/marking notifications
   - generating Git HTTPS credentials
-  - listing repositories
-  - creating repositories
-  - getting repository metadata
-  - listing pull requests
-  - creating pull requests
+  - GitHub repository operations
+  - GitHub issue operations
+  - GitHub pull request operations
 - relevant GitHub webhooks create notifications and trigger wake
 
 Still pending:

@@ -157,21 +157,28 @@ agent_schedules {
 
 **Tools para agentes:**
 
-**FR1: Criar agendamento**
-- `create_agent_schedule({name, description?, scheduleType, cronExpression|scheduledDate, timezone, content})`
-- Retorna: `scheduleId`
+Seguir a mesma regra de superfície:
+- `list_*` retorna subitens quando fizer sentido
+- `get_*` retorna um item completo
+- `manage_*` agrupa `create | update | delete`
+- `toggle_*` cobre estados recíprocos
 
-**FR2: Listar agendamentos**
+**FR1: Listar agendamentos**
 - `list_agent_schedules()`
-- Retorna: array de agendamentos do próprio agente
+- Retorna array de agendamentos do próprio agente
 
-**FR3: Atualizar agendamento**
-- `update_agent_schedule({scheduleId, name?, description?, isActive?, cronExpression?, scheduledDate?, timezone?, content?})`
-- Permite alteração parcial
+**FR2: Obter um agendamento**
+- `get_agent_schedule({scheduleId})`
+- Retorna um agendamento completo
 
-**FR4: Deletar agendamento**
-- `delete_agent_schedule({scheduleId})`
-- Remove agendamento do banco e cancela execução
+**FR3: Gerenciar agendamento**
+- `manage_agent_schedule({action, scheduleId?, name?, description?, scheduleType?, cronExpression?, scheduledDate?, timezone?, content?})`
+- `action: create | update | delete`
+- criação e atualização continuam permitindo alteração parcial quando aplicável
+
+**FR4: Ativar/desativar agendamento**
+- `toggle_agent_schedule({scheduleId, isActive})`
+- altera apenas o estado ativo/inativo
 
 **FR5: Recarregar na inicialização**
 - Na inicialização da aplicação:
