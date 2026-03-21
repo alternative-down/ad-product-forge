@@ -26,3 +26,6 @@ These documents replace older PRDs that mixed implemented behavior with future i
 
 - [Configuration and Endpoints](./configuration-and-endpoints.md)
   - Environment variables, HTTP server boundary, and current route surface.
+
+- [Known Gaps](./known-gaps.md)
+  - Major capabilities still missing from the current implementation.

@@ -147,7 +147,7 @@ Custom `Processor<'long-term-memory'>` that provides hybrid semantic search.
 - Indexes new observations on every output step
 - Stores observations in `.forge-memory/{agentId}/observations/{YYYY-MM-DD}.md`
 
-See `docs/system/memory-and-context-architecture.md` for detailed memory flow.
+See `docs/references/system/memory-and-context-architecture.md` for detailed memory flow.
 
 ---
 

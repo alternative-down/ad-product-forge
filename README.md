@@ -16,6 +16,8 @@ The current system already supports:
 
 This repository is still in active development. The documentation source of truth is now the `docs/current/` directory.
 
+For an explicit list of what is still missing, see [docs/current/known-gaps.md](./docs/current/known-gaps.md).
+
 ## Where to start
 
 - [Current system docs](./docs/current/README.md)

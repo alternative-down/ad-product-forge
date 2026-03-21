@@ -43,3 +43,4 @@ If the goal is to understand the current system, start here:
 - [Tools and Permissions](./current/tools-and-permissions.md)
 - [Finance and Execution](./current/finance-and-execution.md)
 - [Configuration and Endpoints](./current/configuration-and-endpoints.md)
+- [Known Gaps](./current/known-gaps.md)
