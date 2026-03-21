@@ -135,6 +135,18 @@ export type AgentFunction = {
   assignedAgentCount: number;
 };
 
+export type HireAgentInput = {
+  requestedFunction: string;
+  additionalContext?: string;
+  weeklyBudgetUsd: number;
+};
+
+export type HireAgentResult = {
+  agentId: string;
+  emailAddress: string;
+  githubAppRegistrationUrl: string;
+};
+
 export type RoleListResponse = {
   availableToolIds: string[];
   items: Array<{
@@ -229,6 +241,32 @@ export function reloadAgent(agentId: string) {
   return request<{ success: true; agentId: string }>('/admin/agent/reload', {
     method: 'POST',
     body: JSON.stringify({ agentId }),
+  });
+}
+
+export function hireAgent(input: HireAgentInput) {
+  return request<HireAgentResult>('/admin/agent/hire', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function terminateAgent(agentId: string) {
+  return request<{ agentId: string }>('/admin/agent/terminate', {
+    method: 'POST',
+    body: JSON.stringify({ agentId }),
+  });
+}
+
+export function changeAgentFunction(agentId: string, functionId: string) {
+  return request<{
+    agentId: string;
+    functionId: string;
+    functionName: string;
+    changedBy: string;
+  }>('/admin/agent/change-function', {
+    method: 'POST',
+    body: JSON.stringify({ agentId, functionId }),
   });
 }
 

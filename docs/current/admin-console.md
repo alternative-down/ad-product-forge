@@ -8,6 +8,8 @@ It exists for:
 
 - runtime visibility
 - agent maintenance
+- agent hiring and termination
+- agent function reassignment
 - schedule management
 - role tool grant maintenance
 
@@ -75,6 +77,9 @@ Shows:
 
 Actions available:
 
+- hire agent
+- terminate agent
+- reassign the selected agent function
 - wake agent
 - reload agent runtime
 - create agent schedule
@@ -141,6 +146,9 @@ Read endpoints:
 
 Mutation endpoints:
 
+- `POST /admin/agent/hire`
+- `POST /admin/agent/terminate`
+- `POST /admin/agent/change-function`
 - `POST /admin/agent/wake`
 - `POST /admin/agent/reload`
 - `POST /admin/agent-schedule/create`

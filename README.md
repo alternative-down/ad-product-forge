@@ -35,7 +35,7 @@ For an explicit list of what is still missing, see [docs/current/known-gaps.md](
 
 - `apps/forge-admin/`
   - Separate human admin UI.
-  - Owns the maintenance dashboard for runtime visibility, schedules, and role tool grants.
+  - Owns the maintenance dashboard for runtime visibility, agent hiring/termination, schedules, and role tool grants.
 
 - `packages/mastra-engine/`
   - Shared engine layer.

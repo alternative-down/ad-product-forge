@@ -5,10 +5,14 @@ import type { AgentLoaderConfig } from '../agents/agent-loader.js';
 import { loadAgent } from '../agents/agent-loader.js';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry.js';
 import { createCapabilityStore } from '../capabilities/store.js';
-import { reloadAgentsForRole } from '../capabilities/runtime.js';
+import { changeAgentFunctionFromAdmin, reloadAgentsForRole } from '../capabilities/runtime.js';
 import type { createForgeHttpServer } from '../http/server.js';
 import type { createAgentScheduleManager } from '../schedules/manager.js';
 import { createAdminReadModel } from './read-model.js';
+import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle.js';
+import type { AgentEmailManager } from '../email/migadu-manager.js';
+import type { CoolifyManager } from '../coolify/manager.js';
+import type { GitHubAppManager } from '../github/manager.js';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -52,11 +56,30 @@ const agentActionSchema = z.object({
   agentId: z.string().min(1),
 });
 
+const hireAgentSchema = z.object({
+  requestedFunction: z.string().min(1),
+  additionalContext: z.string().optional(),
+  weeklyBudgetUsd: z.coerce.number().positive(),
+});
+
+const terminateAgentSchema = z.object({
+  agentId: z.string().min(1),
+});
+
+const changeAgentFunctionSchema = z.object({
+  agentId: z.string().min(1),
+  functionId: z.string().min(1),
+});
+
 export function registerAdminRoutes(input: {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;
   loaderConfig: AgentLoaderConfig;
   schedules: ReturnType<typeof createAgentScheduleManager>;
+  workspaceBasePath: string;
+  githubApps: GitHubAppManager;
+  emailMailboxes: AgentEmailManager | null;
+  coolify: CoolifyManager | null;
 }) {
   const readModel = createAdminReadModel(input.db);
   const capabilities = createCapabilityStore(input.db);
@@ -131,6 +154,60 @@ export function registerAdminRoutes(input: {
       await registry.add(input.db, runtime);
 
       return jsonResponse({ success: true, agentId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/hire',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, hireAgentSchema);
+      const result = await runInternalHiring(input.db, {
+        requestedFunction: body.requestedFunction,
+        additionalContext: body.additionalContext,
+        weeklyBudgetUsd: body.weeklyBudgetUsd,
+        workspaceBasePath: input.workspaceBasePath,
+        workflows: input.loaderConfig.workflows,
+        githubApps: input.githubApps,
+        emailMailboxes: input.emailMailboxes,
+        coolify: input.coolify,
+        schedules: input.schedules,
+      });
+
+      return jsonResponse(result, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/terminate',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, terminateAgentSchema);
+      const result = await runInternalTermination(input.db, {
+        agentId: body.agentId,
+        workspaceBasePath: input.workspaceBasePath,
+        githubApps: input.githubApps,
+        emailMailboxes: input.emailMailboxes,
+        schedules: input.schedules,
+      });
+
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/change-function',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, changeAgentFunctionSchema);
+      const result = await changeAgentFunctionFromAdmin({
+        db: input.db,
+        loaderConfig: input.loaderConfig,
+        targetAgentId: body.agentId,
+        functionId: body.functionId,
+      });
+
+      return jsonResponse(result);
     },
   });
 

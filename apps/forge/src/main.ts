@@ -126,6 +126,10 @@ export async function main() {
     httpServer,
     loaderConfig,
     schedules,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    githubApps,
+    emailMailboxes,
+    coolify,
   });
   const agents = await registry.loadAll(db, loaderConfig);
   await githubApps.loadAllAgents();

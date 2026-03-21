@@ -8,6 +8,8 @@ Current scope:
 
 - dashboard overview
 - agent runtime visibility
+- agent hiring and termination
+- selected agent function reassignment
 - agent wake and reload actions
 - agent schedule management
 - role custom tool grant management

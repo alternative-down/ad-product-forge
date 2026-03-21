@@ -87,6 +87,9 @@ Read surface:
 
 Mutation surface:
 
+- `POST /admin/agent/hire`
+- `POST /admin/agent/terminate`
+- `POST /admin/agent/change-function`
 - `POST /admin/agent/wake`
 - `POST /admin/agent/reload`
 - `POST /admin/agent-schedule/create`

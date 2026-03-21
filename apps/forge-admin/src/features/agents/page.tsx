@@ -1,18 +1,24 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Bot, Clock3, LoaderCircle, RefreshCcw, Zap } from 'lucide-react';
+import { Bot, Clock3, LoaderCircle, RefreshCcw, Trash2, UserPlus, Zap } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
 import {
+  changeAgentFunction,
   createSchedule,
   deleteSchedule,
   getAgent,
+  hireAgent,
   listAgents,
+  listFunctions,
   reloadAgent,
+  terminateAgent,
   updateSchedule,
   wakeAgent,
+  type AgentFunction,
   type AgentSchedule,
   type CreateScheduleInput,
+  type HireAgentResult,
   type UpdateScheduleInput,
 } from '../../lib/api';
 import { formatDateTime, formatInteger, formatUsd } from '../../lib/format';
@@ -37,15 +43,35 @@ type ScheduleDraft = {
   isActive: boolean;
 };
 
+type HireAgentDraft = {
+  requestedFunction: string;
+  additionalContext: string;
+  weeklyBudgetUsd: string;
+};
+
 export function AgentsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate({ from: '/agents' });
   const search = useSearch({ from: '/agents' });
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft | null>(null);
+  const [hireDraft, setHireDraft] = useState<HireAgentDraft>({
+    requestedFunction: '',
+    additionalContext: '',
+    weeklyBudgetUsd: '25',
+  });
+  const [hireResult, setHireResult] = useState<HireAgentResult | null>(null);
+  const [functionDraft, setFunctionDraft] = useState<{
+    agentId: string;
+    functionId: string;
+  } | null>(null);
 
   const agentsQuery = useQuery({
     queryKey: ['admin', 'agents'],
     queryFn: listAgents,
+  });
+  const functionsQuery = useQuery({
+    queryKey: ['admin', 'functions'],
+    queryFn: listFunctions,
   });
   const agentDetailQuery = useQuery({
     queryKey: ['admin', 'agent', search.agentId],
@@ -67,6 +93,11 @@ export function AgentsPage() {
     });
   }, [agentsQuery.data, navigate, search.agentId]);
 
+  const selectedAgentFunctionId =
+    agentDetailQuery.data && functionDraft?.agentId === agentDetailQuery.data.agentId
+      ? functionDraft.functionId
+      : (agentDetailQuery.data?.function?.functionId ?? '');
+
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
     onSuccess: async (_, agentId) => {
@@ -83,6 +114,69 @@ export function AgentsPage() {
         queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] }),
       ]);
+    },
+  });
+  const hireMutation = useMutation({
+    mutationFn: hireAgent,
+    onSuccess: async (result) => {
+      setHireResult(result);
+      setHireDraft({
+        requestedFunction: '',
+        additionalContext: '',
+        weeklyBudgetUsd: '25',
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
+      ]);
+
+      void navigate({
+        to: '/agents',
+        search: {
+          agentId: result.agentId,
+        },
+      });
+    },
+  });
+  const changeFunctionMutation = useMutation({
+    mutationFn: ({ agentId, functionId }: { agentId: string; functionId: string }) =>
+      changeAgentFunction(agentId, functionId),
+    onSuccess: async (_, input) => {
+      setFunctionDraft(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
+      ]);
+    },
+  });
+  const terminateMutation = useMutation({
+    mutationFn: terminateAgent,
+    onSuccess: async ({ agentId }) => {
+      setScheduleDraft(null);
+      setFunctionDraft(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
+        queryClient.removeQueries({ queryKey: ['admin', 'agent', agentId] }),
+      ]);
+
+      const remainingAgents = await queryClient.fetchQuery({
+        queryKey: ['admin', 'agents'],
+        queryFn: listAgents,
+      });
+
+      void navigate({
+        to: '/agents',
+        search: {
+          agentId: remainingAgents[0]?.agentId,
+        },
+        replace: true,
+      });
     },
   });
   const createScheduleMutation = useMutation({
@@ -175,8 +269,23 @@ export function AgentsPage() {
       </Card>
 
       <div className="space-y-6">
+        <HireAgentCard
+          draft={hireDraft}
+          pending={hireMutation.isPending}
+          error={hireMutation.error?.message ?? null}
+          result={hireResult}
+          onChange={setHireDraft}
+          onSubmit={(draft) => {
+            hireMutation.mutate({
+              requestedFunction: draft.requestedFunction,
+              additionalContext: draft.additionalContext || undefined,
+              weeklyBudgetUsd: Number(draft.weeklyBudgetUsd),
+            });
+          }}
+        />
         {agentDetailQuery.isLoading && <PanelLoading label="Loading agent detail" />}
         {agentDetailQuery.isError && <PanelError message={agentDetailQuery.error.message} />}
+        {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
         {agentDetailQuery.data && (
           <>
             <AgentHeader
@@ -186,6 +295,34 @@ export function AgentsPage() {
               wakePending={wakeMutation.isPending}
               reloadPending={reloadMutation.isPending}
             />
+            {functionsQuery.data && (
+              <AgentMaintenanceCard
+                agent={agentDetailQuery.data}
+                functions={functionsQuery.data}
+                selectedFunctionId={selectedAgentFunctionId}
+                onSelectedFunctionIdChange={(functionId) => {
+                  if (!agentDetailQuery.data) {
+                    return;
+                  }
+
+                  setFunctionDraft({
+                    agentId: agentDetailQuery.data.agentId,
+                    functionId,
+                  });
+                }}
+                onApplyFunctionChange={() =>
+                  changeFunctionMutation.mutate({
+                    agentId: agentDetailQuery.data!.agentId,
+                    functionId: selectedAgentFunctionId,
+                  })
+                }
+                functionPending={changeFunctionMutation.isPending}
+                functionError={changeFunctionMutation.error?.message ?? null}
+                onTerminate={() => terminateMutation.mutate(agentDetailQuery.data!.agentId)}
+                terminatePending={terminateMutation.isPending}
+                terminateError={terminateMutation.error?.message ?? null}
+              />
+            )}
             <SchedulesCard
               schedules={agentDetailQuery.data.schedules}
               heartbeat={agentDetailQuery.data.heartbeat}
@@ -231,6 +368,106 @@ export function AgentsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function HireAgentCard(input: {
+  draft: HireAgentDraft;
+  pending: boolean;
+  error: string | null;
+  result: HireAgentResult | null;
+  onChange(draft: HireAgentDraft): void;
+  onSubmit(draft: HireAgentDraft): void;
+}) {
+  return (
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950">Hire agent</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Creates the agent, mailbox, execution contract, heartbeat, and GitHub app runtime.
+          </p>
+        </div>
+        <UserPlus className="h-5 w-5 text-slate-500" />
+      </div>
+
+      <form
+        className="mt-5 grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          input.onSubmit(input.draft);
+        }}
+      >
+        <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+          <LabeledField label="Requested function">
+            <Input
+              value={input.draft.requestedFunction}
+              onChange={(event) =>
+                input.onChange({ ...input.draft, requestedFunction: event.target.value })
+              }
+              placeholder="Product engineering"
+              required
+            />
+          </LabeledField>
+          <LabeledField label="Weekly budget (USD)">
+            <Input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={input.draft.weeklyBudgetUsd}
+              onChange={(event) =>
+                input.onChange({ ...input.draft, weeklyBudgetUsd: event.target.value })
+              }
+              required
+            />
+          </LabeledField>
+        </div>
+
+        <LabeledField label="Additional context">
+          <Textarea
+            value={input.draft.additionalContext}
+            onChange={(event) =>
+              input.onChange({ ...input.draft, additionalContext: event.target.value })
+            }
+            placeholder="Short operating context for the hiring workflow."
+          />
+        </LabeledField>
+
+        {input.error && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {input.error}
+          </div>
+        )}
+
+        {input.result && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div>Agent created: {input.result.agentId}</div>
+            <div>Email: {input.result.emailAddress}</div>
+            <a
+              href={input.result.githubAppRegistrationUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block underline"
+            >
+              Open GitHub App registration
+            </a>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button type="submit" disabled={input.pending}>
+            {input.pending ? (
+              <>
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                Hiring...
+              </>
+            ) : (
+              'Hire agent'
+            )}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 
@@ -325,6 +562,110 @@ function AgentHeader(input: {
               value={agent.providers.map((provider) => provider.providerType).join(', ') || '—'}
             />
           </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function AgentMaintenanceCard(input: {
+  agent: Awaited<ReturnType<typeof getAgent>>;
+  functions: AgentFunction[];
+  selectedFunctionId: string;
+  onSelectedFunctionIdChange(functionId: string): void;
+  onApplyFunctionChange(): void;
+  functionPending: boolean;
+  functionError: string | null;
+  onTerminate(): void;
+  terminatePending: boolean;
+  terminateError: string | null;
+}) {
+  const currentFunctionId = input.agent?.function?.functionId ?? '';
+
+  return (
+    <Card className="p-6">
+      <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-semibold text-slate-950">Agent maintenance</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Human-facing adjustments only. Functions stay read-only here except for reassignment on
+            the selected agent.
+          </p>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
+            <LabeledField label="Assigned function">
+              <Select
+                value={input.selectedFunctionId}
+                onChange={(event) => input.onSelectedFunctionIdChange(event.target.value)}
+              >
+                <option value="" disabled>
+                  Select function
+                </option>
+                {input.functions.map((agentFunction) => (
+                  <option key={agentFunction.functionId} value={agentFunction.functionId}>
+                    {agentFunction.name}
+                  </option>
+                ))}
+              </Select>
+            </LabeledField>
+            <div className="flex items-end">
+              <Button
+                variant="secondary"
+                onClick={input.onApplyFunctionChange}
+                disabled={
+                  input.functionPending ||
+                  !input.selectedFunctionId ||
+                  input.selectedFunctionId === currentFunctionId
+                }
+              >
+                {input.functionPending ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    Applying...
+                  </>
+                ) : (
+                  'Apply function'
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {input.functionError && (
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {input.functionError}
+            </div>
+          )}
+        </div>
+
+        <div className="w-full rounded-2xl border border-red-200 bg-red-50 p-4 xl:max-w-sm">
+          <div className="text-sm font-semibold text-red-800">Terminate agent</div>
+          <p className="mt-2 text-sm text-red-700">
+            Removes runtime, schedules, mailbox, GitHub app installation, database record, and the
+            workspace directory.
+          </p>
+          {input.terminateError && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-700">
+              {input.terminateError}
+            </div>
+          )}
+          <Button
+            className="mt-4 w-full"
+            variant="danger"
+            onClick={input.onTerminate}
+            disabled={input.terminatePending}
+          >
+            {input.terminatePending ? (
+              <>
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                Terminating...
+              </>
+            ) : (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Terminate agent
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </Card>
