@@ -1,6 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { z } from 'zod';
 
-import { RolesPage, rolesSearchSchema } from '../features/roles/page';
+import { RolesPage } from '../features/roles/page';
+
+const rolesSearchSchema = z.object({
+  roleId: z.string().optional(),
+});
 
 export const Route = createFileRoute('/roles')({
   validateSearch: rolesSearchSchema,

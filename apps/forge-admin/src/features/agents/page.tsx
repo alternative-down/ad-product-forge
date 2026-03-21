@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Bot, Clock3, LoaderCircle, RefreshCcw, Zap } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { z } from 'zod';
 
 import {
   createSchedule,
@@ -37,10 +36,6 @@ type ScheduleDraft = {
   content: string;
   isActive: boolean;
 };
-
-export const agentsSearchSchema = z.object({
-  agentId: z.string().optional(),
-});
 
 export function AgentsPage() {
   const queryClient = useQueryClient();

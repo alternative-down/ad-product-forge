@@ -2,7 +2,6 @@ import { LoaderCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { z } from 'zod';
 
 import {
   addRoleToolPermission,
@@ -13,10 +12,6 @@ import {
 import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
 import { cn } from '../../lib/utils';
-
-export const rolesSearchSchema = z.object({
-  roleId: z.string().optional(),
-});
 
 export function RolesPage() {
   const queryClient = useQueryClient();
