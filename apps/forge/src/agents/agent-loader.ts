@@ -158,7 +158,8 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
   const agentConfigs = await db.query.agents.findMany();
 
   if (agentConfigs.length === 0) {
-    throw new Error('No agents found in registry. Run init-registry first.');
+    console.log('[AgentLoader] No agents found in registry');
+    return new Map<string, InternalAgentRuntime>();
   }
 
   console.log(`[AgentLoader] Loading ${agentConfigs.length} agents from registry...`);

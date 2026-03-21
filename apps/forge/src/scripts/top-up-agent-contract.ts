@@ -17,7 +17,7 @@ async function main() {
   });
   const db = getDatabase();
 
-  await runMigrations(db);
+  await runMigrations();
 
   const result = await topUpActiveAgentContract(db, input);
 

@@ -4,10 +4,10 @@
  * Gerencia conexão com banco de dados local via libsql (SQLite).
  */
 
-import { createClient } from '@libsql/client';
+import { createClient, type Client } from '@libsql/client';
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
-import * as schema from './schema';
-import { getAppDatabasePath } from './config';
+import * as schema from './schema.js';
+import { getAppDatabasePath } from './config.js';
 
 type Database = LibSQLDatabase<typeof schema>;
 const databasePath = getAppDatabasePath();
@@ -20,6 +20,10 @@ const db = drizzle(client, { schema });
  */
 export function getDatabase(): Database {
   return db;
+}
+
+export function getDatabaseClient(): Client {
+  return client;
 }
 
 export { schema };

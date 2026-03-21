@@ -67,7 +67,7 @@ async function initAgentRegistry() {
     const db = getDatabase();
 
     console.log('[Init] Running database migrations...');
-    await runMigrations(db);
+    await runMigrations();
     await seedModelPrices(db);
     console.log('[Init] Migrations completed ✓');
 

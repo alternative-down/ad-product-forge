@@ -35,7 +35,7 @@ export async function main() {
 
   // Load database and agents from registry
   const db = getDatabase();
-  await runMigrations(db);
+  await runMigrations();
   await seedModelPrices(db);
   const registry = getInternalAgentRegistry();
   const httpServer = createForgeHttpServer({
