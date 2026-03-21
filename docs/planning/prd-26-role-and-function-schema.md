@@ -144,22 +144,24 @@ They are not filtered by the permission system.
 The system should expose management capabilities for authorized agents.
 
 Initial capability surface:
-- create function
-- list functions
-- update function
-- create role
-- list roles
-- update role
-- assign role to function
-- change own function
-- change another agent function
-- list role tool permissions
-- add role tool permission
-- remove role tool permission
-- list role workflow permissions
-- add role workflow permission
-- remove role workflow permission
-- assign function to agent
+- `list_agent_functions`
+- `get_agent_function`
+- `manage_agent_function`
+- `list_agent_roles`
+- `get_agent_role`
+- `manage_agent_role`
+- `change_own_function`
+- `change_agent_function`
+- `list_role_tool_permissions`
+- `manage_role_tool_permissions`
+- `list_role_workflow_permissions`
+- `manage_role_workflow_permissions`
+- `list_available_capabilities`
+
+Direction:
+- `list_*` and `get_*` return richer views
+- `manage_*` groups `create | update | delete`
+- separate `toggle_*` is only needed when there is a reciprocal state pair
 
 The same permission model applies to these management tools too.
 
