@@ -99,7 +99,7 @@ export async function changeAgentFunction(input: {
     })
     .where(eq(agents.id, input.targetAgentId));
 
-  await updateInternalChatProviderDescription(input.db, {
+  await updateInternalChatProviderProfile(input.db, {
     agentId: input.targetAgentId,
     displayName: targetAgent.name,
     description: agentFunction.description ?? agentFunction.name,
@@ -126,7 +126,63 @@ export async function changeAgentFunction(input: {
   };
 }
 
-async function updateInternalChatProviderDescription(
+export async function changeAgentFunctionFromAdmin(input: {
+  db: Database;
+  loaderConfig: AgentLoaderConfig;
+  targetAgentId: string;
+  functionId: string;
+}) {
+  const targetAgent = await input.db.query.agents.findFirst({
+    where: eq(agents.id, input.targetAgentId),
+  });
+
+  if (!targetAgent) {
+    throw new Error(`Target agent not found: ${input.targetAgentId}`);
+  }
+
+  const agentFunction = await input.db.query.agentFunctions.findFirst({
+    where: eq(agentFunctions.id, input.functionId),
+  });
+
+  if (!agentFunction) {
+    throw new Error(`Function not found: ${input.functionId}`);
+  }
+
+  await input.db
+    .update(agents)
+    .set({
+      functionId: input.functionId,
+      updatedAt: Date.now(),
+    })
+    .where(eq(agents.id, input.targetAgentId));
+
+  await updateInternalChatProviderProfile(input.db, {
+    agentId: input.targetAgentId,
+    displayName: targetAgent.name,
+    description: agentFunction.description ?? agentFunction.name,
+  });
+
+  const notifications = createAgentNotificationStore(input.db);
+
+  await notifications.createNotification({
+    agentId: input.targetAgentId,
+    content: `Function changed to "${agentFunction.name}" by admin console.`,
+  });
+
+  await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
+
+  const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
+  targetEntry?.runner.notifyExternalEvent();
+
+  return {
+    agentId: input.targetAgentId,
+    functionId: agentFunction.id,
+    functionName: agentFunction.name,
+    changedBy: 'admin-console',
+  };
+}
+
+export async function updateInternalChatProviderProfile(
   db: Database,
   input: {
     agentId: string;

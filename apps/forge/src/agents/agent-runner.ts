@@ -23,10 +23,7 @@ type OmObservationEndPart = {
   };
 };
 
-export function createAgentRunner(
-  db: Database,
-  runtime: InternalAgentRuntime,
-) {
+export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
   const wakeQueue = createAgentWakeQueue({
     run: wake,
@@ -53,10 +50,13 @@ export function createAgentRunner(
       return;
     }
 
-    timer = setTimeout(() => {
-      timer = null;
-      void queueNextStep();
-    }, Math.max(delayMs, 0));
+    timer = setTimeout(
+      () => {
+        timer = null;
+        void queueNextStep();
+      },
+      Math.max(delayMs, 0),
+    );
   }
 
   async function start() {
@@ -113,10 +113,13 @@ export function createAgentRunner(
 
       const delayMs = nextAttempt.delayMs;
       instant = false;
-      timer = setTimeout(() => {
-        timer = null;
-        void executeStep(nextAttempt.contractId);
-      }, Math.max(delayMs, 0));
+      timer = setTimeout(
+        () => {
+          timer = null;
+          void executeStep(nextAttempt.contractId);
+        },
+        Math.max(delayMs, 0),
+      );
     } catch (error) {
       console.error(`[AgentRunner] ${runtime.id} failed to schedule next step:`, error);
       instant = false;
@@ -202,7 +205,9 @@ export function createAgentRunner(
     return {
       execute: true as const,
       contractId: contract.id,
-      delayMs: instant ? 0 : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
+      delayMs: instant
+        ? 0
+        : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
     };
   }
 
@@ -213,7 +218,8 @@ export function createAgentRunner(
       return null;
     }
 
-    const averageStepUsd = recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
+    const averageStepUsd =
+      recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
     const modelPrice = await store.getModelPrice(runtime.modelKey);
     const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
 
@@ -221,11 +227,16 @@ export function createAgentRunner(
       return averageStepUsd;
     }
 
-    const inputEstimatedUsd = (lastAgentStep.inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd;
+    const inputEstimatedUsd =
+      (lastAgentStep.inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd;
     return (inputEstimatedUsd + averageStepUsd) / 2;
   }
 
-  function calculateDelayMs(endsAt: number, remainingBudgetUsd: number, estimatedStepUsd: number | null) {
+  function calculateDelayMs(
+    endsAt: number,
+    remainingBudgetUsd: number,
+    estimatedStepUsd: number | null,
+  ) {
     if (estimatedStepUsd === null || estimatedStepUsd <= 0) {
       return 0;
     }
@@ -274,15 +285,20 @@ export function createAgentRunner(
     });
   }
 
-  async function recordObservationalMemorySteps(contractId: string, steps: Array<{
-    response?: {
-      uiMessages?: Array<{
-        parts?: Array<unknown>;
-      }>;
-    };
-  }>) {
+  async function recordObservationalMemorySteps(
+    contractId: string,
+    steps: Array<{
+      response?: {
+        uiMessages?: Array<{
+          parts?: Array<unknown>;
+        }>;
+      };
+    }>,
+  ) {
     const modelPrice = await store.getModelPrice(runtime.omModelKey);
-    const parts = steps.flatMap((step) => step.response?.uiMessages ?? []).flatMap((message) => message.parts ?? []);
+    const parts = steps
+      .flatMap((step) => step.response?.uiMessages ?? [])
+      .flatMap((message) => message.parts ?? []);
 
     for (const part of parts) {
       if (!isOmObservationEndPart(part)) {
@@ -325,10 +341,21 @@ export function createAgentRunner(
     return 'type' in part && part.type === 'data-om-observation-end';
   }
 
+  function getSnapshot() {
+    return {
+      stopped,
+      instant,
+      executing,
+      scheduled: timer !== null,
+      backoffMs,
+    };
+  }
+
   return {
     start,
     stop,
     wake,
+    getSnapshot,
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
 }

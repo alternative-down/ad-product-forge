@@ -13,6 +13,7 @@ import { createGitHubAppManager } from './github/manager.js';
 import { createAgentEmailManager } from './email/migadu-manager.js';
 import { createCoolifyManager } from './coolify/manager.js';
 import { createAgentScheduleManager } from './schedules/manager.js';
+import { registerAdminRoutes } from './admin/routes.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -41,15 +42,28 @@ export async function main() {
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
 
-  if ((env.MIGADU_API_USER && !env.MIGADU_API_KEY) || (!env.MIGADU_API_USER && env.MIGADU_API_KEY)) {
+  if (
+    (env.MIGADU_API_USER && !env.MIGADU_API_KEY) ||
+    (!env.MIGADU_API_USER && env.MIGADU_API_KEY)
+  ) {
     throw new Error('Migadu email provisioning requires both MIGADU_API_USER and MIGADU_API_KEY');
   }
 
-  const hasAnyCoolifyConfig = !!(env.COOLIFY_BASE_URL || env.COOLIFY_ADMIN_TOKEN || env.COOLIFY_APPLICATIONS_BASE_DOMAIN);
-  const hasAllCoolifyConfig = !!(env.COOLIFY_BASE_URL && env.COOLIFY_ADMIN_TOKEN && env.COOLIFY_APPLICATIONS_BASE_DOMAIN);
+  const hasAnyCoolifyConfig = !!(
+    env.COOLIFY_BASE_URL ||
+    env.COOLIFY_ADMIN_TOKEN ||
+    env.COOLIFY_APPLICATIONS_BASE_DOMAIN
+  );
+  const hasAllCoolifyConfig = !!(
+    env.COOLIFY_BASE_URL &&
+    env.COOLIFY_ADMIN_TOKEN &&
+    env.COOLIFY_APPLICATIONS_BASE_DOMAIN
+  );
 
   if (hasAnyCoolifyConfig && !hasAllCoolifyConfig) {
-    throw new Error('Coolify integration requires COOLIFY_BASE_URL, COOLIFY_ADMIN_TOKEN, and COOLIFY_APPLICATIONS_BASE_DOMAIN');
+    throw new Error(
+      'Coolify integration requires COOLIFY_BASE_URL, COOLIFY_ADMIN_TOKEN, and COOLIFY_APPLICATIONS_BASE_DOMAIN',
+    );
   }
 
   const emailMailboxes = createAgentEmailManager({
@@ -87,10 +101,10 @@ export async function main() {
   });
   const coolify = hasAllCoolifyConfig
     ? createCoolifyManager({
-      baseUrl: env.COOLIFY_BASE_URL!,
-      adminToken: env.COOLIFY_ADMIN_TOKEN!,
-      applicationsBaseDomain: env.COOLIFY_APPLICATIONS_BASE_DOMAIN!,
-    })
+        baseUrl: env.COOLIFY_BASE_URL!,
+        adminToken: env.COOLIFY_ADMIN_TOKEN!,
+        applicationsBaseDomain: env.COOLIFY_APPLICATIONS_BASE_DOMAIN!,
+      })
     : null;
   const workflows = createInternalAgentWorkflows({
     db,
@@ -100,13 +114,24 @@ export async function main() {
     coolify,
     schedules,
   });
-  const agents = await registry.loadAll(db, {
+  const loaderConfig = {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     workflows,
     githubApps,
     coolify,
     schedules,
+  };
+  registerAdminRoutes({
+    db,
+    httpServer,
+    loaderConfig,
+    schedules,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    githubApps,
+    emailMailboxes,
+    coolify,
   });
+  const agents = await registry.loadAll(db, loaderConfig);
   await githubApps.loadAllAgents();
   await schedules.loadAll();
   await httpServer.start();
@@ -127,7 +152,8 @@ export async function main() {
   // Graceful shutdown handlers
   const handleShutdown = (signal: string) => {
     console.log(`\n[${signal}] Shutting down gracefully...`);
-    void schedules.stop()
+    void schedules
+      .stop()
       .finally(() => httpServer.stop())
       .finally(() => {
         process.exit(0);
@@ -136,7 +162,6 @@ export async function main() {
 
   process.on('SIGTERM', () => handleShutdown('SIGTERM'));
   process.on('SIGINT', () => handleShutdown('SIGINT'));
-
 }
 
 main().catch((error) => {

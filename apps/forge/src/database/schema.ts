@@ -15,16 +15,16 @@ import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-or
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
 
-const WorkspaceFilesystemConfigSchema = z.object({
+const _WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
 });
 
-const WorkspaceSandboxConfigSchema = z.object({
+const _WorkspaceSandboxConfigSchema = z.object({
   workingDirectory: z.string(),
 });
 
-export type WorkspaceFilesystemConfig = z.infer<typeof WorkspaceFilesystemConfigSchema>;
-export type WorkspaceSandboxConfig = z.infer<typeof WorkspaceSandboxConfigSchema>;
+export type WorkspaceFilesystemConfig = z.infer<typeof _WorkspaceFilesystemConfigSchema>;
+export type WorkspaceSandboxConfig = z.infer<typeof _WorkspaceSandboxConfigSchema>;
 
 /**
  * Tabela: agents

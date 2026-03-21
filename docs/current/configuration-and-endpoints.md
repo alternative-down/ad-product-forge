@@ -58,6 +58,7 @@ The server is intentionally minimal:
 - in-memory route registry
 - full request body buffering
 - no framework layer
+- Zod request errors return HTTP `400`
 
 ## Current GitHub endpoints
 
@@ -72,8 +73,43 @@ Current route patterns:
 
 These are adapter-specific endpoints, not a generic webhook bus.
 
+## Current admin endpoints
+
+Admin routes are registered centrally at startup.
+
+Read surface:
+
+- `GET /admin/overview`
+- `GET /admin/agents`
+- `GET /admin/agent?agentId=...`
+- `GET /admin/functions`
+- `GET /admin/roles`
+
+Mutation surface:
+
+- `POST /admin/agent/hire`
+- `POST /admin/agent/terminate`
+- `POST /admin/agent/change-function`
+- `POST /admin/agent/update-config`
+- `POST /admin/agent-provider/upsert`
+- `POST /admin/agent-provider/delete`
+- `POST /admin/agent/wake`
+- `POST /admin/agent/reload`
+- `POST /admin/agent-schedule/create`
+- `POST /admin/agent-schedule/update`
+- `POST /admin/agent-schedule/delete`
+- `POST /admin/role-tool-permission/add`
+- `POST /admin/role-tool-permission/remove`
+
+These routes are for the human admin UI, not for agent-facing work.
+
 ## Current endpoint model
 
 Today, Forge uses explicit provider-specific HTTP endpoints where the integration actually needs them.
 
-That is currently true for GitHub and not yet true for Coolify.
+That is currently true for:
+
+- GitHub integration routes
+- admin maintenance routes
+
+Coolify webhook support is still not implemented.

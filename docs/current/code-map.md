@@ -147,6 +147,38 @@ It does not try to explain every detail. It explains where each main responsibil
 - [http/server.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/http/server.ts)
   - minimal route registry and request handling
 
+- [admin/read-model.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/read-model.ts)
+  - read-only admin-facing aggregation over runtime, schedules, roles, finance, notifications, and agent workspace communication data
+
+- [admin/routes.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/routes.ts)
+  - admin endpoint registration for the separate maintenance UI
+  - agent lifecycle, runtime config, provider updates, schedules, and role tool grants
+
+## Admin UI layer: `apps/forge-admin/src`
+
+- [main.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/main.tsx)
+  - TanStack Query provider, Router provider, and root app bootstrap
+
+- [router.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/router.tsx)
+  - router creation from generated TanStack file-based route tree
+
+- [routes/\_\_root.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/routes/__root.tsx)
+  - shared admin shell route
+
+- [features/overview/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/overview/page.tsx)
+  - dashboard overview page
+
+- [features/agents/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/agents/page.tsx)
+  - agent maintenance page
+  - runtime actions
+  - schedule management
+
+- [features/roles/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/roles/page.tsx)
+  - role tool grant page
+
+- [lib/api.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/lib/api.ts)
+  - browser client for Forge admin endpoints
+
 ## Engine layer: `packages/mastra-engine/src`
 
 ### Communication module

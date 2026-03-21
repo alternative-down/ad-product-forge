@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 import { z } from 'zod';
-import { eq, and, inArray, or, isNotNull } from 'drizzle-orm';
+import { eq, and, inArray, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from './schema';
 
@@ -52,9 +52,6 @@ const messageSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-type Contact = z.infer<typeof contactSchema>;
-type Conversation = z.infer<typeof conversationSchema>;
-type MessageRecord = z.infer<typeof messageSchema>;
 export type Attachment = z.infer<typeof attachmentSchema>;
 
 export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>) {
@@ -180,7 +177,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
 
   async function listContacts() {
     const contacts = await db.query.communicationContacts.findMany({
-      orderBy: (table) => [schema.communicationContacts.displayName, schema.communicationContacts.slug],
+      orderBy: [schema.communicationContacts.displayName, schema.communicationContacts.slug],
       with: {
         accounts: true,
       },
@@ -204,7 +201,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
 
   async function listSelfAccounts() {
     const accounts = await db.query.communicationAccounts.findMany({
-      orderBy: (table) => schema.communicationAccounts.provider,
+      orderBy: [schema.communicationAccounts.provider],
     });
 
     return accounts.map((account) => ({
@@ -447,7 +444,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     const conversations = await db.query.communicationConversations.findMany({
       with: {
         messages: {
-          orderBy: (table) => schema.communicationMessages.createdAt,
+          orderBy: [schema.communicationMessages.createdAt],
         },
       },
     });
@@ -525,7 +522,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
   async function getMessages(conversationId: string, limit: number) {
     const messages = await db.query.communicationMessages.findMany({
       where: eq(schema.communicationMessages.conversationId, conversationId),
-      orderBy: (table) => schema.communicationMessages.createdAt,
+      orderBy: [schema.communicationMessages.createdAt],
     });
 
     const recentMessages = messages.slice(-limit);

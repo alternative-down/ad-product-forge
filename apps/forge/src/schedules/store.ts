@@ -61,9 +61,7 @@ export function createAgentScheduleStore(db: Database) {
       orderBy: [asc(agentSchedules.createdAt)],
     });
 
-    return rows
-      .filter((row) => row.kind === 'agent')
-      .map(toScheduleSummary);
+    return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
   }
 
   async function listActiveSchedules() {
@@ -103,7 +101,11 @@ export function createAgentScheduleStore(db: Database) {
     return toScheduleRecord(row);
   }
 
-  async function updateAgentSchedule(agentId: string, scheduleId: string, input: UpdateAgentScheduleInput) {
+  async function updateAgentSchedule(
+    agentId: string,
+    scheduleId: string,
+    input: UpdateAgentScheduleInput,
+  ) {
     const existing = await db.query.agentSchedules.findFirst({
       where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
     });
@@ -112,15 +114,21 @@ export function createAgentScheduleStore(db: Database) {
       return null;
     }
 
+    if (existing.kind !== 'agent') {
+      return null;
+    }
+
     const updated = {
       name: input.name ?? existing.name,
       description: input.description === undefined ? existing.description : input.description,
       scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
-      cronExpression: input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
-      scheduledDate: input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
+      cronExpression:
+        input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
+      scheduledDate:
+        input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
       timezone: input.timezone ?? existing.timezone,
       content: input.content ?? existing.content,
-      isActive: input.isActive === undefined ? existing.isActive : (input.isActive ? 1 : 0),
+      isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
       updatedAt: Date.now(),
     };
 
@@ -141,7 +149,13 @@ export function createAgentScheduleStore(db: Database) {
       return false;
     }
 
-    await db.delete(agentSchedules).where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
+    if (existing.kind !== 'agent') {
+      return false;
+    }
+
+    await db
+      .delete(agentSchedules)
+      .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
     return true;
   }
 

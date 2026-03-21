@@ -67,9 +67,9 @@ export class OAuthGateway extends MastraModelGateway {
         },
       };
     },
-    wrapGenerate: async ({ doGenerate, doStream }) => {
+    wrapGenerate: async ({ doGenerate: _doGenerate, doStream }) => {
       const { request, response: initialResponse, stream } = await doStream();
-      type GenerateResult = Awaited<ReturnType<typeof doGenerate>>;
+      type GenerateResult = Awaited<ReturnType<typeof _doGenerate>>;
       type StreamPart = Awaited<ReturnType<typeof doStream>>['stream'] extends ReadableStream<infer Part>
         ? Part
         : never;

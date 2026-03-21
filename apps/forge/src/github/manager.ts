@@ -772,7 +772,7 @@ export function createGitHubAppManager(config: {
     }
 
     const app = createGitHubApp(credentials);
-    app.webhooks.onAny(async ({ id, name, payload }) => {
+    app.webhooks.onAny(async ({ name, payload }) => {
       const payloadRecord = payload as Record<string, unknown>;
       const repository =
         typeof payloadRecord.repository === 'object' && payloadRecord.repository && 'full_name' in payloadRecord.repository

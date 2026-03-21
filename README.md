@@ -33,6 +33,10 @@ For an explicit list of what is still missing, see [docs/current/known-gaps.md](
   - Main application runtime.
   - Owns the central database, hiring/termination, integrations, schedules, notifications, and HTTP endpoints.
 
+- `apps/forge-admin/`
+  - Separate human admin UI.
+  - Owns the maintenance dashboard for runtime visibility, agent lifecycle, runtime config, provider credentials, schedules, and role tool grants.
+
 - `packages/mastra-engine/`
   - Shared engine layer.
   - Owns communication abstractions, wake queue, memory components, and shared LLM gateway pieces.

@@ -6,11 +6,15 @@ Forge is a central company runtime that persists internal agents, loads them at 
 
 ## Top-level shape
 
-The current system has two main layers:
+The current system has three main layers:
 
 - `apps/forge/`
   - The application layer.
   - Owns the company database, agent registry, hiring and termination workflows, provider credential storage, integrations, schedules, notifications, and HTTP routes.
+
+- `apps/forge-admin/`
+  - Human admin layer.
+  - Owns the maintenance dashboard for runtime visibility and safe administrative actions.
 
 - `packages/mastra-engine/`
   - Shared runtime primitives.
@@ -110,7 +114,10 @@ Each agent also has a per-agent workspace directory containing:
 
 Forge exposes its own HTTP server in [server.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/http/server.ts).
 
-Today this is used for provider-specific integration endpoints, especially GitHub App registration and GitHub webhook handling.
+Today this is used for:
+
+- provider-specific integration endpoints, especially GitHub App registration and GitHub webhook handling
+- admin maintenance endpoints consumed by `apps/forge-admin`
 
 ## Current architectural constraints
 
