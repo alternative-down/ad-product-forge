@@ -29,3 +29,6 @@ These documents replace older PRDs that mixed implemented behavior with future i
 
 - [Known Gaps](./known-gaps.md)
   - Major capabilities still missing from the current implementation.
+
+- [Code Map](./code-map.md)
+  - Practical map of where each current responsibility lives in the codebase.

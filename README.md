@@ -21,6 +21,7 @@ For an explicit list of what is still missing, see [docs/current/known-gaps.md](
 ## Where to start
 
 - [Current system docs](./docs/current/README.md)
+- [Current code map](./docs/current/code-map.md)
 - [Documentation index](./docs/README.md)
 - [Roadmap](./ROADMAP.md)
 - [Code style](./CODE_STYLE.md)
