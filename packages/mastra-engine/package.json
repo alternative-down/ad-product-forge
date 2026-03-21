@@ -8,8 +8,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "NODE_OPTIONS=--max-old-space-size=8192 tsc",
-    "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "smoke:openai-codex": "tsx examples/openai-codex-smoke.ts",
     "smoke:claude-max": "tsx examples/claude-max-smoke.ts",
