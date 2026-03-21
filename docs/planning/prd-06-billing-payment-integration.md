@@ -1,5 +1,7 @@
 # PRD-06: Integração de Pagamento & Faturamento
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Rascunho - Simplificado para Desenvolvedor Solo
 **Data:** 2026-03-15
 **Versão:** 1.0

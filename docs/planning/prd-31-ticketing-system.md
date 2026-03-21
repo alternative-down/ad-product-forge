@@ -1,5 +1,7 @@
 # PRD-31: Sistema de Tickets como Provider de Comunicação
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Planejamento
 
 **Data:** 2026-03-15

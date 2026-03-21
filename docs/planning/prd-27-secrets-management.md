@@ -1,5 +1,7 @@
 # PRD-27: Sistema de Gerenciamento de Segredos
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Planejamento - Design Técnico
 **Data:** 2026-03-15
 **Escopo:** Projeto pessoal de desenvolvedor - Princípios KISS & YAGNI

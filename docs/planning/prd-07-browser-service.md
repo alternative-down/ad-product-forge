@@ -1,5 +1,7 @@
 # PRD-07: Serviço de Navegador — Investigação Necessária
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** ⚠️ Investigação Necessária - Não Implementado
 **Data:** 2026-03-15
 **Versão:** 0.1 (Rascunho - Requer Pesquisa)

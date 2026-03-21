@@ -1,5 +1,7 @@
 # PRD-21: Integração de Plataforma de Marketing (Simplificado)
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Rascunho - Simplificado para Desenvolvedor Solo
 **Data:** 2026-03-15
 **Nota:** Projeto de desenvolvedor pessoal. Aplicar princípios KISS + YAGNI.

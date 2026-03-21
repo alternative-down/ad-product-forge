@@ -1,5 +1,7 @@
 # PRD-24: GitHub Work Organization
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Planned
 **Classification:** FORGE APP
 
