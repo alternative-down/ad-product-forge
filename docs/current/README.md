@@ -23,3 +23,6 @@ These documents replace older PRDs that mixed implemented behavior with future i
 
 - [Finance and Execution](./finance-and-execution.md)
   - Contracts, spend tracking, cash ledger, and micro ERP read models.
+
+- [Configuration and Endpoints](./configuration-and-endpoints.md)
+  - Environment variables, HTTP server boundary, and current route surface.
