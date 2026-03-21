@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "start": "tsx src/main.ts",
+    "start": "node dist/main.js",
     "build": "npm run -w @mastra-engine/core build && tsc",
     "typecheck": "npm run -w @mastra-engine/core build && tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
