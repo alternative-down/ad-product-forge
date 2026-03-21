@@ -748,9 +748,9 @@ Quando acionado:
 
 ## 📚 Referências
 
-- `docs/system/autonomous-system-overview.md` — Visão geral arquitetural
-- `docs/features/*` — Detalhamento por feature
-- `docs/notes/*` — Anotações de decisões em aberto
+- `docs/references/system/autonomous-system-overview.md` — Visão geral arquitetural
+- `docs/backlog/features/*` — Detalhamento por feature
+- `docs/references/notes/*` — Anotações de decisões em aberto
 
 ---
 

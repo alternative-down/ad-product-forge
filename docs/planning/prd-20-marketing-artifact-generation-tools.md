@@ -1,5 +1,7 @@
 # PRD-20: Ferramentas de Geração de Artefato de Marketing
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Planejamento
 **Data:** 2026-03-15
 **Versão:** 1.0

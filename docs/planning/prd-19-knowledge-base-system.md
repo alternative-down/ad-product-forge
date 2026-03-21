@@ -1,5 +1,7 @@
 # PRD-19: Sistema de Base de Conhecimento
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Planejamento
 
 **Data:** 2026-03-15

@@ -1,5 +1,7 @@
 # PRD-28: Integração com Redes Sociais e Comunidade
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Planejamento
 
 **Data:** 2026-03-15

@@ -4,7 +4,7 @@
 
 This document provides technical configuration details for the three-layer memory system integrated into agents via `createAgent()` and `createForgeAgent()`.
 
-For the conceptual architecture and data flow, see `docs/system/memory-and-context-architecture.md`.
+For the conceptual architecture and data flow, see `docs/references/system/memory-and-context-architecture.md`.
 
 ---
 

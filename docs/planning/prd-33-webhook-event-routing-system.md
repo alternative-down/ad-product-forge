@@ -1,5 +1,7 @@
 # PRD-33: Sistema de Roteamento de Evento & Webhook
 
+> Status: planned. This document does not describe implemented behavior unless explicitly stated.
+
 **Status:** Planejamento
 
 **Boundary note:** GitHub usa endpoint adapter-specific próprio. Coolify está fora do escopo da primeira versão e também não passa por este PRD agora. Este PRD continua reservado para um bus genérico de webhook quando isso realmente fizer sentido.
