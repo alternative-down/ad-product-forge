@@ -238,3 +238,73 @@ The article's strongest idea is:
 
 In one sentence:
 - **turn the model into a planner/composer, not into a relay for every schema and payload**
+
+## Forge note: current sandbox and CLI-in-environment idea
+
+This was discussed separately from the Anthropic article, but it is relevant as a local architectural note.
+
+### Current Forge reality
+
+Forge currently creates agent workspaces with Mastra `LocalSandbox`.
+
+Today, Forge only persists and passes:
+- `workingDirectory`
+
+Current code path:
+- `apps/forge/src/agents/create-forge-agent.ts`
+- `apps/forge/src/database/schema.ts`
+
+### Important technical point
+
+Mastra `LocalSandbox` supports more than what Forge currently models.
+
+Its options include:
+- `workingDirectory`
+- `env`
+- `timeout`
+- `isolation`
+- `nativeSandbox`
+
+So the execution environment can technically be enriched with custom environment variables and a custom `PATH`.
+
+### CLI conclusion for Forge
+
+Yes, a CLI can be incorporated into the agent sandbox environment.
+
+The correct interpretation is:
+- not prompt context
+- not model context
+- execution environment context
+
+That means:
+- available binaries
+- `PATH`
+- environment variables
+- working directory
+
+### Practical ways this could work later
+
+1. Executable file inside the agent workspace
+- example: `workspace/bin/my-cli`
+- callable by explicit path
+
+2. Sandbox `PATH` enrichment
+- add a workspace `bin/` directory
+- prepend that directory to sandbox `PATH`
+- the agent can call the CLI by name
+
+3. Shared host-level CLI
+- possible, but less desirable
+- mixes global machine setup with agent runtime
+
+### Recommended direction if we return to this later
+
+If Forge needs CLI-aware sandbox environments later, the clean direction is:
+- expand `workspaceSandbox` config
+- allow something like:
+  - `env?: Record<string, string>`
+  - `pathEntries?: string[]`
+- resolve relative paths against the agent workspace
+- build final sandbox `PATH` explicitly at runtime
+
+This keeps the behavior explicit and local to the agent runtime.
