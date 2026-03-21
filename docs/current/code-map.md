@@ -158,14 +158,22 @@ It does not try to explain every detail. It explains where each main responsibil
 - [main.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/main.tsx)
   - TanStack Query provider, Router provider, and root app bootstrap
 
-- [routes/index.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/routes/index.tsx)
-  - current single-route admin console wiring
+- [router.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/router.tsx)
+  - router creation from generated TanStack file-based route tree
 
-- [components/admin-console.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/components/admin-console.tsx)
-  - main maintenance screen
-  - overview cards
-  - agent detail and schedule maintenance
-  - role tool grant maintenance
+- [routes/\_\_root.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/routes/__root.tsx)
+  - shared admin shell route
+
+- [features/overview/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/overview/page.tsx)
+  - dashboard overview page
+
+- [features/agents/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/agents/page.tsx)
+  - agent maintenance page
+  - runtime actions
+  - schedule management
+
+- [features/roles/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/roles/page.tsx)
+  - role tool grant page
 
 - [lib/api.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/lib/api.ts)
   - browser client for Forge admin endpoints

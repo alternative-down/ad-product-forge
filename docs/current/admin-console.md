@@ -26,11 +26,21 @@ It does not exist for:
 - TanStack Router
 - Tailwind CSS
 
-The current UI is a single-screen SPA with three sections:
+The current UI uses file-based TanStack Router routes with a shared app shell.
 
-- `Overview`
-- `Agents`
-- `Roles`
+Current route surface:
+
+- `/`
+  - overview
+- `/agents`
+  - agent maintenance
+- `/roles`
+  - role tool grants
+
+Agent and role selection state lives in route search params:
+
+- `/agents?agentId=...`
+- `/roles?roleId=...`
 
 ## Current behavior
 
@@ -102,6 +112,14 @@ Current backend code:
 
 - [admin/read-model.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/read-model.ts)
 - [admin/routes.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/routes.ts)
+
+Current frontend anchors:
+
+- [router.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/router.tsx)
+- [\_\_root.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/routes/__root.tsx)
+- [overview/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/overview/page.tsx)
+- [agents/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/agents/page.tsx)
+- [roles/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/roles/page.tsx)
 
 The admin API is intentionally separate from:
 
