@@ -1,9 +1,9 @@
 import { gracefulShutdown, scheduleJob, type Job, type RecurrenceSpecDateRange } from 'node-schedule';
 import { z } from 'zod';
 
-import type { Database } from '../database/index.js';
-import { createAgentNotificationStore } from '../notifications/store.js';
-import { createAgentScheduleStore } from './store.js';
+import type { Database } from '../database/index';
+import { createAgentNotificationStore } from '../notifications/store';
+import { createAgentScheduleStore } from './store';
 
 const createScheduleSchema = z.object({
   name: z.string().min(1),

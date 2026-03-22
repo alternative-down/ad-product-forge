@@ -48,6 +48,7 @@ Current global integrations are stored in the application database:
 Current LLM defaults are also stored in the application database:
 
 - reusable `llm_profiles`
+- each `llm_profile` also carries a contract cost modifier for execution budget accounting
 - one `system_llm_defaults` row that points to the active defaults for:
   - primary hiring model
   - OM model

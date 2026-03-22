@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { createSystemIntegrationStore } from '../system-integrations/store.js';
+import type { createSystemIntegrationStore } from '../system-integrations/store';
 
 const GitHubAppSchema = z.object({
   id: z.number().int().optional(),

@@ -1,11 +1,11 @@
-import type { Database } from '../database/index.js';
+import type { Database } from '../database/index';
 import { and, eq, inArray } from 'drizzle-orm';
 
-import { agents, agentProviders, agentFunctions, functionRoles } from '../database/schema.js';
-import { loadAgent, type AgentLoaderConfig } from '../agents/agent-loader.js';
-import { getInternalAgentRegistry } from '../agents/internal-agent-registry.js';
-import { createAgentNotificationStore } from '../notifications/store.js';
-import { decryptSecret, encryptSecret } from '../encryption/crypto.js';
+import { agents, agentProviders, agentFunctions, functionRoles } from '../database/schema';
+import { loadAgent, type AgentLoaderConfig } from '../agents/agent-loader';
+import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
+import { createAgentNotificationStore } from '../notifications/store';
+import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
 export async function reloadAgentIfLoaded(db: Database, config: AgentLoaderConfig, agentId: string) {
   const registry = getInternalAgentRegistry();

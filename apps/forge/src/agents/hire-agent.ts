@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
+import type { Database } from '../database/index';
 import {
   agents,
   agentExecutionContracts,
@@ -9,17 +9,17 @@ import {
   type NewAgent,
   type NewAgentExecutionContract,
   type NewAgentProvider,
-} from '../database/schema.js';
-import type { ProviderCredentialsMap } from '../communication/provider-loader.js';
-import { encryptSecret } from '../encryption/crypto.js';
-import type { CreateAgentConfig } from './create-forge-agent.js';
-import { getInternalAgentRegistry } from './internal-agent-registry.js';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
-import type { GitHubAppManager } from '../github/manager.js';
-import type { AgentEmailManager } from '../email/migadu-manager.js';
-import type { CoolifyManager } from '../coolify/manager.js';
-import type { createAgentScheduleManager } from '../schedules/manager.js';
-import { loadAgent } from './agent-loader.js';
+} from '../database/schema';
+import type { ProviderCredentialsMap } from '../communication/provider-loader';
+import { encryptSecret } from '../encryption/crypto';
+import type { CreateAgentConfig } from './create-forge-agent';
+import { getInternalAgentRegistry } from './internal-agent-registry';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
+import type { GitHubAppManager } from '../github/manager';
+import type { AgentEmailManager } from '../email/migadu-manager';
+import type { CoolifyManager } from '../coolify/manager';
+import type { createAgentScheduleManager } from '../schedules/manager';
+import { loadAgent } from './agent-loader';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -31,7 +31,9 @@ export type HireInternalAgentInput = {
   description?: string;
   instructions: string;
   model: string;
+  modelProfileId?: string;
   omModel?: string;
+  omModelProfileId?: string;
   workspaceBasePath: string;
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
@@ -71,7 +73,9 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     description: input.description,
     functionId: input.functionId,
     model: input.model,
+    modelProfileId: input.modelProfileId ?? null,
     omModel: input.omModel,
+    omModelProfileId: input.omModelProfileId ?? null,
     instructions: input.instructions,
     executionState: 'idle',
     workspaceAutoSync: 1,

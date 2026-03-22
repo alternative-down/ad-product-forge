@@ -272,6 +272,7 @@ export type LlmProfile = {
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
   modelKey: string;
+  contractCostMultiplier: number;
   isEnabled: boolean;
   createdAt: number;
   updatedAt: number;
@@ -360,6 +361,7 @@ export type UpsertLlmProfileInput = {
   label: string;
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
+  contractCostMultiplier: number;
   isEnabled: boolean;
 };
 

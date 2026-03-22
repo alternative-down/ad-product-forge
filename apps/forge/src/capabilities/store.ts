@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import { and, asc, eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
+import type { Database } from '../database/index';
 import {
   agents,
   agentFunctions,
@@ -9,7 +9,7 @@ import {
   functionRoles,
   roleToolPermissions,
   roleWorkflowPermissions,
-} from '../database/schema.js';
+} from '../database/schema';
 
 type CapabilitySet = {
   toolIds: string[];

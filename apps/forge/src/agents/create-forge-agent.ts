@@ -16,7 +16,7 @@ import {
   appendWorkingMemoryInstructions,
   embedTextWithFastembed,
 } from '@mastra-engine/core';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema.js';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -25,6 +25,8 @@ export type CreateForgeAgentConfig<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
   omModel?: AgentConfig['model'];
+  modelProfileId?: string;
+  omModelProfileId?: string;
   providers?: CommunicationProvider[];
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
@@ -42,7 +44,9 @@ export type InternalAgentRuntime<
 > = {
   id: TAgentId;
   modelKey: string;
+  modelProfileId?: string;
   omModelKey: string;
+  omModelProfileId?: string;
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
   onReceiveMessage(handler: () => void): void;
 };
@@ -63,6 +67,8 @@ export interface CreateAgentConfig<
     | 'workflows'
     | 'agents'
     | 'omModel'
+    | 'modelProfileId'
+    | 'omModelProfileId'
     | 'providers'
     | 'workspaceFilesystem'
     | 'workspaceSandbox'
@@ -187,7 +193,9 @@ export async function createInternalAgentRuntime<
   return {
     id: config.id,
     modelKey: config.model,
+    modelProfileId: config.modelProfileId,
     omModelKey,
+    omModelProfileId: config.omModelProfileId,
     agent,
     onReceiveMessage: communication.onReceiveMessage,
   };

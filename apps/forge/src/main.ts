@@ -5,17 +5,17 @@ import { ConsoleLogger } from '@mastra/core/logger';
 import { createOAuthGateway } from '@mastra-engine/core';
 import { z } from 'zod';
 
-import { getDatabase, runMigrations, seedModelPrices } from './database/index.js';
-import { getInternalAgentRegistry } from './agents/internal-agent-registry.js';
-import { createInternalAgentWorkflows } from './workflows/internal-agents.js';
-import { createForgeHttpServer } from './http/server.js';
-import { createGitHubAppManager } from './github/manager.js';
-import { createAgentEmailManager } from './email/migadu-manager.js';
-import { createCoolifyManager } from './coolify/manager.js';
-import { createAgentScheduleManager } from './schedules/manager.js';
-import { registerAdminRoutes } from './admin/routes.js';
-import { createSystemIntegrationStore } from './system-integrations/store.js';
-import { createMiniMaxTokenGateway } from './llm/minimax-token-gateway.js';
+import { getDatabase, runMigrations, seedModelPrices } from './database/index';
+import { getInternalAgentRegistry } from './agents/internal-agent-registry';
+import { createInternalAgentWorkflows } from './workflows/internal-agents';
+import { createForgeHttpServer } from './http/server';
+import { createGitHubAppManager } from './github/manager';
+import { createAgentEmailManager } from './email/migadu-manager';
+import { createCoolifyManager } from './coolify/manager';
+import { createAgentScheduleManager } from './schedules/manager';
+import { registerAdminRoutes } from './admin/routes';
+import { createSystemIntegrationStore } from './system-integrations/store';
+import { createMiniMaxTokenGateway } from './llm/minimax-token-gateway';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),

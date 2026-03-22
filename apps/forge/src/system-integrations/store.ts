@@ -1,15 +1,15 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database/index.js';
+import type { Database } from '../database/index';
 import type {
   CoolifySystemIntegrationConfig,
   GitHubSystemIntegrationConfig,
   MigaduSystemIntegrationConfig,
   MiniMaxSystemIntegrationConfig,
-} from '../database/schema.js';
-import { systemIntegrations } from '../database/schema.js';
-import { decryptSecret, encryptSecret } from '../encryption/crypto.js';
+} from '../database/schema';
+import { systemIntegrations } from '../database/schema';
+import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
 const migaduConfigSchema = z.object({
   apiUser: z.string().email(),

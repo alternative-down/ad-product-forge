@@ -5,10 +5,10 @@ import path from 'node:path';
 
 import { eq, and } from 'drizzle-orm';
 
-import * as schema from '../database/schema.js';
-import { getDatabase, runMigrations, seedModelPrices } from '../database/index.js';
+import * as schema from '../database/schema';
+import { getDatabase, runMigrations, seedModelPrices } from '../database/index';
 import { createId } from '@paralleldrive/cuid2';
-import { encryptSecret } from '../encryption/crypto.js';
+import { encryptSecret } from '../encryption/crypto';
 
 /**
  * Determines the gateway and provider for a given model ID

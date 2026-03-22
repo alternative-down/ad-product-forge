@@ -1,8 +1,8 @@
 import { and, eq, gte } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
-import type { Database } from '../database/index.js';
-import { companyCashLedger, companyRecurringPayables } from '../database/schema.js';
+import type { Database } from '../database/index';
+import { companyCashLedger, companyRecurringPayables } from '../database/schema';
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
 

@@ -37,7 +37,11 @@ export const agents = sqliteTable('agents', {
   functionId: text('function_id')
     .references(() => agentFunctions.id, { onDelete: 'set null' }),
   model: text('model').notNull(),
+  modelProfileId: text('model_profile_id')
+    .references(() => llmProfiles.id, { onDelete: 'set null' }),
   omModel: text('om_model'), // Modelo para observational memory
+  omModelProfileId: text('om_model_profile_id')
+    .references(() => llmProfiles.id, { onDelete: 'set null' }),
   instructions: text('instructions').notNull(),
   executionState: text('execution_state').notNull().default('idle'),
   // Workspace configuration
@@ -312,6 +316,7 @@ export const llmProfiles = sqliteTable('llm_profiles', {
   label: text('label').notNull(),
   providerType: text('provider_type').notNull().$type<LlmProviderType>(),
   modelId: text('model_id').notNull(),
+  contractCostMultiplier: real('contract_cost_multiplier').notNull().default(1),
   isEnabled: integer('is_enabled').notNull().default(1),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
@@ -362,11 +367,30 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
     fields: [agents.functionId],
     references: [agentFunctions.id],
   }),
+  modelProfile: one(llmProfiles, {
+    relationName: 'agent_model_profile',
+    fields: [agents.modelProfileId],
+    references: [llmProfiles.id],
+  }),
+  omModelProfile: one(llmProfiles, {
+    relationName: 'agent_om_model_profile',
+    fields: [agents.omModelProfileId],
+    references: [llmProfiles.id],
+  }),
   providers: many(agentProviders),
   executionContracts: many(agentExecutionContracts),
   executionSteps: many(agentExecutionSteps),
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
+}));
+
+export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
+  agentsAsPrimaryModel: many(agents, {
+    relationName: 'agent_model_profile',
+  }),
+  agentsAsOmModel: many(agents, {
+    relationName: 'agent_om_model_profile',
+  }),
 }));
 
 export const agentFunctionsRelations = relations(agentFunctions, ({ one, many }) => ({

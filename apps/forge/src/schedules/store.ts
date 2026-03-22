@@ -1,8 +1,8 @@
 import { createId } from '@paralleldrive/cuid2';
 import { and, asc, eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
-import { agentSchedules } from '../database/schema.js';
+import type { Database } from '../database/index';
+import { agentSchedules } from '../database/schema';
 
 type ScheduleType = 'cron' | 'date';
 type ScheduleKind = 'agent' | 'heartbeat';

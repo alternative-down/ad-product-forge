@@ -1,10 +1,10 @@
 import { and, desc, eq, lte, gte, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
-import type { Database } from '../database/index.js';
-import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices } from '../database/schema.js';
-import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
-import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
+import type { Database } from '../database/index';
+import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles } from '../database/schema';
+import { createCompanyCashLedger } from '../finance/company-cash-ledger';
+import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -85,10 +85,24 @@ export function createAgentContractStore(db: Database) {
     return rows[0]?.total ?? 0;
   }
 
-  async function getModelPrice(modelKey: string) {
-    return db.query.llmModelPrices.findFirst({
-      where: eq(llmModelPrices.modelKey, modelKey),
+  async function getUsagePricing(input: {
+    modelKey: string;
+    profileId?: string;
+  }) {
+    const modelPrice = await db.query.llmModelPrices.findFirst({
+      where: eq(llmModelPrices.modelKey, input.modelKey),
     });
+
+    const profile = input.profileId
+      ? await db.query.llmProfiles.findFirst({
+          where: eq(llmProfiles.id, input.profileId),
+        })
+      : await findProfileByModelKey(input.modelKey);
+
+    return {
+      modelPrice,
+      contractCostMultiplier: profile?.contractCostMultiplier ?? 1,
+    };
   }
 
   async function recordAgentStep(input: {
@@ -178,7 +192,36 @@ export function createAgentContractStore(db: Database) {
     getRunnableContract,
     listRecentSteps,
     getContractSpend,
-    getModelPrice,
+    getUsagePricing,
     recordAgentStep,
+  };
+
+  async function findProfileByModelKey(modelKey: string) {
+    const resolved = parseLlmProfileKey(modelKey);
+
+    if (!resolved) {
+      return null;
+    }
+
+    return db.query.llmProfiles.findFirst({
+      where: and(
+        eq(llmProfiles.providerType, resolved.providerType),
+        eq(llmProfiles.modelId, resolved.modelId),
+      ),
+      orderBy: [desc(llmProfiles.updatedAt)],
+    });
+  }
+}
+
+function parseLlmProfileKey(modelKey: string) {
+  const [gatewayId, providerType, ...modelParts] = modelKey.split('/');
+
+  if (!gatewayId || !providerType || modelParts.length === 0) {
+    return null;
+  }
+
+  return {
+    providerType: providerType as typeof llmProfiles.$inferSelect.providerType,
+    modelId: modelParts.join('/'),
   };
 }

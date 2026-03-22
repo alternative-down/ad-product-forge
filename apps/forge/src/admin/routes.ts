@@ -1,32 +1,32 @@
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
-import type { AgentLoaderConfig } from '../agents/agent-loader.js';
-import { loadAgent } from '../agents/agent-loader.js';
-import { getInternalAgentRegistry } from '../agents/internal-agent-registry.js';
-import { createCapabilityStore } from '../capabilities/store.js';
+import type { Database } from '../database/index';
+import type { AgentLoaderConfig } from '../agents/agent-loader';
+import { loadAgent } from '../agents/agent-loader';
+import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
+import { createCapabilityStore } from '../capabilities/store';
 import {
   changeAgentFunctionFromAdmin,
   reloadAgentIfLoaded,
   reloadAgentsForRole,
   updateInternalChatProviderProfile,
-} from '../capabilities/runtime.js';
-import type { createForgeHttpServer } from '../http/server.js';
-import type { createAgentScheduleManager } from '../schedules/manager.js';
-import { createAdminReadModel } from './read-model.js';
-import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle.js';
-import type { AgentEmailManager } from '../email/migadu-manager.js';
-import type { CoolifyManager } from '../coolify/manager.js';
-import type { GitHubAppManager } from '../github/manager.js';
-import { agentFunctions, agents, agentProviders } from '../database/schema.js';
-import { encryptSecret } from '../encryption/crypto.js';
-import { parseProviderCredentials } from '../communication/provider-loader.js';
+} from '../capabilities/runtime';
+import type { createForgeHttpServer } from '../http/server';
+import type { createAgentScheduleManager } from '../schedules/manager';
+import { createAdminReadModel } from './read-model';
+import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';
+import type { AgentEmailManager } from '../email/migadu-manager';
+import type { CoolifyManager } from '../coolify/manager';
+import type { GitHubAppManager } from '../github/manager';
+import { agentFunctions, agents, agentProviders } from '../database/schema';
+import { encryptSecret } from '../encryption/crypto';
+import { parseProviderCredentials } from '../communication/provider-loader';
 import { createId } from '@paralleldrive/cuid2';
-import { createSystemIntegrationStore } from '../system-integrations/store.js';
-import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
-import { createCompanyPayables } from '../finance/company-payables.js';
-import { createLlmSettingsStore } from '../llm/settings-store.js';
+import { createSystemIntegrationStore } from '../system-integrations/store';
+import { createCompanyCashOperations } from '../finance/company-cash-operations';
+import { createCompanyPayables } from '../finance/company-payables';
+import { createLlmSettingsStore } from '../llm/settings-store';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -157,6 +157,7 @@ const upsertLlmProfileSchema = z.object({
   label: z.string().min(1),
   providerType: llmProviderTypeSchema,
   modelId: z.string().min(1),
+  contractCostMultiplier: z.coerce.number().positive().default(1),
   isEnabled: z.boolean().default(true),
 });
 

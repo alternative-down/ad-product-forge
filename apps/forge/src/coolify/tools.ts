@@ -1,7 +1,7 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { CoolifyManager } from './manager.js';
+import type { CoolifyManager } from './manager';
 
 const coolifyApplicationSlugSchema = z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/, {
   message: 'slug must be lowercase kebab-case and valid for subdomain use',

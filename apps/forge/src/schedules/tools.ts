@@ -1,7 +1,7 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { createAgentScheduleManager } from './manager.js';
+import type { createAgentScheduleManager } from './manager';
 
 const createScheduleInputSchema = z.object({
   name: z.string().min(1),

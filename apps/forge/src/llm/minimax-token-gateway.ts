@@ -4,7 +4,7 @@ import { MastraModelGateway } from '@mastra/core/llm';
 import type { GatewayLanguageModel, ProviderConfig } from '@mastra/core/llm';
 import { wrapLanguageModel } from 'ai';
 
-import type { createSystemIntegrationStore } from '../system-integrations/store.js';
+import type { createSystemIntegrationStore } from '../system-integrations/store';
 
 const MINIMAX_BASE_URL = 'https://api.minimax.io/anthropic';
 const MINIMAX_PROVIDER_ID = 'minimax';

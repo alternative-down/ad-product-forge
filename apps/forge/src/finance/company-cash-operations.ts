@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
-import type { Database } from '../database/index.js';
-import { companyCashLedger } from '../database/schema.js';
+import type { Database } from '../database/index';
+import { companyCashLedger } from '../database/schema';
 
 type CompanyCashDirection = 'in' | 'out';
 type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
