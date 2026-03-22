@@ -18,6 +18,7 @@ import { forgeCustomToolIds } from '../capabilities/catalog.js';
 import { decryptSecret } from '../encryption/crypto.js';
 import { createAgentNotificationStore } from '../notifications/store.js';
 import { createSystemIntegrationStore } from '../system-integrations/store.js';
+import { createLlmSettingsStore } from '../llm/settings-store.js';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -35,6 +36,7 @@ export function createAdminReadModel(input: {
   const capabilities = createCapabilityStore(db);
   const notifications = createAgentNotificationStore(db);
   const integrations = createSystemIntegrationStore(db);
+  const llmSettings = createLlmSettingsStore(db);
 
   async function getDashboard() {
     const [agentRows, balance, summary, activeContracts, cashMovements, functions, roles] =
@@ -319,6 +321,19 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function getSystemLlm() {
+    const [profiles, defaults] = await Promise.all([
+      llmSettings.listProfiles(),
+      llmSettings.getDefaults(),
+    ]);
+
+    return {
+      defaults,
+      profiles,
+      supportedProviders: llmSettings.listSupportedProviders(),
+    };
+  }
+
   return {
     getDashboard,
     listAgents,
@@ -326,6 +341,7 @@ export function createAdminReadModel(input: {
     listFunctions,
     listRoles,
     listSystemIntegrations,
+    getSystemLlm,
     getFinance,
   };
 }

@@ -26,6 +26,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { createSystemIntegrationStore } from '../system-integrations/store.js';
 import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
 import { createCompanyPayables } from '../finance/company-payables.js';
+import { createLlmSettingsStore } from '../llm/settings-store.js';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -140,6 +141,27 @@ const deleteSystemIntegrationSchema = z.object({
   providerType: systemIntegrationProviderSchema,
 });
 
+const llmProviderTypeSchema = z.enum(['openai-codex', 'claude-max']);
+
+const upsertLlmProfileSchema = z.object({
+  profileId: z.string().min(1).optional(),
+  slug: z.string().min(1),
+  label: z.string().min(1),
+  providerType: llmProviderTypeSchema,
+  modelId: z.string().min(1),
+  isEnabled: z.boolean().default(true),
+});
+
+const deleteLlmProfileSchema = z.object({
+  profileId: z.string().min(1),
+});
+
+const updateLlmDefaultsSchema = z.object({
+  primaryProfileId: z.string().min(1),
+  omProfileId: z.string().min(1),
+  hiringRhProfileId: z.string().min(1),
+});
+
 const createInvestmentSchema = z.object({
   amountUsd: z.coerce.number().positive(),
   description: z.string().optional(),
@@ -191,6 +213,7 @@ export function registerAdminRoutes(input: {
   });
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
+  const llmSettings = createLlmSettingsStore(input.db);
   const registry = getInternalAgentRegistry();
   const companyCash = createCompanyCashOperations(input.db);
   const companyPayables = createCompanyPayables(input.db);
@@ -240,6 +263,12 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/system/integrations',
     handler: async () => jsonResponse(await readModel.listSystemIntegrations()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/llm',
+    handler: async () => jsonResponse(await readModel.getSystemLlm()),
   });
 
   input.httpServer.registerRoute({
@@ -519,6 +548,34 @@ export function registerAdminRoutes(input: {
       const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
       await integrations.deleteIntegration(body.providerType);
       return jsonResponse({ success: true, providerType: body.providerType });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/llm/profile/upsert',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
+      return jsonResponse(await llmSettings.upsertProfile(body));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/llm/profile/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteLlmProfileSchema);
+      await llmSettings.deleteProfile(body.profileId);
+      return jsonResponse({ success: true, profileId: body.profileId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/llm/defaults/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
+      return jsonResponse(await llmSettings.updateDefaults(body));
     },
   });
 

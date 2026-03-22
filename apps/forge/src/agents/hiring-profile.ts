@@ -1,15 +1,17 @@
-const DEFAULT_AGENT_MODEL = 'account-oauth/openai-codex/gpt-5.4';
-const DEFAULT_OM_MODEL = 'account-oauth/openai-codex/gpt-5.4-mini';
+import type { Database } from '../database/index.js';
+import { createLlmSettingsStore } from '../llm/settings-store.js';
 
-export function buildHiredAgentProfile(input: {
+export async function buildHiredAgentProfile(db: Database, input: {
   requestedFunction: string;
 }) {
   const requestedFunction = input.requestedFunction.trim();
+  const llmSettings = createLlmSettingsStore(db);
+  const defaults = await llmSettings.getResolvedDefaults();
 
   return {
     name: requestedFunction,
     description: `Internal collaborator responsible for ${requestedFunction}.`,
-    model: DEFAULT_AGENT_MODEL,
-    omModel: DEFAULT_OM_MODEL,
+    model: defaults.primaryProfile.modelKey,
+    omModel: defaults.omProfile.modelKey,
   };
 }

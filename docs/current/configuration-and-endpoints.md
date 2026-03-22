@@ -44,6 +44,14 @@ Current global integrations are stored in the application database:
 - `coolify`
 - `github`
 
+Current LLM defaults are also stored in the application database:
+
+- reusable `llm_profiles`
+- one `system_llm_defaults` row that points to the active defaults for:
+  - primary hiring model
+  - OM model
+  - hiring RH model
+
 These configs are:
 
 - created and updated through the admin console
@@ -92,6 +100,7 @@ Read surface:
 - `GET /admin/functions`
 - `GET /admin/roles`
 - `GET /admin/system/integrations`
+- `GET /admin/system/llm`
 
 Mutation surface:
 
@@ -110,6 +119,9 @@ Mutation surface:
 - `POST /admin/role-tool-permission/remove`
 - `POST /admin/system/integration/upsert`
 - `POST /admin/system/integration/delete`
+- `POST /admin/system/llm/profile/upsert`
+- `POST /admin/system/llm/profile/delete`
+- `POST /admin/system/llm/defaults/update`
 
 These routes are for the human admin UI, not for agent-facing work.
 

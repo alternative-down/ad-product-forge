@@ -6,24 +6,27 @@ import type { Database } from '../database/index.js';
 import { llmModelPrices } from '../database/schema.js';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
 import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
+import { createLlmSettingsStore } from '../llm/settings-store.js';
 import { createOAuthGateway } from '@mastra-engine/core';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
-const HIRING_RH_MODEL = 'account-oauth/openai-codex/gpt-5.4-mini';
 
 export async function generateHiredAgentInstructions(db: Database, input: {
   requestedFunction: string;
   additionalContext?: string;
 }) {
+  const llmSettings = createLlmSettingsStore(db);
+  const defaults = await llmSettings.getResolvedDefaults();
+  const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
   const modelPrice = await db.query.llmModelPrices.findFirst({
-    where: eq(llmModelPrices.modelKey, HIRING_RH_MODEL),
+    where: eq(llmModelPrices.modelKey, hiringRhModelKey),
   });
   const hiringPrompt = buildHiringPrompt(input);
 
   if (!modelPrice) {
-    throw new Error(`Missing LLM model price for hiring workflow: ${HIRING_RH_MODEL}`);
+    throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelKey}`);
   }
 
   const estimatedInputTokens = estimateTextTokens(hiringPrompt);
@@ -38,7 +41,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     id: HIRING_RH_AGENT_ID,
     name: 'Internal Hiring RH',
     instructions: 'Write only the hired agent system prompt. Return plain text only.',
-    model: HIRING_RH_MODEL,
+    model: hiringRhModelKey,
   });
   const mastra = new Mastra({
     agents: {
@@ -65,7 +68,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   return {
     instructions: result.text.trim(),
     costUsd,
-    modelKey: HIRING_RH_MODEL,
+    modelKey: hiringRhModelKey,
   };
 }
 

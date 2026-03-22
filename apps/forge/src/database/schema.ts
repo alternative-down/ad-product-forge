@@ -274,6 +274,10 @@ const _GitHubSystemIntegrationConfigSchema = z.object({
   appHomeUrl: z.string().url(),
 });
 
+const _LlmProviderTypeSchema = z.enum(['openai-codex', 'claude-max']);
+
+export type LlmProviderType = z.infer<typeof _LlmProviderTypeSchema>;
+
 export type MigaduSystemIntegrationConfig = z.infer<typeof _MigaduSystemIntegrationConfigSchema>;
 export type CoolifySystemIntegrationConfig = z.infer<typeof _CoolifySystemIntegrationConfigSchema>;
 export type GitHubSystemIntegrationConfig = z.infer<typeof _GitHubSystemIntegrationConfigSchema>;
@@ -294,6 +298,35 @@ export const systemIntegrations = sqliteTable('system_integrations', {
 export type SystemIntegration = typeof systemIntegrations.$inferSelect;
 export type NewSystemIntegration = typeof systemIntegrations.$inferInsert;
 export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
+
+export const llmProfiles = sqliteTable('llm_profiles', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull(),
+  label: text('label').notNull(),
+  providerType: text('provider_type').notNull().$type<LlmProviderType>(),
+  modelId: text('model_id').notNull(),
+  isEnabled: integer('is_enabled').notNull().default(1),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  llmProfilesSlugIdx: uniqueIndex('llm_profiles_slug_idx').on(table.slug),
+  llmProfilesIsEnabledIdx: index('llm_profiles_is_enabled_idx').on(table.isEnabled),
+}));
+
+export type LlmProfile = typeof llmProfiles.$inferSelect;
+export type NewLlmProfile = typeof llmProfiles.$inferInsert;
+
+export const systemLlmDefaults = sqliteTable('system_llm_defaults', {
+  id: text('id').primaryKey(),
+  primaryProfileId: text('primary_profile_id').notNull(),
+  omProfileId: text('om_profile_id').notNull(),
+  hiringRhProfileId: text('hiring_rh_profile_id').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type SystemLlmDefaults = typeof systemLlmDefaults.$inferSelect;
+export type NewSystemLlmDefaults = typeof systemLlmDefaults.$inferInsert;
 
 /**
  * Tabela: agent_providers

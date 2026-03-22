@@ -9,6 +9,7 @@ It exists for:
 - runtime visibility
 - agent maintenance
 - system integration management
+- system LLM profile management
 - agent hiring and termination
 - agent function reassignment
 - agent runtime config updates
@@ -45,7 +46,7 @@ Current route surface:
 - `/finance`
   - company cash operations and payable maintenance
 - `/system`
-  - system integrations
+  - system integrations and LLM defaults
 - `/roles`
   - role tool grants
 
@@ -111,6 +112,11 @@ Shows and manages:
 - global Migadu integration config
 - global Coolify integration config
 - global GitHub integration config
+- reusable LLM profiles
+- system hiring defaults for:
+  - primary agent model
+  - OM model
+  - hiring RH model
 - enabled/disabled state per integration
 - last update timestamp
 
@@ -120,6 +126,14 @@ For Coolify:
 - when omitted, Forge reads `wildcard_domain` from the Coolify server API and uses that to build deterministic application domains from the chosen slug
 
 These integration settings are persisted in the Forge application database and encrypted at rest.
+
+LLM profiles are also persisted in the Forge application database.
+
+They are used to:
+
+- define reusable `provider + model` combinations
+- choose which model Forge uses by default when hiring a new agent
+- choose which model the internal hiring RH agent uses to generate instructions
 
 ### Finance
 
@@ -199,6 +213,7 @@ Read endpoints:
 - `GET /admin/functions`
 - `GET /admin/roles`
 - `GET /admin/system/integrations`
+- `GET /admin/system/llm`
 
 Mutation endpoints:
 
@@ -222,6 +237,9 @@ Mutation endpoints:
 - `POST /admin/role-tool-permission/remove`
 - `POST /admin/system/integration/upsert`
 - `POST /admin/system/integration/delete`
+- `POST /admin/system/llm/profile/upsert`
+- `POST /admin/system/llm/profile/delete`
+- `POST /admin/system/llm/defaults/update`
 
 ## API base resolution
 
