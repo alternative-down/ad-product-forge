@@ -63,15 +63,11 @@ export type AgentListItem = {
   functionName: string | null;
   modelProfile: {
     profileId: string;
-    label: string;
-    providerType: string;
-    modelId: string;
+    modelKey: string;
   } | null;
   omModelProfile: {
     profileId: string;
-    label: string;
-    providerType: string;
-    modelId: string;
+    modelKey: string;
   } | null;
   loaded: boolean;
   runner: {
@@ -146,6 +142,7 @@ export type AgentDetail = {
   heartbeat: AgentSchedule | null;
   recentExecutionSteps: Array<{
     stepId: string;
+    llmProfileId: string;
     kind: string;
     modelKey: string;
     inputTokens: number;
@@ -271,13 +268,9 @@ export type SystemIntegration =
 
 export type LlmProfile = {
   profileId: string;
-  slug: string;
-  label: string;
-  providerType: 'openai-codex' | 'claude-max' | 'minimax';
-  modelId: string;
   modelKey: string;
-  apiKey: string | null;
-  hasApiKey: boolean;
+  baseUrl: string | null;
+  apiKey: string;
   contractCostMultiplier: number;
   isEnabled: boolean;
   createdAt: number;
@@ -295,11 +288,6 @@ export type SystemLlmDefaults = {
 export type SystemLlmResponse = {
   defaults: SystemLlmDefaults;
   profiles: LlmProfile[];
-  supportedProviders: Array<{
-    providerType: 'openai-codex' | 'claude-max' | 'minimax';
-    label: string;
-    modelIds: string[];
-  }>;
 };
 
 export type SystemOauthState = {
@@ -377,11 +365,9 @@ export type UpsertSystemIntegrationInput =
 
 export type UpsertLlmProfileInput = {
   profileId?: string;
-  slug: string;
-  label: string;
-  providerType: 'openai-codex' | 'claude-max' | 'minimax';
-  modelId: string;
-  apiKey?: string | null;
+  modelKey: string;
+  baseUrl?: string | null;
+  apiKey: string;
   contractCostMultiplier: number;
   isEnabled: boolean;
 };

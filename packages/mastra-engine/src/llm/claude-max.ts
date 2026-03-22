@@ -4,6 +4,6 @@ import { OAUTH_GATEWAY_ID } from './oauth-gateway';
 export { CLAUDE_MAX_MODELS };
 export type { ClaudeMaxModelId };
 
-export function claudeMaxProvider(modelId: ClaudeMaxModelId) {
-  return `${OAUTH_GATEWAY_ID}/claude-max/${modelId}`;
+export function claudeCodeProvider(modelId: ClaudeMaxModelId) {
+  return `${OAUTH_GATEWAY_ID}/claude-code/${modelId}`;
 }

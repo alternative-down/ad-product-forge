@@ -1668,9 +1668,7 @@ function toPrettyJson(value: unknown) {
 function formatAgentProfile(
   profile:
     | {
-        label: string;
-        providerType: string;
-        modelId: string;
+        modelKey: string;
       }
     | null
     | undefined,
@@ -1679,7 +1677,7 @@ function formatAgentProfile(
     return 'No model profile';
   }
 
-  return `${profile.label} (${profile.providerType}/${profile.modelId})`;
+  return profile.modelKey;
 }
 
 function formatDateTimeText(value?: string | null) {

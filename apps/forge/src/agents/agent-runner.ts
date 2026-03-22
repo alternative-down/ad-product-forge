@@ -294,6 +294,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await store.recordAgentStep({
       agentId: runtime.id,
       contractId,
+      llmProfileId: runtime.modelProfileId,
       modelKey: runtime.pricingModelKey,
       kind: 'agent-step',
       inputTokens,
@@ -353,6 +354,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await store.recordAgentStep({
         agentId: runtime.id,
         contractId,
+        llmProfileId: runtime.omModelProfileId,
         modelKey: runtime.omPricingModelKey,
         kind: 'om',
         inputTokens,

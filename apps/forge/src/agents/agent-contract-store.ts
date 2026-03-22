@@ -89,9 +89,8 @@ export function createAgentContractStore(db: Database) {
     pricingModelKey: string;
     profileId: string;
   }) {
-    const pricingLookupKey = normalizePricingLookupKey(input.pricingModelKey);
     const modelPrice = await db.query.llmModelPrices.findFirst({
-      where: eq(llmModelPrices.modelKey, pricingLookupKey),
+      where: eq(llmModelPrices.modelKey, input.pricingModelKey),
     });
 
     const profile = await db.query.llmProfiles.findFirst({
@@ -111,6 +110,7 @@ export function createAgentContractStore(db: Database) {
   async function recordAgentStep(input: {
     agentId: string;
     contractId: string;
+    llmProfileId: string;
     modelKey: string;
     kind: 'agent-step' | 'om' | 'ltm';
     inputTokens: number;
@@ -126,6 +126,7 @@ export function createAgentContractStore(db: Database) {
       id: createId(),
       agentId: input.agentId,
       contractId: input.contractId,
+      llmProfileId: input.llmProfileId,
       modelKey: input.modelKey,
       kind: input.kind,
       inputTokens: input.inputTokens,
@@ -207,18 +208,4 @@ export function createAgentContractStore(db: Database) {
     recordAgentStep,
   };
 
-}
-
-function normalizePricingLookupKey(modelKey: string) {
-  const directMatch = modelKey.match(/^custom\/(claude-max|minimax)\/(.+)$/);
-
-  if (!directMatch) {
-    return modelKey;
-  }
-
-  if (directMatch[1] === 'claude-max') {
-    return `account-oauth/claude-max/${directMatch[2]}`;
-  }
-
-  return `token-plan/minimax/${directMatch[2]}`;
 }

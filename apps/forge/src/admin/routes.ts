@@ -150,15 +150,11 @@ const deleteSystemIntegrationSchema = z.object({
   providerType: systemIntegrationProviderSchema,
 });
 
-const llmProviderTypeSchema = z.enum(['openai-codex', 'claude-max', 'minimax']);
-
 const upsertLlmProfileSchema = z.object({
   profileId: z.string().min(1).optional(),
-  slug: z.string().min(1),
-  label: z.string().min(1),
-  providerType: llmProviderTypeSchema,
-  modelId: z.string().min(1),
-  apiKey: z.string().min(1).optional().nullable(),
+  modelKey: z.string().min(1),
+  baseUrl: z.string().url().optional().nullable(),
+  apiKey: z.string().min(1),
   contractCostMultiplier: z.coerce.number().positive().default(1),
   isEnabled: z.boolean().default(true),
 });

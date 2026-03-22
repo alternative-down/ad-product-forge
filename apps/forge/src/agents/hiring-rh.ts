@@ -18,7 +18,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
 }) {
   const llmSettings = createLlmSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
-  const hiringRhModelId = defaults.hiringRhProfile.modelId;
+  const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const hiringRhPricingModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
@@ -28,7 +28,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   const hiringPrompt = buildHiringPrompt(input);
 
   if (!modelPrice) {
-    throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelId}`);
+    throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelKey}`);
   }
 
   const estimatedInputTokens = estimateTextTokens(hiringPrompt);

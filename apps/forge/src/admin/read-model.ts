@@ -108,17 +108,13 @@ export function createAdminReadModel(input: {
         modelProfile: modelProfile
           ? {
               profileId: modelProfile.profileId,
-              label: modelProfile.label,
-              providerType: modelProfile.providerType,
-              modelId: modelProfile.modelId,
+              modelKey: modelProfile.modelKey,
             }
           : null,
         omModelProfile: omModelProfile
           ? {
               profileId: omModelProfile.profileId,
-              label: omModelProfile.label,
-              providerType: omModelProfile.providerType,
-              modelId: omModelProfile.modelId,
+              modelKey: omModelProfile.modelKey,
             }
           : null,
         loaded: Boolean(loadedAgent),
@@ -193,17 +189,13 @@ export function createAdminReadModel(input: {
       modelProfile: modelProfile
         ? {
             profileId: modelProfile.profileId,
-            label: modelProfile.label,
-            providerType: modelProfile.providerType,
-            modelId: modelProfile.modelId,
+            modelKey: modelProfile.modelKey,
           }
         : null,
       omModelProfile: omModelProfile
         ? {
             profileId: omModelProfile.profileId,
-            label: omModelProfile.label,
-            providerType: omModelProfile.providerType,
-            modelId: omModelProfile.modelId,
+            modelKey: omModelProfile.modelKey,
           }
         : null,
       function: agentFunction
@@ -242,6 +234,7 @@ export function createAdminReadModel(input: {
       heartbeat: heartbeat ? toScheduleSummary(heartbeat) : null,
       recentExecutionSteps: recentSteps.map((step) => ({
         stepId: step.id,
+        llmProfileId: step.llmProfileId,
         kind: step.kind,
         modelKey: step.modelKey,
         inputTokens: step.inputTokens,
@@ -371,7 +364,6 @@ export function createAdminReadModel(input: {
     return {
       defaults,
       profiles,
-      supportedProviders: llmSettings.listSupportedProviders(),
     };
   }
 
