@@ -1,68 +1,52 @@
 export const forgeCustomToolIds = [
-  'get_company_cash_balance',
-  'list_company_cash_movements',
-  'get_company_cash_summary',
-  'list_active_internal_agent_contracts',
-  'get_active_internal_agent_contract',
+  'list_company_cash',
+  'get_company_cash',
+  'list_internal_agent_contracts',
   'list_agent_notifications',
-  'get_agent_notification',
   'mark_agent_notification_read',
   'get_github_git_credentials',
   'list_github_repositories',
-  'create_github_repository',
   'get_github_repository',
+  'manage_github_repository',
   'list_github_pull_requests',
-  'create_github_pull_request',
+  'get_github_pull_request',
+  'manage_github_pull_request',
   'list_github_issues',
   'get_github_issue',
-  'create_github_issue',
-  'update_github_issue',
-  'close_github_issue',
-  'reopen_github_issue',
-  'list_github_issue_comments',
-  'create_github_issue_comment',
+  'manage_github_issue',
+  'toggle_github_issue',
+  'manage_github_issue_comment',
   'list_github_labels',
-  'add_github_issue_labels',
-  'remove_github_issue_labels',
+  'manage_github_label',
   'list_github_milestones',
+  'manage_github_milestone',
   'list_coolify_github_apps',
   'list_coolify_github_app_repositories',
   'list_coolify_github_app_repository_branches',
   'list_coolify_applications',
-  'create_coolify_application',
   'get_coolify_application',
-  'update_coolify_application',
-  'start_coolify_application',
-  'stop_coolify_application',
-  'restart_coolify_application',
-  'delete_coolify_application',
+  'manage_coolify_application',
+  'toggle_coolify_application',
   'list_coolify_application_deployments',
   'get_coolify_deployment_logs',
   'get_coolify_application_logs',
-  'list_coolify_application_envs',
-  'set_coolify_application_env',
-  'delete_coolify_application_env',
-  'create_agent_schedule',
+  'get_coolify_application_envs',
+  'manage_coolify_application_env',
   'list_agent_schedules',
-  'update_agent_schedule',
-  'delete_agent_schedule',
+  'manage_agent_schedule',
+  'toggle_agent_schedule',
   'list_agent_functions',
-  'create_agent_function',
-  'update_agent_function',
+  'manage_agent_function',
   'list_agent_roles',
-  'create_agent_role',
-  'update_agent_role',
+  'manage_agent_role',
   'assign_role_to_function',
   'change_agent_function',
   'change_own_function',
   'list_role_tool_permissions',
-  'add_role_tool_permission',
-  'remove_role_tool_permission',
+  'manage_role_tool_permissions',
   'list_role_workflow_permissions',
-  'add_role_workflow_permission',
-  'remove_role_workflow_permission',
-  'list_available_custom_tools',
-  'list_available_workflows',
+  'manage_role_workflow_permissions',
+  'list_available_capabilities',
 ] as const;
 
 export const forgeWorkflowIds = [
@@ -72,3 +56,116 @@ export const forgeWorkflowIds = [
 
 export type ForgeCustomToolId = typeof forgeCustomToolIds[number];
 export type ForgeWorkflowId = typeof forgeWorkflowIds[number];
+
+export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, readonly string[]>> = {
+  list_company_cash: [
+    'list_company_cash_movements',
+    'get_company_cash_summary',
+  ],
+  get_company_cash: [
+    'get_company_cash_balance',
+  ],
+  list_internal_agent_contracts: [
+    'list_active_internal_agent_contracts',
+    'get_active_internal_agent_contract',
+  ],
+  list_agent_notifications: [
+    'get_agent_notification',
+  ],
+  manage_github_repository: [
+    'create_github_repository',
+  ],
+  manage_github_pull_request: [
+    'create_github_pull_request',
+  ],
+  manage_github_issue: [
+    'create_github_issue',
+    'update_github_issue',
+    'add_github_issue_labels',
+    'remove_github_issue_labels',
+  ],
+  toggle_github_issue: [
+    'close_github_issue',
+    'reopen_github_issue',
+  ],
+  manage_github_issue_comment: [
+    'list_github_issue_comments',
+    'create_github_issue_comment',
+  ],
+  manage_coolify_application: [
+    'create_coolify_application',
+    'update_coolify_application',
+    'delete_coolify_application',
+    'restart_coolify_application',
+  ],
+  toggle_coolify_application: [
+    'start_coolify_application',
+    'stop_coolify_application',
+  ],
+  get_coolify_application_envs: [
+    'list_coolify_application_envs',
+  ],
+  manage_coolify_application_env: [
+    'set_coolify_application_env',
+    'delete_coolify_application_env',
+  ],
+  manage_agent_schedule: [
+    'create_agent_schedule',
+    'update_agent_schedule',
+    'delete_agent_schedule',
+  ],
+  toggle_agent_schedule: [
+    'update_agent_schedule',
+  ],
+  manage_agent_function: [
+    'create_agent_function',
+    'update_agent_function',
+  ],
+  manage_agent_role: [
+    'create_agent_role',
+    'update_agent_role',
+  ],
+  manage_role_tool_permissions: [
+    'add_role_tool_permission',
+    'remove_role_tool_permission',
+  ],
+  manage_role_workflow_permissions: [
+    'add_role_workflow_permission',
+    'remove_role_workflow_permission',
+  ],
+  list_available_capabilities: [
+    'list_available_custom_tools',
+    'list_available_workflows',
+  ],
+};
+
+export function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolId: ForgeCustomToolId) {
+  if (!allowedToolIds) {
+    return true;
+  }
+
+  if (allowedToolIds.has(toolId)) {
+    return true;
+  }
+
+  const aliases = legacyToolPermissionAliases[toolId] ?? [];
+  return aliases.some((alias) => allowedToolIds.has(alias));
+}
+
+export function normalizeToolPermissionIds(toolIds: readonly string[]) {
+  const normalized = new Set<string>();
+
+  for (const toolId of toolIds) {
+    const canonical = forgeCustomToolIds.find((candidate) => {
+      if (candidate === toolId) {
+        return true;
+      }
+
+      return (legacyToolPermissionAliases[candidate] ?? []).includes(toolId);
+    });
+
+    normalized.add(canonical ?? toolId);
+  }
+
+  return [...normalized].sort((left, right) => left.localeCompare(right));
+}

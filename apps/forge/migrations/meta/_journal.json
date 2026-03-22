@@ -99,6 +99,13 @@
       "when": 1774272000003,
       "tag": "0013_default_llm_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1774272000004,
+      "tag": "0014_role_tool_permission_cleanup",
+      "breakpoints": true
     }
   ]
 }

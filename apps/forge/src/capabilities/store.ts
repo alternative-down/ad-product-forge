@@ -10,6 +10,7 @@ import {
   roleToolPermissions,
   roleWorkflowPermissions,
 } from '../database/schema';
+import { normalizeToolPermissionIds } from './catalog';
 
 type CapabilitySet = {
   toolIds: string[];
@@ -95,6 +96,15 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
+  async function deleteFunction(functionId: string) {
+    await db.delete(agentFunctions).where(eq(agentFunctions.id, functionId));
+
+    return {
+      functionId,
+      success: true,
+    };
+  }
+
   async function listRoles() {
     const rows = await db.query.agentRoles.findMany({
       orderBy: [asc(agentRoles.name)],
@@ -153,6 +163,15 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
+  async function deleteRole(roleId: string) {
+    await db.delete(agentRoles).where(eq(agentRoles.id, roleId));
+
+    return {
+      roleId,
+      success: true,
+    };
+  }
+
   async function assignRoleToFunction(input: { functionId: string; roleId: string }) {
     const now = Date.now();
 
@@ -183,7 +202,7 @@ export function createCapabilityStore(db: Database) {
       orderBy: [asc(roleToolPermissions.toolId)],
     });
 
-    return rows.map((row) => row.toolId);
+    return normalizeToolPermissionIds(rows.map((row) => row.toolId));
   }
 
   async function addRoleToolPermission(input: { roleId: string; toolId: string }) {
@@ -291,9 +310,11 @@ export function createCapabilityStore(db: Database) {
     createFunction,
     getOrCreateFunction,
     updateFunction,
+    deleteFunction,
     listRoles,
     createRole,
     updateRole,
+    deleteRole,
     assignRoleToFunction,
     listRoleToolPermissions,
     addRoleToolPermission,

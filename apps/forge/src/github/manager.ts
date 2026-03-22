@@ -182,6 +182,53 @@ export function createGitHubAppManager(config: {
     };
   }
 
+  async function updateRepository(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    name?: string;
+    description?: string;
+    private?: boolean;
+    defaultBranch?: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('PATCH /repos/{owner}/{repo}', {
+      owner,
+      repo: input.repositoryName,
+      name: input.name,
+      description: input.description,
+      private: input.private,
+      default_branch: input.defaultBranch,
+    });
+
+    return {
+      id: response.data.id,
+      name: response.data.name,
+      fullName: response.data.full_name,
+      private: response.data.private,
+      defaultBranch: response.data.default_branch,
+      url: response.data.html_url,
+      cloneUrl: response.data.clone_url,
+      sshUrl: response.data.ssh_url,
+    };
+  }
+
+  async function deleteRepository(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    await octokit.request('DELETE /repos/{owner}/{repo}', {
+      owner,
+      repo: input.repositoryName,
+    });
+
+    return {
+      success: true,
+    };
+  }
+
   async function getRepository(agentId: string, input: {
     owner?: string;
     repositoryName: string;
@@ -255,6 +302,70 @@ export function createGitHubAppManager(config: {
       url: response.data.html_url,
       head: response.data.head.ref,
       base: response.data.base.ref,
+    };
+  }
+
+  async function getPullRequest(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    pullRequestNumber: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+      owner,
+      repo: input.repositoryName,
+      pull_number: input.pullRequestNumber,
+    });
+
+    return {
+      number: response.data.number,
+      title: response.data.title,
+      state: response.data.state,
+      url: response.data.html_url,
+      head: response.data.head.ref,
+      base: response.data.base.ref,
+      body: response.data.body ?? null,
+      merged: response.data.merged,
+      draft: response.data.draft ?? false,
+      createdAt: response.data.created_at,
+      updatedAt: response.data.updated_at,
+    };
+  }
+
+  async function updatePullRequest(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    pullRequestNumber: number;
+    title?: string;
+    body?: string;
+    base?: string;
+    state?: 'open' | 'closed';
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
+      owner,
+      repo: input.repositoryName,
+      pull_number: input.pullRequestNumber,
+      title: input.title,
+      body: input.body,
+      base: input.base,
+      state: input.state,
+    });
+
+    return {
+      number: response.data.number,
+      title: response.data.title,
+      state: response.data.state,
+      url: response.data.html_url,
+      head: response.data.head.ref,
+      base: response.data.base.ref,
+      body: response.data.body ?? null,
+      merged: response.data.merged,
+      draft: response.data.draft ?? false,
+      createdAt: response.data.created_at,
+      updatedAt: response.data.updated_at,
     };
   }
 
@@ -428,6 +539,49 @@ export function createGitHubAppManager(config: {
     };
   }
 
+  async function updateIssueComment(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    commentId: number;
+    body: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+      owner,
+      repo: input.repositoryName,
+      comment_id: input.commentId,
+      body: input.body,
+    });
+
+    return {
+      id: response.data.id,
+      url: response.data.html_url,
+      body: response.data.body ?? '',
+      author: response.data.user?.login ?? null,
+      createdAt: response.data.created_at,
+      updatedAt: response.data.updated_at,
+    };
+  }
+
+  async function deleteIssueComment(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    commentId: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    await octokit.request('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+      owner,
+      repo: input.repositoryName,
+      comment_id: input.commentId,
+    });
+
+    return {
+      success: true,
+    };
+  }
+
   async function listLabels(agentId: string, input: {
     owner?: string;
     repositoryName: string;
@@ -447,6 +601,76 @@ export function createGitHubAppManager(config: {
       color: label.color,
       default: label.default,
     }));
+  }
+
+  async function createLabel(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    labelName: string;
+    color: string;
+    description?: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('POST /repos/{owner}/{repo}/labels', {
+      owner,
+      repo: input.repositoryName,
+      name: input.labelName,
+      color: input.color,
+      description: input.description,
+    });
+
+    return {
+      name: response.data.name,
+      description: response.data.description ?? null,
+      color: response.data.color,
+      default: response.data.default,
+    };
+  }
+
+  async function updateLabel(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    labelName: string;
+    newLabelName?: string;
+    color?: string;
+    description?: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('PATCH /repos/{owner}/{repo}/labels/{name}', {
+      owner,
+      repo: input.repositoryName,
+      name: input.labelName,
+      new_name: input.newLabelName,
+      color: input.color,
+      description: input.description,
+    });
+
+    return {
+      name: response.data.name,
+      description: response.data.description ?? null,
+      color: response.data.color,
+      default: response.data.default,
+    };
+  }
+
+  async function deleteLabel(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    labelName: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    await octokit.request('DELETE /repos/{owner}/{repo}/labels/{name}', {
+      owner,
+      repo: input.repositoryName,
+      name: input.labelName,
+    });
+
+    return {
+      success: true,
+    };
   }
 
   async function addIssueLabels(agentId: string, input: {
@@ -541,6 +765,86 @@ export function createGitHubAppManager(config: {
     }));
   }
 
+  async function createMilestone(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    title: string;
+    description?: string;
+    state?: 'open' | 'closed';
+    dueOn?: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('POST /repos/{owner}/{repo}/milestones', {
+      owner,
+      repo: input.repositoryName,
+      title: input.title,
+      description: input.description,
+      state: input.state,
+      due_on: input.dueOn ?? undefined,
+    });
+
+    return {
+      number: response.data.number,
+      title: response.data.title,
+      description: response.data.description ?? null,
+      state: response.data.state,
+      dueOn: response.data.due_on,
+      openIssues: response.data.open_issues,
+      closedIssues: response.data.closed_issues,
+    };
+  }
+
+  async function updateMilestone(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    milestoneNumber: number;
+    title?: string;
+    description?: string;
+    state?: 'open' | 'closed';
+    dueOn?: string | null;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('PATCH /repos/{owner}/{repo}/milestones/{milestone_number}', {
+      owner,
+      repo: input.repositoryName,
+      milestone_number: input.milestoneNumber,
+      title: input.title,
+      description: input.description,
+      state: input.state,
+      due_on: input.dueOn ?? undefined,
+    });
+
+    return {
+      number: response.data.number,
+      title: response.data.title,
+      description: response.data.description ?? null,
+      state: response.data.state,
+      dueOn: response.data.due_on,
+      openIssues: response.data.open_issues,
+      closedIssues: response.data.closed_issues,
+    };
+  }
+
+  async function deleteMilestone(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    milestoneNumber: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    await octokit.request('DELETE /repos/{owner}/{repo}/milestones/{milestone_number}', {
+      owner,
+      repo: input.repositoryName,
+      milestone_number: input.milestoneNumber,
+    });
+
+    return {
+      success: true,
+    };
+  }
+
   return {
     createAgentApp,
     loadAllAgents,
@@ -549,9 +853,13 @@ export function createGitHubAppManager(config: {
     getGitCredentials,
     listRepositories,
     createRepository,
+    updateRepository,
+    deleteRepository,
     getRepository,
     listPullRequests,
     createPullRequest,
+    getPullRequest,
+    updatePullRequest,
     listIssues,
     getIssue,
     createIssue,
@@ -560,10 +868,18 @@ export function createGitHubAppManager(config: {
     reopenIssue,
     listIssueComments,
     createIssueComment,
+    updateIssueComment,
+    deleteIssueComment,
     listLabels,
+    createLabel,
+    updateLabel,
+    deleteLabel,
     addIssueLabels,
     removeIssueLabels,
     listMilestones,
+    createMilestone,
+    updateMilestone,
+    deleteMilestone,
   };
 
   function buildProvisioning(agentId: string, credentials: GitHubAppCredentials): GitHubAppProvisioning {

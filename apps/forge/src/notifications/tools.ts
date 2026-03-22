@@ -2,17 +2,14 @@ import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
+import { hasToolPermission } from '../capabilities/catalog';
 import { createAgentNotificationStore } from './store';
-
-function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: string) {
-  return !allowedToolIds || allowedToolIds.has(toolId);
-}
 
 export function createAgentNotificationTools(db: Database, agentId: string, allowedToolIds?: Set<string> | null) {
   const notifications = createAgentNotificationStore(db);
   const tools: Record<string, unknown> = {};
 
-  if (canCreateTool(allowedToolIds, 'list_agent_notifications')) {
+  if (hasToolPermission(allowedToolIds, 'list_agent_notifications')) {
     tools.list_agent_notifications = createTool({
       id: 'list_agent_notifications',
       description: 'List the latest notifications for this agent.',
@@ -28,18 +25,7 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'get_agent_notification')) {
-    tools.get_agent_notification = createTool({
-      id: 'get_agent_notification',
-      description: 'Get one notification for this agent by notificationId.',
-      inputSchema: z.object({
-        notificationId: z.string().min(1),
-      }),
-      execute: async (input) => notifications.getNotification(agentId, input.notificationId),
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'mark_agent_notification_read')) {
+  if (hasToolPermission(allowedToolIds, 'mark_agent_notification_read')) {
     tools.mark_agent_notification_read = createTool({
       id: 'mark_agent_notification_read',
       description: 'Mark one notification for this agent as read.',

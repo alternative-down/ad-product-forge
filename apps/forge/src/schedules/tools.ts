@@ -1,20 +1,12 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
+import { hasToolPermission } from '../capabilities/catalog';
 import type { createAgentScheduleManager } from './manager';
 
-const createScheduleInputSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  scheduleType: z.enum(['cron', 'date']),
-  cronExpression: z.string().min(1).optional(),
-  scheduledDate: z.string().min(1).optional(),
-  timezone: z.string().min(1).default('UTC'),
-  content: z.string().min(1),
-});
-
-const updateScheduleInputSchema = z.object({
-  scheduleId: z.string().min(1),
+const manageScheduleInputSchema = z.object({
+  action: z.enum(['create', 'update', 'delete']),
+  scheduleId: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
   scheduleType: z.enum(['cron', 'date']).optional(),
@@ -22,18 +14,36 @@ const updateScheduleInputSchema = z.object({
   scheduledDate: z.string().min(1).optional().nullable(),
   timezone: z.string().min(1).optional(),
   content: z.string().min(1).optional(),
-  isActive: z.boolean().optional(),
-}).refine((input) => Object.keys(input).length > 1, {
-  message: 'At least one field besides scheduleId must be provided',
+}).superRefine((input, ctx) => {
+  if (input.action === 'create') {
+    if (!input.name) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'name is required when action is create' });
+    }
+
+    if (!input.scheduleType) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduleType'], message: 'scheduleType is required when action is create' });
+    }
+
+    if (!input.content) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['content'], message: 'content is required when action is create' });
+    }
+  }
+
+  if (input.action === 'update' || input.action === 'delete') {
+    if (!input.scheduleId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduleId'], message: 'scheduleId is required when action is not create' });
+    }
+  }
+
+  if (input.action === 'update' && Object.keys(input).length <= 2) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides action and scheduleId must be provided' });
+  }
 });
 
-const scheduleIdInputSchema = z.object({
+const toggleScheduleInputSchema = z.object({
   scheduleId: z.string().min(1),
+  isActive: z.boolean(),
 });
-
-function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: string) {
-  return !allowedToolIds || allowedToolIds.has(toolId);
-}
 
 export function createAgentScheduleTools(
   agentId: string,
@@ -42,16 +52,7 @@ export function createAgentScheduleTools(
 ) {
   const tools: Record<string, unknown> = {};
 
-  if (canCreateTool(allowedToolIds, 'create_agent_schedule')) {
-    tools.create_agent_schedule = createTool({
-      id: 'create_agent_schedule',
-      description: 'Create a scheduled wake for this agent. The schedule will later create a notification and wake this agent with the provided content.',
-      inputSchema: createScheduleInputSchema,
-      execute: async (input) => schedules.createSchedule(agentId, input),
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'list_agent_schedules')) {
+  if (hasToolPermission(allowedToolIds, 'list_agent_schedules')) {
     tools.list_agent_schedules = createTool({
       id: 'list_agent_schedules',
       description: 'List this agent scheduled wakes.',
@@ -60,21 +61,49 @@ export function createAgentScheduleTools(
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'update_agent_schedule')) {
-    tools.update_agent_schedule = createTool({
-      id: 'update_agent_schedule',
-      description: 'Partially update one scheduled wake for this agent.',
-      inputSchema: updateScheduleInputSchema,
-      execute: async ({ scheduleId, ...input }) => schedules.updateSchedule(agentId, scheduleId, input),
+  if (hasToolPermission(allowedToolIds, 'manage_agent_schedule')) {
+    tools.manage_agent_schedule = createTool({
+      id: 'manage_agent_schedule',
+      description: 'Create, update, or delete one scheduled wake for this agent.',
+      inputSchema: manageScheduleInputSchema,
+      execute: async (input) => {
+        if (input.action === 'create') {
+          return schedules.createSchedule(agentId, {
+            name: input.name!,
+            description: input.description ?? undefined,
+            scheduleType: input.scheduleType!,
+            cronExpression: input.cronExpression ?? undefined,
+            scheduledDate: input.scheduledDate ?? undefined,
+            timezone: input.timezone ?? 'UTC',
+            content: input.content!,
+          });
+        }
+
+        if (input.action === 'delete') {
+          return schedules.deleteSchedule(agentId, input.scheduleId!);
+        }
+
+        return schedules.updateSchedule(agentId, input.scheduleId!, {
+          name: input.name,
+          description: input.description,
+          scheduleType: input.scheduleType,
+          cronExpression: input.cronExpression,
+          scheduledDate: input.scheduledDate,
+          timezone: input.timezone,
+          content: input.content,
+        });
+      },
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'delete_agent_schedule')) {
-    tools.delete_agent_schedule = createTool({
-      id: 'delete_agent_schedule',
-      description: 'Delete one scheduled wake for this agent.',
-      inputSchema: scheduleIdInputSchema,
-      execute: async (input) => schedules.deleteSchedule(agentId, input.scheduleId),
+  if (hasToolPermission(allowedToolIds, 'toggle_agent_schedule')) {
+    tools.toggle_agent_schedule = createTool({
+      id: 'toggle_agent_schedule',
+      description: 'Activate or pause one scheduled wake for this agent.',
+      inputSchema: toggleScheduleInputSchema,
+      execute: async (input) => schedules.updateSchedule(agentId, input.scheduleId, {
+        isActive: input.isActive,
+      }),
     });
   }
 

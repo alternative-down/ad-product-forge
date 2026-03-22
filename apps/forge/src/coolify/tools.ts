@@ -1,20 +1,17 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
+import { hasToolPermission } from '../capabilities/catalog';
 import type { CoolifyManager } from './manager';
 
 const coolifyApplicationSlugSchema = z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/, {
   message: 'slug must be lowercase kebab-case and valid for subdomain use',
 });
 
-function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: string) {
-  return !allowedToolIds || allowedToolIds.has(toolId);
-}
-
 export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set<string> | null) {
   const tools: Record<string, unknown> = {};
 
-  if (canCreateTool(allowedToolIds, 'list_coolify_github_apps')) {
+  if (hasToolPermission(allowedToolIds, 'list_coolify_github_apps')) {
     tools.list_coolify_github_apps = createTool({
       id: 'list_coolify_github_apps',
       description: 'List the GitHub Apps currently registered in Coolify.',
@@ -23,7 +20,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'list_coolify_github_app_repositories')) {
+  if (hasToolPermission(allowedToolIds, 'list_coolify_github_app_repositories')) {
     tools.list_coolify_github_app_repositories = createTool({
       id: 'list_coolify_github_app_repositories',
       description: 'List repositories accessible to one Coolify GitHub App.',
@@ -34,7 +31,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'list_coolify_github_app_repository_branches')) {
+  if (hasToolPermission(allowedToolIds, 'list_coolify_github_app_repository_branches')) {
     tools.list_coolify_github_app_repository_branches = createTool({
       id: 'list_coolify_github_app_repository_branches',
       description: 'List branches for one repository accessible to a Coolify GitHub App.',
@@ -46,7 +43,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'list_coolify_applications')) {
+  if (hasToolPermission(allowedToolIds, 'list_coolify_applications')) {
     tools.list_coolify_applications = createTool({
       id: 'list_coolify_applications',
       description: 'List applications currently managed by Coolify.',
@@ -55,27 +52,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'create_coolify_application')) {
-    tools.create_coolify_application = createTool({
-      id: 'create_coolify_application',
-      description: 'Create a Coolify application from a repository available through a Coolify GitHub App using Forge defaults.',
-      inputSchema: z.object({
-        githubAppUuid: z.string().min(1),
-        repositoryOwner: z.string().min(1),
-        repositoryName: z.string().min(1),
-        branch: z.string().min(1),
-        name: z.string().min(1),
-        slug: coolifyApplicationSlugSchema,
-        port: z.number().int().positive(),
-        buildCommand: z.string().optional(),
-        startCommand: z.string().optional(),
-        installCommand: z.string().optional(),
-      }),
-      execute: async (input) => coolify.createApplication(input),
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'get_coolify_application')) {
+  if (hasToolPermission(allowedToolIds, 'get_coolify_application')) {
     tools.get_coolify_application = createTool({
       id: 'get_coolify_application',
       description: 'Get one Coolify application by applicationUuid.',
@@ -86,72 +63,91 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'update_coolify_application')) {
-    tools.update_coolify_application = createTool({
-      id: 'update_coolify_application',
-      description: 'Partially update one Coolify application configuration.',
+  if (hasToolPermission(allowedToolIds, 'manage_coolify_application')) {
+    tools.manage_coolify_application = createTool({
+      id: 'manage_coolify_application',
+      description: 'Create, update, delete, or restart one Coolify application.',
       inputSchema: z.object({
-        applicationUuid: z.string().min(1),
-        name: z.string().optional(),
-        description: z.string().optional(),
+        action: z.enum(['create', 'update', 'delete', 'restart']),
+        applicationUuid: z.string().min(1).optional(),
+        githubAppUuid: z.string().min(1).optional(),
+        repositoryOwner: z.string().min(1).optional(),
+        repositoryName: z.string().min(1).optional(),
+        branch: z.string().min(1).optional(),
+        name: z.string().min(1).optional(),
+        slug: coolifyApplicationSlugSchema.optional(),
         port: z.number().int().positive().optional(),
         buildCommand: z.string().optional(),
         startCommand: z.string().optional(),
         installCommand: z.string().optional(),
-        branch: z.string().optional(),
-        slug: coolifyApplicationSlugSchema.optional(),
-      }).refine((input) => Object.keys(input).length > 1, {
-        message: 'At least one field besides applicationUuid must be provided',
+        description: z.string().optional(),
+      }).superRefine((input, ctx) => {
+        if (input.action === 'create') {
+          for (const field of ['githubAppUuid', 'repositoryOwner', 'repositoryName', 'branch', 'name', 'slug', 'port'] as const) {
+            if (input[field] === undefined) {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `${field} is required when action is create` });
+            }
+          }
+        }
+
+        if (input.action !== 'create' && !input.applicationUuid) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['applicationUuid'], message: 'applicationUuid is required when action is not create' });
+        }
       }),
-      execute: async (input) => coolify.updateApplication(input),
+      execute: async (input) => {
+        if (input.action === 'create') {
+          return coolify.createApplication({
+            githubAppUuid: input.githubAppUuid!,
+            repositoryOwner: input.repositoryOwner!,
+            repositoryName: input.repositoryName!,
+            branch: input.branch!,
+            name: input.name!,
+            slug: input.slug!,
+            port: input.port!,
+            buildCommand: input.buildCommand,
+            startCommand: input.startCommand,
+            installCommand: input.installCommand,
+          });
+        }
+
+        if (input.action === 'delete') {
+          return coolify.deleteApplication(input.applicationUuid!);
+        }
+
+        if (input.action === 'restart') {
+          return coolify.restartApplication(input.applicationUuid!);
+        }
+
+        return coolify.updateApplication({
+          applicationUuid: input.applicationUuid!,
+          name: input.name,
+          description: input.description,
+          port: input.port,
+          buildCommand: input.buildCommand,
+          startCommand: input.startCommand,
+          installCommand: input.installCommand,
+          branch: input.branch,
+          slug: input.slug,
+        });
+      },
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'start_coolify_application')) {
-    tools.start_coolify_application = createTool({
-      id: 'start_coolify_application',
-      description: 'Start one Coolify application.',
+  if (hasToolPermission(allowedToolIds, 'toggle_coolify_application')) {
+    tools.toggle_coolify_application = createTool({
+      id: 'toggle_coolify_application',
+      description: 'Start or stop one Coolify application.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
+        state: z.enum(['running', 'stopped']),
       }),
-      execute: async (input) => coolify.startApplication(input.applicationUuid),
+      execute: async (input) => input.state === 'running'
+        ? coolify.startApplication(input.applicationUuid)
+        : coolify.stopApplication(input.applicationUuid),
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'stop_coolify_application')) {
-    tools.stop_coolify_application = createTool({
-      id: 'stop_coolify_application',
-      description: 'Stop one Coolify application.',
-      inputSchema: z.object({
-        applicationUuid: z.string().min(1),
-      }),
-      execute: async (input) => coolify.stopApplication(input.applicationUuid),
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'restart_coolify_application')) {
-    tools.restart_coolify_application = createTool({
-      id: 'restart_coolify_application',
-      description: 'Restart one Coolify application.',
-      inputSchema: z.object({
-        applicationUuid: z.string().min(1),
-      }),
-      execute: async (input) => coolify.restartApplication(input.applicationUuid),
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'delete_coolify_application')) {
-    tools.delete_coolify_application = createTool({
-      id: 'delete_coolify_application',
-      description: 'Delete one Coolify application.',
-      inputSchema: z.object({
-        applicationUuid: z.string().min(1),
-      }),
-      execute: async (input) => coolify.deleteApplication(input.applicationUuid),
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'list_coolify_application_deployments')) {
+  if (hasToolPermission(allowedToolIds, 'list_coolify_application_deployments')) {
     tools.list_coolify_application_deployments = createTool({
       id: 'list_coolify_application_deployments',
       description: 'List recent deployments for one Coolify application.',
@@ -163,7 +159,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'get_coolify_deployment_logs')) {
+  if (hasToolPermission(allowedToolIds, 'get_coolify_deployment_logs')) {
     tools.get_coolify_deployment_logs = createTool({
       id: 'get_coolify_deployment_logs',
       description: 'Get deployment logs for one Coolify application. If deploymentUuid is omitted, the latest deployment is used.',
@@ -175,7 +171,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'get_coolify_application_logs')) {
+  if (hasToolPermission(allowedToolIds, 'get_coolify_application_logs')) {
     tools.get_coolify_application_logs = createTool({
       id: 'get_coolify_application_logs',
       description: 'Get runtime logs for one Coolify application.',
@@ -188,10 +184,10 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'list_coolify_application_envs')) {
-    tools.list_coolify_application_envs = createTool({
-      id: 'list_coolify_application_envs',
-      description: 'List environment variables for one Coolify application.',
+  if (hasToolPermission(allowedToolIds, 'get_coolify_application_envs')) {
+    tools.get_coolify_application_envs = createTool({
+      id: 'get_coolify_application_envs',
+      description: 'Get environment variables for one Coolify application.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
       }),
@@ -199,33 +195,44 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'set_coolify_application_env')) {
-    tools.set_coolify_application_env = createTool({
-      id: 'set_coolify_application_env',
-      description: 'Create or update one environment variable for one Coolify application.',
+  if (hasToolPermission(allowedToolIds, 'manage_coolify_application_env')) {
+    tools.manage_coolify_application_env = createTool({
+      id: 'manage_coolify_application_env',
+      description: 'Create, update, or delete one environment variable for one Coolify application.',
       inputSchema: z.object({
+        action: z.enum(['create', 'update', 'delete']),
         applicationUuid: z.string().min(1),
         key: z.string().min(1),
-        value: z.string(),
+        value: z.string().optional(),
         isBuildTime: z.boolean().optional(),
         isPreview: z.boolean().optional(),
         isLiteral: z.boolean().optional(),
         isMultiline: z.boolean().optional(),
         isShownOnce: z.boolean().optional(),
+      }).superRefine((input, ctx) => {
+        if (input.action !== 'delete' && input.value === undefined) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['value'], message: 'value is required when action is not delete' });
+        }
       }),
-      execute: async (input) => coolify.setApplicationEnv(input),
-    });
-  }
+      execute: async (input) => {
+        if (input.action === 'delete') {
+          return coolify.deleteApplicationEnv({
+            applicationUuid: input.applicationUuid,
+            key: input.key,
+          });
+        }
 
-  if (canCreateTool(allowedToolIds, 'delete_coolify_application_env')) {
-    tools.delete_coolify_application_env = createTool({
-      id: 'delete_coolify_application_env',
-      description: 'Delete one environment variable from one Coolify application by key.',
-      inputSchema: z.object({
-        applicationUuid: z.string().min(1),
-        key: z.string().min(1),
-      }),
-      execute: async (input) => coolify.deleteApplicationEnv(input),
+        return coolify.setApplicationEnv({
+          applicationUuid: input.applicationUuid,
+          key: input.key,
+          value: input.value!,
+          isBuildTime: input.isBuildTime,
+          isPreview: input.isPreview,
+          isLiteral: input.isLiteral,
+          isMultiline: input.isMultiline,
+          isShownOnce: input.isShownOnce,
+        });
+      },
     });
   }
 
