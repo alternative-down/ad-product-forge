@@ -141,6 +141,13 @@
       "when": 1774215625682,
       "tag": "0019_stiff_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1774223400000,
+      "tag": "0020_function_roles_table_rebuild",
+      "breakpoints": true
     }
   ]
 }
