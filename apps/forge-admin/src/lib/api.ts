@@ -222,25 +222,67 @@ export type RoleListResponse = {
   }>;
 };
 
-export type SystemIntegration = {
-  providerType: 'migadu' | 'coolify' | 'github';
-  isEnabled: boolean;
-  config:
-    | {
+export type SystemIntegration =
+  | {
+      providerType: 'migadu';
+      isEnabled: boolean;
+      config: {
         apiUser: string;
         apiKey: string;
-      }
-    | {
+      };
+      createdAt: number;
+      updatedAt: number;
+    }
+  | {
+      providerType: 'coolify';
+      isEnabled: boolean;
+      config: {
         baseUrl: string;
         adminToken: string;
         applicationsBaseDomain?: string;
-      }
-    | {
+      };
+      createdAt: number;
+      updatedAt: number;
+    }
+  | {
+      providerType: 'github';
+      isEnabled: boolean;
+      config: {
         organization: string;
         appHomeUrl: string;
       };
+      createdAt: number;
+      updatedAt: number;
+    };
+
+export type LlmProfile = {
+  profileId: string;
+  slug: string;
+  label: string;
+  providerType: 'openai-codex' | 'claude-max';
+  modelId: string;
+  modelKey: string;
+  isEnabled: boolean;
   createdAt: number;
   updatedAt: number;
+};
+
+export type SystemLlmDefaults = {
+  primaryProfileId: string;
+  omProfileId: string;
+  hiringRhProfileId: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type SystemLlmResponse = {
+  defaults: SystemLlmDefaults;
+  profiles: LlmProfile[];
+  supportedProviders: Array<{
+    providerType: 'openai-codex' | 'claude-max';
+    label: string;
+    modelIds: string[];
+  }>;
 };
 
 export type CreateScheduleInput = {
@@ -293,6 +335,21 @@ export type UpsertSystemIntegrationInput =
         appHomeUrl: string;
       };
     };
+
+export type UpsertLlmProfileInput = {
+  profileId?: string;
+  slug: string;
+  label: string;
+  providerType: 'openai-codex' | 'claude-max';
+  modelId: string;
+  isEnabled: boolean;
+};
+
+export type UpdateSystemLlmDefaultsInput = {
+  primaryProfileId: string;
+  omProfileId: string;
+  hiringRhProfileId: string;
+};
 
 export type CreateInvestmentInput = {
   amountUsd: number;
@@ -446,6 +503,10 @@ export function getFinance() {
   return request<AdminFinance>('/admin/finance');
 }
 
+export function getSystemLlm() {
+  return request<SystemLlmResponse>('/admin/system/llm');
+}
+
 export function wakeAgent(agentId: string) {
   return request<{ success: true }>('/admin/agent/wake', {
     method: 'POST',
@@ -566,6 +627,27 @@ export function deleteSystemIntegration(providerType: 'migadu' | 'coolify' | 'gi
       body: JSON.stringify({ providerType }),
     },
   );
+}
+
+export function upsertLlmProfile(input: UpsertLlmProfileInput) {
+  return request<LlmProfile>('/admin/system/llm/profile/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteLlmProfile(profileId: string) {
+  return request<{ success: true; profileId: string }>('/admin/system/llm/profile/delete', {
+    method: 'POST',
+    body: JSON.stringify({ profileId }),
+  });
+}
+
+export function updateSystemLlmDefaults(input: UpdateSystemLlmDefaultsInput) {
+  return request<SystemLlmDefaults>('/admin/system/llm/defaults/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function createInvestment(input: CreateInvestmentInput) {

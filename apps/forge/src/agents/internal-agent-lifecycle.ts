@@ -23,7 +23,7 @@ type RunInternalHiringInput = {
 };
 
 export async function runInternalHiring(db: Database, input: RunInternalHiringInput) {
-  const profile = buildHiredAgentProfile(input);
+  const profile = await buildHiredAgentProfile(db, input);
   const hiringRh = await generateHiredAgentInstructions(db, input);
   const capabilities = createCapabilityStore(db);
   const agentFunction = await capabilities.getOrCreateFunction({
