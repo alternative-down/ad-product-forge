@@ -14,7 +14,7 @@ import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createCapabilityStore } from '../capabilities/store';
-import { forgeCustomToolIds } from '../capabilities/catalog';
+import { forgeCustomToolIds, forgeWorkflowIds } from '../capabilities/catalog';
 import { decryptSecret } from '../encryption/crypto';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createSystemIntegrationStore } from '../system-integrations/store';
@@ -304,6 +304,7 @@ export function createAdminReadModel(input: {
 
     return {
       availableToolIds: forgeCustomToolIds,
+      availableWorkflowIds: forgeWorkflowIds,
       items: roles.map((role) => ({
         roleId: role.roleId,
         name: role.name,
