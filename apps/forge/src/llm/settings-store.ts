@@ -14,7 +14,7 @@ import type { LlmProviderType } from '../database/schema';
 import { llmProfiles, systemLlmDefaults } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
-import { PROFILE_LLM_GATEWAY_ID } from './profile-token-gateway';
+import { CUSTOM_LLM_GATEWAY_ID } from './profile-token-gateway';
 
 const llmProfileSchema = z.object({
   slug: z.string().min(1),
@@ -141,6 +141,44 @@ export function createLlmSettingsStore(db: Database) {
     };
   }
 
+  async function getDirectApiKeyProfile(providerType: 'claude-max' | 'minimax', modelId: string) {
+    const rows = await db.query.llmProfiles.findMany({
+      where: eq(llmProfiles.providerType, providerType),
+    });
+    const matches = rows.filter((row) => row.modelId === modelId && Boolean(row.encryptedApiKey));
+
+    if (matches.length === 0) {
+      throw new Error(`Direct ${providerType} profile not found for model ${modelId}`);
+    }
+
+    if (matches.length > 1) {
+      throw new Error(`Multiple direct ${providerType} profiles found for model ${modelId}`);
+    }
+
+    const row = matches[0];
+
+    return {
+      profileId: row.id,
+      slug: row.slug,
+      label: row.label,
+      providerType: row.providerType,
+      modelId: row.modelId,
+      modelKey: buildPricingModelKey(row.providerType, row.modelId),
+      runtimeModelKey: buildRuntimeModelKey({
+        profileId: row.id,
+        providerType: row.providerType,
+        modelId: row.modelId,
+        hasApiKey: true,
+      }),
+      apiKey: decryptSecret(row.encryptedApiKey!),
+      hasApiKey: true,
+      contractCostMultiplier: row.contractCostMultiplier,
+      isEnabled: row.isEnabled === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
   async function upsertProfile(input: {
     profileId?: string;
     slug: string;
@@ -165,6 +203,21 @@ export function createLlmSettingsStore(db: Database) {
           where: eq(llmProfiles.id, input.profileId),
         })
       : null;
+
+    if (shouldUseDirectApiKey(parsed.providerType, parsed.apiKey)) {
+      const duplicates = await db.query.llmProfiles.findMany({
+        where: eq(llmProfiles.providerType, parsed.providerType),
+      });
+      const conflictingProfile = duplicates.find((row) =>
+        row.modelId === parsed.modelId &&
+        Boolean(row.encryptedApiKey) &&
+        row.id !== input.profileId,
+      );
+
+      if (conflictingProfile) {
+        throw new Error(`Only one direct-token profile is allowed for ${parsed.providerType}/${parsed.modelId}`);
+      }
+    }
 
     if (existing) {
       await db
@@ -312,6 +365,7 @@ export function createLlmSettingsStore(db: Database) {
     getProfile,
     getDefaults,
     getResolvedDefaults,
+    getDirectApiKeyProfile,
     upsertProfile,
     deleteProfile,
     updateDefaults,
@@ -350,14 +404,14 @@ function buildRuntimeModelKey(input: {
   }
 
   if (input.providerType === 'minimax') {
-    return `${PROFILE_LLM_GATEWAY_ID}/minimax/${input.profileId}`;
+    return `${CUSTOM_LLM_GATEWAY_ID}/minimax/${input.modelId}`;
   }
 
   if (!input.hasApiKey) {
     return buildPricingModelKey(input.providerType, input.modelId);
   }
 
-  return `${PROFILE_LLM_GATEWAY_ID}/${input.providerType}/${input.profileId}`;
+  return `${CUSTOM_LLM_GATEWAY_ID}/${input.providerType}/${input.modelId}`;
 }
 
 function shouldUseDirectApiKey(providerType: LlmProviderType, apiKey?: string | null) {

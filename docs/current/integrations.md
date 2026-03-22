@@ -93,7 +93,7 @@ Current model:
 
 - each MiniMax profile must carry its own direct API token
 - anthropic-compatible HTTP endpoint
-- exposed to agents through `profile-llm/minimax/...`
+- exposed to agents through `custom/minimax/...`
 - selectable in admin-managed LLM profiles and hiring defaults
 
 Current supported MiniMax model surface:

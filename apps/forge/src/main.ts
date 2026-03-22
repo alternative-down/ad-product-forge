@@ -117,7 +117,7 @@ export async function main() {
     workflows,
     gateways: {
       oauth: createOAuthGateway(),
-      'profile-llm': profileLlm,
+      custom: profileLlm,
     },
     logger: new ConsoleLogger({
       name: 'forge-app',

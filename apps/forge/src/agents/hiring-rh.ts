@@ -54,7 +54,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     },
     gateways: {
       oauth: createOAuthGateway(),
-      'profile-llm': profileGateway,
+      custom: profileGateway,
     },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt);

@@ -9,11 +9,11 @@ import type { createLlmSettingsStore } from './settings-store';
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const MINIMAX_BASE_URL = 'https://api.minimax.io/anthropic';
 
-export const PROFILE_LLM_GATEWAY_ID = 'profile-llm';
+export const CUSTOM_LLM_GATEWAY_ID = 'custom';
 
 export class ProfileTokenGateway extends MastraModelGateway {
-  readonly id = PROFILE_LLM_GATEWAY_ID;
-  readonly name = 'Profile Token Gateway';
+  readonly id = CUSTOM_LLM_GATEWAY_ID;
+  readonly name = 'Custom Profile Token Gateway';
 
   constructor(private readonly options: {
     llmSettings: ReturnType<typeof createLlmSettingsStore>;
@@ -45,7 +45,7 @@ export class ProfileTokenGateway extends MastraModelGateway {
   }
 
   async buildUrl(modelId: string) {
-    const profile = await this.getResolvedProfile(modelId);
+    const profile = await this.getResolvedProfileByRuntimeModelKey(modelId);
 
     if (profile.providerType === 'claude-max') {
       return ANTHROPIC_BASE_URL;
@@ -55,7 +55,7 @@ export class ProfileTokenGateway extends MastraModelGateway {
   }
 
   async getApiKey(modelId: string) {
-    const profile = await this.getResolvedProfile(modelId);
+    const profile = await this.getResolvedProfileByRuntimeModelKey(modelId);
 
     if (!profile.apiKey) {
       throw new Error(`LLM profile is missing direct apiKey: ${profile.profileId}`);
@@ -69,7 +69,8 @@ export class ProfileTokenGateway extends MastraModelGateway {
     providerId: string;
     apiKey: string;
   }): Promise<GatewayLanguageModel> {
-    const profile = await this.getResolvedProfile(`${this.id}/${args.providerId}/${args.modelId}`);
+    const providerId = parseDirectProviderId(args.providerId);
+    const profile = await this.options.llmSettings.getDirectApiKeyProfile(providerId, args.modelId);
 
     if (profile.providerType === 'claude-max') {
       return this.resolveClaudeModel(profile.modelId, args.apiKey);
@@ -78,24 +79,14 @@ export class ProfileTokenGateway extends MastraModelGateway {
     return this.resolveMiniMaxModel(profile.modelId, args.apiKey);
   }
 
-  private async getResolvedProfile(runtimeModelKey: string) {
-    const match = runtimeModelKey.match(/^profile-llm\/(claude-max|minimax)\/([^/]+)$/);
+  private async getResolvedProfileByRuntimeModelKey(runtimeModelKey: string) {
+    const match = runtimeModelKey.match(/^custom\/(claude-max|minimax)\/([^/]+)$/);
 
     if (!match) {
       throw new Error(`Unsupported profile gateway model: ${runtimeModelKey}`);
     }
 
-    const profile = await this.options.llmSettings.getProfile(match[2]);
-
-    if (profile.providerType !== match[1]) {
-      throw new Error(`LLM profile provider mismatch for ${profile.profileId}`);
-    }
-
-    if (!profile.hasApiKey) {
-      throw new Error(`LLM profile does not define a direct apiKey: ${profile.profileId}`);
-    }
-
-    return profile;
+    return this.options.llmSettings.getDirectApiKeyProfile(parseDirectProviderId(match[1]), match[2]);
   }
 
   private resolveClaudeModel(modelId: string, apiKey: string) {
@@ -128,4 +119,12 @@ export function createProfileTokenGateway(options: {
   llmSettings: ReturnType<typeof createLlmSettingsStore>;
 }) {
   return new ProfileTokenGateway(options);
+}
+
+function parseDirectProviderId(value: string): 'claude-max' | 'minimax' {
+  if (value === 'claude-max' || value === 'minimax') {
+    return value;
+  }
+
+  throw new Error(`Unsupported direct-token provider: ${value}`);
 }
