@@ -240,6 +240,24 @@ export const companyCashLedger = sqliteTable('company_cash_ledger', {
 
 export type CompanyCashLedgerEntry = typeof companyCashLedger.$inferSelect;
 
+export const companyRecurringPayables = sqliteTable('company_recurring_payables', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  amountUsd: real('amount_usd').notNull(),
+  recurrencePeriod: text('recurrence_period').notNull(),
+  nextDueAt: integer('next_due_at').notNull(),
+  isActive: integer('is_active').notNull().default(1),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  companyRecurringPayablesIsActiveIdx: index('company_recurring_payables_is_active_idx').on(table.isActive),
+  companyRecurringPayablesNextDueAtIdx: index('company_recurring_payables_next_due_at_idx').on(table.nextDueAt),
+}));
+
+export type CompanyRecurringPayable = typeof companyRecurringPayables.$inferSelect;
+export type NewCompanyRecurringPayable = typeof companyRecurringPayables.$inferInsert;
+
 const _MigaduSystemIntegrationConfigSchema = z.object({
   apiUser: z.string().email(),
   apiKey: z.string().min(1),

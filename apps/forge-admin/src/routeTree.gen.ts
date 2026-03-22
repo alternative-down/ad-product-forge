@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SystemRouteImport } from './routes/system'
 import { Route as RolesRouteImport } from './routes/roles'
+import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -22,6 +23,11 @@ const SystemRoute = SystemRouteImport.update({
 const RolesRoute = RolesRouteImport.update({
   id: '/roles',
   path: '/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceRoute = FinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentsRoute = AgentsRouteImport.update({
@@ -38,12 +44,14 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
+  '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
   '/system': typeof SystemRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
+  '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
   '/system': typeof SystemRoute
 }
@@ -51,20 +59,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
+  '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
   '/system': typeof SystemRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agents' | '/roles' | '/system'
+  fullPaths: '/' | '/agents' | '/finance' | '/roles' | '/system'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agents' | '/roles' | '/system'
-  id: '__root__' | '/' | '/agents' | '/roles' | '/system'
+  to: '/' | '/agents' | '/finance' | '/roles' | '/system'
+  id: '__root__' | '/' | '/agents' | '/finance' | '/roles' | '/system'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentsRoute: typeof AgentsRoute
+  FinanceRoute: typeof FinanceRoute
   RolesRoute: typeof RolesRoute
   SystemRoute: typeof SystemRoute
 }
@@ -83,6 +93,13 @@ declare module '@tanstack/react-router' {
       path: '/roles'
       fullPath: '/roles'
       preLoaderRoute: typeof RolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance': {
+      id: '/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof FinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agents': {
@@ -105,6 +122,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRoute: AgentsRoute,
+  FinanceRoute: FinanceRoute,
   RolesRoute: RolesRoute,
   SystemRoute: SystemRoute,
 }

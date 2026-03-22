@@ -34,6 +34,26 @@ export type AdminOverview = {
   };
 };
 
+export type AdminFinance = {
+  balanceUsd: number;
+  summary: AdminOverview['cash']['summary'];
+  movements: {
+    items: AdminOverview['cash']['recentMovements'];
+    total: number;
+  };
+  recurringPayables: Array<{
+    payableId: string;
+    name: string;
+    description?: string;
+    amountUsd: number;
+    recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+    nextDueAt: number;
+    isActive: boolean;
+    createdAt: number;
+    updatedAt: number;
+  }>;
+};
+
 export type AgentListItem = {
   agentId: string;
   name: string;
@@ -274,6 +294,29 @@ export type UpsertSystemIntegrationInput =
       };
     };
 
+export type CreateInvestmentInput = {
+  amountUsd: number;
+  description?: string;
+  effectiveAt?: string;
+};
+
+export type CreatePayableInput =
+  | {
+      kind: 'single';
+      name: string;
+      description?: string;
+      amountUsd: number;
+      dueAt: string;
+    }
+  | {
+      kind: 'recurring';
+      name: string;
+      description?: string;
+      amountUsd: number;
+      dueAt: string;
+      recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+    };
+
 export class AdminApiKeyError extends Error {
   constructor(message = 'Invalid admin API key') {
     super(message);
@@ -399,6 +442,10 @@ export function listSystemIntegrations() {
   return request<SystemIntegration[]>('/admin/system/integrations');
 }
 
+export function getFinance() {
+  return request<AdminFinance>('/admin/finance');
+}
+
 export function wakeAgent(agentId: string) {
   return request<{ success: true }>('/admin/agent/wake', {
     method: 'POST',
@@ -517,6 +564,53 @@ export function deleteSystemIntegration(providerType: 'migadu' | 'coolify' | 'gi
     {
       method: 'POST',
       body: JSON.stringify({ providerType }),
+    },
+  );
+}
+
+export function createInvestment(input: CreateInvestmentInput) {
+  return request<{ success: true }>('/admin/finance/investment/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function createPayable(input: CreatePayableInput) {
+  return request<{ kind: 'single' | 'recurring'; entryId: string; payableId?: string }>(
+    '/admin/finance/payable/create',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function postPlannedLedgerEntry(entryId: string, effectiveAt?: string) {
+  return request<{ entryId: string; status: 'posted'; effectiveAt: number }>(
+    '/admin/finance/ledger/post',
+    {
+      method: 'POST',
+      body: JSON.stringify({ entryId, effectiveAt }),
+    },
+  );
+}
+
+export function cancelPlannedLedgerEntry(entryId: string) {
+  return request<{ entryId: string; status: 'canceled' }>(
+    '/admin/finance/ledger/cancel',
+    {
+      method: 'POST',
+      body: JSON.stringify({ entryId }),
+    },
+  );
+}
+
+export function setRecurringPayableActive(payableId: string, isActive: boolean) {
+  return request<{ payableId: string; isActive: boolean }>(
+    '/admin/finance/recurring-payable/set-active',
+    {
+      method: 'POST',
+      body: JSON.stringify({ payableId, isActive }),
     },
   );
 }

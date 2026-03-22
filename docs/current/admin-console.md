@@ -42,6 +42,8 @@ Current route surface:
   - overview
 - `/agents`
   - agent maintenance
+- `/finance`
+  - company cash operations and payable maintenance
 - `/system`
   - system integrations
 - `/roles`
@@ -119,6 +121,25 @@ For Coolify:
 
 These integration settings are persisted in the Forge application database and encrypted at rest.
 
+### Finance
+
+Shows and manages:
+
+- current cash balance and summary
+- manual owner investment entries
+- one-off payable creation
+- recurring payable creation
+- recurring payable activation state
+- planned ledger entry posting and cancelation
+
+This does not mutate balance directly.
+
+It writes explicit ledger records with types such as:
+
+- `owner-investment`
+- `manual-payable`
+- `recurring-payable`
+
 ### Roles
 
 Shows:
@@ -174,6 +195,7 @@ Read endpoints:
 - `GET /admin/overview`
 - `GET /admin/agents`
 - `GET /admin/agent?agentId=...`
+- `GET /admin/finance`
 - `GET /admin/functions`
 - `GET /admin/roles`
 - `GET /admin/system/integrations`
@@ -191,6 +213,11 @@ Mutation endpoints:
 - `POST /admin/agent-schedule/create`
 - `POST /admin/agent-schedule/update`
 - `POST /admin/agent-schedule/delete`
+- `POST /admin/finance/investment/create`
+- `POST /admin/finance/payable/create`
+- `POST /admin/finance/ledger/post`
+- `POST /admin/finance/ledger/cancel`
+- `POST /admin/finance/recurring-payable/set-active`
 - `POST /admin/role-tool-permission/add`
 - `POST /admin/role-tool-permission/remove`
 - `POST /admin/system/integration/upsert`

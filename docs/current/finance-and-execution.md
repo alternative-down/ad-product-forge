@@ -51,9 +51,34 @@ Today it supports:
 
 - funding operations
 - spend-related recording
+- manual payable scheduling
+- recurring payable scheduling
 - cash reads through the micro ERP tools
 
 This is not yet a full external accounting integration.
+
+## Admin finance operations
+
+The human admin UI now owns the write surface for basic company cash maintenance.
+
+Current admin-side write actions:
+
+- register owner investment as a posted cash-in entry
+- create one-off planned payables
+- create recurring payables with an active recurrence plan
+- post planned ledger entries
+- cancel planned ledger entries
+- pause or resume recurring payables
+
+Recurring payables are stored separately from the ledger in `company_recurring_payables`.
+
+Each recurring payable keeps:
+
+- current recurrence period
+- next due timestamp
+- active state
+
+When a planned recurring ledger entry is posted or canceled from the admin UI, Forge creates the next planned occurrence and advances `next_due_at`.
 
 ## Micro ERP
 
