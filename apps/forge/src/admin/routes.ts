@@ -121,7 +121,7 @@ const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
     config: z.object({
       baseUrl: z.string().url(),
       adminToken: z.string().min(1),
-      applicationsBaseDomain: z.string().min(1),
+      applicationsBaseDomain: z.string().min(1).optional(),
     }),
   }),
   z.object({

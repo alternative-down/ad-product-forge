@@ -213,7 +213,7 @@ export type SystemIntegration = {
     | {
         baseUrl: string;
         adminToken: string;
-        applicationsBaseDomain: string;
+        applicationsBaseDomain?: string;
       }
     | {
         organization: string;
@@ -262,7 +262,7 @@ export type UpsertSystemIntegrationInput =
       config: {
         baseUrl: string;
         adminToken: string;
-        applicationsBaseDomain: string;
+        applicationsBaseDomain?: string;
       };
     }
   | {

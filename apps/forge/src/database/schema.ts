@@ -248,7 +248,7 @@ const _MigaduSystemIntegrationConfigSchema = z.object({
 const _CoolifySystemIntegrationConfigSchema = z.object({
   baseUrl: z.string().url(),
   adminToken: z.string().min(1),
-  applicationsBaseDomain: z.string().min(1),
+  applicationsBaseDomain: z.string().min(1).optional(),
 });
 
 const _GitHubSystemIntegrationConfigSchema = z.object({

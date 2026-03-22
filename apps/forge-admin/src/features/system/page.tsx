@@ -265,7 +265,7 @@ function CoolifyIntegrationCard(input: {
                 applicationsBaseDomain: event.target.value,
               }))
             }
-            placeholder="apps.example.com"
+            placeholder="Optional override. Leave empty to use Coolify wildcard domain."
           />
         </LabeledField>
       </div>
@@ -293,7 +293,9 @@ function CoolifyIntegrationCard(input: {
               config: {
                 baseUrl: draft.baseUrl,
                 adminToken: draft.adminToken,
-                applicationsBaseDomain: draft.applicationsBaseDomain,
+                ...(draft.applicationsBaseDomain.trim()
+                  ? { applicationsBaseDomain: draft.applicationsBaseDomain.trim() }
+                  : {}),
               },
             })
           }
@@ -488,7 +490,7 @@ function getCoolifyDraft(integration: SystemIntegration | null): CoolifyDraft {
     isEnabled: integration.isEnabled,
     baseUrl: integration.config.baseUrl,
     adminToken: integration.config.adminToken,
-    applicationsBaseDomain: integration.config.applicationsBaseDomain,
+    applicationsBaseDomain: integration.config.applicationsBaseDomain ?? '',
   };
 }
 
