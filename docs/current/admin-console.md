@@ -113,7 +113,9 @@ Shows and manages:
 - global Coolify integration config
 - global GitHub integration config
 - global MiniMax token plan config
-- OAuth sync for Codex and Claude CLI credentials
+- OAuth sync for:
+  - Codex CLI credentials
+  - Claude setup-token
 - reusable LLM profiles
 - system hiring defaults for:
   - primary agent model
@@ -131,7 +133,8 @@ These integration settings are persisted in the Forge application database and e
 
 OAuth sync uses a different boundary:
 
-- the operator logs into Codex or Claude CLI inside the running container
+- the operator logs into Codex CLI inside the running container
+- the operator obtains the Claude setup-token inside the running container
 - the admin UI triggers a sync action
 - Forge copies the normalized credentials into:
   - `{FORGE_DATA_PATH}/auth/oauth.json`
