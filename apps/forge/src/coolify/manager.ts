@@ -68,6 +68,7 @@ const EnvironmentSchema = z.object({
 const ServerSchema = z.object({
   uuid: z.string(),
   name: z.string().optional(),
+  wildcard_domain: z.string().optional(),
   proxy_uuid: z.string().optional(),
   proxy: z.object({
     uuid: z.string().optional(),
@@ -182,7 +183,7 @@ export function createCoolifyManager(config: {
     installCommand?: string;
   }) {
     const deploymentContext = await loadDefaultDeploymentContext();
-    const domain = await buildApplicationDomain(input.slug);
+    const domain = await buildApplicationDomain(input.slug, deploymentContext.serverUuid);
     const data = await requestJson('POST', '/applications/private-github-app', {
       project_uuid: deploymentContext.projectUuid,
       environment_name: deploymentContext.environmentName,
@@ -530,9 +531,12 @@ export function createCoolifyManager(config: {
     return data;
   }
 
-  async function buildApplicationDomain(slug: string) {
+  async function buildApplicationDomain(slug: string, serverUuid?: string) {
     const providerConfig = await getProviderConfig();
-    return `${slug}.${providerConfig.applicationsBaseDomain}`;
+    const baseDomain = providerConfig.applicationsBaseDomain
+      ?? await getApplicationsBaseDomain(serverUuid);
+
+    return `${slug}.${baseDomain}`;
   }
 
   async function getProviderConfig() {
@@ -547,8 +551,23 @@ export function createCoolifyManager(config: {
     return {
       baseUrl: `${integration.baseUrl.replace(/\/$/, '')}/api/v1`,
       adminToken: integration.adminToken,
-      applicationsBaseDomain: integration.applicationsBaseDomain.replace(/^\./, '').trim(),
+      applicationsBaseDomain: integration.applicationsBaseDomain?.replace(/^\./, '').trim() || null,
     };
+  }
+
+  async function getApplicationsBaseDomain(serverUuid?: string) {
+    const server = serverUuid
+      ? extractItem(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`), ServerSchema)
+      : await getDefaultServer();
+    const wildcardDomain = server.wildcard_domain?.replace(/^\./, '').trim();
+
+    if (!wildcardDomain) {
+      throw new Error(
+        'Coolify integration could not determine a wildcard domain from the server configuration',
+      );
+    }
+
+    return wildcardDomain;
   }
 }
 

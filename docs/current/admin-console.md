@@ -112,6 +112,11 @@ Shows and manages:
 - enabled/disabled state per integration
 - last update timestamp
 
+For Coolify:
+
+- `applicationsBaseDomain` is optional
+- when omitted, Forge reads `wildcard_domain` from the Coolify server API and uses that to build deterministic application domains from the chosen slug
+
 These integration settings are persisted in the Forge application database and encrypted at rest.
 
 ### Roles
