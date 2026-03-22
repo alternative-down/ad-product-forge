@@ -113,8 +113,12 @@ export type AgentDetail = {
     functionId: string;
     name: string;
     description?: string;
-    roleId: string | null;
-    roleName: string | null;
+    roleIds: string[];
+    roles: Array<{
+      roleId: string;
+      name: string;
+      description?: string;
+    }>;
   } | null;
   loaded: boolean;
   runner: AgentListItem['runner'];
@@ -203,7 +207,12 @@ export type AgentFunction = {
   functionId: string;
   name: string;
   description?: string;
-  roleId: string | null;
+  roleIds: string[];
+  roles: Array<{
+    roleId: string;
+    name: string;
+    description?: string;
+  }>;
   createdAt: number;
   updatedAt: number;
   assignedAgentCount: number;
@@ -754,8 +763,15 @@ export function deleteFunction(functionId: string) {
   });
 }
 
-export function assignRoleToFunction(functionId: string, roleId: string | null) {
-  return request<{ functionId: string; roleId: string | null }>('/admin/function-role/assign', {
+export function addRoleToFunction(functionId: string, roleId: string) {
+  return request<{ functionId: string; roleId: string }>('/admin/function-role/add', {
+    method: 'POST',
+    body: JSON.stringify({ functionId, roleId }),
+  });
+}
+
+export function removeRoleFromFunction(functionId: string, roleId: string) {
+  return request<{ functionId: string; roleId: string }>('/admin/function-role/remove', {
     method: 'POST',
     body: JSON.stringify({ functionId, roleId }),
   });

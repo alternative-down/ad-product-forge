@@ -6,13 +6,14 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   addRoleToolPermission,
   addRoleWorkflowPermission,
-  assignRoleToFunction,
+  addRoleToFunction,
   createFunction,
   createRole,
   deleteFunction,
   deleteRole,
   listFunctions,
   listRoles,
+  removeRoleFromFunction,
   removeRoleToolPermission,
   removeRoleWorkflowPermission,
   updateFunction,
@@ -22,7 +23,6 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
-import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 
@@ -182,9 +182,11 @@ export function RolesPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] });
     },
   });
-  const assignRoleMutation = useMutation({
-    mutationFn: ({ functionId, roleId }: { functionId: string; roleId: string | null }) =>
-      assignRoleToFunction(functionId, roleId),
+  const functionRoleMutation = useMutation({
+    mutationFn: (input: { functionId: string; roleId: string; enabled: boolean }) =>
+      input.enabled
+        ? removeRoleFromFunction(input.functionId, input.roleId)
+        : addRoleToFunction(input.functionId, input.roleId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
@@ -448,7 +450,7 @@ export function RolesPage() {
               <div>
                 <h3 className="text-xl font-semibold text-slate-950">Functions</h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Create functions and assign or clear their role relation.
+                  Create functions and assign one or more roles to each function.
                 </p>
               </div>
             </div>
@@ -529,23 +531,32 @@ export function RolesPage() {
                           }
                         />
                       </LabeledField>
-                      <LabeledField label="Role">
-                        <Select
-                          value={agentFunction.roleId ?? ''}
-                          onChange={(event) => {
-                            assignRoleMutation.mutate({
-                              functionId: agentFunction.functionId,
-                              roleId: event.target.value || null,
-                            });
-                          }}
-                        >
-                          <option value="">No role</option>
-                          {rolesQuery.data.items.map((role) => (
-                            <option key={role.roleId} value={role.roleId}>
-                              {role.name}
-                            </option>
-                          ))}
-                        </Select>
+                      <LabeledField label="Roles">
+                        <div className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                          {rolesQuery.data.items.map((role) => {
+                            const enabled = agentFunction.roleIds.includes(role.roleId);
+
+                            return (
+                              <PermissionToggle
+                                key={role.roleId}
+                                label={role.name}
+                                checked={enabled}
+                                pending={
+                                  functionRoleMutation.isPending &&
+                                  functionRoleMutation.variables?.functionId === agentFunction.functionId &&
+                                  functionRoleMutation.variables?.roleId === role.roleId
+                                }
+                                onChange={() => {
+                                  functionRoleMutation.mutate({
+                                    functionId: agentFunction.functionId,
+                                    roleId: role.roleId,
+                                    enabled,
+                                  });
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
                       </LabeledField>
                       <div className="flex items-end gap-2">
                         <Button
@@ -578,7 +589,7 @@ export function RolesPage() {
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
                       <Badge>{agentFunction.assignedAgentCount} agents</Badge>
-                      <Badge>{agentFunction.roleId ? 'Role assigned' : 'No role'}</Badge>
+                      <Badge>{agentFunction.roleIds.length} roles</Badge>
                     </div>
                   </div>
                 );
@@ -587,13 +598,13 @@ export function RolesPage() {
 
             {(updateFunctionMutation.error ||
               deleteFunctionMutation.error ||
-              assignRoleMutation.error) && (
+              functionRoleMutation.error) && (
               <div className="mt-4">
                 <InlineError
                   message={
                     updateFunctionMutation.error?.message ??
                     deleteFunctionMutation.error?.message ??
-                    assignRoleMutation.error?.message ??
+                    functionRoleMutation.error?.message ??
                     ''
                   }
                 />

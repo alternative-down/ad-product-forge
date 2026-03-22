@@ -134,13 +134,13 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'assign_role_to_function')) {
     tools.assign_role_to_function = createTool({
       id: 'assign_role_to_function',
-      description: 'Assign one role to one function.',
+      description: 'Assign one role to one function without removing other assigned roles.',
       inputSchema: z.object({
         functionId: z.string().min(1),
         roleId: z.string().min(1),
       }),
       execute: async (input) => {
-        const result = await capabilities.assignRoleToFunction(input);
+        const result = await capabilities.addRoleToFunction(input);
         await reloadAgentsForFunction(db, loaderConfig, input.functionId);
         return result;
       },

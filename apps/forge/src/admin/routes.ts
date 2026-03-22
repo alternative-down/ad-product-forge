@@ -83,9 +83,9 @@ const deleteFunctionSchema = z.object({
   functionId: z.string().min(1),
 });
 
-const assignRoleToFunctionSchema = z.object({
+const functionRoleSchema = z.object({
   functionId: z.string().min(1),
-  roleId: z.string().min(1).nullable(),
+  roleId: z.string().min(1),
 });
 
 const createScheduleSchema = z.object({
@@ -647,15 +647,22 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
-    path: '/admin/function-role/assign',
+    path: '/admin/function-role/add',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, assignRoleToFunctionSchema);
-      const result = body.roleId
-        ? await capabilities.assignRoleToFunction({
-            functionId: body.functionId,
-            roleId: body.roleId,
-          })
-        : await capabilities.clearRoleFromFunction(body.functionId);
+      const body = parseJsonBody(request.bodyText, functionRoleSchema);
+      const result = await capabilities.addRoleToFunction(body);
+
+      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/function-role/remove',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, functionRoleSchema);
+      const result = await capabilities.removeRoleFromFunction(body);
 
       await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
       return jsonResponse(result);

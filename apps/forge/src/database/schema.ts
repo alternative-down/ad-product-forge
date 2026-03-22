@@ -92,7 +92,9 @@ export const functionRoles = sqliteTable('function_roles', {
     .references(() => agentRoles.id, { onDelete: 'cascade' }),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
-  functionRolesFunctionIdIdx: uniqueIndex('function_roles_function_id_idx').on(table.functionId),
+  functionRolesUniqueIdx: uniqueIndex('function_roles_unique_idx').on(table.functionId, table.roleId),
+  functionRolesFunctionIdIdx: index('function_roles_function_id_idx').on(table.functionId),
+  functionRolesRoleIdIdx: index('function_roles_role_id_idx').on(table.roleId),
 }));
 
 export type FunctionRole = typeof functionRoles.$inferSelect;
@@ -391,11 +393,8 @@ export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
   }),
 }));
 
-export const agentFunctionsRelations = relations(agentFunctions, ({ one, many }) => ({
-  roleLink: one(functionRoles, {
-    fields: [agentFunctions.id],
-    references: [functionRoles.functionId],
-  }),
+export const agentFunctionsRelations = relations(agentFunctions, ({ many }) => ({
+  roleLinks: many(functionRoles),
   agents: many(agents),
 }));
 

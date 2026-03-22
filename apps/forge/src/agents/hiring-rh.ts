@@ -58,7 +58,13 @@ export async function generateHiredAgentInstructions(db: Database, input: {
       oauth: createOAuthGateway(),
     },
   });
-  const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt);
+  const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
+    maxSteps: 1,
+    memory: {
+      thread: HIRING_RH_AGENT_ID,
+      resource: HIRING_RH_AGENT_ID,
+    },
+  });
   const parsed = hiringRhResultSchema.parse(JSON.parse(result.text));
   const inputTokens = result.usage.inputTokens ?? 0;
   const outputTokens = result.usage.outputTokens ?? 0;

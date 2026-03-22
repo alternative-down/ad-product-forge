@@ -138,7 +138,6 @@ export function createAdminReadModel(input: {
 
     const [
       functions,
-      roleRows,
       llmProfiles,
       providerRows,
       recentSteps,
@@ -149,7 +148,6 @@ export function createAdminReadModel(input: {
     ] =
       await Promise.all([
         capabilities.listFunctions(),
-        capabilities.listRoles(),
         llmSettings.listProfiles(),
         db.query.agentProviders.findMany({
           where: eq(agentProviders.agentId, agentId),
@@ -173,7 +171,6 @@ export function createAdminReadModel(input: {
     const registry = getInternalAgentRegistry();
     const loadedAgent = registry.get(agentId);
     const functionMap = new Map(functions.map((row) => [row.functionId, row]));
-    const roleMap = new Map(roleRows.map((row) => [row.roleId, row]));
     const llmProfileMap = new Map(
       llmProfiles.map((row) => [
         row.profileId,
@@ -185,7 +182,6 @@ export function createAdminReadModel(input: {
       ]),
     );
     const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
-    const role = agentFunction?.roleId ? (roleMap.get(agentFunction.roleId) ?? null) : null;
     const modelProfile = llmProfileMap.get(agent.modelProfileId);
     const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
     const heartbeat = agentScheduleRows.find((schedule) => schedule.kind === 'heartbeat') ?? null;
@@ -201,8 +197,6 @@ export function createAdminReadModel(input: {
       function: agentFunction && {
         ...agentFunction,
         description: agentFunction.description ?? null,
-        roleId: agentFunction.roleId ?? null,
-        roleName: role?.name ?? null,
       },
       loaded: Boolean(loadedAgent),
       runner: loadedAgent?.runner.getSnapshot() ?? null,
@@ -289,14 +283,12 @@ export function createAdminReadModel(input: {
     const functionCountByRoleId = new Map<string, number>();
 
     for (const agentFunction of functions) {
-      if (!agentFunction.roleId) {
-        continue;
+      for (const roleId of agentFunction.roleIds) {
+        functionCountByRoleId.set(
+          roleId,
+          (functionCountByRoleId.get(roleId) ?? 0) + 1,
+        );
       }
-
-      functionCountByRoleId.set(
-        agentFunction.roleId,
-        (functionCountByRoleId.get(agentFunction.roleId) ?? 0) + 1,
-      );
     }
 
     const toolMap = new Map(toolPermissions.map((row) => [row.roleId, row.toolIds]));
