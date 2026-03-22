@@ -63,10 +63,12 @@ export type AgentListItem = {
   functionName: string | null;
   modelProfile: {
     profileId: string;
+    name: string;
     modelKey: string;
   } | null;
   omModelProfile: {
     profileId: string;
+    name: string;
     modelKey: string;
   } | null;
   loaded: boolean;
@@ -268,6 +270,7 @@ export type SystemIntegration =
 
 export type LlmProfile = {
   profileId: string;
+  name: string;
   modelKey: string;
   baseUrl: string | null;
   apiKey: string;
@@ -365,6 +368,7 @@ export type UpsertSystemIntegrationInput =
 
 export type UpsertLlmProfileInput = {
   profileId?: string;
+  name: string;
   modelKey: string;
   baseUrl?: string | null;
   apiKey: string;

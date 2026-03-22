@@ -88,6 +88,7 @@ export function createAdminReadModel(input: {
         row.profileId,
         {
           profileId: row.profileId,
+          name: row.name,
           modelKey: row.modelKey,
         },
       ]),
@@ -176,6 +177,7 @@ export function createAdminReadModel(input: {
         row.profileId,
         {
           profileId: row.profileId,
+          name: row.name,
           modelKey: row.modelKey,
         },
       ]),

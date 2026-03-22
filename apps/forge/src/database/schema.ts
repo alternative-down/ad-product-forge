@@ -309,6 +309,7 @@ export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
 
 export const llmProfiles = sqliteTable('llm_profiles', {
   id: text('id').primaryKey(),
+  name: text('name').notNull(),
   modelKey: text('model_key').notNull(),
   baseUrl: text('base_url'),
   encryptedApiKey: text('encrypted_api_key').notNull(),
@@ -317,6 +318,7 @@ export const llmProfiles = sqliteTable('llm_profiles', {
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
+  llmProfilesNameIdx: uniqueIndex('llm_profiles_name_idx').on(table.name),
   llmProfilesModelKeyIdx: index('llm_profiles_model_key_idx').on(table.modelKey),
   llmProfilesIsEnabledIdx: index('llm_profiles_is_enabled_idx').on(table.isEnabled),
 }));

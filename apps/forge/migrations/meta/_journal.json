@@ -120,6 +120,20 @@
       "when": 1774350000000,
       "tag": "0016_llm_profile_model_key_refactor",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1774209892368,
+      "tag": "0017_sudden_elektra",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1774370000000,
+      "tag": "0018_llm_profile_uuid_ids",
+      "breakpoints": true
     }
   ]
 }
