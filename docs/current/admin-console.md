@@ -140,6 +140,8 @@ OAuth sync uses a different boundary:
   - `{FORGE_DATA_PATH}/auth/oauth.json`
 - after that, runtime auth no longer depends on persisting the CLI home directories
 
+For Claude, Forge prefers the setup-token source and falls back to the CLI credentials file when needed.
+
 LLM profiles are also persisted in the Forge application database.
 
 They are used to:

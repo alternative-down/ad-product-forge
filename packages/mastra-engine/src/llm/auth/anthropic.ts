@@ -66,19 +66,38 @@ async function refresh(credential: OAuthCredential) {
 
 export async function syncAnthropicCredential(options?: {
   setupTokenFilePath?: string;
+  authFilePath?: string;
   storePath?: string;
 }): Promise<OAuthCredential> {
   const storePath = options?.storePath ?? oauthStore.getDefaultPath();
-  const filePath = options?.setupTokenFilePath ?? getAnthropicSetupTokenFilePath();
-  const access = fs.readFileSync(filePath, 'utf8').trim();
+  const setupTokenFilePath = options?.setupTokenFilePath ?? getAnthropicSetupTokenFilePath();
 
-  if (!access) {
-    throw new Error(`Claude setup token not found in ${filePath}`);
+  try {
+    const access = fs.readFileSync(setupTokenFilePath, 'utf8').trim();
+
+    if (!access) {
+      throw new Error(`Claude setup token not found in ${setupTokenFilePath}`);
+    }
+
+    const credential = { access } satisfies OAuthCredential;
+    oauthStore.write('anthropic', credential, storePath);
+    return credential;
+  } catch {
+    const authFilePath = options?.authFilePath ?? getAnthropicCliAuthFilePath();
+    const payload = claudeCliAuthSchema.parse(oauthStore.readJsonFile(authFilePath));
+    let credential = {
+      access: payload.claudeAiOauth.accessToken,
+      refresh: payload.claudeAiOauth.refreshToken,
+      expires: payload.claudeAiOauth.expiresAt,
+    } satisfies OAuthCredential;
+
+    if (credential.refresh && oauthStore.isExpired(credential)) {
+      credential = await refresh(credential);
+    }
+
+    oauthStore.write('anthropic', credential, storePath);
+    return credential;
   }
-
-  const credential = { access } satisfies OAuthCredential;
-  oauthStore.write('anthropic', credential, storePath);
-  return credential;
 }
 
 export async function resolveAnthropicCredential(options?: {
@@ -88,39 +107,6 @@ export async function resolveAnthropicCredential(options?: {
 }): Promise<OAuthCredential> {
   const storePath = options?.storePath ?? oauthStore.getDefaultPath();
   const stored = oauthStore.read(storePath).anthropic;
-
-  function readSetupToken() {
-    const filePath = options?.setupTokenFilePath ?? getAnthropicSetupTokenFilePath();
-    const access = fs.readFileSync(filePath, 'utf8').trim();
-
-    if (!access) {
-      throw new Error(`Claude setup token not found in ${filePath}`);
-    }
-
-    return { access } satisfies OAuthCredential;
-  }
-
-  function readClaudeCliCredential() {
-    const filePath = options?.authFilePath ?? getAnthropicCliAuthFilePath();
-    const payload = claudeCliAuthSchema.parse(oauthStore.readJsonFile(filePath));
-
-    return {
-      access: payload.claudeAiOauth.accessToken,
-      refresh: payload.claudeAiOauth.refreshToken,
-      expires: payload.claudeAiOauth.expiresAt,
-    } satisfies OAuthCredential;
-  }
-
-  async function syncAnthropicCliCredential() {
-    let credential = readClaudeCliCredential();
-
-    if (credential.refresh && oauthStore.isExpired(credential)) {
-      credential = await refresh(credential);
-    }
-
-    oauthStore.write('anthropic', credential, storePath);
-    return credential;
-  }
 
   if (stored && !oauthStore.isExpired(stored)) {
     return stored;
@@ -146,18 +132,9 @@ export async function resolveAnthropicCredential(options?: {
     return credential;
   }
 
-  try {
-    return syncAnthropicCredential({
-      setupTokenFilePath: options?.setupTokenFilePath,
-      storePath,
-    });
-  } catch {
-    try {
-      return await syncAnthropicCliCredential();
-    } catch {
-      const credential = readSetupToken();
-      oauthStore.write('anthropic', credential, storePath);
-      return credential;
-    }
-  }
+  return syncAnthropicCredential({
+    setupTokenFilePath: options?.setupTokenFilePath,
+    authFilePath: options?.authFilePath,
+    storePath,
+  });
 }

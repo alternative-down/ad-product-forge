@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import fs from 'node:fs';
 import {
+  getAnthropicCliAuthFilePath,
   getAnthropicSetupTokenFilePath,
   getOpenAICodexCliAuthFilePath,
   oauthStore,
@@ -775,7 +776,8 @@ function readOauthState() {
   const storePath = oauthStore.getDefaultPath();
   const store = oauthStore.read(storePath);
   const openAICodexPath = getOpenAICodexCliAuthFilePath();
-  const anthropicPath = getAnthropicSetupTokenFilePath();
+  const anthropicSetupTokenPath = getAnthropicSetupTokenFilePath();
+  const anthropicCliPath = getAnthropicCliAuthFilePath();
 
   return {
     storePath,
@@ -791,8 +793,8 @@ function readOauthState() {
       },
       {
         providerId: 'anthropic' as const,
-        sourcePath: anthropicPath,
-        sourcePresent: fs.existsSync(anthropicPath),
+        sourcePath: `${anthropicSetupTokenPath} or ${anthropicCliPath}`,
+        sourcePresent: fs.existsSync(anthropicSetupTokenPath) || fs.existsSync(anthropicCliPath),
         synced: Boolean(store.anthropic),
         hasRefresh: Boolean(store.anthropic?.refresh),
         expiresAt: store.anthropic?.expires ?? null,
