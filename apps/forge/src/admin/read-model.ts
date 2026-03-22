@@ -1,11 +1,12 @@
 import path from 'node:path';
 
 import { desc, eq, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
 import {
   communicationConversations,
   communicationMessages,
-  initializeCommunicationDatabase,
+  communicationSchema,
 } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
@@ -362,7 +363,7 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
     const client = createClient({
       url: `file:${agentDatabasePath}`,
     });
-    const db = await initializeCommunicationDatabase(client);
+    const db = drizzle(client, { schema: communicationSchema });
     const rows = await db.query.communicationConversations.findMany({
       orderBy: [desc(communicationConversations.updatedAt)],
       limit: RECENT_CONVERSATION_LIMIT,

@@ -5,8 +5,8 @@
  * - Migration runner (runMigrations) - used internally by communication module
  * - Communication schema and types
  *
- * NOTE: Database initialization is now handled by:
- * - packages/mastra-engine/src/agent/communication/database.ts
+ * NOTE: Communication module initialization runs migrations inside:
+ * - packages/mastra-engine/src/agent/communication/module.ts
  */
 
 export { runMigrations } from './migrate';
