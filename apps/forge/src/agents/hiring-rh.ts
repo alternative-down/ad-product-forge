@@ -2,13 +2,13 @@ import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
-import { llmModelPrices } from '../database/schema.js';
-import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
-import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
-import { createLlmSettingsStore } from '../llm/settings-store.js';
-import { createSystemIntegrationStore } from '../system-integrations/store.js';
-import { createMiniMaxTokenGateway } from '../llm/minimax-token-gateway.js';
+import type { Database } from '../database/index';
+import { llmModelPrices } from '../database/schema';
+import { createCompanyCashLedger } from '../finance/company-cash-ledger';
+import { createCompanyCashOperations } from '../finance/company-cash-operations';
+import { createLlmSettingsStore } from '../llm/settings-store';
+import { createSystemIntegrationStore } from '../system-integrations/store';
+import { createMiniMaxTokenGateway } from '../llm/minimax-token-gateway';
 import { createOAuthGateway } from '@mastra-engine/core';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';

@@ -78,6 +78,20 @@
       "when": 1774272000000,
       "tag": "0010_llm_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1774272000001,
+      "tag": "0011_remarkable_colossus",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1774272000002,
+      "tag": "0012_long_makkari",
+      "breakpoints": true
     }
   ]
 }

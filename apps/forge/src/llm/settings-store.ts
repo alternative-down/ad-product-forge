@@ -9,17 +9,18 @@ import {
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database/index.js';
-import type { LlmProviderType } from '../database/schema.js';
-import { llmProfiles, systemLlmDefaults } from '../database/schema.js';
+import type { Database } from '../database/index';
+import type { LlmProviderType } from '../database/schema';
+import { llmProfiles, systemLlmDefaults } from '../database/schema';
 
-import { TOKEN_PLAN_GATEWAY_ID } from './minimax-token-gateway.js';
+import { TOKEN_PLAN_GATEWAY_ID } from './minimax-token-gateway';
 
 const llmProfileSchema = z.object({
   slug: z.string().min(1),
   label: z.string().min(1),
   providerType: z.enum(['openai-codex', 'claude-max', 'minimax']),
   modelId: z.string().min(1),
+  contractCostMultiplier: z.number().positive().default(1),
   isEnabled: z.boolean().default(true),
 });
 
@@ -50,6 +51,7 @@ export function createLlmSettingsStore(db: Database) {
       providerType: row.providerType,
       modelId: row.modelId,
       modelKey: buildModelKey(row.providerType, row.modelId),
+      contractCostMultiplier: row.contractCostMultiplier,
       isEnabled: row.isEnabled === 1,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -98,12 +100,36 @@ export function createLlmSettingsStore(db: Database) {
     };
   }
 
+  async function getProfile(profileId: string) {
+    const row = await db.query.llmProfiles.findFirst({
+      where: eq(llmProfiles.id, profileId),
+    });
+
+    if (!row) {
+      throw new Error(`LLM profile not found: ${profileId}`);
+    }
+
+    return {
+      profileId: row.id,
+      slug: row.slug,
+      label: row.label,
+      providerType: row.providerType,
+      modelId: row.modelId,
+      modelKey: buildModelKey(row.providerType, row.modelId),
+      contractCostMultiplier: row.contractCostMultiplier,
+      isEnabled: row.isEnabled === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
   async function upsertProfile(input: {
     profileId?: string;
     slug: string;
     label: string;
     providerType: LlmProviderType;
     modelId: string;
+    contractCostMultiplier?: number;
     isEnabled?: boolean;
   }) {
     const parsed = llmProfileSchema.parse(input);
@@ -124,6 +150,7 @@ export function createLlmSettingsStore(db: Database) {
           label: parsed.label,
           providerType: parsed.providerType,
           modelId: parsed.modelId,
+          contractCostMultiplier: parsed.contractCostMultiplier,
           isEnabled: parsed.isEnabled ? 1 : 0,
           updatedAt: now,
         })
@@ -135,6 +162,7 @@ export function createLlmSettingsStore(db: Database) {
         label: parsed.label,
         providerType: parsed.providerType,
         modelId: parsed.modelId,
+        contractCostMultiplier: parsed.contractCostMultiplier,
         isEnabled: parsed.isEnabled ? 1 : 0,
         createdAt: now,
         updatedAt: now,
@@ -148,6 +176,7 @@ export function createLlmSettingsStore(db: Database) {
       providerType: parsed.providerType,
       modelId: parsed.modelId,
       modelKey: buildModelKey(parsed.providerType, parsed.modelId),
+      contractCostMultiplier: parsed.contractCostMultiplier,
       isEnabled: parsed.isEnabled,
     };
   }
@@ -242,6 +271,7 @@ export function createLlmSettingsStore(db: Database) {
 
   return {
     listProfiles,
+    getProfile,
     getDefaults,
     getResolvedDefaults,
     upsertProfile,

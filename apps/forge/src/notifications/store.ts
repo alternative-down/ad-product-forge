@@ -1,8 +1,8 @@
 import { createId } from '@paralleldrive/cuid2';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
-import { agentNotifications } from '../database/schema.js';
+import type { Database } from '../database/index';
+import { agentNotifications } from '../database/schema';
 
 export function createAgentNotificationStore(db: Database) {
   async function createNotification(input: {

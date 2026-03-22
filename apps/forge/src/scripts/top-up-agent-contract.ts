@@ -2,8 +2,8 @@ import 'dotenv/config';
 
 import { z } from 'zod';
 
-import { getDatabase, runMigrations } from '../database/index.js';
-import { topUpActiveAgentContract } from '../agents/top-up-agent-contract.js';
+import { getDatabase, runMigrations } from '../database/index';
+import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 
 const cliInputSchema = z.object({
   agentId: z.string().min(1),

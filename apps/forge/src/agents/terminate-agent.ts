@@ -3,12 +3,12 @@ import path from 'node:path';
 
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
-import { agents } from '../database/schema.js';
-import { getInternalAgentRegistry } from './internal-agent-registry.js';
-import type { GitHubAppManager } from '../github/manager.js';
-import type { AgentEmailManager } from '../email/migadu-manager.js';
-import type { createAgentScheduleManager } from '../schedules/manager.js';
+import type { Database } from '../database/index';
+import { agents } from '../database/schema';
+import { getInternalAgentRegistry } from './internal-agent-registry';
+import type { GitHubAppManager } from '../github/manager';
+import type { AgentEmailManager } from '../email/migadu-manager';
+import type { createAgentScheduleManager } from '../schedules/manager';
 
 export async function terminateInternalAgent(db: Database, input: {
   agentId: string;

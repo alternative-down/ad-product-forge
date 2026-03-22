@@ -1,8 +1,8 @@
 import { and, desc, eq, gte, lte, ne, sql } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
-import { agents, agentExecutionContracts, companyCashLedger } from '../database/schema.js';
-import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
+import type { Database } from '../database/index';
+import { agents, agentExecutionContracts, companyCashLedger } from '../database/schema';
+import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 
 const IN = 'in';
 const OUT = 'out';

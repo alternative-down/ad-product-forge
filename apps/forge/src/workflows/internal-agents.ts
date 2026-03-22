@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { createStep, createWorkflow, type AnyWorkflow } from '@mastra/core/workflows';
 
-import type { Database } from '../database/index.js';
-import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle.js';
-import type { GitHubAppManager } from '../github/manager.js';
-import type { AgentEmailManager } from '../email/migadu-manager.js';
-import type { CoolifyManager } from '../coolify/manager.js';
-import type { createAgentScheduleManager } from '../schedules/manager.js';
+import type { Database } from '../database/index';
+import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';
+import type { GitHubAppManager } from '../github/manager';
+import type { AgentEmailManager } from '../email/migadu-manager';
+import type { CoolifyManager } from '../coolify/manager';
+import type { createAgentScheduleManager } from '../schedules/manager';
 
 const hireInternalAgentInputSchema = z.object({
   requestedFunction: z.string().min(1),

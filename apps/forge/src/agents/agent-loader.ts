@@ -1,19 +1,20 @@
 import { eq } from 'drizzle-orm';
-import type { Database } from '../database/index.js';
-import { agents, agentProviders } from '../database/schema.js';
-import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentRuntime } from './create-forge-agent.js';
-import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader.js';
-import { decryptSecret } from '../encryption/crypto.js';
-import { createMicroErpTools } from '../micro-erp/tools.js';
-import { createAgentNotificationTools } from '../notifications/tools.js';
-import { createGitHubTools } from '../github/tools.js';
-import type { GitHubAppManager } from '../github/manager.js';
-import type { CoolifyManager } from '../coolify/manager.js';
-import { createCoolifyTools } from '../coolify/tools.js';
-import type { createAgentScheduleManager } from '../schedules/manager.js';
-import { createAgentScheduleTools } from '../schedules/tools.js';
-import { createCapabilityStore } from '../capabilities/store.js';
-import { createCapabilityTools } from '../capabilities/tools.js';
+import type { Database } from '../database/index';
+import { agents, agentProviders } from '../database/schema';
+import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentRuntime } from './create-forge-agent';
+import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader';
+import { decryptSecret } from '../encryption/crypto';
+import { createMicroErpTools } from '../micro-erp/tools';
+import { createAgentNotificationTools } from '../notifications/tools';
+import { createGitHubTools } from '../github/tools';
+import type { GitHubAppManager } from '../github/manager';
+import type { CoolifyManager } from '../coolify/manager';
+import { createCoolifyTools } from '../coolify/tools';
+import type { createAgentScheduleManager } from '../schedules/manager';
+import { createAgentScheduleTools } from '../schedules/tools';
+import { createCapabilityStore } from '../capabilities/store';
+import { createCapabilityTools } from '../capabilities/tools';
+import { createLlmSettingsStore } from '../llm/settings-store';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -48,6 +49,12 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   if (!agentConfig.functionId) {
     throw new Error(`Agent is missing functionId: ${config.agentId}`);
   }
+
+  const llmSettings = createLlmSettingsStore(db);
+  const [primaryProfile, omProfile] = await Promise.all([
+    llmSettings.getProfile(agentConfig.modelProfileId),
+    llmSettings.getProfile(agentConfig.omModelProfileId),
+  ]);
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
@@ -99,8 +106,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       name: agentConfig.name,
       description: agentConfig.description || undefined,
       instructions: agentConfig.instructions,
-      model: agentConfig.model,
-      omModel: agentConfig.omModel || undefined,
+      model: primaryProfile.modelKey,
+      modelProfileId: primaryProfile.profileId,
+      omModel: omProfile.modelKey,
+      omModelProfileId: omProfile.profileId,
       tools: customTools,
       providers,
       workflows: filteredWorkflows,

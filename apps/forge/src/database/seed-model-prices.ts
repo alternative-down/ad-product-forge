@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 
-import type { Database } from './index.js';
-import { llmModelPrices } from './schema.js';
+import type { Database } from './index';
+import { llmModelPrices } from './schema';
 
 const MODEL_PRICES = [
   {

@@ -1,11 +1,11 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { Database } from '../database/index.js';
-import { forgeCustomToolIds, forgeWorkflowIds } from './catalog.js';
-import { createCapabilityStore } from './store.js';
-import type { AgentLoaderConfig } from '../agents/agent-loader.js';
-import { changeAgentFunction, reloadAgentsForFunction, reloadAgentsForRole } from './runtime.js';
+import type { Database } from '../database/index';
+import { forgeCustomToolIds, forgeWorkflowIds } from './catalog';
+import { createCapabilityStore } from './store';
+import type { AgentLoaderConfig } from '../agents/agent-loader';
+import { changeAgentFunction, reloadAgentsForFunction, reloadAgentsForRole } from './runtime';
 
 const toolIdSchema = z.enum(forgeCustomToolIds);
 const workflowIdSchema = z.enum(forgeWorkflowIds);

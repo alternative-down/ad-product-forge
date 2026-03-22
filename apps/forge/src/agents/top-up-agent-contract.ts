@@ -1,9 +1,9 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
 
-import type { Database } from '../database/index.js';
-import { agentExecutionContracts } from '../database/schema.js';
-import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
-import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
+import type { Database } from '../database/index';
+import { agentExecutionContracts } from '../database/schema';
+import { createCompanyCashLedger } from '../finance/company-cash-ledger';
+import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
 export async function topUpActiveAgentContract(db: Database, input: {
   agentId: string;

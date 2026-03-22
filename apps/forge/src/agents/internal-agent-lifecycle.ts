@@ -1,14 +1,14 @@
-import type { Database } from '../database/index.js';
+import type { Database } from '../database/index';
 
-import { buildHiredAgentProfile } from './hiring-profile.js';
-import { generateHiredAgentInstructions } from './hiring-rh.js';
-import { hireInternalAgent, type HireInternalAgentInput } from './hire-agent.js';
-import { terminateInternalAgent } from './terminate-agent.js';
-import type { GitHubAppManager } from '../github/manager.js';
-import type { AgentEmailManager } from '../email/migadu-manager.js';
-import type { CoolifyManager } from '../coolify/manager.js';
-import type { createAgentScheduleManager } from '../schedules/manager.js';
-import { createCapabilityStore } from '../capabilities/store.js';
+import { buildHiredAgentProfile } from './hiring-profile';
+import { generateHiredAgentInstructions } from './hiring-rh';
+import { hireInternalAgent, type HireInternalAgentInput } from './hire-agent';
+import { terminateInternalAgent } from './terminate-agent';
+import type { GitHubAppManager } from '../github/manager';
+import type { AgentEmailManager } from '../email/migadu-manager';
+import type { CoolifyManager } from '../coolify/manager';
+import type { createAgentScheduleManager } from '../schedules/manager';
+import { createCapabilityStore } from '../capabilities/store';
 
 type RunInternalHiringInput = {
   requestedFunction: string;

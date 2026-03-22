@@ -1,8 +1,8 @@
 import { createAgentWakeQueue } from '@mastra-engine/core';
 
-import type { InternalAgentRuntime } from './create-forge-agent.js';
-import { createAgentContractStore } from './agent-contract-store.js';
-import type { Database } from '../database/index.js';
+import type { InternalAgentRuntime } from './create-forge-agent';
+import { createAgentContractStore } from './agent-contract-store';
+import type { Database } from '../database/index';
 
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
@@ -212,6 +212,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   }
 
   async function estimateStepCostUsd() {
+    if (!runtime.modelProfileId) {
+      throw new Error(`Agent runtime is missing primary model profile: ${runtime.id}`);
+    }
+
     const recentSteps = await store.listRecentSteps(runtime.id, RECENT_STEP_LIMIT);
 
     if (recentSteps.length === 0) {
@@ -220,15 +224,19 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
     const averageStepUsd =
       recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
-    const modelPrice = await store.getModelPrice(runtime.modelKey);
+    const pricing = await store.getUsagePricing({
+      modelKey: runtime.modelKey,
+      profileId: runtime.modelProfileId,
+    });
     const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
 
-    if (!modelPrice || !lastAgentStep) {
+    if (!pricing.modelPrice || !lastAgentStep) {
       return averageStepUsd;
     }
 
     const inputEstimatedUsd =
-      (lastAgentStep.inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd;
+      ((lastAgentStep.inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd) *
+      pricing.contractCostMultiplier;
     return (inputEstimatedUsd + averageStepUsd) / 2;
   }
 
@@ -263,14 +271,22 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     cachedInputTokens: number,
     outputTokens: number,
   ) {
-    const modelPrice = await store.getModelPrice(runtime.modelKey);
+    if (!runtime.modelProfileId) {
+      throw new Error(`Agent runtime is missing primary model profile: ${runtime.id}`);
+    }
+
+    const pricing = await store.getUsagePricing({
+      modelKey: runtime.modelKey,
+      profileId: runtime.modelProfileId,
+    });
     let costUsd = 0;
 
-    if (modelPrice) {
+    if (pricing.modelPrice) {
       costUsd =
-        (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
-        (cachedInputTokens / 1_000_000) * modelPrice.inputCachePerMillionUsd +
-        (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
+        ((inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+          (cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+          (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+        pricing.contractCostMultiplier;
     }
 
     await store.recordAgentStep({
@@ -281,6 +297,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       inputTokens,
       cachedInputTokens,
       outputTokens,
+      inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
+      inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
+      outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
+      contractCostMultiplier: pricing.contractCostMultiplier,
       costUsd,
     });
   }
@@ -295,7 +315,14 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       };
     }>,
   ) {
-    const modelPrice = await store.getModelPrice(runtime.omModelKey);
+    if (!runtime.omModelProfileId) {
+      throw new Error(`Agent runtime is missing OM model profile: ${runtime.id}`);
+    }
+
+    const pricing = await store.getUsagePricing({
+      modelKey: runtime.omModelKey,
+      profileId: runtime.omModelProfileId,
+    });
     const parts = steps
       .flatMap((step) => step.response?.uiMessages ?? [])
       .flatMap((message) => message.parts ?? []);
@@ -314,10 +341,11 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
       let costUsd = 0;
 
-      if (modelPrice) {
+      if (pricing.modelPrice) {
         costUsd =
-          (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
-          (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
+          ((inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+            (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+          pricing.contractCostMultiplier;
       }
 
       await store.recordAgentStep({
@@ -328,6 +356,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         inputTokens,
         cachedInputTokens: 0,
         outputTokens,
+        inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
+        inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
+        outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
+        contractCostMultiplier: pricing.contractCostMultiplier,
         costUsd,
       });
     }

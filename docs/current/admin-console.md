@@ -133,6 +133,7 @@ LLM profiles are also persisted in the Forge application database.
 They are used to:
 
 - define reusable `provider + model` combinations
+- define a per-profile contract cost modifier used by weekly execution budget accounting
 - choose which model Forge uses by default when hiring a new agent
 - choose which model the internal hiring RH agent uses to generate instructions
 

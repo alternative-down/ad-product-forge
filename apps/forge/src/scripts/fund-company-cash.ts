@@ -2,9 +2,9 @@ import 'dotenv/config';
 
 import { z } from 'zod';
 
-import { getDatabase, runMigrations } from '../database/index.js';
-import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
-import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
+import { getDatabase, runMigrations } from '../database/index';
+import { createCompanyCashLedger } from '../finance/company-cash-ledger';
+import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
 const cliInputSchema = z.object({
   amountUsd: z.coerce.number().positive(),

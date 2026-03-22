@@ -1,8 +1,8 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { Database } from '../database/index.js';
-import { createMicroErpReadModel } from './read-model.js';
+import type { Database } from '../database/index';
+import { createMicroErpReadModel } from './read-model';
 
 const listCompanyCashMovementsInputSchema = z.object({
   direction: z.enum(['in', 'out']).optional(),

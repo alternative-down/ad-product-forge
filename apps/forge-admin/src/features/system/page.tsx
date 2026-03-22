@@ -55,6 +55,7 @@ type LlmProfileDraft = {
   label: string;
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
+  contractCostMultiplier: number;
   isEnabled: boolean;
 };
 
@@ -389,6 +390,10 @@ function LlmProfileEditorCard(input: {
                     <dd className="inline break-all">{profile.modelKey}</dd>
                   </div>
                   <div>
+                    <dt className="inline font-medium text-slate-800">Contract cost modifier:</dt>{' '}
+                    <dd className="inline">{profile.contractCostMultiplier.toFixed(3)}x</dd>
+                  </div>
+                  <div>
                     <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
                     <dd className="inline">{formatDateTime(profile.updatedAt)}</dd>
                   </div>
@@ -463,6 +468,20 @@ function LlmProfileForm(input: {
               </option>
             ))}
           </Select>
+        </LabeledField>
+        <LabeledField label="Contract cost modifier">
+          <Input
+            type="number"
+            min="0.001"
+            step="0.001"
+            value={String(draft.contractCostMultiplier)}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                contractCostMultiplier: Number(event.target.value || '1'),
+              }))
+            }
+          />
         </LabeledField>
       </div>
 
@@ -991,6 +1010,7 @@ function buildLlmProfileDraft(
       label: '',
       providerType: supportedProviders[0]?.providerType ?? 'openai-codex',
       modelId: supportedProviders[0]?.modelIds[0] ?? '',
+      contractCostMultiplier: 1,
       isEnabled: true,
     };
   }
@@ -1001,6 +1021,7 @@ function buildLlmProfileDraft(
     label: profile.label,
     providerType: profile.providerType,
     modelId: profile.modelId,
+    contractCostMultiplier: profile.contractCostMultiplier,
     isEnabled: profile.isEnabled,
   };
 }

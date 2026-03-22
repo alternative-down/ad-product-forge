@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 import type { CommunicationProvider } from '@mastra-engine/core';
-import { createDiscordProvider } from '../discord-account.js';
-import { createEmailProvider } from '../email-account.js';
-import { createInternalChatPreset } from './presets/internal-chat.js';
+import { createDiscordProvider } from '../discord-account';
+import { createEmailProvider } from '../email-account';
+import { createInternalChatPreset } from './presets/internal-chat';
 
 export const internalChatCredentialsSchema = z.object({
   agentId: z.string(),

@@ -61,8 +61,8 @@ export type AgentListItem = {
   executionState: 'idle' | 'running';
   functionId: string | null;
   functionName: string | null;
-  model: string;
-  omModel?: string;
+  model: string | null;
+  omModel: string | null;
   loaded: boolean;
   runner: {
     stopped: boolean;
@@ -99,8 +99,8 @@ export type AgentDetail = {
   description?: string;
   instructions: string;
   executionState: 'idle' | 'running';
-  model: string;
-  omModel?: string;
+  model: string | null;
+  omModel: string | null;
   function: {
     functionId: string;
     name: string;
@@ -141,6 +141,10 @@ export type AgentDetail = {
     inputTokens: number;
     cachedInputTokens: number;
     outputTokens: number;
+    inputPerMillionUsd: number;
+    inputCachePerMillionUsd: number;
+    outputPerMillionUsd: number;
+    contractCostMultiplier: number;
     costUsd: number;
     createdAt: number;
   }>;
@@ -272,6 +276,7 @@ export type LlmProfile = {
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
   modelKey: string;
+  contractCostMultiplier: number;
   isEnabled: boolean;
   createdAt: number;
   updatedAt: number;
@@ -360,6 +365,7 @@ export type UpsertLlmProfileInput = {
   label: string;
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
+  contractCostMultiplier: number;
   isEnabled: boolean;
 };
 

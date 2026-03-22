@@ -36,8 +36,12 @@ export const agents = sqliteTable('agents', {
   description: text('description'),
   functionId: text('function_id')
     .references(() => agentFunctions.id, { onDelete: 'set null' }),
-  model: text('model').notNull(),
-  omModel: text('om_model'), // Modelo para observational memory
+  modelProfileId: text('model_profile_id')
+    .notNull()
+    .references(() => llmProfiles.id, { onDelete: 'restrict' }),
+  omModelProfileId: text('om_model_profile_id')
+    .notNull()
+    .references(() => llmProfiles.id, { onDelete: 'restrict' }),
   instructions: text('instructions').notNull(),
   executionState: text('execution_state').notNull().default('idle'),
   // Workspace configuration
@@ -154,6 +158,10 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
   inputTokens: integer('input_tokens').notNull(),
   cachedInputTokens: integer('cached_input_tokens').notNull().default(0),
   outputTokens: integer('output_tokens').notNull(),
+  inputPerMillionUsd: real('input_per_million_usd').notNull().default(0),
+  inputCachePerMillionUsd: real('input_cache_per_million_usd').notNull().default(0),
+  outputPerMillionUsd: real('output_per_million_usd').notNull().default(0),
+  contractCostMultiplier: real('contract_cost_multiplier').notNull().default(1),
   costUsd: real('cost_usd').notNull(),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
@@ -312,6 +320,7 @@ export const llmProfiles = sqliteTable('llm_profiles', {
   label: text('label').notNull(),
   providerType: text('provider_type').notNull().$type<LlmProviderType>(),
   modelId: text('model_id').notNull(),
+  contractCostMultiplier: real('contract_cost_multiplier').notNull().default(1),
   isEnabled: integer('is_enabled').notNull().default(1),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
@@ -362,11 +371,30 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
     fields: [agents.functionId],
     references: [agentFunctions.id],
   }),
+  modelProfile: one(llmProfiles, {
+    relationName: 'agent_model_profile',
+    fields: [agents.modelProfileId],
+    references: [llmProfiles.id],
+  }),
+  omModelProfile: one(llmProfiles, {
+    relationName: 'agent_om_model_profile',
+    fields: [agents.omModelProfileId],
+    references: [llmProfiles.id],
+  }),
   providers: many(agentProviders),
   executionContracts: many(agentExecutionContracts),
   executionSteps: many(agentExecutionSteps),
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
+}));
+
+export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
+  agentsAsPrimaryModel: many(agents, {
+    relationName: 'agent_model_profile',
+  }),
+  agentsAsOmModel: many(agents, {
+    relationName: 'agent_om_model_profile',
+  }),
 }));
 
 export const agentFunctionsRelations = relations(agentFunctions, ({ one, many }) => ({

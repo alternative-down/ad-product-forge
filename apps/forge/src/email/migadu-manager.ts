@@ -3,11 +3,11 @@ import crypto from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database/index.js';
-import { agentProviders } from '../database/schema.js';
-import { decryptSecret } from '../encryption/crypto.js';
-import type { ProviderCredentialsMap } from '../communication/provider-loader.js';
-import type { createSystemIntegrationStore } from '../system-integrations/store.js';
+import type { Database } from '../database/index';
+import { agentProviders } from '../database/schema';
+import { decryptSecret } from '../encryption/crypto';
+import type { ProviderCredentialsMap } from '../communication/provider-loader';
+import type { createSystemIntegrationStore } from '../system-integrations/store';
 
 const EMAIL_PROVIDER_TYPE = 'email';
 const MIGADU_API_BASE_URL = 'https://api.migadu.com/v1';

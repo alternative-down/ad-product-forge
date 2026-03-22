@@ -1,7 +1,7 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { GitHubAppManager } from './manager.js';
+import type { GitHubAppManager } from './manager';
 
 function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: string) {
   return !allowedToolIds || allowedToolIds.has(toolId);

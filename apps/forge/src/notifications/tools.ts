@@ -1,8 +1,8 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import type { Database } from '../database/index.js';
-import { createAgentNotificationStore } from './store.js';
+import type { Database } from '../database/index';
+import { createAgentNotificationStore } from './store';
 
 function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: string) {
   return !allowedToolIds || allowedToolIds.has(toolId);

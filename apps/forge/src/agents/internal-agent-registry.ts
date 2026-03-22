@@ -1,7 +1,7 @@
-import type { Database } from '../database/index.js';
-import { loadAgents, type AgentLoaderConfig } from './agent-loader.js';
-import { createAgentRunner, type InternalAgentRunner } from './agent-runner.js';
-import type { InternalAgentRuntime } from './create-forge-agent.js';
+import type { Database } from '../database/index';
+import { loadAgents, type AgentLoaderConfig } from './agent-loader';
+import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
+import type { InternalAgentRuntime } from './create-forge-agent';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;

@@ -6,13 +6,13 @@ import { App, Octokit } from 'octokit';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database/index.js';
-import type { createSystemIntegrationStore } from '../system-integrations/store.js';
-import { agentProviders, type NewAgentProvider } from '../database/schema.js';
-import { decryptSecret, encryptSecret } from '../encryption/crypto.js';
-import type { createForgeHttpServer, HttpResponse } from '../http/server.js';
-import { createAgentNotificationStore } from '../notifications/store.js';
-import { githubAppCredentialsSchema, type GitHubAppCredentials } from './types.js';
+import type { Database } from '../database/index';
+import type { createSystemIntegrationStore } from '../system-integrations/store';
+import { agentProviders, type NewAgentProvider } from '../database/schema';
+import { decryptSecret, encryptSecret } from '../encryption/crypto';
+import type { createForgeHttpServer, HttpResponse } from '../http/server';
+import { createAgentNotificationStore } from '../notifications/store';
+import { githubAppCredentialsSchema, type GitHubAppCredentials } from './types';
 
 const GITHUB_PROVIDER_TYPE = 'github-app';
 const manifestConversionSchema = z.object({

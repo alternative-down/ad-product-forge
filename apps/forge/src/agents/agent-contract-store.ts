@@ -1,10 +1,10 @@
 import { and, desc, eq, lte, gte, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
-import type { Database } from '../database/index.js';
-import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices } from '../database/schema.js';
-import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
-import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
+import type { Database } from '../database/index';
+import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles } from '../database/schema';
+import { createCompanyCashLedger } from '../finance/company-cash-ledger';
+import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -85,10 +85,26 @@ export function createAgentContractStore(db: Database) {
     return rows[0]?.total ?? 0;
   }
 
-  async function getModelPrice(modelKey: string) {
-    return db.query.llmModelPrices.findFirst({
-      where: eq(llmModelPrices.modelKey, modelKey),
+  async function getUsagePricing(input: {
+    modelKey: string;
+    profileId: string;
+  }) {
+    const modelPrice = await db.query.llmModelPrices.findFirst({
+      where: eq(llmModelPrices.modelKey, input.modelKey),
     });
+
+    const profile = await db.query.llmProfiles.findFirst({
+      where: eq(llmProfiles.id, input.profileId),
+    });
+
+    if (!profile) {
+      throw new Error(`LLM profile not found for pricing: ${input.profileId}`);
+    }
+
+    return {
+      modelPrice,
+      contractCostMultiplier: profile.contractCostMultiplier,
+    };
   }
 
   async function recordAgentStep(input: {
@@ -99,6 +115,10 @@ export function createAgentContractStore(db: Database) {
     inputTokens: number;
     cachedInputTokens: number;
     outputTokens: number;
+    inputPerMillionUsd: number;
+    inputCachePerMillionUsd: number;
+    outputPerMillionUsd: number;
+    contractCostMultiplier: number;
     costUsd: number;
   }) {
     await db.insert(agentExecutionSteps).values({
@@ -110,6 +130,10 @@ export function createAgentContractStore(db: Database) {
       inputTokens: input.inputTokens,
       cachedInputTokens: input.cachedInputTokens,
       outputTokens: input.outputTokens,
+      inputPerMillionUsd: input.inputPerMillionUsd,
+      inputCachePerMillionUsd: input.inputCachePerMillionUsd,
+      outputPerMillionUsd: input.outputPerMillionUsd,
+      contractCostMultiplier: input.contractCostMultiplier,
       costUsd: input.costUsd,
       createdAt: Date.now(),
     });
@@ -178,7 +202,8 @@ export function createAgentContractStore(db: Database) {
     getRunnableContract,
     listRecentSteps,
     getContractSpend,
-    getModelPrice,
+    getUsagePricing,
     recordAgentStep,
   };
+
 }
