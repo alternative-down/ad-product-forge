@@ -174,7 +174,7 @@ export async function createInternalAgentRuntime<
     description: config.description,
     instructions: appendWorkingMemoryInstructions(config.instructions),
     model: config.model,
-    tools: {} as TTools,
+    tools: searchableTools as TTools,
     workflows: config.workflows,
     workspace,
     agents: config.agents,
