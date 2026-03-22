@@ -5,14 +5,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   deleteLlmProfile,
   deleteSystemIntegration,
+  getSystemOauth,
   getSystemLlm,
   listSystemIntegrations,
+  syncSystemOauth,
   updateSystemLlmDefaults,
   upsertLlmProfile,
   upsertSystemIntegration,
   type LlmProfile,
   type SystemIntegration,
   type SystemLlmDefaults,
+  type SystemOauthState,
   type SystemLlmResponse,
   type UpdateSystemLlmDefaultsInput,
   type UpsertLlmProfileInput,
@@ -69,6 +72,10 @@ export function SystemPage() {
     queryKey: ['admin', 'system-llm'],
     queryFn: getSystemLlm,
   });
+  const oauthQuery = useQuery({
+    queryKey: ['admin', 'system-oauth'],
+    queryFn: getSystemOauth,
+  });
   const upsertIntegrationMutation = useMutation({
     mutationFn: upsertSystemIntegration,
     onSuccess: async () => {
@@ -99,8 +106,14 @@ export function SystemPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
     },
   });
+  const syncOauthMutation = useMutation({
+    mutationFn: syncSystemOauth,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'system-oauth'] });
+    },
+  });
 
-  if (integrationsQuery.isLoading || llmQuery.isLoading) {
+  if (integrationsQuery.isLoading || llmQuery.isLoading || oauthQuery.isLoading) {
     return <PanelLoading label="Loading system configuration" />;
   }
 
@@ -112,12 +125,17 @@ export function SystemPage() {
     return <PanelError message={llmQuery.error.message} />;
   }
 
+  if (oauthQuery.isError) {
+    return <PanelError message={oauthQuery.error.message} />;
+  }
+
   const integrations = integrationsQuery.data ?? [];
   const migaduIntegration = integrations.find((integration) => integration.providerType === 'migadu') ?? null;
   const coolifyIntegration = integrations.find((integration) => integration.providerType === 'coolify') ?? null;
   const githubIntegration = integrations.find((integration) => integration.providerType === 'github') ?? null;
   const minimaxIntegration = integrations.find((integration) => integration.providerType === 'minimax') ?? null;
   const systemLlm = llmQuery.data!;
+  const oauthState = oauthQuery.data!;
 
   return (
     <div className="space-y-6">
@@ -163,6 +181,14 @@ export function SystemPage() {
         deleteError={deleteLlmProfileMutation.error?.message ?? null}
         onSave={(input) => upsertLlmProfileMutation.mutate(input)}
         onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
+      />
+
+      <OauthSyncCard
+        state={oauthState}
+        pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
+        error={syncOauthMutation.error?.message ?? null}
+        result={syncOauthMutation.data ?? null}
+        onSync={(providerId) => syncOauthMutation.mutate(providerId)}
       />
 
       <MigaduIntegrationCard
@@ -772,6 +798,102 @@ function GitHubIntegrationCard(input: {
         </Button>
       </div>
     </IntegrationCard>
+  );
+}
+
+function OauthSyncCard(input: {
+  state: SystemOauthState;
+  pendingProviderId: 'openai-codex' | 'anthropic' | 'all' | null;
+  error: string | null;
+  result: {
+    state: SystemOauthState;
+    results: Array<{
+      providerId: 'openai-codex' | 'anthropic';
+      synced: boolean;
+      error?: string;
+    }>;
+  } | null;
+  onSync(providerId: 'openai-codex' | 'anthropic' | 'all'): void;
+}) {
+  return (
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-base font-semibold text-slate-950">OAuth sync</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Log into Codex or Claude CLI inside the running container, then sync the credentials into Forge persistent
+            storage.
+          </p>
+        </div>
+        <Cable className="h-5 w-5 text-slate-500" />
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        Persistent store: <span className="font-mono text-slate-900">{input.state.storePath}</span>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        {input.state.providers.map((provider) => (
+          <div key={provider.providerId} className="rounded-2xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-950">{provider.providerId}</h4>
+                <p className="mt-1 text-xs text-slate-500">{provider.sourcePath}</p>
+              </div>
+              <Button
+                onClick={() => input.onSync(provider.providerId)}
+                disabled={input.pendingProviderId !== null}
+              >
+                {input.pendingProviderId === provider.providerId ? 'Syncing...' : 'Sync'}
+              </Button>
+            </div>
+
+            <dl className="mt-4 space-y-2 text-sm text-slate-600">
+              <div className="flex items-center justify-between gap-3">
+                <dt>CLI source present</dt>
+                <dd className="font-medium text-slate-900">{provider.sourcePresent ? 'yes' : 'no'}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Persisted in Forge</dt>
+                <dd className="font-medium text-slate-900">{provider.synced ? 'yes' : 'no'}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Refresh token</dt>
+                <dd className="font-medium text-slate-900">{provider.hasRefresh ? 'yes' : 'no'}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Expires at</dt>
+                <dd className="font-medium text-slate-900">
+                  {provider.expiresAt ? formatDateTime(provider.expiresAt) : 'n/a'}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button onClick={() => input.onSync('all')} disabled={input.pendingProviderId !== null}>
+          {input.pendingProviderId === 'all' ? 'Syncing all...' : 'Sync all'}
+        </Button>
+      </div>
+
+      {input.error ? <p className="mt-4 text-sm text-rose-600">{input.error}</p> : null}
+
+      {input.result ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          <div className="font-medium text-slate-900">Last sync result</div>
+          <ul className="mt-2 space-y-1">
+            {input.result.results.map((result) => (
+              <li key={result.providerId}>
+                <span className="font-medium text-slate-900">{result.providerId}</span>: {result.synced ? 'synced' : 'failed'}
+                {result.error ? ` - ${result.error}` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </Card>
   );
 }
 

@@ -7,6 +7,8 @@ import type { Database } from '../database/index';
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
+const AUTONOMOUS_STEP_PROMPT =
+  'System wake: continue your autonomous work using current memory, pending conversations, schedules, and available tools. If nothing requires action right now, stop without calling tools.';
 type AgentUsage = {
   inputTokens?: number;
   outputTokens?: number;
@@ -149,7 +151,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
-      const result = await runtime.agent.generate([], {
+      const result = await runtime.agent.generate(AUTONOMOUS_STEP_PROMPT, {
         maxSteps: 1,
       });
       const usage = result.usage as AgentUsage;

@@ -113,6 +113,7 @@ Shows and manages:
 - global Coolify integration config
 - global GitHub integration config
 - global MiniMax token plan config
+- OAuth sync for Codex and Claude CLI credentials
 - reusable LLM profiles
 - system hiring defaults for:
   - primary agent model
@@ -127,6 +128,14 @@ For Coolify:
 - when omitted, Forge reads `wildcard_domain` from the Coolify server API and uses that to build deterministic application domains from the chosen slug
 
 These integration settings are persisted in the Forge application database and encrypted at rest.
+
+OAuth sync uses a different boundary:
+
+- the operator logs into Codex or Claude CLI inside the running container
+- the admin UI triggers a sync action
+- Forge copies the normalized credentials into:
+  - `{FORGE_DATA_PATH}/auth/oauth.json`
+- after that, runtime auth no longer depends on persisting the CLI home directories
 
 LLM profiles are also persisted in the Forge application database.
 
@@ -222,6 +231,7 @@ Read endpoints:
 - `GET /admin/roles`
 - `GET /admin/system/integrations`
 - `GET /admin/system/llm`
+- `GET /admin/system/oauth`
 
 Mutation endpoints:
 
@@ -248,6 +258,7 @@ Mutation endpoints:
 - `POST /admin/system/llm/profile/upsert`
 - `POST /admin/system/llm/profile/delete`
 - `POST /admin/system/llm/defaults/update`
+- `POST /admin/system/oauth/sync`
 
 ## API base resolution
 

@@ -300,6 +300,28 @@ export type SystemLlmResponse = {
   }>;
 };
 
+export type SystemOauthState = {
+  storePath: string;
+  providers: Array<{
+    providerId: 'openai-codex' | 'anthropic';
+    sourcePath: string;
+    sourcePresent: boolean;
+    synced: boolean;
+    hasRefresh: boolean;
+    expiresAt: number | null;
+    accountId: string | null;
+  }>;
+};
+
+export type SyncOauthResult = {
+  state: SystemOauthState;
+  results: Array<{
+    providerId: 'openai-codex' | 'anthropic';
+    synced: boolean;
+    error?: string;
+  }>;
+};
+
 export type CreateScheduleInput = {
   agentId: string;
   name: string;
@@ -531,6 +553,10 @@ export function getSystemLlm() {
   return request<SystemLlmResponse>('/admin/system/llm');
 }
 
+export function getSystemOauth() {
+  return request<SystemOauthState>('/admin/system/oauth');
+}
+
 export function wakeAgent(agentId: string) {
   return request<{ success: true }>('/admin/agent/wake', {
     method: 'POST',
@@ -671,6 +697,13 @@ export function updateSystemLlmDefaults(input: UpdateSystemLlmDefaultsInput) {
   return request<SystemLlmDefaults>('/admin/system/llm/defaults/update', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export function syncSystemOauth(providerId: 'openai-codex' | 'anthropic' | 'all') {
+  return request<SyncOauthResult>('/admin/system/oauth/sync', {
+    method: 'POST',
+    body: JSON.stringify({ providerId }),
   });
 }
 

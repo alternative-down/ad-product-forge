@@ -1,5 +1,13 @@
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
+import fs from 'node:fs';
+import {
+  getAnthropicCliAuthFilePath,
+  getOpenAICodexCliAuthFilePath,
+  oauthStore,
+  syncAnthropicCredential,
+  syncOpenAICodexCredential,
+} from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
@@ -171,6 +179,12 @@ const updateLlmDefaultsSchema = z.object({
   hiringRhProfileId: z.string().min(1),
 });
 
+const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
+
+const syncOauthSchema = z.object({
+  providerId: oauthSyncProviderSchema.default('all'),
+});
+
 const createInvestmentSchema = z.object({
   amountUsd: z.coerce.number().positive(),
   description: z.string().optional(),
@@ -278,6 +292,12 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/system/llm',
     handler: async () => jsonResponse(await readModel.getSystemLlm()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/oauth',
+    handler: async () => jsonResponse(readOauthState()),
   });
 
   input.httpServer.registerRoute({
@@ -590,6 +610,47 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
+    path: '/admin/system/oauth/sync',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, syncOauthSchema);
+      const providerIds: Array<'openai-codex' | 'anthropic'> =
+        body.providerId === 'all' ? ['openai-codex', 'anthropic'] : [body.providerId];
+      const results: Array<{
+        providerId: 'openai-codex' | 'anthropic';
+        synced: boolean;
+        error?: string;
+      }> = [];
+
+      for (const providerId of providerIds) {
+        try {
+          if (providerId === 'openai-codex') {
+            await syncOpenAICodexCredential();
+          } else {
+            await syncAnthropicCredential();
+          }
+
+          results.push({
+            providerId,
+            synced: true,
+          });
+        } catch (error) {
+          results.push({
+            providerId,
+            synced: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      return jsonResponse({
+        state: readOauthState(),
+        results,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
     path: '/admin/finance/investment/create',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, createInvestmentSchema);
@@ -707,5 +768,36 @@ function jsonResponse(body: unknown, status = 200) {
       'cache-control': 'no-store',
     },
     body: JSON.stringify(body),
+  };
+}
+
+function readOauthState() {
+  const storePath = oauthStore.getDefaultPath();
+  const store = oauthStore.read(storePath);
+  const openAICodexPath = getOpenAICodexCliAuthFilePath();
+  const anthropicPath = getAnthropicCliAuthFilePath();
+
+  return {
+    storePath,
+    providers: [
+      {
+        providerId: 'openai-codex' as const,
+        sourcePath: openAICodexPath,
+        sourcePresent: fs.existsSync(openAICodexPath),
+        synced: Boolean(store['openai-codex']),
+        hasRefresh: Boolean(store['openai-codex']?.refresh),
+        expiresAt: store['openai-codex']?.expires ?? null,
+        accountId: store['openai-codex']?.accountId ?? null,
+      },
+      {
+        providerId: 'anthropic' as const,
+        sourcePath: anthropicPath,
+        sourcePresent: fs.existsSync(anthropicPath),
+        synced: Boolean(store.anthropic),
+        hasRefresh: Boolean(store.anthropic?.refresh),
+        expiresAt: store.anthropic?.expires ?? null,
+        accountId: store.anthropic?.accountId ?? null,
+      },
+    ],
   };
 }
