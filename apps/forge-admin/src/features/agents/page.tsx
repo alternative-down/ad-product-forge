@@ -650,7 +650,7 @@ function AgentHeader(input: {
           <div className="flex flex-wrap gap-2 text-xs text-slate-600">
             <span>Function: {agent.function?.name ?? 'No function'}</span>
             <span>•</span>
-            <span>Role: {agent.function?.roleName ?? 'No role'}</span>
+            <span>Roles: {agent.function?.roles.map((role) => role.name).join(', ') || 'No roles'}</span>
             <span>•</span>
             <span>Profile: {formatAgentProfile(agent.modelProfile)}</span>
           </div>

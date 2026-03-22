@@ -21,21 +21,29 @@ export function createCapabilityStore(db: Database) {
   async function listFunctions() {
     const rows = await db.query.agentFunctions.findMany({
       with: {
-        roleLink: true,
+        roleLinks: {
+          with: {
+            role: true,
+          },
+        },
       },
       orderBy: [asc(agentFunctions.name)],
     });
 
-    return rows.map((row) => {
-      const { id, roleLink, ...rest } = row;
-
-      return {
-        ...rest,
-        functionId: id,
-        description: rest.description ?? undefined,
-        roleId: roleLink?.roleId ?? null,
-      };
-    });
+    return rows.map(({ id, roleLinks, ...rest }) => ({
+      ...rest,
+      functionId: id,
+      description: rest.description ?? undefined,
+      roleIds: roleLinks.map((link) => link.roleId),
+      roles: roleLinks
+        .map((link) => link.role)
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((role) => ({
+          roleId: role.id,
+          name: role.name,
+          description: role.description ?? undefined,
+        })),
+    }));
   }
 
   async function createFunction(input: { name: string; description?: string }) {
@@ -180,14 +188,15 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function deleteRole(roleId: string) {
-    const linkedFunction = await db.query.functionRoles.findFirst({
+    const linkedFunctions = await db.query.functionRoles.findMany({
       where: eq(functionRoles.roleId, roleId),
       columns: {
         functionId: true,
       },
+      limit: 1,
     });
 
-    if (linkedFunction) {
+    if (linkedFunctions.length > 0) {
       throw new Error(`Cannot delete role with assigned functions: ${roleId}`);
     }
 
@@ -201,28 +210,17 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
-  async function assignRoleToFunction(input: { functionId: string; roleId: string }) {
-    const now = Date.now();
-
+  async function addRoleToFunction(input: { functionId: string; roleId: string }) {
     await db
       .insert(functionRoles)
       .values({
         functionId: input.functionId,
         roleId: input.roleId,
-        createdAt: now,
+        createdAt: Date.now(),
       })
-      .onConflictDoUpdate({
-        target: functionRoles.functionId,
-        set: {
-          roleId: input.roleId,
-          createdAt: now,
-        },
-      });
+      .onConflictDoNothing();
 
-    return {
-      functionId: input.functionId,
-      roleId: input.roleId,
-    };
+    return input;
   }
 
   async function ensureDefaultFunctionsForRoles() {
@@ -245,20 +243,19 @@ export function createCapabilityStore(db: Database) {
         description: `Default function for role ${role.name}.`,
       });
 
-      await assignRoleToFunction({
+      await addRoleToFunction({
         functionId: createdFunction.functionId,
         roleId: role.roleId,
       });
     }
   }
 
-  async function clearRoleFromFunction(functionId: string) {
-    await db.delete(functionRoles).where(eq(functionRoles.functionId, functionId));
+  async function removeRoleFromFunction(input: { functionId: string; roleId: string }) {
+    await db
+      .delete(functionRoles)
+      .where(and(eq(functionRoles.functionId, input.functionId), eq(functionRoles.roleId, input.roleId)));
 
-    return {
-      functionId,
-      roleId: null,
-    };
+    return input;
   }
 
   async function listRoleToolPermissions(roleId: string) {
@@ -348,25 +345,27 @@ export function createCapabilityStore(db: Database) {
       throw new Error(`Agent is missing functionId: ${agentId}`);
     }
 
-    const functionRole = await db.query.functionRoles.findFirst({
+    const functionRolesForAgent = await db.query.functionRoles.findMany({
       where: eq(functionRoles.functionId, agent.functionId),
     });
 
-    if (!functionRole) {
+    if (functionRolesForAgent.length === 0) {
       return {
         toolIds: [],
         workflowIds: [],
       };
     }
 
-    const [toolIds, workflowIds] = await Promise.all([
-      listRoleToolPermissions(functionRole.roleId),
-      listRoleWorkflowPermissions(functionRole.roleId),
-    ]);
+    const capabilitySets = await Promise.all(
+      functionRolesForAgent.map(async (functionRole) => ({
+        toolIds: await listRoleToolPermissions(functionRole.roleId),
+        workflowIds: await listRoleWorkflowPermissions(functionRole.roleId),
+      })),
+    );
 
     return {
-      toolIds,
-      workflowIds,
+      toolIds: [...new Set(capabilitySets.flatMap((set) => set.toolIds))].sort(),
+      workflowIds: [...new Set(capabilitySets.flatMap((set) => set.workflowIds))].sort(),
     };
   }
 
@@ -380,9 +379,9 @@ export function createCapabilityStore(db: Database) {
     createRole,
     updateRole,
     deleteRole,
-    assignRoleToFunction,
+    addRoleToFunction,
     ensureDefaultFunctionsForRoles,
-    clearRoleFromFunction,
+    removeRoleFromFunction,
     listRoleToolPermissions,
     addRoleToolPermission,
     removeRoleToolPermission,

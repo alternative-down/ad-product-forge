@@ -1,7 +1,7 @@
 import { CircleDollarSign, Shield, Siren } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getOverview, listFunctions, listRoles } from '../../lib/api';
+import { getOverview, listFunctions } from '../../lib/api';
 import { formatDateTime, formatUsd } from '../../lib/format';
 import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
@@ -15,12 +15,7 @@ export function OverviewPage() {
     queryKey: ['admin', 'functions'],
     queryFn: listFunctions,
   });
-  const rolesQuery = useQuery({
-    queryKey: ['admin', 'roles'],
-    queryFn: listRoles,
-  });
-
-  if (overviewQuery.isLoading || functionsQuery.isLoading || rolesQuery.isLoading) {
+  if (overviewQuery.isLoading || functionsQuery.isLoading) {
     return <PanelLoading label="Loading overview" />;
   }
 
@@ -32,13 +27,8 @@ export function OverviewPage() {
     return <PanelError message={functionsQuery.error.message} />;
   }
 
-  if (rolesQuery.isError) {
-    return <PanelError message={rolesQuery.error.message} />;
-  }
-
   const overview = overviewQuery.data!;
   const functions = functionsQuery.data!;
-  const roles = rolesQuery.data!;
 
   return (
     <div className="space-y-6">
@@ -128,8 +118,7 @@ export function OverviewPage() {
           </div>
           <div className="mt-5 space-y-3">
             {functions.map((agentFunction) => {
-              const roleName =
-                roles.items.find((role) => role.roleId === agentFunction.roleId)?.name ?? 'No role';
+              const roleNames = agentFunction.roles.map((role) => role.name);
 
               return (
                 <div
@@ -147,7 +136,7 @@ export function OverviewPage() {
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-xs text-slate-600">
                     <Shield className="h-3.5 w-3.5" />
-                    Role: {roleName}
+                    Roles: {roleNames.length > 0 ? roleNames.join(', ') : 'No roles'}
                   </div>
                 </div>
               );
