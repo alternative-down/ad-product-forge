@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm';
 import type { Database } from '../database/index';
 import { llmModelPrices } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
-import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createOAuthGateway } from '@mastra-engine/core';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
@@ -19,11 +18,9 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   const llmSettings = createLlmSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
-  const hiringRhPricingModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
-  const companyCashOperations = createCompanyCashOperations(db);
   const modelPrice = await db.query.llmModelPrices.findFirst({
-    where: eq(llmModelPrices.modelKey, hiringRhPricingModelKey),
+    where: eq(llmModelPrices.modelKey, hiringRhModelKey),
   });
   const hiringPrompt = buildHiringPrompt(input);
 
@@ -60,17 +57,10 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
-  await companyCashOperations.recordCashOut({
-    type: 'agent-hiring-process',
-    amountUsd: costUsd,
-    description: `Hiring workflow cost for ${input.requestedFunction}`,
-    referenceType: 'hiring-workflow',
-  });
-
   return {
     instructions: result.text.trim(),
     costUsd,
-    modelKey: hiringRhPricingModelKey,
+    modelKey: hiringRhModelKey,
   };
 }
 

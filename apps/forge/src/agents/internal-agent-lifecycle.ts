@@ -9,6 +9,7 @@ import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createCapabilityStore } from '../capabilities/store';
+import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
 type RunInternalHiringInput = {
   requestedFunction: string;
@@ -25,6 +26,7 @@ type RunInternalHiringInput = {
 export async function runInternalHiring(db: Database, input: RunInternalHiringInput) {
   const profile = await buildHiredAgentProfile(db, input);
   const hiringRh = await generateHiredAgentInstructions(db, input);
+  const companyCashOperations = createCompanyCashOperations(db);
   const capabilities = createCapabilityStore(db);
   const agentFunction = await capabilities.getOrCreateFunction({
     name: input.requestedFunction,
@@ -47,6 +49,13 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     const githubApp = await input.githubApps.createAgentApp({
       agentId: hired.agentId,
       agentName: profile.name,
+    });
+    await companyCashOperations.recordCashOut({
+      type: 'agent-hiring-process',
+      amountUsd: hiringRh.costUsd,
+      description: `Hiring workflow cost for ${input.requestedFunction}`,
+      referenceType: 'hiring-workflow',
+      referenceId: hired.agentId,
     });
 
     return {
