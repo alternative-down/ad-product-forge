@@ -14,6 +14,7 @@ import type { createAgentScheduleManager } from '../schedules/manager';
 import { createAgentScheduleTools } from '../schedules/tools';
 import { createCapabilityStore } from '../capabilities/store';
 import { createCapabilityTools } from '../capabilities/tools';
+import { createLlmSettingsStore } from '../llm/settings-store';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -48,6 +49,12 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   if (!agentConfig.functionId) {
     throw new Error(`Agent is missing functionId: ${config.agentId}`);
   }
+
+  const llmSettings = createLlmSettingsStore(db);
+  const [primaryProfile, omProfile] = await Promise.all([
+    llmSettings.getProfile(agentConfig.modelProfileId),
+    llmSettings.getProfile(agentConfig.omModelProfileId),
+  ]);
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
@@ -99,10 +106,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       name: agentConfig.name,
       description: agentConfig.description || undefined,
       instructions: agentConfig.instructions,
-      model: agentConfig.model,
-      modelProfileId: agentConfig.modelProfileId ?? undefined,
-      omModel: agentConfig.omModel || undefined,
-      omModelProfileId: agentConfig.omModelProfileId ?? undefined,
+      model: primaryProfile.modelKey,
+      modelProfileId: primaryProfile.profileId,
+      omModel: omProfile.modelKey,
+      omModelProfileId: omProfile.profileId,
       tools: customTools,
       providers,
       workflows: filteredWorkflows,

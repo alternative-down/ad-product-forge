@@ -30,10 +30,8 @@ export type HireInternalAgentInput = {
   name: string;
   description?: string;
   instructions: string;
-  model: string;
-  modelProfileId?: string;
-  omModel?: string;
-  omModelProfileId?: string;
+  modelProfileId: string;
+  omModelProfileId: string;
   workspaceBasePath: string;
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
@@ -72,10 +70,8 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     name: input.name,
     description: input.description,
     functionId: input.functionId,
-    model: input.model,
-    modelProfileId: input.modelProfileId ?? null,
-    omModel: input.omModel,
-    omModelProfileId: input.omModelProfileId ?? null,
+    modelProfileId: input.modelProfileId,
+    omModelProfileId: input.omModelProfileId,
     instructions: input.instructions,
     executionState: 'idle',
     workspaceAutoSync: 1,

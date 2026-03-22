@@ -9,31 +9,7 @@ import * as schema from '../database/schema';
 import { getDatabase, runMigrations, seedModelPrices } from '../database/index';
 import { createId } from '@paralleldrive/cuid2';
 import { encryptSecret } from '../encryption/crypto';
-
-/**
- * Determines the gateway and provider for a given model ID
- * Supports: claude-* for Claude/Anthropic, gpt-* for OpenAI
- */
-function resolveModelGateway(modelId: string): { provider: string; gateway: string } {
-  if (modelId.includes('claude') || modelId.includes('anthropic')) {
-    return { provider: 'claude-max', gateway: 'account-oauth' };
-  }
-
-  if (modelId.startsWith('gpt-')) {
-    return { provider: 'openai-codex', gateway: 'account-oauth' };
-  }
-
-  throw new Error(`Unsupported model: ${modelId}. Expected 'claude-*' or 'gpt-*' format`);
-}
-
-/**
- * Builds the full model string for agent initialization
- * Format: {gateway}/{provider}/{modelId}
- */
-function buildModelString(modelId: string): string {
-  const { gateway, provider } = resolveModelGateway(modelId);
-  return `${gateway}/${provider}/${modelId}`;
-}
+import { createLlmSettingsStore } from '../llm/settings-store';
 
 /**
  * Agent configuration - hardcoded once, then managed via database
@@ -44,15 +20,11 @@ const AGENTS_CONFIG = {
     id: 'forge-agent',
     name: 'Forge Agent',
     description: 'Main Forge agent for task execution',
-    modelId: 'gpt-5.4',
-    omModelId: 'gpt-5.4-mini',
   },
   helper: {
     id: 'forge-helper',
     name: 'Forge Helper',
     description: 'Helper agent for analysis and support',
-    modelId: 'gpt-5.4',
-    omModelId: 'gpt-5.4-mini',
   },
 };
 
@@ -72,13 +44,15 @@ async function initAgentRegistry() {
     console.log('[Init] Migrations completed ✓');
 
     // Prepare agent configs
+    const llmSettings = createLlmSettingsStore(db);
+    const defaults = await llmSettings.getResolvedDefaults();
     const agentConfigs = [
       {
         id: AGENTS_CONFIG.forge.id,
         name: AGENTS_CONFIG.forge.name,
         description: AGENTS_CONFIG.forge.description,
-        model: buildModelString(AGENTS_CONFIG.forge.modelId),
-        omModel: buildModelString(AGENTS_CONFIG.forge.omModelId),
+        modelProfileId: defaults.primaryProfile.profileId,
+        omModelProfileId: defaults.omProfile.profileId,
         instructions: systemPrompt,
         workspaceAutoSync: 1,
         workspaceBm25: 1,
@@ -90,8 +64,8 @@ async function initAgentRegistry() {
         id: AGENTS_CONFIG.helper.id,
         name: AGENTS_CONFIG.helper.name,
         description: AGENTS_CONFIG.helper.description,
-        model: buildModelString(AGENTS_CONFIG.helper.modelId),
-        omModel: buildModelString(AGENTS_CONFIG.helper.omModelId),
+        modelProfileId: defaults.primaryProfile.profileId,
+        omModelProfileId: defaults.omProfile.profileId,
         instructions: [
           systemPrompt,
           'You are the helper agent for the main Forge agent.',
@@ -124,8 +98,8 @@ async function initAgentRegistry() {
           .set({
             name: config.name,
             description: config.description,
-            model: config.model,
-            omModel: config.omModel,
+            modelProfileId: config.modelProfileId,
+            omModelProfileId: config.omModelProfileId,
             instructions: config.instructions,
             workspaceAutoSync: config.workspaceAutoSync,
             workspaceBm25: config.workspaceBm25,
@@ -143,8 +117,8 @@ async function initAgentRegistry() {
           id: config.id,
           name: config.name,
           description: config.description,
-          model: config.model,
-          omModel: config.omModel,
+          modelProfileId: config.modelProfileId,
+          omModelProfileId: config.omModelProfileId,
           instructions: config.instructions,
           workspaceAutoSync: config.workspaceAutoSync,
           workspaceBm25: config.workspaceBm25,
@@ -219,7 +193,8 @@ async function initAgentRegistry() {
     console.log(`  Total agents: ${agents.length}`);
     agents.forEach((agent: typeof schema.agents.$inferSelect) => {
       console.log(`    - ${agent.id}: ${agent.name}`);
-      console.log(`      Model: ${agent.model}`);
+      console.log(`      Primary profile: ${agent.modelProfileId}`);
+      console.log(`      OM profile: ${agent.omModelProfileId}`);
       console.log(`      Instructions: ${agent.instructions ? agent.instructions.substring(0, 50) + '...' : 'N/A'}`);
     });
 

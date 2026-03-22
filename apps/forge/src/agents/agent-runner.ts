@@ -212,6 +212,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   }
 
   async function estimateStepCostUsd() {
+    if (!runtime.modelProfileId) {
+      throw new Error(`Agent runtime is missing primary model profile: ${runtime.id}`);
+    }
+
     const recentSteps = await store.listRecentSteps(runtime.id, RECENT_STEP_LIMIT);
 
     if (recentSteps.length === 0) {
@@ -267,6 +271,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     cachedInputTokens: number,
     outputTokens: number,
   ) {
+    if (!runtime.modelProfileId) {
+      throw new Error(`Agent runtime is missing primary model profile: ${runtime.id}`);
+    }
+
     const pricing = await store.getUsagePricing({
       modelKey: runtime.modelKey,
       profileId: runtime.modelProfileId,
@@ -289,6 +297,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       inputTokens,
       cachedInputTokens,
       outputTokens,
+      inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
+      inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
+      outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
+      contractCostMultiplier: pricing.contractCostMultiplier,
       costUsd,
     });
   }
@@ -303,6 +315,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       };
     }>,
   ) {
+    if (!runtime.omModelProfileId) {
+      throw new Error(`Agent runtime is missing OM model profile: ${runtime.id}`);
+    }
+
     const pricing = await store.getUsagePricing({
       modelKey: runtime.omModelKey,
       profileId: runtime.omModelProfileId,
@@ -340,6 +356,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         inputTokens,
         cachedInputTokens: 0,
         outputTokens,
+        inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
+        inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
+        outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
+        contractCostMultiplier: pricing.contractCostMultiplier,
         costUsd,
       });
     }

@@ -652,7 +652,7 @@ function AgentHeader(input: {
             <span>•</span>
             <span>Role: {agent.function?.roleName ?? 'No role'}</span>
             <span>•</span>
-            <span>Model: {agent.model}</span>
+            <span>Model: {agent.model ?? 'No model profile'}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -1458,7 +1458,12 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
                 <td className="px-4 py-3">{step.kind}</td>
                 <td className="px-4 py-3">{step.modelKey}</td>
                 <td className="px-4 py-3">{formatInteger(step.inputTokens + step.outputTokens)}</td>
-                <td className="px-4 py-3">{formatUsd(step.costUsd)}</td>
+                <td className="px-4 py-3">
+                  <div>{formatUsd(step.costUsd)}</div>
+                  <div className="text-xs text-slate-500">
+                    {step.contractCostMultiplier.toFixed(3)}x
+                  </div>
+                </td>
                 <td className="px-4 py-3">{formatDateTime(step.createdAt)}</td>
               </tr>
             ))}

@@ -100,6 +100,29 @@ export function createLlmSettingsStore(db: Database) {
     };
   }
 
+  async function getProfile(profileId: string) {
+    const row = await db.query.llmProfiles.findFirst({
+      where: eq(llmProfiles.id, profileId),
+    });
+
+    if (!row) {
+      throw new Error(`LLM profile not found: ${profileId}`);
+    }
+
+    return {
+      profileId: row.id,
+      slug: row.slug,
+      label: row.label,
+      providerType: row.providerType,
+      modelId: row.modelId,
+      modelKey: buildModelKey(row.providerType, row.modelId),
+      contractCostMultiplier: row.contractCostMultiplier,
+      isEnabled: row.isEnabled === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
   async function upsertProfile(input: {
     profileId?: string;
     slug: string;
@@ -248,6 +271,7 @@ export function createLlmSettingsStore(db: Database) {
 
   return {
     listProfiles,
+    getProfile,
     getDefaults,
     getResolvedDefaults,
     upsertProfile,

@@ -36,12 +36,12 @@ export const agents = sqliteTable('agents', {
   description: text('description'),
   functionId: text('function_id')
     .references(() => agentFunctions.id, { onDelete: 'set null' }),
-  model: text('model').notNull(),
   modelProfileId: text('model_profile_id')
-    .references(() => llmProfiles.id, { onDelete: 'set null' }),
-  omModel: text('om_model'), // Modelo para observational memory
+    .notNull()
+    .references(() => llmProfiles.id, { onDelete: 'restrict' }),
   omModelProfileId: text('om_model_profile_id')
-    .references(() => llmProfiles.id, { onDelete: 'set null' }),
+    .notNull()
+    .references(() => llmProfiles.id, { onDelete: 'restrict' }),
   instructions: text('instructions').notNull(),
   executionState: text('execution_state').notNull().default('idle'),
   // Workspace configuration
@@ -158,6 +158,10 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
   inputTokens: integer('input_tokens').notNull(),
   cachedInputTokens: integer('cached_input_tokens').notNull().default(0),
   outputTokens: integer('output_tokens').notNull(),
+  inputPerMillionUsd: real('input_per_million_usd').notNull().default(0),
+  inputCachePerMillionUsd: real('input_cache_per_million_usd').notNull().default(0),
+  outputPerMillionUsd: real('output_per_million_usd').notNull().default(0),
+  contractCostMultiplier: real('contract_cost_multiplier').notNull().default(1),
   costUsd: real('cost_usd').notNull(),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({

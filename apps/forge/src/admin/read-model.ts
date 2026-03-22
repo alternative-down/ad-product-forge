@@ -73,15 +73,17 @@ export function createAdminReadModel(input: {
   }
 
   async function listAgents() {
-    const [agentRows, functionRows, providerRows] = await Promise.all([
+    const [agentRows, functionRows, providerRows, llmProfiles] = await Promise.all([
       db.query.agents.findMany({
         orderBy: (fields, { asc }) => [asc(fields.name)],
       }),
       capabilities.listFunctions(),
       db.query.agentProviders.findMany(),
+      llmSettings.listProfiles(),
     ]);
     const registry = getInternalAgentRegistry();
     const functionMap = new Map(functionRows.map((row) => [row.functionId, row]));
+    const llmProfileMap = new Map(llmProfiles.map((row) => [row.profileId, row]));
     const providerTypesByAgentId = new Map<string, string[]>();
 
     for (const provider of providerRows) {
@@ -93,6 +95,8 @@ export function createAdminReadModel(input: {
     return agentRows.map((agent) => {
       const loadedAgent = registry.get(agent.id);
       const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
+      const modelProfile = llmProfileMap.get(agent.modelProfileId);
+      const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
 
       return {
         agentId: agent.id,
@@ -101,8 +105,8 @@ export function createAdminReadModel(input: {
         executionState: agent.executionState,
         functionId: agent.functionId,
         functionName: agentFunction?.name ?? null,
-        model: agent.model,
-        omModel: agent.omModel ?? undefined,
+        model: modelProfile?.modelKey ?? null,
+        omModel: omModelProfile?.modelKey ?? null,
         loaded: Boolean(loadedAgent),
         runner: loadedAgent?.runner.getSnapshot() ?? null,
         providerTypes: (providerTypesByAgentId.get(agent.id) ?? []).sort(),
@@ -124,6 +128,7 @@ export function createAdminReadModel(input: {
     const [
       functions,
       roleRows,
+      llmProfiles,
       providerRows,
       recentSteps,
       agentScheduleRows,
@@ -134,6 +139,7 @@ export function createAdminReadModel(input: {
       await Promise.all([
         capabilities.listFunctions(),
         capabilities.listRoles(),
+        llmSettings.listProfiles(),
         db.query.agentProviders.findMany({
           where: eq(agentProviders.agentId, agentId),
         }),
@@ -157,8 +163,11 @@ export function createAdminReadModel(input: {
     const loadedAgent = registry.get(agentId);
     const functionMap = new Map(functions.map((row) => [row.functionId, row]));
     const roleMap = new Map(roleRows.map((row) => [row.roleId, row]));
+    const llmProfileMap = new Map(llmProfiles.map((row) => [row.profileId, row]));
     const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
     const role = agentFunction?.roleId ? (roleMap.get(agentFunction.roleId) ?? null) : null;
+    const modelProfile = llmProfileMap.get(agent.modelProfileId);
+    const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
     const heartbeat = agentScheduleRows.find((schedule) => schedule.kind === 'heartbeat') ?? null;
 
     return {
@@ -167,8 +176,8 @@ export function createAdminReadModel(input: {
       description: agent.description ?? undefined,
       instructions: agent.instructions,
       executionState: agent.executionState,
-      model: agent.model,
-      omModel: agent.omModel ?? undefined,
+      model: modelProfile?.modelKey ?? null,
+      omModel: omModelProfile?.modelKey ?? null,
       function: agentFunction
         ? {
             functionId: agentFunction.functionId,
@@ -210,6 +219,10 @@ export function createAdminReadModel(input: {
         inputTokens: step.inputTokens,
         cachedInputTokens: step.cachedInputTokens,
         outputTokens: step.outputTokens,
+        inputPerMillionUsd: step.inputPerMillionUsd,
+        inputCachePerMillionUsd: step.inputCachePerMillionUsd,
+        outputPerMillionUsd: step.outputPerMillionUsd,
+        contractCostMultiplier: step.contractCostMultiplier,
         costUsd: step.costUsd,
         createdAt: step.createdAt,
       })),
