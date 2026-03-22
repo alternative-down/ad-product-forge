@@ -2,15 +2,15 @@ import type { Database } from '../database/index';
 import { createLlmSettingsStore } from '../llm/settings-store';
 
 export async function buildHiredAgentProfile(db: Database, input: {
-  requestedFunction: string;
+  agentName: string;
+  agentDescription?: string;
 }) {
-  const requestedFunction = input.requestedFunction.trim();
   const llmSettings = createLlmSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
 
   return {
-    name: requestedFunction,
-    description: `Internal collaborator responsible for ${requestedFunction}.`,
+    name: input.agentName.trim(),
+    description: input.agentDescription?.trim(),
     modelProfileId: defaults.primaryProfile.profileId,
     omModelProfileId: defaults.omProfile.profileId,
   };

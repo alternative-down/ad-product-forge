@@ -8,11 +8,19 @@ import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createOAuthGateway } from '@mastra-engine/core';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
+import { z } from 'zod';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
+const hiringRhResultSchema = z.object({
+  agentName: z.string().min(1),
+  agentDescription: z.string().min(1),
+  functionName: z.string().min(1),
+  functionDescription: z.string().min(1),
+  instructions: z.string().min(1),
+});
 
 export async function generateHiredAgentInstructions(db: Database, input: {
-  requestedFunction: string;
+  hiringRequest: string;
   additionalContext?: string;
 }) {
   const llmSettings = createLlmSettingsStore(db);
@@ -51,6 +59,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt);
+  const parsed = hiringRhResultSchema.parse(JSON.parse(result.text));
   const inputTokens = result.usage.inputTokens ?? 0;
   const outputTokens = result.usage.outputTokens ?? 0;
   const costUsd =
@@ -58,22 +67,27 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
   return {
-    instructions: result.text.trim(),
+    agentName: parsed.agentName.trim(),
+    agentDescription: parsed.agentDescription.trim(),
+    functionName: parsed.functionName.trim(),
+    functionDescription: parsed.functionDescription.trim(),
+    instructions: parsed.instructions.trim(),
     costUsd,
     modelKey: hiringRhModelKey,
   };
 }
 
 function buildHiringPrompt(input: {
-  requestedFunction: string;
+  hiringRequest: string;
   additionalContext?: string;
 }) {
   const sections = [
-    'Write the full system prompt for a newly hired permanent internal collaborator.',
-    `Professional function: ${input.requestedFunction.trim()}`,
+    'Design one newly hired permanent internal collaborator from the hiring request.',
+    `Hiring request:\n${input.hiringRequest.trim()}`,
     'The collaborator works inside the company and primarily communicates through internal-chat.',
-    'The prompt should be direct, practical, execution-oriented, and written as the hired agent instructions.',
-    'Return only the system prompt text with no markdown fences, no explanation, and no extra commentary.',
+    'Return only valid JSON with exactly these keys: agentName, agentDescription, functionName, functionDescription, instructions.',
+    'The instructions field must be the full system prompt for the hired agent.',
+    'Do not wrap the JSON in markdown fences.',
   ];
 
   if (input.additionalContext?.trim()) {

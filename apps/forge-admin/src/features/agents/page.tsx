@@ -48,7 +48,7 @@ type ScheduleDraft = {
 };
 
 type HireAgentDraft = {
-  requestedFunction: string;
+  hiringRequest: string;
   additionalContext: string;
   weeklyBudgetUsd: string;
 };
@@ -74,7 +74,7 @@ export function AgentsPage() {
   const search = useSearch({ from: '/agents' });
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft | null>(null);
   const [hireDraft, setHireDraft] = useState<HireAgentDraft>({
-    requestedFunction: '',
+    hiringRequest: '',
     additionalContext: '',
     weeklyBudgetUsd: '25',
   });
@@ -153,7 +153,7 @@ export function AgentsPage() {
     onSuccess: async (result) => {
       setHireResult(result);
       setHireDraft({
-        requestedFunction: '',
+        hiringRequest: '',
         additionalContext: '',
         weeklyBudgetUsd: '25',
       });
@@ -353,7 +353,7 @@ export function AgentsPage() {
           onChange={setHireDraft}
           onSubmit={(draft) => {
             hireMutation.mutate({
-              requestedFunction: draft.requestedFunction,
+              hiringRequest: draft.hiringRequest,
               additionalContext: draft.additionalContext || undefined,
               weeklyBudgetUsd: Number(draft.weeklyBudgetUsd),
             });
@@ -556,13 +556,13 @@ function HireAgentCard(input: {
         }}
       >
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-          <LabeledField label="Requested function">
-            <Input
-              value={input.draft.requestedFunction}
+          <LabeledField label="Hiring request">
+            <Textarea
+              value={input.draft.hiringRequest}
               onChange={(event) =>
-                input.onChange({ ...input.draft, requestedFunction: event.target.value })
+                input.onChange({ ...input.draft, hiringRequest: event.target.value })
               }
-              placeholder="Product engineering"
+              placeholder="Describe the kind of collaborator you need, expected responsibilities, context, and desired profile."
               required
             />
           </LabeledField>

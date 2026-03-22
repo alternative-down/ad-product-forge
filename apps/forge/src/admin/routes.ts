@@ -81,7 +81,7 @@ const agentActionSchema = z.object({
 });
 
 const hireAgentSchema = z.object({
-  requestedFunction: z.string().min(1),
+  hiringRequest: z.string().min(1),
   additionalContext: z.string().optional(),
   weeklyBudgetUsd: z.coerce.number().positive(),
 });
@@ -352,7 +352,7 @@ export function registerAdminRoutes(input: {
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, hireAgentSchema);
       const result = await runInternalHiring(input.db, {
-        requestedFunction: body.requestedFunction,
+        hiringRequest: body.hiringRequest,
         additionalContext: body.additionalContext,
         weeklyBudgetUsd: body.weeklyBudgetUsd,
         workspaceBasePath: input.workspaceBasePath,
