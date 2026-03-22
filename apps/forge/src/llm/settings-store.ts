@@ -1,4 +1,4 @@
-import { createId } from '@paralleldrive/cuid2';
+import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -7,6 +7,7 @@ import { llmProfiles, systemLlmDefaults } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
 const llmProfileSchema = z.object({
+  name: z.string().min(1),
   modelKey: z.string().min(1),
   baseUrl: z.string().url().optional().nullable(),
   apiKey: z.string().min(1),
@@ -92,6 +93,7 @@ export function createLlmSettingsStore(db: Database) {
 
   async function upsertProfile(input: {
     profileId?: string;
+    name: string;
     modelKey: string;
     baseUrl?: string | null;
     apiKey: string;
@@ -100,7 +102,7 @@ export function createLlmSettingsStore(db: Database) {
   }) {
     const parsed = llmProfileSchema.parse(input);
     const now = Date.now();
-    const profileId = input.profileId ?? createId();
+    const profileId = input.profileId ?? randomUUID();
     const existing = input.profileId
       ? await db.query.llmProfiles.findFirst({
           where: eq(llmProfiles.id, input.profileId),
@@ -111,6 +113,7 @@ export function createLlmSettingsStore(db: Database) {
       await db
         .update(llmProfiles)
         .set({
+          name: parsed.name.trim(),
           modelKey: parsed.modelKey,
           baseUrl: parsed.baseUrl?.trim() || null,
           encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
@@ -122,6 +125,7 @@ export function createLlmSettingsStore(db: Database) {
     } else {
       await db.insert(llmProfiles).values({
         id: profileId,
+        name: parsed.name.trim(),
         modelKey: parsed.modelKey,
         baseUrl: parsed.baseUrl?.trim() || null,
         encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
@@ -134,6 +138,7 @@ export function createLlmSettingsStore(db: Database) {
 
     return {
       profileId,
+      name: parsed.name.trim(),
       modelKey: parsed.modelKey,
       baseUrl: parsed.baseUrl?.trim() || null,
       apiKey: parsed.apiKey.trim(),

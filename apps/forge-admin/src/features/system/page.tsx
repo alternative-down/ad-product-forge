@@ -47,6 +47,7 @@ type GitHubDraft = {
 
 type LlmProfileDraft = {
   profileId?: string;
+  name: string;
   modelKey: string;
   baseUrl: string;
   apiKey: string;
@@ -382,7 +383,8 @@ function LlmProfileEditorCard(input: {
               <div key={profile.profileId} className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-950">{profile.profileId}</p>
+                    <p className="font-medium text-slate-950">{profile.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">{profile.profileId}</p>
                     <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
@@ -435,6 +437,13 @@ function LlmProfileForm(input: {
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2">
+        <LabeledField label="Profile name">
+          <Input
+            value={draft.name}
+            onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+            placeholder="claude-haiku-om"
+          />
+        </LabeledField>
         <LabeledField label="Model key">
           <Input
             value={draft.modelKey}
@@ -491,6 +500,7 @@ function LlmProfileForm(input: {
           onClick={() =>
             input.onSave({
               ...draft,
+              name: draft.name.trim(),
               modelKey: draft.modelKey.trim(),
               baseUrl: draft.baseUrl.trim() ? draft.baseUrl.trim() : null,
               apiKey: draft.apiKey.trim(),
@@ -1001,6 +1011,7 @@ function buildLlmProfileDraft(profile: LlmProfile | null): LlmProfileDraft {
   if (!profile) {
     return {
       modelKey: '',
+      name: '',
       baseUrl: '',
       apiKey: '',
       contractCostMultiplier: 1,
@@ -1010,6 +1021,7 @@ function buildLlmProfileDraft(profile: LlmProfile | null): LlmProfileDraft {
 
   return {
     profileId: profile.profileId,
+    name: profile.name,
     modelKey: profile.modelKey,
     baseUrl: profile.baseUrl ?? '',
     apiKey: profile.apiKey,
@@ -1019,5 +1031,5 @@ function buildLlmProfileDraft(profile: LlmProfile | null): LlmProfileDraft {
 }
 
 function formatProfileOption(profile: LlmProfile) {
-  return `${profile.profileId} · ${profile.modelKey}`;
+  return `${profile.name} · ${profile.modelKey}`;
 }
