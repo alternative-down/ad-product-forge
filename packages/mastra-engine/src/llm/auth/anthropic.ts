@@ -8,6 +8,77 @@ import { oauthStore, type OAuthCredential } from './store';
 
 const ANTHROPIC_CLIENT_ID = Buffer.from('OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl', 'base64').toString('utf8');
 const ANTHROPIC_TOKEN_URL = 'https://console.anthropic.com/v1/oauth/token';
+const claudeCliAuthSchema = z.object({
+  claudeAiOauth: z.object({
+    accessToken: z.string(),
+    refreshToken: z.string().optional(),
+    expiresAt: z.number().optional(),
+  }),
+});
+
+export function getAnthropicCliAuthFilePath(filePath = path.join(os.homedir(), '.claude', '.credentials.json')) {
+  return filePath;
+}
+
+async function refresh(credential: OAuthCredential) {
+  if (!credential.refresh) {
+    throw new Error('Anthropic refresh token missing.');
+  }
+
+  const response = await fetch(ANTHROPIC_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'refresh_token',
+      client_id: ANTHROPIC_CLIENT_ID,
+      refresh_token: credential.refresh,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Anthropic token refresh failed: ${response.status} ${text}`.trim());
+  }
+
+  const payload = z
+    .object({
+      access_token: z.string().optional(),
+      refresh_token: z.string().optional(),
+      expires_in: z.number().optional(),
+    })
+    .parse(await response.json());
+
+  if (!payload.access_token || payload.expires_in === undefined) {
+    throw new Error('Anthropic refresh response missing access token or expiry.');
+  }
+
+  return {
+    access: payload.access_token,
+    refresh: payload.refresh_token || credential.refresh,
+    expires: Date.now() + payload.expires_in * 1000 - 5 * 60 * 1000,
+  } satisfies OAuthCredential;
+}
+
+export async function syncAnthropicCredential(options?: {
+  authFilePath?: string;
+  storePath?: string;
+}): Promise<OAuthCredential> {
+  const storePath = options?.storePath ?? oauthStore.getDefaultPath();
+  const filePath = options?.authFilePath ?? getAnthropicCliAuthFilePath();
+  const payload = claudeCliAuthSchema.parse(oauthStore.readJsonFile(filePath));
+  let credential = {
+    access: payload.claudeAiOauth.accessToken,
+    refresh: payload.claudeAiOauth.refreshToken,
+    expires: payload.claudeAiOauth.expiresAt,
+  } satisfies OAuthCredential;
+
+  if (credential.refresh && oauthStore.isExpired(credential)) {
+    credential = await refresh(credential);
+  }
+
+  oauthStore.write('anthropic', credential, storePath);
+  return credential;
+}
 
 export async function resolveAnthropicCredential(options?: {
   authFilePath?: string;
@@ -16,13 +87,6 @@ export async function resolveAnthropicCredential(options?: {
 }): Promise<OAuthCredential> {
   const storePath = options?.storePath ?? oauthStore.getDefaultPath();
   const stored = oauthStore.read(storePath).anthropic;
-  const claudeCliAuthSchema = z.object({
-    claudeAiOauth: z.object({
-      accessToken: z.string(),
-      refreshToken: z.string().optional(),
-      expiresAt: z.number().optional(),
-    }),
-  });
 
   function readSetupToken() {
     const filePath = options?.setupTokenFilePath ?? '/tmp/claude_oauth_token';
@@ -33,56 +97,6 @@ export async function resolveAnthropicCredential(options?: {
     }
 
     return { access } satisfies OAuthCredential;
-  }
-
-  function readClaudeCliCredential() {
-    const filePath = options?.authFilePath ?? path.join(os.homedir(), '.claude', '.credentials.json');
-    const payload = claudeCliAuthSchema.parse(oauthStore.readJsonFile(filePath));
-
-    return {
-      access: payload.claudeAiOauth.accessToken,
-      refresh: payload.claudeAiOauth.refreshToken,
-      expires: payload.claudeAiOauth.expiresAt,
-    } satisfies OAuthCredential;
-  }
-
-  async function refresh(credential: OAuthCredential) {
-    if (!credential.refresh) {
-      throw new Error('Anthropic refresh token missing.');
-    }
-
-    const response = await fetch(ANTHROPIC_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        grant_type: 'refresh_token',
-        client_id: ANTHROPIC_CLIENT_ID,
-        refresh_token: credential.refresh,
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      throw new Error(`Anthropic token refresh failed: ${response.status} ${text}`.trim());
-    }
-
-    const payload = z
-      .object({
-        access_token: z.string().optional(),
-        refresh_token: z.string().optional(),
-        expires_in: z.number().optional(),
-      })
-      .parse(await response.json());
-
-    if (!payload.access_token || payload.expires_in === undefined) {
-      throw new Error('Anthropic refresh response missing access token or expiry.');
-    }
-
-    return {
-      access: payload.access_token,
-      refresh: payload.refresh_token || credential.refresh,
-      expires: Date.now() + payload.expires_in * 1000 - 5 * 60 * 1000,
-    } satisfies OAuthCredential;
   }
 
   if (stored && !oauthStore.isExpired(stored)) {
@@ -110,14 +124,10 @@ export async function resolveAnthropicCredential(options?: {
   }
 
   try {
-    let credential = readClaudeCliCredential();
-
-    if (credential.refresh && oauthStore.isExpired(credential)) {
-      credential = await refresh(credential);
-    }
-
-    oauthStore.write('anthropic', credential, storePath);
-    return credential;
+    return syncAnthropicCredential({
+      authFilePath: options?.authFilePath,
+      storePath,
+    });
   } catch {
     const credential = readSetupToken();
     oauthStore.write('anthropic', credential, storePath);

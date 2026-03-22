@@ -122,11 +122,15 @@ Current behavior:
 
 - the runner uses a wake queue from the engine
 - an idle agent becomes `running` when an external wake arrives
-- while running, the agent executes one Mastra step at a time using `generate([], { maxSteps: 1 })`
+- while running, the agent executes one Mastra step at a time using a synthetic `user` wake prompt with `maxSteps: 1`
 - if the result contains no tool calls, the agent returns to `idle`
 - if the result contains tool calls, the runner queues the next step
 - pacing is contract-aware and cost-aware
 - budget insufficiency causes backoff instead of continued execution
+
+The runner does this because the underlying AI SDK prompt standardization rejects empty `messages`.
+
+That makes `generate([])` unsafe for a cold first step.
 
 ## Execution states
 
