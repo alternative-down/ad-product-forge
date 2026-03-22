@@ -28,11 +28,10 @@ export async function terminateInternalAgent(db: Database, input: {
   getInternalAgentRegistry().remove(input.agentId);
   await input.schedules.removeAgent(input.agentId);
 
-  if (!input.emailMailboxes) {
-    throw new Error('Migadu email provisioning is required for termination but is not configured');
+  if (input.emailMailboxes && (await input.emailMailboxes.isConfigured())) {
+    await input.emailMailboxes.deleteAgentMailbox(input.agentId);
   }
 
-  await input.emailMailboxes.deleteAgentMailbox(input.agentId);
   await input.githubApps.deleteAgentApp(input.agentId);
 
   await db.delete(agents).where(eq(agents.id, input.agentId));

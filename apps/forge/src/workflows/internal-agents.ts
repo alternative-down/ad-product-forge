@@ -16,7 +16,7 @@ const hireInternalAgentInputSchema = z.object({
 
 const hireInternalAgentOutputSchema = z.object({
   agentId: z.string(),
-  emailAddress: z.string().email(),
+  emailAddress: z.string().email().nullable(),
   githubAppRegistrationUrl: z.string().url(),
 });
 

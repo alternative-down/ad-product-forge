@@ -599,7 +599,7 @@ function HireAgentCard(input: {
         {input.result && (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             <div>Agent created: {input.result.agentId}</div>
-            <div>Email: {input.result.emailAddress}</div>
+            {input.result.emailAddress ? <div>Email: {input.result.emailAddress}</div> : null}
             <a
               href={input.result.githubAppRegistrationUrl}
               target="_blank"

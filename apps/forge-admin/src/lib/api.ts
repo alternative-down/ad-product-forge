@@ -217,7 +217,7 @@ export type HireAgentInput = {
 
 export type HireAgentResult = {
   agentId: string;
-  emailAddress: string;
+  emailAddress: string | null;
   githubAppRegistrationUrl: string;
 };
 
