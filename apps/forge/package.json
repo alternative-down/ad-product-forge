@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "build": "npm run -w @mastra-engine/core build && tsc && node ../../packages/mastra-engine/scripts/fix-dist-import-specifiers.mjs dist",
+    "build": "npm run -w @mastra-engine/core build && tsup",
     "typecheck": "npm run -w @mastra-engine/core build && tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "init-registry": "tsx src/scripts/init-agent-registry.ts",
@@ -30,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "@types/nodemailer": "^7.0.11",
+    "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

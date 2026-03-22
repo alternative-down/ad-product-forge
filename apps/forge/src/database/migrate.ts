@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
@@ -94,10 +93,7 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
   try {
     console.log('[Migrations] Running pending migrations for application database...');
 
-    const currentFile = fileURLToPath(import.meta.url);
-    const currentDir = dirname(currentFile);
-    const appRoot = dirname(dirname(currentDir));
-    const migrationsPath = join(appRoot, 'migrations');
+    const migrationsPath = join(process.cwd(), 'migrations');
 
     const migrationFiles = (await readdir(migrationsPath))
       .filter((fileName) => fileName.endsWith('.sql'))

@@ -9,7 +9,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && node ./scripts/fix-dist-import-specifiers.mjs",
+    "build": "tsup",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "smoke:openai-codex": "tsx examples/openai-codex-smoke.ts",
@@ -34,6 +34,7 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   }
 }
