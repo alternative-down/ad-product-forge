@@ -18,6 +18,7 @@ import { createCapabilityStore } from '../capabilities/store';
 import {
   changeAgentFunctionFromAdmin,
   reloadAgentIfLoaded,
+  reloadAgentsForFunction,
   reloadAgentsForRole,
   updateInternalChatProviderProfile,
 } from '../capabilities/runtime';
@@ -45,6 +46,46 @@ const agentIdQuerySchema = z.object({
 const roleToolPermissionSchema = z.object({
   roleId: z.string().min(1),
   toolId: z.string().min(1),
+});
+
+const roleWorkflowPermissionSchema = z.object({
+  roleId: z.string().min(1),
+  workflowId: z.string().min(1),
+});
+
+const createRoleSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+});
+
+const updateRoleSchema = z.object({
+  roleId: z.string().min(1),
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+});
+
+const deleteRoleSchema = z.object({
+  roleId: z.string().min(1),
+});
+
+const createFunctionSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+});
+
+const updateFunctionSchema = z.object({
+  functionId: z.string().min(1),
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+});
+
+const deleteFunctionSchema = z.object({
+  functionId: z.string().min(1),
+});
+
+const assignRoleToFunctionSchema = z.object({
+  functionId: z.string().min(1),
+  roleId: z.string().min(1).nullable(),
 });
 
 const createScheduleSchema = z.object({
@@ -548,10 +589,107 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
+    path: '/admin/role/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createRoleSchema);
+      return jsonResponse(await capabilities.createRole(body), 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/role/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateRoleSchema);
+      const result = await capabilities.updateRole(body);
+      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/role/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteRoleSchema);
+      return jsonResponse(await capabilities.deleteRole(body.roleId));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/function/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createFunctionSchema);
+      return jsonResponse(await capabilities.createFunction(body), 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/function/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateFunctionSchema);
+      const result = await capabilities.updateFunction(body);
+      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/function/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteFunctionSchema);
+      return jsonResponse(await capabilities.deleteFunction(body.functionId));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/function-role/assign',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, assignRoleToFunctionSchema);
+      const result = body.roleId
+        ? await capabilities.assignRoleToFunction({
+            functionId: body.functionId,
+            roleId: body.roleId,
+          })
+        : await capabilities.clearRoleFromFunction(body.functionId);
+
+      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
     path: '/admin/role-tool-permission/add',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
       const result = await capabilities.addRoleToolPermission(body);
+      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/role-workflow-permission/add',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
+      const result = await capabilities.addRoleWorkflowPermission(body);
+      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/role-workflow-permission/remove',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
+      const result = await capabilities.removeRoleWorkflowPermission(body);
       await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
       return jsonResponse(result);
     },
