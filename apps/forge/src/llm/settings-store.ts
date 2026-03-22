@@ -12,14 +12,17 @@ import { z } from 'zod';
 import type { Database } from '../database/index';
 import type { LlmProviderType } from '../database/schema';
 import { llmProfiles, systemLlmDefaults } from '../database/schema';
+import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
 import { TOKEN_PLAN_GATEWAY_ID } from './minimax-token-gateway';
+import { PROFILE_LLM_GATEWAY_ID } from './profile-token-gateway';
 
 const llmProfileSchema = z.object({
   slug: z.string().min(1),
   label: z.string().min(1),
   providerType: z.enum(['openai-codex', 'claude-max', 'minimax']),
   modelId: z.string().min(1),
+  apiKey: z.string().min(1).optional().nullable(),
   contractCostMultiplier: z.number().positive().default(1),
   isEnabled: z.boolean().default(true),
 });
@@ -50,7 +53,15 @@ export function createLlmSettingsStore(db: Database) {
       label: row.label,
       providerType: row.providerType,
       modelId: row.modelId,
-      modelKey: buildModelKey(row.providerType, row.modelId),
+      modelKey: buildPricingModelKey(row.providerType, row.modelId),
+      runtimeModelKey: buildRuntimeModelKey({
+        profileId: row.id,
+        providerType: row.providerType,
+        modelId: row.modelId,
+        hasApiKey: Boolean(row.encryptedApiKey),
+      }),
+      apiKey: row.encryptedApiKey ? decryptSecret(row.encryptedApiKey) : null,
+      hasApiKey: Boolean(row.encryptedApiKey),
       contractCostMultiplier: row.contractCostMultiplier,
       isEnabled: row.isEnabled === 1,
       createdAt: row.createdAt,
@@ -115,7 +126,15 @@ export function createLlmSettingsStore(db: Database) {
       label: row.label,
       providerType: row.providerType,
       modelId: row.modelId,
-      modelKey: buildModelKey(row.providerType, row.modelId),
+      modelKey: buildPricingModelKey(row.providerType, row.modelId),
+      runtimeModelKey: buildRuntimeModelKey({
+        profileId: row.id,
+        providerType: row.providerType,
+        modelId: row.modelId,
+        hasApiKey: Boolean(row.encryptedApiKey),
+      }),
+      apiKey: row.encryptedApiKey ? decryptSecret(row.encryptedApiKey) : null,
+      hasApiKey: Boolean(row.encryptedApiKey),
       contractCostMultiplier: row.contractCostMultiplier,
       isEnabled: row.isEnabled === 1,
       createdAt: row.createdAt,
@@ -129,6 +148,7 @@ export function createLlmSettingsStore(db: Database) {
     label: string;
     providerType: LlmProviderType;
     modelId: string;
+    apiKey?: string | null;
     contractCostMultiplier?: number;
     isEnabled?: boolean;
   }) {
@@ -150,6 +170,9 @@ export function createLlmSettingsStore(db: Database) {
           label: parsed.label,
           providerType: parsed.providerType,
           modelId: parsed.modelId,
+          encryptedApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey)
+            ? encryptSecret(parsed.apiKey!.trim())
+            : null,
           contractCostMultiplier: parsed.contractCostMultiplier,
           isEnabled: parsed.isEnabled ? 1 : 0,
           updatedAt: now,
@@ -162,6 +185,9 @@ export function createLlmSettingsStore(db: Database) {
         label: parsed.label,
         providerType: parsed.providerType,
         modelId: parsed.modelId,
+        encryptedApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey)
+          ? encryptSecret(parsed.apiKey!.trim())
+          : null,
         contractCostMultiplier: parsed.contractCostMultiplier,
         isEnabled: parsed.isEnabled ? 1 : 0,
         createdAt: now,
@@ -175,7 +201,15 @@ export function createLlmSettingsStore(db: Database) {
       label: parsed.label,
       providerType: parsed.providerType,
       modelId: parsed.modelId,
-      modelKey: buildModelKey(parsed.providerType, parsed.modelId),
+      modelKey: buildPricingModelKey(parsed.providerType, parsed.modelId),
+      runtimeModelKey: buildRuntimeModelKey({
+        profileId,
+        providerType: parsed.providerType,
+        modelId: parsed.modelId,
+        hasApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey),
+      }),
+      apiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey) ? parsed.apiKey!.trim() : null,
+      hasApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey),
       contractCostMultiplier: parsed.contractCostMultiplier,
       isEnabled: parsed.isEnabled,
     };
@@ -289,7 +323,7 @@ function assertSupportedModel(providerType: LlmProviderType, modelId: string) {
   }
 }
 
-function buildModelKey(providerType: LlmProviderType, modelId: string) {
+function buildPricingModelKey(providerType: LlmProviderType, modelId: string) {
   if (providerType === 'openai-codex') {
     return openaiCodexProvider(modelId as (typeof OPENAI_CODEX_MODELS)[number]);
   }
@@ -299,4 +333,25 @@ function buildModelKey(providerType: LlmProviderType, modelId: string) {
   }
 
   return `${TOKEN_PLAN_GATEWAY_ID}/minimax/${modelId}`;
+}
+
+function buildRuntimeModelKey(input: {
+  profileId: string;
+  providerType: LlmProviderType;
+  modelId: string;
+  hasApiKey: boolean;
+}) {
+  if (!input.hasApiKey || input.providerType === 'openai-codex') {
+    return buildPricingModelKey(input.providerType, input.modelId);
+  }
+
+  return `${PROFILE_LLM_GATEWAY_ID}/${input.providerType}/${input.profileId}`;
+}
+
+function shouldUseDirectApiKey(providerType: LlmProviderType, apiKey?: string | null) {
+  if (!apiKey?.trim()) {
+    return false;
+  }
+
+  return providerType === 'claude-max' || providerType === 'minimax';
 }

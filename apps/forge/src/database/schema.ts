@@ -320,6 +320,7 @@ export const llmProfiles = sqliteTable('llm_profiles', {
   label: text('label').notNull(),
   providerType: text('provider_type').notNull().$type<LlmProviderType>(),
   modelId: text('model_id').notNull(),
+  encryptedApiKey: text('encrypted_api_key'),
   contractCostMultiplier: real('contract_cost_multiplier').notNull().default(1),
   isEnabled: integer('is_enabled').notNull().default(1),
   createdAt: integer('created_at').notNull(),

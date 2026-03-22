@@ -25,6 +25,8 @@ export type CreateForgeAgentConfig<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
   omModel?: AgentConfig['model'];
+  pricingModelKey: string;
+  omPricingModelKey?: string;
   modelProfileId?: string;
   omModelProfileId?: string;
   providers?: CommunicationProvider[];
@@ -44,8 +46,10 @@ export type InternalAgentRuntime<
 > = {
   id: TAgentId;
   modelKey: string;
+  pricingModelKey: string;
   modelProfileId?: string;
   omModelKey: string;
+  omPricingModelKey: string;
   omModelProfileId?: string;
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
   onReceiveMessage(handler: () => void): void;
@@ -63,10 +67,12 @@ export interface CreateAgentConfig<
     | 'description'
     | 'instructions'
     | 'model'
+    | 'pricingModelKey'
     | 'tools'
     | 'workflows'
     | 'agents'
     | 'omModel'
+    | 'omPricingModelKey'
     | 'modelProfileId'
     | 'omModelProfileId'
     | 'providers'
@@ -144,6 +150,7 @@ export async function createInternalAgentRuntime<
   } as Record<string, Tool<unknown, unknown>>;
   const memory = createAgentMemory({ storage, vector });
   const omModelKey = config.omModel ?? config.model;
+  const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
 
   if (typeof omModelKey !== 'string') {
     throw new Error('Internal agent runtime requires a string OM model id');
@@ -193,8 +200,10 @@ export async function createInternalAgentRuntime<
   return {
     id: config.id,
     modelKey: config.model,
+    pricingModelKey: config.pricingModelKey,
     modelProfileId: config.modelProfileId,
     omModelKey,
+    omPricingModelKey,
     omModelProfileId: config.omModelProfileId,
     agent,
     onReceiveMessage: communication.onReceiveMessage,

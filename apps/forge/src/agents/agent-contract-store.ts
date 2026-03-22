@@ -86,11 +86,11 @@ export function createAgentContractStore(db: Database) {
   }
 
   async function getUsagePricing(input: {
-    modelKey: string;
+    pricingModelKey: string;
     profileId: string;
   }) {
     const modelPrice = await db.query.llmModelPrices.findFirst({
-      where: eq(llmModelPrices.modelKey, input.modelKey),
+      where: eq(llmModelPrices.modelKey, input.pricingModelKey),
     });
 
     const profile = await db.query.llmProfiles.findFirst({

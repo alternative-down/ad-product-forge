@@ -166,6 +166,7 @@ const upsertLlmProfileSchema = z.object({
   label: z.string().min(1),
   providerType: llmProviderTypeSchema,
   modelId: z.string().min(1),
+  apiKey: z.string().min(1).optional().nullable(),
   contractCostMultiplier: z.coerce.number().positive().default(1),
   isEnabled: z.boolean().default(true),
 });

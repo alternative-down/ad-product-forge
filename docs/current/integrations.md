@@ -91,9 +91,12 @@ MiniMax text model access is owned by:
 
 Current model:
 
-- one global MiniMax token plan API key for the company
+- one global MiniMax token plan API key for the company as the shared fallback
+- optional direct MiniMax token on each LLM profile when that profile must own its own credential boundary
 - anthropic-compatible HTTP endpoint
-- exposed to agents through the `token-plan/minimax/...` model id format
+- exposed to agents through either:
+  - `token-plan/minimax/...` when using the shared integration token
+  - `profile-llm/minimax/...` when using a direct token on the profile
 - selectable in admin-managed LLM profiles and hiring defaults
 
 Current supported MiniMax model surface:

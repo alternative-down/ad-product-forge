@@ -58,6 +58,7 @@ type LlmProfileDraft = {
   label: string;
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
+  apiKey: string;
   contractCostMultiplier: number;
   isEnabled: boolean;
 };
@@ -416,6 +417,10 @@ function LlmProfileEditorCard(input: {
                     <dd className="inline break-all">{profile.modelKey}</dd>
                   </div>
                   <div>
+                    <dt className="inline font-medium text-slate-800">Direct token:</dt>{' '}
+                    <dd className="inline">{profile.hasApiKey ? 'configured' : 'not configured'}</dd>
+                  </div>
+                  <div>
                     <dt className="inline font-medium text-slate-800">Contract cost modifier:</dt>{' '}
                     <dd className="inline">{profile.contractCostMultiplier.toFixed(3)}x</dd>
                   </div>
@@ -509,6 +514,24 @@ function LlmProfileForm(input: {
             }
           />
         </LabeledField>
+        <LabeledField label="Direct API token">
+          <Input
+            value={draft.apiKey}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                apiKey: event.target.value,
+              }))
+            }
+            placeholder={
+              draft.providerType === 'claude-max'
+                ? 'Optional sk-ant-... token for this profile'
+                : draft.providerType === 'minimax'
+                  ? 'Optional MiniMax token for this profile'
+                  : 'Not used for this provider'
+            }
+          />
+        </LabeledField>
       </div>
 
       <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
@@ -524,7 +547,16 @@ function LlmProfileForm(input: {
       {input.deleteError ? <p className="mt-2 text-sm text-rose-600">{input.deleteError}</p> : null}
 
       <div className="mt-5 flex gap-3">
-        <Button type="button" disabled={input.pending} onClick={() => input.onSave(draft)}>
+        <Button
+          type="button"
+          disabled={input.pending}
+          onClick={() =>
+            input.onSave({
+              ...draft,
+              apiKey: draft.apiKey.trim() ? draft.apiKey.trim() : null,
+            })
+          }
+        >
           {input.profile ? 'Save profile' : 'Create profile'}
         </Button>
         {input.profile ? (
@@ -1132,6 +1164,7 @@ function buildLlmProfileDraft(
       label: '',
       providerType: supportedProviders[0]?.providerType ?? 'openai-codex',
       modelId: supportedProviders[0]?.modelIds[0] ?? '',
+      apiKey: '',
       contractCostMultiplier: 1,
       isEnabled: true,
     };
@@ -1143,6 +1176,7 @@ function buildLlmProfileDraft(
     label: profile.label,
     providerType: profile.providerType,
     modelId: profile.modelId,
+    apiKey: profile.apiKey ?? '',
     contractCostMultiplier: profile.contractCostMultiplier,
     isEnabled: profile.isEnabled,
   };

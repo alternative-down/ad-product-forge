@@ -147,9 +147,16 @@ LLM profiles are also persisted in the Forge application database.
 They are used to:
 
 - define reusable `provider + model` combinations
+- optionally carry a direct provider token when the credential belongs to that specific profile instead of a shared global integration
 - define a per-profile contract cost modifier used by weekly execution budget accounting
 - choose which model Forge uses by default when hiring a new agent
 - choose which model the internal hiring RH agent uses to generate instructions
+
+Profile-level tokens exist for a different boundary than system integrations:
+
+- shared company credentials still belong in `System Integrations`
+- fixed tokens tied to one concrete model profile can live in the `LLM profile`
+- this keeps the profile self-contained and opens the path for future providers with direct API-key auth without changing the hiring model boundary again
 
 Current provider choices in the LLM profile editor:
 
