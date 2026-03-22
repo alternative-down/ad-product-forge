@@ -200,8 +200,6 @@ export type UpdateAgentConfigInput = {
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
   workspaceEmbedder: string;
-  workspaceFilesystemBasePath?: string | null;
-  workspaceSandboxWorkingDirectory?: string | null;
 };
 
 export type UpsertAgentProviderInput = {

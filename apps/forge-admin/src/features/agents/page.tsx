@@ -59,8 +59,6 @@ type AgentConfigDraft = {
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
   workspaceEmbedder: string;
-  workspaceFilesystemBasePath: string;
-  workspaceSandboxWorkingDirectory: string;
 };
 
 type ProviderDraft = {
@@ -422,9 +420,6 @@ export function AgentsPage() {
                     workspaceAutoSync: draft.workspaceAutoSync,
                     workspaceBm25: draft.workspaceBm25,
                     workspaceEmbedder: draft.workspaceEmbedder,
-                    workspaceFilesystemBasePath: draft.workspaceFilesystemBasePath || null,
-                    workspaceSandboxWorkingDirectory:
-                      draft.workspaceSandboxWorkingDirectory || null,
                   })
                 }
               />
@@ -698,7 +693,6 @@ function AgentHeader(input: {
             />
             <ReadOnlyField label="BM25" value={agent.workspace.bm25 ? 'enabled' : 'disabled'} />
             <ReadOnlyField label="Embedder" value={agent.workspace.embedder} />
-            <ReadOnlyField label="Sandbox working dir" value={getSandboxWorkingDirectory(agent)} />
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -880,33 +874,6 @@ function AgentConfigurationCard(input: {
             }
           />
         </LabeledField>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <LabeledField label="Workspace filesystem base path">
-            <Input
-              value={input.draft.workspaceFilesystemBasePath}
-              onChange={(event) =>
-                input.onChange({
-                  ...input.draft,
-                  workspaceFilesystemBasePath: event.target.value,
-                })
-              }
-              placeholder="repo"
-            />
-          </LabeledField>
-          <LabeledField label="Sandbox working directory">
-            <Input
-              value={input.draft.workspaceSandboxWorkingDirectory}
-              onChange={(event) =>
-                input.onChange({
-                  ...input.draft,
-                  workspaceSandboxWorkingDirectory: event.target.value,
-                })
-              }
-              placeholder="repo"
-            />
-          </LabeledField>
-        </div>
 
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
@@ -1597,8 +1564,6 @@ function createAgentConfigDraft(agent: AgentDetail): AgentConfigDraft {
     workspaceAutoSync: agent.workspace.autoSync,
     workspaceBm25: agent.workspace.bm25,
     workspaceEmbedder: agent.workspace.embedder,
-    workspaceFilesystemBasePath: getWorkspaceFilesystemBasePath(agent),
-    workspaceSandboxWorkingDirectory: getRawSandboxWorkingDirectory(agent),
   };
 }
 
@@ -1641,38 +1606,6 @@ function toDateTimeLocalValue(timestamp: number) {
   const minute = `${date.getMinutes()}`.padStart(2, '0');
 
   return `${year}-${month}-${day}T${hour}:${minute}`;
-}
-
-function getSandboxWorkingDirectory(agent: NonNullable<Awaited<ReturnType<typeof getAgent>>>) {
-  return getRawSandboxWorkingDirectory(agent) || '—';
-}
-
-function getRawSandboxWorkingDirectory(agent: NonNullable<Awaited<ReturnType<typeof getAgent>>>) {
-  const sandbox = agent.workspace.sandbox;
-
-  if (!sandbox || typeof sandbox !== 'object') {
-    return '';
-  }
-
-  if (!('workingDirectory' in sandbox) || typeof sandbox.workingDirectory !== 'string') {
-    return '';
-  }
-
-  return sandbox.workingDirectory;
-}
-
-function getWorkspaceFilesystemBasePath(agent: AgentDetail) {
-  const filesystem = agent.workspace.filesystem;
-
-  if (!filesystem || typeof filesystem !== 'object') {
-    return '';
-  }
-
-  if (!('basePath' in filesystem) || typeof filesystem.basePath !== 'string') {
-    return '';
-  }
-
-  return filesystem.basePath;
 }
 
 function buildProviderDraftKey(agentId: string, providerType: 'discord' | 'email') {

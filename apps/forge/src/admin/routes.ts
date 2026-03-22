@@ -143,8 +143,6 @@ const updateAgentConfigSchema = z.object({
   workspaceAutoSync: z.boolean(),
   workspaceBm25: z.boolean(),
   workspaceEmbedder: z.string().min(1),
-  workspaceFilesystemBasePath: z.string().optional().nullable(),
-  workspaceSandboxWorkingDirectory: z.string().optional().nullable(),
 });
 
 const upsertAgentProviderSchema = z.object({
@@ -462,12 +460,6 @@ export function registerAdminRoutes(input: {
           workspaceAutoSync: body.workspaceAutoSync ? 1 : 0,
           workspaceBm25: body.workspaceBm25 ? 1 : 0,
           workspaceEmbedder: body.workspaceEmbedder,
-          workspaceFilesystem: body.workspaceFilesystemBasePath
-            ? { basePath: body.workspaceFilesystemBasePath }
-            : null,
-          workspaceSandbox: body.workspaceSandboxWorkingDirectory
-            ? { workingDirectory: body.workspaceSandboxWorkingDirectory }
-            : null,
           updatedAt: Date.now(),
         })
         .where(eq(agents.id, body.agentId));
