@@ -1,6 +1,5 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
-import { ToolSearchProcessor } from '@mastra/core/processors';
 import type { Tool } from '@mastra/core/tools';
 import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { createClient } from '@libsql/client';
@@ -156,15 +155,7 @@ export async function createInternalAgentRuntime<
     model: omModelKey,
   });
 
-  const toolSearch = new ToolSearchProcessor({
-    tools: searchableTools,
-    search: {
-      topK: 8,
-      minScore: 0.1,
-    },
-  });
-
-  const inputProcessors: InputProcessorOrWorkflow[] = [toolSearch, om];
+  const inputProcessors: InputProcessorOrWorkflow[] = [om];
   const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
