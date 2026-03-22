@@ -226,8 +226,46 @@ export type UpdateScheduleInput = {
   isActive?: boolean;
 };
 
+function stripTrailingSlash(value: string) {
+  return value.endsWith('/') ? value.slice(0, -1) : value;
+}
+
+function getConfiguredApiBaseUrl() {
+  const configuredBaseUrl = import.meta.env.VITE_FORGE_API_BASE_URL?.trim();
+
+  if (configuredBaseUrl) {
+    return stripTrailingSlash(configuredBaseUrl);
+  }
+
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const { protocol, hostname, port } = window.location;
+
+  if (hostname.startsWith('forge-admin.')) {
+    return `${protocol}//forge.${hostname.slice('forge-admin.'.length)}`;
+  }
+
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:${port || '3011'}`;
+  }
+
+  return '';
+}
+
+const API_BASE_URL = getConfiguredApiBaseUrl();
+
+function buildApiUrl(path: string) {
+  if (!API_BASE_URL) {
+    return path;
+  }
+
+  return `${API_BASE_URL}${path}`;
+}
+
 async function request<TResponse>(path: string, init?: RequestInit) {
-  const response = await fetch(path, {
+  const response = await fetch(buildApiUrl(path), {
     ...init,
     headers: {
       'content-type': 'application/json',
@@ -367,7 +405,7 @@ export function addRoleToolPermission(roleId: string, toolId: string) {
 }
 
 export function removeRoleToolPermission(roleId: string, toolId: string) {
-  return request<{ roleId: string; toolId: string; success: boolean }>(
+  return request<{ roleId: string; toolId: string }>(
     '/admin/role-tool-permission/remove',
     {
       method: 'POST',

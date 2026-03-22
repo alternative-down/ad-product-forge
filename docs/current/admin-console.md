@@ -171,10 +171,23 @@ Mutation endpoints:
 - `POST /admin/role-tool-permission/add`
 - `POST /admin/role-tool-permission/remove`
 
+## API base resolution
+
+The admin frontend resolves the Forge API base in this order:
+
+- `VITE_FORGE_API_BASE_URL`, when defined at build time
+- automatic sibling host fallback from `forge-admin.*` to `forge.*`
+- same-origin fallback when the admin UI is reverse-proxied with the API on the same host
+
+Examples:
+
+- admin on `https://forge-admin.example.com`
+  - API fallback becomes `https://forge.example.com`
+- admin and API behind one host
+  - requests stay relative as `/admin/...`
+
 ## Runtime assumptions
 
 - this UI assumes a local/trusted admin environment
 - no separate authentication layer has been implemented yet
 - the Vite dev server proxies `/admin` to the Forge HTTP server on port `3011`
-
-For production, the intended model is same-origin or reverse-proxied deployment behind trusted infrastructure.
