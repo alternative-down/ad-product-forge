@@ -8,13 +8,13 @@ const MINIMAX_BASE_URL = 'https://api.minimax.io/anthropic';
 type RuntimeProfile = {
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
-  oauthModelKey: string;
+  modelKey: string;
   apiKey: string | null;
 };
 
 export function resolveProfileRuntimeModel(profile: RuntimeProfile): MastraModelConfig {
   if (profile.providerType === 'openai-codex') {
-    return profile.oauthModelKey;
+    return profile.modelKey;
   }
 
   if (profile.providerType === 'minimax' && !profile.apiKey) {
@@ -22,7 +22,7 @@ export function resolveProfileRuntimeModel(profile: RuntimeProfile): MastraModel
   }
 
   if (!profile.apiKey) {
-    return profile.oauthModelKey;
+    return profile.modelKey;
   }
 
   const anthropic = createAnthropic({

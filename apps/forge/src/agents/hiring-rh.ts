@@ -19,7 +19,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   const llmSettings = createLlmSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
   const hiringRhModelId = defaults.hiringRhProfile.modelId;
-  const hiringRhPricingModelKey = defaults.hiringRhProfile.pricingModelKey;
+  const hiringRhPricingModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
   const modelPrice = await db.query.llmModelPrices.findFirst({

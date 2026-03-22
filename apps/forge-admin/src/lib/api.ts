@@ -275,8 +275,7 @@ export type LlmProfile = {
   label: string;
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
-  pricingModelKey: string;
-  oauthModelKey: string;
+  modelKey: string;
   apiKey: string | null;
   hasApiKey: boolean;
   contractCostMultiplier: number;
