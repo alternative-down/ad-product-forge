@@ -1,7 +1,9 @@
 import type { Client } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
 
-import { initializeCommunicationDatabase } from './database';
+import { runMigrations } from '../../database/migrate';
 import { createCommunicationStore } from './store';
+import * as communicationSchema from './schema';
 import type {
   CommunicationConversationView,
   CommunicationMessageView,
@@ -12,10 +14,10 @@ export async function createCommunicationModule(config: {
   client: Client;
   providers: CommunicationProvider[];
 }) {
-  // Initialize database (run migrations) and get Drizzle instance
-  const db = await initializeCommunicationDatabase(config.client);
-
-  // Create store for data operations
+  console.log('[Communication] Initializing communication database...');
+  const db = drizzle(config.client, { schema: communicationSchema });
+  await runMigrations(db);
+  console.log('[Communication] Database initialized successfully');
   const store = await createCommunicationStore(db);
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: (() => void) | null = null;
