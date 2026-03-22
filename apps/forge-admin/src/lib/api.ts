@@ -203,6 +203,7 @@ export type UpdateAgentConfigInput = {
   agentId: string;
   name: string;
   description?: string | null;
+  instructions: string;
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
   workspaceEmbedder: string;

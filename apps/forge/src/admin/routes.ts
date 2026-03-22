@@ -140,6 +140,7 @@ const updateAgentConfigSchema = z.object({
   agentId: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional().nullable(),
+  instructions: z.string().min(1),
   workspaceAutoSync: z.boolean(),
   workspaceBm25: z.boolean(),
   workspaceEmbedder: z.string().min(1),
@@ -458,6 +459,7 @@ export function registerAdminRoutes(input: {
         .set({
           name: body.name,
           description: body.description ?? null,
+          instructions: body.instructions,
           workspaceAutoSync: body.workspaceAutoSync ? 1 : 0,
           workspaceBm25: body.workspaceBm25 ? 1 : 0,
           workspaceEmbedder: body.workspaceEmbedder,
