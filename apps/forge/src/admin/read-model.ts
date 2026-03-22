@@ -5,7 +5,7 @@ import { createClient } from '@libsql/client';
 import {
   communicationConversations,
   communicationMessages,
-  initializeCommunicationDatabase,
+  getCommunicationDatabase,
 } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
@@ -362,7 +362,7 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
     const client = createClient({
       url: `file:${agentDatabasePath}`,
     });
-    const db = await initializeCommunicationDatabase(client);
+    const db = getCommunicationDatabase(client);
     const rows = await db.query.communicationConversations.findMany({
       orderBy: [desc(communicationConversations.updatedAt)],
       limit: RECENT_CONVERSATION_LIMIT,

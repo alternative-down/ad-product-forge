@@ -25,7 +25,7 @@
  */
 
 export { createCommunicationModule } from './module';
-export { initializeCommunicationDatabase } from './database';
+export { getCommunicationDatabase, initializeCommunicationDatabase } from './database';
 export { createCommunicationStore } from './store';
 
 export type { CommunicationProvider, CommunicationConversationView, CommunicationMessageView } from './provider-types';
