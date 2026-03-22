@@ -3,6 +3,7 @@ import path from 'node:path';
 import { desc, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
+import { LibSQLStore } from '@mastra/libsql';
 import {
   communicationConversations,
   communicationMessages,
@@ -234,6 +235,7 @@ export function createAdminReadModel(input: {
       }),
       recentNotifications,
       recentConversations,
+      recentThreadMessages: await listRecentThreadMessages(input.workspaceBasePath, agentId),
       createdAt: agent.createdAt,
       updatedAt: agent.updatedAt,
     };
@@ -396,6 +398,69 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
   } catch {
     return [];
   }
+}
+
+async function listRecentThreadMessages(workspaceBasePath: string, agentId: string) {
+  try {
+    const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
+    const client = createClient({
+      url: `file:${agentDatabasePath}`,
+    });
+    const storage = new LibSQLStore({
+      id: `${agentId}-storage`,
+      client,
+      disableInit: true,
+    });
+    const memory = await storage.getStore('memory');
+
+    if (!memory) {
+      return [];
+    }
+
+    const result = await memory.listMessages({
+      threadId: agentId,
+      resourceId: agentId,
+      page: 0,
+      perPage: 20,
+      orderBy: {
+        field: 'createdAt',
+        direction: 'DESC',
+      },
+    });
+
+    return result.messages.map((message) => ({
+      messageId: message.id,
+      role: message.role,
+      type: message.type ?? null,
+      content: extractMessageText(message.content),
+      createdAt: message.createdAt.getTime(),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function extractMessageText(content: {
+  content?: unknown;
+  parts?: Array<unknown>;
+}) {
+  if (typeof content.content === 'string' && content.content.trim()) {
+    return content.content;
+  }
+
+  const parts = (content.parts ?? []).flatMap((part) => {
+    if (!part || typeof part !== 'object' || !('type' in part)) {
+      return [];
+    }
+
+    if (part.type !== 'text' || !('text' in part) || typeof part.text !== 'string') {
+      return [];
+    }
+
+    return [part.text];
+  });
+
+  return parts.join('\n').trim();
 }
 
 function parseProviderCredentials(encryptedCredentials: string) {

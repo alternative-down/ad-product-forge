@@ -25,7 +25,7 @@ import {
   type AgentDetail,
   type UpdateScheduleInput,
 } from '../../lib/api';
-import { formatDateTime, formatInteger, formatUsd } from '../../lib/format';
+import { formatDateTime, formatInteger, formatUsd, formatUsdPrecise } from '../../lib/format';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
@@ -476,6 +476,7 @@ export function AgentsPage() {
               }
             />
             <AgentPromptCard instructions={agentDetailQuery.data.instructions} />
+            <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
             <AgentInboxCard
               notifications={agentDetailQuery.data.recentNotifications}
               conversations={agentDetailQuery.data.recentConversations}
@@ -1198,6 +1199,43 @@ function AgentInboxCard(input: {
   );
 }
 
+function AgentThreadCard(input: {
+  messages: AgentDetail['recentThreadMessages'];
+}) {
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-950">Recent thread messages</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Latest messages persisted in the agent memory thread. Useful to inspect wake prompts,
+          assistant replies, and tool-driven flow.
+        </p>
+      </div>
+      <div className="mt-5 space-y-3">
+        {input.messages.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+            No thread messages for this agent.
+          </div>
+        )}
+        {input.messages.map((message) => (
+          <div key={message.messageId} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Badge>{message.role}</Badge>
+                {message.type && <Badge>{message.type}</Badge>}
+              </div>
+              <div className="text-xs text-slate-500">{formatDateTime(message.createdAt)}</div>
+            </div>
+            <div className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
+              {message.content || '—'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function SchedulesCard(input: {
   schedules: AgentSchedule[];
   heartbeat: AgentSchedule | null;
@@ -1457,11 +1495,16 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
               <tr key={step.stepId}>
                 <td className="px-4 py-3">{step.kind}</td>
                 <td className="px-4 py-3">{step.modelKey}</td>
-                <td className="px-4 py-3">{formatInteger(step.inputTokens + step.outputTokens)}</td>
                 <td className="px-4 py-3">
-                  <div>{formatUsd(step.costUsd)}</div>
+                  <div>{formatInteger(step.inputTokens + step.cachedInputTokens + step.outputTokens)}</div>
                   <div className="text-xs text-slate-500">
-                    {step.contractCostMultiplier.toFixed(3)}x
+                    in {formatInteger(step.inputTokens)} / cache {formatInteger(step.cachedInputTokens)} / out {formatInteger(step.outputTokens)}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div>{formatUsdPrecise(step.costUsd)}</div>
+                  <div className="text-xs text-slate-500">
+                    in {step.inputPerMillionUsd} / cache {step.inputCachePerMillionUsd} / out {step.outputPerMillionUsd} · {step.contractCostMultiplier.toFixed(3)}x
                   </div>
                 </td>
                 <td className="px-4 py-3">{formatDateTime(step.createdAt)}</td>

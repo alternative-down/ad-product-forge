@@ -167,6 +167,13 @@ export type AgentDetail = {
     timestamp: number;
     read: boolean;
   }>;
+  recentThreadMessages: Array<{
+    messageId: string;
+    role: 'user' | 'assistant' | 'system';
+    type: string | null;
+    content: string;
+    createdAt: number;
+  }>;
   recentConversations: Array<{
     conversationId: string;
     provider: string;

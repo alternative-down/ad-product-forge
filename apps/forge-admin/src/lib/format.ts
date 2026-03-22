@@ -26,6 +26,27 @@ export function formatUsd(value?: number | null) {
   return currencyFormatter.format(value);
 }
 
+export function formatUsdPrecise(value?: number | null) {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+
+  if (value === 0) {
+    return '$0.00';
+  }
+
+  if (Math.abs(value) < 0.01) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 6,
+    }).format(value);
+  }
+
+  return formatUsd(value);
+}
+
 export function formatInteger(value?: number | null) {
   if (value === null || value === undefined) {
     return '—';
