@@ -153,6 +153,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
       const result = await runtime.agent.generate(AUTONOMOUS_STEP_PROMPT, {
         maxSteps: 1,
+        memory: {
+          thread: runtime.id,
+          resource: runtime.id,
+        },
       });
       const usage = result.usage as AgentUsage;
       const inputTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
