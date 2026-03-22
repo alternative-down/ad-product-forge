@@ -13,6 +13,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
+    "prepare": "husky",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "changeset": "changeset",

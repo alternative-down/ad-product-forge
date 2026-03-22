@@ -25,7 +25,7 @@ import {
   type AgentDetail,
   type UpdateScheduleInput,
 } from '../../lib/api';
-import { formatDateTime, formatInteger, formatUsd } from '../../lib/format';
+import { formatDateTime, formatInteger, formatUsd, formatUsdPrecise } from '../../lib/format';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
@@ -59,8 +59,6 @@ type AgentConfigDraft = {
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
   workspaceEmbedder: string;
-  workspaceFilesystemBasePath: string;
-  workspaceSandboxWorkingDirectory: string;
 };
 
 type ProviderDraft = {
@@ -399,6 +397,7 @@ export function AgentsPage() {
                 terminateError={terminateMutation.error?.message ?? null}
               />
             )}
+            <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
             {selectedAgentConfig && (
               <AgentConfigurationCard
                 draft={selectedAgentConfig}
@@ -422,9 +421,6 @@ export function AgentsPage() {
                     workspaceAutoSync: draft.workspaceAutoSync,
                     workspaceBm25: draft.workspaceBm25,
                     workspaceEmbedder: draft.workspaceEmbedder,
-                    workspaceFilesystemBasePath: draft.workspaceFilesystemBasePath || null,
-                    workspaceSandboxWorkingDirectory:
-                      draft.workspaceSandboxWorkingDirectory || null,
                   })
                 }
               />
@@ -476,6 +472,7 @@ export function AgentsPage() {
               }
             />
             <AgentPromptCard instructions={agentDetailQuery.data.instructions} />
+            <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
             <AgentInboxCard
               notifications={agentDetailQuery.data.recentNotifications}
               conversations={agentDetailQuery.data.recentConversations}
@@ -697,7 +694,6 @@ function AgentHeader(input: {
             />
             <ReadOnlyField label="BM25" value={agent.workspace.bm25 ? 'enabled' : 'disabled'} />
             <ReadOnlyField label="Embedder" value={agent.workspace.embedder} />
-            <ReadOnlyField label="Sandbox working dir" value={getSandboxWorkingDirectory(agent)} />
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -880,33 +876,6 @@ function AgentConfigurationCard(input: {
           />
         </LabeledField>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <LabeledField label="Workspace filesystem base path">
-            <Input
-              value={input.draft.workspaceFilesystemBasePath}
-              onChange={(event) =>
-                input.onChange({
-                  ...input.draft,
-                  workspaceFilesystemBasePath: event.target.value,
-                })
-              }
-              placeholder="repo"
-            />
-          </LabeledField>
-          <LabeledField label="Sandbox working directory">
-            <Input
-              value={input.draft.workspaceSandboxWorkingDirectory}
-              onChange={(event) =>
-                input.onChange({
-                  ...input.draft,
-                  workspaceSandboxWorkingDirectory: event.target.value,
-                })
-              }
-              placeholder="repo"
-            />
-          </LabeledField>
-        </div>
-
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             <input
@@ -949,6 +918,65 @@ function AgentConfigurationCard(input: {
           </Button>
         </div>
       </form>
+    </Card>
+  );
+}
+
+function GitHubProvisioningCard(input: {
+  provisioning: AgentDetail['githubProvisioning'];
+}) {
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-950">GitHub provisioning</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Hiring starts the GitHub App registration flow. The app only exists in GitHub after the
+          registration URL is opened and completed.
+        </p>
+      </div>
+
+      {!input.provisioning ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          No GitHub app provisioning exists for this agent.
+        </div>
+      ) : (
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <ReadOnlyField label="Status" value={input.provisioning.status} />
+            <ReadOnlyField
+              label="Registration URL"
+              value={input.provisioning.registrationUrl}
+              wrap
+            />
+            <ReadOnlyField
+              label="Install URL"
+              value={input.provisioning.installUrl ?? '—'}
+              wrap
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <a
+              href={input.provisioning.registrationUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-100"
+            >
+              Open registration
+            </a>
+            {input.provisioning.installUrl ? (
+              <a
+                href={input.provisioning.installUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-950 bg-slate-950 px-4 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              >
+                Open install
+              </a>
+            ) : null}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
@@ -1195,6 +1223,43 @@ function AgentInboxCard(input: {
         </div>
       </Card>
     </div>
+  );
+}
+
+function AgentThreadCard(input: {
+  messages: AgentDetail['recentThreadMessages'];
+}) {
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-950">Recent thread messages</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Latest messages persisted in the agent memory thread. Useful to inspect wake prompts,
+          assistant replies, and tool-driven flow.
+        </p>
+      </div>
+      <div className="mt-5 space-y-3">
+        {input.messages.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+            No thread messages for this agent.
+          </div>
+        )}
+        {input.messages.map((message) => (
+          <div key={message.messageId} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Badge>{message.role}</Badge>
+                {message.type && <Badge>{message.type}</Badge>}
+              </div>
+              <div className="text-xs text-slate-500">{formatDateTime(message.createdAt)}</div>
+            </div>
+            <div className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
+              {message.content || '—'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -1457,11 +1522,16 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
               <tr key={step.stepId}>
                 <td className="px-4 py-3">{step.kind}</td>
                 <td className="px-4 py-3">{step.modelKey}</td>
-                <td className="px-4 py-3">{formatInteger(step.inputTokens + step.outputTokens)}</td>
                 <td className="px-4 py-3">
-                  <div>{formatUsd(step.costUsd)}</div>
+                  <div>{formatInteger(step.inputTokens + step.cachedInputTokens + step.outputTokens)}</div>
                   <div className="text-xs text-slate-500">
-                    {step.contractCostMultiplier.toFixed(3)}x
+                    in {formatInteger(step.inputTokens)} / cache {formatInteger(step.cachedInputTokens)} / out {formatInteger(step.outputTokens)}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div>{formatUsdPrecise(step.costUsd)}</div>
+                  <div className="text-xs text-slate-500">
+                    in {step.inputPerMillionUsd} / cache {step.inputCachePerMillionUsd} / out {step.outputPerMillionUsd} · {step.contractCostMultiplier.toFixed(3)}x
                   </div>
                 </td>
                 <td className="px-4 py-3">{formatDateTime(step.createdAt)}</td>
@@ -1485,13 +1555,13 @@ function MiniMetric(input: { label: string; value: string }) {
   );
 }
 
-function ReadOnlyField(input: { label: string; value: string }) {
+function ReadOnlyField(input: { label: string; value: string; wrap?: boolean }) {
   return (
     <div>
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
         {input.label}
       </div>
-      <div className="mt-1 text-sm text-slate-900">{input.value}</div>
+      <div className={cn('mt-1 text-sm text-slate-900', input.wrap && 'break-all')}>{input.value}</div>
     </div>
   );
 }
@@ -1554,8 +1624,6 @@ function createAgentConfigDraft(agent: AgentDetail): AgentConfigDraft {
     workspaceAutoSync: agent.workspace.autoSync,
     workspaceBm25: agent.workspace.bm25,
     workspaceEmbedder: agent.workspace.embedder,
-    workspaceFilesystemBasePath: getWorkspaceFilesystemBasePath(agent),
-    workspaceSandboxWorkingDirectory: getRawSandboxWorkingDirectory(agent),
   };
 }
 
@@ -1598,38 +1666,6 @@ function toDateTimeLocalValue(timestamp: number) {
   const minute = `${date.getMinutes()}`.padStart(2, '0');
 
   return `${year}-${month}-${day}T${hour}:${minute}`;
-}
-
-function getSandboxWorkingDirectory(agent: NonNullable<Awaited<ReturnType<typeof getAgent>>>) {
-  return getRawSandboxWorkingDirectory(agent) || '—';
-}
-
-function getRawSandboxWorkingDirectory(agent: NonNullable<Awaited<ReturnType<typeof getAgent>>>) {
-  const sandbox = agent.workspace.sandbox;
-
-  if (!sandbox || typeof sandbox !== 'object') {
-    return '';
-  }
-
-  if (!('workingDirectory' in sandbox) || typeof sandbox.workingDirectory !== 'string') {
-    return '';
-  }
-
-  return sandbox.workingDirectory;
-}
-
-function getWorkspaceFilesystemBasePath(agent: AgentDetail) {
-  const filesystem = agent.workspace.filesystem;
-
-  if (!filesystem || typeof filesystem !== 'object') {
-    return '';
-  }
-
-  if (!('basePath' in filesystem) || typeof filesystem.basePath !== 'string') {
-    return '';
-  }
-
-  return filesystem.basePath;
 }
 
 function buildProviderDraftKey(agentId: string, providerType: 'discord' | 'email') {

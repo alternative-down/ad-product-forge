@@ -218,7 +218,21 @@ export function createCapabilityStore(db: Database) {
         roleId: input.roleId,
         createdAt: Date.now(),
       })
-      .onConflictDoNothing();
+      .onConflictDoNothing({
+        target: [functionRoles.functionId, functionRoles.roleId],
+      });
+
+    const link = await db.query.functionRoles.findFirst({
+      where: and(eq(functionRoles.functionId, input.functionId), eq(functionRoles.roleId, input.roleId)),
+      columns: {
+        functionId: true,
+        roleId: true,
+      },
+    });
+
+    if (!link) {
+      throw new Error(`Failed to persist function role relation: ${input.functionId} -> ${input.roleId}`);
+    }
 
     return input;
   }

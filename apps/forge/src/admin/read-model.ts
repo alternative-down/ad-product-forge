@@ -3,6 +3,7 @@ import path from 'node:path';
 import { desc, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
+import { LibSQLStore } from '@mastra/libsql';
 import {
   communicationConversations,
   communicationMessages,
@@ -21,6 +22,7 @@ import { createAgentNotificationStore } from '../notifications/store';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
+import type { GitHubAppManager } from '../github/manager';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -31,6 +33,7 @@ const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
 export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
+  githubApps: GitHubAppManager;
 }) {
   const db = input.db;
   const finance = createMicroErpReadModel(db);
@@ -146,6 +149,7 @@ export function createAdminReadModel(input: {
       activeContract,
       recentNotifications,
       recentConversations,
+      githubProvisioning,
     ] =
       await Promise.all([
         capabilities.listFunctions(),
@@ -168,6 +172,7 @@ export function createAdminReadModel(input: {
           limit: RECENT_NOTIFICATION_LIMIT,
         }),
         listRecentConversations(input.workspaceBasePath, agentId),
+        input.githubApps.getAgentProvisioning(agentId),
       ]);
     const registry = getInternalAgentRegistry();
     const loadedAgent = registry.get(agentId);
@@ -219,6 +224,7 @@ export function createAdminReadModel(input: {
               : parseProviderCredentials(provider.encryptedCredentials),
         }))
         .sort((left, right) => left.providerType.localeCompare(right.providerType)),
+      githubProvisioning,
       activeContract,
       schedules: agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')
@@ -234,6 +240,7 @@ export function createAdminReadModel(input: {
       }),
       recentNotifications,
       recentConversations,
+      recentThreadMessages: await listRecentThreadMessages(input.workspaceBasePath, agentId),
       createdAt: agent.createdAt,
       updatedAt: agent.updatedAt,
     };
@@ -396,6 +403,69 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
   } catch {
     return [];
   }
+}
+
+async function listRecentThreadMessages(workspaceBasePath: string, agentId: string) {
+  try {
+    const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
+    const client = createClient({
+      url: `file:${agentDatabasePath}`,
+    });
+    const storage = new LibSQLStore({
+      id: `${agentId}-storage`,
+      client,
+      disableInit: true,
+    });
+    const memory = await storage.getStore('memory');
+
+    if (!memory) {
+      return [];
+    }
+
+    const result = await memory.listMessages({
+      threadId: agentId,
+      resourceId: agentId,
+      page: 0,
+      perPage: 20,
+      orderBy: {
+        field: 'createdAt',
+        direction: 'DESC',
+      },
+    });
+
+    return result.messages.map((message) => ({
+      messageId: message.id,
+      role: message.role,
+      type: message.type ?? null,
+      content: extractMessageText(message.content),
+      createdAt: message.createdAt.getTime(),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function extractMessageText(content: {
+  content?: unknown;
+  parts?: Array<unknown>;
+}) {
+  if (typeof content.content === 'string' && content.content.trim()) {
+    return content.content;
+  }
+
+  const parts = (content.parts ?? []).flatMap((part) => {
+    if (!part || typeof part !== 'object' || !('type' in part)) {
+      return [];
+    }
+
+    if (part.type !== 'text' || !('text' in part) || typeof part.text !== 'string') {
+      return [];
+    }
+
+    return [part.text];
+  });
+
+  return parts.join('\n').trim();
 }
 
 function parseProviderCredentials(encryptedCredentials: string) {

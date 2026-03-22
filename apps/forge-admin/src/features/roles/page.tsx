@@ -29,11 +29,14 @@ import { cn } from '../../lib/utils';
 type RoleDraft = {
   name: string;
   description: string;
+  toolIds: string[];
+  workflowIds: string[];
 };
 
 type FunctionDraft = {
   name: string;
   description: string;
+  roleIds: string[];
 };
 
 export function RolesPage() {
@@ -44,11 +47,14 @@ export function RolesPage() {
   const [newRoleDraft, setNewRoleDraft] = useState<RoleDraft>({
     name: '',
     description: '',
+    toolIds: [],
+    workflowIds: [],
   });
   const [functionDrafts, setFunctionDrafts] = useState<Record<string, FunctionDraft>>({});
   const [newFunctionDraft, setNewFunctionDraft] = useState<FunctionDraft>({
     name: '',
     description: '',
+    roleIds: [],
   });
 
   const rolesQuery = useQuery({
@@ -81,33 +87,18 @@ export function RolesPage() {
       : {
           name: selectedRole.name,
           description: selectedRole.description ?? '',
+          toolIds: selectedRole.toolIds,
+          workflowIds: selectedRole.workflowIds,
         }
     : null;
-
-  const roleToolMutation = useMutation({
-    mutationFn: async (input: { roleId: string; toolId: string; enabled: boolean }) =>
-      input.enabled
-        ? removeRoleToolPermission(input.roleId, input.toolId)
-        : addRoleToolPermission(input.roleId, input.toolId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
-    },
-  });
-  const roleWorkflowMutation = useMutation({
-    mutationFn: async (input: { roleId: string; workflowId: string; enabled: boolean }) =>
-      input.enabled
-        ? removeRoleWorkflowPermission(input.roleId, input.workflowId)
-        : addRoleWorkflowPermission(input.roleId, input.workflowId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
-    },
-  });
   const createRoleMutation = useMutation({
     mutationFn: createRole,
     onSuccess: async (result) => {
       setNewRoleDraft({
         name: '',
         description: '',
+        toolIds: [],
+        workflowIds: [],
       });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
       void navigate({
@@ -119,7 +110,46 @@ export function RolesPage() {
     },
   });
   const updateRoleMutation = useMutation({
-    mutationFn: updateRole,
+    mutationFn: async (input: {
+      roleId: string;
+      name: string;
+      description: string | null;
+      nextToolIds: string[];
+      nextWorkflowIds: string[];
+      currentToolIds: string[];
+      currentWorkflowIds: string[];
+    }) => {
+      await updateRole({
+        roleId: input.roleId,
+        name: input.name,
+        description: input.description,
+      });
+
+      const toolAdds = input.nextToolIds.filter((toolId) => !input.currentToolIds.includes(toolId));
+      const toolRemovals = input.currentToolIds.filter((toolId) => !input.nextToolIds.includes(toolId));
+      const workflowAdds = input.nextWorkflowIds.filter(
+        (workflowId) => !input.currentWorkflowIds.includes(workflowId),
+      );
+      const workflowRemovals = input.currentWorkflowIds.filter(
+        (workflowId) => !input.nextWorkflowIds.includes(workflowId),
+      );
+
+      for (const toolId of toolAdds) {
+        await addRoleToolPermission(input.roleId, toolId);
+      }
+
+      for (const toolId of toolRemovals) {
+        await removeRoleToolPermission(input.roleId, toolId);
+      }
+
+      for (const workflowId of workflowAdds) {
+        await addRoleWorkflowPermission(input.roleId, workflowId);
+      }
+
+      for (const workflowId of workflowRemovals) {
+        await removeRoleWorkflowPermission(input.roleId, workflowId);
+      }
+    },
     onSuccess: async (_, input) => {
       setRoleDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
@@ -156,12 +186,38 @@ export function RolesPage() {
       setNewFunctionDraft({
         name: '',
         description: '',
+        roleIds: [],
       });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] });
     },
   });
   const updateFunctionMutation = useMutation({
-    mutationFn: updateFunction,
+    mutationFn: async (input: {
+      functionId: string;
+      name: string;
+      description: string | null;
+      nextRoleIds: string[];
+      currentRoleIds: string[];
+    }) => {
+      await updateFunction({
+        functionId: input.functionId,
+        name: input.name,
+        description: input.description,
+      });
+
+      const roleAdds = input.nextRoleIds.filter((roleId) => !input.currentRoleIds.includes(roleId));
+      const roleRemovals = input.currentRoleIds.filter(
+        (roleId) => !input.nextRoleIds.includes(roleId),
+      );
+
+      for (const roleId of roleAdds) {
+        await addRoleToFunction(input.functionId, roleId);
+      }
+
+      for (const roleId of roleRemovals) {
+        await removeRoleFromFunction(input.functionId, roleId);
+      }
+    },
     onSuccess: async (_, input) => {
       setFunctionDrafts((current) => {
         const next = { ...current };
@@ -182,19 +238,6 @@ export function RolesPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] });
     },
   });
-  const functionRoleMutation = useMutation({
-    mutationFn: (input: { functionId: string; roleId: string; enabled: boolean }) =>
-      input.enabled
-        ? removeRoleFromFunction(input.functionId, input.roleId)
-        : addRoleToFunction(input.functionId, input.roleId),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] }),
-      ]);
-    },
-  });
-
   const toolGroups = useMemo(
     () => groupIds(rolesQuery.data?.availableToolIds ?? []),
     [rolesQuery.data?.availableToolIds],
@@ -322,6 +365,10 @@ export function RolesPage() {
                   roleId: selectedRole.roleId,
                   name: selectedRoleDraft.name,
                   description: selectedRoleDraft.description || null,
+                  nextToolIds: selectedRoleDraft.toolIds,
+                  nextWorkflowIds: selectedRoleDraft.workflowIds,
+                  currentToolIds: selectedRole.toolIds,
+                  currentWorkflowIds: selectedRole.workflowIds,
                 });
               }}
             >
@@ -333,6 +380,8 @@ export function RolesPage() {
                       setRoleDraft({
                         name: event.target.value,
                         description: selectedRoleDraft.description,
+                        toolIds: selectedRoleDraft.toolIds,
+                        workflowIds: selectedRoleDraft.workflowIds,
                       })
                     }
                     required
@@ -345,6 +394,8 @@ export function RolesPage() {
                       setRoleDraft({
                         name: selectedRoleDraft.name,
                         description: event.target.value,
+                        toolIds: selectedRoleDraft.toolIds,
+                        workflowIds: selectedRoleDraft.workflowIds,
                       })
                     }
                   />
@@ -380,22 +431,18 @@ export function RolesPage() {
                   {Object.entries(toolGroups).map(([group, toolIds]) => (
                     <PermissionGroup key={group} title={group}>
                       {toolIds.map((toolId) => {
-                        const enabled = selectedRole.toolIds.includes(toolId);
-
                         return (
                           <PermissionToggle
                             key={toolId}
                             label={toolId}
-                            checked={enabled}
-                            pending={
-                              roleToolMutation.isPending &&
-                              roleToolMutation.variables?.toolId === toolId
-                            }
+                            checked={selectedRoleDraft.toolIds.includes(toolId)}
+                            pending={updateRoleMutation.isPending}
                             onChange={() => {
-                              roleToolMutation.mutate({
-                                roleId: selectedRole.roleId,
-                                toolId,
-                                enabled,
+                              setRoleDraft({
+                                ...selectedRoleDraft,
+                                toolIds: selectedRoleDraft.toolIds.includes(toolId)
+                                  ? selectedRoleDraft.toolIds.filter((id) => id !== toolId)
+                                  : [...selectedRoleDraft.toolIds, toolId],
                               });
                             }}
                           />
@@ -411,33 +458,24 @@ export function RolesPage() {
                   </div>
                   <PermissionGroup title="workflows">
                     {rolesQuery.data.availableWorkflowIds.map((workflowId) => {
-                      const enabled = selectedRole.workflowIds.includes(workflowId);
-
                       return (
                         <PermissionToggle
                           key={workflowId}
                           label={workflowId}
-                          checked={enabled}
-                          pending={
-                            roleWorkflowMutation.isPending &&
-                            roleWorkflowMutation.variables?.workflowId === workflowId
-                          }
+                          checked={selectedRoleDraft.workflowIds.includes(workflowId)}
+                          pending={updateRoleMutation.isPending}
                           onChange={() => {
-                            roleWorkflowMutation.mutate({
-                              roleId: selectedRole.roleId,
-                              workflowId,
-                              enabled,
+                            setRoleDraft({
+                              ...selectedRoleDraft,
+                              workflowIds: selectedRoleDraft.workflowIds.includes(workflowId)
+                                ? selectedRoleDraft.workflowIds.filter((id) => id !== workflowId)
+                                : [...selectedRoleDraft.workflowIds, workflowId],
                             });
                           }}
                         />
                       );
                     })}
                   </PermissionGroup>
-                  {(roleToolMutation.error || roleWorkflowMutation.error) && (
-                    <InlineError
-                      message={roleToolMutation.error?.message ?? roleWorkflowMutation.error?.message ?? ''}
-                    />
-                  )}
                 </div>
               </div>
             </form>
@@ -495,6 +533,7 @@ export function RolesPage() {
                 const draft = functionDrafts[agentFunction.functionId] ?? {
                   name: agentFunction.name,
                   description: agentFunction.description ?? '',
+                  roleIds: agentFunction.roleIds,
                 };
 
                 return (
@@ -534,23 +573,21 @@ export function RolesPage() {
                       <LabeledField label="Roles">
                         <div className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                           {rolesQuery.data.items.map((role) => {
-                            const enabled = agentFunction.roleIds.includes(role.roleId);
-
                             return (
                               <PermissionToggle
                                 key={role.roleId}
                                 label={role.name}
-                                checked={enabled}
-                                pending={
-                                  functionRoleMutation.isPending &&
-                                  functionRoleMutation.variables?.functionId === agentFunction.functionId &&
-                                  functionRoleMutation.variables?.roleId === role.roleId
-                                }
+                                checked={draft.roleIds.includes(role.roleId)}
+                                pending={updateFunctionMutation.isPending}
                                 onChange={() => {
-                                  functionRoleMutation.mutate({
-                                    functionId: agentFunction.functionId,
-                                    roleId: role.roleId,
-                                    enabled,
+                                  setFunctionDrafts({
+                                    ...functionDrafts,
+                                    [agentFunction.functionId]: {
+                                      ...draft,
+                                      roleIds: draft.roleIds.includes(role.roleId)
+                                        ? draft.roleIds.filter((id) => id !== role.roleId)
+                                        : [...draft.roleIds, role.roleId],
+                                    },
                                   });
                                 }}
                               />
@@ -568,6 +605,8 @@ export function RolesPage() {
                               functionId: agentFunction.functionId,
                               name: draft.name,
                               description: draft.description || null,
+                              nextRoleIds: draft.roleIds,
+                              currentRoleIds: agentFunction.roleIds,
                             });
                           }}
                         >
@@ -597,14 +636,12 @@ export function RolesPage() {
             </div>
 
             {(updateFunctionMutation.error ||
-              deleteFunctionMutation.error ||
-              functionRoleMutation.error) && (
+              deleteFunctionMutation.error) && (
               <div className="mt-4">
                 <InlineError
                   message={
                     updateFunctionMutation.error?.message ??
                     deleteFunctionMutation.error?.message ??
-                    functionRoleMutation.error?.message ??
                     ''
                   }
                 />

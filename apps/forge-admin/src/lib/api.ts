@@ -135,6 +135,12 @@ export type AgentDetail = {
     editable: boolean;
     credentials: unknown;
   }>;
+  githubProvisioning: {
+    agentId: string;
+    status: 'pending' | 'created' | 'active';
+    registrationUrl: string;
+    installUrl?: string;
+  } | null;
   activeContract: {
     contractId: string;
     agentId: string;
@@ -167,6 +173,13 @@ export type AgentDetail = {
     timestamp: number;
     read: boolean;
   }>;
+  recentThreadMessages: Array<{
+    messageId: string;
+    role: 'user' | 'assistant' | 'system';
+    type: string | null;
+    content: string;
+    createdAt: number;
+  }>;
   recentConversations: Array<{
     conversationId: string;
     provider: string;
@@ -193,8 +206,6 @@ export type UpdateAgentConfigInput = {
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
   workspaceEmbedder: string;
-  workspaceFilesystemBasePath?: string | null;
-  workspaceSandboxWorkingDirectory?: string | null;
 };
 
 export type UpsertAgentProviderInput = {
