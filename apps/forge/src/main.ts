@@ -22,8 +22,7 @@ const envSchema = z.object({
   WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
   FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
-  GITHUB_ORGANIZATION: z.string().min(1),
-  GITHUB_APP_HOME_URL: z.string().url().optional(),
+  FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
 });
 
 export async function main() {
@@ -36,6 +35,7 @@ export async function main() {
   const registry = getInternalAgentRegistry();
   const httpServer = createForgeHttpServer({
     port: env.FORGE_HTTP_PORT,
+    adminApiKey: env.FORGE_ADMIN_API_KEY,
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   const integrations = createSystemIntegrationStore(db);
@@ -60,8 +60,7 @@ export async function main() {
     db,
     httpServer,
     publicBaseUrl,
-    organization: env.GITHUB_ORGANIZATION,
-    appHomeUrl: env.GITHUB_APP_HOME_URL ?? publicBaseUrl,
+    integrations,
     notifyAgent(agentId) {
       const entry = registry.get(agentId);
 

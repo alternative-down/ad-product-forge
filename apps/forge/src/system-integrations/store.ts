@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Database } from '../database/index.js';
 import type {
   CoolifySystemIntegrationConfig,
+  GitHubSystemIntegrationConfig,
   MigaduSystemIntegrationConfig,
 } from '../database/schema.js';
 import { systemIntegrations } from '../database/schema.js';
@@ -20,7 +21,12 @@ const coolifyConfigSchema = z.object({
   applicationsBaseDomain: z.string().min(1),
 });
 
-export type SystemIntegrationProviderType = 'migadu' | 'coolify';
+const githubConfigSchema = z.object({
+  organization: z.string().min(1),
+  appHomeUrl: z.string().url(),
+});
+
+export type SystemIntegrationProviderType = 'migadu' | 'coolify' | 'github';
 
 export function createSystemIntegrationStore(db: Database) {
   async function listIntegrations() {
@@ -31,10 +37,7 @@ export function createSystemIntegrationStore(db: Database) {
     return rows.map((row) => ({
       providerType: row.providerType,
       isEnabled: row.isEnabled === 1,
-      config:
-        row.providerType === 'migadu'
-          ? parseMigaduConfig(row.encryptedConfig)
-          : parseCoolifyConfig(row.encryptedConfig),
+      config: parseIntegrationConfig(row.providerType, row.encryptedConfig),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));
@@ -50,6 +53,11 @@ export function createSystemIntegrationStore(db: Database) {
     return row ? parseCoolifyConfig(row.encryptedConfig) : null;
   }
 
+  async function getGitHubConfig(): Promise<GitHubSystemIntegrationConfig | null> {
+    const row = await getEnabledIntegration('github');
+    return row ? parseGitHubConfig(row.encryptedConfig) : null;
+  }
+
   async function upsertIntegration(
     input:
       | {
@@ -61,13 +69,15 @@ export function createSystemIntegrationStore(db: Database) {
           providerType: 'coolify';
           config: CoolifySystemIntegrationConfig;
           isEnabled?: boolean;
+        }
+      | {
+          providerType: 'github';
+          config: GitHubSystemIntegrationConfig;
+          isEnabled?: boolean;
         },
   ) {
     const now = Date.now();
-    const parsedConfig =
-      input.providerType === 'migadu'
-        ? migaduConfigSchema.parse(input.config)
-        : coolifyConfigSchema.parse(input.config);
+    const parsedConfig = parseUpsertConfig(input.providerType, input.config);
     const existing = await db.query.systemIntegrations.findFirst({
       where: eq(systemIntegrations.providerType, input.providerType),
     });
@@ -122,10 +132,45 @@ export function createSystemIntegrationStore(db: Database) {
     return coolifyConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
   }
 
+  function parseGitHubConfig(encryptedConfig: string): GitHubSystemIntegrationConfig {
+    return githubConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
+  }
+
+  function parseIntegrationConfig(
+    providerType: SystemIntegrationProviderType,
+    encryptedConfig: string,
+  ) {
+    if (providerType === 'migadu') {
+      return parseMigaduConfig(encryptedConfig);
+    }
+
+    if (providerType === 'coolify') {
+      return parseCoolifyConfig(encryptedConfig);
+    }
+
+    return parseGitHubConfig(encryptedConfig);
+  }
+
+  function parseUpsertConfig(
+    providerType: SystemIntegrationProviderType,
+    config: MigaduSystemIntegrationConfig | CoolifySystemIntegrationConfig | GitHubSystemIntegrationConfig,
+  ) {
+    if (providerType === 'migadu') {
+      return migaduConfigSchema.parse(config);
+    }
+
+    if (providerType === 'coolify') {
+      return coolifyConfigSchema.parse(config);
+    }
+
+    return githubConfigSchema.parse(config);
+  }
+
   return {
     listIntegrations,
     getMigaduConfig,
     getCoolifyConfig,
+    getGitHubConfig,
     upsertIntegration,
     deleteIntegration,
   };

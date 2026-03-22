@@ -27,6 +27,12 @@ type CoolifyDraft = {
   applicationsBaseDomain: string;
 };
 
+type GitHubDraft = {
+  isEnabled: boolean;
+  organization: string;
+  appHomeUrl: string;
+};
+
 export function SystemPage() {
   const queryClient = useQueryClient();
   const integrationsQuery = useQuery({
@@ -57,6 +63,7 @@ export function SystemPage() {
   const integrations = integrationsQuery.data ?? [];
   const migaduIntegration = integrations.find((integration) => integration.providerType === 'migadu') ?? null;
   const coolifyIntegration = integrations.find((integration) => integration.providerType === 'coolify') ?? null;
+  const githubIntegration = integrations.find((integration) => integration.providerType === 'github') ?? null;
 
   return (
     <div className="space-y-6">
@@ -101,6 +108,22 @@ export function SystemPage() {
           deleteMutation.variables,
         )}
         onDelete={() => deleteMutation.mutate('coolify')}
+        onSave={(input) => upsertMutation.mutate(input)}
+      />
+
+      <GitHubIntegrationCard
+        key={`github-${githubIntegration?.updatedAt ?? 'new'}`}
+        integration={githubIntegration}
+        pending={upsertMutation.isPending && upsertMutation.variables?.providerType === 'github'}
+        deleting={deleteMutation.isPending && deleteMutation.variables === 'github'}
+        error={getIntegrationError(
+          'github',
+          upsertMutation.error?.message,
+          deleteMutation.error?.message,
+          upsertMutation.variables,
+          deleteMutation.variables,
+        )}
+        onDelete={() => deleteMutation.mutate('github')}
         onSave={(input) => upsertMutation.mutate(input)}
       />
     </div>
@@ -282,6 +305,87 @@ function CoolifyIntegrationCard(input: {
   );
 }
 
+function GitHubIntegrationCard(input: {
+  integration: SystemIntegration | null;
+  pending: boolean;
+  deleting: boolean;
+  error: string | null;
+  onDelete(): void;
+  onSave(input: Extract<UpsertSystemIntegrationInput, { providerType: 'github' }>): void;
+}) {
+  const initialDraft = getGitHubDraft(input.integration);
+  const [draft, setDraft] = useState(initialDraft);
+
+  return (
+    <IntegrationCard
+      title="GitHub"
+      integration={input.integration}
+      pending={input.pending}
+      deleting={input.deleting}
+      error={input.error}
+      onDelete={input.onDelete}
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <LabeledField label="Organization">
+          <Input
+            value={draft.organization}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                organization: event.target.value,
+              }))
+            }
+            placeholder="alternative-down"
+          />
+        </LabeledField>
+        <LabeledField label="App home URL">
+          <Input
+            value={draft.appHomeUrl}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                appHomeUrl: event.target.value,
+              }))
+            }
+            placeholder="https://forge.alternativedown.com.br"
+          />
+        </LabeledField>
+      </div>
+      <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={draft.isEnabled}
+          onChange={(event) =>
+            setDraft((current) => ({
+              ...current,
+              isEnabled: event.target.checked,
+            }))
+          }
+        />
+        Enable GitHub App provisioning
+      </label>
+      <div className="mt-5 flex gap-3">
+        <Button
+          type="button"
+          disabled={input.pending}
+          onClick={() =>
+            input.onSave({
+              providerType: 'github',
+              isEnabled: draft.isEnabled,
+              config: {
+                organization: draft.organization,
+                appHomeUrl: draft.appHomeUrl,
+              },
+            })
+          }
+        >
+          Save GitHub
+        </Button>
+      </div>
+    </IntegrationCard>
+  );
+}
+
 function IntegrationCard(input: {
   title: string;
   integration: SystemIntegration | null;
@@ -341,7 +445,7 @@ function getIntegrationError(
   upsertError: string | null | undefined,
   deleteError: string | null | undefined,
   currentUpsertInput: UpsertSystemIntegrationInput | undefined,
-  deletingProviderType: 'migadu' | 'coolify' | undefined,
+  deletingProviderType: 'migadu' | 'coolify' | 'github' | undefined,
 ) {
   if (currentUpsertInput?.providerType === providerType && upsertError) {
     return upsertError;
@@ -385,6 +489,22 @@ function getCoolifyDraft(integration: SystemIntegration | null): CoolifyDraft {
     baseUrl: integration.config.baseUrl,
     adminToken: integration.config.adminToken,
     applicationsBaseDomain: integration.config.applicationsBaseDomain,
+  };
+}
+
+function getGitHubDraft(integration: SystemIntegration | null): GitHubDraft {
+  if (!integration || !('organization' in integration.config)) {
+    return {
+      isEnabled: true,
+      organization: '',
+      appHomeUrl: '',
+    };
+  }
+
+  return {
+    isEnabled: integration.isEnabled,
+    organization: integration.config.organization,
+    appHomeUrl: integration.config.appHomeUrl,
   };
 }
 

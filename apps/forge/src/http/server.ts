@@ -23,10 +23,12 @@ type RouteKey = `${string} ${string}`;
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET,POST,OPTIONS',
-  'access-control-allow-headers': 'content-type',
+  'access-control-allow-headers': 'content-type,x-forge-admin-api-key',
 };
 
-export function createForgeHttpServer(config: { port: number }) {
+const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
+
+export function createForgeHttpServer(config: { port: number; adminApiKey?: string }) {
   const routes = new Map<RouteKey, HttpHandler>();
   const server = http.createServer(async (req, res) => {
     if (!req.url || !req.method) {
@@ -48,6 +50,20 @@ export function createForgeHttpServer(config: { port: number }) {
     if (!handler) {
       res.writeHead(404, CORS_HEADERS).end('Not found');
       return;
+    }
+
+    if (config.adminApiKey && url.pathname.startsWith('/admin/')) {
+      const adminApiKey = getHeaderValue(req.headers[ADMIN_API_KEY_HEADER]);
+
+      if (adminApiKey !== config.adminApiKey) {
+        res.writeHead(401, {
+          ...CORS_HEADERS,
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        });
+        res.end(JSON.stringify({ error: 'Invalid admin API key' }));
+        return;
+      }
     }
 
     const body = await readBody(req);
@@ -126,6 +142,18 @@ export function createForgeHttpServer(config: { port: number }) {
     stop,
     port: config.port,
   };
+}
+
+function getHeaderValue(value: string | string[] | undefined) {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return undefined;
 }
 
 function readBody(request: http.IncomingMessage) {

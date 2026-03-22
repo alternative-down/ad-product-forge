@@ -11,9 +11,6 @@ Current application environment is defined primarily in [main.ts](/home/nicolas/
 - `ENCRYPTION_KEY`
   - base64-encoded 32-byte AES-256-GCM key used to encrypt and decrypt sensitive provider credentials and global integration configs
 
-- `GITHUB_ORGANIZATION`
-  - organization name used by the GitHub App manager
-
 ### Optional with defaults
 
 - `FORGE_LOG_LEVEL`
@@ -33,8 +30,9 @@ Current application environment is defined primarily in [main.ts](/home/nicolas/
 - `FORGE_PUBLIC_BASE_URL`
   - defaults to local server URL derived from `FORGE_HTTP_PORT`
 
-- `GITHUB_APP_HOME_URL`
-  - defaults to the public base URL
+- `FORGE_ADMIN_API_KEY`
+  - when set, every `/admin/*` request must include the `x-forge-admin-api-key` header
+  - used by the admin UI and stored only in browser localStorage on the admin host
 
 ## Current system integration model
 
@@ -44,6 +42,7 @@ Current global integrations are stored in the application database:
 
 - `migadu`
 - `coolify`
+- `github`
 
 These configs are:
 
@@ -66,6 +65,7 @@ The server is intentionally minimal:
 - Zod request errors return HTTP `400`
 - CORS is enabled for browser-based admin access
 - `OPTIONS` preflight requests return `204`
+- admin routes can be protected by `FORGE_ADMIN_API_KEY`
 
 ## Current GitHub endpoints
 

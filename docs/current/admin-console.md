@@ -108,6 +108,7 @@ Shows and manages:
 
 - global Migadu integration config
 - global Coolify integration config
+- global GitHub integration config
 - enabled/disabled state per integration
 - last update timestamp
 
@@ -207,6 +208,6 @@ Examples:
 
 ## Runtime assumptions
 
-- this UI assumes a local/trusted admin environment
-- no separate authentication layer has been implemented yet
+- this UI requires the Forge admin API key when `FORGE_ADMIN_API_KEY` is configured on the backend
+- the admin key is stored in browser localStorage and sent in the `x-forge-admin-api-key` header
 - the Vite dev server proxies `/admin` to the Forge HTTP server on port `3011`
