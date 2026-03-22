@@ -24,6 +24,8 @@ import { encryptSecret } from '../encryption/crypto.js';
 import { parseProviderCredentials } from '../communication/provider-loader.js';
 import { createId } from '@paralleldrive/cuid2';
 import { createSystemIntegrationStore } from '../system-integrations/store.js';
+import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
+import { createCompanyPayables } from '../finance/company-payables.js';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -138,6 +140,40 @@ const deleteSystemIntegrationSchema = z.object({
   providerType: systemIntegrationProviderSchema,
 });
 
+const createInvestmentSchema = z.object({
+  amountUsd: z.coerce.number().positive(),
+  description: z.string().optional(),
+  effectiveAt: z.string().optional(),
+});
+
+const createPayableSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('single'),
+    name: z.string().min(1),
+    description: z.string().optional(),
+    amountUsd: z.coerce.number().positive(),
+    dueAt: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal('recurring'),
+    name: z.string().min(1),
+    description: z.string().optional(),
+    amountUsd: z.coerce.number().positive(),
+    dueAt: z.string().min(1),
+    recurrencePeriod: z.enum(['weekly', 'monthly', 'yearly']),
+  }),
+]);
+
+const ledgerEntryActionSchema = z.object({
+  entryId: z.string().min(1),
+  effectiveAt: z.string().optional(),
+});
+
+const recurringPayableStatusSchema = z.object({
+  payableId: z.string().min(1),
+  isActive: z.boolean(),
+});
+
 export function registerAdminRoutes(input: {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;
@@ -156,6 +192,8 @@ export function registerAdminRoutes(input: {
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
   const registry = getInternalAgentRegistry();
+  const companyCash = createCompanyCashOperations(input.db);
+  const companyPayables = createCompanyPayables(input.db);
 
   input.httpServer.registerRoute({
     method: 'GET',
@@ -202,6 +240,12 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/system/integrations',
     handler: async () => jsonResponse(await readModel.listSystemIntegrations()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/finance',
+    handler: async () => jsonResponse(await readModel.getFinance()),
   });
 
   input.httpServer.registerRoute({
@@ -475,6 +519,108 @@ export function registerAdminRoutes(input: {
       const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
       await integrations.deleteIntegration(body.providerType);
       return jsonResponse({ success: true, providerType: body.providerType });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/finance/investment/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createInvestmentSchema);
+      const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : Date.now();
+
+      await companyCash.recordCashIn({
+        type: 'owner-investment',
+        amountUsd: body.amountUsd,
+        description: body.description ?? 'Manual owner investment',
+        effectiveAt,
+      });
+
+      return jsonResponse({ success: true });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/finance/payable/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createPayableSchema);
+      const dueAt = new Date(body.dueAt).getTime();
+
+      if (!Number.isFinite(dueAt)) {
+        throw new Error('Invalid payable dueAt');
+      }
+
+      if (body.kind === 'single') {
+        const result = await companyCash.scheduleCashOut({
+          type: 'manual-payable',
+          amountUsd: body.amountUsd,
+          description: body.description ?? body.name,
+          referenceType: 'manual-payable',
+          referenceId: createId(),
+          dueAt,
+        });
+
+        return jsonResponse({
+          kind: body.kind,
+          entryId: result.entryId,
+        }, 201);
+      }
+
+      const result = await companyPayables.createRecurringPayable({
+        name: body.name,
+        description: body.description,
+        amountUsd: body.amountUsd,
+        recurrencePeriod: body.recurrencePeriod,
+        dueAt,
+      });
+
+      return jsonResponse({
+        kind: body.kind,
+        payableId: result.payableId,
+        entryId: result.entryId,
+      }, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/finance/ledger/post',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
+      const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : undefined;
+      const result = await companyCash.postPlannedEntry(body.entryId, { effectiveAt });
+
+      await companyPayables.syncRecurringPayableOccurrence({
+        entryId: body.entryId,
+      });
+
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/finance/ledger/cancel',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
+      const result = await companyCash.cancelPlannedEntry(body.entryId);
+
+      await companyPayables.syncRecurringPayableOccurrence({
+        entryId: body.entryId,
+      });
+
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/finance/recurring-payable/set-active',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
+      const result = await companyPayables.setRecurringPayableActive(body.payableId, body.isActive);
+      return jsonResponse(result);
     },
   });
 }

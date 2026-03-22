@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, Bot, Cable, CircleDollarSign, KeyRound, Shield, Zap } from 'lucide-react';
+import { Activity, Bot, Cable, CircleDollarSign, KeyRound, Shield, Wallet, Zap } from 'lucide-react';
 import { Link, Outlet } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
@@ -18,6 +18,7 @@ import { Input } from '../ui/input';
 const navigationItems = [
   { to: '/', label: 'Overview', icon: Activity },
   { to: '/agents', label: 'Agents', icon: Bot },
+  { to: '/finance', label: 'Finance', icon: Wallet },
   { to: '/system', label: 'System', icon: Cable },
   { to: '/roles', label: 'Roles', icon: Shield },
 ] as const;

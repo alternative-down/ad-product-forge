@@ -12,6 +12,7 @@ import type { Database } from '../database/index.js';
 import { agents, agentExecutionSteps, agentProviders, agentSchedules } from '../database/schema.js';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry.js';
 import { createMicroErpReadModel } from '../micro-erp/read-model.js';
+import { createCompanyPayables } from '../finance/company-payables.js';
 import { createCapabilityStore } from '../capabilities/store.js';
 import { forgeCustomToolIds } from '../capabilities/catalog.js';
 import { decryptSecret } from '../encryption/crypto.js';
@@ -30,6 +31,7 @@ export function createAdminReadModel(input: {
 }) {
   const db = input.db;
   const finance = createMicroErpReadModel(db);
+  const payables = createCompanyPayables(db);
   const capabilities = createCapabilityStore(db);
   const notifications = createAgentNotificationStore(db);
   const integrations = createSystemIntegrationStore(db);
@@ -301,6 +303,22 @@ export function createAdminReadModel(input: {
     }));
   }
 
+  async function getFinance() {
+    const [balance, summary, movements, recurringPayables] = await Promise.all([
+      finance.getCompanyCashBalance(),
+      finance.getCompanyCashSummary(),
+      finance.listCompanyCashMovements({ limit: 50 }),
+      payables.listRecurringPayables(),
+    ]);
+
+    return {
+      balanceUsd: balance.balanceUsd,
+      summary,
+      movements,
+      recurringPayables,
+    };
+  }
+
   return {
     getDashboard,
     listAgents,
@@ -308,6 +326,7 @@ export function createAdminReadModel(input: {
     listFunctions,
     listRoles,
     listSystemIntegrations,
+    getFinance,
   };
 }
 
