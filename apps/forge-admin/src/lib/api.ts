@@ -240,7 +240,7 @@ export type SystemIntegration =
       config: {
         apiUser: string;
         apiKey: string;
-      };
+      } | null;
       createdAt: number;
       updatedAt: number;
     }
@@ -251,7 +251,7 @@ export type SystemIntegration =
         baseUrl: string;
         adminToken: string;
         applicationsBaseDomain?: string;
-      };
+      } | null;
       createdAt: number;
       updatedAt: number;
     }
@@ -261,7 +261,7 @@ export type SystemIntegration =
       config: {
         organization: string;
         appHomeUrl: string;
-      };
+      } | null;
       createdAt: number;
       updatedAt: number;
     };
@@ -286,7 +286,7 @@ export type SystemLlmDefaults = {
 };
 
 export type SystemLlmResponse = {
-  defaults: SystemLlmDefaults;
+  defaults: SystemLlmDefaults | null;
   profiles: LlmProfile[];
 };
 
