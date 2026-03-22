@@ -79,6 +79,16 @@ export function createGitHubAppManager(config: {
     return buildProvisioning(input.agentId, pendingCredentials);
   }
 
+  async function getAgentProvisioning(agentId: string) {
+    const credentials = await getCredentials(agentId);
+
+    if (!credentials) {
+      return null;
+    }
+
+    return buildProvisioning(agentId, credentials);
+  }
+
   async function loadAllAgents() {
     const providerRows = await config.db.query.agentProviders.findMany({
       where: eq(agentProviders.providerType, GITHUB_PROVIDER_TYPE),
@@ -846,6 +856,7 @@ export function createGitHubAppManager(config: {
   }
 
   return {
+    getAgentProvisioning,
     createAgentApp,
     loadAllAgents,
     unloadAgent,

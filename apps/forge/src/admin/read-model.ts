@@ -22,6 +22,7 @@ import { createAgentNotificationStore } from '../notifications/store';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
+import type { GitHubAppManager } from '../github/manager';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -32,6 +33,7 @@ const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
 export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
+  githubApps: GitHubAppManager;
 }) {
   const db = input.db;
   const finance = createMicroErpReadModel(db);
@@ -147,6 +149,7 @@ export function createAdminReadModel(input: {
       activeContract,
       recentNotifications,
       recentConversations,
+      githubProvisioning,
     ] =
       await Promise.all([
         capabilities.listFunctions(),
@@ -169,6 +172,7 @@ export function createAdminReadModel(input: {
           limit: RECENT_NOTIFICATION_LIMIT,
         }),
         listRecentConversations(input.workspaceBasePath, agentId),
+        input.githubApps.getAgentProvisioning(agentId),
       ]);
     const registry = getInternalAgentRegistry();
     const loadedAgent = registry.get(agentId);
@@ -220,6 +224,7 @@ export function createAdminReadModel(input: {
               : parseProviderCredentials(provider.encryptedCredentials),
         }))
         .sort((left, right) => left.providerType.localeCompare(right.providerType)),
+      githubProvisioning,
       activeContract,
       schedules: agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')

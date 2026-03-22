@@ -271,6 +271,7 @@ export function registerAdminRoutes(input: {
   const readModel = createAdminReadModel({
     db: input.db,
     workspaceBasePath: input.workspaceBasePath,
+    githubApps: input.githubApps,
   });
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
