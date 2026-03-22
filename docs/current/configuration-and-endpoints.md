@@ -63,6 +63,8 @@ The server is intentionally minimal:
 - full request body buffering
 - no framework layer
 - Zod request errors return HTTP `400`
+- CORS is enabled for browser-based admin access
+- `OPTIONS` preflight requests return `204`
 
 ## Current GitHub endpoints
 

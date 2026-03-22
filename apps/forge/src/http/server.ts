@@ -20,20 +20,33 @@ type HttpHandler = (request: HttpRequest) => Promise<HttpResponse> | HttpRespons
 
 type RouteKey = `${string} ${string}`;
 
+const CORS_HEADERS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET,POST,OPTIONS',
+  'access-control-allow-headers': 'content-type',
+};
+
 export function createForgeHttpServer(config: { port: number }) {
   const routes = new Map<RouteKey, HttpHandler>();
   const server = http.createServer(async (req, res) => {
     if (!req.url || !req.method) {
-      res.writeHead(400).end('Missing request data');
+      res.writeHead(400, CORS_HEADERS).end('Missing request data');
       return;
     }
 
     const url = new URL(req.url, `http://127.0.0.1:${config.port}`);
+
+    if (req.method.toUpperCase() === 'OPTIONS') {
+      res.writeHead(204, CORS_HEADERS);
+      res.end();
+      return;
+    }
+
     const key = `${req.method.toUpperCase()} ${url.pathname}` as RouteKey;
     const handler = routes.get(key);
 
     if (!handler) {
-      res.writeHead(404).end('Not found');
+      res.writeHead(404, CORS_HEADERS).end('Not found');
       return;
     }
 
@@ -49,11 +62,15 @@ export function createForgeHttpServer(config: { port: number }) {
         bodyText: body.toString('utf8'),
       });
 
-      res.writeHead(response.status, response.headers ?? {});
+      res.writeHead(response.status, {
+        ...CORS_HEADERS,
+        ...(response.headers ?? {}),
+      });
       res.end(response.body);
     } catch (error) {
       if (error instanceof ZodError) {
         res.writeHead(400, {
+          ...CORS_HEADERS,
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
         });
@@ -67,7 +84,7 @@ export function createForgeHttpServer(config: { port: number }) {
       }
 
       console.error(`[ForgeHttpServer] ${req.method} ${url.pathname} failed:`, error);
-      res.writeHead(500).end('Internal server error');
+      res.writeHead(500, CORS_HEADERS).end('Internal server error');
     }
   });
 
