@@ -7,6 +7,8 @@ import { llmModelPrices } from '../database/schema.js';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger.js';
 import { createCompanyCashOperations } from '../finance/company-cash-operations.js';
 import { createLlmSettingsStore } from '../llm/settings-store.js';
+import { createSystemIntegrationStore } from '../system-integrations/store.js';
+import { createMiniMaxTokenGateway } from '../llm/minimax-token-gateway.js';
 import { createOAuthGateway } from '@mastra-engine/core';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
@@ -18,6 +20,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   const llmSettings = createLlmSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
+  const integrations = createSystemIntegrationStore(db);
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
   const modelPrice = await db.query.llmModelPrices.findFirst({
@@ -49,6 +52,9 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     },
     gateways: {
       oauth: createOAuthGateway(),
+      'token-plan': createMiniMaxTokenGateway({
+        integrations,
+      }),
     },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt);

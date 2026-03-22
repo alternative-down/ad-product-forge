@@ -15,6 +15,7 @@ import { createCoolifyManager } from './coolify/manager.js';
 import { createAgentScheduleManager } from './schedules/manager.js';
 import { registerAdminRoutes } from './admin/routes.js';
 import { createSystemIntegrationStore } from './system-integrations/store.js';
+import { createMiniMaxTokenGateway } from './llm/minimax-token-gateway.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -74,6 +75,9 @@ export async function main() {
   const coolify = createCoolifyManager({
     integrations,
   });
+  const minimax = createMiniMaxTokenGateway({
+    integrations,
+  });
   const workflows = createInternalAgentWorkflows({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
@@ -111,6 +115,7 @@ export async function main() {
     workflows,
     gateways: {
       oauth: createOAuthGateway(),
+      'token-plan': minimax,
     },
     logger: new ConsoleLogger({
       name: 'forge-app',

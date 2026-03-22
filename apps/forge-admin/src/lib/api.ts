@@ -253,13 +253,23 @@ export type SystemIntegration =
       };
       createdAt: number;
       updatedAt: number;
+    }
+  | {
+      providerType: 'minimax';
+      isEnabled: boolean;
+      config: {
+        apiKey: string;
+        baseUrl?: string;
+      };
+      createdAt: number;
+      updatedAt: number;
     };
 
 export type LlmProfile = {
   profileId: string;
   slug: string;
   label: string;
-  providerType: 'openai-codex' | 'claude-max';
+  providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
   modelKey: string;
   isEnabled: boolean;
@@ -279,7 +289,7 @@ export type SystemLlmResponse = {
   defaults: SystemLlmDefaults;
   profiles: LlmProfile[];
   supportedProviders: Array<{
-    providerType: 'openai-codex' | 'claude-max';
+    providerType: 'openai-codex' | 'claude-max' | 'minimax';
     label: string;
     modelIds: string[];
   }>;
@@ -334,13 +344,21 @@ export type UpsertSystemIntegrationInput =
         organization: string;
         appHomeUrl: string;
       };
+    }
+  | {
+      providerType: 'minimax';
+      isEnabled: boolean;
+      config: {
+        apiKey: string;
+        baseUrl?: string;
+      };
     };
 
 export type UpsertLlmProfileInput = {
   profileId?: string;
   slug: string;
   label: string;
-  providerType: 'openai-codex' | 'claude-max';
+  providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
   isEnabled: boolean;
 };
@@ -619,8 +637,8 @@ export function upsertSystemIntegration(input: UpsertSystemIntegrationInput) {
   });
 }
 
-export function deleteSystemIntegration(providerType: 'migadu' | 'coolify' | 'github') {
-  return request<{ success: true; providerType: 'migadu' | 'coolify' | 'github' }>(
+export function deleteSystemIntegration(providerType: 'migadu' | 'coolify' | 'github' | 'minimax') {
+  return request<{ success: true; providerType: 'migadu' | 'coolify' | 'github' | 'minimax' }>(
     '/admin/system/integration/delete',
     {
       method: 'POST',

@@ -1,6 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import {
   CLAUDE_MAX_MODELS,
+  MINIMAX_MODELS,
   OPENAI_CODEX_MODELS,
   claudeMaxProvider,
   openaiCodexProvider,
@@ -12,10 +13,12 @@ import type { Database } from '../database/index.js';
 import type { LlmProviderType } from '../database/schema.js';
 import { llmProfiles, systemLlmDefaults } from '../database/schema.js';
 
+import { TOKEN_PLAN_GATEWAY_ID } from './minimax-token-gateway.js';
+
 const llmProfileSchema = z.object({
   slug: z.string().min(1),
   label: z.string().min(1),
-  providerType: z.enum(['openai-codex', 'claude-max']),
+  providerType: z.enum(['openai-codex', 'claude-max', 'minimax']),
   modelId: z.string().min(1),
   isEnabled: z.boolean().default(true),
 });
@@ -29,6 +32,7 @@ const llmDefaultsSchema = z.object({
 const SUPPORTED_MODELS = {
   'openai-codex': [...OPENAI_CODEX_MODELS],
   'claude-max': [...CLAUDE_MAX_MODELS],
+  minimax: [...MINIMAX_MODELS],
 } as const satisfies Record<LlmProviderType, readonly string[]>;
 
 const DEFAULTS_ROW_ID = 'default';
@@ -222,6 +226,11 @@ export function createLlmSettingsStore(db: Database) {
         label: 'Claude Max',
         modelIds: [...SUPPORTED_MODELS['claude-max']],
       },
+      {
+        providerType: 'minimax' as const,
+        label: 'MiniMax Token Plan',
+        modelIds: [...SUPPORTED_MODELS.minimax],
+      },
     ];
   }
 
@@ -255,5 +264,9 @@ function buildModelKey(providerType: LlmProviderType, modelId: string) {
     return openaiCodexProvider(modelId as (typeof OPENAI_CODEX_MODELS)[number]);
   }
 
-  return claudeMaxProvider(modelId as (typeof CLAUDE_MAX_MODELS)[number]);
+  if (providerType === 'claude-max') {
+    return claudeMaxProvider(modelId as (typeof CLAUDE_MAX_MODELS)[number]);
+  }
+
+  return `${TOKEN_PLAN_GATEWAY_ID}/minimax/${modelId}`;
 }
