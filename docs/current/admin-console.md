@@ -112,6 +112,7 @@ Shows and manages:
 - global Migadu integration config
 - global Coolify integration config
 - global GitHub integration config
+- global MiniMax token plan config
 - reusable LLM profiles
 - system hiring defaults for:
   - primary agent model
@@ -134,6 +135,12 @@ They are used to:
 - define reusable `provider + model` combinations
 - choose which model Forge uses by default when hiring a new agent
 - choose which model the internal hiring RH agent uses to generate instructions
+
+Current provider choices in the LLM profile editor:
+
+- `openai-codex`
+- `claude-max`
+- `minimax`
 
 ### Finance
 

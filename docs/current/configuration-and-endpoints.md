@@ -43,6 +43,7 @@ Current global integrations are stored in the application database:
 - `migadu`
 - `coolify`
 - `github`
+- `minimax`
 
 Current LLM defaults are also stored in the application database:
 

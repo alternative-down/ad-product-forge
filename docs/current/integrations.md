@@ -32,8 +32,7 @@ Email uses real mailboxes provisioned through Migadu. Runtime communication is s
 
 Administrative provisioning uses:
 
-- `MIGADU_API_USER`
-- `MIGADU_API_KEY`
+- global Migadu integration config in the admin console
 
 Per-agent mailbox credentials are stored encrypted in `agent_providers`.
 
@@ -71,11 +70,9 @@ Current model:
 - no local deployment entity or mirror table
 - the agent operates directly on Coolify resources through tools
 
-Current required environment:
+Current required configuration:
 
-- `COOLIFY_BASE_URL`
-- `COOLIFY_ADMIN_TOKEN`
-- `COOLIFY_APPLICATIONS_BASE_DOMAIN`
+- global Coolify integration config in the admin console
 
 Current creation direction:
 
@@ -84,6 +81,24 @@ Current creation direction:
 - Forge derives the application domain from the configured base domain
 
 Current webhook support for Coolify is not implemented.
+
+## MiniMax
+
+MiniMax text model access is owned by:
+
+- [minimax-token-gateway.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/llm/minimax-token-gateway.ts)
+- [settings-store.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/llm/settings-store.ts)
+
+Current model:
+
+- one global MiniMax token plan API key for the company
+- anthropic-compatible HTTP endpoint
+- exposed to agents through the `token-plan/minimax/...` model id format
+- selectable in admin-managed LLM profiles and hiring defaults
+
+Current supported MiniMax model surface:
+
+- `MiniMax-M2.7`
 
 ## HTTP integration boundary
 

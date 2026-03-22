@@ -43,11 +43,17 @@ type GitHubDraft = {
   appHomeUrl: string;
 };
 
+type MiniMaxDraft = {
+  isEnabled: boolean;
+  apiKey: string;
+  baseUrl: string;
+};
+
 type LlmProfileDraft = {
   profileId?: string;
   slug: string;
   label: string;
-  providerType: 'openai-codex' | 'claude-max';
+  providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
   isEnabled: boolean;
 };
@@ -109,6 +115,7 @@ export function SystemPage() {
   const migaduIntegration = integrations.find((integration) => integration.providerType === 'migadu') ?? null;
   const coolifyIntegration = integrations.find((integration) => integration.providerType === 'coolify') ?? null;
   const githubIntegration = integrations.find((integration) => integration.providerType === 'github') ?? null;
+  const minimaxIntegration = integrations.find((integration) => integration.providerType === 'minimax') ?? null;
   const systemLlm = llmQuery.data!;
 
   return (
@@ -202,6 +209,22 @@ export function SystemPage() {
           deleteIntegrationMutation.variables,
         )}
         onDelete={() => deleteIntegrationMutation.mutate('github')}
+        onSave={(input) => upsertIntegrationMutation.mutate(input)}
+      />
+
+      <MiniMaxIntegrationCard
+        key={`minimax-${minimaxIntegration?.updatedAt ?? 'new'}`}
+        integration={minimaxIntegration}
+        pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'minimax'}
+        deleting={deleteIntegrationMutation.isPending && deleteIntegrationMutation.variables === 'minimax'}
+        error={getIntegrationError(
+          'minimax',
+          upsertIntegrationMutation.error?.message,
+          deleteIntegrationMutation.error?.message,
+          upsertIntegrationMutation.variables,
+          deleteIntegrationMutation.variables,
+        )}
+        onDelete={() => deleteIntegrationMutation.mutate('minimax')}
         onSave={(input) => upsertIntegrationMutation.mutate(input)}
       />
     </div>
@@ -733,6 +756,87 @@ function GitHubIntegrationCard(input: {
   );
 }
 
+function MiniMaxIntegrationCard(input: {
+  integration: SystemIntegration | null;
+  pending: boolean;
+  deleting: boolean;
+  error: string | null;
+  onDelete(): void;
+  onSave(input: Extract<UpsertSystemIntegrationInput, { providerType: 'minimax' }>): void;
+}) {
+  const initialDraft = getMiniMaxDraft(input.integration);
+  const [draft, setDraft] = useState(initialDraft);
+
+  return (
+    <IntegrationCard
+      title="MiniMax Token Plan"
+      integration={input.integration}
+      pending={input.pending}
+      deleting={input.deleting}
+      error={input.error}
+      onDelete={input.onDelete}
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <LabeledField label="API key">
+          <Input
+            value={draft.apiKey}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                apiKey: event.target.value,
+              }))
+            }
+            placeholder="MiniMax token plan API key"
+          />
+        </LabeledField>
+        <LabeledField label="Anthropic-compatible base URL">
+          <Input
+            value={draft.baseUrl}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                baseUrl: event.target.value,
+              }))
+            }
+            placeholder="Optional. Leave empty to use https://api.minimax.io/anthropic"
+          />
+        </LabeledField>
+      </div>
+      <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={draft.isEnabled}
+          onChange={(event) =>
+            setDraft((current) => ({
+              ...current,
+              isEnabled: event.target.checked,
+            }))
+          }
+        />
+        Enable MiniMax token plan models
+      </label>
+      <div className="mt-5 flex gap-3">
+        <Button
+          type="button"
+          disabled={input.pending}
+          onClick={() =>
+            input.onSave({
+              providerType: 'minimax',
+              isEnabled: draft.isEnabled,
+              config: {
+                apiKey: draft.apiKey,
+                ...(draft.baseUrl.trim() ? { baseUrl: draft.baseUrl.trim() } : {}),
+              },
+            })
+          }
+        >
+          Save MiniMax
+        </Button>
+      </div>
+    </IntegrationCard>
+  );
+}
+
 function IntegrationCard(input: {
   title: string;
   integration: SystemIntegration | null;
@@ -798,7 +902,7 @@ function getIntegrationError(
   upsertErrorMessage: string | undefined,
   deleteErrorMessage: string | undefined,
   upsertVariables: UpsertSystemIntegrationInput | undefined,
-  deleteVariables: 'migadu' | 'coolify' | 'github' | undefined,
+  deleteVariables: 'migadu' | 'coolify' | 'github' | 'minimax' | undefined,
 ) {
   if (upsertVariables?.providerType === providerType && upsertErrorMessage) {
     return upsertErrorMessage;
@@ -858,6 +962,22 @@ function getGitHubDraft(integration: SystemIntegration | null): GitHubDraft {
     isEnabled: integration.isEnabled,
     organization: integration.config.organization,
     appHomeUrl: integration.config.appHomeUrl,
+  };
+}
+
+function getMiniMaxDraft(integration: SystemIntegration | null): MiniMaxDraft {
+  if (!integration || integration.providerType !== 'minimax') {
+    return {
+      isEnabled: true,
+      apiKey: '',
+      baseUrl: '',
+    };
+  }
+
+  return {
+    isEnabled: integration.isEnabled,
+    apiKey: integration.config.apiKey,
+    baseUrl: integration.config.baseUrl ?? '',
   };
 }
 

@@ -14,3 +14,9 @@ export const CLAUDE_MAX_MODELS = [
 ] as const;
 
 export type ClaudeMaxModelId = (typeof CLAUDE_MAX_MODELS)[number];
+
+export const MINIMAX_MODELS = [
+  'MiniMax-M2.7',
+] as const;
+
+export type MiniMaxModelId = (typeof MINIMAX_MODELS)[number];

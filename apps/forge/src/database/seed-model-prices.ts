@@ -46,6 +46,12 @@ const MODEL_PRICES = [
     inputCachePerMillionUsd: 0.1,
     outputPerMillionUsd: 5,
   },
+  {
+    modelKey: 'token-plan/minimax/MiniMax-M2.7',
+    inputPerMillionUsd: 0.3,
+    inputCachePerMillionUsd: 0.06,
+    outputPerMillionUsd: 1.2,
+  },
 ] as const;
 
 export async function seedModelPrices(db: Database) {

@@ -107,7 +107,7 @@ const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
-const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github']);
+const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
 
 const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({
@@ -135,13 +135,21 @@ const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
       appHomeUrl: z.string().url(),
     }),
   }),
+  z.object({
+    providerType: z.literal('minimax'),
+    isEnabled: z.boolean().default(true),
+    config: z.object({
+      apiKey: z.string().min(1),
+      baseUrl: z.string().url().optional(),
+    }),
+  }),
 ]);
 
 const deleteSystemIntegrationSchema = z.object({
   providerType: systemIntegrationProviderSchema,
 });
 
-const llmProviderTypeSchema = z.enum(['openai-codex', 'claude-max']);
+const llmProviderTypeSchema = z.enum(['openai-codex', 'claude-max', 'minimax']);
 
 const upsertLlmProfileSchema = z.object({
   profileId: z.string().min(1).optional(),
