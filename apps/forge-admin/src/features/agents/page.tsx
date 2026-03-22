@@ -56,6 +56,7 @@ type HireAgentDraft = {
 type AgentConfigDraft = {
   name: string;
   description: string;
+  instructions: string;
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
   workspaceEmbedder: string;
@@ -418,6 +419,7 @@ export function AgentsPage() {
                     agentId: agentDetailQuery.data!.agentId,
                     name: draft.name,
                     description: draft.description || null,
+                    instructions: draft.instructions,
                     workspaceAutoSync: draft.workspaceAutoSync,
                     workspaceBm25: draft.workspaceBm25,
                     workspaceEmbedder: draft.workspaceEmbedder,
@@ -471,7 +473,6 @@ export function AgentsPage() {
                 upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
               }
             />
-            <AgentPromptCard instructions={agentDetailQuery.data.instructions} />
             <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
             <AgentInboxCard
               notifications={agentDetailQuery.data.recentNotifications}
@@ -876,6 +877,17 @@ function AgentConfigurationCard(input: {
           />
         </LabeledField>
 
+        <LabeledField label="Agent instructions">
+          <Textarea
+            className="min-h-56"
+            value={input.draft.instructions}
+            onChange={(event) =>
+              input.onChange({ ...input.draft, instructions: event.target.value })
+            }
+            required
+          />
+        </LabeledField>
+
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             <input
@@ -1122,22 +1134,6 @@ function AgentProvidersCard(input: {
           </div>
         )}
       </div>
-    </Card>
-  );
-}
-
-function AgentPromptCard(input: { instructions: string }) {
-  return (
-    <Card className="p-6">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-950">Agent instructions</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Read-only prompt currently persisted for the selected agent.
-        </p>
-      </div>
-      <pre className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm whitespace-pre-wrap text-slate-700">
-        {input.instructions}
-      </pre>
     </Card>
   );
 }
@@ -1621,6 +1617,7 @@ function createAgentConfigDraft(agent: AgentDetail): AgentConfigDraft {
   return {
     name: agent.name,
     description: agent.description ?? '',
+    instructions: agent.instructions,
     workspaceAutoSync: agent.workspace.autoSync,
     workspaceBm25: agent.workspace.bm25,
     workspaceEmbedder: agent.workspace.embedder,
