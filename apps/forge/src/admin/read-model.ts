@@ -19,6 +19,7 @@ import { decryptSecret } from '../encryption/crypto';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createLlmSettingsStore } from '../llm/settings-store';
+import { createLlmModelPriceStore } from '../llm/model-price-store';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -37,6 +38,7 @@ export function createAdminReadModel(input: {
   const notifications = createAgentNotificationStore(db);
   const integrations = createSystemIntegrationStore(db);
   const llmSettings = createLlmSettingsStore(db);
+  const llmModelPrices = createLlmModelPriceStore(db);
 
   async function getDashboard() {
     const [agentRows, balance, summary, activeContracts, cashMovements, functions, roles] =
@@ -336,14 +338,16 @@ export function createAdminReadModel(input: {
   }
 
   async function getSystemLlm() {
-    const [profiles, defaults] = await Promise.all([
+    const [profiles, defaults, prices] = await Promise.all([
       llmSettings.listProfiles(),
       llmSettings.getDefaults(),
+      llmModelPrices.listPrices(),
     ]);
 
     return {
       defaults,
       profiles,
+      prices,
     };
   }
 

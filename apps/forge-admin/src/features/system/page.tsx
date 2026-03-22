@@ -10,9 +10,11 @@ import {
   listSystemIntegrations,
   syncSystemOauth,
   updateSystemLlmDefaults,
+  upsertLlmModelPrice,
   upsertLlmProfile,
   upsertSystemIntegration,
   type LlmProfile,
+  type UpsertLlmModelPriceInput,
   type SystemIntegration,
   type SystemLlmDefaults,
   type SystemOauthState,
@@ -54,6 +56,8 @@ type LlmProfileDraft = {
   contractCostMultiplier: number;
   isEnabled: boolean;
 };
+
+type LlmModelPriceDraft = UpsertLlmModelPriceInput;
 
 export function SystemPage() {
   const queryClient = useQueryClient();
@@ -103,6 +107,12 @@ export function SystemPage() {
     mutationFn: syncSystemOauth,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-oauth'] });
+    },
+  });
+  const upsertLlmModelPriceMutation = useMutation({
+    mutationFn: upsertLlmModelPrice,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
     },
   });
 
@@ -174,6 +184,13 @@ export function SystemPage() {
         onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
       />
 
+      <LlmPricingCard
+        prices={systemLlm.prices}
+        pending={upsertLlmModelPriceMutation.isPending}
+        error={upsertLlmModelPriceMutation.error?.message ?? null}
+        onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
+      />
+
       <OauthSyncCard
         state={oauthState}
         pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
@@ -231,6 +248,161 @@ export function SystemPage() {
       />
 
     </div>
+  );
+}
+
+function LlmPricingCard(input: {
+  prices: Array<{
+    modelKey: string;
+    inputPerMillionUsd: number;
+    inputCachePerMillionUsd: number;
+    outputPerMillionUsd: number;
+    createdAt: number;
+    updatedAt: number;
+  }>;
+  pending: boolean;
+  error: string | null;
+  onSave(input: UpsertLlmModelPriceInput): void;
+}) {
+  const [selectedModelKey, setSelectedModelKey] = useState<string>('new');
+  const selectedPrice = input.prices.find((price) => price.modelKey === selectedModelKey) ?? null;
+  const [draft, setDraft] = useState<LlmModelPriceDraft>(buildLlmModelPriceDraft(selectedPrice));
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-950">LLM model prices</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Pricing is used by hiring and contract accounting. Add or adjust any model key here.
+          </p>
+        </div>
+        {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
+      </div>
+
+      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <div className="space-y-4">
+          <LabeledField label="Edit price">
+            <Select
+              value={selectedModelKey}
+              onChange={(event) => {
+                const nextModelKey = event.target.value;
+                const nextSelectedPrice = input.prices.find((price) => price.modelKey === nextModelKey) ?? null;
+                setSelectedModelKey(nextModelKey);
+                setDraft(buildLlmModelPriceDraft(nextSelectedPrice));
+              }}
+            >
+              <option value="new">Create new price</option>
+              {input.prices.map((price) => (
+                <option key={price.modelKey} value={price.modelKey}>
+                  {price.modelKey}
+                </option>
+              ))}
+            </Select>
+          </LabeledField>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <LabeledField label="Model key">
+              <Input
+                value={draft.modelKey}
+                onChange={(event) => setDraft((current) => ({ ...current, modelKey: event.target.value }))}
+                placeholder="minimax/MiniMax-M2.7"
+              />
+            </LabeledField>
+            <LabeledField label="Input / 1M USD">
+              <Input
+                type="number"
+                min="0"
+                step="0.001"
+                value={String(draft.inputPerMillionUsd)}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    inputPerMillionUsd: Number(event.target.value || '0'),
+                  }))
+                }
+              />
+            </LabeledField>
+            <LabeledField label="Input cache / 1M USD">
+              <Input
+                type="number"
+                min="0"
+                step="0.001"
+                value={String(draft.inputCachePerMillionUsd)}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    inputCachePerMillionUsd: Number(event.target.value || '0'),
+                  }))
+                }
+              />
+            </LabeledField>
+            <LabeledField label="Output / 1M USD">
+              <Input
+                type="number"
+                min="0"
+                step="0.001"
+                value={String(draft.outputPerMillionUsd)}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    outputPerMillionUsd: Number(event.target.value || '0'),
+                  }))
+                }
+              />
+            </LabeledField>
+          </div>
+
+          {input.error ? <p className="text-sm text-rose-600">{input.error}</p> : null}
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              disabled={input.pending || !draft.modelKey.trim()}
+              onClick={() =>
+                input.onSave({
+                  modelKey: draft.modelKey.trim(),
+                  inputPerMillionUsd: draft.inputPerMillionUsd,
+                  inputCachePerMillionUsd: draft.inputCachePerMillionUsd,
+                  outputPerMillionUsd: draft.outputPerMillionUsd,
+                })
+              }
+            >
+              Save model price
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered prices</h4>
+          <div className="mt-4 space-y-3">
+            {input.prices.map((price) => (
+              <div key={price.modelKey} className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="font-medium text-slate-950 break-all">{price.modelKey}</p>
+                <dl className="mt-3 space-y-1 text-sm text-slate-600">
+                  <div>
+                    <dt className="inline font-medium text-slate-800">Input:</dt>{' '}
+                    <dd className="inline">{price.inputPerMillionUsd}</dd>
+                  </div>
+                  <div>
+                    <dt className="inline font-medium text-slate-800">Cache input:</dt>{' '}
+                    <dd className="inline">{price.inputCachePerMillionUsd}</dd>
+                  </div>
+                  <div>
+                    <dt className="inline font-medium text-slate-800">Output:</dt>{' '}
+                    <dd className="inline">{price.outputPerMillionUsd}</dd>
+                  </div>
+                  <div>
+                    <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
+                    <dd className="inline">{formatDateTime(price.updatedAt)}</dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -1027,6 +1199,29 @@ function buildLlmProfileDraft(profile: LlmProfile | null): LlmProfileDraft {
     apiKey: profile.apiKey,
     contractCostMultiplier: profile.contractCostMultiplier,
     isEnabled: profile.isEnabled,
+  };
+}
+
+function buildLlmModelPriceDraft(price: {
+  modelKey: string;
+  inputPerMillionUsd: number;
+  inputCachePerMillionUsd: number;
+  outputPerMillionUsd: number;
+} | null): LlmModelPriceDraft {
+  if (!price) {
+    return {
+      modelKey: '',
+      inputPerMillionUsd: 0,
+      inputCachePerMillionUsd: 0,
+      outputPerMillionUsd: 0,
+    };
+  }
+
+  return {
+    modelKey: price.modelKey,
+    inputPerMillionUsd: price.inputPerMillionUsd,
+    inputCachePerMillionUsd: price.inputCachePerMillionUsd,
+    outputPerMillionUsd: price.outputPerMillionUsd,
   };
 }
 

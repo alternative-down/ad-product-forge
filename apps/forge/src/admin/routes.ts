@@ -36,6 +36,7 @@ import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createLlmSettingsStore } from '../llm/settings-store';
+import { createLlmModelPriceStore } from '../llm/model-price-store';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -170,6 +171,13 @@ const updateLlmDefaultsSchema = z.object({
   hiringRhProfileId: z.string().min(1),
 });
 
+const upsertLlmModelPriceSchema = z.object({
+  modelKey: z.string().min(1),
+  inputPerMillionUsd: z.coerce.number().nonnegative(),
+  inputCachePerMillionUsd: z.coerce.number().nonnegative(),
+  outputPerMillionUsd: z.coerce.number().nonnegative(),
+});
+
 const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
 
 const syncOauthSchema = z.object({
@@ -228,6 +236,7 @@ export function registerAdminRoutes(input: {
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
   const llmSettings = createLlmSettingsStore(input.db);
+  const llmModelPrices = createLlmModelPriceStore(input.db);
   const registry = getInternalAgentRegistry();
   const companyCash = createCompanyCashOperations(input.db);
   const companyPayables = createCompanyPayables(input.db);
@@ -283,6 +292,15 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/system/llm',
     handler: async () => jsonResponse(await readModel.getSystemLlm()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/llm/price/upsert',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
+      return jsonResponse(await llmModelPrices.upsertPrice(body));
+    },
   });
 
   input.httpServer.registerRoute({
