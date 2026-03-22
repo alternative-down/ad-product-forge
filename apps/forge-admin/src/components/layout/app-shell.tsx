@@ -1,4 +1,4 @@
-import { Activity, Bot, CircleDollarSign, Shield, Zap } from 'lucide-react';
+import { Activity, Bot, Cable, CircleDollarSign, Shield, Zap } from 'lucide-react';
 import { Link, Outlet } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
@@ -10,6 +10,7 @@ import { Card } from '../ui/card';
 const navigationItems = [
   { to: '/', label: 'Overview', icon: Activity },
   { to: '/agents', label: 'Agents', icon: Bot },
+  { to: '/system', label: 'System', icon: Cable },
   { to: '/roles', label: 'Roles', icon: Shield },
 ] as const;
 

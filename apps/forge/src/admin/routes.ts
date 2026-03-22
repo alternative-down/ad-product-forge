@@ -23,6 +23,7 @@ import { agentFunctions, agents, agentProviders } from '../database/schema.js';
 import { encryptSecret } from '../encryption/crypto.js';
 import { parseProviderCredentials } from '../communication/provider-loader.js';
 import { createId } from '@paralleldrive/cuid2';
+import { createSystemIntegrationStore } from '../system-integrations/store.js';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -103,6 +104,32 @@ const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
+const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify']);
+
+const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
+  z.object({
+    providerType: z.literal('migadu'),
+    isEnabled: z.boolean().default(true),
+    config: z.object({
+      apiUser: z.string().email(),
+      apiKey: z.string().min(1),
+    }),
+  }),
+  z.object({
+    providerType: z.literal('coolify'),
+    isEnabled: z.boolean().default(true),
+    config: z.object({
+      baseUrl: z.string().url(),
+      adminToken: z.string().min(1),
+      applicationsBaseDomain: z.string().min(1),
+    }),
+  }),
+]);
+
+const deleteSystemIntegrationSchema = z.object({
+  providerType: systemIntegrationProviderSchema,
+});
+
 export function registerAdminRoutes(input: {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;
@@ -112,12 +139,14 @@ export function registerAdminRoutes(input: {
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
+  integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
   const readModel = createAdminReadModel({
     db: input.db,
     workspaceBasePath: input.workspaceBasePath,
   });
   const capabilities = createCapabilityStore(input.db);
+  const integrations = input.integrations;
   const registry = getInternalAgentRegistry();
 
   input.httpServer.registerRoute({
@@ -159,6 +188,12 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/roles',
     handler: async () => jsonResponse(await readModel.listRoles()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/integrations',
+    handler: async () => jsonResponse(await readModel.listSystemIntegrations()),
   });
 
   input.httpServer.registerRoute({
@@ -411,6 +446,38 @@ export function registerAdminRoutes(input: {
       const result = await capabilities.removeRoleToolPermission(body);
       await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
       return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/integration/upsert',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
+      const result =
+        body.providerType === 'migadu'
+          ? await integrations.upsertIntegration({
+              providerType: 'migadu',
+              isEnabled: body.isEnabled,
+              config: body.config,
+            })
+          : await integrations.upsertIntegration({
+              providerType: 'coolify',
+              isEnabled: body.isEnabled,
+              config: body.config,
+            });
+
+      return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/integration/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
+      await integrations.deleteIntegration(body.providerType);
+      return jsonResponse({ success: true, providerType: body.providerType });
     },
   });
 }

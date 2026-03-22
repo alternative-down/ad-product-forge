@@ -8,6 +8,7 @@ It exists for:
 
 - runtime visibility
 - agent maintenance
+- system integration management
 - agent hiring and termination
 - agent function reassignment
 - agent runtime config updates
@@ -21,7 +22,7 @@ It exists for:
 It does not exist for:
 
 - editing agent conversations or notifications
-- operating GitHub or Coolify directly
+- operating GitHub directly
 - editing role or function definitions
 - changing agent prompts or other internal cognitive configuration
 
@@ -41,6 +42,8 @@ Current route surface:
   - overview
 - `/agents`
   - agent maintenance
+- `/system`
+  - system integrations
 - `/roles`
   - role tool grants
 
@@ -99,6 +102,17 @@ Actions available:
 
 Heartbeat is visible but not editable from the UI.
 
+### System
+
+Shows and manages:
+
+- global Migadu integration config
+- global Coolify integration config
+- enabled/disabled state per integration
+- last update timestamp
+
+These integration settings are persisted in the Forge application database and encrypted at rest.
+
 ### Roles
 
 Shows:
@@ -128,6 +142,7 @@ Current backend code:
 
 - [admin/read-model.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/read-model.ts)
 - [admin/routes.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/routes.ts)
+- [system-integrations/store.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/system-integrations/store.ts)
 
 Current frontend anchors:
 
@@ -135,6 +150,7 @@ Current frontend anchors:
 - [\_\_root.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/routes/__root.tsx)
 - [overview/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/overview/page.tsx)
 - [agents/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/agents/page.tsx)
+- [system/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/system/page.tsx)
 - [roles/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/roles/page.tsx)
 
 The admin API is intentionally separate from:
@@ -154,6 +170,7 @@ Read endpoints:
 - `GET /admin/agent?agentId=...`
 - `GET /admin/functions`
 - `GET /admin/roles`
+- `GET /admin/system/integrations`
 
 Mutation endpoints:
 
@@ -170,6 +187,8 @@ Mutation endpoints:
 - `POST /admin/agent-schedule/delete`
 - `POST /admin/role-tool-permission/add`
 - `POST /admin/role-tool-permission/remove`
+- `POST /admin/system/integration/upsert`
+- `POST /admin/system/integration/delete`
 
 ## API base resolution
 

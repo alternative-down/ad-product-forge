@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { createSystemIntegrationStore } from '../system-integrations/store.js';
+
 const GitHubAppSchema = z.object({
   id: z.number().int().optional(),
   uuid: z.string(),
@@ -75,13 +77,8 @@ const ServerSchema = z.object({
 export type CoolifyManager = ReturnType<typeof createCoolifyManager>;
 
 export function createCoolifyManager(config: {
-  baseUrl: string;
-  adminToken: string;
-  applicationsBaseDomain: string;
+  integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
-  const baseUrl = `${config.baseUrl.replace(/\/$/, '')}/api/v1`;
-  const applicationsBaseDomain = config.applicationsBaseDomain.replace(/^\./, '').trim();
-
   async function listGitHubApps() {
     const data = await requestJson('GET', '/github-apps');
     const apps = extractCollection(data, GitHubAppSchema);
@@ -185,7 +182,7 @@ export function createCoolifyManager(config: {
     installCommand?: string;
   }) {
     const deploymentContext = await loadDefaultDeploymentContext();
-    const domain = buildApplicationDomain(input.slug);
+    const domain = await buildApplicationDomain(input.slug);
     const data = await requestJson('POST', '/applications/private-github-app', {
       project_uuid: deploymentContext.projectUuid,
       environment_name: deploymentContext.environmentName,
@@ -231,7 +228,7 @@ export function createCoolifyManager(config: {
     if (input.startCommand !== undefined) body.start_command = input.startCommand;
     if (input.installCommand !== undefined) body.install_command = input.installCommand;
     if (input.branch !== undefined) body.branch = input.branch;
-    if (input.slug !== undefined) body.fqdn = buildApplicationDomain(input.slug);
+    if (input.slug !== undefined) body.fqdn = await buildApplicationDomain(input.slug);
 
     const data = await requestJson('PATCH', `/applications/${encodeURIComponent(input.applicationUuid)}`, body);
     const application = extractItem(data, ApplicationSchema);
@@ -512,10 +509,11 @@ export function createCoolifyManager(config: {
   }
 
   async function requestJson(method: string, path: string, body?: Record<string, unknown>) {
-    const response = await fetch(`${baseUrl}${path}`, {
+    const providerConfig = await getProviderConfig();
+    const response = await fetch(`${providerConfig.baseUrl}${path}`, {
       method,
       headers: {
-        Authorization: `Bearer ${config.adminToken}`,
+        Authorization: `Bearer ${providerConfig.adminToken}`,
         Accept: 'application/json',
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
@@ -532,8 +530,25 @@ export function createCoolifyManager(config: {
     return data;
   }
 
-  function buildApplicationDomain(slug: string) {
-    return `${slug}.${applicationsBaseDomain}`;
+  async function buildApplicationDomain(slug: string) {
+    const providerConfig = await getProviderConfig();
+    return `${slug}.${providerConfig.applicationsBaseDomain}`;
+  }
+
+  async function getProviderConfig() {
+    const integration = await config.integrations.getCoolifyConfig();
+
+    if (!integration) {
+      throw new Error(
+        'Coolify integration requires a configured admin connection in system integrations',
+      );
+    }
+
+    return {
+      baseUrl: `${integration.baseUrl.replace(/\/$/, '')}/api/v1`,
+      adminToken: integration.adminToken,
+      applicationsBaseDomain: integration.applicationsBaseDomain.replace(/^\./, '').trim(),
+    };
   }
 }
 

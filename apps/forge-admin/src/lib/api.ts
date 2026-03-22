@@ -202,6 +202,23 @@ export type RoleListResponse = {
   }>;
 };
 
+export type SystemIntegration = {
+  providerType: 'migadu' | 'coolify';
+  isEnabled: boolean;
+  config:
+    | {
+        apiUser: string;
+        apiKey: string;
+      }
+    | {
+        baseUrl: string;
+        adminToken: string;
+        applicationsBaseDomain: string;
+      };
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type CreateScheduleInput = {
   agentId: string;
   name: string;
@@ -225,6 +242,25 @@ export type UpdateScheduleInput = {
   content?: string;
   isActive?: boolean;
 };
+
+export type UpsertSystemIntegrationInput =
+  | {
+      providerType: 'migadu';
+      isEnabled: boolean;
+      config: {
+        apiUser: string;
+        apiKey: string;
+      };
+    }
+  | {
+      providerType: 'coolify';
+      isEnabled: boolean;
+      config: {
+        baseUrl: string;
+        adminToken: string;
+        applicationsBaseDomain: string;
+      };
+    };
 
 function stripTrailingSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -307,6 +343,10 @@ export function listFunctions() {
 
 export function listRoles() {
   return request<RoleListResponse>('/admin/roles');
+}
+
+export function listSystemIntegrations() {
+  return request<SystemIntegration[]>('/admin/system/integrations');
 }
 
 export function wakeAgent(agentId: string) {
@@ -410,6 +450,23 @@ export function removeRoleToolPermission(roleId: string, toolId: string) {
     {
       method: 'POST',
       body: JSON.stringify({ roleId, toolId }),
+    },
+  );
+}
+
+export function upsertSystemIntegration(input: UpsertSystemIntegrationInput) {
+  return request<SystemIntegration>('/admin/system/integration/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteSystemIntegration(providerType: 'migadu' | 'coolify') {
+  return request<{ success: true; providerType: 'migadu' | 'coolify' }>(
+    '/admin/system/integration/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify({ providerType }),
     },
   );
 }

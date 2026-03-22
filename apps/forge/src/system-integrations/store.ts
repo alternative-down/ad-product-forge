@@ -1,0 +1,132 @@
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+
+import type { Database } from '../database/index.js';
+import type {
+  CoolifySystemIntegrationConfig,
+  MigaduSystemIntegrationConfig,
+} from '../database/schema.js';
+import { systemIntegrations } from '../database/schema.js';
+import { decryptSecret, encryptSecret } from '../encryption/crypto.js';
+
+const migaduConfigSchema = z.object({
+  apiUser: z.string().email(),
+  apiKey: z.string().min(1),
+});
+
+const coolifyConfigSchema = z.object({
+  baseUrl: z.string().url(),
+  adminToken: z.string().min(1),
+  applicationsBaseDomain: z.string().min(1),
+});
+
+export type SystemIntegrationProviderType = 'migadu' | 'coolify';
+
+export function createSystemIntegrationStore(db: Database) {
+  async function listIntegrations() {
+    const rows = await db.query.systemIntegrations.findMany({
+      orderBy: (fields, { asc }) => [asc(fields.providerType)],
+    });
+
+    return rows.map((row) => ({
+      providerType: row.providerType,
+      isEnabled: row.isEnabled === 1,
+      config:
+        row.providerType === 'migadu'
+          ? parseMigaduConfig(row.encryptedConfig)
+          : parseCoolifyConfig(row.encryptedConfig),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  }
+
+  async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
+    const row = await getEnabledIntegration('migadu');
+    return row ? parseMigaduConfig(row.encryptedConfig) : null;
+  }
+
+  async function getCoolifyConfig(): Promise<CoolifySystemIntegrationConfig | null> {
+    const row = await getEnabledIntegration('coolify');
+    return row ? parseCoolifyConfig(row.encryptedConfig) : null;
+  }
+
+  async function upsertIntegration(
+    input:
+      | {
+          providerType: 'migadu';
+          config: MigaduSystemIntegrationConfig;
+          isEnabled?: boolean;
+        }
+      | {
+          providerType: 'coolify';
+          config: CoolifySystemIntegrationConfig;
+          isEnabled?: boolean;
+        },
+  ) {
+    const now = Date.now();
+    const parsedConfig =
+      input.providerType === 'migadu'
+        ? migaduConfigSchema.parse(input.config)
+        : coolifyConfigSchema.parse(input.config);
+    const existing = await db.query.systemIntegrations.findFirst({
+      where: eq(systemIntegrations.providerType, input.providerType),
+    });
+
+    if (existing) {
+      await db
+        .update(systemIntegrations)
+        .set({
+          encryptedConfig: encryptSecret(JSON.stringify(parsedConfig)),
+          isEnabled: input.isEnabled === false ? 0 : 1,
+          updatedAt: now,
+        })
+        .where(eq(systemIntegrations.providerType, input.providerType));
+    } else {
+      await db.insert(systemIntegrations).values({
+        providerType: input.providerType,
+        encryptedConfig: encryptSecret(JSON.stringify(parsedConfig)),
+        isEnabled: input.isEnabled === false ? 0 : 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return {
+      providerType: input.providerType,
+      isEnabled: input.isEnabled === false ? false : true,
+      config: parsedConfig,
+    };
+  }
+
+  async function deleteIntegration(providerType: SystemIntegrationProviderType) {
+    await db.delete(systemIntegrations).where(eq(systemIntegrations.providerType, providerType));
+  }
+
+  async function getEnabledIntegration(providerType: SystemIntegrationProviderType) {
+    const row = await db.query.systemIntegrations.findFirst({
+      where: eq(systemIntegrations.providerType, providerType),
+    });
+
+    if (!row || row.isEnabled !== 1) {
+      return null;
+    }
+
+    return row;
+  }
+
+  function parseMigaduConfig(encryptedConfig: string): MigaduSystemIntegrationConfig {
+    return migaduConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
+  }
+
+  function parseCoolifyConfig(encryptedConfig: string): CoolifySystemIntegrationConfig {
+    return coolifyConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
+  }
+
+  return {
+    listIntegrations,
+    getMigaduConfig,
+    getCoolifyConfig,
+    upsertIntegration,
+    deleteIntegration,
+  };
+}
