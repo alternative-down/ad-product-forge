@@ -217,10 +217,6 @@ export function createLlmSettingsStore(db: Database) {
 }
 
 function toProfileRecord(row: typeof llmProfiles.$inferSelect) {
-  if (!row.encryptedApiKey) {
-    throw new Error(`LLM profile is missing apiKey: ${row.id}`);
-  }
-
   const {
     id,
     encryptedApiKey,
@@ -232,7 +228,7 @@ function toProfileRecord(row: typeof llmProfiles.$inferSelect) {
     ...rest,
     profileId: id,
     baseUrl: rest.baseUrl ?? null,
-    apiKey: decryptSecret(encryptedApiKey),
+    apiKey: encryptedApiKey ? decryptSecret(encryptedApiKey) : '',
     isEnabled: isEnabled === 1,
   };
 }
