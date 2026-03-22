@@ -251,11 +251,18 @@ const _CoolifySystemIntegrationConfigSchema = z.object({
   applicationsBaseDomain: z.string().min(1),
 });
 
+const _GitHubSystemIntegrationConfigSchema = z.object({
+  organization: z.string().min(1),
+  appHomeUrl: z.string().url(),
+});
+
 export type MigaduSystemIntegrationConfig = z.infer<typeof _MigaduSystemIntegrationConfigSchema>;
 export type CoolifySystemIntegrationConfig = z.infer<typeof _CoolifySystemIntegrationConfigSchema>;
+export type GitHubSystemIntegrationConfig = z.infer<typeof _GitHubSystemIntegrationConfigSchema>;
 export type SystemIntegrationConfigMap = {
   migadu: MigaduSystemIntegrationConfig;
   coolify: CoolifySystemIntegrationConfig;
+  github: GitHubSystemIntegrationConfig;
 };
 
 export const systemIntegrations = sqliteTable('system_integrations', {

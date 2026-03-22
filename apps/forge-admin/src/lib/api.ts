@@ -203,7 +203,7 @@ export type RoleListResponse = {
 };
 
 export type SystemIntegration = {
-  providerType: 'migadu' | 'coolify';
+  providerType: 'migadu' | 'coolify' | 'github';
   isEnabled: boolean;
   config:
     | {
@@ -214,6 +214,10 @@ export type SystemIntegration = {
         baseUrl: string;
         adminToken: string;
         applicationsBaseDomain: string;
+      }
+    | {
+        organization: string;
+        appHomeUrl: string;
       };
   createdAt: number;
   updatedAt: number;
@@ -260,7 +264,25 @@ export type UpsertSystemIntegrationInput =
         adminToken: string;
         applicationsBaseDomain: string;
       };
+    }
+  | {
+      providerType: 'github';
+      isEnabled: boolean;
+      config: {
+        organization: string;
+        appHomeUrl: string;
+      };
     };
+
+export class AdminApiKeyError extends Error {
+  constructor(message = 'Invalid admin API key') {
+    super(message);
+    this.name = 'AdminApiKeyError';
+  }
+}
+
+const ADMIN_API_KEY_STORAGE_KEY = 'forgeAdminApiKey';
+const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
 
 function stripTrailingSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -292,6 +314,28 @@ function getConfiguredApiBaseUrl() {
 
 const API_BASE_URL = getConfiguredApiBaseUrl();
 
+export function getStoredAdminApiKey() {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.localStorage.getItem(ADMIN_API_KEY_STORAGE_KEY)?.trim() ?? '';
+}
+
+export function setStoredAdminApiKey(value: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const nextValue = value.trim();
+
+  if (nextValue) {
+    window.localStorage.setItem(ADMIN_API_KEY_STORAGE_KEY, nextValue);
+  } else {
+    window.localStorage.removeItem(ADMIN_API_KEY_STORAGE_KEY);
+  }
+}
+
 function buildApiUrl(path: string) {
   if (!API_BASE_URL) {
     return path;
@@ -301,10 +345,12 @@ function buildApiUrl(path: string) {
 }
 
 async function request<TResponse>(path: string, init?: RequestInit) {
+  const adminApiKey = getStoredAdminApiKey();
   const response = await fetch(buildApiUrl(path), {
     ...init,
     headers: {
       'content-type': 'application/json',
+      ...(adminApiKey ? { [ADMIN_API_KEY_HEADER]: adminApiKey } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -317,6 +363,10 @@ async function request<TResponse>(path: string, init?: RequestInit) {
       message = payload.error ?? message;
     } catch {
       // Keep HTTP fallback.
+    }
+
+    if (response.status === 401) {
+      throw new AdminApiKeyError(message);
     }
 
     throw new Error(message);
@@ -461,8 +511,8 @@ export function upsertSystemIntegration(input: UpsertSystemIntegrationInput) {
   });
 }
 
-export function deleteSystemIntegration(providerType: 'migadu' | 'coolify') {
-  return request<{ success: true; providerType: 'migadu' | 'coolify' }>(
+export function deleteSystemIntegration(providerType: 'migadu' | 'coolify' | 'github') {
+  return request<{ success: true; providerType: 'migadu' | 'coolify' | 'github' }>(
     '/admin/system/integration/delete',
     {
       method: 'POST',

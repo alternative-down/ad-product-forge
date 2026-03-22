@@ -104,7 +104,7 @@ const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
-const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify']);
+const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github']);
 
 const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({
@@ -122,6 +122,14 @@ const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
       baseUrl: z.string().url(),
       adminToken: z.string().min(1),
       applicationsBaseDomain: z.string().min(1),
+    }),
+  }),
+  z.object({
+    providerType: z.literal('github'),
+    isEnabled: z.boolean().default(true),
+    config: z.object({
+      organization: z.string().min(1),
+      appHomeUrl: z.string().url(),
     }),
   }),
 ]);
@@ -454,18 +462,7 @@ export function registerAdminRoutes(input: {
     path: '/admin/system/integration/upsert',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
-      const result =
-        body.providerType === 'migadu'
-          ? await integrations.upsertIntegration({
-              providerType: 'migadu',
-              isEnabled: body.isEnabled,
-              config: body.config,
-            })
-          : await integrations.upsertIntegration({
-              providerType: 'coolify',
-              isEnabled: body.isEnabled,
-              config: body.config,
-            });
+      const result = await integrations.upsertIntegration(body);
 
       return jsonResponse(result);
     },

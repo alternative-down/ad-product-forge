@@ -7,6 +7,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { Database } from '../database/index.js';
+import type { createSystemIntegrationStore } from '../system-integrations/store.js';
 import { agentProviders, type NewAgentProvider } from '../database/schema.js';
 import { decryptSecret, encryptSecret } from '../encryption/crypto.js';
 import type { createForgeHttpServer, HttpResponse } from '../http/server.js';
@@ -33,14 +34,33 @@ export function createGitHubAppManager(config: {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;
   publicBaseUrl: string;
-  organization: string;
-  appHomeUrl: string;
+  integrations: ReturnType<typeof createSystemIntegrationStore>;
   notifyAgent(agentId: string): void;
 }) {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
 
+  async function getGlobalConfig() {
+    const githubConfig = await config.integrations.getGitHubConfig();
+
+    if (!githubConfig) {
+      throw new Error('GitHub integration is not configured');
+    }
+
+    return githubConfig;
+  }
+
+  async function getDefaultOwner(owner?: string) {
+    if (owner) {
+      return owner;
+    }
+
+    const githubConfig = await getGlobalConfig();
+    return githubConfig.organization;
+  }
+
   async function createAgentApp(input: { agentId: string; agentName: string }) {
+    await getGlobalConfig();
     const existing = await getCredentials(input.agentId);
 
     if (existing) {
@@ -104,6 +124,7 @@ export function createGitHubAppManager(config: {
     agentId: string;
     repositoryName?: string;
   }) {
+    const githubConfig = await getGlobalConfig();
     const credentials = await getActiveCredentials(input.agentId);
     const token = await getInstallationToken(credentials);
 
@@ -112,7 +133,7 @@ export function createGitHubAppManager(config: {
       token: token.token,
       expiresAt: token.expiresAt,
       repositoryUrl: input.repositoryName
-        ? `https://github.com/${config.organization}/${input.repositoryName}.git`
+        ? `https://github.com/${githubConfig.organization}/${input.repositoryName}.git`
         : undefined,
       gitUserName: credentials.appName,
       gitUserEmail: `${credentials.appSlug}@forge.github-app.local`,
@@ -142,8 +163,9 @@ export function createGitHubAppManager(config: {
     autoInit?: boolean;
   }) {
     const octokit = await getInstallationOctokit(agentId);
+    const githubConfig = await getGlobalConfig();
     const response = await octokit.request('POST /orgs/{org}/repos', {
-      org: config.organization,
+      org: githubConfig.organization,
       name: input.name,
       description: input.description,
       private: input.private ?? true,
@@ -165,7 +187,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('GET /repos/{owner}/{repo}', {
       owner,
       repo: input.repositoryName,
@@ -189,7 +211,7 @@ export function createGitHubAppManager(config: {
     state?: 'open' | 'closed' | 'all';
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('GET /repos/{owner}/{repo}/pulls', {
       owner,
       repo: input.repositoryName,
@@ -216,7 +238,7 @@ export function createGitHubAppManager(config: {
     body?: string;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('POST /repos/{owner}/{repo}/pulls', {
       owner,
       repo: input.repositoryName,
@@ -248,7 +270,7 @@ export function createGitHubAppManager(config: {
     limit?: number;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('GET /repos/{owner}/{repo}/issues', {
       owner,
       repo: input.repositoryName,
@@ -272,7 +294,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
       owner,
       repo: input.repositoryName,
@@ -292,7 +314,7 @@ export function createGitHubAppManager(config: {
     milestone?: number;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('POST /repos/{owner}/{repo}/issues', {
       owner,
       repo: input.repositoryName,
@@ -318,7 +340,7 @@ export function createGitHubAppManager(config: {
     milestone?: number | null;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
       owner,
       repo: input.repositoryName,
@@ -363,7 +385,7 @@ export function createGitHubAppManager(config: {
     limit?: number;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}/comments', {
       owner,
       repo: input.repositoryName,
@@ -388,7 +410,7 @@ export function createGitHubAppManager(config: {
     body: string;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
       owner,
       repo: input.repositoryName,
@@ -412,7 +434,7 @@ export function createGitHubAppManager(config: {
     limit?: number;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('GET /repos/{owner}/{repo}/labels', {
       owner,
       repo: input.repositoryName,
@@ -434,7 +456,7 @@ export function createGitHubAppManager(config: {
     labels: string[];
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', {
       owner,
       repo: input.repositoryName,
@@ -457,7 +479,7 @@ export function createGitHubAppManager(config: {
     labels: string[];
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
 
     for (const labelName of input.labels) {
       await octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}', {
@@ -500,7 +522,7 @@ export function createGitHubAppManager(config: {
     limit?: number;
   }) {
     const octokit = await getInstallationOctokit(agentId);
-    const owner = input.owner ?? config.organization;
+    const owner = await getDefaultOwner(input.owner);
     const response = await octokit.request('GET /repos/{owner}/{repo}/milestones', {
       owner,
       repo: input.repositoryName,
@@ -606,9 +628,11 @@ export function createGitHubAppManager(config: {
       );
     }
 
+    const githubConfig = await getGlobalConfig();
+
     const manifest = JSON.stringify({
       name: credentials.appName,
-      url: config.appHomeUrl,
+      url: githubConfig.appHomeUrl,
       redirect_url: `${config.publicBaseUrl}${getManifestCallbackPath(agentId)}`,
       setup_url: `${config.publicBaseUrl}${getSetupPath(agentId)}`,
       hook_attributes: {
@@ -632,7 +656,7 @@ export function createGitHubAppManager(config: {
         'repository',
       ],
     });
-    const action = `https://github.com/organizations/${encodeURIComponent(config.organization)}/settings/apps/new?state=${encodeURIComponent(credentials.state)}`;
+    const action = `https://github.com/organizations/${encodeURIComponent(githubConfig.organization)}/settings/apps/new?state=${encodeURIComponent(credentials.state)}`;
     const body = `<!doctype html>
 <html>
   <body>
@@ -743,9 +767,10 @@ export function createGitHubAppManager(config: {
     };
 
     await saveCredentials(agentId, activeCredentials);
+    const githubConfig = await getGlobalConfig();
     await notifications.createNotification({
       agentId,
-      content: `GitHub App ${activeCredentials.appSlug} installed in organization ${config.organization}.`,
+      content: `GitHub App ${activeCredentials.appSlug} installed in organization ${githubConfig.organization}.`,
     });
     config.notifyAgent(agentId);
 

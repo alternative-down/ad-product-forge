@@ -1,11 +1,19 @@
-import { Activity, Bot, Cable, CircleDollarSign, Shield, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { Activity, Bot, Cable, CircleDollarSign, KeyRound, Shield, Zap } from 'lucide-react';
 import { Link, Outlet } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
-import { getOverview } from '../../lib/api';
+import {
+  AdminApiKeyError,
+  getOverview,
+  getStoredAdminApiKey,
+  setStoredAdminApiKey,
+} from '../../lib/api';
 import { formatUsd } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 const navigationItems = [
   { to: '/', label: 'Overview', icon: Activity },
@@ -15,10 +23,30 @@ const navigationItems = [
 ] as const;
 
 export function AppShell() {
+  const [adminApiKey, setAdminApiKey] = useState(() => getStoredAdminApiKey());
   const overviewQuery = useQuery({
-    queryKey: ['admin', 'overview'],
+    queryKey: ['admin', 'overview', adminApiKey],
     queryFn: getOverview,
+    enabled: Boolean(adminApiKey),
   });
+
+  if (!adminApiKey || overviewQuery.error instanceof AdminApiKeyError) {
+    return (
+      <AdminApiKeyGate
+        initialValue={adminApiKey}
+        errorMessage={overviewQuery.error instanceof AdminApiKeyError ? overviewQuery.error.message : null}
+        onSave={(value) => {
+          setStoredAdminApiKey(value);
+          setAdminApiKey(value.trim());
+          void overviewQuery.refetch();
+        }}
+        onClear={() => {
+          setStoredAdminApiKey('');
+          setAdminApiKey('');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(184,230,218,0.75),_transparent_30%),linear-gradient(180deg,_#f4f1e8_0%,_#ece7db_100%)] text-slate-900">
@@ -84,6 +112,63 @@ export function AppShell() {
 
           <Outlet />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminApiKeyGate(input: {
+  initialValue: string;
+  errorMessage: string | null;
+  onSave(value: string): void;
+  onClear(): void;
+}) {
+  const [value, setValue] = useState(input.initialValue);
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(184,230,218,0.75),_transparent_30%),linear-gradient(180deg,_#f4f1e8_0%,_#ece7db_100%)] text-slate-900">
+      <div className="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10">
+        <Card className="w-full rounded-[28px] border border-slate-200/80 bg-white/90 p-8 shadow-[0_20px_60px_rgba(33,41,51,0.08)]">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-slate-950 p-3 text-white">
+              <KeyRound className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="font-serif text-3xl tracking-tight text-slate-950">Admin API key</h1>
+              <p className="mt-2 text-sm text-slate-600">
+                This console requires the Forge admin API key. The key is stored only in this browser
+                via localStorage and sent on admin API requests.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <Input
+              type="password"
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              placeholder="Forge admin API key"
+            />
+            {input.errorMessage ? (
+              <p className="text-sm text-rose-600">{input.errorMessage}</p>
+            ) : null}
+            <div className="flex gap-3">
+              <Button type="button" onClick={() => input.onSave(value)} disabled={!value.trim()}>
+                Unlock admin
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setValue('');
+                  input.onClear();
+                }}
+              >
+                Clear cached key
+              </Button>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
