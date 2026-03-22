@@ -1,29 +1,115 @@
-import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { migrate } from 'drizzle-orm/libsql/migrator';
+import { fileURLToPath } from 'node:url';
+
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
-/**
- * Executes pending database migrations for application database
- * This function should be called during application initialization
- *
- * @param db - The Drizzle database instance with schema
- * @throws Error if migration fails
- */
+type SqliteRow = Record<string, unknown>;
+
+type SqliteClient = {
+  execute(statement: string): Promise<{
+    rows: SqliteRow[];
+  }>;
+};
+
+function getSqliteClient(db: LibSQLDatabase<Record<string, unknown>>) {
+  const candidate = (db as unknown as { $client?: SqliteClient }).$client;
+
+  if (!candidate) {
+    throw new Error('Database client unavailable for migrations');
+  }
+
+  return candidate;
+}
+
+async function ensureMigrationsTable(db: LibSQLDatabase<Record<string, unknown>>) {
+  const client = getSqliteClient(db);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hash TEXT NOT NULL,
+      created_at NUMERIC
+    )
+  `);
+}
+
+async function listAppliedMigrationHashes(db: LibSQLDatabase<Record<string, unknown>>) {
+  const client = getSqliteClient(db);
+  const result = await client.execute('SELECT hash FROM "__drizzle_migrations"');
+  return new Set(
+    result.rows
+      .map((row) => row.hash)
+      .filter((hash): hash is string => typeof hash === 'string'),
+  );
+}
+
+function splitMigrationStatements(source: string) {
+  return source
+    .split('--> statement-breakpoint')
+    .flatMap((statementBlock) =>
+      statementBlock
+        .split(';')
+        .map((statement) => statement.trim())
+        .filter(Boolean)
+        .map((statement) => `${statement};`),
+    )
+    .filter(Boolean);
+}
+
+function createMigrationHash(fileName: string, source: string) {
+  return createHash('sha256').update(`${fileName}:${source}`).digest('hex');
+}
+
+async function applyMigrationFile(
+  db: LibSQLDatabase<Record<string, unknown>>,
+  fileName: string,
+  filePath: string,
+  appliedHashes: Set<string>,
+) {
+  const source = await readFile(filePath, 'utf8');
+  const hash = createMigrationHash(fileName, source);
+
+  if (appliedHashes.has(hash)) {
+    return;
+  }
+
+  const statements = splitMigrationStatements(source);
+  const client = getSqliteClient(db);
+
+  for (const statement of statements) {
+    await client.execute(statement);
+  }
+
+  await client.execute(`
+    INSERT INTO "__drizzle_migrations" ("hash", "created_at")
+    VALUES ('${hash}', ${Date.now()})
+  `);
+
+  appliedHashes.add(hash);
+}
+
 export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
   try {
     console.log('[Migrations] Running pending migrations for application database...');
 
-    // Get absolute path to migrations folder
-    // migrations/ is at the root of apps/forge/
     const currentFile = fileURLToPath(import.meta.url);
-    const currentDir = dirname(currentFile); // src/database/
-    const appRoot = dirname(dirname(currentDir)); // apps/forge/
+    const currentDir = dirname(currentFile);
+    const appRoot = dirname(dirname(currentDir));
     const migrationsPath = join(appRoot, 'migrations');
 
-    await migrate(db, {
-      migrationsFolder: migrationsPath,
-    });
+    const migrationFiles = (await readdir(migrationsPath))
+      .filter((fileName) => fileName.endsWith('.sql'))
+      .sort();
+
+    await ensureMigrationsTable(db);
+
+    const appliedHashes = await listAppliedMigrationHashes(db);
+
+    for (const fileName of migrationFiles) {
+      await applyMigrationFile(db, fileName, join(migrationsPath, fileName), appliedHashes);
+    }
 
     console.log('[Migrations] Migrations completed successfully');
   } catch (error) {

@@ -2,13 +2,14 @@
   "name": "@mastra-engine/core",
   "version": "0.1.0",
   "description": "Mastra Agent Engine Factory",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node ./scripts/fix-dist-import-specifiers.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "smoke:openai-codex": "tsx examples/openai-codex-smoke.ts",
