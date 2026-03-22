@@ -1,4 +1,10 @@
 export const forgeCustomToolIds = [
+  'list_contacts',
+  'get_contact',
+  'upsert_contact',
+  'list_conversations',
+  'get_messages',
+  'send_message',
   'list_company_cash',
   'get_company_cash',
   'list_internal_agent_contracts',
