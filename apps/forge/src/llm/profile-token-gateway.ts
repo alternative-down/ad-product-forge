@@ -5,7 +5,6 @@ import type { GatewayLanguageModel, ProviderConfig } from '@mastra/core/llm';
 import { wrapLanguageModel } from 'ai';
 
 import type { createLlmSettingsStore } from './settings-store';
-import type { createSystemIntegrationStore } from '../system-integrations/store';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const MINIMAX_BASE_URL = 'https://api.minimax.io/anthropic';
@@ -18,7 +17,6 @@ export class ProfileTokenGateway extends MastraModelGateway {
 
   constructor(private readonly options: {
     llmSettings: ReturnType<typeof createLlmSettingsStore>;
-    integrations: ReturnType<typeof createSystemIntegrationStore>;
   }) {
     super();
   }
@@ -41,7 +39,7 @@ export class ProfileTokenGateway extends MastraModelGateway {
         models: minimaxProfiles.map((profile) => profile.profileId) as Array<(typeof MINIMAX_MODELS)[number]>,
         apiKeyEnvVar: 'FORGE_AUTH_UNUSED',
         gateway: this.id,
-        url: await this.getMiniMaxBaseUrl(),
+        url: MINIMAX_BASE_URL,
       },
     };
   }
@@ -53,7 +51,7 @@ export class ProfileTokenGateway extends MastraModelGateway {
       return ANTHROPIC_BASE_URL;
     }
 
-    return this.getMiniMaxBaseUrl();
+    return MINIMAX_BASE_URL;
   }
 
   async getApiKey(modelId: string) {
@@ -115,7 +113,7 @@ export class ProfileTokenGateway extends MastraModelGateway {
   private async resolveMiniMaxModel(modelId: string, apiKey: string) {
     const anthropic = createAnthropic({
       apiKey,
-      baseURL: await this.getMiniMaxBaseUrl(),
+      baseURL: MINIMAX_BASE_URL,
     });
 
     return wrapLanguageModel({
@@ -124,15 +122,10 @@ export class ProfileTokenGateway extends MastraModelGateway {
     });
   }
 
-  private async getMiniMaxBaseUrl() {
-    const integration = await this.options.integrations.getMiniMaxConfig();
-    return integration?.baseUrl?.replace(/\/$/, '') ?? MINIMAX_BASE_URL;
-  }
 }
 
 export function createProfileTokenGateway(options: {
   llmSettings: ReturnType<typeof createLlmSettingsStore>;
-  integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
   return new ProfileTokenGateway(options);
 }

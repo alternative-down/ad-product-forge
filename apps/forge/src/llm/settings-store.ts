@@ -14,7 +14,6 @@ import type { LlmProviderType } from '../database/schema';
 import { llmProfiles, systemLlmDefaults } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
-import { TOKEN_PLAN_GATEWAY_ID } from './minimax-token-gateway';
 import { PROFILE_LLM_GATEWAY_ID } from './profile-token-gateway';
 
 const llmProfileSchema = z.object({
@@ -154,6 +153,11 @@ export function createLlmSettingsStore(db: Database) {
   }) {
     const parsed = llmProfileSchema.parse(input);
     assertSupportedModel(parsed.providerType, parsed.modelId);
+
+    if (parsed.providerType === 'minimax' && !parsed.apiKey?.trim()) {
+      throw new Error('MiniMax profiles require a direct apiKey');
+    }
+
     const now = Date.now();
     const profileId = input.profileId ?? createId();
     const existing = input.profileId
@@ -332,7 +336,7 @@ function buildPricingModelKey(providerType: LlmProviderType, modelId: string) {
     return claudeMaxProvider(modelId as (typeof CLAUDE_MAX_MODELS)[number]);
   }
 
-  return `${TOKEN_PLAN_GATEWAY_ID}/minimax/${modelId}`;
+  return `token-plan/minimax/${modelId}`;
 }
 
 function buildRuntimeModelKey(input: {
@@ -341,7 +345,15 @@ function buildRuntimeModelKey(input: {
   modelId: string;
   hasApiKey: boolean;
 }) {
-  if (!input.hasApiKey || input.providerType === 'openai-codex') {
+  if (input.providerType === 'openai-codex') {
+    return buildPricingModelKey(input.providerType, input.modelId);
+  }
+
+  if (input.providerType === 'minimax') {
+    return `${PROFILE_LLM_GATEWAY_ID}/minimax/${input.profileId}`;
+  }
+
+  if (!input.hasApiKey) {
     return buildPricingModelKey(input.providerType, input.modelId);
   }
 

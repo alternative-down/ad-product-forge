@@ -15,7 +15,6 @@ import { createCoolifyManager } from './coolify/manager';
 import { createAgentScheduleManager } from './schedules/manager';
 import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
-import { createMiniMaxTokenGateway } from './llm/minimax-token-gateway';
 import { createLlmSettingsStore } from './llm/settings-store';
 import { createProfileTokenGateway } from './llm/profile-token-gateway';
 
@@ -78,12 +77,8 @@ export async function main() {
   const coolify = createCoolifyManager({
     integrations,
   });
-  const minimax = createMiniMaxTokenGateway({
-    integrations,
-  });
   const profileLlm = createProfileTokenGateway({
     llmSettings,
-    integrations,
   });
   const workflows = createInternalAgentWorkflows({
     db,
@@ -122,7 +117,6 @@ export async function main() {
     workflows,
     gateways: {
       oauth: createOAuthGateway(),
-      'token-plan': minimax,
       'profile-llm': profileLlm,
     },
     logger: new ConsoleLogger({

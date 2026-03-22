@@ -7,8 +7,6 @@ import { llmModelPrices } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import { createSystemIntegrationStore } from '../system-integrations/store';
-import { createMiniMaxTokenGateway } from '../llm/minimax-token-gateway';
 import { createProfileTokenGateway } from '../llm/profile-token-gateway';
 import { createOAuthGateway } from '@mastra-engine/core';
 
@@ -22,10 +20,8 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   const defaults = await llmSettings.getResolvedDefaults();
   const hiringRhModelKey = defaults.hiringRhProfile.runtimeModelKey;
   const hiringRhPricingModelKey = defaults.hiringRhProfile.modelKey;
-  const integrations = createSystemIntegrationStore(db);
   const profileGateway = createProfileTokenGateway({
     llmSettings,
-    integrations,
   });
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
@@ -58,9 +54,6 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     },
     gateways: {
       oauth: createOAuthGateway(),
-      'token-plan': createMiniMaxTokenGateway({
-        integrations,
-      }),
       'profile-llm': profileGateway,
     },
   });

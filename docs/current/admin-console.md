@@ -112,7 +112,6 @@ Shows and manages:
 - global Migadu integration config
 - global Coolify integration config
 - global GitHub integration config
-- global MiniMax token plan config
 - OAuth sync for:
   - Codex CLI credentials
   - Claude setup-token
@@ -157,6 +156,7 @@ Profile-level tokens exist for a different boundary than system integrations:
 - shared company credentials still belong in `System Integrations`
 - fixed tokens tied to one concrete model profile can live in the `LLM profile`
 - this keeps the profile self-contained and opens the path for future providers with direct API-key auth without changing the hiring model boundary again
+- MiniMax now lives only in this profile-level token boundary
 
 Current provider choices in the LLM profile editor:
 

@@ -282,11 +282,6 @@ const _GitHubSystemIntegrationConfigSchema = z.object({
   appHomeUrl: z.string().url(),
 });
 
-const _MiniMaxSystemIntegrationConfigSchema = z.object({
-  apiKey: z.string().min(1),
-  baseUrl: z.string().url().optional(),
-});
-
 const _LlmProviderTypeSchema = z.enum(['openai-codex', 'claude-max', 'minimax']);
 
 export type LlmProviderType = z.infer<typeof _LlmProviderTypeSchema>;
@@ -294,12 +289,10 @@ export type LlmProviderType = z.infer<typeof _LlmProviderTypeSchema>;
 export type MigaduSystemIntegrationConfig = z.infer<typeof _MigaduSystemIntegrationConfigSchema>;
 export type CoolifySystemIntegrationConfig = z.infer<typeof _CoolifySystemIntegrationConfigSchema>;
 export type GitHubSystemIntegrationConfig = z.infer<typeof _GitHubSystemIntegrationConfigSchema>;
-export type MiniMaxSystemIntegrationConfig = z.infer<typeof _MiniMaxSystemIntegrationConfigSchema>;
 export type SystemIntegrationConfigMap = {
   migadu: MigaduSystemIntegrationConfig;
   coolify: CoolifySystemIntegrationConfig;
   github: GitHubSystemIntegrationConfig;
-  minimax: MiniMaxSystemIntegrationConfig;
 };
 
 export const systemIntegrations = sqliteTable('system_integrations', {
