@@ -652,7 +652,9 @@ export function registerAdminRoutes(input: {
       const body = parseJsonBody(request.bodyText, functionRoleSchema);
       const result = await capabilities.addRoleToFunction(body);
 
-      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
+      void reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId).catch((error) => {
+        console.error(`[Admin] Failed to reload agents for function ${body.functionId}:`, error);
+      });
       return jsonResponse(result);
     },
   });
@@ -664,7 +666,9 @@ export function registerAdminRoutes(input: {
       const body = parseJsonBody(request.bodyText, functionRoleSchema);
       const result = await capabilities.removeRoleFromFunction(body);
 
-      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
+      void reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId).catch((error) => {
+        console.error(`[Admin] Failed to reload agents for function ${body.functionId}:`, error);
+      });
       return jsonResponse(result);
     },
   });
