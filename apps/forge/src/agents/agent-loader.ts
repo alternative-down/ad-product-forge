@@ -15,6 +15,7 @@ import { createAgentScheduleTools } from '../schedules/tools';
 import { createCapabilityStore } from '../capabilities/store';
 import { createCapabilityTools } from '../capabilities/tools';
 import { createLlmSettingsStore } from '../llm/settings-store';
+import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -106,10 +107,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       name: agentConfig.name,
       description: agentConfig.description || undefined,
       instructions: agentConfig.instructions,
-      model: primaryProfile.runtimeModelKey,
+      model: resolveProfileRuntimeModel(primaryProfile),
       pricingModelKey: primaryProfile.modelKey,
       modelProfileId: primaryProfile.profileId,
-      omModel: omProfile.runtimeModelKey,
+      omModel: resolveProfileRuntimeModel(omProfile),
       omPricingModelKey: omProfile.modelKey,
       omModelProfileId: omProfile.profileId,
       tools: customTools,

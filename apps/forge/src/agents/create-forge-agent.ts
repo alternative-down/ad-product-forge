@@ -45,10 +45,10 @@ export type InternalAgentRuntime<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = {
   id: TAgentId;
-  modelKey: string;
+  modelKey: AgentConfig<TAgentId, TTools, TOutput, TRequestContext>['model'];
   pricingModelKey: string;
   modelProfileId?: string;
-  omModelKey: string;
+  omModelKey: AgentConfig<TAgentId, TTools, TOutput, TRequestContext>['model'];
   omPricingModelKey: string;
   omModelProfileId?: string;
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
@@ -104,10 +104,6 @@ export async function createInternalAgentRuntime<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<InternalAgentRuntime<TAgentId, TTools, TOutput, TRequestContext>> {
-  if (typeof config.model !== 'string') {
-    throw new Error('Internal agent runtime requires a string model id');
-  }
-
   const agentWorkspacePath = path.resolve(config.workspaceBasePath, config.id);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
   const agentWorkspaceDir = config.workspaceFilesystem?.basePath
@@ -151,10 +147,6 @@ export async function createInternalAgentRuntime<
   const memory = createAgentMemory({ storage, vector });
   const omModelKey = config.omModel ?? config.model;
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
-
-  if (typeof omModelKey !== 'string') {
-    throw new Error('Internal agent runtime requires a string OM model id');
-  }
 
   const om = createObservationalMemory({
     storage,
