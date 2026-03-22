@@ -50,12 +50,8 @@ export function createLlmSettingsStore(db: Database) {
       label: row.label,
       providerType: row.providerType,
       modelId: row.modelId,
-      modelKey: buildPricingModelKey(row.providerType, row.modelId),
-      runtimeModelKey: buildRuntimeModelKey({
-        providerType: row.providerType,
-        modelId: row.modelId,
-        hasApiKey: Boolean(row.encryptedApiKey),
-      }),
+      pricingModelKey: buildPricingModelKey(row.providerType, row.modelId),
+      oauthModelKey: buildOAuthModelKey(row.providerType, row.modelId),
       apiKey: row.encryptedApiKey ? decryptSecret(row.encryptedApiKey) : null,
       hasApiKey: Boolean(row.encryptedApiKey),
       contractCostMultiplier: row.contractCostMultiplier,
@@ -122,12 +118,8 @@ export function createLlmSettingsStore(db: Database) {
       label: row.label,
       providerType: row.providerType,
       modelId: row.modelId,
-      modelKey: buildPricingModelKey(row.providerType, row.modelId),
-      runtimeModelKey: buildRuntimeModelKey({
-        providerType: row.providerType,
-        modelId: row.modelId,
-        hasApiKey: Boolean(row.encryptedApiKey),
-      }),
+      pricingModelKey: buildPricingModelKey(row.providerType, row.modelId),
+      oauthModelKey: buildOAuthModelKey(row.providerType, row.modelId),
       apiKey: row.encryptedApiKey ? decryptSecret(row.encryptedApiKey) : null,
       hasApiKey: Boolean(row.encryptedApiKey),
       contractCostMultiplier: row.contractCostMultiplier,
@@ -201,12 +193,8 @@ export function createLlmSettingsStore(db: Database) {
       label: parsed.label,
       providerType: parsed.providerType,
       modelId: parsed.modelId,
-      modelKey: buildPricingModelKey(parsed.providerType, parsed.modelId),
-      runtimeModelKey: buildRuntimeModelKey({
-        providerType: parsed.providerType,
-        modelId: parsed.modelId,
-        hasApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey),
-      }),
+      pricingModelKey: buildPricingModelKey(parsed.providerType, parsed.modelId),
+      oauthModelKey: buildOAuthModelKey(parsed.providerType, parsed.modelId),
       apiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey) ? parsed.apiKey!.trim() : null,
       hasApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey),
       contractCostMultiplier: parsed.contractCostMultiplier,
@@ -334,20 +322,16 @@ function buildPricingModelKey(providerType: LlmProviderType, modelId: string) {
   return `token-plan/minimax/${modelId}`;
 }
 
-function buildRuntimeModelKey(input: {
-  providerType: LlmProviderType;
-  modelId: string;
-  hasApiKey: boolean;
-}) {
-  if (input.providerType === 'openai-codex') {
-    return buildPricingModelKey(input.providerType, input.modelId);
+function buildOAuthModelKey(providerType: LlmProviderType, modelId: string) {
+  if (providerType === 'openai-codex') {
+    return buildPricingModelKey(providerType, modelId);
   }
 
-  if (!input.hasApiKey) {
-    return buildPricingModelKey(input.providerType, input.modelId);
+  if (providerType === 'claude-max') {
+    return buildPricingModelKey(providerType, modelId);
   }
 
-  return `custom/${input.providerType}/${input.modelId}`;
+  return `token-plan/minimax/${modelId}`;
 }
 
 function shouldUseDirectApiKey(providerType: LlmProviderType, apiKey?: string | null) {

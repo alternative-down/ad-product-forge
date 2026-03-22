@@ -61,8 +61,18 @@ export type AgentListItem = {
   executionState: 'idle' | 'running';
   functionId: string | null;
   functionName: string | null;
-  model: string | null;
-  omModel: string | null;
+  modelProfile: {
+    profileId: string;
+    label: string;
+    providerType: string;
+    modelId: string;
+  } | null;
+  omModelProfile: {
+    profileId: string;
+    label: string;
+    providerType: string;
+    modelId: string;
+  } | null;
   loaded: boolean;
   runner: {
     stopped: boolean;
@@ -99,8 +109,8 @@ export type AgentDetail = {
   description?: string;
   instructions: string;
   executionState: 'idle' | 'running';
-  model: string | null;
-  omModel: string | null;
+  modelProfile: AgentListItem['modelProfile'];
+  omModelProfile: AgentListItem['omModelProfile'];
   function: {
     functionId: string;
     name: string;
@@ -265,8 +275,8 @@ export type LlmProfile = {
   label: string;
   providerType: 'openai-codex' | 'claude-max' | 'minimax';
   modelId: string;
-  modelKey: string;
-  runtimeModelKey: string;
+  pricingModelKey: string;
+  oauthModelKey: string;
   apiKey: string | null;
   hasApiKey: boolean;
   contractCostMultiplier: number;

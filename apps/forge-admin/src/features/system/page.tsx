@@ -391,8 +391,8 @@ function LlmProfileEditorCard(input: {
                     <dd className="inline">{profile.modelId}</dd>
                   </div>
                   <div>
-                    <dt className="inline font-medium text-slate-800">Model key:</dt>{' '}
-                    <dd className="inline break-all">{profile.modelKey}</dd>
+                    <dt className="inline font-medium text-slate-800">Pricing key:</dt>{' '}
+                    <dd className="inline break-all">{profile.pricingModelKey}</dd>
                   </div>
                   <div>
                     <dt className="inline font-medium text-slate-800">Direct token:</dt>{' '}

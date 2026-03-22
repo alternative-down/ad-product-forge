@@ -105,8 +105,22 @@ export function createAdminReadModel(input: {
         executionState: agent.executionState,
         functionId: agent.functionId,
         functionName: agentFunction?.name ?? null,
-        model: modelProfile?.modelKey ?? null,
-        omModel: omModelProfile?.modelKey ?? null,
+        modelProfile: modelProfile
+          ? {
+              profileId: modelProfile.profileId,
+              label: modelProfile.label,
+              providerType: modelProfile.providerType,
+              modelId: modelProfile.modelId,
+            }
+          : null,
+        omModelProfile: omModelProfile
+          ? {
+              profileId: omModelProfile.profileId,
+              label: omModelProfile.label,
+              providerType: omModelProfile.providerType,
+              modelId: omModelProfile.modelId,
+            }
+          : null,
         loaded: Boolean(loadedAgent),
         runner: loadedAgent?.runner.getSnapshot() ?? null,
         providerTypes: (providerTypesByAgentId.get(agent.id) ?? []).sort(),
@@ -176,8 +190,22 @@ export function createAdminReadModel(input: {
       description: agent.description ?? undefined,
       instructions: agent.instructions,
       executionState: agent.executionState,
-      model: modelProfile?.modelKey ?? null,
-      omModel: omModelProfile?.modelKey ?? null,
+      modelProfile: modelProfile
+        ? {
+            profileId: modelProfile.profileId,
+            label: modelProfile.label,
+            providerType: modelProfile.providerType,
+            modelId: modelProfile.modelId,
+          }
+        : null,
+      omModelProfile: omModelProfile
+        ? {
+            profileId: omModelProfile.profileId,
+            label: omModelProfile.label,
+            providerType: omModelProfile.providerType,
+            modelId: omModelProfile.modelId,
+          }
+        : null,
       function: agentFunction
         ? {
             functionId: agentFunction.functionId,

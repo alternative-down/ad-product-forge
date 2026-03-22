@@ -45,10 +45,8 @@ export type InternalAgentRuntime<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = {
   id: TAgentId;
-  modelKey: AgentConfig<TAgentId, TTools, TOutput, TRequestContext>['model'];
   pricingModelKey: string;
   modelProfileId?: string;
-  omModelKey: AgentConfig<TAgentId, TTools, TOutput, TRequestContext>['model'];
   omPricingModelKey: string;
   omModelProfileId?: string;
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
@@ -191,10 +189,8 @@ export async function createInternalAgentRuntime<
 
   return {
     id: config.id,
-    modelKey: config.model,
     pricingModelKey: config.pricingModelKey,
     modelProfileId: config.modelProfileId,
-    omModelKey,
     omPricingModelKey,
     omModelProfileId: config.omModelProfileId,
     agent,

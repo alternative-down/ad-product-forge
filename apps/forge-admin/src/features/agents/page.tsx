@@ -652,7 +652,7 @@ function AgentHeader(input: {
             <span>•</span>
             <span>Role: {agent.function?.roleName ?? 'No role'}</span>
             <span>•</span>
-            <span>Model: {agent.model ?? 'No model profile'}</span>
+            <span>Profile: {formatAgentProfile(agent.modelProfile)}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -1663,6 +1663,23 @@ function createProviderTemplate(providerType: 'discord' | 'email') {
 
 function toPrettyJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
+}
+
+function formatAgentProfile(
+  profile:
+    | {
+        label: string;
+        providerType: string;
+        modelId: string;
+      }
+    | null
+    | undefined,
+) {
+  if (!profile) {
+    return 'No model profile';
+  }
+
+  return `${profile.label} (${profile.providerType}/${profile.modelId})`;
 }
 
 function formatDateTimeText(value?: string | null) {
