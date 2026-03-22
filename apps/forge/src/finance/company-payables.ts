@@ -12,17 +12,17 @@ export function createCompanyPayables(db: Database) {
       orderBy: (fields, { asc }) => [asc(fields.name)],
     });
 
-    return rows.map((row) => ({
-      payableId: row.id,
-      name: row.name,
-      description: row.description ?? undefined,
-      amountUsd: row.amountUsd,
-      recurrencePeriod: row.recurrencePeriod as RecurrencePeriod,
-      nextDueAt: row.nextDueAt,
-      isActive: row.isActive === 1,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    return rows.map((row) => {
+      const { id, recurrencePeriod, isActive, ...rest } = row;
+
+      return {
+        ...rest,
+        payableId: id,
+        description: rest.description ?? undefined,
+        recurrencePeriod: recurrencePeriod as RecurrencePeriod,
+        isActive: isActive === 1,
+      };
+    });
   }
 
   async function createRecurringPayable(input: {

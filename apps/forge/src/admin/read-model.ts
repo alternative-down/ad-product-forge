@@ -194,15 +194,12 @@ export function createAdminReadModel(input: {
       executionState: agent.executionState,
       modelProfile: modelProfile ?? null,
       omModelProfile: omModelProfile ?? null,
-      function: agentFunction
-        ? {
-            functionId: agentFunction.functionId,
-            name: agentFunction.name,
-            description: agentFunction.description ?? null,
-            roleId: agentFunction.roleId ?? null,
-            roleName: role?.name ?? null,
-          }
-        : null,
+      function: agentFunction && {
+        ...agentFunction,
+        description: agentFunction.description ?? null,
+        roleId: agentFunction.roleId ?? null,
+        roleName: role?.name ?? null,
+      },
       loaded: Boolean(loadedAgent),
       runner: loadedAgent?.runner.getSnapshot() ?? null,
       workspace: {
@@ -228,21 +225,14 @@ export function createAdminReadModel(input: {
         .filter((schedule) => schedule.kind === 'agent')
         .map(toScheduleSummary),
       heartbeat: heartbeat ? toScheduleSummary(heartbeat) : null,
-      recentExecutionSteps: recentSteps.map((step) => ({
-        stepId: step.id,
-        llmProfileId: step.llmProfileId,
-        kind: step.kind,
-        modelKey: step.modelKey,
-        inputTokens: step.inputTokens,
-        cachedInputTokens: step.cachedInputTokens,
-        outputTokens: step.outputTokens,
-        inputPerMillionUsd: step.inputPerMillionUsd,
-        inputCachePerMillionUsd: step.inputCachePerMillionUsd,
-        outputPerMillionUsd: step.outputPerMillionUsd,
-        contractCostMultiplier: step.contractCostMultiplier,
-        costUsd: step.costUsd,
-        createdAt: step.createdAt,
-      })),
+      recentExecutionSteps: recentSteps.map((step) => {
+        const { id, ...rest } = step;
+
+        return {
+          ...rest,
+          stepId: id,
+        };
+      }),
       recentNotifications,
       recentConversations,
       createdAt: agent.createdAt,

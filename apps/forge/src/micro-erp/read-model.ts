@@ -70,15 +70,11 @@ export function createMicroErpReadModel(db: Database) {
 
     return {
       items: rows.map((row) => ({
-        id: row.id,
-        type: row.type,
+        ...row,
         direction: row.direction as 'in' | 'out',
-        amountUsd: row.amountUsd,
         description: row.description ?? undefined,
-        status: row.status,
         dueAt: row.dueAt ?? undefined,
         effectiveAt: row.effectiveAt ?? undefined,
-        createdAt: row.createdAt,
       })),
       total: countRows[0]?.total ?? 0,
       summary: await getCompanyCashSummary({
@@ -163,12 +159,7 @@ export function createMicroErpReadModel(db: Database) {
 
     return {
       items: rows.map((row) => ({
-        contractId: row.contractId,
-        agentId: row.agentId,
-        agentName: row.agentName,
-        startsAt: row.startsAt,
-        endsAt: row.endsAt,
-        weeklyValueUsd: row.weeklyValueUsd,
+        ...row,
         autoRenew: Boolean(row.autoRenew),
       })),
     };
@@ -205,12 +196,7 @@ export function createMicroErpReadModel(db: Database) {
     }
 
     return {
-      contractId: contract.contractId,
-      agentId: contract.agentId,
-      agentName: contract.agentName,
-      startsAt: contract.startsAt,
-      endsAt: contract.endsAt,
-      weeklyValueUsd: contract.weeklyValueUsd,
+      ...contract,
       autoRenew: Boolean(contract.autoRenew),
     };
   }

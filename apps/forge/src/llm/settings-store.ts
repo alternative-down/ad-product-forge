@@ -221,14 +221,18 @@ function toProfileRecord(row: typeof llmProfiles.$inferSelect) {
     throw new Error(`LLM profile is missing apiKey: ${row.id}`);
   }
 
+  const {
+    id,
+    encryptedApiKey,
+    isEnabled,
+    ...rest
+  } = row;
+
   return {
-    profileId: row.id,
-    modelKey: row.modelKey,
-    baseUrl: row.baseUrl ?? null,
-    apiKey: decryptSecret(row.encryptedApiKey),
-    contractCostMultiplier: row.contractCostMultiplier,
-    isEnabled: row.isEnabled === 1,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    ...rest,
+    profileId: id,
+    baseUrl: rest.baseUrl ?? null,
+    apiKey: decryptSecret(encryptedApiKey),
+    isEnabled: isEnabled === 1,
   };
 }
