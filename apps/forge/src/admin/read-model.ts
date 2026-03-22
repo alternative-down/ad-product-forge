@@ -105,8 +105,8 @@ export function createAdminReadModel(input: {
         executionState: agent.executionState,
         functionId: agent.functionId,
         functionName: agentFunction?.name ?? null,
-        modelProfile: toProfileSummary(modelProfile),
-        omModelProfile: toProfileSummary(omModelProfile),
+        modelProfile: modelProfile ? { profileId: modelProfile.profileId, modelKey: modelProfile.modelKey } : null,
+        omModelProfile: omModelProfile ? { profileId: omModelProfile.profileId, modelKey: omModelProfile.modelKey } : null,
         loaded: Boolean(loadedAgent),
         runner: loadedAgent?.runner.getSnapshot() ?? null,
         providerTypes: (providerTypesByAgentId.get(agent.id) ?? []).sort(),
@@ -176,9 +176,17 @@ export function createAdminReadModel(input: {
       description: agent.description ?? undefined,
       instructions: agent.instructions,
       executionState: agent.executionState,
-      modelProfile: toProfileSummary(modelProfile),
-      omModelProfile: toProfileSummary(omModelProfile),
-      function: toFunctionSummary(agentFunction, role?.name ?? null),
+      modelProfile: modelProfile ? { profileId: modelProfile.profileId, modelKey: modelProfile.modelKey } : null,
+      omModelProfile: omModelProfile ? { profileId: omModelProfile.profileId, modelKey: omModelProfile.modelKey } : null,
+      function: agentFunction
+        ? {
+            functionId: agentFunction.functionId,
+            name: agentFunction.name,
+            description: agentFunction.description ?? null,
+            roleId: agentFunction.roleId ?? null,
+            roleName: role?.name ?? null,
+          }
+        : null,
       loaded: Boolean(loadedAgent),
       runner: loadedAgent?.runner.getSnapshot() ?? null,
       workspace: {
@@ -193,7 +201,10 @@ export function createAdminReadModel(input: {
           providerType: provider.providerType,
           createdAt: provider.createdAt,
           editable: provider.providerType !== 'internal-chat',
-          credentials: toProviderCredentials(provider),
+          credentials:
+            provider.providerType === 'internal-chat'
+              ? null
+              : parseProviderCredentials(provider.encryptedCredentials),
         }))
         .sort((left, right) => left.providerType.localeCompare(right.providerType)),
       activeContract,
@@ -346,56 +357,6 @@ export function createAdminReadModel(input: {
     getSystemLlm,
     getFinance,
   };
-}
-
-function toProfileSummary(
-  profile:
-    | {
-        profileId: string;
-        modelKey: string;
-      }
-    | undefined,
-) {
-  if (!profile) {
-    return null;
-  }
-
-  return {
-    profileId: profile.profileId,
-    modelKey: profile.modelKey,
-  };
-}
-
-function toFunctionSummary(
-  agentFunction:
-    | {
-        functionId: string;
-        name: string;
-        description?: string | null;
-        roleId?: string | null;
-      }
-    | null,
-  roleName: string | null,
-) {
-  if (!agentFunction) {
-    return null;
-  }
-
-  return {
-    functionId: agentFunction.functionId,
-    name: agentFunction.name,
-    description: agentFunction.description ?? null,
-    roleId: agentFunction.roleId ?? null,
-    roleName,
-  };
-}
-
-function toProviderCredentials(provider: typeof agentProviders.$inferSelect) {
-  if (provider.providerType === 'internal-chat') {
-    return null;
-  }
-
-  return parseProviderCredentials(provider.encryptedCredentials);
 }
 
 async function listRecentConversations(workspaceBasePath: string, agentId: string) {
