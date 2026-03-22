@@ -155,7 +155,7 @@ export function SystemPage() {
       </Card>
 
       <LlmDefaultsCard
-        key={`llm-defaults-${systemLlm.defaults.updatedAt}`}
+        key={`llm-defaults-${systemLlm.defaults?.updatedAt ?? 'unset'}`}
         defaults={systemLlm.defaults}
         profiles={systemLlm.profiles}
         pending={updateLlmDefaultsMutation.isPending}
@@ -234,7 +234,7 @@ export function SystemPage() {
 }
 
 function LlmDefaultsCard(input: {
-  defaults: SystemLlmDefaults;
+  defaults: SystemLlmDefaults | null;
   profiles: LlmProfile[];
   pending: boolean;
   error: string | null;
@@ -245,9 +245,9 @@ function LlmDefaultsCard(input: {
     [input.profiles],
   );
   const [draft, setDraft] = useState<UpdateSystemLlmDefaultsInput>({
-    primaryProfileId: input.defaults.primaryProfileId,
-    omProfileId: input.defaults.omProfileId,
-    hiringRhProfileId: input.defaults.hiringRhProfileId,
+    primaryProfileId: input.defaults?.primaryProfileId ?? selectableProfiles[0]?.profileId ?? '',
+    omProfileId: input.defaults?.omProfileId ?? selectableProfiles[0]?.profileId ?? '',
+    hiringRhProfileId: input.defaults?.hiringRhProfileId ?? selectableProfiles[0]?.profileId ?? '',
   });
 
   return (
@@ -302,9 +302,23 @@ function LlmDefaultsCard(input: {
       </div>
 
       {input.error ? <p className="mt-4 text-sm text-rose-600">{input.error}</p> : null}
+      {!input.defaults ? (
+        <p className="mt-4 text-sm text-amber-700">
+          LLM defaults are not configured yet. Pick the profiles and save them.
+        </p>
+      ) : null}
 
       <div className="mt-5 flex gap-3">
-        <Button type="button" disabled={input.pending} onClick={() => input.onSave(draft)}>
+        <Button
+          type="button"
+          disabled={
+            input.pending ||
+            !draft.primaryProfileId ||
+            !draft.omProfileId ||
+            !draft.hiringRhProfileId
+          }
+          onClick={() => input.onSave(draft)}
+        >
           Save LLM defaults
         </Button>
       </div>
@@ -944,8 +958,8 @@ function getMigaduDraft(integration: SystemIntegration | null): MigaduDraft {
 
   return {
     isEnabled: integration.isEnabled,
-    apiUser: integration.config.apiUser,
-    apiKey: integration.config.apiKey,
+    apiUser: integration.config?.apiUser ?? '',
+    apiKey: integration.config?.apiKey ?? '',
   };
 }
 
@@ -961,9 +975,9 @@ function getCoolifyDraft(integration: SystemIntegration | null): CoolifyDraft {
 
   return {
     isEnabled: integration.isEnabled,
-    baseUrl: integration.config.baseUrl,
-    adminToken: integration.config.adminToken,
-    applicationsBaseDomain: integration.config.applicationsBaseDomain ?? '',
+    baseUrl: integration.config?.baseUrl ?? '',
+    adminToken: integration.config?.adminToken ?? '',
+    applicationsBaseDomain: integration.config?.applicationsBaseDomain ?? '',
   };
 }
 
@@ -978,8 +992,8 @@ function getGitHubDraft(integration: SystemIntegration | null): GitHubDraft {
 
   return {
     isEnabled: integration.isEnabled,
-    organization: integration.config.organization,
-    appHomeUrl: integration.config.appHomeUrl,
+    organization: integration.config?.organization ?? '',
+    appHomeUrl: integration.config?.appHomeUrl ?? '',
   };
 }
 

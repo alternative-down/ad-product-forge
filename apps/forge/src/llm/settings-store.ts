@@ -35,7 +35,7 @@ export function createLlmSettingsStore(db: Database) {
     const row = await getDefaultsRow();
 
     if (!row) {
-      throw new Error('System LLM defaults are not configured');
+      return null;
     }
 
     return {
@@ -49,6 +49,11 @@ export function createLlmSettingsStore(db: Database) {
 
   async function getResolvedDefaults() {
     const [profiles, defaults] = await Promise.all([listProfiles(), getDefaults()]);
+
+    if (!defaults) {
+      throw new Error('System LLM defaults are not configured');
+    }
+
     const profileMap = new Map(profiles.map((profile) => [profile.profileId, profile]));
     const primaryProfile = profileMap.get(defaults.primaryProfileId);
     const omProfile = profileMap.get(defaults.omProfileId);
@@ -140,11 +145,11 @@ export function createLlmSettingsStore(db: Database) {
   async function deleteProfile(profileId: string) {
     const defaults = await getDefaults();
 
-    if (
+    if (defaults && (
       defaults.primaryProfileId === profileId ||
       defaults.omProfileId === profileId ||
       defaults.hiringRhProfileId === profileId
-    ) {
+    )) {
       throw new Error('Cannot delete an LLM profile that is currently selected as a system default');
     }
 
@@ -217,10 +222,6 @@ export function createLlmSettingsStore(db: Database) {
 }
 
 function toProfileRecord(row: typeof llmProfiles.$inferSelect) {
-  if (!row.encryptedApiKey) {
-    throw new Error(`LLM profile is missing apiKey: ${row.id}`);
-  }
-
   const {
     id,
     encryptedApiKey,
@@ -232,7 +233,7 @@ function toProfileRecord(row: typeof llmProfiles.$inferSelect) {
     ...rest,
     profileId: id,
     baseUrl: rest.baseUrl ?? null,
-    apiKey: decryptSecret(encryptedApiKey),
+    apiKey: encryptedApiKey ? decryptSecret(encryptedApiKey) : '',
     isEnabled: isEnabled === 1,
   };
 }

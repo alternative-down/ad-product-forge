@@ -44,7 +44,7 @@ export function createSystemIntegrationStore(db: Database) {
         return {
           ...rest,
           isEnabled: row.isEnabled === 1,
-          config: parseIntegrationConfig(row.providerType, encryptedConfig),
+          config: parseIntegrationConfigForList(row.providerType, encryptedConfig),
         };
       });
   }
@@ -156,6 +156,17 @@ export function createSystemIntegrationStore(db: Database) {
 
     if (providerType === 'github') {
       return parseGitHubConfig(encryptedConfig);
+    }
+  }
+
+  function parseIntegrationConfigForList(
+    providerType: SystemIntegrationProviderType,
+    encryptedConfig: string,
+  ) {
+    try {
+      return parseIntegrationConfig(providerType, encryptedConfig);
+    } catch {
+      return null;
     }
   }
 
