@@ -291,6 +291,14 @@ export type SystemLlmDefaults = {
 export type SystemLlmResponse = {
   defaults: SystemLlmDefaults | null;
   profiles: LlmProfile[];
+  prices: Array<{
+    modelKey: string;
+    inputPerMillionUsd: number;
+    inputCachePerMillionUsd: number;
+    outputPerMillionUsd: number;
+    createdAt: number;
+    updatedAt: number;
+  }>;
 };
 
 export type SystemOauthState = {
@@ -380,6 +388,13 @@ export type UpdateSystemLlmDefaultsInput = {
   primaryProfileId: string;
   omProfileId: string;
   hiringRhProfileId: string;
+};
+
+export type UpsertLlmModelPriceInput = {
+  modelKey: string;
+  inputPerMillionUsd: number;
+  inputCachePerMillionUsd: number;
+  outputPerMillionUsd: number;
 };
 
 export type CreateInvestmentInput = {
@@ -536,6 +551,13 @@ export function getFinance() {
 
 export function getSystemLlm() {
   return request<SystemLlmResponse>('/admin/system/llm');
+}
+
+export function upsertLlmModelPrice(input: UpsertLlmModelPriceInput) {
+  return request<UpsertLlmModelPriceInput>('/admin/system/llm/price/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function getSystemOauth() {

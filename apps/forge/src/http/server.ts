@@ -100,7 +100,16 @@ export function createForgeHttpServer(config: { port: number; adminApiKey?: stri
       }
 
       console.error(`[ForgeHttpServer] ${req.method} ${url.pathname} failed:`, error);
-      res.writeHead(500, CORS_HEADERS).end('Internal server error');
+      res.writeHead(500, {
+        ...CORS_HEADERS,
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      res.end(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
     }
   });
 
