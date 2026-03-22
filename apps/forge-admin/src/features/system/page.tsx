@@ -998,7 +998,7 @@ function buildLlmProfileDraft(profile: LlmProfile | null): LlmProfileDraft {
     profileId: profile.profileId,
     modelKey: profile.modelKey,
     baseUrl: profile.baseUrl ?? '',
-    apiKey: profile.apiKey ?? '',
+    apiKey: profile.apiKey,
     contractCostMultiplier: profile.contractCostMultiplier,
     isEnabled: profile.isEnabled,
   };

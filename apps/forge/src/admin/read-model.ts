@@ -324,15 +324,7 @@ export function createAdminReadModel(input: {
   }
 
   async function listSystemIntegrations() {
-    const items = await integrations.listIntegrations();
-
-    return items.map((integration) => ({
-      providerType: integration.providerType,
-      isEnabled: integration.isEnabled,
-      config: integration.config,
-      createdAt: integration.createdAt,
-      updatedAt: integration.updatedAt,
-    }));
+    return integrations.listIntegrations();
   }
 
   async function getFinance() {
