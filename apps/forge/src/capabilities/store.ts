@@ -225,6 +225,33 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
+  async function ensureDefaultFunctionsForRoles() {
+    const roles = await listRoles();
+
+    for (const role of roles) {
+      const existingFunction = await db.query.functionRoles.findFirst({
+        where: eq(functionRoles.roleId, role.roleId),
+        columns: {
+          functionId: true,
+        },
+      });
+
+      if (existingFunction) {
+        continue;
+      }
+
+      const createdFunction = await createFunction({
+        name: `Default ${role.name}`,
+        description: `Default function for role ${role.name}.`,
+      });
+
+      await assignRoleToFunction({
+        functionId: createdFunction.functionId,
+        roleId: role.roleId,
+      });
+    }
+  }
+
   async function clearRoleFromFunction(functionId: string) {
     await db.delete(functionRoles).where(eq(functionRoles.functionId, functionId));
 
@@ -354,6 +381,7 @@ export function createCapabilityStore(db: Database) {
     updateRole,
     deleteRole,
     assignRoleToFunction,
+    ensureDefaultFunctionsForRoles,
     clearRoleFromFunction,
     listRoleToolPermissions,
     addRoleToolPermission,

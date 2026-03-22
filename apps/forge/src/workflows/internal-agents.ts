@@ -9,7 +9,7 @@ import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 
 const hireInternalAgentInputSchema = z.object({
-  requestedFunction: z.string().min(1),
+  hiringRequest: z.string().min(1),
   additionalContext: z.string().optional(),
   weeklyBudgetUsd: z.number().positive(),
 });

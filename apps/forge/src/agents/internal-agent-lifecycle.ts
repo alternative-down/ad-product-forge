@@ -12,7 +12,7 @@ import { createCapabilityStore } from '../capabilities/store';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
 type RunInternalHiringInput = {
-  requestedFunction: string;
+  hiringRequest: string;
   additionalContext?: string;
   weeklyBudgetUsd: number;
   workspaceBasePath: string;
@@ -24,13 +24,16 @@ type RunInternalHiringInput = {
 };
 
 export async function runInternalHiring(db: Database, input: RunInternalHiringInput) {
-  const profile = await buildHiredAgentProfile(db, input);
   const hiringRh = await generateHiredAgentInstructions(db, input);
+  const profile = await buildHiredAgentProfile(db, {
+    agentName: hiringRh.agentName,
+    agentDescription: hiringRh.agentDescription,
+  });
   const companyCashOperations = createCompanyCashOperations(db);
   const capabilities = createCapabilityStore(db);
   const agentFunction = await capabilities.getOrCreateFunction({
-    name: input.requestedFunction,
-    description: input.additionalContext,
+    name: hiringRh.functionName,
+    description: hiringRh.functionDescription,
   });
   const hired = await hireInternalAgent(db, {
     functionId: agentFunction.functionId,
@@ -53,7 +56,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     await companyCashOperations.recordCashOut({
       type: 'agent-hiring-process',
       amountUsd: hiringRh.costUsd,
-      description: `Hiring workflow cost for ${input.requestedFunction}`,
+      description: `Hiring workflow cost for ${hiringRh.functionName}`,
       referenceType: 'hiring-workflow',
       referenceId: hired.agentId,
     });

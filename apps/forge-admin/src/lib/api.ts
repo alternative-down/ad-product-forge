@@ -210,7 +210,7 @@ export type AgentFunction = {
 };
 
 export type HireAgentInput = {
-  requestedFunction: string;
+  hiringRequest: string;
   additionalContext?: string;
   weeklyBudgetUsd: number;
 };
