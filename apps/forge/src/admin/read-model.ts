@@ -83,7 +83,15 @@ export function createAdminReadModel(input: {
     ]);
     const registry = getInternalAgentRegistry();
     const functionMap = new Map(functionRows.map((row) => [row.functionId, row]));
-    const llmProfileMap = new Map(llmProfiles.map((row) => [row.profileId, row]));
+    const llmProfileMap = new Map(
+      llmProfiles.map((row) => [
+        row.profileId,
+        {
+          profileId: row.profileId,
+          modelKey: row.modelKey,
+        },
+      ]),
+    );
     const providerTypesByAgentId = new Map<string, string[]>();
 
     for (const provider of providerRows) {
@@ -105,8 +113,8 @@ export function createAdminReadModel(input: {
         executionState: agent.executionState,
         functionId: agent.functionId,
         functionName: agentFunction?.name ?? null,
-        modelProfile: modelProfile ? { profileId: modelProfile.profileId, modelKey: modelProfile.modelKey } : null,
-        omModelProfile: omModelProfile ? { profileId: omModelProfile.profileId, modelKey: omModelProfile.modelKey } : null,
+        modelProfile: modelProfile ?? null,
+        omModelProfile: omModelProfile ?? null,
         loaded: Boolean(loadedAgent),
         runner: loadedAgent?.runner.getSnapshot() ?? null,
         providerTypes: (providerTypesByAgentId.get(agent.id) ?? []).sort(),
@@ -163,7 +171,15 @@ export function createAdminReadModel(input: {
     const loadedAgent = registry.get(agentId);
     const functionMap = new Map(functions.map((row) => [row.functionId, row]));
     const roleMap = new Map(roleRows.map((row) => [row.roleId, row]));
-    const llmProfileMap = new Map(llmProfiles.map((row) => [row.profileId, row]));
+    const llmProfileMap = new Map(
+      llmProfiles.map((row) => [
+        row.profileId,
+        {
+          profileId: row.profileId,
+          modelKey: row.modelKey,
+        },
+      ]),
+    );
     const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
     const role = agentFunction?.roleId ? (roleMap.get(agentFunction.roleId) ?? null) : null;
     const modelProfile = llmProfileMap.get(agent.modelProfileId);
@@ -176,8 +192,8 @@ export function createAdminReadModel(input: {
       description: agent.description ?? undefined,
       instructions: agent.instructions,
       executionState: agent.executionState,
-      modelProfile: modelProfile ? { profileId: modelProfile.profileId, modelKey: modelProfile.modelKey } : null,
-      omModelProfile: omModelProfile ? { profileId: omModelProfile.profileId, modelKey: omModelProfile.modelKey } : null,
+      modelProfile: modelProfile ?? null,
+      omModelProfile: omModelProfile ?? null,
       function: agentFunction
         ? {
             functionId: agentFunction.functionId,
