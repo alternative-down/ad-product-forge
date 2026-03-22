@@ -3,6 +3,7 @@ import { eq, and } from 'drizzle-orm';
 import fs from 'node:fs';
 import {
   getAnthropicCliAuthFilePath,
+  getAnthropicSetupTokenFilePath,
   getOpenAICodexCliAuthFilePath,
   oauthStore,
   syncAnthropicCredential,
@@ -115,7 +116,7 @@ const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
-const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
+const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github']);
 
 const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({
@@ -143,14 +144,6 @@ const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
       appHomeUrl: z.string().url(),
     }),
   }),
-  z.object({
-    providerType: z.literal('minimax'),
-    isEnabled: z.boolean().default(true),
-    config: z.object({
-      apiKey: z.string().min(1),
-      baseUrl: z.string().url().optional(),
-    }),
-  }),
 ]);
 
 const deleteSystemIntegrationSchema = z.object({
@@ -165,6 +158,7 @@ const upsertLlmProfileSchema = z.object({
   label: z.string().min(1),
   providerType: llmProviderTypeSchema,
   modelId: z.string().min(1),
+  apiKey: z.string().min(1).optional().nullable(),
   contractCostMultiplier: z.coerce.number().positive().default(1),
   isEnabled: z.boolean().default(true),
 });
@@ -775,7 +769,8 @@ function readOauthState() {
   const storePath = oauthStore.getDefaultPath();
   const store = oauthStore.read(storePath);
   const openAICodexPath = getOpenAICodexCliAuthFilePath();
-  const anthropicPath = getAnthropicCliAuthFilePath();
+  const anthropicSetupTokenPath = getAnthropicSetupTokenFilePath();
+  const anthropicCliPath = getAnthropicCliAuthFilePath();
 
   return {
     storePath,
@@ -791,8 +786,8 @@ function readOauthState() {
       },
       {
         providerId: 'anthropic' as const,
-        sourcePath: anthropicPath,
-        sourcePresent: fs.existsSync(anthropicPath),
+        sourcePath: `${anthropicSetupTokenPath} or ${anthropicCliPath}`,
+        sourcePresent: fs.existsSync(anthropicSetupTokenPath) || fs.existsSync(anthropicCliPath),
         synced: Boolean(store.anthropic),
         hasRefresh: Boolean(store.anthropic?.refresh),
         expiresAt: store.anthropic?.expires ?? null,

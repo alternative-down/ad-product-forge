@@ -7,8 +7,7 @@ import { llmModelPrices } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import { createSystemIntegrationStore } from '../system-integrations/store';
-import { createMiniMaxTokenGateway } from '../llm/minimax-token-gateway';
+import { createProfileTokenGateway } from '../llm/profile-token-gateway';
 import { createOAuthGateway } from '@mastra-engine/core';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
@@ -19,12 +18,15 @@ export async function generateHiredAgentInstructions(db: Database, input: {
 }) {
   const llmSettings = createLlmSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
-  const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
-  const integrations = createSystemIntegrationStore(db);
+  const hiringRhModelKey = defaults.hiringRhProfile.runtimeModelKey;
+  const hiringRhPricingModelKey = defaults.hiringRhProfile.modelKey;
+  const profileGateway = createProfileTokenGateway({
+    llmSettings,
+  });
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
   const modelPrice = await db.query.llmModelPrices.findFirst({
-    where: eq(llmModelPrices.modelKey, hiringRhModelKey),
+    where: eq(llmModelPrices.modelKey, hiringRhPricingModelKey),
   });
   const hiringPrompt = buildHiringPrompt(input);
 
@@ -52,9 +54,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     },
     gateways: {
       oauth: createOAuthGateway(),
-      'token-plan': createMiniMaxTokenGateway({
-        integrations,
-      }),
+      custom: profileGateway,
     },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt);
@@ -74,7 +74,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   return {
     instructions: result.text.trim(),
     costUsd,
-    modelKey: hiringRhModelKey,
+    modelKey: hiringRhPricingModelKey,
   };
 }
 

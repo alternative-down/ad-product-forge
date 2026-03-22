@@ -15,7 +15,8 @@ import { createCoolifyManager } from './coolify/manager';
 import { createAgentScheduleManager } from './schedules/manager';
 import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
-import { createMiniMaxTokenGateway } from './llm/minimax-token-gateway';
+import { createLlmSettingsStore } from './llm/settings-store';
+import { createProfileTokenGateway } from './llm/profile-token-gateway';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -40,6 +41,7 @@ export async function main() {
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   const integrations = createSystemIntegrationStore(db);
+  const llmSettings = createLlmSettingsStore(db);
 
   const emailMailboxes = createAgentEmailManager({
     db,
@@ -75,8 +77,8 @@ export async function main() {
   const coolify = createCoolifyManager({
     integrations,
   });
-  const minimax = createMiniMaxTokenGateway({
-    integrations,
+  const profileLlm = createProfileTokenGateway({
+    llmSettings,
   });
   const workflows = createInternalAgentWorkflows({
     db,
@@ -115,7 +117,7 @@ export async function main() {
     workflows,
     gateways: {
       oauth: createOAuthGateway(),
-      'token-plan': minimax,
+      custom: profileLlm,
     },
     logger: new ConsoleLogger({
       name: 'forge-app',

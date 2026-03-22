@@ -227,7 +227,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     const averageStepUsd =
       recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
     const pricing = await store.getUsagePricing({
-      modelKey: runtime.modelKey,
+      pricingModelKey: runtime.pricingModelKey,
       profileId: runtime.modelProfileId,
     });
     const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
@@ -278,7 +278,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     const pricing = await store.getUsagePricing({
-      modelKey: runtime.modelKey,
+      pricingModelKey: runtime.pricingModelKey,
       profileId: runtime.modelProfileId,
     });
     let costUsd = 0;
@@ -294,7 +294,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await store.recordAgentStep({
       agentId: runtime.id,
       contractId,
-      modelKey: runtime.modelKey,
+      modelKey: runtime.pricingModelKey,
       kind: 'agent-step',
       inputTokens,
       cachedInputTokens,
@@ -322,7 +322,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     const pricing = await store.getUsagePricing({
-      modelKey: runtime.omModelKey,
+      pricingModelKey: runtime.omPricingModelKey,
       profileId: runtime.omModelProfileId,
     });
     const parts = steps
@@ -353,7 +353,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await store.recordAgentStep({
         agentId: runtime.id,
         contractId,
-        modelKey: runtime.omModelKey,
+        modelKey: runtime.omPricingModelKey,
         kind: 'om',
         inputTokens,
         cachedInputTokens: 0,

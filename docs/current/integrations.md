@@ -86,14 +86,14 @@ Current webhook support for Coolify is not implemented.
 
 MiniMax text model access is owned by:
 
-- [minimax-token-gateway.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/llm/minimax-token-gateway.ts)
+- [profile-token-gateway.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/llm/profile-token-gateway.ts)
 - [settings-store.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/llm/settings-store.ts)
 
 Current model:
 
-- one global MiniMax token plan API key for the company
+- each MiniMax profile must carry its own direct API token
 - anthropic-compatible HTTP endpoint
-- exposed to agents through the `token-plan/minimax/...` model id format
+- exposed to agents through `custom/minimax/...`
 - selectable in admin-managed LLM profiles and hiring defaults
 
 Current supported MiniMax model surface:

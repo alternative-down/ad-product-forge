@@ -112,8 +112,9 @@ Shows and manages:
 - global Migadu integration config
 - global Coolify integration config
 - global GitHub integration config
-- global MiniMax token plan config
-- OAuth sync for Codex and Claude CLI credentials
+- OAuth sync for:
+  - Codex CLI credentials
+  - Claude setup-token
 - reusable LLM profiles
 - system hiring defaults for:
   - primary agent model
@@ -131,20 +132,31 @@ These integration settings are persisted in the Forge application database and e
 
 OAuth sync uses a different boundary:
 
-- the operator logs into Codex or Claude CLI inside the running container
+- the operator logs into Codex CLI inside the running container
+- the operator obtains the Claude setup-token inside the running container
 - the admin UI triggers a sync action
 - Forge copies the normalized credentials into:
   - `{FORGE_DATA_PATH}/auth/oauth.json`
 - after that, runtime auth no longer depends on persisting the CLI home directories
+
+For Claude, Forge prefers the setup-token source and falls back to the CLI credentials file when needed.
 
 LLM profiles are also persisted in the Forge application database.
 
 They are used to:
 
 - define reusable `provider + model` combinations
+- optionally carry a direct provider token when the credential belongs to that specific profile instead of a shared global integration
 - define a per-profile contract cost modifier used by weekly execution budget accounting
 - choose which model Forge uses by default when hiring a new agent
 - choose which model the internal hiring RH agent uses to generate instructions
+
+Profile-level tokens exist for a different boundary than system integrations:
+
+- shared company credentials still belong in `System Integrations`
+- fixed tokens tied to one concrete model profile can live in the `LLM profile`
+- this keeps the profile self-contained and opens the path for future providers with direct API-key auth without changing the hiring model boundary again
+- MiniMax now lives only in this profile-level token boundary
 
 Current provider choices in the LLM profile editor:
 
