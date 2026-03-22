@@ -13,6 +13,7 @@
 - Prefer `const`; use `let` only when mutation is truly part of the design.
 - Avoid helper extraction unless it clearly reduces real complexity or is truly reusable.
 - Avoid defensive programming in the middle of the flow. Fix the shape of the flow instead.
+- Default to greenfield design. Do not add compatibility layers, repair flows, fallback behavior, or legacy-preservation logic unless the user explicitly asks for it.
 - Validate unknown input at the boundary with Zod.
 - Do not leak provider-specific external ids or metadata through agent-facing tool outputs unless explicitly required.
 - Keep naming literal and obvious.

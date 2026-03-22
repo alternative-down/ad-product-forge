@@ -1,27 +1,15 @@
 import { createId } from '@paralleldrive/cuid2';
-import {
-  CLAUDE_MAX_MODELS,
-  MINIMAX_MODELS,
-  OPENAI_CODEX_MODELS,
-  claudeMaxProvider,
-  openaiCodexProvider,
-} from '@mastra-engine/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
-import type { LlmProviderType } from '../database/schema';
 import { llmProfiles, systemLlmDefaults } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
-import { CUSTOM_LLM_GATEWAY_ID } from './profile-token-gateway';
-
 const llmProfileSchema = z.object({
-  slug: z.string().min(1),
-  label: z.string().min(1),
-  providerType: z.enum(['openai-codex', 'claude-max', 'minimax']),
-  modelId: z.string().min(1),
-  apiKey: z.string().min(1).optional().nullable(),
+  modelKey: z.string().min(1),
+  baseUrl: z.string().url().optional().nullable(),
+  apiKey: z.string().min(1),
   contractCostMultiplier: z.number().positive().default(1),
   isEnabled: z.boolean().default(true),
 });
@@ -32,40 +20,15 @@ const llmDefaultsSchema = z.object({
   hiringRhProfileId: z.string().min(1),
 });
 
-const SUPPORTED_MODELS = {
-  'openai-codex': [...OPENAI_CODEX_MODELS],
-  'claude-max': [...CLAUDE_MAX_MODELS],
-  minimax: [...MINIMAX_MODELS],
-} as const satisfies Record<LlmProviderType, readonly string[]>;
-
 const DEFAULTS_ROW_ID = 'default';
 
 export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
     const rows = await db.query.llmProfiles.findMany({
-      orderBy: (fields, { asc }) => [asc(fields.label)],
+      orderBy: (fields, { asc }) => [asc(fields.modelKey)],
     });
 
-    return rows.map((row) => ({
-      profileId: row.id,
-      slug: row.slug,
-      label: row.label,
-      providerType: row.providerType,
-      modelId: row.modelId,
-      modelKey: buildPricingModelKey(row.providerType, row.modelId),
-      runtimeModelKey: buildRuntimeModelKey({
-        profileId: row.id,
-        providerType: row.providerType,
-        modelId: row.modelId,
-        hasApiKey: Boolean(row.encryptedApiKey),
-      }),
-      apiKey: row.encryptedApiKey ? decryptSecret(row.encryptedApiKey) : null,
-      hasApiKey: Boolean(row.encryptedApiKey),
-      contractCostMultiplier: row.contractCostMultiplier,
-      isEnabled: row.isEnabled === 1,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    return rows.map(toProfileRecord);
   }
 
   async function getDefaults() {
@@ -119,83 +82,18 @@ export function createLlmSettingsStore(db: Database) {
       throw new Error(`LLM profile not found: ${profileId}`);
     }
 
-    return {
-      profileId: row.id,
-      slug: row.slug,
-      label: row.label,
-      providerType: row.providerType,
-      modelId: row.modelId,
-      modelKey: buildPricingModelKey(row.providerType, row.modelId),
-      runtimeModelKey: buildRuntimeModelKey({
-        profileId: row.id,
-        providerType: row.providerType,
-        modelId: row.modelId,
-        hasApiKey: Boolean(row.encryptedApiKey),
-      }),
-      apiKey: row.encryptedApiKey ? decryptSecret(row.encryptedApiKey) : null,
-      hasApiKey: Boolean(row.encryptedApiKey),
-      contractCostMultiplier: row.contractCostMultiplier,
-      isEnabled: row.isEnabled === 1,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
-  }
-
-  async function getDirectApiKeyProfile(providerType: 'claude-max' | 'minimax', modelId: string) {
-    const rows = await db.query.llmProfiles.findMany({
-      where: eq(llmProfiles.providerType, providerType),
-    });
-    const matches = rows.filter((row) => row.modelId === modelId && Boolean(row.encryptedApiKey));
-
-    if (matches.length === 0) {
-      throw new Error(`Direct ${providerType} profile not found for model ${modelId}`);
-    }
-
-    if (matches.length > 1) {
-      throw new Error(`Multiple direct ${providerType} profiles found for model ${modelId}`);
-    }
-
-    const row = matches[0];
-
-    return {
-      profileId: row.id,
-      slug: row.slug,
-      label: row.label,
-      providerType: row.providerType,
-      modelId: row.modelId,
-      modelKey: buildPricingModelKey(row.providerType, row.modelId),
-      runtimeModelKey: buildRuntimeModelKey({
-        profileId: row.id,
-        providerType: row.providerType,
-        modelId: row.modelId,
-        hasApiKey: true,
-      }),
-      apiKey: decryptSecret(row.encryptedApiKey!),
-      hasApiKey: true,
-      contractCostMultiplier: row.contractCostMultiplier,
-      isEnabled: row.isEnabled === 1,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
+    return toProfileRecord(row);
   }
 
   async function upsertProfile(input: {
     profileId?: string;
-    slug: string;
-    label: string;
-    providerType: LlmProviderType;
-    modelId: string;
-    apiKey?: string | null;
+    modelKey: string;
+    baseUrl?: string | null;
+    apiKey: string;
     contractCostMultiplier?: number;
     isEnabled?: boolean;
   }) {
     const parsed = llmProfileSchema.parse(input);
-    assertSupportedModel(parsed.providerType, parsed.modelId);
-
-    if (parsed.providerType === 'minimax' && !parsed.apiKey?.trim()) {
-      throw new Error('MiniMax profiles require a direct apiKey');
-    }
-
     const now = Date.now();
     const profileId = input.profileId ?? createId();
     const existing = input.profileId
@@ -204,32 +102,13 @@ export function createLlmSettingsStore(db: Database) {
         })
       : null;
 
-    if (shouldUseDirectApiKey(parsed.providerType, parsed.apiKey)) {
-      const duplicates = await db.query.llmProfiles.findMany({
-        where: eq(llmProfiles.providerType, parsed.providerType),
-      });
-      const conflictingProfile = duplicates.find((row) =>
-        row.modelId === parsed.modelId &&
-        Boolean(row.encryptedApiKey) &&
-        row.id !== input.profileId,
-      );
-
-      if (conflictingProfile) {
-        throw new Error(`Only one direct-token profile is allowed for ${parsed.providerType}/${parsed.modelId}`);
-      }
-    }
-
     if (existing) {
       await db
         .update(llmProfiles)
         .set({
-          slug: parsed.slug,
-          label: parsed.label,
-          providerType: parsed.providerType,
-          modelId: parsed.modelId,
-          encryptedApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey)
-            ? encryptSecret(parsed.apiKey!.trim())
-            : null,
+          modelKey: parsed.modelKey,
+          baseUrl: parsed.baseUrl?.trim() || null,
+          encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
           contractCostMultiplier: parsed.contractCostMultiplier,
           isEnabled: parsed.isEnabled ? 1 : 0,
           updatedAt: now,
@@ -238,13 +117,9 @@ export function createLlmSettingsStore(db: Database) {
     } else {
       await db.insert(llmProfiles).values({
         id: profileId,
-        slug: parsed.slug,
-        label: parsed.label,
-        providerType: parsed.providerType,
-        modelId: parsed.modelId,
-        encryptedApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey)
-          ? encryptSecret(parsed.apiKey!.trim())
-          : null,
+        modelKey: parsed.modelKey,
+        baseUrl: parsed.baseUrl?.trim() || null,
+        encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
         contractCostMultiplier: parsed.contractCostMultiplier,
         isEnabled: parsed.isEnabled ? 1 : 0,
         createdAt: now,
@@ -254,19 +129,9 @@ export function createLlmSettingsStore(db: Database) {
 
     return {
       profileId,
-      slug: parsed.slug,
-      label: parsed.label,
-      providerType: parsed.providerType,
-      modelId: parsed.modelId,
-      modelKey: buildPricingModelKey(parsed.providerType, parsed.modelId),
-      runtimeModelKey: buildRuntimeModelKey({
-        profileId,
-        providerType: parsed.providerType,
-        modelId: parsed.modelId,
-        hasApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey),
-      }),
-      apiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey) ? parsed.apiKey!.trim() : null,
-      hasApiKey: shouldUseDirectApiKey(parsed.providerType, parsed.apiKey),
+      modelKey: parsed.modelKey,
+      baseUrl: parsed.baseUrl?.trim() || null,
+      apiKey: parsed.apiKey.trim(),
       contractCostMultiplier: parsed.contractCostMultiplier,
       isEnabled: parsed.isEnabled,
     };
@@ -303,7 +168,7 @@ export function createLlmSettingsStore(db: Database) {
       }
 
       if (!profile.isEnabled) {
-        throw new Error(`Default LLM profile must be enabled: ${profile.label}`);
+        throw new Error(`Default LLM profile must be enabled: ${profile.profileId}`);
       }
     }
 
@@ -334,26 +199,6 @@ export function createLlmSettingsStore(db: Database) {
     return parsed;
   }
 
-  function listSupportedProviders() {
-    return [
-      {
-        providerType: 'openai-codex' as const,
-        label: 'OpenAI Codex',
-        modelIds: [...SUPPORTED_MODELS['openai-codex']],
-      },
-      {
-        providerType: 'claude-max' as const,
-        label: 'Claude Max',
-        modelIds: [...SUPPORTED_MODELS['claude-max']],
-      },
-      {
-        providerType: 'minimax' as const,
-        label: 'MiniMax Token Plan',
-        modelIds: [...SUPPORTED_MODELS.minimax],
-      },
-    ];
-  }
-
   async function getDefaultsRow() {
     return db.query.systemLlmDefaults.findFirst({
       where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
@@ -365,59 +210,29 @@ export function createLlmSettingsStore(db: Database) {
     getProfile,
     getDefaults,
     getResolvedDefaults,
-    getDirectApiKeyProfile,
     upsertProfile,
     deleteProfile,
     updateDefaults,
-    listSupportedProviders,
   };
 }
 
-function assertSupportedModel(providerType: LlmProviderType, modelId: string) {
-  const supportedModelIds = SUPPORTED_MODELS[providerType] as readonly string[];
-
-  if (!supportedModelIds.includes(modelId)) {
-    throw new Error(`Unsupported model for ${providerType}: ${modelId}`);
-  }
-}
-
-function buildPricingModelKey(providerType: LlmProviderType, modelId: string) {
-  if (providerType === 'openai-codex') {
-    return openaiCodexProvider(modelId as (typeof OPENAI_CODEX_MODELS)[number]);
+function toProfileRecord(row: typeof llmProfiles.$inferSelect) {
+  if (!row.encryptedApiKey) {
+    throw new Error(`LLM profile is missing apiKey: ${row.id}`);
   }
 
-  if (providerType === 'claude-max') {
-    return claudeMaxProvider(modelId as (typeof CLAUDE_MAX_MODELS)[number]);
-  }
+  const {
+    id,
+    encryptedApiKey,
+    isEnabled,
+    ...rest
+  } = row;
 
-  return `token-plan/minimax/${modelId}`;
-}
-
-function buildRuntimeModelKey(input: {
-  profileId: string;
-  providerType: LlmProviderType;
-  modelId: string;
-  hasApiKey: boolean;
-}) {
-  if (input.providerType === 'openai-codex') {
-    return buildPricingModelKey(input.providerType, input.modelId);
-  }
-
-  if (input.providerType === 'minimax') {
-    return `${CUSTOM_LLM_GATEWAY_ID}/minimax/${input.modelId}`;
-  }
-
-  if (!input.hasApiKey) {
-    return buildPricingModelKey(input.providerType, input.modelId);
-  }
-
-  return `${CUSTOM_LLM_GATEWAY_ID}/${input.providerType}/${input.modelId}`;
-}
-
-function shouldUseDirectApiKey(providerType: LlmProviderType, apiKey?: string | null) {
-  if (!apiKey?.trim()) {
-    return false;
-  }
-
-  return providerType === 'claude-max' || providerType === 'minimax';
+  return {
+    ...rest,
+    profileId: id,
+    baseUrl: rest.baseUrl ?? null,
+    apiKey: decryptSecret(encryptedApiKey),
+    isEnabled: isEnabled === 1,
+  };
 }

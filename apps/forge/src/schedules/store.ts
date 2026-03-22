@@ -212,38 +212,35 @@ export function createAgentScheduleStore(db: Database) {
 }
 
 function toScheduleRecord(row: typeof agentSchedules.$inferSelect) {
+  const { id, ...rest } = row;
+
   return {
-    kind: row.kind as ScheduleKind,
-    scheduleId: row.id,
-    agentId: row.agentId,
-    name: row.name,
-    description: row.description ?? undefined,
-    scheduleType: row.scheduleType as ScheduleType,
-    cronExpression: row.cronExpression ?? undefined,
-    scheduledDate: row.scheduledDate ?? undefined,
-    timezone: row.timezone,
-    content: row.content,
-    isActive: row.isActive === 1,
-    lastTriggeredAt: row.lastTriggeredAt ?? undefined,
-    nextTriggerAt: row.nextTriggerAt ?? undefined,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    ...rest,
+    kind: rest.kind as ScheduleKind,
+    scheduleId: id,
+    description: rest.description ?? undefined,
+    scheduleType: rest.scheduleType as ScheduleType,
+    cronExpression: rest.cronExpression ?? undefined,
+    scheduledDate: rest.scheduledDate ?? undefined,
+    isActive: rest.isActive === 1,
+    lastTriggeredAt: rest.lastTriggeredAt ?? undefined,
+    nextTriggerAt: rest.nextTriggerAt ?? undefined,
   };
 }
 
 function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
+  const { id, agentId: _agentId, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = row;
+
   return {
-    kind: row.kind as ScheduleKind,
-    scheduleId: row.id,
-    name: row.name,
-    description: row.description ?? undefined,
-    scheduleType: row.scheduleType as ScheduleType,
-    cronExpression: row.cronExpression ?? undefined,
-    scheduledDate: row.scheduledDate ?? undefined,
-    timezone: row.timezone,
-    content: row.content,
-    isActive: row.isActive === 1,
-    lastTriggeredAt: row.lastTriggeredAt ?? undefined,
-    nextTriggerAt: row.nextTriggerAt ?? undefined,
+    ...rest,
+    kind: rest.kind as ScheduleKind,
+    scheduleId: id,
+    description: rest.description ?? undefined,
+    scheduleType: rest.scheduleType as ScheduleType,
+    cronExpression: rest.cronExpression ?? undefined,
+    scheduledDate: rest.scheduledDate ?? undefined,
+    isActive: rest.isActive === 1,
+    lastTriggeredAt: rest.lastTriggeredAt ?? undefined,
+    nextTriggerAt: rest.nextTriggerAt ?? undefined,
   };
 }

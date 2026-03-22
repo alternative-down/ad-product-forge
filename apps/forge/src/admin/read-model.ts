@@ -83,7 +83,15 @@ export function createAdminReadModel(input: {
     ]);
     const registry = getInternalAgentRegistry();
     const functionMap = new Map(functionRows.map((row) => [row.functionId, row]));
-    const llmProfileMap = new Map(llmProfiles.map((row) => [row.profileId, row]));
+    const llmProfileMap = new Map(
+      llmProfiles.map((row) => [
+        row.profileId,
+        {
+          profileId: row.profileId,
+          modelKey: row.modelKey,
+        },
+      ]),
+    );
     const providerTypesByAgentId = new Map<string, string[]>();
 
     for (const provider of providerRows) {
@@ -105,8 +113,8 @@ export function createAdminReadModel(input: {
         executionState: agent.executionState,
         functionId: agent.functionId,
         functionName: agentFunction?.name ?? null,
-        model: modelProfile?.modelKey ?? null,
-        omModel: omModelProfile?.modelKey ?? null,
+        modelProfile: modelProfile ?? null,
+        omModelProfile: omModelProfile ?? null,
         loaded: Boolean(loadedAgent),
         runner: loadedAgent?.runner.getSnapshot() ?? null,
         providerTypes: (providerTypesByAgentId.get(agent.id) ?? []).sort(),
@@ -163,7 +171,15 @@ export function createAdminReadModel(input: {
     const loadedAgent = registry.get(agentId);
     const functionMap = new Map(functions.map((row) => [row.functionId, row]));
     const roleMap = new Map(roleRows.map((row) => [row.roleId, row]));
-    const llmProfileMap = new Map(llmProfiles.map((row) => [row.profileId, row]));
+    const llmProfileMap = new Map(
+      llmProfiles.map((row) => [
+        row.profileId,
+        {
+          profileId: row.profileId,
+          modelKey: row.modelKey,
+        },
+      ]),
+    );
     const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
     const role = agentFunction?.roleId ? (roleMap.get(agentFunction.roleId) ?? null) : null;
     const modelProfile = llmProfileMap.get(agent.modelProfileId);
@@ -176,17 +192,14 @@ export function createAdminReadModel(input: {
       description: agent.description ?? undefined,
       instructions: agent.instructions,
       executionState: agent.executionState,
-      model: modelProfile?.modelKey ?? null,
-      omModel: omModelProfile?.modelKey ?? null,
-      function: agentFunction
-        ? {
-            functionId: agentFunction.functionId,
-            name: agentFunction.name,
-            description: agentFunction.description,
-            roleId: agentFunction.roleId,
-            roleName: role?.name ?? null,
-          }
-        : null,
+      modelProfile: modelProfile ?? null,
+      omModelProfile: omModelProfile ?? null,
+      function: agentFunction && {
+        ...agentFunction,
+        description: agentFunction.description ?? null,
+        roleId: agentFunction.roleId ?? null,
+        roleName: role?.name ?? null,
+      },
       loaded: Boolean(loadedAgent),
       runner: loadedAgent?.runner.getSnapshot() ?? null,
       workspace: {
@@ -212,20 +225,14 @@ export function createAdminReadModel(input: {
         .filter((schedule) => schedule.kind === 'agent')
         .map(toScheduleSummary),
       heartbeat: heartbeat ? toScheduleSummary(heartbeat) : null,
-      recentExecutionSteps: recentSteps.map((step) => ({
-        stepId: step.id,
-        kind: step.kind,
-        modelKey: step.modelKey,
-        inputTokens: step.inputTokens,
-        cachedInputTokens: step.cachedInputTokens,
-        outputTokens: step.outputTokens,
-        inputPerMillionUsd: step.inputPerMillionUsd,
-        inputCachePerMillionUsd: step.inputCachePerMillionUsd,
-        outputPerMillionUsd: step.outputPerMillionUsd,
-        contractCostMultiplier: step.contractCostMultiplier,
-        costUsd: step.costUsd,
-        createdAt: step.createdAt,
-      })),
+      recentExecutionSteps: recentSteps.map((step) => {
+        const { id, ...rest } = step;
+
+        return {
+          ...rest,
+          stepId: id,
+        };
+      }),
       recentNotifications,
       recentConversations,
       createdAt: agent.createdAt,
@@ -307,15 +314,7 @@ export function createAdminReadModel(input: {
   }
 
   async function listSystemIntegrations() {
-    const items = await integrations.listIntegrations();
-
-    return items.map((integration) => ({
-      providerType: integration.providerType,
-      isEnabled: integration.isEnabled,
-      config: integration.config,
-      createdAt: integration.createdAt,
-      updatedAt: integration.updatedAt,
-    }));
+    return integrations.listIntegrations();
   }
 
   async function getFinance() {
@@ -343,7 +342,6 @@ export function createAdminReadModel(input: {
     return {
       defaults,
       profiles,
-      supportedProviders: llmSettings.listSupportedProviders(),
     };
   }
 

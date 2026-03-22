@@ -38,13 +38,15 @@ export function createSystemIntegrationStore(db: Database) {
       .filter((row): row is typeof row & { providerType: SystemIntegrationProviderType } =>
         row.providerType === 'migadu' || row.providerType === 'coolify' || row.providerType === 'github',
       )
-      .map((row) => ({
-      providerType: row.providerType,
-      isEnabled: row.isEnabled === 1,
-      config: parseIntegrationConfig(row.providerType, row.encryptedConfig),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      }));
+      .map((row) => {
+        const { encryptedConfig, ...rest } = row;
+
+        return {
+          ...rest,
+          isEnabled: row.isEnabled === 1,
+          config: parseIntegrationConfig(row.providerType, encryptedConfig),
+        };
+      });
   }
 
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {

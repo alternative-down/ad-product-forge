@@ -153,6 +153,9 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
   agentId: text('agent_id')
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),
+  llmProfileId: text('llm_profile_id')
+    .notNull()
+    .references(() => llmProfiles.id, { onDelete: 'restrict' }),
   modelKey: text('model_key').notNull(),
   kind: text('kind').notNull(),
   inputTokens: integer('input_tokens').notNull(),
@@ -167,6 +170,7 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
 }, (table) => ({
   agentExecutionStepsAgentIdIdx: index('agent_execution_steps_agent_id_idx').on(table.agentId),
   agentExecutionStepsContractIdIdx: index('agent_execution_steps_contract_id_idx').on(table.contractId),
+  agentExecutionStepsLlmProfileIdIdx: index('agent_execution_steps_llm_profile_id_idx').on(table.llmProfileId),
   agentExecutionStepsCreatedAtIdx: index('agent_execution_steps_created_at_idx').on(table.createdAt),
 }));
 
@@ -282,10 +286,6 @@ const _GitHubSystemIntegrationConfigSchema = z.object({
   appHomeUrl: z.string().url(),
 });
 
-const _LlmProviderTypeSchema = z.enum(['openai-codex', 'claude-max', 'minimax']);
-
-export type LlmProviderType = z.infer<typeof _LlmProviderTypeSchema>;
-
 export type MigaduSystemIntegrationConfig = z.infer<typeof _MigaduSystemIntegrationConfigSchema>;
 export type CoolifySystemIntegrationConfig = z.infer<typeof _CoolifySystemIntegrationConfigSchema>;
 export type GitHubSystemIntegrationConfig = z.infer<typeof _GitHubSystemIntegrationConfigSchema>;
@@ -309,17 +309,15 @@ export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
 
 export const llmProfiles = sqliteTable('llm_profiles', {
   id: text('id').primaryKey(),
-  slug: text('slug').notNull(),
-  label: text('label').notNull(),
-  providerType: text('provider_type').notNull().$type<LlmProviderType>(),
-  modelId: text('model_id').notNull(),
-  encryptedApiKey: text('encrypted_api_key'),
+  modelKey: text('model_key').notNull(),
+  baseUrl: text('base_url'),
+  encryptedApiKey: text('encrypted_api_key').notNull(),
   contractCostMultiplier: real('contract_cost_multiplier').notNull().default(1),
   isEnabled: integer('is_enabled').notNull().default(1),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
-  llmProfilesSlugIdx: uniqueIndex('llm_profiles_slug_idx').on(table.slug),
+  llmProfilesModelKeyIdx: index('llm_profiles_model_key_idx').on(table.modelKey),
   llmProfilesIsEnabledIdx: index('llm_profiles_is_enabled_idx').on(table.isEnabled),
 }));
 

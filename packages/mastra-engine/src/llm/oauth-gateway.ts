@@ -162,8 +162,8 @@ export class OAuthGateway extends MastraModelGateway {
       };
     },
   };
-  // Middleware for Claude Max provider. Adds Claude Code identity context.
-  // Applied to: 'claude-max' models
+  // Middleware for Claude Code provider. Adds Claude Code identity context.
+  // Applied to: 'claude-code' models
   // Prepends a system message identifying the model as Claude Code, and removes topP if temperature is set.
   private readonly claudeCodeMiddleware: LanguageModelMiddleware = {
     specificationVersion: 'v3',
@@ -188,8 +188,8 @@ export class OAuthGateway extends MastraModelGateway {
       };
     },
   };
-  // Middleware for Claude Max provider. Applies prompt caching to system and last message.
-  // Applied to: 'claude-max' models (with claudeCodeMiddleware)
+  // Middleware for Claude Code provider. Applies prompt caching to system and last message.
+  // Applied to: 'claude-code' models (with claudeCodeMiddleware)
   // Ordering: claudeCodeMiddleware runs first to add identity, then promptCacheMiddleware adds cache control.
   // Caches the system message and the last user message with ephemeral cache control.
   private readonly promptCacheMiddleware: LanguageModelMiddleware = {
@@ -271,8 +271,8 @@ export class OAuthGateway extends MastraModelGateway {
         gateway: this.id,
         url: this.openAICodexUrl,
       },
-      'claude-max': {
-        name: 'Claude Max OAuth',
+      'claude-code': {
+        name: 'Claude Code OAuth',
         models: [...CLAUDE_MAX_MODELS],
         apiKeyEnvVar: 'FORGE_AUTH_UNUSED',
         gateway: this.id,
@@ -286,7 +286,7 @@ export class OAuthGateway extends MastraModelGateway {
       return this.openAICodexUrl;
     }
 
-    if (modelId.startsWith(`${this.id}/claude-max/`)) {
+    if (modelId.startsWith(`${this.id}/claude-code/`)) {
       return this.anthropicUrl;
     }
 
@@ -298,7 +298,7 @@ export class OAuthGateway extends MastraModelGateway {
       return (await resolveOpenAICodexCredential(this.options.openaiCodex)).access;
     }
 
-    if (modelId.startsWith(`${this.id}/claude-max/`)) {
+    if (modelId.startsWith(`${this.id}/claude-code/`)) {
       return (await resolveAnthropicCredential(this.options.anthropic)).access;
     }
 
@@ -314,7 +314,7 @@ export class OAuthGateway extends MastraModelGateway {
     switch (args.providerId) {
       case 'openai-codex':
         return this.resolveOpenAICodexModel(args.modelId, args.apiKey);
-      case 'claude-max':
+      case 'claude-code':
         return this.resolveClaudeMaxModel(args.modelId, args.apiKey);
       default:
         throw new Error(`Unsupported gateway provider: ${args.providerId}`);
@@ -365,10 +365,10 @@ export class OAuthGateway extends MastraModelGateway {
   }
 
   private async resolveClaudeMaxModel(modelId: string, apiKey: string) {
-    const baseURL = this.buildUrl(`${this.id}/claude-max/${modelId}`);
+    const baseURL = this.buildUrl(`${this.id}/claude-code/${modelId}`);
 
     if (!baseURL) {
-      throw new Error(`Unsupported gateway model: claude-max/${modelId}`);
+      throw new Error(`Unsupported gateway model: claude-code/${modelId}`);
     }
 
     const anthropic = createAnthropic({
@@ -382,9 +382,9 @@ export class OAuthGateway extends MastraModelGateway {
         headers.set('anthropic-beta', ANTHROPIC_BETA_HEADER);
         headers.set('anthropic-version', '2023-06-01');
 
-        forgeDebug('provider:claude-max', 'request', { url: String(url) });
+        forgeDebug('provider:claude-code', 'request', { url: String(url) });
         const response = await fetch(url, { ...init, headers });
-        forgeDebug('provider:claude-max', 'response', {
+        forgeDebug('provider:claude-code', 'response', {
           url: String(url),
           status: response.status,
           ok: response.ok,

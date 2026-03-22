@@ -7,8 +7,8 @@ import { llmModelPrices } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import { createProfileTokenGateway } from '../llm/profile-token-gateway';
 import { createOAuthGateway } from '@mastra-engine/core';
+import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 
@@ -18,11 +18,8 @@ export async function generateHiredAgentInstructions(db: Database, input: {
 }) {
   const llmSettings = createLlmSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
-  const hiringRhModelKey = defaults.hiringRhProfile.runtimeModelKey;
+  const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const hiringRhPricingModelKey = defaults.hiringRhProfile.modelKey;
-  const profileGateway = createProfileTokenGateway({
-    llmSettings,
-  });
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
   const modelPrice = await db.query.llmModelPrices.findFirst({
@@ -46,7 +43,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     id: HIRING_RH_AGENT_ID,
     name: 'Internal Hiring RH',
     instructions: 'Write only the hired agent system prompt. Return plain text only.',
-    model: hiringRhModelKey,
+    model: resolveProfileRuntimeModel(defaults.hiringRhProfile),
   });
   const mastra = new Mastra({
     agents: {
@@ -54,7 +51,6 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     },
     gateways: {
       oauth: createOAuthGateway(),
-      custom: profileGateway,
     },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt);

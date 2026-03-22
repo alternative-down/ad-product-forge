@@ -9,7 +9,7 @@ async function main() {
     id: 'claude-max-smoke',
     name: 'Claude Max Smoke',
     instructions: 'Responda de forma curta e direta.',
-    model: `${OAUTH_GATEWAY_ID}/claude-max/${CLAUDE_MAX_MODELS[0]}`,
+    model: `${OAUTH_GATEWAY_ID}/claude-code/${CLAUDE_MAX_MODELS[0]}`,
   });
   const mastra = new Mastra({
     agents: { [String(agent.id)]: agent },

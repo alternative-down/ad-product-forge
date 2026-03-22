@@ -110,6 +110,7 @@ export function createAgentContractStore(db: Database) {
   async function recordAgentStep(input: {
     agentId: string;
     contractId: string;
+    llmProfileId: string;
     modelKey: string;
     kind: 'agent-step' | 'om' | 'ltm';
     inputTokens: number;
@@ -125,6 +126,7 @@ export function createAgentContractStore(db: Database) {
       id: createId(),
       agentId: input.agentId,
       contractId: input.contractId,
+      llmProfileId: input.llmProfileId,
       modelKey: input.modelKey,
       kind: input.kind,
       inputTokens: input.inputTokens,

@@ -61,8 +61,14 @@ export type AgentListItem = {
   executionState: 'idle' | 'running';
   functionId: string | null;
   functionName: string | null;
-  model: string | null;
-  omModel: string | null;
+  modelProfile: {
+    profileId: string;
+    modelKey: string;
+  } | null;
+  omModelProfile: {
+    profileId: string;
+    modelKey: string;
+  } | null;
   loaded: boolean;
   runner: {
     stopped: boolean;
@@ -99,8 +105,8 @@ export type AgentDetail = {
   description?: string;
   instructions: string;
   executionState: 'idle' | 'running';
-  model: string | null;
-  omModel: string | null;
+  modelProfile: AgentListItem['modelProfile'];
+  omModelProfile: AgentListItem['omModelProfile'];
   function: {
     functionId: string;
     name: string;
@@ -136,6 +142,7 @@ export type AgentDetail = {
   heartbeat: AgentSchedule | null;
   recentExecutionSteps: Array<{
     stepId: string;
+    llmProfileId: string;
     kind: string;
     modelKey: string;
     inputTokens: number;
@@ -261,14 +268,9 @@ export type SystemIntegration =
 
 export type LlmProfile = {
   profileId: string;
-  slug: string;
-  label: string;
-  providerType: 'openai-codex' | 'claude-max' | 'minimax';
-  modelId: string;
   modelKey: string;
-  runtimeModelKey: string;
-  apiKey: string | null;
-  hasApiKey: boolean;
+  baseUrl: string | null;
+  apiKey: string;
   contractCostMultiplier: number;
   isEnabled: boolean;
   createdAt: number;
@@ -286,11 +288,6 @@ export type SystemLlmDefaults = {
 export type SystemLlmResponse = {
   defaults: SystemLlmDefaults;
   profiles: LlmProfile[];
-  supportedProviders: Array<{
-    providerType: 'openai-codex' | 'claude-max' | 'minimax';
-    label: string;
-    modelIds: string[];
-  }>;
 };
 
 export type SystemOauthState = {
@@ -368,11 +365,9 @@ export type UpsertSystemIntegrationInput =
 
 export type UpsertLlmProfileInput = {
   profileId?: string;
-  slug: string;
-  label: string;
-  providerType: 'openai-codex' | 'claude-max' | 'minimax';
-  modelId: string;
-  apiKey?: string | null;
+  modelKey: string;
+  baseUrl?: string | null;
+  apiKey: string;
   contractCostMultiplier: number;
   isEnabled: boolean;
 };

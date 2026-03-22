@@ -26,14 +26,16 @@ export function createCapabilityStore(db: Database) {
       orderBy: [asc(agentFunctions.name)],
     });
 
-    return rows.map((row) => ({
-      functionId: row.id,
-      name: row.name,
-      description: row.description ?? undefined,
-      roleId: row.roleLink?.roleId ?? null,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    return rows.map((row) => {
+      const { id, roleLink, ...rest } = row;
+
+      return {
+        ...rest,
+        functionId: id,
+        description: rest.description ?? undefined,
+        roleId: roleLink?.roleId ?? null,
+      };
+    });
   }
 
   async function createFunction(input: { name: string; description?: string }) {
@@ -110,13 +112,15 @@ export function createCapabilityStore(db: Database) {
       orderBy: [asc(agentRoles.name)],
     });
 
-    return rows.map((row) => ({
-      roleId: row.id,
-      name: row.name,
-      description: row.description ?? undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    return rows.map((row) => {
+      const { id, ...rest } = row;
+
+      return {
+        ...rest,
+        roleId: id,
+        description: rest.description ?? undefined,
+      };
+    });
   }
 
   async function createRole(input: { name: string; description?: string }) {

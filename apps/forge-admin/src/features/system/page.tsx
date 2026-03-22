@@ -16,7 +16,6 @@ import {
   type SystemIntegration,
   type SystemLlmDefaults,
   type SystemOauthState,
-  type SystemLlmResponse,
   type UpdateSystemLlmDefaultsInput,
   type UpsertLlmProfileInput,
   type UpsertSystemIntegrationInput,
@@ -48,10 +47,8 @@ type GitHubDraft = {
 
 type LlmProfileDraft = {
   profileId?: string;
-  slug: string;
-  label: string;
-  providerType: 'openai-codex' | 'claude-max' | 'minimax';
-  modelId: string;
+  modelKey: string;
+  baseUrl: string;
   apiKey: string;
   contractCostMultiplier: number;
   isEnabled: boolean;
@@ -167,7 +164,6 @@ export function SystemPage() {
       />
 
       <LlmProfileEditorCard
-        supportedProviders={systemLlm.supportedProviders}
         profiles={systemLlm.profiles}
         pending={upsertLlmProfileMutation.isPending}
         deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
@@ -274,7 +270,7 @@ function LlmDefaultsCard(input: {
           >
             {selectableProfiles.map((profile) => (
               <option key={profile.profileId} value={profile.profileId}>
-                {profile.label}
+                {formatProfileOption(profile)}
               </option>
             ))}
           </Select>
@@ -286,7 +282,7 @@ function LlmDefaultsCard(input: {
           >
             {selectableProfiles.map((profile) => (
               <option key={profile.profileId} value={profile.profileId}>
-                {profile.label}
+                {formatProfileOption(profile)}
               </option>
             ))}
           </Select>
@@ -298,7 +294,7 @@ function LlmDefaultsCard(input: {
           >
             {selectableProfiles.map((profile) => (
               <option key={profile.profileId} value={profile.profileId}>
-                {profile.label}
+                {formatProfileOption(profile)}
               </option>
             ))}
           </Select>
@@ -317,7 +313,6 @@ function LlmDefaultsCard(input: {
 }
 
 function LlmProfileEditorCard(input: {
-  supportedProviders: SystemLlmResponse['supportedProviders'];
   profiles: LlmProfile[];
   pending: boolean;
   deletingProfileId: string | null;
@@ -347,17 +342,16 @@ function LlmProfileEditorCard(input: {
             <Select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
               <option value="new">Create new profile</option>
               {input.profiles.map((profile) => (
-                <option key={profile.profileId} value={profile.profileId}>
-                  {profile.label}
-                </option>
-              ))}
+              <option key={profile.profileId} value={profile.profileId}>
+                  {formatProfileOption(profile)}
+              </option>
+            ))}
             </Select>
           </LabeledField>
 
           <LlmProfileForm
             key={`llm-profile-form-${selectedProfile?.profileId ?? 'new'}`}
             profile={selectedProfile}
-            supportedProviders={input.supportedProviders}
             pending={input.pending}
             deletingProfileId={input.deletingProfileId}
             saveError={input.saveError}
@@ -374,8 +368,8 @@ function LlmProfileEditorCard(input: {
               <div key={profile.profileId} className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-950">{profile.label}</p>
-                    <p className="mt-1 text-xs text-slate-500">{profile.slug}</p>
+                    <p className="font-medium text-slate-950">{profile.profileId}</p>
+                    <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                     {profile.isEnabled ? 'enabled' : 'disabled'}
@@ -383,20 +377,16 @@ function LlmProfileEditorCard(input: {
                 </div>
                 <dl className="mt-3 space-y-1 text-sm text-slate-600">
                   <div>
-                    <dt className="inline font-medium text-slate-800">Provider:</dt>{' '}
-                    <dd className="inline">{profile.providerType}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Model:</dt>{' '}
-                    <dd className="inline">{profile.modelId}</dd>
-                  </div>
-                  <div>
                     <dt className="inline font-medium text-slate-800">Model key:</dt>{' '}
                     <dd className="inline break-all">{profile.modelKey}</dd>
                   </div>
                   <div>
+                    <dt className="inline font-medium text-slate-800">Base URL:</dt>{' '}
+                    <dd className="inline break-all">{profile.baseUrl ?? '—'}</dd>
+                  </div>
+                  <div>
                     <dt className="inline font-medium text-slate-800">Direct token:</dt>{' '}
-                    <dd className="inline">{profile.hasApiKey ? 'configured' : 'not configured'}</dd>
+                    <dd className="inline">configured</dd>
                   </div>
                   <div>
                     <dt className="inline font-medium text-slate-800">Contract cost modifier:</dt>{' '}
@@ -418,7 +408,6 @@ function LlmProfileEditorCard(input: {
 
 function LlmProfileForm(input: {
   profile: LlmProfile | null;
-  supportedProviders: SystemLlmResponse['supportedProviders'];
   pending: boolean;
   deletingProfileId: string | null;
   saveError: string | null;
@@ -426,57 +415,25 @@ function LlmProfileForm(input: {
   onSave(input: UpsertLlmProfileInput): void;
   onDelete(profileId: string): void;
 }) {
-  const [draft, setDraft] = useState<LlmProfileDraft>(buildLlmProfileDraft(input.profile, input.supportedProviders));
-  const availableModels = getSupportedModelIds(input.supportedProviders, draft.providerType);
+  const profile = input.profile;
+  const [draft, setDraft] = useState<LlmProfileDraft>(buildLlmProfileDraft(input.profile));
 
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2">
-        <LabeledField label="Slug">
+        <LabeledField label="Model key">
           <Input
-            value={draft.slug}
-            onChange={(event) => setDraft((current) => ({ ...current, slug: event.target.value }))}
-            placeholder="openai-codex-gpt-5-4-primary"
+            value={draft.modelKey}
+            onChange={(event) => setDraft((current) => ({ ...current, modelKey: event.target.value }))}
+            placeholder="account-oauth/openai-codex/gpt-5.4"
           />
         </LabeledField>
-        <LabeledField label="Label">
+        <LabeledField label="Base URL">
           <Input
-            value={draft.label}
-            onChange={(event) => setDraft((current) => ({ ...current, label: event.target.value }))}
-            placeholder="OpenAI Codex GPT-5.4 Primary"
+            value={draft.baseUrl}
+            onChange={(event) => setDraft((current) => ({ ...current, baseUrl: event.target.value }))}
+            placeholder="https://api.minimax.io/anthropic/v1"
           />
-        </LabeledField>
-        <LabeledField label="Provider">
-          <Select
-            value={draft.providerType}
-            onChange={(event) => {
-              const nextProviderType = event.target.value as LlmProfileDraft['providerType'];
-              const nextModels = getSupportedModelIds(input.supportedProviders, nextProviderType);
-              setDraft((current) => ({
-                ...current,
-                providerType: nextProviderType,
-                modelId: nextModels[0] ?? '',
-              }));
-            }}
-          >
-            {input.supportedProviders.map((provider) => (
-              <option key={provider.providerType} value={provider.providerType}>
-                {provider.label}
-              </option>
-            ))}
-          </Select>
-        </LabeledField>
-        <LabeledField label="Model">
-          <Select
-            value={draft.modelId}
-            onChange={(event) => setDraft((current) => ({ ...current, modelId: event.target.value }))}
-          >
-            {availableModels.map((modelId) => (
-              <option key={modelId} value={modelId}>
-                {modelId}
-              </option>
-            ))}
-          </Select>
         </LabeledField>
         <LabeledField label="Contract cost modifier">
           <Input
@@ -492,22 +449,11 @@ function LlmProfileForm(input: {
             }
           />
         </LabeledField>
-        <LabeledField label="Direct API token">
+        <LabeledField label="API key">
           <Input
             value={draft.apiKey}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                apiKey: event.target.value,
-              }))
-            }
-            placeholder={
-              draft.providerType === 'claude-max'
-                ? 'Optional sk-ant-... token for this profile'
-                : draft.providerType === 'minimax'
-                  ? 'Optional MiniMax token for this profile'
-                  : 'Not used for this provider'
-            }
+            onChange={(event) => setDraft((current) => ({ ...current, apiKey: event.target.value }))}
+            placeholder="Required. OAuth profiles can use a placeholder value."
           />
         </LabeledField>
       </div>
@@ -531,18 +477,20 @@ function LlmProfileForm(input: {
           onClick={() =>
             input.onSave({
               ...draft,
-              apiKey: draft.apiKey.trim() ? draft.apiKey.trim() : null,
+              modelKey: draft.modelKey.trim(),
+              baseUrl: draft.baseUrl.trim() ? draft.baseUrl.trim() : null,
+              apiKey: draft.apiKey.trim(),
             })
           }
         >
-          {input.profile ? 'Save profile' : 'Create profile'}
+          {profile ? 'Save profile' : 'Create profile'}
         </Button>
-        {input.profile ? (
+        {profile ? (
           <Button
             type="button"
             variant="secondary"
-            disabled={input.deletingProfileId === input.profile.profileId}
-            onClick={() => input.onDelete(input.profile!.profileId)}
+            disabled={input.deletingProfileId === profile.profileId}
+            onClick={() => input.onDelete(profile.profileId)}
           >
             <Trash2 className="h-4 w-4" />
             Delete profile
@@ -1035,16 +983,11 @@ function getGitHubDraft(integration: SystemIntegration | null): GitHubDraft {
   };
 }
 
-function buildLlmProfileDraft(
-  profile: LlmProfile | null,
-  supportedProviders: SystemLlmResponse['supportedProviders'],
-): LlmProfileDraft {
+function buildLlmProfileDraft(profile: LlmProfile | null): LlmProfileDraft {
   if (!profile) {
     return {
-      slug: '',
-      label: '',
-      providerType: supportedProviders[0]?.providerType ?? 'openai-codex',
-      modelId: supportedProviders[0]?.modelIds[0] ?? '',
+      modelKey: '',
+      baseUrl: '',
       apiKey: '',
       contractCostMultiplier: 1,
       isEnabled: true,
@@ -1053,19 +996,14 @@ function buildLlmProfileDraft(
 
   return {
     profileId: profile.profileId,
-    slug: profile.slug,
-    label: profile.label,
-    providerType: profile.providerType,
-    modelId: profile.modelId,
-    apiKey: profile.apiKey ?? '',
+    modelKey: profile.modelKey,
+    baseUrl: profile.baseUrl ?? '',
+    apiKey: profile.apiKey,
     contractCostMultiplier: profile.contractCostMultiplier,
     isEnabled: profile.isEnabled,
   };
 }
 
-function getSupportedModelIds(
-  supportedProviders: SystemLlmResponse['supportedProviders'],
-  providerType: LlmProfileDraft['providerType'],
-) {
-  return supportedProviders.find((provider) => provider.providerType === providerType)?.modelIds ?? [];
+function formatProfileOption(profile: LlmProfile) {
+  return `${profile.profileId} · ${profile.modelKey}`;
 }
