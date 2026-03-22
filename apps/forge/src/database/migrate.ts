@@ -1,11 +1,15 @@
 import { join } from 'node:path';
 
+import { createClient } from '@libsql/client';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+
+import { getAppDatabasePath } from './config';
 
 export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
   try {
     console.log('[Migrations] Running pending migrations for application database...');
+    await repairLegacySchema();
 
     await migrate(db, {
       migrationsFolder: join(process.cwd(), 'migrations'),
@@ -15,5 +19,33 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
   } catch (error) {
     console.error('[Migrations] Failed to run migrations:', error);
     throw error;
+  }
+}
+
+async function repairLegacySchema() {
+  const client = createClient({
+    url: `file:${getAppDatabasePath()}`,
+  });
+
+  try {
+    const tableInfo = await client.execute('PRAGMA table_info("llm_profiles")');
+    const hasEncryptedApiKey = tableInfo.rows.some((row) => row.name === 'encrypted_api_key');
+
+    if (hasEncryptedApiKey) {
+      return;
+    }
+
+    console.log('[Migrations] Repairing legacy llm_profiles schema');
+    await client.execute('ALTER TABLE llm_profiles ADD COLUMN encrypted_api_key text');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message.includes('no such table: llm_profiles')) {
+      return;
+    }
+
+    throw error;
+  } finally {
+    client.close();
   }
 }
