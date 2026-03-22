@@ -1,5 +1,5 @@
 ALTER TABLE `agents` ADD `execution_state` text DEFAULT 'idle' NOT NULL;
-
+--> statement-breakpoint
 CREATE TABLE `agent_execution_contracts` (
   `id` text PRIMARY KEY NOT NULL,
   `agent_id` text NOT NULL,

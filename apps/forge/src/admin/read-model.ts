@@ -16,6 +16,7 @@ import { createCapabilityStore } from '../capabilities/store.js';
 import { forgeCustomToolIds } from '../capabilities/catalog.js';
 import { decryptSecret } from '../encryption/crypto.js';
 import { createAgentNotificationStore } from '../notifications/store.js';
+import { createSystemIntegrationStore } from '../system-integrations/store.js';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -31,6 +32,7 @@ export function createAdminReadModel(input: {
   const finance = createMicroErpReadModel(db);
   const capabilities = createCapabilityStore(db);
   const notifications = createAgentNotificationStore(db);
+  const integrations = createSystemIntegrationStore(db);
 
   async function getDashboard() {
     const [agentRows, balance, summary, activeContracts, cashMovements, functions, roles] =
@@ -287,12 +289,25 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function listSystemIntegrations() {
+    const items = await integrations.listIntegrations();
+
+    return items.map((integration) => ({
+      providerType: integration.providerType,
+      isEnabled: integration.isEnabled,
+      config: integration.config,
+      createdAt: integration.createdAt,
+      updatedAt: integration.updatedAt,
+    }));
+  }
+
   return {
     getDashboard,
     listAgents,
     getAgent,
     listFunctions,
     listRoles,
+    listSystemIntegrations,
   };
 }
 

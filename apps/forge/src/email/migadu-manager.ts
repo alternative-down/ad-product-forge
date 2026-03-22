@@ -7,6 +7,7 @@ import type { Database } from '../database/index.js';
 import { agentProviders } from '../database/schema.js';
 import { decryptSecret } from '../encryption/crypto.js';
 import type { ProviderCredentialsMap } from '../communication/provider-loader.js';
+import type { createSystemIntegrationStore } from '../system-integrations/store.js';
 
 const EMAIL_PROVIDER_TYPE = 'email';
 const MIGADU_API_BASE_URL = 'https://api.migadu.com/v1';
@@ -45,8 +46,7 @@ export type AgentEmailManager = ReturnType<typeof createAgentEmailManager>;
 
 export function createAgentEmailManager(config: {
   db: Database;
-  apiUser: string | null;
-  apiKey: string | null;
+  integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
   async function provisionMailbox(input: { agentId: string; agentName: string }) {
     const localPart = buildMailboxLocalPart(input.agentId);
@@ -66,7 +66,7 @@ export function createAgentEmailManager(config: {
       });
     }
 
-    const providerConfig = getProviderConfig();
+    const providerConfig = await getRequiredProviderConfig();
     const address = `${localPart}@${providerConfig.domain}`;
 
     return {
@@ -87,7 +87,12 @@ export function createAgentEmailManager(config: {
 
   async function deleteMailboxByAddress(address: string) {
     const localPart = getLocalPart(address);
-    const providerConfig = getProviderConfig();
+    const providerConfig = await getOptionalProviderConfig();
+
+    if (!providerConfig) {
+      return;
+    }
+
     const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
       method: 'DELETE',
       headers: buildHeaders(providerConfig),
@@ -113,7 +118,7 @@ export function createAgentEmailManager(config: {
   }
 
   async function getMailbox(localPart: string) {
-    const providerConfig = getProviderConfig();
+    const providerConfig = await getRequiredProviderConfig();
     const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
       headers: buildHeaders(providerConfig),
     });
@@ -130,7 +135,7 @@ export function createAgentEmailManager(config: {
   }
 
   async function createMailbox(input: { localPart: string; name: string; password: string }) {
-    const providerConfig = getProviderConfig();
+    const providerConfig = await getRequiredProviderConfig();
     const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes`), {
       method: 'POST',
       headers: buildHeaders(providerConfig),
@@ -149,7 +154,7 @@ export function createAgentEmailManager(config: {
   }
 
   async function updateMailbox(localPart: string, input: { name: string; password: string }) {
-    const providerConfig = getProviderConfig();
+    const providerConfig = await getRequiredProviderConfig();
     const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
       method: 'PUT',
       headers: buildHeaders(providerConfig),
@@ -166,23 +171,37 @@ export function createAgentEmailManager(config: {
     return migaduMailboxSchema.parse(await response.json());
   }
 
-  function getProviderConfig() {
-    if (!config.apiUser || !config.apiKey) {
-      throw new Error('Migadu email provisioning requires MIGADU_API_USER and MIGADU_API_KEY');
+  async function getOptionalProviderConfig() {
+    const integration = await config.integrations.getMigaduConfig();
+
+    if (!integration) {
+      return null;
     }
 
-    const domain = config.apiUser.split('@')[1];
+    const domain = integration.apiUser.split('@')[1];
 
     if (!domain) {
-      throw new Error(`Cannot derive Migadu domain from API user: ${config.apiUser}`);
+      throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
     }
 
     return {
       apiBaseUrl: MIGADU_API_BASE_URL,
-      apiUser: config.apiUser,
-      apiKey: config.apiKey,
+      apiUser: integration.apiUser,
+      apiKey: integration.apiKey,
       domain,
     };
+  }
+
+  async function getRequiredProviderConfig() {
+    const providerConfig = await getOptionalProviderConfig();
+
+    if (!providerConfig) {
+      throw new Error(
+        'Migadu email provisioning requires a configured admin connection in system integrations',
+      );
+    }
+
+    return providerConfig;
   }
 
   function buildProviderCredentials(address: string, password: string): ProviderCredentialsMap['email'] {

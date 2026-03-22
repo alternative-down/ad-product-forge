@@ -14,6 +14,7 @@ import { createAgentEmailManager } from './email/migadu-manager.js';
 import { createCoolifyManager } from './coolify/manager.js';
 import { createAgentScheduleManager } from './schedules/manager.js';
 import { registerAdminRoutes } from './admin/routes.js';
+import { createSystemIntegrationStore } from './system-integrations/store.js';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -23,11 +24,6 @@ const envSchema = z.object({
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
   GITHUB_ORGANIZATION: z.string().min(1),
   GITHUB_APP_HOME_URL: z.string().url().optional(),
-  MIGADU_API_USER: z.string().email().optional(),
-  MIGADU_API_KEY: z.string().min(1).optional(),
-  COOLIFY_BASE_URL: z.string().url().optional(),
-  COOLIFY_ADMIN_TOKEN: z.string().min(1).optional(),
-  COOLIFY_APPLICATIONS_BASE_DOMAIN: z.string().min(1).optional(),
 });
 
 export async function main() {
@@ -42,35 +38,11 @@ export async function main() {
     port: env.FORGE_HTTP_PORT,
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
-
-  if (
-    (env.MIGADU_API_USER && !env.MIGADU_API_KEY) ||
-    (!env.MIGADU_API_USER && env.MIGADU_API_KEY)
-  ) {
-    throw new Error('Migadu email provisioning requires both MIGADU_API_USER and MIGADU_API_KEY');
-  }
-
-  const hasAnyCoolifyConfig = !!(
-    env.COOLIFY_BASE_URL ||
-    env.COOLIFY_ADMIN_TOKEN ||
-    env.COOLIFY_APPLICATIONS_BASE_DOMAIN
-  );
-  const hasAllCoolifyConfig = !!(
-    env.COOLIFY_BASE_URL &&
-    env.COOLIFY_ADMIN_TOKEN &&
-    env.COOLIFY_APPLICATIONS_BASE_DOMAIN
-  );
-
-  if (hasAnyCoolifyConfig && !hasAllCoolifyConfig) {
-    throw new Error(
-      'Coolify integration requires COOLIFY_BASE_URL, COOLIFY_ADMIN_TOKEN, and COOLIFY_APPLICATIONS_BASE_DOMAIN',
-    );
-  }
+  const integrations = createSystemIntegrationStore(db);
 
   const emailMailboxes = createAgentEmailManager({
     db,
-    apiUser: env.MIGADU_API_USER ?? null,
-    apiKey: env.MIGADU_API_KEY ?? null,
+    integrations,
   });
   const schedules = createAgentScheduleManager({
     db,
@@ -100,13 +72,9 @@ export async function main() {
       entry.runner.notifyExternalEvent();
     },
   });
-  const coolify = hasAllCoolifyConfig
-    ? createCoolifyManager({
-        baseUrl: env.COOLIFY_BASE_URL!,
-        adminToken: env.COOLIFY_ADMIN_TOKEN!,
-        applicationsBaseDomain: env.COOLIFY_APPLICATIONS_BASE_DOMAIN!,
-      })
-    : null;
+  const coolify = createCoolifyManager({
+    integrations,
+  });
   const workflows = createInternalAgentWorkflows({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
@@ -131,6 +99,7 @@ export async function main() {
     githubApps,
     emailMailboxes,
     coolify,
+    integrations,
   });
   const agents = await registry.loadAll(db, loaderConfig);
   await githubApps.loadAllAgents();

@@ -9,7 +9,7 @@ Current application environment is defined primarily in [main.ts](/home/nicolas/
 ### Always required
 
 - `ENCRYPTION_KEY`
-  - base64-encoded 32-byte AES-256-GCM key used to encrypt and decrypt `agent_providers.encryptedCredentials`
+  - base64-encoded 32-byte AES-256-GCM key used to encrypt and decrypt sensitive provider credentials and global integration configs
 
 - `GITHUB_ORGANIZATION`
   - organization name used by the GitHub App manager
@@ -36,21 +36,22 @@ Current application environment is defined primarily in [main.ts](/home/nicolas/
 - `GITHUB_APP_HOME_URL`
   - defaults to the public base URL
 
-### Optional, but required in pairs or groups when that integration is enabled
+## Current system integration model
 
-- Migadu provisioning
-  - `MIGADU_API_USER`
-  - `MIGADU_API_KEY`
+Global provider integrations are no longer configured from Forge environment variables.
 
-- Coolify integration
-  - `COOLIFY_BASE_URL`
-  - `COOLIFY_ADMIN_TOKEN`
-  - `COOLIFY_APPLICATIONS_BASE_DOMAIN`
+Current global integrations are stored in the application database:
 
-Current runtime rule:
+- `migadu`
+- `coolify`
 
-- if only part of the Migadu pair is provided, startup fails
-- if only part of the Coolify config is provided, startup fails
+These configs are:
+
+- created and updated through the admin console
+- stored encrypted in `system_integrations.encrypted_config`
+- loaded by the runtime at use time instead of only at boot
+
+This keeps Forge environment variables focused on application bootstrap, not operational provider setup.
 
 ## HTTP server
 
@@ -90,6 +91,7 @@ Read surface:
 - `GET /admin/agent?agentId=...`
 - `GET /admin/functions`
 - `GET /admin/roles`
+- `GET /admin/system/integrations`
 
 Mutation surface:
 
@@ -106,6 +108,8 @@ Mutation surface:
 - `POST /admin/agent-schedule/delete`
 - `POST /admin/role-tool-permission/add`
 - `POST /admin/role-tool-permission/remove`
+- `POST /admin/system/integration/upsert`
+- `POST /admin/system/integration/delete`
 
 These routes are for the human admin UI, not for agent-facing work.
 

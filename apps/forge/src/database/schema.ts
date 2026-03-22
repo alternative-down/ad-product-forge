@@ -239,6 +239,35 @@ export const companyCashLedger = sqliteTable('company_cash_ledger', {
 }));
 
 export type CompanyCashLedgerEntry = typeof companyCashLedger.$inferSelect;
+
+const _MigaduSystemIntegrationConfigSchema = z.object({
+  apiUser: z.string().email(),
+  apiKey: z.string().min(1),
+});
+
+const _CoolifySystemIntegrationConfigSchema = z.object({
+  baseUrl: z.string().url(),
+  adminToken: z.string().min(1),
+  applicationsBaseDomain: z.string().min(1),
+});
+
+export type MigaduSystemIntegrationConfig = z.infer<typeof _MigaduSystemIntegrationConfigSchema>;
+export type CoolifySystemIntegrationConfig = z.infer<typeof _CoolifySystemIntegrationConfigSchema>;
+export type SystemIntegrationConfigMap = {
+  migadu: MigaduSystemIntegrationConfig;
+  coolify: CoolifySystemIntegrationConfig;
+};
+
+export const systemIntegrations = sqliteTable('system_integrations', {
+  providerType: text('provider_type').primaryKey().$type<keyof SystemIntegrationConfigMap>(),
+  encryptedConfig: text('encrypted_config').notNull(),
+  isEnabled: integer('is_enabled').notNull().default(1),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type SystemIntegration = typeof systemIntegrations.$inferSelect;
+export type NewSystemIntegration = typeof systemIntegrations.$inferInsert;
 export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
 
 /**
