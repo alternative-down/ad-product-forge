@@ -42,7 +42,7 @@ INSERT INTO `__new_llm_profiles` (
 )
 SELECT
   `__llm_profile_id_map`.`new_id`,
-  `llm_profiles`.`name`,
+  `llm_profiles`.`id`,
   `llm_profiles`.`model_key`,
   `llm_profiles`.`base_url`,
   coalesce(`llm_profiles`.`encrypted_api_key`, ''),
