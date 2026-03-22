@@ -5,6 +5,7 @@ import type { Tool } from '@mastra/core/tools';
 import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { createClient } from '@libsql/client';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   createCommunicationModule,
@@ -111,6 +112,10 @@ export async function createInternalAgentRuntime<
   const sandboxWorkingDirectory = config.workspaceSandbox?.workingDirectory
     ? path.resolve(agentWorkspacePath, config.workspaceSandbox.workingDirectory)
     : agentWorkspaceDir;
+
+  await fs.mkdir(agentWorkspacePath, {
+    recursive: true,
+  });
 
   const dbUrl = `file:${agentDatabasePath}`;
   const client = createClient({ url: dbUrl });
