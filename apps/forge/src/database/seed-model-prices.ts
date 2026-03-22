@@ -47,7 +47,7 @@ const MODEL_PRICES = [
     outputPerMillionUsd: 5,
   },
   {
-    modelKey: 'minimax/MiniMax-M2.7',
+    modelKey: 'minimax-coding-plan/MiniMax-M2.7',
     inputPerMillionUsd: 0.3,
     inputCachePerMillionUsd: 0.06,
     outputPerMillionUsd: 1.2,

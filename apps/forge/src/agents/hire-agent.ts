@@ -46,16 +46,14 @@ export type HireInternalAgentInput = {
 
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
   const agentId = input.agentId ?? createId();
-
-  if (!input.emailMailboxes) {
-    throw new Error('Migadu email provisioning is required for hiring but is not configured');
-  }
-
   const now = Date.now();
-  const provisionedMailbox = await input.emailMailboxes.provisionMailbox({
-    agentId,
-    agentName: input.name,
-  });
+  const shouldProvisionEmail = input.emailMailboxes ? await input.emailMailboxes.isConfigured() : false;
+  const provisionedMailbox = shouldProvisionEmail
+    ? await input.emailMailboxes!.provisionMailbox({
+        agentId,
+        agentName: input.name,
+      })
+    : null;
   const providerCredentials: ProviderCredentialsMap = {
     'internal-chat': {
       agentId,
@@ -63,7 +61,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       description: input.functionDescription,
     },
     ...input.providerCredentials,
-    email: provisionedMailbox.credentials,
+    ...(provisionedMailbox ? { email: provisionedMailbox.credentials } : {}),
   };
   const agentRecord: NewAgent = {
     id: agentId,
@@ -127,12 +125,16 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
 
     return {
       agentId,
-      emailAddress: provisionedMailbox.address,
+      emailAddress: provisionedMailbox?.address ?? null,
     };
   } catch (error) {
     getInternalAgentRegistry().remove(agentId);
     await db.delete(agents).where(eq(agents.id, agentId));
-    await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
+
+    if (provisionedMailbox && input.emailMailboxes) {
+      await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
+    }
+
     throw error;
   }
 }

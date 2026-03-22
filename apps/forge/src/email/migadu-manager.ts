@@ -48,6 +48,10 @@ export function createAgentEmailManager(config: {
   db: Database;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
+  async function isConfigured() {
+    return Boolean(await getOptionalProviderConfig());
+  }
+
   async function provisionMailbox(input: { agentId: string; agentName: string }) {
     const localPart = buildMailboxLocalPart(input.agentId);
     const password = createMailboxPassword();
@@ -236,6 +240,7 @@ export function createAgentEmailManager(config: {
   }
 
   return {
+    isConfigured,
     provisionMailbox,
     deleteAgentMailbox,
     deleteMailboxByAddress,
