@@ -99,6 +99,18 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function deleteFunction(functionId: string) {
+    const assignedAgent = await db.query.agents.findFirst({
+      where: eq(agents.functionId, functionId),
+      columns: {
+        id: true,
+      },
+    });
+
+    if (assignedAgent) {
+      throw new Error(`Cannot delete function with assigned agents: ${functionId}`);
+    }
+
+    await db.delete(functionRoles).where(eq(functionRoles.functionId, functionId));
     await db.delete(agentFunctions).where(eq(agentFunctions.id, functionId));
 
     return {
@@ -168,6 +180,19 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function deleteRole(roleId: string) {
+    const linkedFunction = await db.query.functionRoles.findFirst({
+      where: eq(functionRoles.roleId, roleId),
+      columns: {
+        functionId: true,
+      },
+    });
+
+    if (linkedFunction) {
+      throw new Error(`Cannot delete role with assigned functions: ${roleId}`);
+    }
+
+    await db.delete(roleToolPermissions).where(eq(roleToolPermissions.roleId, roleId));
+    await db.delete(roleWorkflowPermissions).where(eq(roleWorkflowPermissions.roleId, roleId));
     await db.delete(agentRoles).where(eq(agentRoles.id, roleId));
 
     return {
@@ -197,6 +222,15 @@ export function createCapabilityStore(db: Database) {
     return {
       functionId: input.functionId,
       roleId: input.roleId,
+    };
+  }
+
+  async function clearRoleFromFunction(functionId: string) {
+    await db.delete(functionRoles).where(eq(functionRoles.functionId, functionId));
+
+    return {
+      functionId,
+      roleId: null,
     };
   }
 
@@ -320,6 +354,7 @@ export function createCapabilityStore(db: Database) {
     updateRole,
     deleteRole,
     assignRoleToFunction,
+    clearRoleFromFunction,
     listRoleToolPermissions,
     addRoleToolPermission,
     removeRoleToolPermission,

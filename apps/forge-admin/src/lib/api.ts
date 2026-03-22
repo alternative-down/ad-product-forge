@@ -223,6 +223,7 @@ export type HireAgentResult = {
 
 export type RoleListResponse = {
   availableToolIds: string[];
+  availableWorkflowIds: string[];
   items: Array<{
     roleId: string;
     name: string;
@@ -395,6 +396,28 @@ export type UpsertLlmModelPriceInput = {
   inputPerMillionUsd: number;
   inputCachePerMillionUsd: number;
   outputPerMillionUsd: number;
+};
+
+export type CreateRoleInput = {
+  name: string;
+  description?: string;
+};
+
+export type UpdateRoleInput = {
+  roleId: string;
+  name?: string;
+  description?: string | null;
+};
+
+export type CreateFunctionInput = {
+  name: string;
+  description?: string;
+};
+
+export type UpdateFunctionInput = {
+  functionId: string;
+  name?: string;
+  description?: string | null;
 };
 
 export type CreateInvestmentInput = {
@@ -667,6 +690,75 @@ export function removeRoleToolPermission(roleId: string, toolId: string) {
       body: JSON.stringify({ roleId, toolId }),
     },
   );
+}
+
+export function addRoleWorkflowPermission(roleId: string, workflowId: string) {
+  return request<{ roleId: string; workflowId: string }>(
+    '/admin/role-workflow-permission/add',
+    {
+      method: 'POST',
+      body: JSON.stringify({ roleId, workflowId }),
+    },
+  );
+}
+
+export function removeRoleWorkflowPermission(roleId: string, workflowId: string) {
+  return request<{ roleId: string; workflowId: string }>(
+    '/admin/role-workflow-permission/remove',
+    {
+      method: 'POST',
+      body: JSON.stringify({ roleId, workflowId }),
+    },
+  );
+}
+
+export function createRole(input: CreateRoleInput) {
+  return request<{ roleId: string; name: string; description?: string }>('/admin/role/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateRole(input: UpdateRoleInput) {
+  return request<{ roleId: string; name: string; description?: string }>('/admin/role/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteRole(roleId: string) {
+  return request<{ roleId: string; success: true }>('/admin/role/delete', {
+    method: 'POST',
+    body: JSON.stringify({ roleId }),
+  });
+}
+
+export function createFunction(input: CreateFunctionInput) {
+  return request<{ functionId: string; name: string; description?: string }>('/admin/function/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateFunction(input: UpdateFunctionInput) {
+  return request<{ functionId: string; name: string; description?: string }>('/admin/function/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteFunction(functionId: string) {
+  return request<{ functionId: string; success: true }>('/admin/function/delete', {
+    method: 'POST',
+    body: JSON.stringify({ functionId }),
+  });
+}
+
+export function assignRoleToFunction(functionId: string, roleId: string | null) {
+  return request<{ functionId: string; roleId: string | null }>('/admin/function-role/assign', {
+    method: 'POST',
+    body: JSON.stringify({ functionId, roleId }),
+  });
 }
 
 export function upsertSystemIntegration(input: UpsertSystemIntegrationInput) {
