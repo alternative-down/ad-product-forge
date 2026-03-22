@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import { z } from 'zod';
@@ -25,7 +24,9 @@ const storeSchema = z.object({
 
 export function createOAuthStore() {
   function getDefaultPath() {
-    return path.join(os.homedir(), '.mastra-engine', 'oauth.json');
+    const dataPath = process.env.FORGE_DATA_PATH ?? './data';
+    const resolvedDataPath = path.resolve(process.cwd(), dataPath);
+    return path.join(resolvedDataPath, 'auth', 'oauth.json');
   }
 
   function readJsonFile(filePath: string) {

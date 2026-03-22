@@ -81,6 +81,10 @@ export function createMicroErpReadModel(db: Database) {
         createdAt: row.createdAt,
       })),
       total: countRows[0]?.total ?? 0,
+      summary: await getCompanyCashSummary({
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+      }),
     };
   }
 

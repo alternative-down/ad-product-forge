@@ -2,17 +2,13 @@ import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
-import { forgeCustomToolIds, forgeWorkflowIds } from './catalog';
+import { forgeCustomToolIds, forgeWorkflowIds, hasToolPermission } from './catalog';
 import { createCapabilityStore } from './store';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 import { changeAgentFunction, reloadAgentsForFunction, reloadAgentsForRole } from './runtime';
 
 const toolIdSchema = z.enum(forgeCustomToolIds);
 const workflowIdSchema = z.enum(forgeWorkflowIds);
-
-function canCreateTool(allowedToolIds: Set<string> | null | undefined, toolId: string) {
-  return !allowedToolIds || allowedToolIds.has(toolId);
-}
 
 export function createCapabilityTools(
   db: Database,
@@ -23,7 +19,7 @@ export function createCapabilityTools(
   const capabilities = createCapabilityStore(db);
   const tools: Record<string, unknown> = {};
 
-  if (canCreateTool(allowedToolIds, 'list_agent_functions')) {
+  if (hasToolPermission(allowedToolIds, 'list_agent_functions')) {
     tools.list_agent_functions = createTool({
       id: 'list_agent_functions',
       description: 'List the internal agent functions.',
@@ -32,34 +28,54 @@ export function createCapabilityTools(
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'create_agent_function')) {
-    tools.create_agent_function = createTool({
-      id: 'create_agent_function',
-      description: 'Create one internal agent function.',
+  if (hasToolPermission(allowedToolIds, 'manage_agent_function')) {
+    tools.manage_agent_function = createTool({
+      id: 'manage_agent_function',
+      description: 'Create, update, or delete one internal agent function.',
       inputSchema: z.object({
-        name: z.string().min(1),
-        description: z.string().optional(),
-      }),
-      execute: async (input) => capabilities.createFunction(input),
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'update_agent_function')) {
-    tools.update_agent_function = createTool({
-      id: 'update_agent_function',
-      description: 'Partially update one internal agent function.',
-      inputSchema: z.object({
-        functionId: z.string().min(1),
+        action: z.enum(['create', 'update', 'delete']),
+        functionId: z.string().min(1).optional(),
         name: z.string().min(1).optional(),
         description: z.string().optional().nullable(),
-      }).refine((input) => Object.keys(input).length > 1, {
-        message: 'At least one field besides functionId must be provided',
+      }).superRefine((input, ctx) => {
+        if (input.action === 'create' && !input.name) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'name is required when action is create' });
+        }
+
+        if ((input.action === 'update' || input.action === 'delete') && !input.functionId) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['functionId'], message: 'functionId is required when action is not create' });
+        }
+
+        if (input.action === 'update' && Object.keys(input).length <= 2) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides action and functionId must be provided' });
+        }
       }),
-      execute: async ({ functionId, ...input }) => capabilities.updateFunction({ functionId, ...input }),
+      execute: async (input) => {
+        if (input.action === 'create') {
+          return capabilities.createFunction({
+            name: input.name!,
+            description: input.description ?? undefined,
+          });
+        }
+
+        if (input.action === 'delete') {
+          const result = await capabilities.deleteFunction(input.functionId!);
+          await reloadAgentsForFunction(db, loaderConfig, input.functionId!);
+          return result;
+        }
+
+        const result = await capabilities.updateFunction({
+          functionId: input.functionId!,
+          name: input.name,
+          description: input.description,
+        });
+        await reloadAgentsForFunction(db, loaderConfig, input.functionId!);
+        return result;
+      },
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'list_agent_roles')) {
+  if (hasToolPermission(allowedToolIds, 'list_agent_roles')) {
     tools.list_agent_roles = createTool({
       id: 'list_agent_roles',
       description: 'List the internal agent roles.',
@@ -68,34 +84,54 @@ export function createCapabilityTools(
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'create_agent_role')) {
-    tools.create_agent_role = createTool({
-      id: 'create_agent_role',
-      description: 'Create one internal agent role.',
+  if (hasToolPermission(allowedToolIds, 'manage_agent_role')) {
+    tools.manage_agent_role = createTool({
+      id: 'manage_agent_role',
+      description: 'Create, update, or delete one internal agent role.',
       inputSchema: z.object({
-        name: z.string().min(1),
-        description: z.string().optional(),
-      }),
-      execute: async (input) => capabilities.createRole(input),
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'update_agent_role')) {
-    tools.update_agent_role = createTool({
-      id: 'update_agent_role',
-      description: 'Partially update one internal agent role.',
-      inputSchema: z.object({
-        roleId: z.string().min(1),
+        action: z.enum(['create', 'update', 'delete']),
+        roleId: z.string().min(1).optional(),
         name: z.string().min(1).optional(),
         description: z.string().optional().nullable(),
-      }).refine((input) => Object.keys(input).length > 1, {
-        message: 'At least one field besides roleId must be provided',
+      }).superRefine((input, ctx) => {
+        if (input.action === 'create' && !input.name) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'name is required when action is create' });
+        }
+
+        if ((input.action === 'update' || input.action === 'delete') && !input.roleId) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['roleId'], message: 'roleId is required when action is not create' });
+        }
+
+        if (input.action === 'update' && Object.keys(input).length <= 2) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides action and roleId must be provided' });
+        }
       }),
-      execute: async ({ roleId, ...input }) => capabilities.updateRole({ roleId, ...input }),
+      execute: async (input) => {
+        if (input.action === 'create') {
+          return capabilities.createRole({
+            name: input.name!,
+            description: input.description ?? undefined,
+          });
+        }
+
+        if (input.action === 'delete') {
+          const result = await capabilities.deleteRole(input.roleId!);
+          await reloadAgentsForRole(db, loaderConfig, input.roleId!);
+          return result;
+        }
+
+        const result = await capabilities.updateRole({
+          roleId: input.roleId!,
+          name: input.name,
+          description: input.description,
+        });
+        await reloadAgentsForRole(db, loaderConfig, input.roleId!);
+        return result;
+      },
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'assign_role_to_function')) {
+  if (hasToolPermission(allowedToolIds, 'assign_role_to_function')) {
     tools.assign_role_to_function = createTool({
       id: 'assign_role_to_function',
       description: 'Assign one role to one function.',
@@ -111,7 +147,7 @@ export function createCapabilityTools(
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'change_agent_function')) {
+  if (hasToolPermission(allowedToolIds, 'change_agent_function')) {
     tools.change_agent_function = createTool({
       id: 'change_agent_function',
       description: 'Change the function of another agent. This creates a notification for the target agent and wakes it.',
@@ -119,38 +155,34 @@ export function createCapabilityTools(
         agentId: z.string().min(1),
         functionId: z.string().min(1),
       }),
-      execute: async (input) => {
-        return changeAgentFunction({
-          db,
-          loaderConfig,
-          actorAgentId: currentAgentId,
-          targetAgentId: input.agentId,
-          functionId: input.functionId,
-        });
-      },
+      execute: async (input) => changeAgentFunction({
+        db,
+        loaderConfig,
+        actorAgentId: currentAgentId,
+        targetAgentId: input.agentId,
+        functionId: input.functionId,
+      }),
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'change_own_function')) {
+  if (hasToolPermission(allowedToolIds, 'change_own_function')) {
     tools.change_own_function = createTool({
       id: 'change_own_function',
       description: 'Change your own function. This creates a notification and wakes you with the new function context.',
       inputSchema: z.object({
         functionId: z.string().min(1),
       }),
-      execute: async (input) => {
-        return changeAgentFunction({
-          db,
-          loaderConfig,
-          actorAgentId: currentAgentId,
-          targetAgentId: currentAgentId,
-          functionId: input.functionId,
-        });
-      },
+      execute: async (input) => changeAgentFunction({
+        db,
+        loaderConfig,
+        actorAgentId: currentAgentId,
+        targetAgentId: currentAgentId,
+        functionId: input.functionId,
+      }),
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'list_role_tool_permissions')) {
+  if (hasToolPermission(allowedToolIds, 'list_role_tool_permissions')) {
     tools.list_role_tool_permissions = createTool({
       id: 'list_role_tool_permissions',
       description: 'List allowed custom tool ids for one role.',
@@ -161,39 +193,26 @@ export function createCapabilityTools(
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'add_role_tool_permission')) {
-    tools.add_role_tool_permission = createTool({
-      id: 'add_role_tool_permission',
-      description: 'Grant one custom tool id to one role.',
+  if (hasToolPermission(allowedToolIds, 'manage_role_tool_permissions')) {
+    tools.manage_role_tool_permissions = createTool({
+      id: 'manage_role_tool_permissions',
+      description: 'Grant or remove one custom tool id for one role.',
       inputSchema: z.object({
+        action: z.enum(['add', 'remove']),
         roleId: z.string().min(1),
         toolId: toolIdSchema,
       }),
       execute: async (input) => {
-        const result = await capabilities.addRoleToolPermission(input);
+        const result = input.action === 'add'
+          ? await capabilities.addRoleToolPermission({ roleId: input.roleId, toolId: input.toolId })
+          : await capabilities.removeRoleToolPermission({ roleId: input.roleId, toolId: input.toolId });
         await reloadAgentsForRole(db, loaderConfig, input.roleId);
         return result;
       },
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'remove_role_tool_permission')) {
-    tools.remove_role_tool_permission = createTool({
-      id: 'remove_role_tool_permission',
-      description: 'Remove one custom tool id from one role.',
-      inputSchema: z.object({
-        roleId: z.string().min(1),
-        toolId: toolIdSchema,
-      }),
-      execute: async (input) => {
-        const result = await capabilities.removeRoleToolPermission(input);
-        await reloadAgentsForRole(db, loaderConfig, input.roleId);
-        return result;
-      },
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'list_role_workflow_permissions')) {
+  if (hasToolPermission(allowedToolIds, 'list_role_workflow_permissions')) {
     tools.list_role_workflow_permissions = createTool({
       id: 'list_role_workflow_permissions',
       description: 'List allowed workflow ids for one role.',
@@ -204,53 +223,34 @@ export function createCapabilityTools(
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'add_role_workflow_permission')) {
-    tools.add_role_workflow_permission = createTool({
-      id: 'add_role_workflow_permission',
-      description: 'Grant one workflow id to one role.',
+  if (hasToolPermission(allowedToolIds, 'manage_role_workflow_permissions')) {
+    tools.manage_role_workflow_permissions = createTool({
+      id: 'manage_role_workflow_permissions',
+      description: 'Grant or remove one workflow id for one role.',
       inputSchema: z.object({
+        action: z.enum(['add', 'remove']),
         roleId: z.string().min(1),
         workflowId: workflowIdSchema,
       }),
       execute: async (input) => {
-        const result = await capabilities.addRoleWorkflowPermission(input);
+        const result = input.action === 'add'
+          ? await capabilities.addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId })
+          : await capabilities.removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId });
         await reloadAgentsForRole(db, loaderConfig, input.roleId);
         return result;
       },
     });
   }
 
-  if (canCreateTool(allowedToolIds, 'remove_role_workflow_permission')) {
-    tools.remove_role_workflow_permission = createTool({
-      id: 'remove_role_workflow_permission',
-      description: 'Remove one workflow id from one role.',
-      inputSchema: z.object({
-        roleId: z.string().min(1),
-        workflowId: workflowIdSchema,
+  if (hasToolPermission(allowedToolIds, 'list_available_capabilities')) {
+    tools.list_available_capabilities = createTool({
+      id: 'list_available_capabilities',
+      description: 'List all custom tool ids and workflow ids available for permission management.',
+      inputSchema: z.object({}),
+      execute: async () => ({
+        toolIds: forgeCustomToolIds,
+        workflowIds: forgeWorkflowIds,
       }),
-      execute: async (input) => {
-        const result = await capabilities.removeRoleWorkflowPermission(input);
-        await reloadAgentsForRole(db, loaderConfig, input.roleId);
-        return result;
-      },
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'list_available_custom_tools')) {
-    tools.list_available_custom_tools = createTool({
-      id: 'list_available_custom_tools',
-      description: 'List all custom tool ids available for permission management.',
-      inputSchema: z.object({}),
-      execute: async () => forgeCustomToolIds,
-    });
-  }
-
-  if (canCreateTool(allowedToolIds, 'list_available_workflows')) {
-    tools.list_available_workflows = createTool({
-      id: 'list_available_workflows',
-      description: 'List all workflow ids available for permission management.',
-      inputSchema: z.object({}),
-      execute: async () => forgeWorkflowIds,
     });
   }
 

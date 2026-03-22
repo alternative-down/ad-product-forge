@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { z } from 'zod';
 
@@ -14,6 +16,13 @@ export async function resolveAnthropicCredential(options?: {
 }): Promise<OAuthCredential> {
   const storePath = options?.storePath ?? oauthStore.getDefaultPath();
   const stored = oauthStore.read(storePath).anthropic;
+  const claudeCliAuthSchema = z.object({
+    claudeAiOauth: z.object({
+      accessToken: z.string(),
+      refreshToken: z.string().optional(),
+      expiresAt: z.number().optional(),
+    }),
+  });
 
   function readSetupToken() {
     const filePath = options?.setupTokenFilePath ?? '/tmp/claude_oauth_token';
@@ -24,6 +33,17 @@ export async function resolveAnthropicCredential(options?: {
     }
 
     return { access } satisfies OAuthCredential;
+  }
+
+  function readClaudeCliCredential() {
+    const filePath = options?.authFilePath ?? path.join(os.homedir(), '.claude', '.credentials.json');
+    const payload = claudeCliAuthSchema.parse(oauthStore.readJsonFile(filePath));
+
+    return {
+      access: payload.claudeAiOauth.accessToken,
+      refresh: payload.claudeAiOauth.refreshToken,
+      expires: payload.claudeAiOauth.expiresAt,
+    } satisfies OAuthCredential;
   }
 
   async function refresh(credential: OAuthCredential) {
@@ -89,5 +109,18 @@ export async function resolveAnthropicCredential(options?: {
     return credential;
   }
 
-  return readSetupToken();
+  try {
+    let credential = readClaudeCliCredential();
+
+    if (credential.refresh && oauthStore.isExpired(credential)) {
+      credential = await refresh(credential);
+    }
+
+    oauthStore.write('anthropic', credential, storePath);
+    return credential;
+  } catch {
+    const credential = readSetupToken();
+    oauthStore.write('anthropic', credential, storePath);
+    return credential;
+  }
 }
