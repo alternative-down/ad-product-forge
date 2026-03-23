@@ -200,20 +200,17 @@ export function createCoolifyManager(config: {
     const deploymentContext = await loadDefaultDeploymentContext();
     const domain = await buildApplicationDomain(input.slug, deploymentContext.serverUuid);
     
-    // Get the GitHub App ID from the UUID (source_id is numeric, not UUID)
-    const githubAppId = await getGithubAppId(input.githubAppUuid);
-    
     const payload: Record<string, unknown> = {
       project_uuid: deploymentContext.projectUuid,
       environment_name: deploymentContext.environmentName,
       environment_uuid: deploymentContext.environmentUuid,
       server_uuid: deploymentContext.serverUuid,
-      // Use source_id format (numeric GitHub App ID)
-      source_id: githubAppId,
+      github_app_uuid: input.githubAppUuid,
       git_repository: `${input.repositoryOwner}/${input.repositoryName}`,
       git_branch: input.branch,
       name: input.name,
       ports_exposes: String(input.port),
+      build_pack: 'nixpacks', // Use nixpacks for Next.js
       build_command: input.buildCommand,
       start_command: input.startCommand,
       install_command: input.installCommand,
