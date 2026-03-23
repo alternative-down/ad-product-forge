@@ -1271,13 +1271,16 @@ function AgentInboxCard(input: {
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <div className="font-medium text-slate-950">
-                  {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? 'Conversation'}
-                </div>
+                <div className="font-medium text-slate-950">{conversation.conversationKey}</div>
                 <Badge>{conversation.provider}</Badge>
               </div>
-              <div className="mt-1 text-xs text-slate-500">
-                Updated at {formatDateTimeText(conversation.updatedAt)}
+              <div className="mt-1 space-y-1 text-xs text-slate-500">
+                <div>
+                  Updated at {formatDateTimeText(conversation.updatedAt)}
+                </div>
+                <div>
+                  {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? 'Conversation'}
+                </div>
               </div>
               <div className="mt-4 space-y-3">
                 {conversation.messages.map((message) => (

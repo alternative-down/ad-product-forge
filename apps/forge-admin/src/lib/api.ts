@@ -193,6 +193,7 @@ export type AgentDetail = {
   }>;
   recentConversations: Array<{
     conversationId: string;
+    conversationKey: string;
     provider: string;
     name?: string;
     contactSlug?: string;
