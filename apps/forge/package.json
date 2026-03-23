@@ -22,6 +22,7 @@
     "discord.js": "^14.24.2",
     "dotenv": "^17.2.3",
     "imapflow": "^1.2.16",
+    "nanoid": "^3.3.11",
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.3",
     "octokit": "^5.0.3",

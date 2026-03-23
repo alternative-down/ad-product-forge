@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 import { createId } from '@paralleldrive/cuid2';
+import { nanoid } from 'nanoid';
 import { createAppAuth } from '@octokit/auth-app';
 import { App, Octokit } from 'octokit';
 import { and, eq } from 'drizzle-orm';
@@ -17,6 +18,8 @@ import { githubAppCredentialsSchema, type GitHubAppCredentials } from './types';
 const GITHUB_PROVIDER_TYPE = 'github-app';
 const INSTALLATION_READY_ATTEMPTS = 10;
 const INSTALLATION_READY_DELAY_MS = 1500;
+const GITHUB_APP_NAME_SUFFIX_LENGTH = 6;
+const GITHUB_APP_NAME_MAX_LENGTH = 32;
 const manifestConversionSchema = z.object({
   id: z.number().int(),
   pem: z.string(),
@@ -974,7 +977,9 @@ export function createGitHubAppManager(config: {
         contents: 'write',
         issues: 'write',
         metadata: 'read',
+        organization_projects: 'write',
         pull_requests: 'write',
+        repository_projects: 'write',
       },
       default_events: [
         'push',
@@ -1392,7 +1397,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function createAppName(agentName: string, agentId: string) {
-  return `${agentName} (${agentId})`;
+  const suffix = nanoid(GITHUB_APP_NAME_SUFFIX_LENGTH).toLowerCase();
+  const fallbackBaseName = `agent-${agentId.slice(0, 8)}`;
+  const normalizedBaseName = agentName
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || fallbackBaseName;
+  const maxBaseLength = GITHUB_APP_NAME_MAX_LENGTH - suffix.length - 1;
+  const baseName = normalizedBaseName.slice(0, maxBaseLength).replace(/-+$/g, '') || fallbackBaseName;
+
+  return `${baseName}-${suffix}`;
 }
 
 function getRegisterPath(agentId: string) {
