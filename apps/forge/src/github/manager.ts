@@ -1077,17 +1077,15 @@ export function createGitHubAppManager(config: {
       return html(400, '<h1>Invalid installation_id</h1>');
     }
 
-    const octokit = await createInstallationOctokit({
-      ...credentials,
-      status: 'active',
-      installationId,
-    });
+    const app = createGitHubApp(credentials);
     let installationReady = false;
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= INSTALLATION_READY_ATTEMPTS; attempt += 1) {
       try {
-        await octokit.request('GET /installation');
+        await app.octokit.request('GET /app/installations/{installation_id}', {
+          installation_id: installationId,
+        });
         installationReady = true;
         break;
       } catch (error) {
