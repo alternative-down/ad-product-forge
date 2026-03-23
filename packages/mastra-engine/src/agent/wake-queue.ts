@@ -59,7 +59,9 @@ export function createAgentWakeQueue(config: {
     try {
       if (isAgentRunning) {
         waitingForIdle = true;
-        console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} is still running, keeping wake pending`);
+        console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} is still running, scheduling retry`);
+        // Reagendar para verificar novamente após o agente terminar
+        scheduleTrigger(WAKE_DEBOUNCE_MS);
         return;
       }
 
