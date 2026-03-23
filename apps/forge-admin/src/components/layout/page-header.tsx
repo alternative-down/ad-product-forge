@@ -12,14 +12,14 @@ export function PageHeader(input: {
   return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-[2rem] border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-6 py-6 shadow-[0_20px_80px_rgba(15,23,42,0.08)] sm:px-8',
+        'relative overflow-hidden rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-6 py-6 shadow-[0_20px_80px_rgba(15,23,42,0.08)] sm:px-8',
         input.className,
       )}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--accent)] to-transparent opacity-60" />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)] xl:items-end">
         <div className="space-y-3">
-          <span className="inline-flex items-center rounded-full border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted-strong)]">
+          <span className="inline-flex items-center rounded-md border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted-strong)]">
             {input.eyebrow}
           </span>
           <div className="space-y-2">
@@ -46,7 +46,7 @@ export function MetricStrip(input: {
       {input.items.map((item) => (
         <div
           key={item.label}
-          className="rounded-[1.5rem] border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4"
+          className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4"
         >
           <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-strong)]">
             {item.label}

@@ -177,7 +177,7 @@ export function SystemPage() {
         title="Global runtime wiring"
         description="This surface controls shared company context, model defaults, provider integrations, OAuth sync, and migration visibility. It should feel like infrastructure, not an assorted form dump."
         aside={
-          <div className="rounded-[1.5rem] border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-5 py-4">
+          <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-5 py-4">
             <div className="flex items-center gap-3 text-[color:var(--muted-strong)]">
               <Cable className="h-4 w-4" />
               <span className="text-[11px] font-semibold uppercase tracking-[0.24em]">
@@ -565,7 +565,7 @@ function LlmPricingCard(input: {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
           <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered prices</h4>
           <div className="mt-4 space-y-3">
             {input.prices.map((price) => (
@@ -740,7 +740,7 @@ function LlmProfileEditorCard(input: {
           />
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
           <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered profiles</h4>
           <div className="mt-4 space-y-3">
             {input.profiles.map((profile) => (
@@ -751,7 +751,7 @@ function LlmProfileEditorCard(input: {
                     <p className="mt-1 text-xs text-slate-500">{profile.profileId}</p>
                     <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                     {profile.isEnabled ? 'enabled' : 'disabled'}
                   </span>
                 </div>
@@ -1174,13 +1174,13 @@ function OauthSyncCard(input: {
         <Cable className="h-5 w-5 text-slate-500" />
       </div>
 
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
         Persistent store: <span className="font-mono text-slate-900">{input.state.storePath}</span>
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {input.state.providers.map((provider) => (
-          <div key={provider.providerId} className="rounded-2xl border border-slate-200 p-4">
+          <div key={provider.providerId} className="rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-slate-950">{provider.providerId}</h4>
@@ -1227,7 +1227,7 @@ function OauthSyncCard(input: {
       {input.error ? <p className="mt-4 text-sm text-rose-600">{input.error}</p> : null}
 
       {input.result ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+        <div className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
           <div className="font-medium text-slate-900">Last sync result</div>
           <ul className="mt-2 space-y-1">
             {input.result.results.map((result) => (

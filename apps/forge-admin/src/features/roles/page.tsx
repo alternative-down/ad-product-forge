@@ -295,7 +295,7 @@ export function RolesPage() {
                 type="button"
                 onClick={() => void navigate({ to: '/roles', search: { roleId: role.roleId } })}
                 className={cn(
-                  'mb-2 w-full rounded-2xl border px-4 py-4 text-left transition last:mb-0',
+                  'mb-2 w-full rounded-lg border px-4 py-4 text-left transition last:mb-0',
                   search.roleId === role.roleId
                     ? 'border-slate-950 bg-slate-950 text-white'
                     : 'border-slate-200 bg-white hover:border-slate-400',
@@ -527,7 +527,7 @@ export function RolesPage() {
             </div>
 
             <form
-              className="mt-6 grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_1fr_auto]"
+              className="mt-6 grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_1fr_auto]"
               onSubmit={(event) => {
                 event.preventDefault();
                 createFunctionMutation.mutate({
@@ -572,7 +572,7 @@ export function RolesPage() {
                 return (
                   <div
                     key={agentFunction.functionId}
-                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                    className="rounded-lg border border-slate-200 bg-white p-4"
                   >
                     <div className="grid gap-4 xl:grid-cols-[1fr_1fr_260px_auto]">
                       <LabeledField label="Name">
@@ -604,7 +604,7 @@ export function RolesPage() {
                         />
                       </LabeledField>
                       <LabeledField label="Roles">
-                        <div className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
                           {rolesQuery.data.items.map((role) => {
                             return (
                               <PermissionToggle
@@ -690,7 +690,7 @@ export function RolesPage() {
 
 function PermissionGroup(input: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="mb-3 text-sm font-medium capitalize text-slate-900">{input.title}</div>
       <div className="grid gap-2">{input.children}</div>
     </div>
@@ -763,7 +763,7 @@ function LabeledField(input: { label: string; children: React.ReactNode }) {
 
 function InlineError(input: { message: string }) {
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
       {input.message}
     </div>
   );

@@ -84,7 +84,7 @@ export function OverviewPage() {
               value={formatUsd(overview.cash.summary.scheduledOutUsd)}
             />
           </div>
-          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
+          <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
@@ -132,7 +132,7 @@ export function OverviewPage() {
               return (
                 <div
                   key={agentFunction.functionId}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -159,7 +159,7 @@ export function OverviewPage() {
 
 function MiniMetric(input: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+    <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
         {input.label}
       </div>

@@ -61,7 +61,7 @@ export function AppShell() {
   return (
     <div className="min-h-screen text-[color:var(--ink)]">
       <div className="mx-auto grid min-h-screen max-w-[1720px] gap-6 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
-        <aside className="relative overflow-hidden rounded-[2rem] bg-[color:var(--bg-rail)] p-5 text-white shadow-[0_30px_120px_rgba(15,23,42,0.35)]">
+        <aside className="relative overflow-hidden rounded-xl bg-[color:var(--bg-rail)] p-5 text-white shadow-[0_30px_120px_rgba(15,23,42,0.35)]">
           <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,_rgba(184,92,56,0.35),_transparent_58%)]" />
           <div className="relative flex h-full flex-col">
             <div className="border-b border-white/10 pb-5">
@@ -89,9 +89,9 @@ export function AppShell() {
                       className:
                         'border-[color:var(--accent)] bg-white text-slate-950 shadow-[0_12px_40px_rgba(0,0,0,0.18)]',
                     }}
-                    className="group flex w-full items-start gap-3 rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-4 text-left transition hover:border-white/20 hover:bg-white/8"
+                    className="group flex w-full items-start gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-4 text-left transition hover:border-white/20 hover:bg-white/8"
                   >
-                    <div className="mt-0.5 rounded-full border border-white/10 bg-white/8 p-2 text-white/80 group-[.active]:text-slate-950">
+                    <div className="mt-0.5 rounded-md border border-white/10 bg-white/8 p-2 text-white/80 group-[.active]:text-slate-950">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
@@ -119,7 +119,7 @@ export function AppShell() {
         </aside>
 
         <main className="min-w-0 space-y-6 py-1">
-          <section className="rounded-[2rem] border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-6 py-5 shadow-[0_20px_80px_rgba(15,23,42,0.08)]">
+          <section className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-6 py-5 shadow-[0_20px_80px_rgba(15,23,42,0.08)]">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="space-y-2">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted-strong)]">
@@ -164,9 +164,9 @@ function AdminApiKeyGate(input: {
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center">
-        <Card className="grid w-full overflow-hidden rounded-[2rem] lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="grid w-full overflow-hidden rounded-xl lg:grid-cols-[1.1fr_0.9fr]">
           <div className="bg-[color:var(--bg-rail)] px-8 py-10 text-white">
-            <div className="inline-flex items-center rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
+            <div className="inline-flex items-center rounded-md border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
               Access gate
             </div>
             <h1 className="mt-6 font-serif text-4xl tracking-tight">Unlock Forge Admin</h1>
@@ -178,7 +178,7 @@ function AdminApiKeyGate(input: {
 
           <div className="px-8 py-10">
             <div className="flex items-start gap-4">
-              <div className="rounded-[1.25rem] border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-3 text-[color:var(--ink)]">
+              <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-3 text-[color:var(--ink)]">
                 <KeyRound className="h-5 w-5" />
               </div>
               <div>
@@ -200,7 +200,7 @@ function AdminApiKeyGate(input: {
                 placeholder="Forge admin API key"
               />
               {input.errorMessage ? (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {input.errorMessage}
                 </p>
               ) : null}
@@ -235,7 +235,7 @@ function RailStat(input: {
   const Icon = input.icon;
 
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-4">
+    <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-4">
       <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/50">
         <Icon className="h-4 w-4" />
         {input.label}
@@ -249,7 +249,7 @@ function RailStat(input: {
 
 function TopMetric(input: { label: string; value: string | number | undefined }) {
   return (
-    <div className="rounded-[1.35rem] border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
+    <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
       <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-strong)]">
         {input.label}
       </div>

@@ -366,7 +366,7 @@ function RecurringPayablesCard(input: {
         </div>
         <Repeat className="h-5 w-5 text-slate-500" />
       </div>
-      <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
@@ -440,7 +440,7 @@ function LedgerCard(input: {
           </p>
         </div>
       </div>
-      <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
@@ -511,7 +511,7 @@ function LabeledField(input: { label: string; children: ReactNode }) {
 
 function ErrorBanner(input: { message: string }) {
   return (
-    <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
       {input.message}
     </div>
   );

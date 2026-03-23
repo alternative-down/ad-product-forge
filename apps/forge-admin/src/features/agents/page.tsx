@@ -345,7 +345,7 @@ export function AgentsPage() {
                 });
               }}
               className={cn(
-                'mb-2 w-full rounded-2xl border px-4 py-4 text-left transition last:mb-0',
+                'mb-2 w-full rounded-lg border px-4 py-4 text-left transition last:mb-0',
                 search.agentId === agent.agentId
                   ? 'border-slate-950 bg-slate-950 text-white'
                   : 'border-slate-200 bg-white hover:border-slate-400',
@@ -642,13 +642,13 @@ function HireAgentCard(input: {
         </LabeledField>
 
         {input.error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {input.error}
           </div>
         )}
 
         {input.result && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             <div>Agent created: {input.result.agentId}</div>
             {input.result.emailAddress ? <div>Email: {input.result.emailAddress}</div> : null}
             <a
@@ -763,7 +763,7 @@ function AgentHeader(input: {
       </div>
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             Workspace
           </div>
@@ -776,7 +776,7 @@ function AgentHeader(input: {
             <ReadOnlyField label="Embedder" value={agent.workspace.embedder} />
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             Execution contract
           </div>
@@ -829,7 +829,7 @@ function AgentHeader(input: {
             </Button>
           </form>
           {input.topUpError && (
-            <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {input.topUpError}
             </div>
           )}
@@ -902,13 +902,13 @@ function AgentMaintenanceCard(input: {
           </div>
 
           {input.functionError && (
-            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {input.functionError}
             </div>
           )}
         </div>
 
-        <div className="w-full rounded-2xl border border-red-200 bg-red-50 p-4 xl:max-w-sm">
+        <div className="w-full rounded-lg border border-red-200 bg-red-50 p-4 xl:max-w-sm">
           <div className="text-sm font-semibold text-red-800">Terminate agent</div>
           <p className="mt-2 text-sm text-red-700">
             Removes runtime, schedules, mailbox, GitHub app installation, database record, and the
@@ -1006,7 +1006,7 @@ function AgentConfigurationCard(input: {
         </LabeledField>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={input.draft.workspaceAutoSync}
@@ -1016,7 +1016,7 @@ function AgentConfigurationCard(input: {
             />
             Workspace auto sync
           </label>
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={input.draft.workspaceBm25}
@@ -1029,7 +1029,7 @@ function AgentConfigurationCard(input: {
         </div>
 
         {input.error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {input.error}
           </div>
         )}
@@ -1065,7 +1065,7 @@ function GitHubProvisioningCard(input: {
       </div>
 
       {!input.provisioning ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
           No GitHub app provisioning exists for this agent.
         </div>
       ) : (
@@ -1156,7 +1156,7 @@ function AgentProvidersCard(input: {
                 };
 
           return (
-            <div key={provider.providerType} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div key={provider.providerType} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="font-medium text-slate-950">{provider.providerType}</div>
@@ -1201,7 +1201,7 @@ function AgentProvidersCard(input: {
         })}
 
         {editableProviders.length < 2 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-4">
+          <div className="rounded-lg border border-dashed border-slate-300 p-4">
             <div className="text-sm font-medium text-slate-900">Add provider</div>
             <div className="mt-4 grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
               <LabeledField label="Provider type">
@@ -1246,7 +1246,7 @@ function AgentProvidersCard(input: {
         )}
 
         {input.error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {input.error}
           </div>
         )}
@@ -1270,12 +1270,12 @@ function AgentInboxCard(input: {
         </div>
         <div className="mt-5 space-y-3">
           {input.notifications.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+            <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
               No notifications for this agent.
             </div>
           )}
           {input.notifications.map((notification) => (
-            <div key={notification.notificationId} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div key={notification.notificationId} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <Badge>{notification.read ? 'read' : 'unread'}</Badge>
                 <div className="text-xs text-slate-500">{formatDateTime(notification.timestamp)}</div>
@@ -1295,14 +1295,14 @@ function AgentInboxCard(input: {
         </div>
         <div className="mt-5 space-y-4">
           {input.conversations.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+            <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
               No conversations for this agent.
             </div>
           )}
           {input.conversations.map((conversation) => (
             <div
               key={conversation.conversationId}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              className="rounded-lg border border-slate-200 bg-slate-50 p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <div className="font-medium text-slate-950">{conversation.conversationKey}</div>
@@ -1361,12 +1361,12 @@ function AgentThreadCard(input: {
       </div>
       <div className="mt-5 space-y-3">
         {input.messages.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
             No thread messages for this agent.
           </div>
         )}
         {input.messages.map((message) => (
-          <div key={message.messageId} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div key={message.messageId} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Badge>{message.role}</Badge>
@@ -1407,7 +1407,7 @@ function SchedulesCard(input: {
       </div>
 
       {input.heartbeat && (
-        <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <div className="flex items-center gap-2 font-medium">
             <Clock3 className="h-4 w-4" />
             Heartbeat
@@ -1421,14 +1421,14 @@ function SchedulesCard(input: {
 
       <div className="mt-5 space-y-3">
         {input.schedules.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
             No agent schedules.
           </div>
         )}
         {input.schedules.map((schedule) => (
           <div
             key={schedule.scheduleId}
-            className="rounded-2xl border border-slate-200 bg-white p-4"
+            className="rounded-lg border border-slate-200 bg-white p-4"
           >
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
@@ -1545,7 +1545,7 @@ function ScheduleEditorCard(input: {
           </LabeledField>
 
           {input.draft.mode === 'edit' && (
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               <input
                 type="checkbox"
                 checked={input.draft.isActive}
@@ -1591,7 +1591,7 @@ function ScheduleEditorCard(input: {
         </LabeledField>
 
         {input.error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {input.error}
           </div>
         )}
@@ -1627,7 +1627,7 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
         </div>
         <Bot className="h-5 w-5 text-slate-500" />
       </div>
-      <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
         <div className="grid gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-4">
           <ReadOnlyField label="Contract value" value={formatUsd(agent.activeContract?.weeklyValueUsd)} />
           <ReadOnlyField
@@ -1686,7 +1686,7 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
 
 function MiniMetric(input: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+    <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
         {input.label}
       </div>
