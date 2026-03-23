@@ -1,7 +1,11 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
 import type { Tool } from '@mastra/core/tools';
-import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
+import {
+  LocalFilesystem,
+  LocalSandbox,
+  Workspace as WorkspaceRuntime,
+} from '@mastra/core/workspace';
 import { createClient } from '@libsql/client';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import fs from 'node:fs/promises';
@@ -60,26 +64,26 @@ export interface CreateAgentConfig<
   TTools extends ToolsInput = ToolsInput,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
-  > extends Pick<
-    CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-    | 'id'
-    | 'name'
-    | 'description'
-    | 'instructions'
-    | 'model'
-    | 'pricingModelKey'
-    | 'tools'
-    | 'workflows'
-    | 'agents'
-    | 'omModel'
-    | 'omPricingModelKey'
-    | 'modelProfileId'
-    | 'omModelProfileId'
-    | 'companyName'
-    | 'companyContext'
-    | 'providers'
-    | 'workspaceFilesystem'
-    | 'workspaceSandbox'
+> extends Pick<
+  CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
+  | 'id'
+  | 'name'
+  | 'description'
+  | 'instructions'
+  | 'model'
+  | 'pricingModelKey'
+  | 'tools'
+  | 'workflows'
+  | 'agents'
+  | 'omModel'
+  | 'omPricingModelKey'
+  | 'modelProfileId'
+  | 'omModelProfileId'
+  | 'companyName'
+  | 'companyContext'
+  | 'providers'
+  | 'workspaceFilesystem'
+  | 'workspaceSandbox'
 > {
   workspaceBasePath: string;
 }
@@ -91,9 +95,21 @@ const CHECKPOINT_INSTRUCTIONS = [
   '- Any visible text that does not start with `CHECKPOINT:` is treated as a final stop for the current run.',
 ].join('\n');
 
-function buildAgentSystemPrompt(instructions: string, companyName?: string, companyContext?: string): string;
-function buildAgentSystemPrompt<T>(instructions: T, companyName?: string, companyContext?: string): T;
-function buildAgentSystemPrompt(instructions: unknown, companyName?: string, companyContext?: string) {
+function buildAgentSystemPrompt(
+  instructions: string,
+  companyName?: string,
+  companyContext?: string,
+): string;
+function buildAgentSystemPrompt<T>(
+  instructions: T,
+  companyName?: string,
+  companyContext?: string,
+): T;
+function buildAgentSystemPrompt(
+  instructions: unknown,
+  companyName?: string,
+  companyContext?: string,
+) {
   if (typeof instructions !== 'string') {
     return instructions;
   }
@@ -212,11 +228,9 @@ export async function createInternalAgentRuntime<
     id: config.id,
     name: config.name,
     description: config.description,
-    instructions: appendWorkingMemoryInstructions(buildAgentSystemPrompt(
-      config.instructions,
-      config.companyName,
-      config.companyContext,
-    )),
+    instructions: appendWorkingMemoryInstructions(
+      buildAgentSystemPrompt(config.instructions, config.companyName, config.companyContext),
+    ),
     model: config.model,
     tools: searchableTools as TTools,
     workflows: config.workflows,

@@ -171,12 +171,18 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
       const prompt = needsWakePrompt ? AUTONOMOUS_STEP_PROMPT : [];
       console.log(`[AgentRunner] ${runtime.id} executing step`);
+
       const result = await runtime.agent.generate(prompt, {
         maxSteps: 1,
         toolChoice: 'required',
         memory: {
           thread: runtime.id,
           resource: runtime.id,
+        },
+        providerOptions: {
+          anthropic: {
+            thinking: { type: 'enabled', budgetTokens: 12000 },
+          },
         },
       });
       const usage = result.usage as AgentUsage;
@@ -268,7 +274,8 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     const inputEstimatedUsd =
-      ((lastAgentStep.inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd) *
+      (lastAgentStep.inputTokens / 1_000_000) *
+      pricing.modelPrice.inputPerMillionUsd *
       pricing.contractCostMultiplier;
     return (inputEstimatedUsd + averageStepUsd) / 2;
   }
