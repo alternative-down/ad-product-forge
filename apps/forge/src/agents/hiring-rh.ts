@@ -103,10 +103,6 @@ export async function generateHiredAgentInstructions(db: Database, input: {
       schema: hiringRhResultSchema,
       jsonPromptInjection: true,
     },
-    memory: {
-      thread: HIRING_RH_AGENT_ID,
-      resource: HIRING_RH_AGENT_ID,
-    },
   });
   const parsed = hiringRhResultSchema.parse(result.object);
   const agentFunction = await capabilities.getFunction(parsed.functionId);
