@@ -157,9 +157,7 @@ export async function generateHiredAgentInstructions(
   const { agent: agentHired } = toolCall.payload.args as z.infer<typeof inputSchema>;
 
   return {
-    agentName: agentHired.agentName.trim(),
-    agentDescription: agentHired.agentDescription.trim(),
-    instructions: agentHired.instructions.trim(),
+    ...agentHired,
     costUsd,
     modelKey: hiringRhModelKey,
   };
