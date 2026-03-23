@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import { CircleDollarSign, LoaderCircle, Repeat, ReceiptText } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate } from '@tanstack/react-router';
 
 import {
   cancelPlannedLedgerEntry,
@@ -39,7 +40,20 @@ type RecurringPayableDraft = {
 };
 
 export function FinancePage() {
-  const [section, setSection] = useState<'capital' | 'payables' | 'recurring' | 'ledger'>('capital');
+  return <FinanceWorkspacePage mode="directory" />;
+}
+
+export function FinanceDetailPage(input: {
+  section: 'capital' | 'payables' | 'recurring' | 'ledger';
+}) {
+  return <FinanceWorkspacePage mode="detail" section={input.section} />;
+}
+
+function FinanceWorkspacePage(input: {
+  mode: 'directory' | 'detail';
+  section?: 'capital' | 'payables' | 'recurring' | 'ledger';
+}) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const financeQuery = useQuery({
     queryKey: ['admin', 'finance'],
@@ -91,6 +105,7 @@ export function FinancePage() {
   }
 
   const finance = financeQuery.data!;
+  const selectedSection = input.section ?? 'capital';
 
   return (
     <div className="space-y-6">
@@ -100,21 +115,50 @@ export function FinancePage() {
         description="Capital events, payable scheduling, recurring liabilities, and ledger posting. One financial task at a time."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)]">
-        <SectionNav
-          title="Finance area"
-          value={section}
-          items={[
-            { value: 'capital', label: 'Capital', detail: `balance ${formatUsd(finance.balanceUsd)}` },
-            { value: 'payables', label: 'Payables', detail: 'create one-off and recurring obligations' },
-            { value: 'recurring', label: 'Recurring', detail: `${finance.recurringPayables.length} recurring obligations` },
-            { value: 'ledger', label: 'Ledger', detail: `${finance.movements.items.length} planned and posted rows` },
-          ]}
-          onChange={(nextSection) => setSection(nextSection)}
-        />
+      {input.mode === 'directory' ? (
+        <WorkspaceCanvas
+          title="Finance areas"
+          description="Open one financial workflow at a time: capital, payables, recurring obligations, or ledger posting."
+        >
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <FinanceEntryLink
+              to="/finance/capital"
+              title="Capital"
+              detail={`balance ${formatUsd(finance.balanceUsd)}`}
+            />
+            <FinanceEntryLink
+              to="/finance/payables"
+              title="Payables"
+              detail="Create one-off and recurring obligations"
+            />
+            <FinanceEntryLink
+              to="/finance/recurring"
+              title="Recurring"
+              detail={`${finance.recurringPayables.length} recurring obligations`}
+            />
+            <FinanceEntryLink
+              to="/finance/ledger"
+              title="Ledger"
+              detail={`${finance.movements.items.length} planned and posted rows`}
+            />
+          </div>
+        </WorkspaceCanvas>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)]">
+          <SectionNav
+            title="Finance area"
+            value={selectedSection}
+            items={[
+              { value: 'capital', label: 'Capital', detail: `balance ${formatUsd(finance.balanceUsd)}` },
+              { value: 'payables', label: 'Payables', detail: 'create one-off and recurring obligations' },
+              { value: 'recurring', label: 'Recurring', detail: `${finance.recurringPayables.length} recurring obligations` },
+              { value: 'ledger', label: 'Ledger', detail: `${finance.movements.items.length} planned and posted rows` },
+            ]}
+            onChange={(nextSection) => void navigate(buildFinanceLocation(nextSection))}
+          />
 
-        <div className="space-y-6">
-          {section === 'capital' ? (
+          <div className="space-y-6">
+          {selectedSection === 'capital' ? (
             <WorkspaceCanvas
               title="Capital injection"
               description="Register owner capital intentionally instead of mutating balance directly."
@@ -135,7 +179,7 @@ export function FinancePage() {
             </WorkspaceCanvas>
           ) : null}
 
-          {section === 'payables' ? (
+          {selectedSection === 'payables' ? (
             <WorkspaceCanvas
               title="Accounts payable"
               description="Create a single planned payable or define a recurring liability."
@@ -150,7 +194,7 @@ export function FinancePage() {
             </WorkspaceCanvas>
           ) : null}
 
-          {section === 'recurring' ? (
+          {selectedSection === 'recurring' ? (
             <WorkspaceCanvas
               title="Recurring obligations"
               description="Pause or resume recurring payables without losing their history."
@@ -165,7 +209,7 @@ export function FinancePage() {
             </WorkspaceCanvas>
           ) : null}
 
-          {section === 'ledger' ? (
+          {selectedSection === 'ledger' ? (
             <WorkspaceCanvas
               title="Ledger posting"
               description="Post or cancel planned entries from the financial timeline."
@@ -182,10 +226,43 @@ export function FinancePage() {
               />
             </WorkspaceCanvas>
           ) : null}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
+}
+
+function FinanceEntryLink(input: {
+  to: '/finance/capital' | '/finance/payables' | '/finance/recurring' | '/finance/ledger';
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Link
+      to={input.to}
+      className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
+    >
+      <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
+      <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+    </Link>
+  );
+}
+
+function buildFinanceLocation(section: 'capital' | 'payables' | 'recurring' | 'ledger') {
+  if (section === 'payables') {
+    return { to: '/finance/payables' as const };
+  }
+
+  if (section === 'recurring') {
+    return { to: '/finance/recurring' as const };
+  }
+
+  if (section === 'ledger') {
+    return { to: '/finance/ledger' as const };
+  }
+
+  return { to: '/finance/capital' as const };
 }
 
 function InvestmentCard(input: {
