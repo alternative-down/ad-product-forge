@@ -9,6 +9,7 @@ const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
 const AUTONOMOUS_STEP_PROMPT =
   'System wake: continue your autonomous work using current memory, pending conversations, schedules, and available tools. If nothing requires action right now, stop without calling tools.';
+const CHECKPOINT_PREFIX = 'CHECKPOINT:';
 type AgentUsage = {
   inputTokens?: number;
   outputTokens?: number;
@@ -167,7 +168,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       await recordObservationalMemorySteps(contractId, result.steps);
 
-      if (result.toolCalls.length === 0) {
+      const checkpointRequested = result.text.trimStart().startsWith(CHECKPOINT_PREFIX);
+
+      if (result.toolCalls.length === 0 && !checkpointRequested) {
         await store.setExecutionState(runtime.id, 'idle');
         return;
       }

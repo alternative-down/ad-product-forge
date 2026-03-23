@@ -76,9 +76,16 @@ export interface CreateAgentConfig<
     | 'providers'
     | 'workspaceFilesystem'
     | 'workspaceSandbox'
-  > {
+> {
   workspaceBasePath: string;
 }
+
+const CHECKPOINT_INSTRUCTIONS = [
+  'Execution control:',
+  '- If you want the system to continue the current autonomous run without stopping, your visible text response must start with `CHECKPOINT:`.',
+  '- Use `CHECKPOINT:` only to report execution progress or the next immediate step you are taking.',
+  '- Any visible text that does not start with `CHECKPOINT:` is treated as a final stop for the current run.',
+].join('\n');
 
 export async function createAgent<
   TAgentId extends string = string,
@@ -172,7 +179,7 @@ export async function createInternalAgentRuntime<
     id: config.id,
     name: config.name,
     description: config.description,
-    instructions: appendWorkingMemoryInstructions(config.instructions),
+    instructions: appendWorkingMemoryInstructions(`${config.instructions}\n\n${CHECKPOINT_INSTRUCTIONS}`),
     model: config.model,
     tools: searchableTools as TTools,
     workflows: config.workflows,
