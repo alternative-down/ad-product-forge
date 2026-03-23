@@ -49,11 +49,15 @@ export function createAgentWakeQueue(config: {
     clearTimer();
 
     if (!pending) {
+      console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} trigger called but pending=false, skipping`);
       return;
     }
 
+    const isAgentRunning = await config.isRunning();
+    console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} trigger executing, isRunning=${isAgentRunning}, pending=${pending}, waitingForIdle=${waitingForIdle}`);
+
     try {
-      if (await config.isRunning()) {
+      if (isAgentRunning) {
         waitingForIdle = true;
         console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} is still running, keeping wake pending`);
         return;
@@ -91,9 +95,11 @@ export function createAgentWakeQueue(config: {
       scheduleTrigger(Math.min(WAKE_DEBOUNCE_MS, firstPendingAt + WAKE_MAX_DELAY_MS - now));
     },
     async onRunnerIdle() {
+      console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} onRunnerIdle called, was waitingForIdle=${waitingForIdle}, pending=${pending}, timer=${!!timer}`);
       waitingForIdle = false; // ALWAYS reset when agent becomes idle
 
       if (timer || !pending) {
+        console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} onRunnerIdle: no action (timer=${!!timer}, pending=${pending})`);
         return;
       }
 
