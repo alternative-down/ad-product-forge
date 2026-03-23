@@ -13,6 +13,8 @@ import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
 import { createSystemSettingsStore } from '../system-settings/store';
+import { hasToolCall } from 'ai';
+import { createTool } from '@mastra/core/tools';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
@@ -76,6 +78,10 @@ export async function generateHiredAgentInstructions(
     throw new Error('Insufficient company cash for hiring workflow');
   }
 
+  const inputSchema = z.object({
+    agent: hiringRhResultSchema,
+  });
+
   const agent = new Agent({
     id: HIRING_RH_AGENT_ID,
     name: 'Internal Hiring RH',
@@ -94,7 +100,28 @@ export async function generateHiredAgentInstructions(
       'Use this structure after the conversational opening: Primary objective, Secondary objectives, Operating context, Function inside the company, Constraints, Communication style, Tool usage rules, Autonomous execution rules.',
     ].join('\n'),
     model: resolveProfileRuntimeModel(defaults.hiringRhProfile),
-    tools,
+    tools: {
+      hireAgent: createTool({
+        id: 'hireAgent',
+        description: 'Realiza contratação do agente e finaliza o processo',
+        inputSchema,
+        execute: async ({ agent }) => {
+          const agentFunction = await capabilities.getFunction(agent);
+
+          if (!agentFunction) {
+            throw new Error(`Hiring RH returned unknown functionId: ${agent.functionId}`);
+          }
+
+          return {
+            ...agent,
+            functionId: agentFunction.functionId,
+            functionName: agentFunction.name,
+            functionDescrition: agentFunction.description,
+          };
+        },
+      }),
+      ...tools,
+    },
   });
   const mastra = new Mastra({
     agents: {
@@ -107,28 +134,16 @@ export async function generateHiredAgentInstructions(
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
     maxSteps: 1000,
     toolChoice: 'required',
-    structuredOutput: {
-      schema: hiringRhResultSchema,
-    },
+    stopWhen: [hasToolCall('hireAgent')],
+    // structuredOutput: {
+    //   schema: hiringRhResultSchema,
+    // },
     providerOptions: {
       anthropic: {
         thinking: { type: 'enabled', budgetTokens: 12000 },
       },
     },
   });
-  // removed and add toolChoice param on generate.
-  // const toolCalls = result.steps.flatMap((step) => step.toolCalls);
-
-  // if (toolCalls.length === 0) {
-  //   throw new Error('Hiring RH must inspect capability tools before returning a hiring plan');
-  // }
-
-  const parsed = hiringRhResultSchema.parse(result.object);
-  const agentFunction = await capabilities.getFunction(parsed.functionId);
-
-  if (!agentFunction) {
-    throw new Error(`Hiring RH returned unknown functionId: ${parsed.functionId}`);
-  }
 
   const inputTokens = result.usage.inputTokens ?? 0;
   const outputTokens = result.usage.outputTokens ?? 0;
@@ -136,13 +151,15 @@ export async function generateHiredAgentInstructions(
     (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
+  const toolCall = result.toolCalls.find((call) => call.payload.toolName === 'hireAgent');
+  if (!toolCall) throw new Error('Hiring RH not returned agent data');
+
+  const { agent: agentHired } = toolCall.payload.args as z.infer<typeof inputSchema>;
+
   return {
-    agentName: parsed.agentName.trim(),
-    agentDescription: parsed.agentDescription.trim(),
-    functionId: agentFunction.functionId,
-    functionName: agentFunction.name,
-    functionDescription: agentFunction.description ?? agentFunction.name,
-    instructions: parsed.instructions.trim(),
+    agentName: agentHired.agentName.trim(),
+    agentDescription: agentHired.agentDescription.trim(),
+    instructions: agentHired.instructions.trim(),
     costUsd,
     modelKey: hiringRhModelKey,
   };
