@@ -14,6 +14,7 @@
     "top-up-contract": "tsx src/scripts/top-up-agent-contract.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.63",
     "@mastra-engine/core": "0.1.0",
     "@mastra/core": "^1.15.0",
     "@octokit/auth-app": "^8.1.1",
