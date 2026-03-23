@@ -81,6 +81,40 @@ export function createCapabilityStore(db: Database) {
     return createFunction(input);
   }
 
+  async function getFunction(functionId: string) {
+    const row = await db.query.agentFunctions.findFirst({
+      where: eq(agentFunctions.id, functionId),
+      with: {
+        roleLinks: {
+          with: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    const { id, roleLinks, ...rest } = row;
+
+    return {
+      ...rest,
+      functionId: id,
+      description: rest.description ?? undefined,
+      roleIds: roleLinks.map((link) => link.roleId),
+      roles: roleLinks
+        .map((link) => link.role)
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((role) => ({
+          roleId: role.id,
+          name: role.name,
+          description: role.description ?? undefined,
+        })),
+    };
+  }
+
   async function updateFunction(input: { functionId: string; name?: string; description?: string | null }) {
     const existing = await db.query.agentFunctions.findFirst({
       where: eq(agentFunctions.id, input.functionId),
@@ -385,6 +419,7 @@ export function createCapabilityStore(db: Database) {
 
   return {
     listFunctions,
+    getFunction,
     createFunction,
     getOrCreateFunction,
     updateFunction,
