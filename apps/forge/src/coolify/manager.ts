@@ -188,12 +188,11 @@ export function createCoolifyManager(config: {
   }) {
     const deploymentContext = await loadDefaultDeploymentContext();
     const domain = await buildApplicationDomain(input.slug, deploymentContext.serverUuid);
-    const data = await requestJson('POST', '/applications/private-github-app', {
+    const payload: Record<string, unknown> = {
       project_uuid: deploymentContext.projectUuid,
       environment_name: deploymentContext.environmentName,
       environment_uuid: deploymentContext.environmentUuid,
       server_uuid: deploymentContext.serverUuid,
-      destination_uuid: deploymentContext.destinationUuid,
       github_app_uuid: input.githubAppUuid,
       owner: input.repositoryOwner,
       repository: input.repositoryName,
@@ -204,7 +203,14 @@ export function createCoolifyManager(config: {
       start_command: input.startCommand,
       install_command: input.installCommand,
       fqdn: domain,
-    });
+    };
+
+    // Only include destination_uuid if available (optional in Coolify v4)
+    if (deploymentContext.destinationUuid) {
+      payload.destination_uuid = deploymentContext.destinationUuid;
+    }
+
+    const data = await requestJson('POST', '/applications/private-github-app', payload);
     const application = extractItem(data, ApplicationSchema);
 
     return {
@@ -516,9 +522,9 @@ export function createCoolifyManager(config: {
       }
     }
 
-    // Debug: log server info for troubleshooting
-    console.error(`[Coolify] Could not determine destination for server ${serverUuid}. Server:`, JSON.stringify(server, null, 2), 'Resources response:', JSON.stringify(resources, null, 2));
-    throw new Error(`Could not determine Coolify destination UUID for server ${serverUuid}`);
+    // Destination is optional in Coolify v4 - Coolify will use the default server destination
+    console.log(`[Coolify] No destination found for server ${serverUuid}. This is optional in Coolify v4.`);
+    return null;
   }
 
   async function findApplicationEnv(applicationUuid: string, key: string) {
