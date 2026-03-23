@@ -129,6 +129,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       const delayMs = nextAttempt.delayMs;
       instant = false;
       nextStepAt = Date.now() + Math.max(delayMs, 0);
+      console.log(`[AgentRunner] ${runtime.id} scheduling next step in ${Math.max(delayMs, 0)}ms`);
       timer = setTimeout(
         () => {
           timer = null;
@@ -167,6 +168,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       }
 
       const prompt = needsWakePrompt ? AUTONOMOUS_STEP_PROMPT : [];
+      console.log(`[AgentRunner] ${runtime.id} executing step`);
       const result = await runtime.agent.generate(prompt, {
         maxSteps: 1,
         toolChoice: 'required',
