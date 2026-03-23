@@ -75,9 +75,9 @@ export function createInternalChatPreset() {
           });
 
           return {
-            providerConversationKey: config.id,
+            providerConversationKey: recipient.id,
             providerMessageId,
-            conversationName: config.displayName,
+            conversationName: recipient.displayName,
           };
         },
       };

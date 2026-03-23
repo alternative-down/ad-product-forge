@@ -83,6 +83,7 @@ export type AgentListItem = {
     lastWakeStartedAt: number | null;
     wake: {
       pending: boolean;
+      waitingForIdle: boolean;
       firstPendingAt: number | null;
       nextTriggerAt: number | null;
     };
@@ -192,6 +193,7 @@ export type AgentDetail = {
   }>;
   recentConversations: Array<{
     conversationId: string;
+    conversationKey: string;
     provider: string;
     name?: string;
     contactSlug?: string;
@@ -650,6 +652,16 @@ export function reloadAgent(agentId: string) {
     method: 'POST',
     body: JSON.stringify({ agentId }),
   });
+}
+
+export function topUpAgentContract(input: { agentId: string; amountUsd: number }) {
+  return request<{ agentId: string; contractId: string; budgetUsd: number }>(
+    '/admin/agent/contract/top-up',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function hireAgent(input: HireAgentInput) {

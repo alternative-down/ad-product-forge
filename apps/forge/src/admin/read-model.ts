@@ -177,7 +177,7 @@ export function createAdminReadModel(input: {
           agentId,
           limit: RECENT_NOTIFICATION_LIMIT,
         }),
-        listRecentConversations(input.workspaceBasePath, agentId),
+        listRecentConversations(input.workspaceBasePath, agentId, agent.name),
         input.githubApps.getAgentProvisioning(agentId),
       ]);
     const registry = getInternalAgentRegistry();
@@ -431,7 +431,7 @@ export function createAdminReadModel(input: {
   };
 }
 
-async function listRecentConversations(workspaceBasePath: string, agentId: string) {
+async function listRecentConversations(workspaceBasePath: string, agentId: string, agentName: string) {
   try {
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
     const client = createClient({
@@ -452,6 +452,7 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
 
     return rows.map((conversation) => ({
       conversationId: conversation.conversationId,
+      conversationKey: conversation.providerConversationKey,
       provider: conversation.provider,
       name: conversation.name ?? undefined,
       contactSlug: conversation.contactSlug ?? undefined,
@@ -463,7 +464,7 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
           messageId: message.messageId,
           content: message.content,
           unread: message.unread === 1,
-          authorDisplayName: message.authorDisplayName ?? undefined,
+          authorDisplayName: message.authorDisplayName ?? agentName,
           createdAt: message.createdAt,
         })),
     }));

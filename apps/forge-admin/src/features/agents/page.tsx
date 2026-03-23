@@ -14,6 +14,7 @@ import {
   listFunctions,
   reloadAgent,
   terminateAgent,
+  topUpAgentContract,
   updateAgentConfig,
   updateSchedule,
   upsertAgentProvider,
@@ -144,6 +145,16 @@ export function AgentsPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] }),
+      ]);
+    },
+  });
+  const topUpContractMutation = useMutation({
+    mutationFn: topUpAgentContract,
+    onSuccess: async (_, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
       ]);
     },
   });
@@ -367,8 +378,16 @@ export function AgentsPage() {
               agent={agentDetailQuery.data}
               onWake={() => wakeMutation.mutate(agentDetailQuery.data!.agentId)}
               onReload={() => reloadMutation.mutate(agentDetailQuery.data!.agentId)}
+              onTopUpContract={(amountUsd) =>
+                topUpContractMutation.mutate({
+                  agentId: agentDetailQuery.data!.agentId,
+                  amountUsd,
+                })
+              }
               wakePending={wakeMutation.isPending}
               reloadPending={reloadMutation.isPending}
+              topUpPending={topUpContractMutation.isPending}
+              topUpError={topUpContractMutation.error?.message ?? null}
             />
             {functionsQuery.data && (
               <AgentMaintenanceCard
@@ -630,10 +649,14 @@ function AgentHeader(input: {
   agent: Awaited<ReturnType<typeof getAgent>>;
   onWake(): void;
   onReload(): void;
+  onTopUpContract(amountUsd: number): void;
   wakePending: boolean;
   reloadPending: boolean;
+  topUpPending: boolean;
+  topUpError: string | null;
 }) {
   const agent = input.agent!;
+  const [topUpAmountUsd, setTopUpAmountUsd] = useState('10');
 
   return (
     <Card className="p-6">
@@ -674,8 +697,26 @@ function AgentHeader(input: {
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MiniMetric label="Runner" value={agent.runner?.executing ? 'executing' : 'idle'} />
-        <MiniMetric label="Wake pending" value={agent.runner?.wake.pending ? 'yes' : 'no'} />
+        <MiniMetric
+          label="Runner"
+          value={
+            agent.runner?.executing
+              ? 'executing'
+              : agent.runner?.scheduled
+                ? 'scheduled'
+                : 'idle'
+          }
+        />
+        <MiniMetric
+          label="Wake pending"
+          value={
+            agent.runner?.wake.pending
+              ? agent.runner.wake.waitingForIdle
+                ? 'waiting for idle'
+                : 'yes'
+              : 'no'
+          }
+        />
         <MiniMetric
           label="Next step"
           value={agent.runner?.nextStepAt ? formatDateTime(agent.runner.nextStepAt) : '—'}
@@ -724,6 +765,40 @@ function AgentHeader(input: {
               value={agent.runner?.wake.nextTriggerAt ? formatDateTime(agent.runner.wake.nextTriggerAt) : '—'}
             />
           </div>
+          <form
+            className="mt-4 flex flex-wrap items-end gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              input.onTopUpContract(Number(topUpAmountUsd));
+            }}
+          >
+            <LabeledField label="Top up contract (USD)" className="min-w-[220px]">
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={topUpAmountUsd}
+                onChange={(event) => setTopUpAmountUsd(event.target.value)}
+                disabled={!agent.activeContract || input.topUpPending}
+                required
+              />
+            </LabeledField>
+            <Button type="submit" disabled={!agent.activeContract || input.topUpPending}>
+              {input.topUpPending ? (
+                <>
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  Applying...
+                </>
+              ) : (
+                'Top up budget'
+              )}
+            </Button>
+          </form>
+          {input.topUpError && (
+            <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {input.topUpError}
+            </div>
+          )}
         </div>
       </div>
     </Card>
@@ -1196,13 +1271,16 @@ function AgentInboxCard(input: {
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <div className="font-medium text-slate-950">
-                  {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? 'Conversation'}
-                </div>
+                <div className="font-medium text-slate-950">{conversation.conversationKey}</div>
                 <Badge>{conversation.provider}</Badge>
               </div>
-              <div className="mt-1 text-xs text-slate-500">
-                Updated at {formatDateTimeText(conversation.updatedAt)}
+              <div className="mt-1 space-y-1 text-xs text-slate-500">
+                <div>
+                  Updated at {formatDateTimeText(conversation.updatedAt)}
+                </div>
+                <div>
+                  {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? 'Conversation'}
+                </div>
               </div>
               <div className="mt-4 space-y-3">
                 {conversation.messages.map((message) => (
@@ -1523,7 +1601,11 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
           />
           <ReadOnlyField
             label="Wake pending"
-            value={agent.runner?.wake.pending ? `yes${agent.runner.wake.nextTriggerAt ? ` · ${formatDateTime(agent.runner.wake.nextTriggerAt)}` : ''}` : 'no'}
+            value={
+              agent.runner?.wake.pending
+                ? `${agent.runner.wake.waitingForIdle ? 'waiting for idle' : 'yes'}${agent.runner.wake.nextTriggerAt ? ` · ${formatDateTime(agent.runner.wake.nextTriggerAt)}` : ''}`
+                : 'no'
+            }
           />
         </div>
         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -1585,9 +1667,9 @@ function ReadOnlyField(input: { label: string; value: string; wrap?: boolean }) 
   );
 }
 
-function LabeledField(input: { label: string; children: ReactNode }) {
+function LabeledField(input: { label: string; children: ReactNode; className?: string }) {
   return (
-    <label className="grid gap-2 text-sm text-slate-700">
+    <label className={cn('grid gap-2 text-sm text-slate-700', input.className)}>
       <span className="font-medium">{input.label}</span>
       {input.children}
     </label>
