@@ -3,11 +3,17 @@ const WAKE_MAX_DELAY_MS = 10000;
 
 export type AgentWakeQueue = {
   notifyExternalEvent(): void;
+  getSnapshot(): {
+    pending: boolean;
+    firstPendingAt: number | null;
+    nextTriggerAt: number | null;
+  };
 };
 
 export function createAgentWakeQueue(config: { run(): Promise<unknown> }): AgentWakeQueue {
   let timer: NodeJS.Timeout | null = null;
   let firstPendingAt: number | null = null;
+  let nextTriggerAt: number | null = null;
 
   function clearTimer() {
     if (!timer) {
@@ -16,6 +22,7 @@ export function createAgentWakeQueue(config: { run(): Promise<unknown> }): Agent
 
     clearTimeout(timer);
     timer = null;
+    nextTriggerAt = null;
   }
 
   function trigger() {
@@ -37,7 +44,15 @@ export function createAgentWakeQueue(config: { run(): Promise<unknown> }): Agent
         return;
       }
 
+      nextTriggerAt = now + WAKE_DEBOUNCE_MS;
       timer = setTimeout(trigger, WAKE_DEBOUNCE_MS);
+    },
+    getSnapshot() {
+      return {
+        pending: timer !== null,
+        firstPendingAt,
+        nextTriggerAt,
+      };
     },
   };
 }
