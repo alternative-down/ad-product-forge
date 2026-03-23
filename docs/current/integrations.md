@@ -98,7 +98,7 @@ Current model:
 
 Current supported MiniMax model surface:
 
-- `MiniMax-M2.7`
+- `MiniMax-M2.5`
 
 ## HTTP integration boundary
 
