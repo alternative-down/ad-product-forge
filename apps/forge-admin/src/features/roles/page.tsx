@@ -1,7 +1,7 @@
 import { LoaderCircle, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 
 import {
   addRoleToolPermission,
@@ -43,9 +43,25 @@ type FunctionDraft = {
 };
 
 export function RolesPage() {
+  return <CapabilitiesWorkspacePage mode="directory" />;
+}
+
+export function RoleDetailPage(input: { roleId: string }) {
+  return <CapabilitiesWorkspacePage mode="detail" section="roles" roleId={input.roleId} />;
+}
+
+export function FunctionDetailPage(input: { functionId: string }) {
+  return <CapabilitiesWorkspacePage mode="detail" section="functions" functionId={input.functionId} />;
+}
+
+function CapabilitiesWorkspacePage(input: {
+  mode: 'directory' | 'detail';
+  section?: 'roles' | 'functions';
+  roleId?: string;
+  functionId?: string;
+}) {
   const queryClient = useQueryClient();
-  const navigate = useNavigate({ from: '/roles' });
-  const search = useSearch({ from: '/roles' });
+  const navigate = useNavigate();
   const [roleDraft, setRoleDraft] = useState<RoleDraft | null>(null);
   const [newRoleDraft, setNewRoleDraft] = useState<RoleDraft>({
     name: '',
@@ -69,43 +85,10 @@ export function RolesPage() {
     queryFn: listFunctions,
   });
 
-  useEffect(() => {
-    if (search.tab === 'functions') {
-      if (search.functionId || !functionsQuery.data?.length) {
-        return;
-      }
-
-      void navigate({
-        to: '/roles',
-        search: {
-          roleId: search.roleId,
-          functionId: functionsQuery.data[0].functionId,
-          tab: 'functions',
-        },
-        replace: true,
-      });
-      return;
-    }
-
-    if (search.roleId || !rolesQuery.data?.items.length) {
-      return;
-    }
-
-    void navigate({
-      to: '/roles',
-      search: {
-        roleId: rolesQuery.data.items[0].roleId,
-        functionId: search.functionId,
-        tab: search.tab,
-      },
-      replace: true,
-    });
-  }, [functionsQuery.data, navigate, rolesQuery.data, search.functionId, search.roleId, search.tab]);
-
-  const selectedRole = rolesQuery.data?.items.find((role) => role.roleId === search.roleId) ?? null;
-  const selectedFunction = functionsQuery.data?.find((item) => item.functionId === search.functionId) ?? null;
+  const selectedRole = rolesQuery.data?.items.find((role) => role.roleId === input.roleId) ?? null;
+  const selectedFunction = functionsQuery.data?.find((item) => item.functionId === input.functionId) ?? null;
   const selectedRoleDraft = selectedRole
-    ? roleDraft && selectedRole.roleId === search.roleId
+    ? roleDraft && selectedRole.roleId === input.roleId
       ? roleDraft
       : {
           name: selectedRole.name,
@@ -124,13 +107,7 @@ export function RolesPage() {
         workflowIds: [],
       });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
-      void navigate({
-        to: '/roles',
-        search: {
-          roleId: result.roleId,
-          tab: search.tab,
-        },
-      });
+      void navigate(buildCapabilitiesLocation({ section: 'roles', roleId: result.roleId }));
     },
   });
   const updateRoleMutation = useMutation({
@@ -177,13 +154,7 @@ export function RolesPage() {
     onSuccess: async (_, input) => {
       setRoleDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
-      void navigate({
-        to: '/roles',
-        search: {
-          roleId: input.roleId,
-          tab: search.tab,
-        },
-      });
+      void navigate(buildCapabilitiesLocation({ section: 'roles', roleId: input.roleId }));
     },
   });
   const deleteRoleMutation = useMutation({
@@ -196,14 +167,12 @@ export function RolesPage() {
         queryFn: listRoles,
       });
       const nextRoleId = nextRoles.items.find((role) => role.roleId !== roleId)?.roleId;
-      void navigate({
-        to: '/roles',
-        search: {
-          roleId: nextRoleId,
-          tab: search.tab,
-        },
-        replace: true,
-      });
+      if (nextRoleId) {
+        void navigate(buildCapabilitiesLocation({ section: 'roles', roleId: nextRoleId, replace: true }));
+        return;
+      }
+
+      void navigate({ to: '/roles', replace: true });
     },
   });
   const createFunctionMutation = useMutation({
@@ -268,7 +237,7 @@ export function RolesPage() {
     () => groupIds(rolesQuery.data?.availableToolIds ?? []),
     [rolesQuery.data?.availableToolIds],
   );
-  const selectedTab = search.tab ?? 'roles';
+  const selectedTab = input.section ?? 'roles';
 
   return (
     <div className="space-y-6">
@@ -278,6 +247,33 @@ export function RolesPage() {
         description="Roles define permissions. Functions compose roles. Keep one editor open at a time."
       />
 
+      {input.mode === 'directory' ? (
+        <WorkspaceCanvas
+          title="Capability areas"
+          description="Open one capability concern at a time: roles or functions."
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <CapabilityEntryLink
+              title="Roles"
+              detail={`${rolesQuery.data?.items.length ?? 0} role definitions`}
+              to={
+                rolesQuery.data?.items[0]
+                  ? buildCapabilitiesLocation({ section: 'roles', roleId: rolesQuery.data.items[0].roleId })
+                  : null
+              }
+            />
+            <CapabilityEntryLink
+              title="Functions"
+              detail={`${functionsQuery.data?.length ?? 0} function definitions`}
+              to={
+                functionsQuery.data?.[0]
+                  ? buildCapabilitiesLocation({ section: 'functions', functionId: functionsQuery.data[0].functionId })
+                  : null
+              }
+            />
+          </div>
+        </WorkspaceCanvas>
+      ) : (
       <div className="space-y-6">
         <SegmentedTabs
           value={selectedTab}
@@ -286,14 +282,17 @@ export function RolesPage() {
             { value: 'functions', label: 'Functions', description: `${functionsQuery.data?.length ?? 0} function definitions` },
           ]}
           onChange={(tab) =>
-            void navigate({
-              to: '/roles',
-              search: {
-                roleId: tab === 'roles' ? search.roleId : undefined,
-                functionId: tab === 'functions' ? search.functionId : undefined,
-                tab,
-              },
-            })
+            void navigate(
+              tab === 'roles'
+                ? buildCapabilitiesLocation({
+                    section: 'roles',
+                    roleId: rolesQuery.data?.items[0]?.roleId ?? selectedRole?.roleId ?? '',
+                  })
+                : buildCapabilitiesLocation({
+                    section: 'functions',
+                    functionId: functionsQuery.data?.[0]?.functionId ?? selectedFunction?.functionId ?? '',
+                  }),
+            )
           }
         />
 
@@ -314,45 +313,45 @@ export function RolesPage() {
             {selectedTab === 'roles' && rolesQuery.isLoading && <PanelLoading label="Loading roles" />}
             {selectedTab === 'roles' && rolesQuery.isError && <PanelError message={rolesQuery.error.message} />}
             {selectedTab === 'roles' && rolesQuery.data?.items.map((role) => (
-              <button
+              <Link
                 key={role.roleId}
-                type="button"
-                onClick={() => void navigate({ to: '/roles', search: { roleId: role.roleId, functionId: undefined, tab: 'roles' } })}
+                to="/roles/roles/$roleId"
+                params={{ roleId: role.roleId }}
                 className={cn(
                   'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
-                  search.roleId === role.roleId
+                  input.roleId === role.roleId
                     ? 'border-slate-950 bg-slate-950 text-white'
                     : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                 )}
               >
                 <div className="font-semibold">{role.name}</div>
-                <div className={cn('mt-1 text-xs', search.roleId === role.roleId ? 'text-slate-300' : 'text-[color:var(--muted)]')}>
+                <div className={cn('mt-1 text-xs', input.roleId === role.roleId ? 'text-slate-300' : 'text-[color:var(--muted)]')}>
                   {role.assignedFunctionCount} function assignments
                 </div>
-              </button>
+              </Link>
             ))}
             {selectedTab === 'functions' && functionsQuery.isLoading && <PanelLoading label="Loading functions" />}
             {selectedTab === 'functions' && functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
             {selectedTab === 'functions' && functionsQuery.data?.map((item) => (
-              <button
+              <Link
                 key={item.functionId}
-                type="button"
-                onClick={() => void navigate({ to: '/roles', search: { functionId: item.functionId, roleId: undefined, tab: 'functions' } })}
+                to="/roles/functions/$functionId"
+                params={{ functionId: item.functionId }}
                 className={cn(
                   'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
-                  search.functionId === item.functionId
+                  input.functionId === item.functionId
                     ? 'border-slate-950 bg-slate-950 text-white'
                     : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                 )}
               >
                 <div className="font-semibold">{item.name}</div>
-                <div className={cn('mt-1 text-xs', search.functionId === item.functionId ? 'text-slate-300' : 'text-[color:var(--muted)]')}>
+                <div className={cn('mt-1 text-xs', input.functionId === item.functionId ? 'text-slate-300' : 'text-[color:var(--muted)]')}>
                   {item.roleIds.length} roles
                 </div>
-              </button>
+              </Link>
             ))}
-              </div>
-            </Card>
+          </div>
+        </Card>
 
             {selectedTab === 'roles' && <Card className="p-6">
               <div className="mb-4 flex items-center gap-2">
@@ -688,6 +687,7 @@ export function RolesPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -714,6 +714,53 @@ function PermissionToggle(input: {
       {input.pending ? <LoaderCircle className="ml-auto h-4 w-4 animate-spin text-slate-500" /> : null}
     </label>
   );
+}
+
+function CapabilityEntryLink(input: {
+  title: string;
+  detail: string;
+  to:
+    | { to: '/roles/roles/$roleId'; params: { roleId: string } }
+    | { to: '/roles/functions/$functionId'; params: { functionId: string } }
+    | null;
+}) {
+  if (!input.to) {
+    return (
+      <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5">
+        <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
+        <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to={input.to.to}
+      params={input.to.params}
+      className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
+    >
+      <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
+      <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+    </Link>
+  );
+}
+
+function buildCapabilitiesLocation(input:
+  | { section: 'roles'; roleId: string; replace?: boolean }
+  | { section: 'functions'; functionId: string; replace?: boolean }) {
+  if (input.section === 'roles') {
+    return {
+      to: '/roles/roles/$roleId' as const,
+      params: { roleId: input.roleId },
+      replace: input.replace,
+    };
+  }
+
+  return {
+    to: '/roles/functions/$functionId' as const,
+    params: { functionId: input.functionId },
+    replace: input.replace,
+  };
 }
 
 function groupIds(ids: string[]) {
