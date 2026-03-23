@@ -640,52 +640,75 @@ function AgentsWorkspacePage(input: {
                     />
 
                     {selectedCommunicationView === 'providers' ? (
-                      <AgentProvidersCard
-                        agent={agentDetailQuery.data}
-                        draftByKey={providerDrafts}
-                        newProviderDraft={newProviderDraft}
-                        onChangeProviderDraft={(providerType, credentialsText) => {
-                          const agentId = agentDetailQuery.data!.agentId;
-                          const key = buildProviderDraftKey(agentId, providerType);
+                      <div className="space-y-6">
+                        <WorkspaceCanvas
+                          title="Provider status"
+                          description="Channel providers connected to this agent."
+                        >
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <ReadOnlyField label="Providers" value={formatInteger(agentDetailQuery.data.providers.length)} />
+                            <ReadOnlyField
+                              label="Editable"
+                              value={formatInteger(agentDetailQuery.data.providers.filter((provider) => provider.editable).length)}
+                            />
+                            <ReadOnlyField
+                              label="Connected types"
+                              value={agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none'}
+                            />
+                            <ReadOnlyField
+                              label="Loaded"
+                              value={agentDetailQuery.data.loaded ? 'yes' : 'no'}
+                            />
+                          </div>
+                        </WorkspaceCanvas>
 
-                          setProviderDrafts((current) => ({
-                            ...current,
-                            [key]: {
+                        <AgentProvidersCard
+                          agent={agentDetailQuery.data}
+                          draftByKey={providerDrafts}
+                          newProviderDraft={newProviderDraft}
+                          onChangeProviderDraft={(providerType, credentialsText) => {
+                            const agentId = agentDetailQuery.data!.agentId;
+                            const key = buildProviderDraftKey(agentId, providerType);
+
+                            setProviderDrafts((current) => ({
+                              ...current,
+                              [key]: {
+                                providerType,
+                                credentialsText,
+                              },
+                            }));
+                          }}
+                          onChangeNewProviderDraft={setNewProviderDraft}
+                          onSaveProvider={(providerType, credentialsText) =>
+                            upsertProviderMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
                               providerType,
                               credentialsText,
-                            },
-                          }));
-                        }}
-                        onChangeNewProviderDraft={setNewProviderDraft}
-                        onSaveProvider={(providerType, credentialsText) =>
-                          upsertProviderMutation.mutate({
-                            agentId: agentDetailQuery.data!.agentId,
-                            providerType,
-                            credentialsText,
-                          })
-                        }
-                        onDeleteProvider={(providerType) =>
-                          deleteProviderMutation.mutate({
-                            agentId: agentDetailQuery.data!.agentId,
-                            providerType,
-                          })
-                        }
-                        onCreateProvider={() =>
-                          upsertProviderMutation.mutate({
-                            agentId: agentDetailQuery.data!.agentId,
-                            providerType: newProviderDraft.providerType,
-                            credentialsText: newProviderDraft.credentialsText,
-                          })
-                        }
-                        pendingProviderType={
-                          upsertProviderMutation.variables?.providerType ??
-                          deleteProviderMutation.variables?.providerType ??
-                          null
-                        }
-                        error={
-                          upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
-                        }
-                      />
+                            })
+                          }
+                          onDeleteProvider={(providerType) =>
+                            deleteProviderMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              providerType,
+                            })
+                          }
+                          onCreateProvider={() =>
+                            upsertProviderMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              providerType: newProviderDraft.providerType,
+                              credentialsText: newProviderDraft.credentialsText,
+                            })
+                          }
+                          pendingProviderType={
+                            upsertProviderMutation.variables?.providerType ??
+                            deleteProviderMutation.variables?.providerType ??
+                            null
+                          }
+                          error={
+                            upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
+                          }
+                        />
+                      </div>
                     ) : null}
 
                     {selectedCommunicationView === 'inbox' ? (
@@ -696,13 +719,57 @@ function AgentsWorkspacePage(input: {
                     ) : null}
 
                     {selectedCommunicationView === 'thread' ? (
-                      <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
+                      <div className="space-y-6">
+                        <WorkspaceCanvas
+                          title="Thread summary"
+                          description="Latest persisted memory traffic by role."
+                        >
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <ReadOnlyField label="Messages" value={formatInteger(agentDetailQuery.data.recentThreadMessages.length)} />
+                            <ReadOnlyField
+                              label="System"
+                              value={formatInteger(agentDetailQuery.data.recentThreadMessages.filter((message) => message.role === 'system').length)}
+                            />
+                            <ReadOnlyField
+                              label="User"
+                              value={formatInteger(agentDetailQuery.data.recentThreadMessages.filter((message) => message.role === 'user').length)}
+                            />
+                            <ReadOnlyField
+                              label="Assistant"
+                              value={formatInteger(agentDetailQuery.data.recentThreadMessages.filter((message) => message.role === 'assistant').length)}
+                            />
+                          </div>
+                        </WorkspaceCanvas>
+
+                        <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
+                      </div>
                     ) : null}
                   </div>
                 )}
 
                 {selectedTab === 'schedules' && (
-                  <>
+                  <div className="space-y-6">
+                    <WorkspaceCanvas
+                      title="Schedule status"
+                      description="Heartbeat and explicit scheduled wakeups attached to this agent."
+                    >
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <ReadOnlyField label="Schedules" value={formatInteger(agentDetailQuery.data.schedules.length)} />
+                        <ReadOnlyField
+                          label="Active schedules"
+                          value={formatInteger(agentDetailQuery.data.schedules.filter((schedule) => schedule.isActive).length)}
+                        />
+                        <ReadOnlyField
+                          label="Heartbeat"
+                          value={agentDetailQuery.data.heartbeat?.cronExpression ?? '—'}
+                        />
+                        <ReadOnlyField
+                          label="Next heartbeat"
+                          value={formatDateTime(agentDetailQuery.data.heartbeat?.nextTriggerAt ?? null)}
+                        />
+                      </div>
+                    </WorkspaceCanvas>
+
                     <SchedulesCard
                       schedules={agentDetailQuery.data.schedules}
                       heartbeat={agentDetailQuery.data.heartbeat}
@@ -741,7 +808,7 @@ function AgentsWorkspacePage(input: {
                         }}
                       />
                     ) : null}
-                  </>
+                  </div>
                 )}
 
                 {selectedTab === 'history' && <ExecutionCard agent={agentDetailQuery.data} />}
