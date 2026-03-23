@@ -134,6 +134,8 @@ function AgentsWorkspacePage(input: {
     queryKey: ['admin', 'agent', input.agentId],
     queryFn: () => getAgent(input.agentId!),
     enabled: Boolean(input.agentId),
+    refetchInterval: input.mode === 'detail' && input.agentId ? 5000 : false,
+    refetchOnWindowFocus: true,
   });
 
   const selectedAgentFunctionId =
@@ -433,10 +435,15 @@ function AgentsWorkspacePage(input: {
                     </div>
                   }
                 >
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                     <CompactStat label="Function" value={agentDetailQuery.data.function?.name ?? '—'} />
                     <CompactStat label="Providers" value={agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none'} />
                     <CompactStat label="Contract" value={agentDetailQuery.data.activeContract ? `${formatUsd(agentDetailQuery.data.activeContract.weeklyValueUsd)} / week` : 'no contract'} />
+                    <CompactStat label="Runner" value={getRunnerStateLabel(agentDetailQuery.data)} />
+                    <CompactStat
+                      label="Next activity"
+                      value={agentDetailQuery.data.runner?.nextStepAt ? formatDateTime(agentDetailQuery.data.runner.nextStepAt) : '—'}
+                    />
                   </div>
                 </WorkspaceCanvas>
 
@@ -1612,73 +1619,204 @@ function ScheduleEditorCard(input: {
 
 function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
   const agent = input.agent!;
+  const latestStep = agent.recentExecutionSteps[0] ?? null;
+  const unreadNotificationCount = agent.recentNotifications.filter((notification) => !notification.read).length;
+  const recentStepCostUsd = agent.recentExecutionSteps.reduce((total, step) => total + step.costUsd, 0);
+  const recentStepTokenCount = agent.recentExecutionSteps.reduce(
+    (total, step) => total + step.inputTokens + step.cachedInputTokens + step.outputTokens,
+    0,
+  );
+  const recentAverageStepGapMs = computeAverageStepGapMs(agent.recentExecutionSteps);
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">Recent execution steps</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Last recorded agent and OM steps from the central ledger.
-          </p>
+    <div className="space-y-6">
+      <WorkspaceCanvas
+        title="Run state"
+        description="Live runner state, wake queue condition, and the latest observed activity from the agent."
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <ReadOnlyField label="Runner state" value={getRunnerStateLabel(agent)} />
+          <ReadOnlyField
+            label="Wake queue"
+            value={getWakeQueueLabel(agent)}
+          />
+          <ReadOnlyField
+            label="Last wake"
+            value={formatDateTime(agent.runner?.lastWakeStartedAt ?? null)}
+          />
+          <ReadOnlyField
+            label="Next scheduled step"
+            value={agent.runner?.nextStepAt ? `${formatDateTime(agent.runner.nextStepAt)}${agent.runner.estimatedDelayMs != null ? ` · ${formatDurationShort(agent.runner.estimatedDelayMs)}` : ''}` : '—'}
+          />
+          <ReadOnlyField
+            label="Latest step"
+            value={latestStep ? `${formatDateTime(latestStep.createdAt)} · ${latestStep.kind}` : '—'}
+          />
+          <ReadOnlyField
+            label="Unread notifications"
+            value={formatInteger(unreadNotificationCount)}
+          />
+          <ReadOnlyField
+            label="Average recent gap"
+            value={recentAverageStepGapMs ? formatDurationShort(recentAverageStepGapMs) : '—'}
+          />
+          <ReadOnlyField
+            label="Auto refresh"
+            value="5s"
+          />
         </div>
-        <Bot className="h-5 w-5 text-slate-500" />
-      </div>
-      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
-        <div className="grid gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-4">
+      </WorkspaceCanvas>
+
+      <WorkspaceCanvas
+        title="Execution summary"
+        description="Budget context and the recent execution footprint visible from the central step ledger."
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <ReadOnlyField label="Contract value" value={formatUsd(agent.activeContract?.weeklyValueUsd)} />
           <ReadOnlyField
             label="Used"
             value={agent.activeContract ? `${formatUsdPrecise(agent.activeContract.spentUsd)} (${agent.activeContract.spentPercent.toFixed(1)}%)` : '—'}
           />
           <ReadOnlyField
-            label="Estimated step interval"
-            value={agent.runner?.estimatedDelayMs != null ? `${Math.round(agent.runner.estimatedDelayMs / 1000)}s` : '—'}
+            label="Estimated next interval"
+            value={agent.runner?.estimatedDelayMs != null ? formatDurationShort(agent.runner.estimatedDelayMs) : '—'}
           />
           <ReadOnlyField
-            label="Wake pending"
-            value={
-              agent.runner?.wake.pending
-                ? `${agent.runner.wake.waitingForIdle ? 'waiting for idle' : 'yes'}${agent.runner.wake.nextTriggerAt ? ` · ${formatDateTime(agent.runner.wake.nextTriggerAt)}` : ''}`
-                : 'no'
-            }
+            label="Recent step cost"
+            value={formatUsdPrecise(recentStepCostUsd)}
+          />
+          <ReadOnlyField
+            label="Recent step tokens"
+            value={formatInteger(recentStepTokenCount)}
           />
         </div>
-        <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">Kind</th>
-              <th className="px-4 py-3 font-medium">Model</th>
-              <th className="px-4 py-3 font-medium">Tokens</th>
-              <th className="px-4 py-3 font-medium">Cost</th>
-              <th className="px-4 py-3 font-medium">At</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
-            {agent.recentExecutionSteps.map((step) => (
-              <tr key={step.stepId}>
-                <td className="px-4 py-3">{step.kind}</td>
-                <td className="px-4 py-3">{step.modelKey}</td>
-                <td className="px-4 py-3">
-                  <div>{formatInteger(step.inputTokens + step.cachedInputTokens + step.outputTokens)}</div>
-                  <div className="text-xs text-slate-500">
-                    in {formatInteger(step.inputTokens)} / cache {formatInteger(step.cachedInputTokens)} / out {formatInteger(step.outputTokens)}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div>{formatUsdPrecise(step.costUsd)}</div>
-                  <div className="text-xs text-slate-500">
-                    in {step.inputPerMillionUsd} / cache {step.inputCachePerMillionUsd} / out {step.outputPerMillionUsd} · {step.contractCostMultiplier.toFixed(3)}x
-                  </div>
-                </td>
-                <td className="px-4 py-3">{formatDateTime(step.createdAt)}</td>
+      </WorkspaceCanvas>
+
+      <Card className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Recent execution steps</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Last recorded agent and OM steps from the central ledger.
+            </p>
+          </div>
+          <Bot className="h-5 w-5 text-slate-500" />
+        </div>
+        <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
+          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3 font-medium">Kind</th>
+                <th className="px-4 py-3 font-medium">Model</th>
+                <th className="px-4 py-3 font-medium">Tokens</th>
+                <th className="px-4 py-3 font-medium">Cost</th>
+                <th className="px-4 py-3 font-medium">At</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+              {agent.recentExecutionSteps.map((step) => (
+                <tr key={step.stepId}>
+                  <td className="px-4 py-3">{step.kind}</td>
+                  <td className="px-4 py-3">{step.modelKey}</td>
+                  <td className="px-4 py-3">
+                    <div>{formatInteger(step.inputTokens + step.cachedInputTokens + step.outputTokens)}</div>
+                    <div className="text-xs text-slate-500">
+                      in {formatInteger(step.inputTokens)} / cache {formatInteger(step.cachedInputTokens)} / out {formatInteger(step.outputTokens)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div>{formatUsdPrecise(step.costUsd)}</div>
+                    <div className="text-xs text-slate-500">
+                      in {step.inputPerMillionUsd} / cache {step.inputCachePerMillionUsd} / out {step.outputPerMillionUsd} · {step.contractCostMultiplier.toFixed(3)}x
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">{formatDateTime(step.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
   );
+}
+
+function getRunnerStateLabel(agent: Awaited<ReturnType<typeof getAgent>>) {
+  if (!agent.runner) {
+    return agent.executionState;
+  }
+
+  if (agent.runner.executing) {
+    return 'executing';
+  }
+
+  if (agent.runner.scheduled) {
+    return 'scheduled';
+  }
+
+  if (agent.runner.wake.pending && agent.runner.wake.waitingForIdle) {
+    return 'waiting for idle';
+  }
+
+  if (agent.runner.wake.pending) {
+    return 'wake pending';
+  }
+
+  return agent.executionState;
+}
+
+function getWakeQueueLabel(agent: Awaited<ReturnType<typeof getAgent>>) {
+  if (!agent.runner?.wake.pending) {
+    return 'idle';
+  }
+
+  if (agent.runner.wake.waitingForIdle) {
+    return 'waiting for idle';
+  }
+
+  if (agent.runner.wake.nextTriggerAt) {
+    return `debounce · ${formatDateTime(agent.runner.wake.nextTriggerAt)}`;
+  }
+
+  return 'pending';
+}
+
+function computeAverageStepGapMs(
+  steps: Array<{
+    createdAt: number;
+  }>,
+) {
+  if (steps.length < 2) {
+    return null;
+  }
+
+  let totalGapMs = 0;
+
+  for (let index = 0; index < steps.length - 1; index += 1) {
+    totalGapMs += Math.abs(steps[index].createdAt - steps[index + 1].createdAt);
+  }
+
+  return totalGapMs / (steps.length - 1);
+}
+
+function formatDurationShort(value: number) {
+  const totalSeconds = Math.max(Math.round(value / 1000), 0);
+
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes < 60) {
+    return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
 }
 
 function ReadOnlyField(input: { label: string; value: string; wrap?: boolean }) {
