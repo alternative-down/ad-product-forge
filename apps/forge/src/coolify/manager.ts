@@ -208,9 +208,8 @@ export function createCoolifyManager(config: {
       environment_name: deploymentContext.environmentName,
       environment_uuid: deploymentContext.environmentUuid,
       server_uuid: deploymentContext.serverUuid,
-      // Use source_id and source_type format (matches forge application structure)
+      // Use source_id format (numeric GitHub App ID)
       source_id: githubAppId,
-      source_type: 'App\\Models\\GithubApp',
       git_repository: `${input.repositoryOwner}/${input.repositoryName}`,
       git_branch: input.branch,
       name: input.name,
