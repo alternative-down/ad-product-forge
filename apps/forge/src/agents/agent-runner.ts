@@ -9,8 +9,6 @@ const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
 const AUTONOMOUS_STEP_PROMPT =
   'System wake: continue your autonomous work using current memory, pending conversations, schedules, and available tools. If nothing requires action right now, stop without calling tools.';
-const AUTONOMOUS_CONTINUE_PROMPT =
-  'Continue the current autonomous run from the latest context, memory, and tool results.';
 const CHECKPOINT_PREFIX = 'CHECKPOINT:';
 type AgentUsage = {
   inputTokens?: number;
@@ -157,7 +155,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
-      const prompt = needsWakePrompt ? AUTONOMOUS_STEP_PROMPT : AUTONOMOUS_CONTINUE_PROMPT;
+      const prompt = needsWakePrompt ? AUTONOMOUS_STEP_PROMPT : [];
       const result = await runtime.agent.generate(prompt, {
         maxSteps: 1,
         toolChoice: 'required',
