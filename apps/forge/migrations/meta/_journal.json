@@ -148,6 +148,13 @@
       "when": 1774223400000,
       "tag": "0020_function_roles_table_rebuild",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1774225200000,
+      "tag": "0021_minimax_supported_model",
+      "breakpoints": true
     }
   ]
 }
