@@ -20,6 +20,7 @@ import {
   upsertAgentProvider,
   wakeAgent,
   type AgentFunction,
+  type AgentListItem,
   type AgentSchedule,
   type CreateScheduleInput,
   type HireAgentResult,
@@ -395,7 +396,10 @@ function AgentsWorkspacePage(input: {
                     </div>
                     <div className="mt-4 grid gap-2 text-sm text-[color:var(--muted)]">
                       <div>Providers: {agent.providerTypes.join(', ') || 'none'}</div>
-                      <div>Status: {agent.executionState}</div>
+                      <div>Runner: {agent.runner ? getRunnerListStateLabel(agent) : agent.executionState}</div>
+                      <div>
+                        Next activity: {agent.runner?.nextStepAt ? formatDateTime(agent.runner.nextStepAt) : '—'}
+                      </div>
                     </div>
                     <div className="mt-5 text-sm font-semibold text-[color:var(--accent)]">Open agent</div>
                   </Link>
@@ -1913,6 +1917,30 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
 }
 
 function getRunnerStateLabel(agent: Awaited<ReturnType<typeof getAgent>>) {
+  if (!agent.runner) {
+    return agent.executionState;
+  }
+
+  if (agent.runner.executing) {
+    return 'executing';
+  }
+
+  if (agent.runner.scheduled) {
+    return 'scheduled';
+  }
+
+  if (agent.runner.wake.pending && agent.runner.wake.waitingForIdle) {
+    return 'waiting for idle';
+  }
+
+  if (agent.runner.wake.pending) {
+    return 'wake pending';
+  }
+
+  return agent.executionState;
+}
+
+function getRunnerListStateLabel(agent: AgentListItem) {
   if (!agent.runner) {
     return agent.executionState;
   }
