@@ -83,6 +83,7 @@ export type AgentListItem = {
     lastWakeStartedAt: number | null;
     wake: {
       pending: boolean;
+      waitingForIdle: boolean;
       firstPendingAt: number | null;
       nextTriggerAt: number | null;
     };

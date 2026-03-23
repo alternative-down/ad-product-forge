@@ -674,8 +674,26 @@ function AgentHeader(input: {
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MiniMetric label="Runner" value={agent.runner?.executing ? 'executing' : 'idle'} />
-        <MiniMetric label="Wake pending" value={agent.runner?.wake.pending ? 'yes' : 'no'} />
+        <MiniMetric
+          label="Runner"
+          value={
+            agent.runner?.executing
+              ? 'executing'
+              : agent.runner?.scheduled
+                ? 'scheduled'
+                : 'idle'
+          }
+        />
+        <MiniMetric
+          label="Wake pending"
+          value={
+            agent.runner?.wake.pending
+              ? agent.runner.wake.waitingForIdle
+                ? 'waiting for idle'
+                : 'yes'
+              : 'no'
+          }
+        />
         <MiniMetric
           label="Next step"
           value={agent.runner?.nextStepAt ? formatDateTime(agent.runner.nextStepAt) : '—'}
@@ -1523,7 +1541,11 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
           />
           <ReadOnlyField
             label="Wake pending"
-            value={agent.runner?.wake.pending ? `yes${agent.runner.wake.nextTriggerAt ? ` · ${formatDateTime(agent.runner.wake.nextTriggerAt)}` : ''}` : 'no'}
+            value={
+              agent.runner?.wake.pending
+                ? `${agent.runner.wake.waitingForIdle ? 'waiting for idle' : 'yes'}${agent.runner.wake.nextTriggerAt ? ` · ${formatDateTime(agent.runner.wake.nextTriggerAt)}` : ''}`
+                : 'no'
+            }
           />
         </div>
         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">

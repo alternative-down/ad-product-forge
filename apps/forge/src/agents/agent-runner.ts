@@ -29,7 +29,8 @@ type OmObservationEndPart = {
 export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
   const wakeQueue = createAgentWakeQueue({
-    run: wake,
+    isRunning: async () => (await store.getExecutionState(runtime.id)) === 'running',
+    wake,
   });
   let timer: NodeJS.Timeout | null = null;
   let stopped = false;
@@ -101,6 +102,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   function stop() {
     stopped = true;
     clearTimer();
+    wakeQueue.stop();
   }
 
   async function queueNextStep() {
@@ -186,6 +188,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         needsWakePrompt = true;
         nextStepAt = null;
         await store.setExecutionState(runtime.id, 'idle');
+        await wakeQueue.onRunnerIdle();
         return;
       }
 

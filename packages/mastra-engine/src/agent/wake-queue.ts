@@ -1,17 +1,25 @@
-const WAKE_DEBOUNCE_MS = 1000;
-const WAKE_MAX_DELAY_MS = 10000;
+const WAKE_DEBOUNCE_MS = 5000;
+const WAKE_MAX_DELAY_MS = 60000;
 
 export type AgentWakeQueue = {
   notifyExternalEvent(): void;
+  onRunnerIdle(): Promise<void>;
+  stop(): void;
   getSnapshot(): {
     pending: boolean;
+    waitingForIdle: boolean;
     firstPendingAt: number | null;
     nextTriggerAt: number | null;
   };
 };
 
-export function createAgentWakeQueue(config: { run(): Promise<unknown> }): AgentWakeQueue {
+export function createAgentWakeQueue(config: {
+  isRunning(): Promise<boolean>;
+  wake(): Promise<void>;
+}): AgentWakeQueue {
   let timer: NodeJS.Timeout | null = null;
+  let pending = false;
+  let waitingForIdle = false;
   let firstPendingAt: number | null = null;
   let nextTriggerAt: number | null = null;
 
@@ -25,31 +33,76 @@ export function createAgentWakeQueue(config: { run(): Promise<unknown> }): Agent
     nextTriggerAt = null;
   }
 
-  function trigger() {
+  function scheduleTrigger(delayMs: number) {
     clearTimer();
-    firstPendingAt = null;
-    void config.run();
+    nextTriggerAt = Date.now() + Math.max(delayMs, 0);
+    timer = setTimeout(
+      () => {
+        void trigger();
+      },
+      Math.max(delayMs, 0),
+    );
+  }
+
+  async function trigger() {
+    clearTimer();
+
+    if (!pending) {
+      return;
+    }
+
+    try {
+      if (await config.isRunning()) {
+        waitingForIdle = true;
+        return;
+      }
+
+      pending = false;
+      waitingForIdle = false;
+      firstPendingAt = null;
+      await config.wake();
+    } catch (error) {
+      console.error('[AgentWakeQueue] Failed to wake agent:', error);
+      scheduleTrigger(WAKE_DEBOUNCE_MS);
+    }
   }
 
   return {
     notifyExternalEvent() {
-      clearTimer();
+      pending = true;
 
       const now = Date.now();
 
       firstPendingAt ??= now;
 
-      if (now - firstPendingAt >= WAKE_MAX_DELAY_MS) {
-        trigger();
+      if (waitingForIdle) {
         return;
       }
 
-      nextTriggerAt = now + WAKE_DEBOUNCE_MS;
-      timer = setTimeout(trigger, WAKE_DEBOUNCE_MS);
+      if (now - firstPendingAt >= WAKE_MAX_DELAY_MS) {
+        void trigger();
+        return;
+      }
+
+      scheduleTrigger(Math.min(WAKE_DEBOUNCE_MS, firstPendingAt + WAKE_MAX_DELAY_MS - now));
+    },
+    async onRunnerIdle() {
+      if (timer || !pending) {
+        return;
+      }
+
+      await trigger();
+    },
+    stop() {
+      pending = false;
+      waitingForIdle = false;
+      firstPendingAt = null;
+      clearTimer();
     },
     getSnapshot() {
       return {
-        pending: timer !== null,
+        pending,
+        waitingForIdle,
         firstPendingAt,
         nextTriggerAt,
       };
