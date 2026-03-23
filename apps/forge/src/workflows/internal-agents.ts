@@ -44,7 +44,7 @@ export function createInternalAgentWorkflows(config: {
   const workflows = {} as InternalAgentWorkflows;
 
   const hireStep = createStep({
-    id: 'hire-internal-agent',
+    id: 'hire-internal-agent-execute',
     inputSchema: hireInternalAgentInputSchema,
     outputSchema: hireInternalAgentOutputSchema,
     execute: async ({ inputData }) => {
