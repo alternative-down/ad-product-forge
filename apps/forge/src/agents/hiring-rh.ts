@@ -97,10 +97,9 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
-    maxSteps: 8,
+    maxSteps: 1000,
     structuredOutput: {
       schema: hiringRhResultSchema,
-      jsonPromptInjection: true,
     },
   });
   const toolCalls = result.steps.flatMap((step) => step.toolCalls);
