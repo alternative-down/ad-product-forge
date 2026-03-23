@@ -116,7 +116,7 @@ export async function generateHiredAgentInstructions(
             ...agent,
             functionId: agentFunction.functionId,
             functionName: agentFunction.name,
-            functionDescrition: agentFunction.description,
+            functionDescription: agentFunction.description,
           };
         },
       }),
@@ -155,9 +155,16 @@ export async function generateHiredAgentInstructions(
   if (!toolCall) throw new Error('Hiring RH not returned agent data');
 
   const { agent: agentHired } = toolCall.payload.args as z.infer<typeof inputSchema>;
+  const agentFunction = await capabilities.getFunction(agentHired.functionId);
+
+  if (!agentFunction) {
+    throw new Error(`Hiring RH returned unknown functionId: ${agentHired.functionId}`);
+  }
 
   return {
     ...agentHired,
+    functionName: agentFunction.name,
+    functionDescription: agentFunction.description,
     costUsd,
     modelKey: hiringRhModelKey,
   };

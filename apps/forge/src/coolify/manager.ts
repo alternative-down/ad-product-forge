@@ -161,14 +161,18 @@ export function createCoolifyManager(config: {
   }
 
   async function getGithubAppId(githubAppUuid: string): Promise<number> {
-    // List GitHub Apps and find the one with matching UUID
     const apps = await listGitHubApps();
     const app = apps.find((a) => a.githubAppUuid === githubAppUuid);
+
     if (!app) {
       throw new Error(`GitHub App with UUID ${githubAppUuid} not found`);
     }
-    // The id field is the numeric ID used by the API
-    return app.id;
+
+    if (typeof app.githubAppId !== 'number') {
+      throw new Error(`GitHub App ${githubAppUuid} is missing numeric githubAppId in Coolify`);
+    }
+
+    return app.githubAppId;
   }
 
   async function listApplications() {

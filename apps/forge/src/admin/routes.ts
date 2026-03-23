@@ -476,6 +476,7 @@ export function registerAdminRoutes(input: {
         workspaceBasePath: input.workspaceBasePath,
         githubApps: input.githubApps,
         emailMailboxes: input.emailMailboxes,
+        coolify: input.coolify,
         schedules: input.schedules,
       });
 
