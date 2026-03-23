@@ -19,7 +19,6 @@ import {
   updateFunction,
   updateRole,
 } from '../../lib/api';
-import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -432,34 +431,36 @@ function CapabilitiesWorkspacePage(input: {
         {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
 
         {selectedTab === 'roles' && selectedRole && rolesQuery.data && functionsQuery.data && selectedRoleDraft && (
-          <Card className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-slate-950">{selectedRole.name}</h2>
-                <p className="mt-2 text-sm text-slate-500">
-                  Edit the role and manage its tool and workflow grants.
-                </p>
+          <form
+            className="space-y-6"
+            onSubmit={(event) => {
+              event.preventDefault();
+              updateRoleMutation.mutate({
+                roleId: selectedRole.roleId,
+                name: selectedRoleDraft.name,
+                description: selectedRoleDraft.description || null,
+                nextToolIds: selectedRoleDraft.toolIds,
+                nextWorkflowIds: selectedRoleDraft.workflowIds,
+                currentToolIds: selectedRole.toolIds,
+                currentWorkflowIds: selectedRole.workflowIds,
+              });
+            }}
+          >
+            <WorkspaceCanvas
+              title={selectedRole.name}
+              description="Edit identity first, then tool and workflow permissions."
+            >
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <ReadOnlyField label="Functions" value={String(selectedRole.assignedFunctionCount)} />
+                <ReadOnlyField label="Tools" value={String(selectedRole.toolIds.length)} />
+                <ReadOnlyField label="Workflows" value={String(selectedRole.workflowIds.length)} />
+                <ReadOnlyField label="Role id" value={selectedRole.roleId} />
               </div>
-              <div className="flex gap-2">
-                <Badge>{selectedRole.assignedFunctionCount} functions</Badge>
-                <Badge>{selectedRole.workflowIds.length} workflows</Badge>
-              </div>
-            </div>
+            </WorkspaceCanvas>
 
-            <form
-              className="mt-6 space-y-6"
-              onSubmit={(event) => {
-                event.preventDefault();
-                updateRoleMutation.mutate({
-                  roleId: selectedRole.roleId,
-                  name: selectedRoleDraft.name,
-                  description: selectedRoleDraft.description || null,
-                  nextToolIds: selectedRoleDraft.toolIds,
-                  nextWorkflowIds: selectedRoleDraft.workflowIds,
-                  currentToolIds: selectedRole.toolIds,
-                  currentWorkflowIds: selectedRole.workflowIds,
-                });
-              }}
+            <WorkspaceCanvas
+              title="Role identity"
+              description="Human-readable name and description for this role."
             >
               <div className="max-w-3xl space-y-4">
                 <LabeledField label="Role name">
@@ -511,178 +512,198 @@ function CapabilitiesWorkspacePage(input: {
                   </Button>
                 </div>
               </div>
+            </WorkspaceCanvas>
 
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Tool grants
-                  </div>
-                  {Object.entries(toolGroups).map(([group, toolIds]) => (
-                    <PermissionGroup key={group} title={group}>
-                      {toolIds.map((toolId) => {
-                        return (
-                          <PermissionToggle
-                            key={toolId}
-                            label={toolId}
-                            checked={selectedRoleDraft.toolIds.includes(toolId)}
-                            pending={updateRoleMutation.isPending}
-                            onChange={() => {
-                              setRoleDraft({
-                                ...selectedRoleDraft,
-                                toolIds: selectedRoleDraft.toolIds.includes(toolId)
-                                  ? selectedRoleDraft.toolIds.filter((id) => id !== toolId)
-                                  : [...selectedRoleDraft.toolIds, toolId],
-                              });
-                            }}
-                          />
-                        );
-                      })}
-                    </PermissionGroup>
-                  ))}
-                </div>
-
-                <div className="space-y-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Workflow grants
-                  </div>
-                  <PermissionGroup title="workflows">
-                    {rolesQuery.data.availableWorkflowIds.map((workflowId) => {
+            <WorkspaceCanvas
+              title="Tool grants"
+              description="Tools this role is allowed to use."
+            >
+              <div className="space-y-4">
+                {Object.entries(toolGroups).map(([group, toolIds]) => (
+                  <PermissionGroup key={group} title={group}>
+                    {toolIds.map((toolId) => {
                       return (
                         <PermissionToggle
-                          key={workflowId}
-                          label={workflowId}
-                          checked={selectedRoleDraft.workflowIds.includes(workflowId)}
+                          key={toolId}
+                          label={toolId}
+                          checked={selectedRoleDraft.toolIds.includes(toolId)}
                           pending={updateRoleMutation.isPending}
                           onChange={() => {
                             setRoleDraft({
                               ...selectedRoleDraft,
-                              workflowIds: selectedRoleDraft.workflowIds.includes(workflowId)
-                                ? selectedRoleDraft.workflowIds.filter((id) => id !== workflowId)
-                                : [...selectedRoleDraft.workflowIds, workflowId],
+                              toolIds: selectedRoleDraft.toolIds.includes(toolId)
+                                ? selectedRoleDraft.toolIds.filter((id) => id !== toolId)
+                                : [...selectedRoleDraft.toolIds, toolId],
                             });
                           }}
                         />
                       );
                     })}
                   </PermissionGroup>
-                </div>
+                ))}
               </div>
-            </form>
-          </Card>
+            </WorkspaceCanvas>
+
+            <WorkspaceCanvas
+              title="Workflow grants"
+              description="Workflows this role can trigger."
+            >
+              <PermissionGroup title="workflows">
+                {rolesQuery.data.availableWorkflowIds.map((workflowId) => {
+                  return (
+                    <PermissionToggle
+                      key={workflowId}
+                      label={workflowId}
+                      checked={selectedRoleDraft.workflowIds.includes(workflowId)}
+                      pending={updateRoleMutation.isPending}
+                      onChange={() => {
+                        setRoleDraft({
+                          ...selectedRoleDraft,
+                          workflowIds: selectedRoleDraft.workflowIds.includes(workflowId)
+                            ? selectedRoleDraft.workflowIds.filter((id) => id !== workflowId)
+                            : [...selectedRoleDraft.workflowIds, workflowId],
+                        });
+                      }}
+                    />
+                  );
+                })}
+              </PermissionGroup>
+            </WorkspaceCanvas>
+          </form>
         )}
 
         {selectedTab === 'functions' && functionsQuery.data && rolesQuery.data && selectedFunction && (
-          <WorkspaceCanvas
-            title={selectedFunction.name}
-            description="Edit metadata and choose which roles compose this function."
-          >
-            {(() => {
-              const draft = functionDrafts[selectedFunction.functionId] ?? {
-                name: selectedFunction.name,
-                description: selectedFunction.description ?? '',
-                roleIds: selectedFunction.roleIds,
-              };
+          <div className="space-y-6">
+            <WorkspaceCanvas
+              title={selectedFunction.name}
+              description="Functions compose roles and are assigned to agents."
+            >
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <ReadOnlyField label="Assigned agents" value={String(selectedFunction.assignedAgentCount)} />
+                <ReadOnlyField label="Roles" value={String(selectedFunction.roleIds.length)} />
+                <ReadOnlyField label="Function id" value={selectedFunction.functionId} />
+                <ReadOnlyField label="Description" value={selectedFunction.description ?? '—'} />
+              </div>
+            </WorkspaceCanvas>
 
-              return (
-                <form
-                  className="space-y-6"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    updateFunctionMutation.mutate({
-                      functionId: selectedFunction.functionId,
-                      name: draft.name,
-                      description: draft.description || null,
-                      nextRoleIds: draft.roleIds,
-                      currentRoleIds: selectedFunction.roleIds,
-                    });
-                  }}
-                >
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <LabeledField label="Function name">
-                      <Input
-                        value={draft.name}
-                        onChange={(event) =>
-                          setFunctionDrafts({
-                            ...functionDrafts,
-                            [selectedFunction.functionId]: {
-                              ...draft,
-                              name: event.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </LabeledField>
-                    <LabeledField label="Description">
-                      <Input
-                        value={draft.description}
-                        onChange={(event) =>
-                          setFunctionDrafts({
-                            ...functionDrafts,
-                            [selectedFunction.functionId]: {
-                              ...draft,
-                              description: event.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </LabeledField>
-                  </div>
+            <form
+              className="space-y-6"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const draft = functionDrafts[selectedFunction.functionId] ?? {
+                  name: selectedFunction.name,
+                  description: selectedFunction.description ?? '',
+                  roleIds: selectedFunction.roleIds,
+                };
 
-                  <div className="flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
-                    <Badge>{selectedFunction.assignedAgentCount} agents</Badge>
-                    <Badge>{selectedFunction.roleIds.length} roles</Badge>
-                  </div>
+                updateFunctionMutation.mutate({
+                  functionId: selectedFunction.functionId,
+                  name: draft.name,
+                  description: draft.description || null,
+                  nextRoleIds: draft.roleIds,
+                  currentRoleIds: selectedFunction.roleIds,
+                });
+              }}
+            >
+              {(() => {
+                const draft = functionDrafts[selectedFunction.functionId] ?? {
+                  name: selectedFunction.name,
+                  description: selectedFunction.description ?? '',
+                  roleIds: selectedFunction.roleIds,
+                };
 
-                  <LabeledField label="Roles">
-                    <div className="grid gap-2 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4 md:grid-cols-2">
-                      {rolesQuery.data.items.map((role) => (
-                        <PermissionToggle
-                          key={role.roleId}
-                          label={role.name}
-                          checked={draft.roleIds.includes(role.roleId)}
-                          pending={updateFunctionMutation.isPending}
-                          onChange={() => {
-                            setFunctionDrafts({
-                              ...functionDrafts,
-                              [selectedFunction.functionId]: {
-                                ...draft,
-                                roleIds: draft.roleIds.includes(role.roleId)
-                                  ? draft.roleIds.filter((id) => id !== role.roleId)
-                                  : [...draft.roleIds, role.roleId],
-                              },
-                            });
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </LabeledField>
-
-                  {(updateFunctionMutation.error || deleteFunctionMutation.error) ? (
-                    <InlineError
-                      message={updateFunctionMutation.error?.message ?? deleteFunctionMutation.error?.message ?? ''}
-                    />
-                  ) : null}
-
-                  <div className="flex gap-3">
-                    <Button type="submit" disabled={updateFunctionMutation.isPending}>
-                      {updateFunctionMutation.isPending ? 'Saving...' : 'Save function'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={deleteFunctionMutation.isPending || selectedFunction.assignedAgentCount > 0}
-                      onClick={() => {
-                        deleteFunctionMutation.mutate(selectedFunction.functionId);
-                      }}
+                return (
+                  <>
+                    <WorkspaceCanvas
+                      title="Function identity"
+                      description="Name and description of this function."
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete function
-                    </Button>
-                  </div>
-                </form>
-              );
-            })()}
-          </WorkspaceCanvas>
+                      <div className="max-w-3xl space-y-4">
+                        <LabeledField label="Function name">
+                          <Input
+                            value={draft.name}
+                            onChange={(event) =>
+                              setFunctionDrafts({
+                                ...functionDrafts,
+                                [selectedFunction.functionId]: {
+                                  ...draft,
+                                  name: event.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </LabeledField>
+                        <LabeledField label="Description">
+                          <Textarea
+                            value={draft.description}
+                            onChange={(event) =>
+                              setFunctionDrafts({
+                                ...functionDrafts,
+                                [selectedFunction.functionId]: {
+                                  ...draft,
+                                  description: event.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </LabeledField>
+                      </div>
+                    </WorkspaceCanvas>
+
+                    <WorkspaceCanvas
+                      title="Role composition"
+                      description="Choose which roles compose this function."
+                    >
+                      <div className="grid gap-2 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4 md:grid-cols-2">
+                        {rolesQuery.data.items.map((role) => (
+                          <PermissionToggle
+                            key={role.roleId}
+                            label={role.name}
+                            checked={draft.roleIds.includes(role.roleId)}
+                            pending={updateFunctionMutation.isPending}
+                            onChange={() => {
+                              setFunctionDrafts({
+                                ...functionDrafts,
+                                [selectedFunction.functionId]: {
+                                  ...draft,
+                                  roleIds: draft.roleIds.includes(role.roleId)
+                                    ? draft.roleIds.filter((id) => id !== role.roleId)
+                                    : [...draft.roleIds, role.roleId],
+                                },
+                              });
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </WorkspaceCanvas>
+
+                    {(updateFunctionMutation.error || deleteFunctionMutation.error) ? (
+                      <InlineError
+                        message={updateFunctionMutation.error?.message ?? deleteFunctionMutation.error?.message ?? ''}
+                      />
+                    ) : null}
+
+                    <div className="flex gap-3">
+                      <Button type="submit" disabled={updateFunctionMutation.isPending}>
+                        {updateFunctionMutation.isPending ? 'Saving...' : 'Save function'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={deleteFunctionMutation.isPending || selectedFunction.assignedAgentCount > 0}
+                        onClick={() => {
+                          deleteFunctionMutation.mutate(selectedFunction.functionId);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete function
+                      </Button>
+                    </div>
+                  </>
+                );
+              })()}
+            </form>
+          </div>
         )}
           </div>
         </div>
@@ -809,6 +830,17 @@ function LabeledField(input: { label: string; children: React.ReactNode }) {
       </div>
       {input.children}
     </label>
+  );
+}
+
+function ReadOnlyField(input: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-strong)]">
+        {input.label}
+      </div>
+      <div className="mt-2 text-sm font-semibold text-[color:var(--ink)]">{input.value}</div>
+    </div>
   );
 }
 
