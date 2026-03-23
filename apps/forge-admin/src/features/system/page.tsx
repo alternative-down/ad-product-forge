@@ -193,6 +193,16 @@ function SystemWorkspacePage(input: {
   const selectedTab = input.section ?? 'company';
   const selectedLlmView = input.llmView ?? 'defaults';
   const selectedIntegrationView = input.integrationView ?? 'migadu';
+  const enabledProfilesCount = systemLlm.profiles.filter((profile) => profile.isEnabled).length;
+  const syncedOauthProviders = oauthState.providers.filter((provider) => provider.synced).length;
+  const appliedMigrationsCount = migrations.entries.filter((entry) => entry.applied).length;
+  const pendingMigrationsCount = migrations.entries.filter((entry) => !entry.applied).length;
+  const selectedIntegration =
+    selectedIntegrationView === 'coolify'
+      ? coolifyIntegration
+      : selectedIntegrationView === 'github'
+        ? githubIntegration
+        : migaduIntegration;
 
   return (
     <div className="space-y-6">
@@ -200,6 +210,16 @@ function SystemWorkspacePage(input: {
         eyebrow="System"
         title="System configuration"
         description="Shared company context, model wiring, OAuth state, integrations, and migration visibility. Open one system area at a time."
+        actions={
+          input.mode === 'detail' ? (
+            <Link
+              to="/system"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-5 text-sm font-semibold text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+            >
+              Back to system
+            </Link>
+          ) : null
+        }
       />
 
       {input.mode === 'directory' ? (
@@ -212,36 +232,43 @@ function SystemWorkspacePage(input: {
               to="/system/company"
               title="Company"
               detail="Global prompt context"
+              metric={systemSettings.companyName || 'No company name'}
             />
             <SystemEntryLink
               to="/system/llm/defaults"
               title="LLM defaults"
               detail={`${systemLlm.profiles.length} profiles configured`}
+              metric={`${enabledProfilesCount} enabled`}
             />
             <SystemEntryLink
               to="/system/llm/profiles"
               title="LLM profiles"
               detail="Runtime endpoints and API keys"
+              metric={`${systemLlm.profiles.length} registered`}
             />
             <SystemEntryLink
               to="/system/llm/prices"
               title="LLM pricing"
               detail={`${systemLlm.prices.length} price rows`}
+              metric={`${systemLlm.prices.length} tracked`}
             />
             <SystemEntryLink
               to="/system/oauth"
               title="OAuth"
               detail={`${Object.keys(oauthState).length} providers`}
+              metric={`${syncedOauthProviders} synced`}
             />
             <SystemEntryLink
               to="/system/integrations/migadu"
               title="Integrations"
               detail={`${integrations.filter((integration) => integration.isEnabled).length} enabled`}
+              metric={`${integrations.length} configured`}
             />
             <SystemEntryLink
               to="/system/migrations"
               title="Migrations"
               detail={`${migrations.entries.filter((entry) => !entry.applied).length} pending`}
+              metric={`${appliedMigrationsCount} applied`}
             />
           </div>
         </WorkspaceCanvas>
@@ -286,6 +313,21 @@ function SystemWorkspacePage(input: {
 
           {selectedTab === 'llm' ? (
             <div className="space-y-6">
+              <WorkspaceCanvas
+                title="LLM status"
+                description="Global model inventory, defaults, and pricing coverage."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField label="Profiles" value={String(systemLlm.profiles.length)} />
+                  <ReadOnlyField label="Enabled profiles" value={String(enabledProfilesCount)} />
+                  <ReadOnlyField label="Price rows" value={String(systemLlm.prices.length)} />
+                  <ReadOnlyField
+                    label="Defaults configured"
+                    value={systemLlm.defaults ? 'yes' : 'no'}
+                  />
+                </div>
+              </WorkspaceCanvas>
+
               <SegmentedTabs
                 value={selectedLlmView}
                 items={[
@@ -352,31 +394,86 @@ function SystemWorkspacePage(input: {
           ) : null}
 
           {selectedTab === 'auth' ? (
-            <WorkspaceCanvas
-              title="OAuth sync"
-              description="Provider-side account sync used by the custom gateway and synced integrations."
-            >
-              <OauthSyncCard
-                state={oauthState}
-                pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
-                error={syncOauthMutation.error?.message ?? null}
-                result={syncOauthMutation.data ?? null}
-                onSync={(providerId) => syncOauthMutation.mutate(providerId)}
-              />
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="OAuth status"
+                description="CLI account availability and persisted sync state."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField label="Providers" value={String(oauthState.providers.length)} />
+                  <ReadOnlyField label="Synced" value={String(syncedOauthProviders)} />
+                  <ReadOnlyField
+                    label="Unsynced"
+                    value={String(oauthState.providers.length - syncedOauthProviders)}
+                  />
+                  <ReadOnlyField label="Store path" value={oauthState.storePath} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="OAuth sync"
+                description="Provider-side account sync used by the custom gateway and synced integrations."
+              >
+                <OauthSyncCard
+                  state={oauthState}
+                  pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
+                  error={syncOauthMutation.error?.message ?? null}
+                  result={syncOauthMutation.data ?? null}
+                  onSync={(providerId) => syncOauthMutation.mutate(providerId)}
+                />
+              </WorkspaceCanvas>
+            </div>
           ) : null}
 
           {selectedTab === 'migrations' ? (
-            <WorkspaceCanvas
-              title="Application migrations"
-              description="Repository journal entries matched against __drizzle_migrations."
-            >
-              <MigrationStatusCard migrations={migrations} />
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Migration status"
+                description="Applied versus pending journal entries for the application database."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField label="Entries" value={String(migrations.entries.length)} />
+                  <ReadOnlyField label="Applied" value={String(appliedMigrationsCount)} />
+                  <ReadOnlyField label="Pending" value={String(pendingMigrationsCount)} />
+                  <ReadOnlyField
+                    label="Latest applied row"
+                    value={migrations.applied.at(-1)?.id != null ? String(migrations.applied.at(-1)?.id) : '—'}
+                  />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Application migrations"
+                description="Repository journal entries matched against __drizzle_migrations."
+              >
+                <MigrationStatusCard migrations={migrations} />
+              </WorkspaceCanvas>
+            </div>
           ) : null}
 
           {selectedTab === 'integrations' ? (
             <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Integration status"
+                description="Current provisioning and automation endpoints configured for the platform."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField
+                    label="Enabled integrations"
+                    value={String(integrations.filter((integration) => integration.isEnabled).length)}
+                  />
+                  <ReadOnlyField label="Selected" value={selectedIntegrationView} />
+                  <ReadOnlyField
+                    label="Configured"
+                    value={selectedIntegration ? 'yes' : 'no'}
+                  />
+                  <ReadOnlyField
+                    label="Enabled"
+                    value={selectedIntegration?.isEnabled ? 'yes' : 'no'}
+                  />
+                </div>
+              </WorkspaceCanvas>
+
               <SegmentedTabs
                 value={selectedIntegrationView}
                 items={[
@@ -546,6 +643,7 @@ function SystemEntryLink(input: {
     | '/system/migrations';
   title: string;
   detail: string;
+  metric: string;
 }) {
   return (
     <Link
@@ -554,6 +652,9 @@ function SystemEntryLink(input: {
     >
       <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
       <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+      <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+        {input.metric}
+      </div>
     </Link>
   );
 }
@@ -671,19 +772,19 @@ function LlmPricingCard(input: {
   const [draft, setDraft] = useState<LlmModelPriceDraft>(buildLlmModelPriceDraft(selectedPrice));
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-950">LLM model prices</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Pricing is used by hiring and contract accounting. Add or adjust any model key here.
-          </p>
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-950">LLM model prices</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Pricing is used by hiring and contract accounting. Add or adjust any model key here.
+            </p>
+          </div>
+          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
         </div>
-        {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
-      </div>
 
-      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <div className="space-y-4">
+        <div className="mt-5 space-y-4">
           <LabeledField label="Edit price">
             <Select
               value={selectedModelKey}
@@ -774,37 +875,37 @@ function LlmPricingCard(input: {
             </Button>
           </div>
         </div>
+      </Card>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered prices</h4>
-          <div className="mt-4 space-y-3">
-            {input.prices.map((price) => (
-              <div key={price.modelKey} className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="font-medium text-slate-950 break-all">{price.modelKey}</p>
-                <dl className="mt-3 space-y-1 text-sm text-slate-600">
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Input:</dt>{' '}
-                    <dd className="inline">{price.inputPerMillionUsd}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Cache input:</dt>{' '}
-                    <dd className="inline">{price.inputCachePerMillionUsd}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Output:</dt>{' '}
-                    <dd className="inline">{price.outputPerMillionUsd}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
-                    <dd className="inline">{formatDateTime(price.updatedAt)}</dd>
-                  </div>
-                </dl>
-              </div>
-            ))}
-          </div>
+      <Card className="p-6">
+        <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered prices</h4>
+        <div className="mt-4 space-y-3">
+          {input.prices.map((price) => (
+            <div key={price.modelKey} className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="font-medium text-slate-950 break-all">{price.modelKey}</p>
+              <dl className="mt-3 space-y-1 text-sm text-slate-600">
+                <div>
+                  <dt className="inline font-medium text-slate-800">Input:</dt>{' '}
+                  <dd className="inline">{price.inputPerMillionUsd}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Cache input:</dt>{' '}
+                  <dd className="inline">{price.inputCachePerMillionUsd}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Output:</dt>{' '}
+                  <dd className="inline">{price.outputPerMillionUsd}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
+                  <dd className="inline">{formatDateTime(price.updatedAt)}</dd>
+                </div>
+              </dl>
+            </div>
+          ))}
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
@@ -914,27 +1015,27 @@ function LlmProfileEditorCard(input: {
   const selectedProfile = input.profiles.find((profile) => profile.profileId === selectedProfileId) ?? null;
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-950">LLM profiles</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Profiles are reusable model selections. Defaults point to one of these profiles.
-          </p>
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-950">LLM profiles</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Profiles are reusable model selections. Defaults point to one of these profiles.
+            </p>
+          </div>
+          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
         </div>
-        {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
-      </div>
 
-      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <div className="space-y-4">
+        <div className="mt-5 space-y-4">
           <LabeledField label="Edit profile">
             <Select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
               <option value="new">Create new profile</option>
               {input.profiles.map((profile) => (
-              <option key={profile.profileId} value={profile.profileId}>
+                <option key={profile.profileId} value={profile.profileId}>
                   {formatProfileOption(profile)}
-              </option>
-            ))}
+                </option>
+              ))}
             </Select>
           </LabeledField>
 
@@ -949,50 +1050,50 @@ function LlmProfileEditorCard(input: {
             onDelete={input.onDelete}
           />
         </div>
+      </Card>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered profiles</h4>
-          <div className="mt-4 space-y-3">
-            {input.profiles.map((profile) => (
-              <div key={profile.profileId} className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-slate-950">{profile.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">{profile.profileId}</p>
-                    <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
-                  </div>
-                  <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                    {profile.isEnabled ? 'enabled' : 'disabled'}
-                  </span>
+      <Card className="p-6">
+        <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered profiles</h4>
+        <div className="mt-4 space-y-3">
+          {input.profiles.map((profile) => (
+            <div key={profile.profileId} className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-slate-950">{profile.name}</p>
+                  <p className="mt-1 text-xs text-slate-500">{profile.profileId}</p>
+                  <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
                 </div>
-                <dl className="mt-3 space-y-1 text-sm text-slate-600">
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Model key:</dt>{' '}
-                    <dd className="inline break-all">{profile.modelKey}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Base URL:</dt>{' '}
-                    <dd className="inline break-all">{profile.baseUrl ?? '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Direct token:</dt>{' '}
-                    <dd className="inline">configured</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Contract cost modifier:</dt>{' '}
-                    <dd className="inline">{profile.contractCostMultiplier.toFixed(3)}x</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
-                    <dd className="inline">{formatDateTime(profile.updatedAt)}</dd>
-                  </div>
-                </dl>
+                <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  {profile.isEnabled ? 'enabled' : 'disabled'}
+                </span>
               </div>
-            ))}
-          </div>
+              <dl className="mt-3 space-y-1 text-sm text-slate-600">
+                <div>
+                  <dt className="inline font-medium text-slate-800">Model key:</dt>{' '}
+                  <dd className="inline break-all">{profile.modelKey}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Base URL:</dt>{' '}
+                  <dd className="inline break-all">{profile.baseUrl ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Direct token:</dt>{' '}
+                  <dd className="inline">configured</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Contract cost modifier:</dt>{' '}
+                  <dd className="inline">{profile.contractCostMultiplier.toFixed(3)}x</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
+                  <dd className="inline">{formatDateTime(profile.updatedAt)}</dd>
+                </div>
+              </dl>
+            </div>
+          ))}
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
@@ -1493,6 +1594,17 @@ function LabeledField(input: { label: string; children: ReactNode }) {
       <span className="font-medium text-slate-800">{input.label}</span>
       {input.children}
     </label>
+  );
+}
+
+function ReadOnlyField(input: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-strong)]">
+        {input.label}
+      </div>
+      <div className="mt-2 break-all text-sm font-semibold text-[color:var(--ink)]">{input.value}</div>
+    </div>
   );
 }
 

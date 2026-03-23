@@ -113,6 +113,16 @@ function FinanceWorkspacePage(input: {
         eyebrow="Finance"
         title="Capital movement and obligations"
         description="Capital events, payable scheduling, recurring liabilities, and ledger posting. One financial task at a time."
+        actions={
+          input.mode === 'detail' ? (
+            <Link
+              to="/finance"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-5 text-sm font-semibold text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+            >
+              Back to finance
+            </Link>
+          ) : null
+        }
       />
 
       {input.mode === 'directory' ? (
@@ -125,21 +135,25 @@ function FinanceWorkspacePage(input: {
               to="/finance/capital"
               title="Capital"
               detail={`balance ${formatUsd(finance.balanceUsd)}`}
+              metric={`scheduled out ${formatUsd(finance.summary.scheduledOutUsd)}`}
             />
             <FinanceEntryLink
               to="/finance/payables"
               title="Payables"
               detail="Create one-off and recurring obligations"
+              metric={`${finance.recurringPayables.length} recurring plans`}
             />
             <FinanceEntryLink
               to="/finance/recurring"
               title="Recurring"
               detail={`${finance.recurringPayables.length} recurring obligations`}
+              metric={`${finance.recurringPayables.filter((item) => item.isActive).length} active`}
             />
             <FinanceEntryLink
               to="/finance/ledger"
               title="Ledger"
               detail={`${finance.movements.items.length} planned and posted rows`}
+              metric={`${finance.movements.items.filter((item) => item.status === 'planned').length} planned`}
             />
           </div>
         </WorkspaceCanvas>
@@ -180,51 +194,118 @@ function FinanceWorkspacePage(input: {
           ) : null}
 
           {selectedSection === 'payables' ? (
-            <WorkspaceCanvas
-              title="Accounts payable"
-              description="Create a single planned payable or define a recurring liability."
-            >
-              <div className="max-w-5xl">
-                <PayableCard
-                  pending={payableMutation.isPending}
-                  error={payableMutation.error?.message ?? null}
-                  onSubmit={(input) => payableMutation.mutate(input)}
-                />
-              </div>
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Payables status"
+                description="One-off and recurring obligations that will affect the company ledger."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MiniMetric label="Recurring plans" value={String(finance.recurringPayables.length)} />
+                  <MiniMetric label="Scheduled out" value={formatUsd(finance.summary.scheduledOutUsd)} />
+                  <MiniMetric label="Ledger rows" value={String(finance.movements.items.length)} />
+                  <MiniMetric label="Balance" value={formatUsd(finance.balanceUsd)} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Create payable"
+                description="Create a single planned payable or define a recurring liability."
+              >
+                <div className="max-w-5xl">
+                  <PayableCard
+                    pending={payableMutation.isPending}
+                    error={payableMutation.error?.message ?? null}
+                    onSubmit={(input) => payableMutation.mutate(input)}
+                  />
+                </div>
+              </WorkspaceCanvas>
+            </div>
           ) : null}
 
           {selectedSection === 'recurring' ? (
-            <WorkspaceCanvas
-              title="Recurring obligations"
-              description="Pause or resume recurring payables without losing their history."
-            >
-              <RecurringPayablesCard
-                items={finance.recurringPayables}
-                pendingPayableId={recurringMutation.variables?.payableId}
-                pending={recurringMutation.isPending}
-                error={recurringMutation.error?.message ?? null}
-                onToggle={(payableId, isActive) => recurringMutation.mutate({ payableId, isActive })}
-              />
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Recurring status"
+                description="Recurring obligations and their next due moments."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MiniMetric
+                    label="Active"
+                    value={String(finance.recurringPayables.filter((item) => item.isActive).length)}
+                  />
+                  <MiniMetric
+                    label="Paused"
+                    value={String(finance.recurringPayables.filter((item) => !item.isActive).length)}
+                  />
+                  <MiniMetric
+                    label="Next due"
+                    value={
+                      finance.recurringPayables[0]
+                        ? formatDateTime(
+                            [...finance.recurringPayables]
+                              .sort((left, right) => left.nextDueAt - right.nextDueAt)[0].nextDueAt,
+                          )
+                        : '—'
+                    }
+                  />
+                  <MiniMetric label="Rows" value={String(finance.recurringPayables.length)} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Recurring obligations"
+                description="Pause or resume recurring payables without losing their history."
+              >
+                <RecurringPayablesCard
+                  items={finance.recurringPayables}
+                  pendingPayableId={recurringMutation.variables?.payableId}
+                  pending={recurringMutation.isPending}
+                  error={recurringMutation.error?.message ?? null}
+                  onToggle={(payableId, isActive) => recurringMutation.mutate({ payableId, isActive })}
+                />
+              </WorkspaceCanvas>
+            </div>
           ) : null}
 
           {selectedSection === 'ledger' ? (
-            <WorkspaceCanvas
-              title="Ledger posting"
-              description="Post or cancel planned entries from the financial timeline."
-            >
-              <LedgerCard
-                items={finance.movements.items}
-                pendingPostEntryId={postEntryMutation.variables?.entryId}
-                pendingCancelEntryId={cancelEntryMutation.variables}
-                postPending={postEntryMutation.isPending}
-                cancelPending={cancelEntryMutation.isPending}
-                error={postEntryMutation.error?.message ?? cancelEntryMutation.error?.message ?? null}
-                onPost={(entryId) => postEntryMutation.mutate({ entryId })}
-                onCancel={(entryId) => cancelEntryMutation.mutate(entryId)}
-              />
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Ledger status"
+                description="Recent financial rows and how many still require posting decisions."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MiniMetric
+                    label="Planned"
+                    value={String(finance.movements.items.filter((item) => item.status === 'planned').length)}
+                  />
+                  <MiniMetric
+                    label="Posted"
+                    value={String(finance.movements.items.filter((item) => item.status === 'posted').length)}
+                  />
+                  <MiniMetric
+                    label="Canceled"
+                    value={String(finance.movements.items.filter((item) => item.status === 'canceled').length)}
+                  />
+                  <MiniMetric label="Rows" value={String(finance.movements.items.length)} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Ledger posting"
+                description="Post or cancel planned entries from the financial timeline."
+              >
+                <LedgerCard
+                  items={finance.movements.items}
+                  pendingPostEntryId={postEntryMutation.variables?.entryId}
+                  pendingCancelEntryId={cancelEntryMutation.variables}
+                  postPending={postEntryMutation.isPending}
+                  cancelPending={cancelEntryMutation.isPending}
+                  error={postEntryMutation.error?.message ?? cancelEntryMutation.error?.message ?? null}
+                  onPost={(entryId) => postEntryMutation.mutate({ entryId })}
+                  onCancel={(entryId) => cancelEntryMutation.mutate(entryId)}
+                />
+              </WorkspaceCanvas>
+            </div>
           ) : null}
           </div>
         </div>
@@ -237,14 +318,18 @@ function FinanceEntryLink(input: {
   to: '/finance/capital' | '/finance/payables' | '/finance/recurring' | '/finance/ledger';
   title: string;
   detail: string;
+  metric: string;
 }) {
   return (
     <Link
       to={input.to}
       className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
-    >
+      >
       <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
       <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+      <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+        {input.metric}
+      </div>
     </Link>
   );
 }
@@ -365,6 +450,16 @@ function PayableCard(input: {
         </div>
         <ReceiptText className="h-5 w-5 text-slate-500" />
       </div>
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <MiniMetric
+          label="Selected mode"
+          value={mode === 'single' ? 'Single payable' : 'Recurring payable'}
+        />
+        <MiniMetric
+          label="Effect"
+          value={mode === 'single' ? 'Creates one planned row' : 'Creates a recurring obligation'}
+        />
+      </div>
       <div className="mt-5 flex gap-2">
         <Button type="button" variant={mode === 'single' ? 'primary' : 'secondary'} onClick={() => setMode('single')}>
           Single
@@ -375,50 +470,66 @@ function PayableCard(input: {
       </div>
 
       {mode === 'single' ? (
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <LabeledField label="Name">
-            <Input value={singleDraft.name} onChange={(event) => setSingleDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Hetzner VPS" />
-          </LabeledField>
-          <LabeledField label="Amount (USD)">
-            <Input value={singleDraft.amountUsd} onChange={(event) => setSingleDraft((current) => ({ ...current, amountUsd: event.target.value }))} placeholder="29.90" />
-          </LabeledField>
-          <LabeledField label="Due at">
-            <Input type="datetime-local" value={singleDraft.dueAt} onChange={(event) => setSingleDraft((current) => ({ ...current, dueAt: event.target.value }))} />
-          </LabeledField>
-          <LabeledField label="Description">
-            <Input value={singleDraft.description} onChange={(event) => setSingleDraft((current) => ({ ...current, description: event.target.value }))} placeholder="March hosting invoice" />
-          </LabeledField>
+        <div className="mt-5 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4">
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-[color:var(--ink)]">Single payable</div>
+            <div className="mt-1 text-sm text-[color:var(--muted)]">
+              Create one planned obligation with a due date.
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <LabeledField label="Name">
+              <Input value={singleDraft.name} onChange={(event) => setSingleDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Hetzner VPS" />
+            </LabeledField>
+            <LabeledField label="Amount (USD)">
+              <Input value={singleDraft.amountUsd} onChange={(event) => setSingleDraft((current) => ({ ...current, amountUsd: event.target.value }))} placeholder="29.90" />
+            </LabeledField>
+            <LabeledField label="Due at">
+              <Input type="datetime-local" value={singleDraft.dueAt} onChange={(event) => setSingleDraft((current) => ({ ...current, dueAt: event.target.value }))} />
+            </LabeledField>
+            <LabeledField label="Description">
+              <Input value={singleDraft.description} onChange={(event) => setSingleDraft((current) => ({ ...current, description: event.target.value }))} placeholder="March hosting invoice" />
+            </LabeledField>
+          </div>
         </div>
       ) : (
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <LabeledField label="Name">
-            <Input value={recurringDraft.name} onChange={(event) => setRecurringDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Coolify server" />
-          </LabeledField>
-          <LabeledField label="Amount (USD)">
-            <Input value={recurringDraft.amountUsd} onChange={(event) => setRecurringDraft((current) => ({ ...current, amountUsd: event.target.value }))} placeholder="10" />
-          </LabeledField>
-          <LabeledField label="First due at">
-            <Input type="datetime-local" value={recurringDraft.dueAt} onChange={(event) => setRecurringDraft((current) => ({ ...current, dueAt: event.target.value }))} />
-          </LabeledField>
-          <LabeledField label="Recurrence">
-            <select
-              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
-              value={recurringDraft.recurrencePeriod}
-              onChange={(event) =>
-                setRecurringDraft((current) => ({
-                  ...current,
-                  recurrencePeriod: event.target.value as 'weekly' | 'monthly' | 'yearly',
-                }))
-              }
-            >
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-          </LabeledField>
-          <LabeledField label="Description">
-            <Input value={recurringDraft.description} onChange={(event) => setRecurringDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Monthly infrastructure invoice" />
-          </LabeledField>
+        <div className="mt-5 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4">
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-[color:var(--ink)]">Recurring payable</div>
+            <div className="mt-1 text-sm text-[color:var(--muted)]">
+              Create a recurring obligation that will keep producing future planned rows.
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <LabeledField label="Name">
+              <Input value={recurringDraft.name} onChange={(event) => setRecurringDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Coolify server" />
+            </LabeledField>
+            <LabeledField label="Amount (USD)">
+              <Input value={recurringDraft.amountUsd} onChange={(event) => setRecurringDraft((current) => ({ ...current, amountUsd: event.target.value }))} placeholder="10" />
+            </LabeledField>
+            <LabeledField label="First due at">
+              <Input type="datetime-local" value={recurringDraft.dueAt} onChange={(event) => setRecurringDraft((current) => ({ ...current, dueAt: event.target.value }))} />
+            </LabeledField>
+            <LabeledField label="Recurrence">
+              <select
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                value={recurringDraft.recurrencePeriod}
+                onChange={(event) =>
+                  setRecurringDraft((current) => ({
+                    ...current,
+                    recurrencePeriod: event.target.value as 'weekly' | 'monthly' | 'yearly',
+                  }))
+                }
+              >
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </LabeledField>
+            <LabeledField label="Description">
+              <Input value={recurringDraft.description} onChange={(event) => setRecurringDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Monthly infrastructure invoice" />
+            </LabeledField>
+          </div>
         </div>
       )}
 
