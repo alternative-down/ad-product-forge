@@ -135,21 +135,25 @@ function FinanceWorkspacePage(input: {
               to="/finance/capital"
               title="Capital"
               detail={`balance ${formatUsd(finance.balanceUsd)}`}
+              metric={`scheduled out ${formatUsd(finance.summary.scheduledOutUsd)}`}
             />
             <FinanceEntryLink
               to="/finance/payables"
               title="Payables"
               detail="Create one-off and recurring obligations"
+              metric={`${finance.recurringPayables.length} recurring plans`}
             />
             <FinanceEntryLink
               to="/finance/recurring"
               title="Recurring"
               detail={`${finance.recurringPayables.length} recurring obligations`}
+              metric={`${finance.recurringPayables.filter((item) => item.isActive).length} active`}
             />
             <FinanceEntryLink
               to="/finance/ledger"
               title="Ledger"
               detail={`${finance.movements.items.length} planned and posted rows`}
+              metric={`${finance.movements.items.filter((item) => item.status === 'planned').length} planned`}
             />
           </div>
         </WorkspaceCanvas>
@@ -314,14 +318,18 @@ function FinanceEntryLink(input: {
   to: '/finance/capital' | '/finance/payables' | '/finance/recurring' | '/finance/ledger';
   title: string;
   detail: string;
+  metric: string;
 }) {
   return (
     <Link
       to={input.to}
       className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
-    >
+      >
       <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
       <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+      <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+        {input.metric}
+      </div>
     </Link>
   );
 }

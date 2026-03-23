@@ -232,36 +232,43 @@ function SystemWorkspacePage(input: {
               to="/system/company"
               title="Company"
               detail="Global prompt context"
+              metric={systemSettings.companyName || 'No company name'}
             />
             <SystemEntryLink
               to="/system/llm/defaults"
               title="LLM defaults"
               detail={`${systemLlm.profiles.length} profiles configured`}
+              metric={`${enabledProfilesCount} enabled`}
             />
             <SystemEntryLink
               to="/system/llm/profiles"
               title="LLM profiles"
               detail="Runtime endpoints and API keys"
+              metric={`${systemLlm.profiles.length} registered`}
             />
             <SystemEntryLink
               to="/system/llm/prices"
               title="LLM pricing"
               detail={`${systemLlm.prices.length} price rows`}
+              metric={`${systemLlm.prices.length} tracked`}
             />
             <SystemEntryLink
               to="/system/oauth"
               title="OAuth"
               detail={`${Object.keys(oauthState).length} providers`}
+              metric={`${syncedOauthProviders} synced`}
             />
             <SystemEntryLink
               to="/system/integrations/migadu"
               title="Integrations"
               detail={`${integrations.filter((integration) => integration.isEnabled).length} enabled`}
+              metric={`${integrations.length} configured`}
             />
             <SystemEntryLink
               to="/system/migrations"
               title="Migrations"
               detail={`${migrations.entries.filter((entry) => !entry.applied).length} pending`}
+              metric={`${appliedMigrationsCount} applied`}
             />
           </div>
         </WorkspaceCanvas>
@@ -636,6 +643,7 @@ function SystemEntryLink(input: {
     | '/system/migrations';
   title: string;
   detail: string;
+  metric: string;
 }) {
   return (
     <Link
@@ -644,6 +652,9 @@ function SystemEntryLink(input: {
     >
       <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
       <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+      <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+        {input.metric}
+      </div>
     </Link>
   );
 }

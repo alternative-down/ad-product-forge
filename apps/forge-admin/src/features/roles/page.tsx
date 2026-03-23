@@ -265,6 +265,7 @@ function CapabilitiesWorkspacePage(input: {
             <CapabilityEntryLink
               title="Roles"
               detail={`${rolesQuery.data?.items.length ?? 0} role definitions`}
+              metric={`${rolesQuery.data?.items.reduce((total, role) => total + role.assignedFunctionCount, 0) ?? 0} function assignments`}
               to={
                 rolesQuery.data?.items[0]
                   ? buildCapabilitiesLocation({ section: 'roles', roleId: rolesQuery.data.items[0].roleId })
@@ -274,6 +275,7 @@ function CapabilitiesWorkspacePage(input: {
             <CapabilityEntryLink
               title="Functions"
               detail={`${functionsQuery.data?.length ?? 0} function definitions`}
+              metric={`${functionsQuery.data?.reduce((total, item) => total + item.assignedAgentCount, 0) ?? 0} assigned agents`}
               to={
                 functionsQuery.data?.[0]
                   ? buildCapabilitiesLocation({ section: 'functions', functionId: functionsQuery.data[0].functionId })
@@ -750,6 +752,7 @@ function PermissionToggle(input: {
 function CapabilityEntryLink(input: {
   title: string;
   detail: string;
+  metric: string;
   to:
     | { to: '/roles/roles/$roleId'; params: { roleId: string } }
     | { to: '/roles/functions/$functionId'; params: { functionId: string } }
@@ -760,6 +763,9 @@ function CapabilityEntryLink(input: {
       <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5">
         <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
         <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+        <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+          {input.metric}
+        </div>
       </div>
     );
   }
@@ -772,6 +778,9 @@ function CapabilityEntryLink(input: {
     >
       <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
       <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+      <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+        {input.metric}
+      </div>
     </Link>
   );
 }
