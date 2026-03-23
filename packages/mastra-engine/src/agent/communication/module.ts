@@ -168,6 +168,8 @@ export async function createCommunicationModule(config: {
   }
 
   async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
+    await Promise.all(Array.from(providers.values()).map((provider) => syncProviderContacts(provider)));
+
     const [selfAccounts, otherContacts] = await Promise.all([
       filter !== 'others' ? store.listSelfAccounts() : Promise.resolve([]),
       filter !== 'self' ? store.listContacts() : Promise.resolve([]),
@@ -188,7 +190,12 @@ export async function createCommunicationModule(config: {
   }
 
   async function getContact(slug: string) {
-    const contact = await store.getContact(slug);
+    let contact = await store.getContact(slug);
+
+    if (!contact) {
+      await Promise.all(Array.from(providers.values()).map((provider) => syncProviderContacts(provider)));
+      contact = await store.getContact(slug);
+    }
 
     if (!contact) {
       return null;
