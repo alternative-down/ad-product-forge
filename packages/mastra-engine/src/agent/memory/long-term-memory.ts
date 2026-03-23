@@ -75,7 +75,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const workspace = new WorkspaceRuntime({
       bm25: true,
       autoSync: true,
-      autoIndexPaths: ['/observations', '/memory', '/archived'],
+      autoIndexPaths: ['/observations', '/memory'],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({
         basePath: memoryPath,
@@ -219,18 +219,9 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     // Check if this is the last step (no toolCalls + has text response)
     // This triggers consolidation when the agent completes a run
     if (this.consolidationTrigger === 'lastStep') {
-      const hasToolCalls = args.messages.some(
-        (msg) =>
-          msg.role === 'assistant' &&
-          Array.isArray(msg.content) &&
-          msg.content.some((c) => 'type' in c && c.type === 'tool-use'),
-      );
-      // Check for text content - look for string messages from assistant
-      const hasTextResponse = args.messages.some((msg) => {
-        if (msg.role !== 'assistant') return false;
-        const content = msg.content as unknown as string | undefined;
-        return typeof content === 'string' && content.trim().length > 0;
-      });
+      // Use toolCalls and text parameters directly from args
+      const hasToolCalls = args.toolCalls && args.toolCalls.length > 0;
+      const hasTextResponse = args.text && args.text.trim().length > 0;
 
       const isLastStep = !hasToolCalls && hasTextResponse;
 
