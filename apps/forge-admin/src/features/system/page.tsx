@@ -7,6 +7,7 @@ import {
   deleteSystemIntegration,
   getSystemOauth,
   getSystemLlm,
+  getSystemMigrations,
   listSystemIntegrations,
   syncSystemOauth,
   updateSystemLlmDefaults,
@@ -17,6 +18,7 @@ import {
   type UpsertLlmModelPriceInput,
   type SystemIntegration,
   type SystemLlmDefaults,
+  type SystemMigrationsResponse,
   type SystemOauthState,
   type UpdateSystemLlmDefaultsInput,
   type UpsertLlmProfileInput,
@@ -73,6 +75,10 @@ export function SystemPage() {
     queryKey: ['admin', 'system-oauth'],
     queryFn: getSystemOauth,
   });
+  const migrationsQuery = useQuery({
+    queryKey: ['admin', 'system-migrations'],
+    queryFn: getSystemMigrations,
+  });
   const upsertIntegrationMutation = useMutation({
     mutationFn: upsertSystemIntegration,
     onSuccess: async () => {
@@ -116,7 +122,7 @@ export function SystemPage() {
     },
   });
 
-  if (integrationsQuery.isLoading || llmQuery.isLoading || oauthQuery.isLoading) {
+  if (integrationsQuery.isLoading || llmQuery.isLoading || oauthQuery.isLoading || migrationsQuery.isLoading) {
     return <PanelLoading label="Loading system configuration" />;
   }
 
@@ -132,12 +138,17 @@ export function SystemPage() {
     return <PanelError message={oauthQuery.error.message} />;
   }
 
+  if (migrationsQuery.isError) {
+    return <PanelError message={migrationsQuery.error.message} />;
+  }
+
   const integrations = integrationsQuery.data ?? [];
   const migaduIntegration = integrations.find((integration) => integration.providerType === 'migadu') ?? null;
   const coolifyIntegration = integrations.find((integration) => integration.providerType === 'coolify') ?? null;
   const githubIntegration = integrations.find((integration) => integration.providerType === 'github') ?? null;
   const systemLlm = llmQuery.data!;
   const oauthState = oauthQuery.data!;
+  const migrations = migrationsQuery.data!;
 
   return (
     <div className="space-y-6">
@@ -199,6 +210,8 @@ export function SystemPage() {
         onSync={(providerId) => syncOauthMutation.mutate(providerId)}
       />
 
+      <MigrationStatusCard migrations={migrations} />
+
       <MigaduIntegrationCard
         key={`migadu-${migaduIntegration?.updatedAt ?? 'new'}`}
         integration={migaduIntegration}
@@ -248,6 +261,52 @@ export function SystemPage() {
       />
 
     </div>
+  );
+}
+
+function MigrationStatusCard(input: {
+  migrations: SystemMigrationsResponse;
+}) {
+  return (
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-950">Application migrations</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Journal entries from the repo matched against rows stored in <code>__drizzle_migrations</code>.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead>
+            <tr className="text-left text-slate-500">
+              <th className="py-2 pr-4 font-medium">Idx</th>
+              <th className="py-2 pr-4 font-medium">Tag</th>
+              <th className="py-2 pr-4 font-medium">Applied</th>
+              <th className="py-2 pr-4 font-medium">Created at</th>
+              <th className="py-2 pr-4 font-medium">Row id</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {input.migrations.entries.map((entry) => (
+              <tr key={entry.tag}>
+                <td className="py-2 pr-4 text-slate-600">{entry.idx}</td>
+                <td className="py-2 pr-4 font-mono text-xs text-slate-900">{entry.tag}</td>
+                <td className="py-2 pr-4">
+                  <span className={entry.applied ? 'text-emerald-700' : 'text-amber-700'}>
+                    {entry.applied ? 'applied' : 'pending'}
+                  </span>
+                </td>
+                <td className="py-2 pr-4 text-slate-600">{formatDateTime(entry.createdAt)}</td>
+                <td className="py-2 pr-4 text-slate-600">{entry.rowId ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 

@@ -336,6 +336,12 @@ export function registerAdminRoutes(input: {
   });
 
   input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/migrations',
+    handler: async () => jsonResponse(await readModel.getApplicationMigrations()),
+  });
+
+  input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/llm/price/upsert',
     handler: async (request) => {
