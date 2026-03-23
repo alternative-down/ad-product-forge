@@ -91,6 +91,8 @@ export function createAgentWakeQueue(config: {
       scheduleTrigger(Math.min(WAKE_DEBOUNCE_MS, firstPendingAt + WAKE_MAX_DELAY_MS - now));
     },
     async onRunnerIdle() {
+      waitingForIdle = false; // ALWAYS reset when agent becomes idle
+
       if (timer || !pending) {
         return;
       }
