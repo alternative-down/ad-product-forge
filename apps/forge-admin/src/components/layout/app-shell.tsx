@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Activity, Bot, Cable, KeyRound, Moon, Shield, Sun, Wallet } from 'lucide-react';
-import { Link, Outlet } from '@tanstack/react-router';
+import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
 import {
@@ -25,6 +25,9 @@ const navigationItems = [
 
 export function AppShell() {
   const [adminApiKey, setAdminApiKey] = useState(() => getStoredAdminApiKey());
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const storedTheme = window.localStorage.getItem('forge-admin-theme');
     return storedTheme === 'dark' ? 'dark' : 'light';
@@ -60,10 +63,14 @@ export function AppShell() {
     );
   }
 
+  const currentWorkspace =
+    navigationItems.find((item) => (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to))) ??
+    navigationItems[0];
+
   return (
     <div className="min-h-screen bg-[color:var(--bg)] text-[color:var(--ink)]">
-      <header className="border-b border-[color:var(--panel-border)] bg-[color:var(--panel)] backdrop-blur">
-        <div className="flex flex-col gap-4 px-4 py-4 lg:px-6">
+      <header className="border-b border-[color:var(--panel-border)] bg-[color:var(--panel)]">
+        <div className="px-4 py-4 lg:px-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted)]">
@@ -73,9 +80,13 @@ export function AppShell() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden items-center gap-5 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-4 py-2 text-sm text-[color:var(--muted)] md:flex">
+              <div className="hidden rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-4 py-2 text-sm text-[color:var(--muted)] lg:block">
+                <span className="font-semibold text-[color:var(--ink)]">{currentWorkspace.label}</span>
+                <span className="mx-2 text-[color:var(--panel-border-strong)]">/</span>
                 <span>Agents {overviewQuery.data?.totals.agents ?? '—'}</span>
+                <span className="mx-2 text-[color:var(--panel-border-strong)]">/</span>
                 <span>Running {overviewQuery.data?.totals.runningAgents ?? '—'}</span>
+                <span className="mx-2 text-[color:var(--panel-border-strong)]">/</span>
                 <span>Cash {formatUsd(overviewQuery.data?.cash.balanceUsd)}</span>
               </div>
               <Button type="button" variant="secondary" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}>
@@ -84,7 +95,7 @@ export function AppShell() {
             </div>
           </div>
 
-          <nav className="flex flex-wrap gap-2">
+          <nav className="mt-4 flex flex-wrap gap-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
 
