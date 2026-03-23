@@ -491,8 +491,18 @@ export function createCoolifyManager(config: {
       return resource.uuid;
     }
 
+    // Try searching all servers for destinations
+    const servers = extractCollection(await requestJson('GET', '/servers'), ServerSchema);
+    for (const s of servers) {
+      if (s.proxy?.uuid || s.proxy_uuid) {
+        const dest = s.proxy?.uuid ?? s.proxy_uuid;
+        console.log(`[Coolify] Found destination ${dest} on server ${s.uuid} (searched for ${serverUuid})`);
+        return dest;
+      }
+    }
+
     // Debug: log server info for troubleshooting
-    console.error(`[Coolify] Could not determine destination for server ${serverUuid}. Server proxy: ${JSON.stringify(server.proxy)}, proxy_uuid: ${server.proxy_uuid}. Resources response:`, JSON.stringify(resources));
+    console.error(`[Coolify] Could not determine destination for server ${serverUuid}. Server:`, JSON.stringify(server, null, 2), 'Resources response:', JSON.stringify(resources, null, 2));
     throw new Error(`Could not determine Coolify destination UUID for server ${serverUuid}`);
   }
 
