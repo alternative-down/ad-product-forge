@@ -26,7 +26,8 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 import { PageHeader } from '../../components/layout/page-header';
-import { SectionNav, WorkspaceCanvas } from '../../components/layout/section-nav';
+import { WorkspaceCanvas } from '../../components/layout/section-nav';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 
 type RoleDraft = {
   name: string;
@@ -277,14 +278,12 @@ export function RolesPage() {
         description="Roles define permissions. Functions compose roles. Keep one editor open at a time."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
-      <div className="space-y-4">
-        <SectionNav
-          title="Capability area"
+      <div className="space-y-6">
+        <SegmentedTabs
           value={selectedTab}
           items={[
-            { value: 'roles', label: 'Roles', detail: `${rolesQuery.data?.items.length ?? 0} role definitions` },
-            { value: 'functions', label: 'Functions', detail: `${functionsQuery.data?.length ?? 0} function definitions` },
+            { value: 'roles', label: 'Roles', description: `${rolesQuery.data?.items.length ?? 0} role definitions` },
+            { value: 'functions', label: 'Functions', description: `${functionsQuery.data?.length ?? 0} function definitions` },
           ]}
           onChange={(tab) =>
             void navigate({
@@ -298,18 +297,20 @@ export function RolesPage() {
           }
         />
 
-        <Card className="overflow-hidden">
-          <div className="border-b border-[color:var(--panel-border)] px-4 py-4">
-            <h2 className="text-base font-semibold text-[color:var(--ink)]">
-              {selectedTab === 'roles' ? 'Roles' : 'Functions'}
-            </h2>
-            <p className="mt-1 text-sm text-[color:var(--muted)]">
-              {selectedTab === 'roles'
-                ? 'Select one role to edit permissions and metadata.'
-                : 'Select one function to edit composition and metadata.'}
-            </p>
-          </div>
-          <div className="max-h-[calc(100vh-18rem)] overflow-y-auto p-3">
+        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="space-y-4">
+            <Card className="overflow-hidden">
+              <div className="border-b border-[color:var(--panel-border)] px-4 py-4">
+                <h2 className="text-base font-semibold text-[color:var(--ink)]">
+                  {selectedTab === 'roles' ? 'Roles' : 'Functions'}
+                </h2>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">
+                  {selectedTab === 'roles'
+                    ? 'Select one role to edit permissions and metadata.'
+                    : 'Select one function to edit composition and metadata.'}
+                </p>
+              </div>
+              <div className="max-h-[calc(100vh-18rem)] overflow-y-auto p-3">
             {selectedTab === 'roles' && rolesQuery.isLoading && <PanelLoading label="Loading roles" />}
             {selectedTab === 'roles' && rolesQuery.isError && <PanelError message={rolesQuery.error.message} />}
             {selectedTab === 'roles' && rolesQuery.data?.items.map((role) => (
@@ -350,84 +351,84 @@ export function RolesPage() {
                 </div>
               </button>
             ))}
-          </div>
-        </Card>
+              </div>
+            </Card>
 
-        {selectedTab === 'roles' && <Card className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Plus className="h-4 w-4 text-slate-500" />
-            <h3 className="text-base font-semibold text-slate-950">Create role</h3>
+            {selectedTab === 'roles' && <Card className="p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Plus className="h-4 w-4 text-slate-500" />
+                <h3 className="text-base font-semibold text-slate-950">Create role</h3>
+              </div>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  createRoleMutation.mutate({
+                    name: newRoleDraft.name,
+                    description: newRoleDraft.description || undefined,
+                  });
+                }}
+              >
+                <LabeledField label="Name">
+                  <Input
+                    value={newRoleDraft.name}
+                    onChange={(event) =>
+                      setNewRoleDraft({ ...newRoleDraft, name: event.target.value })
+                    }
+                    required
+                  />
+                </LabeledField>
+                <LabeledField label="Description">
+                  <Textarea
+                    value={newRoleDraft.description}
+                    onChange={(event) =>
+                      setNewRoleDraft({ ...newRoleDraft, description: event.target.value })
+                    }
+                  />
+                </LabeledField>
+                {createRoleMutation.error && <InlineError message={createRoleMutation.error.message} />}
+                <Button type="submit" disabled={createRoleMutation.isPending}>
+                  {createRoleMutation.isPending ? 'Creating...' : 'Create role'}
+                </Button>
+              </form>
+            </Card>}
+            {selectedTab === 'functions' && <Card className="p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Plus className="h-4 w-4 text-slate-500" />
+                <h3 className="text-base font-semibold text-slate-950">Create function</h3>
+              </div>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  createFunctionMutation.mutate({
+                    name: newFunctionDraft.name,
+                    description: newFunctionDraft.description || undefined,
+                  });
+                }}
+              >
+                <LabeledField label="Name">
+                  <Input
+                    value={newFunctionDraft.name}
+                    onChange={(event) => setNewFunctionDraft({ ...newFunctionDraft, name: event.target.value })}
+                    required
+                  />
+                </LabeledField>
+                <LabeledField label="Description">
+                  <Textarea
+                    value={newFunctionDraft.description}
+                    onChange={(event) => setNewFunctionDraft({ ...newFunctionDraft, description: event.target.value })}
+                  />
+                </LabeledField>
+                {createFunctionMutation.error ? <InlineError message={createFunctionMutation.error.message} /> : null}
+                <Button type="submit" disabled={createFunctionMutation.isPending}>
+                  {createFunctionMutation.isPending ? 'Creating...' : 'Create function'}
+                </Button>
+              </form>
+            </Card>}
           </div>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              createRoleMutation.mutate({
-                name: newRoleDraft.name,
-                description: newRoleDraft.description || undefined,
-              });
-            }}
-          >
-            <LabeledField label="Name">
-              <Input
-                value={newRoleDraft.name}
-                onChange={(event) =>
-                  setNewRoleDraft({ ...newRoleDraft, name: event.target.value })
-                }
-                required
-              />
-            </LabeledField>
-            <LabeledField label="Description">
-              <Textarea
-                value={newRoleDraft.description}
-                onChange={(event) =>
-                  setNewRoleDraft({ ...newRoleDraft, description: event.target.value })
-                }
-              />
-            </LabeledField>
-            {createRoleMutation.error && <InlineError message={createRoleMutation.error.message} />}
-            <Button type="submit" disabled={createRoleMutation.isPending}>
-              {createRoleMutation.isPending ? 'Creating...' : 'Create role'}
-            </Button>
-          </form>
-        </Card>}
-        {selectedTab === 'functions' && <Card className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Plus className="h-4 w-4 text-slate-500" />
-            <h3 className="text-base font-semibold text-slate-950">Create function</h3>
-          </div>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              createFunctionMutation.mutate({
-                name: newFunctionDraft.name,
-                description: newFunctionDraft.description || undefined,
-              });
-            }}
-          >
-            <LabeledField label="Name">
-              <Input
-                value={newFunctionDraft.name}
-                onChange={(event) => setNewFunctionDraft({ ...newFunctionDraft, name: event.target.value })}
-                required
-              />
-            </LabeledField>
-            <LabeledField label="Description">
-              <Textarea
-                value={newFunctionDraft.description}
-                onChange={(event) => setNewFunctionDraft({ ...newFunctionDraft, description: event.target.value })}
-              />
-            </LabeledField>
-            {createFunctionMutation.error ? <InlineError message={createFunctionMutation.error.message} /> : null}
-            <Button type="submit" disabled={createFunctionMutation.isPending}>
-              {createFunctionMutation.isPending ? 'Creating...' : 'Create function'}
-            </Button>
-          </form>
-        </Card>}
-      </div>
 
-      <div className="space-y-6">
+          <div className="space-y-6">
         {functionsQuery.isLoading && <PanelLoading label="Loading functions" />}
         {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
 
@@ -447,7 +448,7 @@ export function RolesPage() {
             </div>
 
             <form
-              className="mt-6 grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]"
+              className="mt-6 space-y-6"
               onSubmit={(event) => {
                 event.preventDefault();
                 updateRoleMutation.mutate({
@@ -461,7 +462,7 @@ export function RolesPage() {
                 });
               }}
             >
-              <div className="space-y-4">
+              <div className="max-w-3xl space-y-4">
                 <LabeledField label="Role name">
                   <Input
                     value={selectedRoleDraft.name}
@@ -512,7 +513,7 @@ export function RolesPage() {
                 </div>
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-6">
                 <div className="space-y-4">
                   <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                     Tool grants
@@ -684,7 +685,8 @@ export function RolesPage() {
             })()}
           </WorkspaceCanvas>
         )}
-      </div>
+          </div>
+        </div>
       </div>
     </div>
   );

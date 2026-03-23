@@ -36,6 +36,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { formatDateTime } from '../../lib/format';
 import { PageHeader } from '../../components/layout/page-header';
 import { SectionNav, WorkspaceCanvas } from '../../components/layout/section-nav';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 
 type MigaduDraft = {
   isEnabled: boolean;
@@ -227,14 +228,13 @@ export function SystemPage() {
           ) : null}
 
           {selectedTab === 'llm' ? (
-            <div className="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)]">
-              <SectionNav
-                title="LLM section"
+            <div className="space-y-6">
+              <SegmentedTabs
                 value={selectedLlmView}
                 items={[
-                  { value: 'defaults', label: 'Defaults', detail: 'system execution profiles' },
-                  { value: 'profiles', label: 'Profiles', detail: 'runtime endpoints and credentials' },
-                  { value: 'prices', label: 'Prices', detail: 'contract accounting rows' },
+                  { value: 'defaults', label: 'Defaults', description: 'system execution profiles' },
+                  { value: 'profiles', label: 'Profiles', description: 'runtime endpoints and credentials' },
+                  { value: 'prices', label: 'Prices', description: 'contract accounting rows' },
                 ]}
                 onChange={(llmView) =>
                   void navigate({
@@ -247,12 +247,13 @@ export function SystemPage() {
                   })
                 }
               />
-              <div>
-                {selectedLlmView === 'defaults' ? (
-                  <WorkspaceCanvas
-                    title="LLM defaults"
-                    description="Pick the primary execution profile, OM profile, and hiring RH profile."
-                  >
+
+              {selectedLlmView === 'defaults' ? (
+                <WorkspaceCanvas
+                  title="LLM defaults"
+                  description="Pick the primary execution profile, OM profile, and hiring RH profile."
+                >
+                  <div className="max-w-5xl">
                     <LlmDefaultsCard
                       key={`llm-defaults-${systemLlm.defaults?.updatedAt ?? 'unset'}`}
                       defaults={systemLlm.defaults}
@@ -261,38 +262,38 @@ export function SystemPage() {
                       error={updateLlmDefaultsMutation.error?.message ?? null}
                       onSave={(input) => updateLlmDefaultsMutation.mutate(input)}
                     />
-                  </WorkspaceCanvas>
-                ) : null}
-                {selectedLlmView === 'profiles' ? (
-                  <WorkspaceCanvas
-                    title="LLM profiles"
-                    description="Profiles define model key, base URL, API key, and contract multiplier."
-                  >
-                    <LlmProfileEditorCard
-                      profiles={systemLlm.profiles}
-                      pending={upsertLlmProfileMutation.isPending}
-                      deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
-                      saveError={upsertLlmProfileMutation.error?.message ?? null}
-                      deleteError={deleteLlmProfileMutation.error?.message ?? null}
-                      onSave={(input) => upsertLlmProfileMutation.mutate(input)}
-                      onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
-                    />
-                  </WorkspaceCanvas>
-                ) : null}
-                {selectedLlmView === 'prices' ? (
-                  <WorkspaceCanvas
-                    title="LLM pricing"
-                    description="Price rows are used by hiring, contracts, and execution accounting."
-                  >
-                    <LlmPricingCard
-                      prices={systemLlm.prices}
-                      pending={upsertLlmModelPriceMutation.isPending}
-                      error={upsertLlmModelPriceMutation.error?.message ?? null}
-                      onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
-                    />
-                  </WorkspaceCanvas>
-                ) : null}
-              </div>
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedLlmView === 'profiles' ? (
+                <WorkspaceCanvas
+                  title="LLM profiles"
+                  description="Profiles define model key, base URL, API key, and contract multiplier."
+                >
+                  <LlmProfileEditorCard
+                    profiles={systemLlm.profiles}
+                    pending={upsertLlmProfileMutation.isPending}
+                    deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
+                    saveError={upsertLlmProfileMutation.error?.message ?? null}
+                    deleteError={deleteLlmProfileMutation.error?.message ?? null}
+                    onSave={(input) => upsertLlmProfileMutation.mutate(input)}
+                    onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
+                  />
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedLlmView === 'prices' ? (
+                <WorkspaceCanvas
+                  title="LLM pricing"
+                  description="Price rows are used by hiring, contracts, and execution accounting."
+                >
+                  <LlmPricingCard
+                    prices={systemLlm.prices}
+                    pending={upsertLlmModelPriceMutation.isPending}
+                    error={upsertLlmModelPriceMutation.error?.message ?? null}
+                    onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
+                  />
+                </WorkspaceCanvas>
+              ) : null}
             </div>
           ) : null}
 
@@ -321,14 +322,13 @@ export function SystemPage() {
           ) : null}
 
           {selectedTab === 'integrations' ? (
-            <div className="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)]">
-              <SectionNav
-                title="Integration"
+            <div className="space-y-6">
+              <SegmentedTabs
                 value={selectedIntegrationView}
                 items={[
-                  { value: 'migadu', label: 'Migadu', detail: 'mailbox provisioning' },
-                  { value: 'coolify', label: 'Coolify', detail: 'deployment automation' },
-                  { value: 'github', label: 'GitHub', detail: 'app provisioning' },
+                  { value: 'migadu', label: 'Migadu', description: 'mailbox provisioning' },
+                  { value: 'coolify', label: 'Coolify', description: 'deployment automation' },
+                  { value: 'github', label: 'GitHub', description: 'app provisioning' },
                 ]}
                 onChange={(integrationView) =>
                   void navigate({
@@ -341,9 +341,10 @@ export function SystemPage() {
                   })
                 }
               />
-              <div>
-                {selectedIntegrationView === 'migadu' ? (
-                  <WorkspaceCanvas title="Migadu integration" description="Controls mailbox provisioning for agents.">
+
+              {selectedIntegrationView === 'migadu' ? (
+                <WorkspaceCanvas title="Migadu integration" description="Controls mailbox provisioning for agents.">
+                  <div className="max-w-5xl">
                     <MigaduIntegrationCard
                       key={`migadu-${migaduIntegration?.updatedAt ?? 'new'}`}
                       integration={migaduIntegration}
@@ -359,10 +360,12 @@ export function SystemPage() {
                       onDelete={() => deleteIntegrationMutation.mutate('migadu')}
                       onSave={(input) => upsertIntegrationMutation.mutate(input)}
                     />
-                  </WorkspaceCanvas>
-                ) : null}
-                {selectedIntegrationView === 'coolify' ? (
-                  <WorkspaceCanvas title="Coolify integration" description="Controls deployment automation and generated application domains.">
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedIntegrationView === 'coolify' ? (
+                <WorkspaceCanvas title="Coolify integration" description="Controls deployment automation and generated application domains.">
+                  <div className="max-w-5xl">
                     <CoolifyIntegrationCard
                       key={`coolify-${coolifyIntegration?.updatedAt ?? 'new'}`}
                       integration={coolifyIntegration}
@@ -378,10 +381,12 @@ export function SystemPage() {
                       onDelete={() => deleteIntegrationMutation.mutate('coolify')}
                       onSave={(input) => upsertIntegrationMutation.mutate(input)}
                     />
-                  </WorkspaceCanvas>
-                ) : null}
-                {selectedIntegrationView === 'github' ? (
-                  <WorkspaceCanvas title="GitHub integration" description="Controls GitHub App provisioning for internal agents.">
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedIntegrationView === 'github' ? (
+                <WorkspaceCanvas title="GitHub integration" description="Controls GitHub App provisioning for internal agents.">
+                  <div className="max-w-5xl">
                     <GitHubIntegrationCard
                       key={`github-${githubIntegration?.updatedAt ?? 'new'}`}
                       integration={githubIntegration}
@@ -397,9 +402,9 @@ export function SystemPage() {
                       onDelete={() => deleteIntegrationMutation.mutate('github')}
                       onSave={(input) => upsertIntegrationMutation.mutate(input)}
                     />
-                  </WorkspaceCanvas>
-                ) : null}
-              </div>
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
             </div>
           ) : null}
         </div>

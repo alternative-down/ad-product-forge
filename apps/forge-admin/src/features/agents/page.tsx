@@ -36,6 +36,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 import { PageHeader } from '../../components/layout/page-header';
 import { SectionNav, WorkspaceCanvas } from '../../components/layout/section-nav';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 
 type ScheduleDraft = {
   mode: 'create' | 'edit';
@@ -119,10 +120,12 @@ export function AgentsPage() {
       search: {
         agentId: agentsQuery.data[0].agentId,
         tab: search.tab,
+        runtimeView: search.runtimeView,
+        communicationView: search.communicationView,
       },
       replace: true,
     });
-  }, [agentsQuery.data, navigate, search.agentId]);
+  }, [agentsQuery.data, navigate, search.agentId, search.communicationView, search.runtimeView, search.tab]);
 
   const selectedAgentFunctionId =
     agentDetailQuery.data && functionDraft?.agentId === agentDetailQuery.data.agentId
@@ -133,6 +136,8 @@ export function AgentsPage() {
       ? configDraft.value
       : (agentDetailQuery.data ? createAgentConfigDraft(agentDetailQuery.data) : null);
   const selectedTab = search.tab ?? (search.agentId ? 'runtime' : 'hire');
+  const selectedRuntimeView = search.runtimeView ?? 'assignment';
+  const selectedCommunicationView = search.communicationView ?? 'providers';
 
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
@@ -183,6 +188,8 @@ export function AgentsPage() {
         search: {
           agentId: result.agentId,
           tab: 'runtime',
+          runtimeView: 'assignment',
+          communicationView: search.communicationView,
         },
       });
     },
@@ -222,6 +229,8 @@ export function AgentsPage() {
         search: {
           agentId: remainingAgents[0]?.agentId,
           tab: search.tab,
+          runtimeView: search.runtimeView,
+          communicationView: search.communicationView,
         },
         replace: true,
       });
@@ -348,6 +357,8 @@ export function AgentsPage() {
                   search: {
                     agentId: search.agentId,
                     tab,
+                    runtimeView: search.runtimeView,
+                    communicationView: search.communicationView,
                   },
                 })
               }
@@ -374,6 +385,8 @@ export function AgentsPage() {
                         search: {
                           agentId: agent.agentId,
                           tab: selectedTab,
+                          runtimeView: search.runtimeView,
+                          communicationView: search.communicationView,
                         },
                       });
                     }}
@@ -450,128 +463,188 @@ export function AgentsPage() {
                 </WorkspaceCanvas>
 
                 {selectedTab === 'runtime' && functionsQuery.data && (
-                  <>
-                    <AgentMaintenanceCard
-                      agent={agentDetailQuery.data}
-                      functions={functionsQuery.data}
-                      selectedFunctionId={selectedAgentFunctionId}
-                      onSelectedFunctionIdChange={(functionId) => {
-                        if (!agentDetailQuery.data) {
-                          return;
-                        }
+                  <div className="space-y-6">
+                    <SegmentedTabs
+                      value={selectedRuntimeView}
+                      items={[
+                        { value: 'assignment', label: 'Assignment', description: 'function and lifecycle changes' },
+                        { value: 'configuration', label: 'Configuration', description: 'identity, prompt, and workspace controls' },
+                        { value: 'contract', label: 'Contract', description: 'budget and top-up control' },
+                        { value: 'github', label: 'GitHub', description: 'provisioning status and links' },
+                      ]}
+                      onChange={(runtimeView) =>
+                        void navigate({
+                          to: '/agents',
+                          search: {
+                            agentId: search.agentId,
+                            tab: 'runtime',
+                            runtimeView,
+                            communicationView: search.communicationView,
+                          },
+                        })
+                      }
+                    />
 
-                        setFunctionDraft({
-                          agentId: agentDetailQuery.data.agentId,
-                          functionId,
-                        });
-                      }}
-                      onApplyFunctionChange={() =>
-                        changeFunctionMutation.mutate({
-                          agentId: agentDetailQuery.data!.agentId,
-                          functionId: selectedAgentFunctionId,
-                        })
-                      }
-                      functionPending={changeFunctionMutation.isPending}
-                      functionError={changeFunctionMutation.error?.message ?? null}
-                      onTerminate={() => terminateMutation.mutate(agentDetailQuery.data!.agentId)}
-                      terminatePending={terminateMutation.isPending}
-                      terminateError={terminateMutation.error?.message ?? null}
-                    />
-                    <AgentConfigurationCard
-                      draft={selectedAgentConfig!}
-                      pending={updateConfigMutation.isPending}
-                      error={updateConfigMutation.error?.message ?? null}
-                      onChange={(draft) => {
-                        if (!agentDetailQuery.data) {
-                          return;
-                        }
+                    {selectedRuntimeView === 'assignment' ? (
+                      <AgentMaintenanceCard
+                        agent={agentDetailQuery.data}
+                        functions={functionsQuery.data}
+                        selectedFunctionId={selectedAgentFunctionId}
+                        onSelectedFunctionIdChange={(functionId) => {
+                          if (!agentDetailQuery.data) {
+                            return;
+                          }
 
-                        setConfigDraft({
-                          agentId: agentDetailQuery.data.agentId,
-                          value: draft,
-                        });
-                      }}
-                      onSubmit={(draft) =>
-                        updateConfigMutation.mutate({
-                          agentId: agentDetailQuery.data!.agentId,
-                          name: draft.name,
-                          description: draft.description || null,
-                          instructions: draft.instructions,
-                          workspaceAutoSync: draft.workspaceAutoSync,
-                          workspaceBm25: draft.workspaceBm25,
-                          workspaceEmbedder: draft.workspaceEmbedder,
-                        })
-                      }
-                    />
-                    <ContractTopUpCard
-                      pending={topUpContractMutation.isPending}
-                      error={topUpContractMutation.error?.message ?? null}
-                      disabled={!agentDetailQuery.data.activeContract}
-                      onSubmit={(amountUsd) =>
-                        topUpContractMutation.mutate({
-                          agentId: agentDetailQuery.data!.agentId,
-                          amountUsd,
-                        })
-                      }
-                    />
-                    <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
-                  </>
+                          setFunctionDraft({
+                            agentId: agentDetailQuery.data.agentId,
+                            functionId,
+                          });
+                        }}
+                        onApplyFunctionChange={() =>
+                          changeFunctionMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            functionId: selectedAgentFunctionId,
+                          })
+                        }
+                        functionPending={changeFunctionMutation.isPending}
+                        functionError={changeFunctionMutation.error?.message ?? null}
+                        onTerminate={() => terminateMutation.mutate(agentDetailQuery.data!.agentId)}
+                        terminatePending={terminateMutation.isPending}
+                        terminateError={terminateMutation.error?.message ?? null}
+                      />
+                    ) : null}
+
+                    {selectedRuntimeView === 'configuration' ? (
+                      <AgentConfigurationCard
+                        draft={selectedAgentConfig!}
+                        pending={updateConfigMutation.isPending}
+                        error={updateConfigMutation.error?.message ?? null}
+                        onChange={(draft) => {
+                          if (!agentDetailQuery.data) {
+                            return;
+                          }
+
+                          setConfigDraft({
+                            agentId: agentDetailQuery.data.agentId,
+                            value: draft,
+                          });
+                        }}
+                        onSubmit={(draft) =>
+                          updateConfigMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            name: draft.name,
+                            description: draft.description || null,
+                            instructions: draft.instructions,
+                            workspaceAutoSync: draft.workspaceAutoSync,
+                            workspaceBm25: draft.workspaceBm25,
+                            workspaceEmbedder: draft.workspaceEmbedder,
+                          })
+                        }
+                      />
+                    ) : null}
+
+                    {selectedRuntimeView === 'contract' ? (
+                      <ContractTopUpCard
+                        pending={topUpContractMutation.isPending}
+                        error={topUpContractMutation.error?.message ?? null}
+                        disabled={!agentDetailQuery.data.activeContract}
+                        onSubmit={(amountUsd) =>
+                          topUpContractMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            amountUsd,
+                          })
+                        }
+                      />
+                    ) : null}
+
+                    {selectedRuntimeView === 'github' ? (
+                      <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
+                    ) : null}
+                  </div>
                 )}
 
                 {selectedTab === 'communications' && (
-                  <>
-                    <AgentProvidersCard
-                      agent={agentDetailQuery.data}
-                      draftByKey={providerDrafts}
-                      newProviderDraft={newProviderDraft}
-                      onChangeProviderDraft={(providerType, credentialsText) => {
-                        const agentId = agentDetailQuery.data!.agentId;
-                        const key = buildProviderDraftKey(agentId, providerType);
+                  <div className="space-y-6">
+                    <SegmentedTabs
+                      value={selectedCommunicationView}
+                      items={[
+                        { value: 'providers', label: 'Providers', description: 'channel credentials and provider wiring' },
+                        { value: 'inbox', label: 'Inbox', description: 'notifications and recent conversations' },
+                        { value: 'thread', label: 'Thread', description: 'latest persisted memory messages' },
+                      ]}
+                      onChange={(communicationView) =>
+                        void navigate({
+                          to: '/agents',
+                          search: {
+                            agentId: search.agentId,
+                            tab: 'communications',
+                            runtimeView: search.runtimeView,
+                            communicationView,
+                          },
+                        })
+                      }
+                    />
 
-                        setProviderDrafts((current) => ({
-                          ...current,
-                          [key]: {
+                    {selectedCommunicationView === 'providers' ? (
+                      <AgentProvidersCard
+                        agent={agentDetailQuery.data}
+                        draftByKey={providerDrafts}
+                        newProviderDraft={newProviderDraft}
+                        onChangeProviderDraft={(providerType, credentialsText) => {
+                          const agentId = agentDetailQuery.data!.agentId;
+                          const key = buildProviderDraftKey(agentId, providerType);
+
+                          setProviderDrafts((current) => ({
+                            ...current,
+                            [key]: {
+                              providerType,
+                              credentialsText,
+                            },
+                          }));
+                        }}
+                        onChangeNewProviderDraft={setNewProviderDraft}
+                        onSaveProvider={(providerType, credentialsText) =>
+                          upsertProviderMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
                             providerType,
                             credentialsText,
-                          },
-                        }));
-                      }}
-                      onChangeNewProviderDraft={setNewProviderDraft}
-                      onSaveProvider={(providerType, credentialsText) =>
-                        upsertProviderMutation.mutate({
-                          agentId: agentDetailQuery.data!.agentId,
-                          providerType,
-                          credentialsText,
-                        })
-                      }
-                      onDeleteProvider={(providerType) =>
-                        deleteProviderMutation.mutate({
-                          agentId: agentDetailQuery.data!.agentId,
-                          providerType,
-                        })
-                      }
-                      onCreateProvider={() =>
-                        upsertProviderMutation.mutate({
-                          agentId: agentDetailQuery.data!.agentId,
-                          providerType: newProviderDraft.providerType,
-                          credentialsText: newProviderDraft.credentialsText,
-                        })
-                      }
-                      pendingProviderType={
-                        upsertProviderMutation.variables?.providerType ??
-                        deleteProviderMutation.variables?.providerType ??
-                        null
-                      }
-                      error={
-                        upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
-                      }
-                    />
-                    <AgentInboxCard
-                      notifications={agentDetailQuery.data.recentNotifications}
-                      conversations={agentDetailQuery.data.recentConversations}
-                    />
-                    <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
-                  </>
+                          })
+                        }
+                        onDeleteProvider={(providerType) =>
+                          deleteProviderMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            providerType,
+                          })
+                        }
+                        onCreateProvider={() =>
+                          upsertProviderMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            providerType: newProviderDraft.providerType,
+                            credentialsText: newProviderDraft.credentialsText,
+                          })
+                        }
+                        pendingProviderType={
+                          upsertProviderMutation.variables?.providerType ??
+                          deleteProviderMutation.variables?.providerType ??
+                          null
+                        }
+                        error={
+                          upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
+                        }
+                      />
+                    ) : null}
+
+                    {selectedCommunicationView === 'inbox' ? (
+                      <AgentInboxCard
+                        notifications={agentDetailQuery.data.recentNotifications}
+                        conversations={agentDetailQuery.data.recentConversations}
+                      />
+                    ) : null}
+
+                    {selectedCommunicationView === 'thread' ? (
+                      <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
+                    ) : null}
+                  </div>
                 )}
 
                 {selectedTab === 'schedules' && (
