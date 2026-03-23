@@ -180,51 +180,118 @@ function FinanceWorkspacePage(input: {
           ) : null}
 
           {selectedSection === 'payables' ? (
-            <WorkspaceCanvas
-              title="Accounts payable"
-              description="Create a single planned payable or define a recurring liability."
-            >
-              <div className="max-w-5xl">
-                <PayableCard
-                  pending={payableMutation.isPending}
-                  error={payableMutation.error?.message ?? null}
-                  onSubmit={(input) => payableMutation.mutate(input)}
-                />
-              </div>
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Payables status"
+                description="One-off and recurring obligations that will affect the company ledger."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MiniMetric label="Recurring plans" value={String(finance.recurringPayables.length)} />
+                  <MiniMetric label="Scheduled out" value={formatUsd(finance.summary.scheduledOutUsd)} />
+                  <MiniMetric label="Ledger rows" value={String(finance.movements.items.length)} />
+                  <MiniMetric label="Balance" value={formatUsd(finance.balanceUsd)} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Create payable"
+                description="Create a single planned payable or define a recurring liability."
+              >
+                <div className="max-w-5xl">
+                  <PayableCard
+                    pending={payableMutation.isPending}
+                    error={payableMutation.error?.message ?? null}
+                    onSubmit={(input) => payableMutation.mutate(input)}
+                  />
+                </div>
+              </WorkspaceCanvas>
+            </div>
           ) : null}
 
           {selectedSection === 'recurring' ? (
-            <WorkspaceCanvas
-              title="Recurring obligations"
-              description="Pause or resume recurring payables without losing their history."
-            >
-              <RecurringPayablesCard
-                items={finance.recurringPayables}
-                pendingPayableId={recurringMutation.variables?.payableId}
-                pending={recurringMutation.isPending}
-                error={recurringMutation.error?.message ?? null}
-                onToggle={(payableId, isActive) => recurringMutation.mutate({ payableId, isActive })}
-              />
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Recurring status"
+                description="Recurring obligations and their next due moments."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MiniMetric
+                    label="Active"
+                    value={String(finance.recurringPayables.filter((item) => item.isActive).length)}
+                  />
+                  <MiniMetric
+                    label="Paused"
+                    value={String(finance.recurringPayables.filter((item) => !item.isActive).length)}
+                  />
+                  <MiniMetric
+                    label="Next due"
+                    value={
+                      finance.recurringPayables[0]
+                        ? formatDateTime(
+                            [...finance.recurringPayables]
+                              .sort((left, right) => left.nextDueAt - right.nextDueAt)[0].nextDueAt,
+                          )
+                        : '—'
+                    }
+                  />
+                  <MiniMetric label="Rows" value={String(finance.recurringPayables.length)} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Recurring obligations"
+                description="Pause or resume recurring payables without losing their history."
+              >
+                <RecurringPayablesCard
+                  items={finance.recurringPayables}
+                  pendingPayableId={recurringMutation.variables?.payableId}
+                  pending={recurringMutation.isPending}
+                  error={recurringMutation.error?.message ?? null}
+                  onToggle={(payableId, isActive) => recurringMutation.mutate({ payableId, isActive })}
+                />
+              </WorkspaceCanvas>
+            </div>
           ) : null}
 
           {selectedSection === 'ledger' ? (
-            <WorkspaceCanvas
-              title="Ledger posting"
-              description="Post or cancel planned entries from the financial timeline."
-            >
-              <LedgerCard
-                items={finance.movements.items}
-                pendingPostEntryId={postEntryMutation.variables?.entryId}
-                pendingCancelEntryId={cancelEntryMutation.variables}
-                postPending={postEntryMutation.isPending}
-                cancelPending={cancelEntryMutation.isPending}
-                error={postEntryMutation.error?.message ?? cancelEntryMutation.error?.message ?? null}
-                onPost={(entryId) => postEntryMutation.mutate({ entryId })}
-                onCancel={(entryId) => cancelEntryMutation.mutate(entryId)}
-              />
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Ledger status"
+                description="Recent financial rows and how many still require posting decisions."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MiniMetric
+                    label="Planned"
+                    value={String(finance.movements.items.filter((item) => item.status === 'planned').length)}
+                  />
+                  <MiniMetric
+                    label="Posted"
+                    value={String(finance.movements.items.filter((item) => item.status === 'posted').length)}
+                  />
+                  <MiniMetric
+                    label="Canceled"
+                    value={String(finance.movements.items.filter((item) => item.status === 'canceled').length)}
+                  />
+                  <MiniMetric label="Rows" value={String(finance.movements.items.length)} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Ledger posting"
+                description="Post or cancel planned entries from the financial timeline."
+              >
+                <LedgerCard
+                  items={finance.movements.items}
+                  pendingPostEntryId={postEntryMutation.variables?.entryId}
+                  pendingCancelEntryId={cancelEntryMutation.variables}
+                  postPending={postEntryMutation.isPending}
+                  cancelPending={cancelEntryMutation.isPending}
+                  error={postEntryMutation.error?.message ?? cancelEntryMutation.error?.message ?? null}
+                  onPost={(entryId) => postEntryMutation.mutate({ entryId })}
+                  onCancel={(entryId) => cancelEntryMutation.mutate(entryId)}
+                />
+              </WorkspaceCanvas>
+            </div>
           ) : null}
           </div>
         </div>
