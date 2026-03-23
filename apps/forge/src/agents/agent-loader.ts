@@ -17,6 +17,7 @@ import { createCapabilityTools } from '../capabilities/tools';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import { createSystemSettingsStore } from '../system-settings/store';
+import { createWebTools } from '../web/tools';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -94,6 +95,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const coolifyTools = config.coolify ? createCoolifyTools(config.coolify, allowedToolIds) : {};
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
   const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
+  const webTools = createWebTools(allowedToolIds);
   const customTools = {
     ...tools,
     ...notificationTools,
@@ -101,6 +103,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...coolifyTools,
     ...scheduleTools,
     ...capabilityTools,
+    ...webTools,
   };
   const filteredWorkflows = filterWorkflows(config.workflows, capabilitySet.workflowIds);
 
