@@ -1150,6 +1150,8 @@ export function createGitHubAppManager(config: {
       return { status: 400, body: 'Missing GitHub webhook headers' };
     }
 
+    console.log(`[GitHubWebhook] Received ${eventName} for agent ${agentId} delivery ${deliveryId}`);
+
     const app = createGitHubApp(credentials);
     app.webhooks.onAny(async ({ name, payload }) => {
       const payloadRecord = payload as Record<string, unknown>;
@@ -1174,7 +1176,9 @@ export function createGitHubAppManager(config: {
         agentId,
         content,
       });
+      console.log(`[GitHubWebhook] Created notification for agent ${agentId}: ${content}`);
       config.notifyAgent(agentId);
+      console.log(`[GitHubWebhook] Requested wake for agent ${agentId}`);
     });
 
     await app.webhooks.verifyAndReceive({

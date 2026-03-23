@@ -8,7 +8,7 @@ const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
 const AUTONOMOUS_STEP_PROMPT =
-  'System wake: continue your autonomous work using current memory, pending conversations, schedules, and available tools. If nothing requires action right now, stop without calling tools.';
+  'System wake: continue your autonomous work using current memory, unread notifications, pending conversations, schedules, and available tools. If nothing requires action right now, stop without calling tools.';
 const CHECKPOINT_PREFIX = 'CHECKPOINT:';
 type AgentUsage = {
   inputTokens?: number;
@@ -29,6 +29,7 @@ type OmObservationEndPart = {
 export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
   const wakeQueue = createAgentWakeQueue({
+    label: runtime.id,
     isRunning: async () => (await store.getExecutionState(runtime.id)) === 'running',
     wake,
   });

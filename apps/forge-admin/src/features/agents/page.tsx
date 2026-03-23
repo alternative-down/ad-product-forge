@@ -1274,6 +1274,11 @@ function AgentInboxCard(input: {
                 <div className="font-medium text-slate-950">{conversation.conversationKey}</div>
                 <Badge>{conversation.provider}</Badge>
               </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {conversation.participants.map((participant) => (
+                  <Badge key={`${conversation.conversationId}-${participant}`}>{participant}</Badge>
+                ))}
+              </div>
               <div className="mt-1 space-y-1 text-xs text-slate-500">
                 <div>
                   Updated at {formatDateTimeText(conversation.updatedAt)}

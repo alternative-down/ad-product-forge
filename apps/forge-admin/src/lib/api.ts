@@ -198,6 +198,7 @@ export type AgentDetail = {
     name?: string;
     contactSlug?: string;
     contactDisplayName?: string;
+    participants: string[];
     updatedAt: string;
     messages: Array<{
       messageId: string;

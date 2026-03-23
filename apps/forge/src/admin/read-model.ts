@@ -450,24 +450,45 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
       },
     });
 
-    return rows.map((conversation) => ({
-      conversationId: conversation.conversationId,
-      conversationKey: conversation.providerConversationKey,
-      provider: conversation.provider,
-      name: conversation.name ?? undefined,
-      contactSlug: conversation.contactSlug ?? undefined,
-      contactDisplayName: conversation.contact?.displayName ?? undefined,
-      updatedAt: conversation.updatedAt,
-      messages: [...conversation.messages]
-        .reverse()
-        .map((message) => ({
-          messageId: message.messageId,
-          content: message.content,
-          unread: message.unread === 1,
-          authorDisplayName: message.authorDisplayName ?? agentName,
-          createdAt: message.createdAt,
-        })),
-    }));
+    return rows.map((conversation) => {
+      const participants = new Set<string>();
+
+      if (conversation.contact?.displayName) {
+        participants.add(conversation.contact.displayName);
+      }
+
+      if (conversation.name) {
+        participants.add(conversation.name);
+      }
+
+      participants.add(agentName);
+
+      for (const message of conversation.messages) {
+        if (message.authorDisplayName) {
+          participants.add(message.authorDisplayName);
+        }
+      }
+
+      return {
+        conversationId: conversation.conversationId,
+        conversationKey: conversation.providerConversationKey,
+        provider: conversation.provider,
+        name: conversation.name ?? undefined,
+        contactSlug: conversation.contactSlug ?? undefined,
+        contactDisplayName: conversation.contact?.displayName ?? undefined,
+        participants: [...participants],
+        updatedAt: conversation.updatedAt,
+        messages: [...conversation.messages]
+          .reverse()
+          .map((message) => ({
+            messageId: message.messageId,
+            content: message.content,
+            unread: message.unread === 1,
+            authorDisplayName: message.authorDisplayName ?? agentName,
+            createdAt: message.createdAt,
+          })),
+      };
+    });
   } catch {
     return [];
   }
