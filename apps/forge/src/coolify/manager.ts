@@ -6,7 +6,7 @@ const GitHubAppSchema = z.object({
   id: z.number().int().optional(),
   uuid: z.string(),
   name: z.string().optional(),
-  organization: z.string().optional(),
+  organization: z.string().nullish(),
   api_url: z.string().optional(),
   html_url: z.string().optional(),
 }).passthrough();
