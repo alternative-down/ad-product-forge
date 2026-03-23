@@ -103,9 +103,21 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     },
   });
   const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+  console.log('[Hiring RH] generate completed. steps:', result.steps.length, 'toolCalls:', toolCalls.length);
+  console.log('[Hiring RH] result.object:', JSON.stringify(result.object));
+  console.log('[Hiring RH] result.text:', result.text?.slice(0, 500));
+
+  if (toolCalls.length === 0) {
+    console.log('[Hiring RH] WARNING: No tool calls made!');
+  }
 
   if (toolCalls.length === 0) {
     throw new Error('Hiring RH must inspect capability tools before returning a hiring plan');
+  }
+
+  if (!result.object || !result.object.agentName) {
+    console.log('[Hiring RH] ERROR: structured output missing required fields');
+    throw new Error(`Structured output validation failed: missing required fields. Got: ${JSON.stringify(result.object)}`);
   }
 
   const parsed = hiringRhResultSchema.parse(result.object);
