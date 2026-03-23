@@ -170,6 +170,7 @@ export async function createInternalAgentRuntime<
       basePath: agentWorkspaceDir,
     }),
     sandbox: new LocalSandbox({
+      isolation: 'none',
       workingDirectory: sandboxWorkingDirectory,
     }),
   });

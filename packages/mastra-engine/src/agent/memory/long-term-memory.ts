@@ -65,6 +65,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         basePath: memoryPath,
       }),
       sandbox: new LocalSandbox({
+        isolation: 'none',
         workingDirectory: memoryPath,
       }),
       vectorStore,
