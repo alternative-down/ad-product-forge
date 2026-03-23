@@ -1,0 +1,11 @@
+import { createFileRoute } from '@tanstack/react-router';
+
+import { SystemDetailPage } from '../features/system/page';
+
+export const Route = createFileRoute('/system/llm/defaults')({
+  component: SystemLlmDefaultsRoute,
+});
+
+function SystemLlmDefaultsRoute() {
+  return <SystemDetailPage section="llm" llmView="defaults" />;
+}
