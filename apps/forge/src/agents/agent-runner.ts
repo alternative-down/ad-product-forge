@@ -129,6 +129,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       const delayMs = nextAttempt.delayMs;
       instant = false;
       nextStepAt = Date.now() + Math.max(delayMs, 0);
+      console.log(`[AgentRunner] ${runtime.id} scheduling next step in ${Math.max(delayMs, 0)}ms`);
       timer = setTimeout(
         () => {
           timer = null;
@@ -167,6 +168,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       }
 
       const prompt = needsWakePrompt ? AUTONOMOUS_STEP_PROMPT : [];
+      console.log(`[AgentRunner] ${runtime.id} executing step`);
       const result = await runtime.agent.generate(prompt, {
         maxSteps: 1,
         toolChoice: 'required',
@@ -241,32 +243,15 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   }
 
   async function estimateStepCostUsd() {
-    if (!runtime.modelProfileId) {
-      throw new Error(`Agent runtime is missing primary model profile: ${runtime.id}`);
-    }
-
     const recentSteps = await store.listRecentSteps(runtime.id, RECENT_STEP_LIMIT);
+    const recentAgentSteps = recentSteps.filter((step) => step.kind === 'agent-step');
 
-    if (recentSteps.length === 0) {
+    if (recentAgentSteps.length === 0) {
       return null;
     }
 
-    const averageStepUsd =
-      recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
-    const pricing = await store.getUsagePricing({
-      pricingModelKey: runtime.pricingModelKey,
-      profileId: runtime.modelProfileId,
-    });
-    const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
-
-    if (!pricing.modelPrice || !lastAgentStep) {
-      return averageStepUsd;
-    }
-
-    const inputEstimatedUsd =
-      ((lastAgentStep.inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd) *
-      pricing.contractCostMultiplier;
-    return (inputEstimatedUsd + averageStepUsd) / 2;
+    const totalRecentUsd = recentSteps.reduce((total, step) => total + step.costUsd, 0);
+    return totalRecentUsd / recentAgentSteps.length;
   }
 
   function calculateDelayMs(
