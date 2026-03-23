@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c7b678d7-cb5b-45c2-975a-fcaefda51d2a",
-  "prevId": "cb775b61-2ea6-41a7-8e9f-fd0bcc63464e",
+  "id": "343710e3-2d60-4c46-9a84-5047bd85ff53",
+  "prevId": "66ac8313-2bdb-4f92-97af-f950634d7180",
   "tables": {
     "agent_execution_contracts": {
       "name": "agent_execution_contracts",
@@ -1479,6 +1479,44 @@
         "created_at": {
           "name": "created_at",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "system_settings": {
+      "name": "system_settings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "company_name": {
+          "name": "company_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "company_context": {
+          "name": "company_context",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false

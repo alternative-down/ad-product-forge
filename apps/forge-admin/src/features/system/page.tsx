@@ -7,12 +7,14 @@ import {
   deleteSystemIntegration,
   getSystemOauth,
   getSystemLlm,
+  getSystemSettings,
   getSystemMigrations,
   listSystemIntegrations,
   syncSystemOauth,
   updateSystemLlmDefaults,
   upsertLlmModelPrice,
   upsertLlmProfile,
+  upsertSystemSettings,
   upsertSystemIntegration,
   type LlmProfile,
   type UpsertLlmModelPriceInput,
@@ -20,6 +22,7 @@ import {
   type SystemLlmDefaults,
   type SystemMigrationsResponse,
   type SystemOauthState,
+  type SystemSettings,
   type UpdateSystemLlmDefaultsInput,
   type UpsertLlmProfileInput,
   type UpsertSystemIntegrationInput,
@@ -28,6 +31,7 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
+import { Textarea } from '../../components/ui/textarea';
 import { formatDateTime } from '../../lib/format';
 
 type MigaduDraft = {
@@ -70,6 +74,10 @@ export function SystemPage() {
   const llmQuery = useQuery({
     queryKey: ['admin', 'system-llm'],
     queryFn: getSystemLlm,
+  });
+  const settingsQuery = useQuery({
+    queryKey: ['admin', 'system-settings'],
+    queryFn: getSystemSettings,
   });
   const oauthQuery = useQuery({
     queryKey: ['admin', 'system-oauth'],
@@ -121,8 +129,14 @@ export function SystemPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
     },
   });
+  const upsertSystemSettingsMutation = useMutation({
+    mutationFn: upsertSystemSettings,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] });
+    },
+  });
 
-  if (integrationsQuery.isLoading || llmQuery.isLoading || oauthQuery.isLoading || migrationsQuery.isLoading) {
+  if (integrationsQuery.isLoading || llmQuery.isLoading || settingsQuery.isLoading || oauthQuery.isLoading || migrationsQuery.isLoading) {
     return <PanelLoading label="Loading system configuration" />;
   }
 
@@ -132,6 +146,10 @@ export function SystemPage() {
 
   if (llmQuery.isError) {
     return <PanelError message={llmQuery.error.message} />;
+  }
+
+  if (settingsQuery.isError) {
+    return <PanelError message={settingsQuery.error.message} />;
   }
 
   if (oauthQuery.isError) {
@@ -147,6 +165,7 @@ export function SystemPage() {
   const coolifyIntegration = integrations.find((integration) => integration.providerType === 'coolify') ?? null;
   const githubIntegration = integrations.find((integration) => integration.providerType === 'github') ?? null;
   const systemLlm = llmQuery.data!;
+  const systemSettings = settingsQuery.data!;
   const oauthState = oauthQuery.data!;
   const migrations = migrationsQuery.data!;
 
@@ -163,6 +182,14 @@ export function SystemPage() {
           <Cable className="h-5 w-5 text-slate-500" />
         </div>
       </Card>
+
+      <SystemSettingsCard
+        key={`system-settings-${systemSettings.updatedAt ?? 'unset'}`}
+        settings={systemSettings}
+        pending={upsertSystemSettingsMutation.isPending}
+        error={upsertSystemSettingsMutation.error?.message ?? null}
+        onSave={(input) => upsertSystemSettingsMutation.mutate(input)}
+      />
 
       <Card className="p-6">
         <div className="flex items-start justify-between gap-4">
@@ -261,6 +288,76 @@ export function SystemPage() {
       />
 
     </div>
+  );
+}
+
+function SystemSettingsCard(input: {
+  settings: SystemSettings;
+  pending: boolean;
+  error: string | null;
+  onSave(input: {
+    companyName: string;
+    companyContext: string;
+  }): void;
+}) {
+  const [draft, setDraft] = useState({
+    companyName: input.settings.companyName,
+    companyContext: input.settings.companyContext,
+  });
+
+  const changed =
+    draft.companyName !== input.settings.companyName ||
+    draft.companyContext !== input.settings.companyContext;
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950">Company context</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Global company information injected into the system prompt of loaded agents.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        <LabeledField label="Company name">
+          <Input
+            value={draft.companyName}
+            onChange={(event) => setDraft({
+              ...draft,
+              companyName: event.target.value,
+            })}
+            placeholder="Alternative Down"
+          />
+        </LabeledField>
+
+        <LabeledField label="Company information">
+          <Textarea
+            value={draft.companyContext}
+            onChange={(event) => setDraft({
+              ...draft,
+              companyContext: event.target.value,
+            })}
+            rows={8}
+            placeholder="Describe the company, business model, operating context, and any fixed information every agent should know."
+          />
+        </LabeledField>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between gap-3">
+        <div className="text-sm text-rose-600">{input.error ?? ''}</div>
+        <Button
+          disabled={!changed || input.pending}
+          onClick={() => input.onSave({
+            companyName: draft.companyName,
+            companyContext: draft.companyContext,
+          })}
+        >
+          {input.pending ? 'Saving...' : 'Save company context'}
+        </Button>
+      </div>
+    </Card>
   );
 }
 

@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
+import { createSystemSettingsStore } from '../system-settings/store';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
@@ -40,13 +41,19 @@ export async function generateHiredAgentInstructions(db: Database, input: {
 }) {
   const llmSettings = createLlmSettingsStore(db);
   const capabilities = createCapabilityStore(db);
+  const systemSettings = createSystemSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
+  const companySettings = await systemSettings.getSettings();
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
   const modelPrice = await db.query.llmModelPrices.findFirst({
     where: eq(llmModelPrices.modelKey, hiringRhModelKey),
   });
-  const hiringPrompt = buildHiringPrompt(input);
+  const hiringPrompt = buildHiringPrompt({
+    ...input,
+    companyName: companySettings.companyName,
+    companyContext: companySettings.companyContext,
+  });
 
   if (!modelPrice) {
     throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelKey}`);
@@ -72,6 +79,11 @@ export async function generateHiredAgentInstructions(db: Database, input: {
       'Return only valid JSON with exactly these keys: agentName, agentDescription, functionId, instructions.',
       'The functionId must be the real internal function id that should be assigned to the hired agent.',
       'The instructions field must be the full system prompt for the hired agent.',
+      'Write that system prompt in two layers: first a natural, conversational operational briefing that sounds like how the company would actually brief the collaborator; only after that organize the prompt into a more structured CrewAI-like operating style.',
+      'Do not start with a dry schema dump. Start by telling the hired agent who they are, what company they are part of, what they own, how they should behave, and how they should operate with the other agents and humans.',
+      'The structured part must reinforce primary objective, secondary objectives, operating context, constraints, communication style, and tool usage, but it must not replace the conversational opening.',
+      'Do not use a heading named Role, because role already has another meaning in the internal capability system.',
+      'Use this structure after the conversational opening: Primary objective, Secondary objectives, Operating context, Function inside the company, Constraints, Communication style, Tool usage rules, Autonomous execution rules.',
       'Do not wrap the JSON in markdown fences.',
     ].join('\n'),
     model: resolveProfileRuntimeModel(defaults.hiringRhProfile),
@@ -121,6 +133,8 @@ export async function generateHiredAgentInstructions(db: Database, input: {
 function buildHiringPrompt(input: {
   hiringRequest: string;
   additionalContext?: string;
+  companyName?: string;
+  companyContext?: string;
 }) {
   const sections = [
     'Design one newly hired permanent internal collaborator from the hiring request.',
@@ -130,8 +144,20 @@ function buildHiringPrompt(input: {
     'Return only valid JSON with exactly these keys: agentName, agentDescription, functionId, instructions.',
     'The functionId must be a real internal function id created or selected through tools.',
     'The instructions field must be the full system prompt for the hired agent.',
+    'The prompt must begin with a natural operational briefing written in a conversational tone, as if the company were onboarding the collaborator directly.',
+    'After that conversational opening, structure the prompt in a CrewAI-like style with explicit Primary objective, Secondary objectives, Operating context, Function inside the company, Constraints, Communication style, Tool usage rules, and Autonomous execution rules.',
+    'Do not use a heading named Role.',
+    'Do not make the whole prompt read like a sterile template. The first impression should feel human, direct, and operational.',
     'Do not wrap the JSON in markdown fences.',
   ];
+
+  if (input.companyName?.trim() || input.companyContext?.trim()) {
+    sections.push([
+      'Company context:',
+      input.companyName?.trim() ? `Company name: ${input.companyName.trim()}` : null,
+      input.companyContext?.trim() ? `Company information: ${input.companyContext.trim()}` : null,
+    ].filter(Boolean).join('\n'));
+  }
 
   if (input.additionalContext?.trim()) {
     sections.push(`Additional hiring context:\n${input.additionalContext.trim()}`);

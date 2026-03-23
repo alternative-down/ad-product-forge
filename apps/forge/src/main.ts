@@ -50,9 +50,11 @@ export async function main() {
       const entry = registry.get(agentId);
 
       if (!entry) {
+        console.warn(`[Forge] Schedule wake requested for unloaded agent ${agentId}`);
         return;
       }
 
+      console.log(`[Forge] Schedule wake requested for agent ${agentId}`);
       entry.runner.notifyExternalEvent();
     },
   });
@@ -65,9 +67,11 @@ export async function main() {
       const entry = registry.get(agentId);
 
       if (!entry) {
+        console.warn(`[Forge] GitHub wake requested for unloaded agent ${agentId}`);
         return;
       }
 
+      console.log(`[Forge] GitHub wake requested for agent ${agentId}`);
       entry.runner.notifyExternalEvent();
     },
   });

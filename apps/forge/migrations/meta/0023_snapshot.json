@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b9dc5084-b0ae-4772-97a9-641e4755d80a",
-  "prevId": "c5641b06-711a-4065-afa9-d468393dbb03",
+  "id": "66ac8313-2bdb-4f92-97af-f950634d7180",
+  "prevId": "2e036c87-d3e1-4ddc-ab6c-d4e2b9a22822",
   "tables": {
     "agent_execution_contracts": {
       "name": "agent_execution_contracts",

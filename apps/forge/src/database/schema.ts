@@ -128,6 +128,16 @@ export const roleWorkflowPermissions = sqliteTable('role_workflow_permissions', 
 export type RoleWorkflowPermission = typeof roleWorkflowPermissions.$inferSelect;
 export type NewRoleWorkflowPermission = typeof roleWorkflowPermissions.$inferInsert;
 
+export const systemSettings = sqliteTable('system_settings', {
+  id: text('id').primaryKey(),
+  companyName: text('company_name').notNull(),
+  companyContext: text('company_context').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type SystemSettings = typeof systemSettings.$inferSelect;
+export type NewSystemSettings = typeof systemSettings.$inferInsert;
+
 export const agentExecutionContracts = sqliteTable('agent_execution_contracts', {
   id: text('id').primaryKey(),
   agentId: text('agent_id')

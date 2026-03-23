@@ -14,6 +14,7 @@ export type AgentWakeQueue = {
 };
 
 export function createAgentWakeQueue(config: {
+  label?: string;
   isRunning(): Promise<boolean>;
   wake(): Promise<void>;
 }): AgentWakeQueue {
@@ -54,12 +55,14 @@ export function createAgentWakeQueue(config: {
     try {
       if (await config.isRunning()) {
         waitingForIdle = true;
+        console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} is still running, keeping wake pending`);
         return;
       }
 
       pending = false;
       waitingForIdle = false;
       firstPendingAt = null;
+      console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} waking now`);
       await config.wake();
     } catch (error) {
       console.error('[AgentWakeQueue] Failed to wake agent:', error);
@@ -74,6 +77,7 @@ export function createAgentWakeQueue(config: {
       const now = Date.now();
 
       firstPendingAt ??= now;
+      console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} received external event`);
 
       if (waitingForIdle) {
         return;
@@ -91,6 +95,7 @@ export function createAgentWakeQueue(config: {
         return;
       }
 
+      console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} became idle with pending wake`);
       await trigger();
     },
     stop() {
