@@ -432,6 +432,16 @@ function PayableCard(input: {
         </div>
         <ReceiptText className="h-5 w-5 text-slate-500" />
       </div>
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <MiniMetric
+          label="Selected mode"
+          value={mode === 'single' ? 'Single payable' : 'Recurring payable'}
+        />
+        <MiniMetric
+          label="Effect"
+          value={mode === 'single' ? 'Creates one planned row' : 'Creates a recurring obligation'}
+        />
+      </div>
       <div className="mt-5 flex gap-2">
         <Button type="button" variant={mode === 'single' ? 'primary' : 'secondary'} onClick={() => setMode('single')}>
           Single
@@ -442,50 +452,66 @@ function PayableCard(input: {
       </div>
 
       {mode === 'single' ? (
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <LabeledField label="Name">
-            <Input value={singleDraft.name} onChange={(event) => setSingleDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Hetzner VPS" />
-          </LabeledField>
-          <LabeledField label="Amount (USD)">
-            <Input value={singleDraft.amountUsd} onChange={(event) => setSingleDraft((current) => ({ ...current, amountUsd: event.target.value }))} placeholder="29.90" />
-          </LabeledField>
-          <LabeledField label="Due at">
-            <Input type="datetime-local" value={singleDraft.dueAt} onChange={(event) => setSingleDraft((current) => ({ ...current, dueAt: event.target.value }))} />
-          </LabeledField>
-          <LabeledField label="Description">
-            <Input value={singleDraft.description} onChange={(event) => setSingleDraft((current) => ({ ...current, description: event.target.value }))} placeholder="March hosting invoice" />
-          </LabeledField>
+        <div className="mt-5 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4">
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-[color:var(--ink)]">Single payable</div>
+            <div className="mt-1 text-sm text-[color:var(--muted)]">
+              Create one planned obligation with a due date.
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <LabeledField label="Name">
+              <Input value={singleDraft.name} onChange={(event) => setSingleDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Hetzner VPS" />
+            </LabeledField>
+            <LabeledField label="Amount (USD)">
+              <Input value={singleDraft.amountUsd} onChange={(event) => setSingleDraft((current) => ({ ...current, amountUsd: event.target.value }))} placeholder="29.90" />
+            </LabeledField>
+            <LabeledField label="Due at">
+              <Input type="datetime-local" value={singleDraft.dueAt} onChange={(event) => setSingleDraft((current) => ({ ...current, dueAt: event.target.value }))} />
+            </LabeledField>
+            <LabeledField label="Description">
+              <Input value={singleDraft.description} onChange={(event) => setSingleDraft((current) => ({ ...current, description: event.target.value }))} placeholder="March hosting invoice" />
+            </LabeledField>
+          </div>
         </div>
       ) : (
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <LabeledField label="Name">
-            <Input value={recurringDraft.name} onChange={(event) => setRecurringDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Coolify server" />
-          </LabeledField>
-          <LabeledField label="Amount (USD)">
-            <Input value={recurringDraft.amountUsd} onChange={(event) => setRecurringDraft((current) => ({ ...current, amountUsd: event.target.value }))} placeholder="10" />
-          </LabeledField>
-          <LabeledField label="First due at">
-            <Input type="datetime-local" value={recurringDraft.dueAt} onChange={(event) => setRecurringDraft((current) => ({ ...current, dueAt: event.target.value }))} />
-          </LabeledField>
-          <LabeledField label="Recurrence">
-            <select
-              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
-              value={recurringDraft.recurrencePeriod}
-              onChange={(event) =>
-                setRecurringDraft((current) => ({
-                  ...current,
-                  recurrencePeriod: event.target.value as 'weekly' | 'monthly' | 'yearly',
-                }))
-              }
-            >
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-          </LabeledField>
-          <LabeledField label="Description">
-            <Input value={recurringDraft.description} onChange={(event) => setRecurringDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Monthly infrastructure invoice" />
-          </LabeledField>
+        <div className="mt-5 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4">
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-[color:var(--ink)]">Recurring payable</div>
+            <div className="mt-1 text-sm text-[color:var(--muted)]">
+              Create a recurring obligation that will keep producing future planned rows.
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <LabeledField label="Name">
+              <Input value={recurringDraft.name} onChange={(event) => setRecurringDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Coolify server" />
+            </LabeledField>
+            <LabeledField label="Amount (USD)">
+              <Input value={recurringDraft.amountUsd} onChange={(event) => setRecurringDraft((current) => ({ ...current, amountUsd: event.target.value }))} placeholder="10" />
+            </LabeledField>
+            <LabeledField label="First due at">
+              <Input type="datetime-local" value={recurringDraft.dueAt} onChange={(event) => setRecurringDraft((current) => ({ ...current, dueAt: event.target.value }))} />
+            </LabeledField>
+            <LabeledField label="Recurrence">
+              <select
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                value={recurringDraft.recurrencePeriod}
+                onChange={(event) =>
+                  setRecurringDraft((current) => ({
+                    ...current,
+                    recurrencePeriod: event.target.value as 'weekly' | 'monthly' | 'yearly',
+                  }))
+                }
+              >
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </LabeledField>
+            <LabeledField label="Description">
+              <Input value={recurringDraft.description} onChange={(event) => setRecurringDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Monthly infrastructure invoice" />
+            </LabeledField>
+          </div>
         </div>
       )}
 
