@@ -15,6 +15,8 @@ import { createAgentNotificationStore } from '../notifications/store';
 import { githubAppCredentialsSchema, type GitHubAppCredentials } from './types';
 
 const GITHUB_PROVIDER_TYPE = 'github-app';
+const INSTALLATION_READY_ATTEMPTS = 10;
+const INSTALLATION_READY_DELAY_MS = 1500;
 const manifestConversionSchema = z.object({
   id: z.number().int(),
   pem: z.string(),
@@ -1080,7 +1082,34 @@ export function createGitHubAppManager(config: {
       status: 'active',
       installationId,
     });
-    await octokit.request('GET /installation');
+    let installationReady = false;
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= INSTALLATION_READY_ATTEMPTS; attempt += 1) {
+      try {
+        await octokit.request('GET /installation');
+        installationReady = true;
+        break;
+      } catch (error) {
+        lastError = error;
+        console.warn(
+          `[GitHubAppManager] Installation ${installationId} for agent ${agentId} is not ready yet (attempt ${attempt}/${INSTALLATION_READY_ATTEMPTS})`,
+          error,
+        );
+
+        if (attempt < INSTALLATION_READY_ATTEMPTS) {
+          await new Promise((resolve) => setTimeout(resolve, INSTALLATION_READY_DELAY_MS));
+        }
+      }
+    }
+
+    if (!installationReady) {
+      const message = lastError instanceof Error ? lastError.message : String(lastError);
+      return html(
+        502,
+        `<h1>GitHub App installation is not ready yet</h1><p>Retry the installation link in a moment.</p><pre>${escapeHtml(message)}</pre>`,
+      );
+    }
 
     const activeCredentials = {
       status: 'active' as const,
