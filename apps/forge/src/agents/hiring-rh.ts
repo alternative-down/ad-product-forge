@@ -98,12 +98,17 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
     maxSteps: 8,
-    toolChoice: 'required',
     structuredOutput: {
       schema: hiringRhResultSchema,
       jsonPromptInjection: true,
     },
   });
+  const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+
+  if (toolCalls.length === 0) {
+    throw new Error('Hiring RH must inspect capability tools before returning a hiring plan');
+  }
+
   const parsed = hiringRhResultSchema.parse(result.object);
   const agentFunction = await capabilities.getFunction(parsed.functionId);
 
