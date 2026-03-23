@@ -160,6 +160,17 @@ export function createCoolifyManager(config: {
     }));
   }
 
+  async function getGithubAppId(githubAppUuid: string): Promise<number> {
+    // List GitHub Apps and find the one with matching UUID
+    const apps = await listGitHubApps();
+    const app = apps.find((a) => a.githubAppUuid === githubAppUuid);
+    if (!app) {
+      throw new Error(`GitHub App with UUID ${githubAppUuid} not found`);
+    }
+    // The id field is the numeric ID used by the API
+    return app.id;
+  }
+
   async function listApplications() {
     const data = await requestJson('GET', '/applications');
     const applications = extractCollection(data, ApplicationSchema);
@@ -188,15 +199,20 @@ export function createCoolifyManager(config: {
   }) {
     const deploymentContext = await loadDefaultDeploymentContext();
     const domain = await buildApplicationDomain(input.slug, deploymentContext.serverUuid);
+    
+    // Get the GitHub App ID from the UUID (source_id is numeric, not UUID)
+    const githubAppId = await getGithubAppId(input.githubAppUuid);
+    
     const payload: Record<string, unknown> = {
       project_uuid: deploymentContext.projectUuid,
       environment_name: deploymentContext.environmentName,
       environment_uuid: deploymentContext.environmentUuid,
       server_uuid: deploymentContext.serverUuid,
-      github_app_uuid: input.githubAppUuid,
-      owner: input.repositoryOwner,
-      repository: input.repositoryName,
-      branch: input.branch,
+      // Use source_id and source_type format (matches forge application structure)
+      source_id: githubAppId,
+      source_type: 'App\\Models\\GithubApp',
+      git_repository: `${input.repositoryOwner}/${input.repositoryName}`,
+      git_branch: input.branch,
       name: input.name,
       ports_exposes: String(input.port),
       build_command: input.buildCommand,
