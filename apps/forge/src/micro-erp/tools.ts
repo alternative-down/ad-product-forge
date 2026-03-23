@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Database } from '../database/index';
 import { hasToolPermission } from '../capabilities/catalog';
 import { createMicroErpReadModel } from './read-model';
+import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 
 const listCompanyCashInputSchema = z.object({
   direction: z.enum(['in', 'out']).optional(),
@@ -43,6 +44,22 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
       description: 'List active internal-agent contracts.',
       inputSchema: z.object({}),
       execute: async () => microErp.listActiveInternalAgentContracts(),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'manage_internal_agent_contract')) {
+    tools.manage_internal_agent_contract = createTool({
+      id: 'manage_internal_agent_contract',
+      description: 'Top up the active execution contract of one internal agent.',
+      inputSchema: z.object({
+        action: z.literal('top-up'),
+        agentId: z.string().min(1),
+        amountUsd: z.number().positive(),
+      }),
+      execute: async (input) => topUpActiveAgentContract(db, {
+        agentId: input.agentId,
+        amountUsd: input.amountUsd,
+      }),
     });
   }
 

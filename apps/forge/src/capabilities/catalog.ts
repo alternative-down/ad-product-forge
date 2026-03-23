@@ -8,6 +8,7 @@ export const forgeCustomToolIds = [
   'list_company_cash',
   'get_company_cash',
   'list_internal_agent_contracts',
+  'manage_internal_agent_contract',
   'list_agent_notifications',
   'mark_agent_notification_read',
   'get_github_git_credentials',
@@ -74,6 +75,9 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
   list_internal_agent_contracts: [
     'list_active_internal_agent_contracts',
     'get_active_internal_agent_contract',
+  ],
+  manage_internal_agent_contract: [
+    'top_up_internal_agent_contract',
   ],
   list_agent_notifications: [
     'get_agent_notification',

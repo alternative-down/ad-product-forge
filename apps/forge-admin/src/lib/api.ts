@@ -653,6 +653,16 @@ export function reloadAgent(agentId: string) {
   });
 }
 
+export function topUpAgentContract(input: { agentId: string; amountUsd: number }) {
+  return request<{ agentId: string; contractId: string; budgetUsd: number }>(
+    '/admin/agent/contract/top-up',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
 export function hireAgent(input: HireAgentInput) {
   return request<HireAgentResult>('/admin/agent/hire', {
     method: 'POST',
