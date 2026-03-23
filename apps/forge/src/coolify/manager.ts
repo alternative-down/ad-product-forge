@@ -218,7 +218,6 @@ export function createCoolifyManager(config: {
       build_command: input.buildCommand,
       start_command: input.startCommand,
       install_command: input.installCommand,
-      fqdn: domain,
     };
 
     // Only include destination_uuid if available (optional in Coolify v4)
@@ -229,10 +228,7 @@ export function createCoolifyManager(config: {
     const data = await requestJson('POST', '/applications/private-github-app', payload);
     const application = extractItem(data, ApplicationSchema);
 
-    return {
-      ...toApplicationDetails(application),
-      domain,
-    };
+    return toApplicationDetails(application);
   }
 
   async function updateApplication(input: {
