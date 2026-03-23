@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 
 import { desc, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/libsql';
@@ -352,6 +353,46 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function getApplicationMigrations() {
+    const journalPath = path.resolve(process.cwd(), 'migrations/meta/_journal.json');
+    const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
+      entries: Array<{
+        idx: number;
+        when: number;
+        tag: string;
+      }>;
+    };
+    const appliedRows = await db.all<{
+      id: number;
+      hash: string;
+      createdAt: number;
+    }>(sql`
+      select
+        id,
+        hash,
+        created_at as createdAt
+      from __drizzle_migrations
+      order by created_at asc
+    `);
+    const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
+
+    return {
+      applied: appliedRows,
+      entries: journal.entries.map((entry) => {
+        const applied = appliedByCreatedAt.get(entry.when);
+
+        return {
+          idx: entry.idx,
+          tag: entry.tag,
+          createdAt: entry.when,
+          applied: Boolean(applied),
+          hash: applied?.hash ?? null,
+          rowId: applied?.id ?? null,
+        };
+      }),
+    };
+  }
+
   return {
     getDashboard,
     listAgents,
@@ -360,6 +401,7 @@ export function createAdminReadModel(input: {
     listRoles,
     listSystemIntegrations,
     getSystemLlm,
+    getApplicationMigrations,
     getFinance,
   };
 }

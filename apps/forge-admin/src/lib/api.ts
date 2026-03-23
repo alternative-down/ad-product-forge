@@ -323,6 +323,22 @@ export type SystemLlmResponse = {
   }>;
 };
 
+export type SystemMigrationsResponse = {
+  applied: Array<{
+    id: number;
+    hash: string;
+    createdAt: number;
+  }>;
+  entries: Array<{
+    idx: number;
+    tag: string;
+    createdAt: number;
+    applied: boolean;
+    hash: string | null;
+    rowId: number | null;
+  }>;
+};
+
 export type SystemOauthState = {
   storePath: string;
   providers: Array<{
@@ -595,6 +611,10 @@ export function getFinance() {
 
 export function getSystemLlm() {
   return request<SystemLlmResponse>('/admin/system/llm');
+}
+
+export function getSystemMigrations() {
+  return request<SystemMigrationsResponse>('/admin/system/migrations');
 }
 
 export function upsertLlmModelPrice(input: UpsertLlmModelPriceInput) {
