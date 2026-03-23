@@ -1,11 +1,12 @@
-import { CircleDollarSign, Shield, Siren } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getOverview, listFunctions } from '../../lib/api';
 import { formatDateTime, formatUsd } from '../../lib/format';
 import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
-import { MetricStrip, PageHeader } from '../../components/layout/page-header';
+import { PageHeader } from '../../components/layout/page-header';
+import { WorkspaceCanvas } from '../../components/layout/section-nav';
 
 export function OverviewPage() {
   const overviewQuery = useQuery({
@@ -36,103 +37,34 @@ export function OverviewPage() {
       <PageHeader
         eyebrow="Overview"
         title="Operational posture at a glance"
-        description="The overview should answer three questions quickly: what is running, what is funded, and where the capability graph is drifting."
-      />
-
-      <MetricStrip
-        items={[
-          {
-            label: 'Agents',
-            value: overview.totals.agents,
-            detail: `${overview.totals.loadedAgents} loaded`,
-          },
-          {
-            label: 'Execution',
-            value: `${overview.totals.runningAgents} running`,
-            detail: `${overview.totals.idleAgents} idle`,
-          },
-          {
-            label: 'Functions / Roles',
-            value: `${overview.totals.functions} / ${overview.totals.roles}`,
-            detail: 'Current capability topology',
-          },
-          {
-            label: 'Cash balance',
-            value: formatUsd(overview.cash.balanceUsd),
-            detail: `${overview.totals.activeContracts} active contracts`,
-          },
-        ]}
+        description="Start with the live pulse of the company, then read cash movement, then inspect the capability map."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
-        <Card className="p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">Cash flow snapshot</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Posted and scheduled movements for the current period.
-              </p>
-            </div>
-            <CircleDollarSign className="h-5 w-5 text-slate-500" />
+        <WorkspaceCanvas
+          title="Operating pulse"
+          description="Core runtime and funding signals without leaving the overview."
+        >
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <MiniMetric label="Agents" value={String(overview.totals.agents)} />
+            <MiniMetric label="Running" value={String(overview.totals.runningAgents)} />
+            <MiniMetric label="Functions / Roles" value={`${overview.totals.functions} / ${overview.totals.roles}`} />
+            <MiniMetric label="Cash balance" value={formatUsd(overview.cash.balanceUsd)} />
           </div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MiniMetric label="Total in" value={formatUsd(overview.cash.summary.totalInUsd)} />
-            <MiniMetric label="Total out" value={formatUsd(overview.cash.summary.totalOutUsd)} />
-            <MiniMetric label="Net" value={formatUsd(overview.cash.summary.netUsd)} />
-            <MiniMetric
-              label="Scheduled out"
-              value={formatUsd(overview.cash.summary.scheduledOutUsd)}
-            />
-          </div>
-          <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
-            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Type</th>
-                  <th className="px-4 py-3 font-medium">Direction</th>
-                  <th className="px-4 py-3 font-medium">Amount</th>
-                  <th className="px-4 py-3 font-medium">When</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
-                {overview.cash.recentMovements.map((movement) => (
-                  <tr key={movement.id}>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-900">{movement.type}</div>
-                      <div className="text-xs text-slate-500">
-                        {movement.description ?? 'No description'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 capitalize">{movement.direction}</td>
-                    <td className="px-4 py-3">{formatUsd(movement.amountUsd)}</td>
-                    <td className="px-4 py-3">
-                      {formatDateTime(movement.effectiveAt ?? movement.dueAt ?? movement.createdAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        </WorkspaceCanvas>
 
-        <Card className="p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">Function map</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Read-only summary of functions, attached roles, and agent counts.
-              </p>
-            </div>
-            <Siren className="h-5 w-5 text-slate-500" />
-          </div>
-          <div className="mt-5 space-y-3">
+        <WorkspaceCanvas
+          title="Capability map"
+          description="Read-only summary of functions, attached roles, and agent counts."
+        >
+          <div className="space-y-3">
             {functions.map((agentFunction) => {
               const roleNames = agentFunction.roles.map((role) => role.name);
 
               return (
                 <div
                   key={agentFunction.functionId}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
+                  className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-3"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -151,8 +83,49 @@ export function OverviewPage() {
               );
             })}
           </div>
-        </Card>
+        </WorkspaceCanvas>
       </div>
+
+      <WorkspaceCanvas
+        title="Cash flow snapshot"
+        description="Posted and scheduled movements for the current period."
+      >
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MiniMetric label="Total in" value={formatUsd(overview.cash.summary.totalInUsd)} />
+          <MiniMetric label="Total out" value={formatUsd(overview.cash.summary.totalOutUsd)} />
+          <MiniMetric label="Net" value={formatUsd(overview.cash.summary.netUsd)} />
+          <MiniMetric label="Scheduled out" value={formatUsd(overview.cash.summary.scheduledOutUsd)} />
+        </div>
+        <div className="mt-6 overflow-hidden rounded-md border border-slate-200">
+          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3 font-medium">Type</th>
+                <th className="px-4 py-3 font-medium">Direction</th>
+                <th className="px-4 py-3 font-medium">Amount</th>
+                <th className="px-4 py-3 font-medium">When</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+              {overview.cash.recentMovements.map((movement) => (
+                <tr key={movement.id}>
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-slate-900">{movement.type}</div>
+                    <div className="text-xs text-slate-500">
+                      {movement.description ?? 'No description'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 capitalize">{movement.direction}</td>
+                  <td className="px-4 py-3">{formatUsd(movement.amountUsd)}</td>
+                  <td className="px-4 py-3">
+                    {formatDateTime(movement.effectiveAt ?? movement.dueAt ?? movement.createdAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </WorkspaceCanvas>
     </div>
   );
 }

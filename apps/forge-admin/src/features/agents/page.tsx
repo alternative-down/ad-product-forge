@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Bot, Clock3, LoaderCircle, RefreshCcw, Trash2, UserPlus, Zap } from 'lucide-react';
+import { Bot, Clock3, LoaderCircle, Trash2, UserPlus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
@@ -32,10 +32,11 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
-import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
-import { MetricStrip, PageHeader } from '../../components/layout/page-header';
+import { PageHeader } from '../../components/layout/page-header';
+import { SectionNav, WorkspaceCanvas } from '../../components/layout/section-nav';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 
 type ScheduleDraft = {
   mode: 'create' | 'edit';
@@ -119,10 +120,12 @@ export function AgentsPage() {
       search: {
         agentId: agentsQuery.data[0].agentId,
         tab: search.tab,
+        runtimeView: search.runtimeView,
+        communicationView: search.communicationView,
       },
       replace: true,
     });
-  }, [agentsQuery.data, navigate, search.agentId]);
+  }, [agentsQuery.data, navigate, search.agentId, search.communicationView, search.runtimeView, search.tab]);
 
   const selectedAgentFunctionId =
     agentDetailQuery.data && functionDraft?.agentId === agentDetailQuery.data.agentId
@@ -133,6 +136,8 @@ export function AgentsPage() {
       ? configDraft.value
       : (agentDetailQuery.data ? createAgentConfigDraft(agentDetailQuery.data) : null);
   const selectedTab = search.tab ?? (search.agentId ? 'runtime' : 'hire');
+  const selectedRuntimeView = search.runtimeView ?? 'assignment';
+  const selectedCommunicationView = search.communicationView ?? 'providers';
 
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
@@ -183,6 +188,8 @@ export function AgentsPage() {
         search: {
           agentId: result.agentId,
           tab: 'runtime',
+          runtimeView: 'assignment',
+          communicationView: search.communicationView,
         },
       });
     },
@@ -222,6 +229,8 @@ export function AgentsPage() {
         search: {
           agentId: remainingAgents[0]?.agentId,
           tab: search.tab,
+          runtimeView: search.runtimeView,
+          communicationView: search.communicationView,
         },
         replace: true,
       });
@@ -293,330 +302,400 @@ export function AgentsPage() {
       setScheduleDraft(null);
     },
   });
+  const agentTabs: Array<{
+    value: 'hire' | 'runtime' | 'communications' | 'schedules' | 'history';
+    label: string;
+    detail: string;
+  }> = [
+    { value: 'hire', label: 'Hire', detail: 'one action: describe the collaborator to create' },
+    { value: 'runtime', label: 'Runtime', detail: 'identity, config, contract, GitHub provisioning' },
+    { value: 'communications', label: 'Communications', detail: 'providers, inbox, and memory thread' },
+    { value: 'schedules', label: 'Schedules', detail: 'heartbeat and explicit wake schedules' },
+    { value: 'history', label: 'History', detail: 'execution cost and recent steps' },
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Agents"
-        title="Runtime roster and maintenance surface"
-        description="This page mixes hiring, runtime inspection, contracts, providers, conversations, and provisioning. The goal here is to separate roster navigation from the selected agent’s working state."
+        title="Agent operations"
+        description="Each area should answer one question at a time: hire a collaborator, inspect runtime state, review communications, manage schedules, or inspect execution history."
       />
 
-      <MetricStrip
-        items={[
-          {
-            label: 'Agents',
-            value: agentsQuery.data?.length ?? '—',
-            detail: `${agentsQuery.data?.filter((agent) => agent.loaded).length ?? 0} loaded`,
-          },
-          {
-            label: 'Running',
-            value: agentsQuery.data?.filter((agent) => agent.executionState === 'running').length ?? '—',
-            detail: 'persisted or live runner activity',
-          },
-          {
-            label: 'Selected function',
-            value: agentDetailQuery.data?.function?.name ?? '—',
-            detail: agentDetailQuery.data?.executionState ?? 'no agent selected',
-          },
-          {
-            label: 'Providers',
-            value: agentDetailQuery.data?.providers.length ?? '—',
-            detail: agentDetailQuery.data ? agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none' : 'select an agent',
-          },
-        ]}
-      />
-
-      <SegmentedTabs
-        value={selectedTab}
-        items={[
-          { value: 'hire', label: 'Hire', description: 'create and contract new agents' },
-          { value: 'runtime', label: 'Runtime', description: 'identity, function, config, github' },
-          { value: 'communications', label: 'Communications', description: 'providers, inbox, memory thread' },
-          { value: 'schedules', label: 'Schedules', description: 'agent schedules and heartbeat' },
-          { value: 'history', label: 'History', description: 'execution spend and recent steps' },
-        ]}
-        onChange={(tab) =>
-          void navigate({
-            to: '/agents',
-            search: {
-              agentId: search.agentId,
-              tab,
-            },
-          })
-        }
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <Card className="overflow-hidden">
-        <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-950">Agents</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Loaded status, function, providers, and runtime state.
-          </p>
-        </div>
-        <div className="max-h-[calc(100vh-16rem)] overflow-y-auto p-3">
-          {agentsQuery.isLoading && <PanelLoading label="Loading agents" />}
-          {agentsQuery.isError && <PanelError message={agentsQuery.error.message} />}
-          {agentsQuery.data?.map((agent) => (
-            <button
-              key={agent.agentId}
-              type="button"
-              onClick={() => {
-                setScheduleDraft(null);
+      {selectedTab === 'hire' ? (
+        <WorkspaceCanvas
+          title="Hire an internal collaborator"
+          description="Describe the collaborator you want. The hiring workflow will shape the function, generate the operating prompt, contract the agent, and return the onboarding links."
+        >
+          <div className="mx-auto max-w-4xl">
+            <HireAgentCard
+              draft={hireDraft}
+              pending={hireMutation.isPending}
+              error={hireMutation.error?.message ?? null}
+              result={hireResult}
+              onChange={setHireDraft}
+              onSubmit={(draft) => {
+                hireMutation.mutate({
+                  hiringRequest: draft.hiringRequest,
+                  additionalContext: draft.additionalContext || undefined,
+                  weeklyBudgetUsd: Number(draft.weeklyBudgetUsd),
+                });
+              }}
+            />
+          </div>
+        </WorkspaceCanvas>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="space-y-4">
+            <SectionNav
+              title="Agent areas"
+              value={selectedTab}
+              items={agentTabs.filter((item) => item.value !== 'hire')}
+              onChange={(tab) =>
                 void navigate({
                   to: '/agents',
                   search: {
-                    agentId: agent.agentId,
-                    tab: search.tab,
+                    agentId: search.agentId,
+                    tab,
+                    runtimeView: search.runtimeView,
+                    communicationView: search.communicationView,
                   },
-                });
-              }}
-              className={cn(
-                'mb-2 w-full rounded-lg border px-4 py-4 text-left transition last:mb-0',
-                search.agentId === agent.agentId
-                  ? 'border-slate-950 bg-slate-950 text-white'
-                  : 'border-slate-200 bg-white hover:border-slate-400',
-              )}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-semibold">{agent.name}</div>
-                  <div
+                })
+              }
+            />
+
+            <Card className="overflow-hidden">
+              <div className="border-b border-[color:var(--panel-border)] px-4 py-4">
+                <h2 className="text-base font-semibold text-[color:var(--ink)]">Roster</h2>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">
+                  Select one agent to inspect and edit.
+                </p>
+              </div>
+              <div className="max-h-[calc(100vh-18rem)] overflow-y-auto p-3">
+                {agentsQuery.isLoading && <PanelLoading label="Loading agents" />}
+                {agentsQuery.isError && <PanelError message={agentsQuery.error.message} />}
+                {agentsQuery.data?.map((agent) => (
+                  <button
+                    key={agent.agentId}
+                    type="button"
+                    onClick={() => {
+                      setScheduleDraft(null);
+                      void navigate({
+                        to: '/agents',
+                        search: {
+                          agentId: agent.agentId,
+                          tab: selectedTab,
+                          runtimeView: search.runtimeView,
+                          communicationView: search.communicationView,
+                        },
+                      });
+                    }}
                     className={cn(
-                      'mt-1 text-xs',
-                      search.agentId === agent.agentId ? 'text-slate-300' : 'text-slate-500',
+                      'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
+                      search.agentId === agent.agentId
+                        ? 'border-slate-950 bg-slate-950 text-white'
+                        : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                     )}
                   >
-                    {agent.functionName ?? 'No function'}
-                  </div>
-                </div>
-                <Badge
-                  className={cn(
-                    search.agentId === agent.agentId &&
-                      'border-slate-700 bg-slate-800 text-slate-100',
-                  )}
-                >
-                  {agent.executionState}
-                </Badge>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold">{agent.name}</div>
+                        <div
+                          className={cn(
+                            'mt-1 text-xs',
+                            search.agentId === agent.agentId ? 'text-slate-300' : 'text-[color:var(--muted)]',
+                          )}
+                        >
+                          {agent.functionName ?? 'No function'}
+                        </div>
+                      </div>
+                      <Badge className={cn(search.agentId === agent.agentId && 'border-slate-700 bg-slate-800 text-slate-100')}>
+                        {agent.executionState}
+                      </Badge>
+                    </div>
+                    <div
+                      className={cn(
+                        'mt-3 text-xs',
+                        search.agentId === agent.agentId ? 'text-slate-300' : 'text-[color:var(--muted)]',
+                      )}
+                    >
+                      {agent.providerTypes.join(', ') || 'no providers'}
+                    </div>
+                  </button>
+                ))}
               </div>
-              <div
-                className={cn(
-                  'mt-3 flex flex-wrap gap-2 text-xs',
-                  search.agentId === agent.agentId ? 'text-slate-200' : 'text-slate-600',
-                )}
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            {agentDetailQuery.isLoading && <PanelLoading label="Loading agent detail" />}
+            {agentDetailQuery.isError && <PanelError message={agentDetailQuery.error.message} />}
+            {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
+            {!search.agentId && !agentDetailQuery.isLoading ? (
+              <WorkspaceCanvas
+                title="Select an agent"
+                description="Pick an agent from the roster to inspect runtime state, communications, schedules, or execution history."
               >
-                <span>{agent.loaded ? 'loaded' : 'not loaded'}</span>
-                <span>•</span>
-                <span>{agent.providerTypes.join(', ') || 'no providers'}</span>
-              </div>
-            </button>
-          ))}
+                <div className="text-sm text-[color:var(--muted)]">No agent selected.</div>
+              </WorkspaceCanvas>
+            ) : null}
+            {agentDetailQuery.data ? (
+              <>
+                <WorkspaceCanvas
+                  title={agentDetailQuery.data.name}
+                  description={`${agentDetailQuery.data.function?.name ?? 'No function assigned'} · ${agentDetailQuery.data.executionState}`}
+                  actions={
+                    <div className="flex flex-wrap gap-3">
+                      <Button type="button" variant="secondary" onClick={() => wakeMutation.mutate(agentDetailQuery.data!.agentId)} disabled={wakeMutation.isPending}>
+                        Wake
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => reloadMutation.mutate(agentDetailQuery.data!.agentId)} disabled={reloadMutation.isPending}>
+                        Reload
+                      </Button>
+                    </div>
+                  }
+                >
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <CompactStat label="Function" value={agentDetailQuery.data.function?.name ?? '—'} />
+                    <CompactStat label="Providers" value={agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none'} />
+                    <CompactStat label="Contract" value={agentDetailQuery.data.activeContract ? `${formatUsd(agentDetailQuery.data.activeContract.weeklyValueUsd)} / week` : 'no contract'} />
+                  </div>
+                </WorkspaceCanvas>
+
+                {selectedTab === 'runtime' && functionsQuery.data && (
+                  <div className="space-y-6">
+                    <SegmentedTabs
+                      value={selectedRuntimeView}
+                      items={[
+                        { value: 'assignment', label: 'Assignment', description: 'function and lifecycle changes' },
+                        { value: 'configuration', label: 'Configuration', description: 'identity, prompt, and workspace controls' },
+                        { value: 'contract', label: 'Contract', description: 'budget and top-up control' },
+                        { value: 'github', label: 'GitHub', description: 'provisioning status and links' },
+                      ]}
+                      onChange={(runtimeView) =>
+                        void navigate({
+                          to: '/agents',
+                          search: {
+                            agentId: search.agentId,
+                            tab: 'runtime',
+                            runtimeView,
+                            communicationView: search.communicationView,
+                          },
+                        })
+                      }
+                    />
+
+                    {selectedRuntimeView === 'assignment' ? (
+                      <AgentMaintenanceCard
+                        agent={agentDetailQuery.data}
+                        functions={functionsQuery.data}
+                        selectedFunctionId={selectedAgentFunctionId}
+                        onSelectedFunctionIdChange={(functionId) => {
+                          if (!agentDetailQuery.data) {
+                            return;
+                          }
+
+                          setFunctionDraft({
+                            agentId: agentDetailQuery.data.agentId,
+                            functionId,
+                          });
+                        }}
+                        onApplyFunctionChange={() =>
+                          changeFunctionMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            functionId: selectedAgentFunctionId,
+                          })
+                        }
+                        functionPending={changeFunctionMutation.isPending}
+                        functionError={changeFunctionMutation.error?.message ?? null}
+                        onTerminate={() => terminateMutation.mutate(agentDetailQuery.data!.agentId)}
+                        terminatePending={terminateMutation.isPending}
+                        terminateError={terminateMutation.error?.message ?? null}
+                      />
+                    ) : null}
+
+                    {selectedRuntimeView === 'configuration' ? (
+                      <AgentConfigurationCard
+                        draft={selectedAgentConfig!}
+                        pending={updateConfigMutation.isPending}
+                        error={updateConfigMutation.error?.message ?? null}
+                        onChange={(draft) => {
+                          if (!agentDetailQuery.data) {
+                            return;
+                          }
+
+                          setConfigDraft({
+                            agentId: agentDetailQuery.data.agentId,
+                            value: draft,
+                          });
+                        }}
+                        onSubmit={(draft) =>
+                          updateConfigMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            name: draft.name,
+                            description: draft.description || null,
+                            instructions: draft.instructions,
+                            workspaceAutoSync: draft.workspaceAutoSync,
+                            workspaceBm25: draft.workspaceBm25,
+                            workspaceEmbedder: draft.workspaceEmbedder,
+                          })
+                        }
+                      />
+                    ) : null}
+
+                    {selectedRuntimeView === 'contract' ? (
+                      <ContractTopUpCard
+                        pending={topUpContractMutation.isPending}
+                        error={topUpContractMutation.error?.message ?? null}
+                        disabled={!agentDetailQuery.data.activeContract}
+                        onSubmit={(amountUsd) =>
+                          topUpContractMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            amountUsd,
+                          })
+                        }
+                      />
+                    ) : null}
+
+                    {selectedRuntimeView === 'github' ? (
+                      <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
+                    ) : null}
+                  </div>
+                )}
+
+                {selectedTab === 'communications' && (
+                  <div className="space-y-6">
+                    <SegmentedTabs
+                      value={selectedCommunicationView}
+                      items={[
+                        { value: 'providers', label: 'Providers', description: 'channel credentials and provider wiring' },
+                        { value: 'inbox', label: 'Inbox', description: 'notifications and recent conversations' },
+                        { value: 'thread', label: 'Thread', description: 'latest persisted memory messages' },
+                      ]}
+                      onChange={(communicationView) =>
+                        void navigate({
+                          to: '/agents',
+                          search: {
+                            agentId: search.agentId,
+                            tab: 'communications',
+                            runtimeView: search.runtimeView,
+                            communicationView,
+                          },
+                        })
+                      }
+                    />
+
+                    {selectedCommunicationView === 'providers' ? (
+                      <AgentProvidersCard
+                        agent={agentDetailQuery.data}
+                        draftByKey={providerDrafts}
+                        newProviderDraft={newProviderDraft}
+                        onChangeProviderDraft={(providerType, credentialsText) => {
+                          const agentId = agentDetailQuery.data!.agentId;
+                          const key = buildProviderDraftKey(agentId, providerType);
+
+                          setProviderDrafts((current) => ({
+                            ...current,
+                            [key]: {
+                              providerType,
+                              credentialsText,
+                            },
+                          }));
+                        }}
+                        onChangeNewProviderDraft={setNewProviderDraft}
+                        onSaveProvider={(providerType, credentialsText) =>
+                          upsertProviderMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            providerType,
+                            credentialsText,
+                          })
+                        }
+                        onDeleteProvider={(providerType) =>
+                          deleteProviderMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            providerType,
+                          })
+                        }
+                        onCreateProvider={() =>
+                          upsertProviderMutation.mutate({
+                            agentId: agentDetailQuery.data!.agentId,
+                            providerType: newProviderDraft.providerType,
+                            credentialsText: newProviderDraft.credentialsText,
+                          })
+                        }
+                        pendingProviderType={
+                          upsertProviderMutation.variables?.providerType ??
+                          deleteProviderMutation.variables?.providerType ??
+                          null
+                        }
+                        error={
+                          upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
+                        }
+                      />
+                    ) : null}
+
+                    {selectedCommunicationView === 'inbox' ? (
+                      <AgentInboxCard
+                        notifications={agentDetailQuery.data.recentNotifications}
+                        conversations={agentDetailQuery.data.recentConversations}
+                      />
+                    ) : null}
+
+                    {selectedCommunicationView === 'thread' ? (
+                      <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
+                    ) : null}
+                  </div>
+                )}
+
+                {selectedTab === 'schedules' && (
+                  <>
+                    <SchedulesCard
+                      schedules={agentDetailQuery.data.schedules}
+                      heartbeat={agentDetailQuery.data.heartbeat}
+                      onCreateSchedule={() => setScheduleDraft(createEmptyScheduleDraft())}
+                      onEditSchedule={(schedule) => setScheduleDraft(createScheduleDraftFromRecord(schedule))}
+                      onDeleteSchedule={(scheduleId) =>
+                        deleteScheduleMutation.mutate({
+                          agentId: agentDetailQuery.data!.agentId,
+                          scheduleId,
+                        })
+                      }
+                      deletingScheduleId={deleteScheduleMutation.variables?.scheduleId}
+                    />
+                    {scheduleDraft ? (
+                      <ScheduleEditorCard
+                        draft={scheduleDraft}
+                        pending={createScheduleMutation.isPending || updateScheduleMutation.isPending}
+                        error={
+                          createScheduleMutation.error?.message ??
+                          updateScheduleMutation.error?.message ??
+                          null
+                        }
+                        onCancel={() => setScheduleDraft(null)}
+                        onChange={setScheduleDraft}
+                        onSubmit={(draft) => {
+                          if (draft.mode === 'create') {
+                            createScheduleMutation.mutate(
+                              toCreateScheduleInput(agentDetailQuery.data!.agentId, draft),
+                            );
+                            return;
+                          }
+
+                          updateScheduleMutation.mutate(
+                            toUpdateScheduleInput(agentDetailQuery.data!.agentId, draft),
+                          );
+                        }}
+                      />
+                    ) : null}
+                  </>
+                )}
+
+                {selectedTab === 'history' && <ExecutionCard agent={agentDetailQuery.data} />}
+              </>
+            ) : null}
+          </div>
         </div>
-      </Card>
-
-      <div className="space-y-6">
-        {selectedTab === 'hire' && (
-          <HireAgentCard
-            draft={hireDraft}
-            pending={hireMutation.isPending}
-            error={hireMutation.error?.message ?? null}
-            result={hireResult}
-            onChange={setHireDraft}
-            onSubmit={(draft) => {
-              hireMutation.mutate({
-                hiringRequest: draft.hiringRequest,
-                additionalContext: draft.additionalContext || undefined,
-                weeklyBudgetUsd: Number(draft.weeklyBudgetUsd),
-              });
-            }}
-          />
-        )}
-        {agentDetailQuery.isLoading && <PanelLoading label="Loading agent detail" />}
-        {agentDetailQuery.isError && <PanelError message={agentDetailQuery.error.message} />}
-        {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
-        {agentDetailQuery.data && (
-          <>
-            {selectedTab !== 'hire' && (
-              <AgentHeader
-                agent={agentDetailQuery.data}
-                onWake={() => wakeMutation.mutate(agentDetailQuery.data!.agentId)}
-                onReload={() => reloadMutation.mutate(agentDetailQuery.data!.agentId)}
-                onTopUpContract={(amountUsd) =>
-                  topUpContractMutation.mutate({
-                    agentId: agentDetailQuery.data!.agentId,
-                    amountUsd,
-                  })
-                }
-                wakePending={wakeMutation.isPending}
-                reloadPending={reloadMutation.isPending}
-                topUpPending={topUpContractMutation.isPending}
-                topUpError={topUpContractMutation.error?.message ?? null}
-              />
-            )}
-            {selectedTab === 'runtime' && functionsQuery.data && (
-              <AgentMaintenanceCard
-                agent={agentDetailQuery.data}
-                functions={functionsQuery.data}
-                selectedFunctionId={selectedAgentFunctionId}
-                onSelectedFunctionIdChange={(functionId) => {
-                  if (!agentDetailQuery.data) {
-                    return;
-                  }
-
-                  setFunctionDraft({
-                    agentId: agentDetailQuery.data.agentId,
-                    functionId,
-                  });
-                }}
-                onApplyFunctionChange={() =>
-                  changeFunctionMutation.mutate({
-                    agentId: agentDetailQuery.data!.agentId,
-                    functionId: selectedAgentFunctionId,
-                  })
-                }
-                functionPending={changeFunctionMutation.isPending}
-                functionError={changeFunctionMutation.error?.message ?? null}
-                onTerminate={() => terminateMutation.mutate(agentDetailQuery.data!.agentId)}
-                terminatePending={terminateMutation.isPending}
-                terminateError={terminateMutation.error?.message ?? null}
-              />
-            )}
-            {selectedTab === 'runtime' && (
-              <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
-            )}
-            {selectedTab === 'runtime' && selectedAgentConfig && (
-              <AgentConfigurationCard
-                draft={selectedAgentConfig}
-                pending={updateConfigMutation.isPending}
-                error={updateConfigMutation.error?.message ?? null}
-                onChange={(draft) => {
-                  if (!agentDetailQuery.data) {
-                    return;
-                  }
-
-                  setConfigDraft({
-                    agentId: agentDetailQuery.data.agentId,
-                    value: draft,
-                  });
-                }}
-                onSubmit={(draft) =>
-                  updateConfigMutation.mutate({
-                    agentId: agentDetailQuery.data!.agentId,
-                    name: draft.name,
-                    description: draft.description || null,
-                    instructions: draft.instructions,
-                    workspaceAutoSync: draft.workspaceAutoSync,
-                    workspaceBm25: draft.workspaceBm25,
-                    workspaceEmbedder: draft.workspaceEmbedder,
-                  })
-                }
-              />
-            )}
-            {selectedTab === 'communications' && (
-              <AgentProvidersCard
-                agent={agentDetailQuery.data}
-                draftByKey={providerDrafts}
-                newProviderDraft={newProviderDraft}
-                onChangeProviderDraft={(providerType, credentialsText) => {
-                  const agentId = agentDetailQuery.data!.agentId;
-                  const key = buildProviderDraftKey(agentId, providerType);
-
-                  setProviderDrafts((current) => ({
-                    ...current,
-                    [key]: {
-                      providerType,
-                      credentialsText,
-                    },
-                  }));
-                }}
-                onChangeNewProviderDraft={setNewProviderDraft}
-                onSaveProvider={(providerType, credentialsText) =>
-                  upsertProviderMutation.mutate({
-                    agentId: agentDetailQuery.data!.agentId,
-                    providerType,
-                    credentialsText,
-                  })
-                }
-                onDeleteProvider={(providerType) =>
-                  deleteProviderMutation.mutate({
-                    agentId: agentDetailQuery.data!.agentId,
-                    providerType,
-                  })
-                }
-                onCreateProvider={() =>
-                  upsertProviderMutation.mutate({
-                    agentId: agentDetailQuery.data!.agentId,
-                    providerType: newProviderDraft.providerType,
-                    credentialsText: newProviderDraft.credentialsText,
-                  })
-                }
-                pendingProviderType={
-                  upsertProviderMutation.variables?.providerType ??
-                  deleteProviderMutation.variables?.providerType ??
-                  null
-                }
-                error={
-                  upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
-                }
-              />
-            )}
-            {selectedTab === 'communications' && (
-              <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
-            )}
-            {selectedTab === 'communications' && (
-              <AgentInboxCard
-                notifications={agentDetailQuery.data.recentNotifications}
-                conversations={agentDetailQuery.data.recentConversations}
-              />
-            )}
-            {selectedTab === 'schedules' && (
-              <SchedulesCard
-                schedules={agentDetailQuery.data.schedules}
-                heartbeat={agentDetailQuery.data.heartbeat}
-                onCreateSchedule={() => setScheduleDraft(createEmptyScheduleDraft())}
-                onEditSchedule={(schedule) =>
-                  setScheduleDraft(createScheduleDraftFromRecord(schedule))
-                }
-                onDeleteSchedule={(scheduleId) =>
-                  deleteScheduleMutation.mutate({
-                    agentId: agentDetailQuery.data!.agentId,
-                    scheduleId,
-                  })
-                }
-                deletingScheduleId={deleteScheduleMutation.variables?.scheduleId}
-              />
-            )}
-            {selectedTab === 'schedules' && scheduleDraft && (
-              <ScheduleEditorCard
-                draft={scheduleDraft}
-                pending={createScheduleMutation.isPending || updateScheduleMutation.isPending}
-                error={
-                  createScheduleMutation.error?.message ??
-                  updateScheduleMutation.error?.message ??
-                  null
-                }
-                onCancel={() => setScheduleDraft(null)}
-                onChange={setScheduleDraft}
-                onSubmit={(draft) => {
-                  if (draft.mode === 'create') {
-                    createScheduleMutation.mutate(
-                      toCreateScheduleInput(agentDetailQuery.data!.agentId, draft),
-                    );
-                    return;
-                  }
-
-                  updateScheduleMutation.mutate(
-                    toUpdateScheduleInput(agentDetailQuery.data!.agentId, draft),
-                  );
-                }}
-              />
-            )}
-            {selectedTab === 'history' && <ExecutionCard agent={agentDetailQuery.data} />}
-          </>
-        )}
-      </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -717,166 +796,6 @@ function HireAgentCard(input: {
           </Button>
         </div>
       </form>
-    </Card>
-  );
-}
-
-function AgentHeader(input: {
-  agent: Awaited<ReturnType<typeof getAgent>>;
-  onWake(): void;
-  onReload(): void;
-  onTopUpContract(amountUsd: number): void;
-  wakePending: boolean;
-  reloadPending: boolean;
-  topUpPending: boolean;
-  topUpError: string | null;
-}) {
-  const agent = input.agent!;
-  const [topUpAmountUsd, setTopUpAmountUsd] = useState('10');
-
-  return (
-    <Card className="p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-semibold text-slate-950">{agent.name}</h2>
-            <Badge>{agent.executionState}</Badge>
-            <Badge>{agent.loaded ? 'loaded' : 'not loaded'}</Badge>
-          </div>
-          <p className="text-sm text-slate-500">{agent.description ?? 'No description'}</p>
-          <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-            <span>Function: {agent.function?.name ?? 'No function'}</span>
-            <span>•</span>
-            <span>Roles: {agent.function?.roles.map((role) => role.name).join(', ') || 'No roles'}</span>
-            <span>•</span>
-            <span>Profile: {formatAgentProfile(agent.modelProfile)}</span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={input.onWake} disabled={input.wakePending || !agent.loaded}>
-            {input.wakePending ? (
-              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Zap className="mr-2 h-4 w-4" />
-            )}
-            Wake
-          </Button>
-          <Button variant="secondary" onClick={input.onReload} disabled={input.reloadPending}>
-            {input.reloadPending ? (
-              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCcw className="mr-2 h-4 w-4" />
-            )}
-            Reload runtime
-          </Button>
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MiniMetric
-          label="Runner"
-          value={
-            agent.runner?.executing
-              ? 'executing'
-              : agent.runner?.scheduled
-                ? 'scheduled'
-                : 'idle'
-          }
-        />
-        <MiniMetric
-          label="Wake pending"
-          value={
-            agent.runner?.wake.pending
-              ? agent.runner.wake.waitingForIdle
-                ? 'waiting for idle'
-                : 'yes'
-              : 'no'
-          }
-        />
-        <MiniMetric
-          label="Next step"
-          value={agent.runner?.nextStepAt ? formatDateTime(agent.runner.nextStepAt) : '—'}
-        />
-        <MiniMetric
-          label="Step interval"
-          value={agent.runner?.estimatedDelayMs != null ? `${Math.round(agent.runner.estimatedDelayMs / 1000)}s` : '—'}
-        />
-        <MiniMetric label="Providers" value={formatInteger(agent.providers.length)} />
-      </div>
-
-      <div className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Workspace
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <ReadOnlyField
-              label="Auto sync"
-              value={agent.workspace.autoSync ? 'enabled' : 'disabled'}
-            />
-            <ReadOnlyField label="BM25" value={agent.workspace.bm25 ? 'enabled' : 'disabled'} />
-            <ReadOnlyField label="Embedder" value={agent.workspace.embedder} />
-          </div>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Execution contract
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <ReadOnlyField
-              label="Weekly budget"
-              value={formatUsd(agent.activeContract?.weeklyValueUsd)}
-            />
-            <ReadOnlyField
-              label="Spent"
-              value={agent.activeContract ? `${formatUsdPrecise(agent.activeContract.spentUsd)} (${agent.activeContract.spentPercent.toFixed(1)}%)` : '—'}
-            />
-            <ReadOnlyField label="Ends at" value={formatDateTime(agent.activeContract?.endsAt)} />
-            <ReadOnlyField
-              label="Auto renew"
-              value={agent.activeContract?.autoRenew ? 'yes' : 'no'}
-            />
-            <ReadOnlyField
-              label="Wake queued for"
-              value={agent.runner?.wake.nextTriggerAt ? formatDateTime(agent.runner.wake.nextTriggerAt) : '—'}
-            />
-          </div>
-          <form
-            className="mt-4 flex flex-wrap items-end gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              input.onTopUpContract(Number(topUpAmountUsd));
-            }}
-          >
-            <LabeledField label="Top up contract (USD)" className="min-w-[220px]">
-              <Input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={topUpAmountUsd}
-                onChange={(event) => setTopUpAmountUsd(event.target.value)}
-                disabled={!agent.activeContract || input.topUpPending}
-                required
-              />
-            </LabeledField>
-            <Button type="submit" disabled={!agent.activeContract || input.topUpPending}>
-              {input.topUpPending ? (
-                <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Applying...
-                </>
-              ) : (
-                'Top up budget'
-              )}
-            </Button>
-          </form>
-          {input.topUpError && (
-            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {input.topUpError}
-            </div>
-          )}
-        </div>
-      </div>
     </Card>
   );
 }
@@ -1148,6 +1067,62 @@ function GitHubProvisioningCard(input: {
           </div>
         </div>
       )}
+    </Card>
+  );
+}
+
+function ContractTopUpCard(input: {
+  pending: boolean;
+  error: string | null;
+  disabled: boolean;
+  onSubmit(amountUsd: number): void;
+}) {
+  const [amountUsd, setAmountUsd] = useState('10');
+
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-950">Contract top up</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Increase the active contract budget without rehiring the agent.
+        </p>
+      </div>
+
+      <form
+        className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end"
+        onSubmit={(event) => {
+          event.preventDefault();
+          input.onSubmit(Number(amountUsd));
+        }}
+      >
+        <LabeledField label="Amount (USD)" className="min-w-[220px]">
+          <Input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={amountUsd}
+            onChange={(event) => setAmountUsd(event.target.value)}
+            disabled={input.disabled || input.pending}
+            required
+          />
+        </LabeledField>
+        <Button type="submit" disabled={input.disabled || input.pending}>
+          {input.pending ? (
+            <>
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+              Applying...
+            </>
+          ) : (
+            'Top up budget'
+          )}
+        </Button>
+      </form>
+
+      {input.error ? (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {input.error}
+        </div>
+      ) : null}
     </Card>
   );
 }
@@ -1726,17 +1701,6 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
   );
 }
 
-function MiniMetric(input: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
-      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-        {input.label}
-      </div>
-      <div className="mt-2 text-base font-semibold text-slate-950">{input.value}</div>
-    </div>
-  );
-}
-
 function ReadOnlyField(input: { label: string; value: string; wrap?: boolean }) {
   return (
     <div>
@@ -1884,21 +1848,6 @@ function toPrettyJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
 }
 
-function formatAgentProfile(
-  profile:
-    | {
-        modelKey: string;
-      }
-    | null
-    | undefined,
-) {
-  if (!profile) {
-    return 'No model profile';
-  }
-
-  return profile.modelKey;
-}
-
 function formatDateTimeText(value?: string | null) {
   if (!value) {
     return '—';
@@ -1911,4 +1860,15 @@ function formatDateTimeText(value?: string | null) {
   }
 
   return formatDateTime(parsed.getTime());
+}
+
+function CompactStat(input: { label: string; value: ReactNode }) {
+  return (
+    <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-strong)]">
+        {input.label}
+      </div>
+      <div className="mt-2 text-sm font-semibold text-[color:var(--ink)]">{input.value}</div>
+    </div>
+  );
 }

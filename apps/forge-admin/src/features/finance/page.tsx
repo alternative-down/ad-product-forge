@@ -14,7 +14,8 @@ import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { formatDateTime, formatUsd } from '../../lib/format';
-import { MetricStrip, PageHeader } from '../../components/layout/page-header';
+import { PageHeader } from '../../components/layout/page-header';
+import { SectionNav, WorkspaceCanvas } from '../../components/layout/section-nav';
 
 type InvestmentDraft = {
   amountUsd: string;
@@ -38,6 +39,7 @@ type RecurringPayableDraft = {
 };
 
 export function FinancePage() {
+  const [section, setSection] = useState<'capital' | 'payables' | 'recurring' | 'ledger'>('capital');
   const queryClient = useQueryClient();
   const financeQuery = useQuery({
     queryKey: ['admin', 'finance'],
@@ -95,49 +97,93 @@ export function FinancePage() {
       <PageHeader
         eyebrow="Finance"
         title="Capital movement and obligations"
-        description="Cash events, payable scheduling, and recurring liabilities live here. This view should make operational cash intent legible before anything is posted."
+        description="Capital events, payable scheduling, recurring liabilities, and ledger posting. One financial task at a time."
       />
 
-      <MetricStrip
-        items={[
-          { label: 'Cash balance', value: formatUsd(finance.balanceUsd) },
-          { label: 'Total in', value: formatUsd(finance.summary.totalInUsd) },
-          { label: 'Total out', value: formatUsd(finance.summary.totalOutUsd) },
-          { label: 'Scheduled out', value: formatUsd(finance.summary.scheduledOutUsd) },
-        ]}
-      />
+      <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)]">
+        <SectionNav
+          title="Finance area"
+          value={section}
+          items={[
+            { value: 'capital', label: 'Capital', detail: `balance ${formatUsd(finance.balanceUsd)}` },
+            { value: 'payables', label: 'Payables', detail: 'create one-off and recurring obligations' },
+            { value: 'recurring', label: 'Recurring', detail: `${finance.recurringPayables.length} recurring obligations` },
+            { value: 'ledger', label: 'Ledger', detail: `${finance.movements.items.length} planned and posted rows` },
+          ]}
+          onChange={(nextSection) => setSection(nextSection)}
+        />
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <InvestmentCard
-          pending={investmentMutation.isPending}
-          error={investmentMutation.error?.message ?? null}
-          onSubmit={(input) => investmentMutation.mutate(input)}
-        />
-        <PayableCard
-          pending={payableMutation.isPending}
-          error={payableMutation.error?.message ?? null}
-          onSubmit={(input) => payableMutation.mutate(input)}
-        />
+        <div className="space-y-6">
+          {section === 'capital' ? (
+            <WorkspaceCanvas
+              title="Capital injection"
+              description="Register owner capital intentionally instead of mutating balance directly."
+            >
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <MiniMetric label="Cash balance" value={formatUsd(finance.balanceUsd)} />
+                <MiniMetric label="Total in" value={formatUsd(finance.summary.totalInUsd)} />
+                <MiniMetric label="Total out" value={formatUsd(finance.summary.totalOutUsd)} />
+                <MiniMetric label="Scheduled out" value={formatUsd(finance.summary.scheduledOutUsd)} />
+              </div>
+              <div className="mt-6 max-w-4xl">
+                <InvestmentCard
+                  pending={investmentMutation.isPending}
+                  error={investmentMutation.error?.message ?? null}
+                  onSubmit={(input) => investmentMutation.mutate(input)}
+                />
+              </div>
+            </WorkspaceCanvas>
+          ) : null}
+
+          {section === 'payables' ? (
+            <WorkspaceCanvas
+              title="Accounts payable"
+              description="Create a single planned payable or define a recurring liability."
+            >
+              <div className="max-w-5xl">
+                <PayableCard
+                  pending={payableMutation.isPending}
+                  error={payableMutation.error?.message ?? null}
+                  onSubmit={(input) => payableMutation.mutate(input)}
+                />
+              </div>
+            </WorkspaceCanvas>
+          ) : null}
+
+          {section === 'recurring' ? (
+            <WorkspaceCanvas
+              title="Recurring obligations"
+              description="Pause or resume recurring payables without losing their history."
+            >
+              <RecurringPayablesCard
+                items={finance.recurringPayables}
+                pendingPayableId={recurringMutation.variables?.payableId}
+                pending={recurringMutation.isPending}
+                error={recurringMutation.error?.message ?? null}
+                onToggle={(payableId, isActive) => recurringMutation.mutate({ payableId, isActive })}
+              />
+            </WorkspaceCanvas>
+          ) : null}
+
+          {section === 'ledger' ? (
+            <WorkspaceCanvas
+              title="Ledger posting"
+              description="Post or cancel planned entries from the financial timeline."
+            >
+              <LedgerCard
+                items={finance.movements.items}
+                pendingPostEntryId={postEntryMutation.variables?.entryId}
+                pendingCancelEntryId={cancelEntryMutation.variables}
+                postPending={postEntryMutation.isPending}
+                cancelPending={cancelEntryMutation.isPending}
+                error={postEntryMutation.error?.message ?? cancelEntryMutation.error?.message ?? null}
+                onPost={(entryId) => postEntryMutation.mutate({ entryId })}
+                onCancel={(entryId) => cancelEntryMutation.mutate(entryId)}
+              />
+            </WorkspaceCanvas>
+          ) : null}
+        </div>
       </div>
-
-      <RecurringPayablesCard
-        items={finance.recurringPayables}
-        pendingPayableId={recurringMutation.variables?.payableId}
-        pending={recurringMutation.isPending}
-        error={recurringMutation.error?.message ?? null}
-        onToggle={(payableId, isActive) => recurringMutation.mutate({ payableId, isActive })}
-      />
-
-      <LedgerCard
-        items={finance.movements.items}
-        pendingPostEntryId={postEntryMutation.variables?.entryId}
-        pendingCancelEntryId={cancelEntryMutation.variables}
-        postPending={postEntryMutation.isPending}
-        cancelPending={cancelEntryMutation.isPending}
-        error={postEntryMutation.error?.message ?? cancelEntryMutation.error?.message ?? null}
-        onPost={(entryId) => postEntryMutation.mutate({ entryId })}
-        onCancel={(entryId) => cancelEntryMutation.mutate(entryId)}
-      />
     </div>
   );
 }
@@ -497,6 +543,17 @@ function LedgerCard(input: {
       </div>
       {input.error ? <ErrorBanner message={input.error} /> : null}
     </Card>
+  );
+}
+
+function MiniMetric(input: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-strong)]">
+        {input.label}
+      </div>
+      <div className="mt-2 text-sm font-semibold text-[color:var(--ink)]">{input.value}</div>
+    </div>
   );
 }
 

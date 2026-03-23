@@ -23,10 +23,11 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
-import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
-import { MetricStrip, PageHeader } from '../../components/layout/page-header';
+import { PageHeader } from '../../components/layout/page-header';
+import { WorkspaceCanvas } from '../../components/layout/section-nav';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 
 type RoleDraft = {
   name: string;
@@ -69,6 +70,23 @@ export function RolesPage() {
   });
 
   useEffect(() => {
+    if (search.tab === 'functions') {
+      if (search.functionId || !functionsQuery.data?.length) {
+        return;
+      }
+
+      void navigate({
+        to: '/roles',
+        search: {
+          roleId: search.roleId,
+          functionId: functionsQuery.data[0].functionId,
+          tab: 'functions',
+        },
+        replace: true,
+      });
+      return;
+    }
+
     if (search.roleId || !rolesQuery.data?.items.length) {
       return;
     }
@@ -77,13 +95,15 @@ export function RolesPage() {
       to: '/roles',
       search: {
         roleId: rolesQuery.data.items[0].roleId,
+        functionId: search.functionId,
         tab: search.tab,
       },
       replace: true,
     });
-  }, [navigate, rolesQuery.data, search.roleId]);
+  }, [functionsQuery.data, navigate, rolesQuery.data, search.functionId, search.roleId, search.tab]);
 
   const selectedRole = rolesQuery.data?.items.find((role) => role.roleId === search.roleId) ?? null;
+  const selectedFunction = functionsQuery.data?.find((item) => item.functionId === search.functionId) ?? null;
   const selectedRoleDraft = selectedRole
     ? roleDraft && selectedRole.roleId === search.roleId
       ? roleDraft
@@ -254,147 +274,161 @@ export function RolesPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Capabilities"
-        title="Roles, functions, and grants"
-        description="This is the capability graph for the company. Roles define rights, functions compose roles, and agents inherit that surface through function assignment."
+        title="Capability graph"
+        description="Roles define permissions. Functions compose roles. Keep one editor open at a time."
       />
 
-      <MetricStrip
-        items={[
-          {
-            label: 'Roles',
-            value: rolesQuery.data?.items.length ?? '—',
-            detail: `${functionsQuery.data?.length ?? 0} functions loaded`,
-          },
-          {
-            label: 'Tool ids',
-            value: rolesQuery.data?.availableToolIds.length ?? '—',
-            detail: 'permission catalog',
-          },
-          {
-            label: 'Workflow ids',
-            value: rolesQuery.data?.availableWorkflowIds.length ?? '—',
-            detail: 'workflow surface',
-          },
-          {
-            label: 'Selected role',
-            value: selectedRole?.name ?? '—',
-            detail: selectedRole ? `${selectedRole.assignedFunctionCount} function assignments` : 'pick a role',
-          },
-        ]}
-      />
-
-      <SegmentedTabs
-        value={selectedTab}
-        items={[
-          { value: 'roles', label: 'Roles', description: 'role metadata and permission grants' },
-          { value: 'functions', label: 'Functions', description: 'function definitions and role composition' },
-        ]}
-        onChange={(tab) =>
-          void navigate({
-            to: '/roles',
-            search: {
-              roleId: search.roleId,
-              tab,
-            },
-          })
-        }
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <div className="space-y-6">
-        <Card className="overflow-hidden">
-          <div className="border-b border-slate-200 px-5 py-4">
-            <h2 className="text-lg font-semibold text-slate-950">Roles</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Manage roles, workflow grants, tool grants, and function assignments.
-            </p>
-          </div>
-          <div className="max-h-[calc(100vh-24rem)] overflow-y-auto p-3">
-            {rolesQuery.isLoading && <PanelLoading label="Loading roles" />}
-            {rolesQuery.isError && <PanelError message={rolesQuery.error.message} />}
-            {rolesQuery.data?.items.map((role) => (
+        <SegmentedTabs
+          value={selectedTab}
+          items={[
+            { value: 'roles', label: 'Roles', description: `${rolesQuery.data?.items.length ?? 0} role definitions` },
+            { value: 'functions', label: 'Functions', description: `${functionsQuery.data?.length ?? 0} function definitions` },
+          ]}
+          onChange={(tab) =>
+            void navigate({
+              to: '/roles',
+              search: {
+                roleId: tab === 'roles' ? search.roleId : undefined,
+                functionId: tab === 'functions' ? search.functionId : undefined,
+                tab,
+              },
+            })
+          }
+        />
+
+        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="space-y-4">
+            <Card className="overflow-hidden">
+              <div className="border-b border-[color:var(--panel-border)] px-4 py-4">
+                <h2 className="text-base font-semibold text-[color:var(--ink)]">
+                  {selectedTab === 'roles' ? 'Roles' : 'Functions'}
+                </h2>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">
+                  {selectedTab === 'roles'
+                    ? 'Select one role to edit permissions and metadata.'
+                    : 'Select one function to edit composition and metadata.'}
+                </p>
+              </div>
+              <div className="max-h-[calc(100vh-18rem)] overflow-y-auto p-3">
+            {selectedTab === 'roles' && rolesQuery.isLoading && <PanelLoading label="Loading roles" />}
+            {selectedTab === 'roles' && rolesQuery.isError && <PanelError message={rolesQuery.error.message} />}
+            {selectedTab === 'roles' && rolesQuery.data?.items.map((role) => (
               <button
                 key={role.roleId}
                 type="button"
-                onClick={() => void navigate({ to: '/roles', search: { roleId: role.roleId, tab: search.tab } })}
+                onClick={() => void navigate({ to: '/roles', search: { roleId: role.roleId, functionId: undefined, tab: 'roles' } })}
                 className={cn(
-                  'mb-2 w-full rounded-lg border px-4 py-4 text-left transition last:mb-0',
+                  'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
                   search.roleId === role.roleId
                     ? 'border-slate-950 bg-slate-950 text-white'
-                    : 'border-slate-200 bg-white hover:border-slate-400',
+                    : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                 )}
               >
                 <div className="font-semibold">{role.name}</div>
-                <div
-                  className={cn(
-                    'mt-1 text-xs',
-                    search.roleId === role.roleId ? 'text-slate-300' : 'text-slate-500',
-                  )}
-                >
+                <div className={cn('mt-1 text-xs', search.roleId === role.roleId ? 'text-slate-300' : 'text-[color:var(--muted)]')}>
                   {role.assignedFunctionCount} function assignments
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge
-                    className={cn(
-                      search.roleId === role.roleId && 'border-slate-700 bg-slate-800 text-slate-100',
-                    )}
-                  >
-                    {role.toolIds.length} tools
-                  </Badge>
-                  <Badge
-                    className={cn(
-                      search.roleId === role.roleId && 'border-slate-700 bg-slate-800 text-slate-100',
-                    )}
-                  >
-                    {role.workflowIds.length} workflows
-                  </Badge>
                 </div>
               </button>
             ))}
-          </div>
-        </Card>
+            {selectedTab === 'functions' && functionsQuery.isLoading && <PanelLoading label="Loading functions" />}
+            {selectedTab === 'functions' && functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
+            {selectedTab === 'functions' && functionsQuery.data?.map((item) => (
+              <button
+                key={item.functionId}
+                type="button"
+                onClick={() => void navigate({ to: '/roles', search: { functionId: item.functionId, roleId: undefined, tab: 'functions' } })}
+                className={cn(
+                  'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
+                  search.functionId === item.functionId
+                    ? 'border-slate-950 bg-slate-950 text-white'
+                    : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
+                )}
+              >
+                <div className="font-semibold">{item.name}</div>
+                <div className={cn('mt-1 text-xs', search.functionId === item.functionId ? 'text-slate-300' : 'text-[color:var(--muted)]')}>
+                  {item.roleIds.length} roles
+                </div>
+              </button>
+            ))}
+              </div>
+            </Card>
 
-        {selectedTab === 'roles' && <Card className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Plus className="h-4 w-4 text-slate-500" />
-            <h3 className="text-base font-semibold text-slate-950">Create role</h3>
+            {selectedTab === 'roles' && <Card className="p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Plus className="h-4 w-4 text-slate-500" />
+                <h3 className="text-base font-semibold text-slate-950">Create role</h3>
+              </div>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  createRoleMutation.mutate({
+                    name: newRoleDraft.name,
+                    description: newRoleDraft.description || undefined,
+                  });
+                }}
+              >
+                <LabeledField label="Name">
+                  <Input
+                    value={newRoleDraft.name}
+                    onChange={(event) =>
+                      setNewRoleDraft({ ...newRoleDraft, name: event.target.value })
+                    }
+                    required
+                  />
+                </LabeledField>
+                <LabeledField label="Description">
+                  <Textarea
+                    value={newRoleDraft.description}
+                    onChange={(event) =>
+                      setNewRoleDraft({ ...newRoleDraft, description: event.target.value })
+                    }
+                  />
+                </LabeledField>
+                {createRoleMutation.error && <InlineError message={createRoleMutation.error.message} />}
+                <Button type="submit" disabled={createRoleMutation.isPending}>
+                  {createRoleMutation.isPending ? 'Creating...' : 'Create role'}
+                </Button>
+              </form>
+            </Card>}
+            {selectedTab === 'functions' && <Card className="p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Plus className="h-4 w-4 text-slate-500" />
+                <h3 className="text-base font-semibold text-slate-950">Create function</h3>
+              </div>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  createFunctionMutation.mutate({
+                    name: newFunctionDraft.name,
+                    description: newFunctionDraft.description || undefined,
+                  });
+                }}
+              >
+                <LabeledField label="Name">
+                  <Input
+                    value={newFunctionDraft.name}
+                    onChange={(event) => setNewFunctionDraft({ ...newFunctionDraft, name: event.target.value })}
+                    required
+                  />
+                </LabeledField>
+                <LabeledField label="Description">
+                  <Textarea
+                    value={newFunctionDraft.description}
+                    onChange={(event) => setNewFunctionDraft({ ...newFunctionDraft, description: event.target.value })}
+                  />
+                </LabeledField>
+                {createFunctionMutation.error ? <InlineError message={createFunctionMutation.error.message} /> : null}
+                <Button type="submit" disabled={createFunctionMutation.isPending}>
+                  {createFunctionMutation.isPending ? 'Creating...' : 'Create function'}
+                </Button>
+              </form>
+            </Card>}
           </div>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              createRoleMutation.mutate({
-                name: newRoleDraft.name,
-                description: newRoleDraft.description || undefined,
-              });
-            }}
-          >
-            <LabeledField label="Name">
-              <Input
-                value={newRoleDraft.name}
-                onChange={(event) =>
-                  setNewRoleDraft({ ...newRoleDraft, name: event.target.value })
-                }
-                required
-              />
-            </LabeledField>
-            <LabeledField label="Description">
-              <Textarea
-                value={newRoleDraft.description}
-                onChange={(event) =>
-                  setNewRoleDraft({ ...newRoleDraft, description: event.target.value })
-                }
-              />
-            </LabeledField>
-            {createRoleMutation.error && <InlineError message={createRoleMutation.error.message} />}
-            <Button type="submit" disabled={createRoleMutation.isPending}>
-              {createRoleMutation.isPending ? 'Creating...' : 'Create role'}
-            </Button>
-          </form>
-        </Card>}
-      </div>
 
-      <div className="space-y-6">
+          <div className="space-y-6">
         {functionsQuery.isLoading && <PanelLoading label="Loading functions" />}
         {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
 
@@ -414,7 +448,7 @@ export function RolesPage() {
             </div>
 
             <form
-              className="mt-6 grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]"
+              className="mt-6 space-y-6"
               onSubmit={(event) => {
                 event.preventDefault();
                 updateRoleMutation.mutate({
@@ -428,7 +462,7 @@ export function RolesPage() {
                 });
               }}
             >
-              <div className="space-y-4">
+              <div className="max-w-3xl space-y-4">
                 <LabeledField label="Role name">
                   <Input
                     value={selectedRoleDraft.name}
@@ -479,7 +513,7 @@ export function RolesPage() {
                 </div>
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-6">
                 <div className="space-y-4">
                   <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                     Tool grants
@@ -538,174 +572,121 @@ export function RolesPage() {
           </Card>
         )}
 
-        {selectedTab === 'functions' && functionsQuery.data && rolesQuery.data && (
-          <Card className="p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-950">Functions</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Create functions and assign one or more roles to each function.
-                </p>
-              </div>
-            </div>
+        {selectedTab === 'functions' && functionsQuery.data && rolesQuery.data && selectedFunction && (
+          <WorkspaceCanvas
+            title={selectedFunction.name}
+            description="Edit metadata and choose which roles compose this function."
+          >
+            {(() => {
+              const draft = functionDrafts[selectedFunction.functionId] ?? {
+                name: selectedFunction.name,
+                description: selectedFunction.description ?? '',
+                roleIds: selectedFunction.roleIds,
+              };
 
-            <form
-              className="mt-6 grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_1fr_auto]"
-              onSubmit={(event) => {
-                event.preventDefault();
-                createFunctionMutation.mutate({
-                  name: newFunctionDraft.name,
-                  description: newFunctionDraft.description || undefined,
-                });
-              }}
-            >
-              <LabeledField label="Name">
-                <Input
-                  value={newFunctionDraft.name}
-                  onChange={(event) =>
-                    setNewFunctionDraft({ ...newFunctionDraft, name: event.target.value })
-                  }
-                  required
-                />
-              </LabeledField>
-              <LabeledField label="Description">
-                <Input
-                  value={newFunctionDraft.description}
-                  onChange={(event) =>
-                    setNewFunctionDraft({ ...newFunctionDraft, description: event.target.value })
-                  }
-                />
-              </LabeledField>
-              <div className="flex items-end">
-                <Button type="submit" disabled={createFunctionMutation.isPending}>
-                  {createFunctionMutation.isPending ? 'Creating...' : 'Create function'}
-                </Button>
-              </div>
-              {createFunctionMutation.error && <InlineError message={createFunctionMutation.error.message} />}
-            </form>
+              return (
+                <form
+                  className="space-y-6"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    updateFunctionMutation.mutate({
+                      functionId: selectedFunction.functionId,
+                      name: draft.name,
+                      description: draft.description || null,
+                      nextRoleIds: draft.roleIds,
+                      currentRoleIds: selectedFunction.roleIds,
+                    });
+                  }}
+                >
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <LabeledField label="Function name">
+                      <Input
+                        value={draft.name}
+                        onChange={(event) =>
+                          setFunctionDrafts({
+                            ...functionDrafts,
+                            [selectedFunction.functionId]: {
+                              ...draft,
+                              name: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </LabeledField>
+                    <LabeledField label="Description">
+                      <Input
+                        value={draft.description}
+                        onChange={(event) =>
+                          setFunctionDrafts({
+                            ...functionDrafts,
+                            [selectedFunction.functionId]: {
+                              ...draft,
+                              description: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </LabeledField>
+                  </div>
 
-            <div className="mt-6 space-y-3">
-              {functionsQuery.data.map((agentFunction) => {
-                const draft = functionDrafts[agentFunction.functionId] ?? {
-                  name: agentFunction.name,
-                  description: agentFunction.description ?? '',
-                  roleIds: agentFunction.roleIds,
-                };
+                  <div className="flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
+                    <Badge>{selectedFunction.assignedAgentCount} agents</Badge>
+                    <Badge>{selectedFunction.roleIds.length} roles</Badge>
+                  </div>
 
-                return (
-                  <div
-                    key={agentFunction.functionId}
-                    className="rounded-lg border border-slate-200 bg-white p-4"
-                  >
-                    <div className="grid gap-4 xl:grid-cols-[1fr_1fr_260px_auto]">
-                      <LabeledField label="Name">
-                        <Input
-                          value={draft.name}
-                          onChange={(event) =>
+                  <LabeledField label="Roles">
+                    <div className="grid gap-2 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4 md:grid-cols-2">
+                      {rolesQuery.data.items.map((role) => (
+                        <PermissionToggle
+                          key={role.roleId}
+                          label={role.name}
+                          checked={draft.roleIds.includes(role.roleId)}
+                          pending={updateFunctionMutation.isPending}
+                          onChange={() => {
                             setFunctionDrafts({
                               ...functionDrafts,
-                              [agentFunction.functionId]: {
+                              [selectedFunction.functionId]: {
                                 ...draft,
-                                name: event.target.value,
+                                roleIds: draft.roleIds.includes(role.roleId)
+                                  ? draft.roleIds.filter((id) => id !== role.roleId)
+                                  : [...draft.roleIds, role.roleId],
                               },
-                            })
-                          }
-                        />
-                      </LabeledField>
-                      <LabeledField label="Description">
-                        <Input
-                          value={draft.description}
-                          onChange={(event) =>
-                            setFunctionDrafts({
-                              ...functionDrafts,
-                              [agentFunction.functionId]: {
-                                ...draft,
-                                description: event.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </LabeledField>
-                      <LabeledField label="Roles">
-                        <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                          {rolesQuery.data.items.map((role) => {
-                            return (
-                              <PermissionToggle
-                                key={role.roleId}
-                                label={role.name}
-                                checked={draft.roleIds.includes(role.roleId)}
-                                pending={updateFunctionMutation.isPending}
-                                onChange={() => {
-                                  setFunctionDrafts({
-                                    ...functionDrafts,
-                                    [agentFunction.functionId]: {
-                                      ...draft,
-                                      roleIds: draft.roleIds.includes(role.roleId)
-                                        ? draft.roleIds.filter((id) => id !== role.roleId)
-                                        : [...draft.roleIds, role.roleId],
-                                    },
-                                  });
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      </LabeledField>
-                      <div className="flex items-end gap-2">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          disabled={updateFunctionMutation.isPending}
-                          onClick={() => {
-                            updateFunctionMutation.mutate({
-                              functionId: agentFunction.functionId,
-                              name: draft.name,
-                              description: draft.description || null,
-                              nextRoleIds: draft.roleIds,
-                              currentRoleIds: agentFunction.roleIds,
                             });
                           }}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          disabled={
-                            deleteFunctionMutation.isPending || agentFunction.assignedAgentCount > 0
-                          }
-                          onClick={() => {
-                            deleteFunctionMutation.mutate(agentFunction.functionId);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        />
+                      ))}
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                      <Badge>{agentFunction.assignedAgentCount} agents</Badge>
-                      <Badge>{agentFunction.roleIds.length} roles</Badge>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  </LabeledField>
 
-            {(updateFunctionMutation.error ||
-              deleteFunctionMutation.error) && (
-              <div className="mt-4">
-                <InlineError
-                  message={
-                    updateFunctionMutation.error?.message ??
-                    deleteFunctionMutation.error?.message ??
-                    ''
-                  }
-                />
-              </div>
-            )}
-          </Card>
+                  {(updateFunctionMutation.error || deleteFunctionMutation.error) ? (
+                    <InlineError
+                      message={updateFunctionMutation.error?.message ?? deleteFunctionMutation.error?.message ?? ''}
+                    />
+                  ) : null}
+
+                  <div className="flex gap-3">
+                    <Button type="submit" disabled={updateFunctionMutation.isPending}>
+                      {updateFunctionMutation.isPending ? 'Saving...' : 'Save function'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={deleteFunctionMutation.isPending || selectedFunction.assignedAgentCount > 0}
+                      onClick={() => {
+                        deleteFunctionMutation.mutate(selectedFunction.functionId);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete function
+                    </Button>
+                  </div>
+                </form>
+              );
+            })()}
+          </WorkspaceCanvas>
         )}
-      </div>
+          </div>
+        </div>
       </div>
     </div>
   );

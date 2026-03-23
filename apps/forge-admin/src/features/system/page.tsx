@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo, useState } from 'react';
-import { Bot, Cable, LoaderCircle, Trash2 } from 'lucide-react';
+import { Cable, LoaderCircle, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
@@ -32,10 +32,11 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
-import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 import { Textarea } from '../../components/ui/textarea';
 import { formatDateTime } from '../../lib/format';
-import { MetricStrip, PageHeader } from '../../components/layout/page-header';
+import { PageHeader } from '../../components/layout/page-header';
+import { SectionNav, WorkspaceCanvas } from '../../components/layout/section-nav';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 
 type MigaduDraft = {
   isEnabled: boolean;
@@ -174,188 +175,240 @@ export function SystemPage() {
   const oauthState = oauthQuery.data!;
   const migrations = migrationsQuery.data!;
   const selectedTab = search.tab ?? 'company';
+  const selectedLlmView = search.llmView ?? 'defaults';
+  const selectedIntegrationView = search.integrationView ?? 'migadu';
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="System"
-        title="Global runtime wiring"
-        description="This surface controls shared company context, model defaults, provider integrations, OAuth sync, and migration visibility. It should feel like infrastructure, not an assorted form dump."
-        aside={
-          <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-5 py-4">
-            <div className="flex items-center gap-3 text-[color:var(--muted-strong)]">
-              <Cable className="h-4 w-4" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.24em]">
-                Runtime plane
-              </span>
-            </div>
-            <div className="mt-3 text-sm leading-6 text-[color:var(--muted)]">
-              Edit global settings here. Agent-local state belongs on the agent page.
-            </div>
-          </div>
-        }
+        title="System configuration"
+        description="Shared company context, model wiring, OAuth state, integrations, and migration visibility. Open one system area at a time."
       />
 
-      <MetricStrip
-        items={[
-          {
-            label: 'LLM profiles',
-            value: systemLlm.profiles.length,
-            detail: `${systemLlm.prices.length} price rows`,
-          },
-          {
-            label: 'Integrations',
-            value: integrations.length,
-            detail: integrations.filter((integration) => integration.isEnabled).length + ' enabled',
-          },
-          {
-            label: 'OAuth sources',
-            value: Object.keys(oauthState).length,
-            detail: 'sync-capable providers',
-          },
-          {
-            label: 'Migrations',
-            value: migrations.applied.length,
-            detail: `${migrations.entries.filter((entry) => !entry.applied).length} pending`,
-          },
-        ]}
-      />
-
-      <SegmentedTabs
-        value={selectedTab}
-        items={[
-          { value: 'company', label: 'Company', description: 'context injected into every agent prompt' },
-          { value: 'llm', label: 'LLM', description: 'profiles, defaults, and pricing' },
-          { value: 'auth', label: 'OAuth', description: 'provider sync and credential visibility' },
-          { value: 'integrations', label: 'Integrations', description: 'Migadu, Coolify, GitHub' },
-          { value: 'migrations', label: 'Migrations', description: 'application migration state' },
-        ]}
-        onChange={(tab) =>
-          void navigate({
-            to: '/system',
-            search: {
-              tab,
-            },
-          })
-        }
-      />
-
-      {selectedTab === 'company' && (
-        <SystemSettingsCard
-          key={`system-settings-${systemSettings.updatedAt ?? 'unset'}`}
-          settings={systemSettings}
-          pending={upsertSystemSettingsMutation.isPending}
-          error={upsertSystemSettingsMutation.error?.message ?? null}
-          onSave={(input) => upsertSystemSettingsMutation.mutate(input)}
+      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
+        <SectionNav
+          title="System areas"
+          value={selectedTab}
+          items={[
+            { value: 'company', label: 'Company', detail: 'global prompt context' },
+            { value: 'llm', label: 'LLM', detail: `${systemLlm.profiles.length} profiles · ${systemLlm.prices.length} prices` },
+            { value: 'auth', label: 'OAuth', detail: `${Object.keys(oauthState).length} providers` },
+            { value: 'integrations', label: 'Integrations', detail: `${integrations.filter((integration) => integration.isEnabled).length} enabled` },
+            { value: 'migrations', label: 'Migrations', detail: `${migrations.entries.filter((entry) => !entry.applied).length} pending` },
+          ]}
+          onChange={(tab) =>
+            void navigate({
+              to: '/system',
+              search: {
+                tab,
+                llmView: search.llmView,
+                integrationView: search.integrationView,
+              },
+            })
+          }
         />
-      )}
 
-      {selectedTab === 'llm' && <Card className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-strong)]">
-              Models
+        <div className="space-y-6">
+          {selectedTab === 'company' ? (
+            <WorkspaceCanvas
+              title="Company context"
+              description="Shared identity and operating context injected into every loaded agent prompt."
+            >
+              <div className="max-w-4xl">
+                <SystemSettingsCard
+                  key={`system-settings-${systemSettings.updatedAt ?? 'unset'}`}
+                  settings={systemSettings}
+                  pending={upsertSystemSettingsMutation.isPending}
+                  error={upsertSystemSettingsMutation.error?.message ?? null}
+                  onSave={(input) => upsertSystemSettingsMutation.mutate(input)}
+                />
+              </div>
+            </WorkspaceCanvas>
+          ) : null}
+
+          {selectedTab === 'llm' ? (
+            <div className="space-y-6">
+              <SegmentedTabs
+                value={selectedLlmView}
+                items={[
+                  { value: 'defaults', label: 'Defaults', description: 'system execution profiles' },
+                  { value: 'profiles', label: 'Profiles', description: 'runtime endpoints and credentials' },
+                  { value: 'prices', label: 'Prices', description: 'contract accounting rows' },
+                ]}
+                onChange={(llmView) =>
+                  void navigate({
+                    to: '/system',
+                    search: {
+                      tab: 'llm',
+                      llmView,
+                      integrationView: search.integrationView,
+                    },
+                  })
+                }
+              />
+
+              {selectedLlmView === 'defaults' ? (
+                <WorkspaceCanvas
+                  title="LLM defaults"
+                  description="Pick the primary execution profile, OM profile, and hiring RH profile."
+                >
+                  <div className="max-w-5xl">
+                    <LlmDefaultsCard
+                      key={`llm-defaults-${systemLlm.defaults?.updatedAt ?? 'unset'}`}
+                      defaults={systemLlm.defaults}
+                      profiles={systemLlm.profiles}
+                      pending={updateLlmDefaultsMutation.isPending}
+                      error={updateLlmDefaultsMutation.error?.message ?? null}
+                      onSave={(input) => updateLlmDefaultsMutation.mutate(input)}
+                    />
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedLlmView === 'profiles' ? (
+                <WorkspaceCanvas
+                  title="LLM profiles"
+                  description="Profiles define model key, base URL, API key, and contract multiplier."
+                >
+                  <LlmProfileEditorCard
+                    profiles={systemLlm.profiles}
+                    pending={upsertLlmProfileMutation.isPending}
+                    deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
+                    saveError={upsertLlmProfileMutation.error?.message ?? null}
+                    deleteError={deleteLlmProfileMutation.error?.message ?? null}
+                    onSave={(input) => upsertLlmProfileMutation.mutate(input)}
+                    onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
+                  />
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedLlmView === 'prices' ? (
+                <WorkspaceCanvas
+                  title="LLM pricing"
+                  description="Price rows are used by hiring, contracts, and execution accounting."
+                >
+                  <LlmPricingCard
+                    prices={systemLlm.prices}
+                    pending={upsertLlmModelPriceMutation.isPending}
+                    error={upsertLlmModelPriceMutation.error?.message ?? null}
+                    onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
+                  />
+                </WorkspaceCanvas>
+              ) : null}
             </div>
-            <h2 className="mt-2 text-lg font-semibold text-slate-950">LLM configuration</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Profiles define provider plus model pairs. Defaults drive internal hiring and OM selection.
-            </p>
-          </div>
-          <Bot className="h-5 w-5 text-slate-500" />
+          ) : null}
+
+          {selectedTab === 'auth' ? (
+            <WorkspaceCanvas
+              title="OAuth sync"
+              description="Provider-side account sync used by the custom gateway and synced integrations."
+            >
+              <OauthSyncCard
+                state={oauthState}
+                pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
+                error={syncOauthMutation.error?.message ?? null}
+                result={syncOauthMutation.data ?? null}
+                onSync={(providerId) => syncOauthMutation.mutate(providerId)}
+              />
+            </WorkspaceCanvas>
+          ) : null}
+
+          {selectedTab === 'migrations' ? (
+            <WorkspaceCanvas
+              title="Application migrations"
+              description="Repository journal entries matched against __drizzle_migrations."
+            >
+              <MigrationStatusCard migrations={migrations} />
+            </WorkspaceCanvas>
+          ) : null}
+
+          {selectedTab === 'integrations' ? (
+            <div className="space-y-6">
+              <SegmentedTabs
+                value={selectedIntegrationView}
+                items={[
+                  { value: 'migadu', label: 'Migadu', description: 'mailbox provisioning' },
+                  { value: 'coolify', label: 'Coolify', description: 'deployment automation' },
+                  { value: 'github', label: 'GitHub', description: 'app provisioning' },
+                ]}
+                onChange={(integrationView) =>
+                  void navigate({
+                    to: '/system',
+                    search: {
+                      tab: 'integrations',
+                      llmView: search.llmView,
+                      integrationView,
+                    },
+                  })
+                }
+              />
+
+              {selectedIntegrationView === 'migadu' ? (
+                <WorkspaceCanvas title="Migadu integration" description="Controls mailbox provisioning for agents.">
+                  <div className="max-w-5xl">
+                    <MigaduIntegrationCard
+                      key={`migadu-${migaduIntegration?.updatedAt ?? 'new'}`}
+                      integration={migaduIntegration}
+                      pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'migadu'}
+                      deleting={deleteIntegrationMutation.isPending && deleteIntegrationMutation.variables === 'migadu'}
+                      error={getIntegrationError(
+                        'migadu',
+                        upsertIntegrationMutation.error?.message,
+                        deleteIntegrationMutation.error?.message,
+                        upsertIntegrationMutation.variables,
+                        deleteIntegrationMutation.variables,
+                      )}
+                      onDelete={() => deleteIntegrationMutation.mutate('migadu')}
+                      onSave={(input) => upsertIntegrationMutation.mutate(input)}
+                    />
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedIntegrationView === 'coolify' ? (
+                <WorkspaceCanvas title="Coolify integration" description="Controls deployment automation and generated application domains.">
+                  <div className="max-w-5xl">
+                    <CoolifyIntegrationCard
+                      key={`coolify-${coolifyIntegration?.updatedAt ?? 'new'}`}
+                      integration={coolifyIntegration}
+                      pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'coolify'}
+                      deleting={deleteIntegrationMutation.isPending && deleteIntegrationMutation.variables === 'coolify'}
+                      error={getIntegrationError(
+                        'coolify',
+                        upsertIntegrationMutation.error?.message,
+                        deleteIntegrationMutation.error?.message,
+                        upsertIntegrationMutation.variables,
+                        deleteIntegrationMutation.variables,
+                      )}
+                      onDelete={() => deleteIntegrationMutation.mutate('coolify')}
+                      onSave={(input) => upsertIntegrationMutation.mutate(input)}
+                    />
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedIntegrationView === 'github' ? (
+                <WorkspaceCanvas title="GitHub integration" description="Controls GitHub App provisioning for internal agents.">
+                  <div className="max-w-5xl">
+                    <GitHubIntegrationCard
+                      key={`github-${githubIntegration?.updatedAt ?? 'new'}`}
+                      integration={githubIntegration}
+                      pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'github'}
+                      deleting={deleteIntegrationMutation.isPending && deleteIntegrationMutation.variables === 'github'}
+                      error={getIntegrationError(
+                        'github',
+                        upsertIntegrationMutation.error?.message,
+                        deleteIntegrationMutation.error?.message,
+                        upsertIntegrationMutation.variables,
+                        deleteIntegrationMutation.variables,
+                      )}
+                      onDelete={() => deleteIntegrationMutation.mutate('github')}
+                      onSave={(input) => upsertIntegrationMutation.mutate(input)}
+                    />
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
+            </div>
+          ) : null}
         </div>
-      </Card>}
-
-      {selectedTab === 'llm' && (
-        <LlmDefaultsCard
-          key={`llm-defaults-${systemLlm.defaults?.updatedAt ?? 'unset'}`}
-          defaults={systemLlm.defaults}
-          profiles={systemLlm.profiles}
-          pending={updateLlmDefaultsMutation.isPending}
-          error={updateLlmDefaultsMutation.error?.message ?? null}
-          onSave={(input) => updateLlmDefaultsMutation.mutate(input)}
-        />
-      )}
-
-      {selectedTab === 'llm' && (
-        <LlmProfileEditorCard
-          profiles={systemLlm.profiles}
-          pending={upsertLlmProfileMutation.isPending}
-          deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
-          saveError={upsertLlmProfileMutation.error?.message ?? null}
-          deleteError={deleteLlmProfileMutation.error?.message ?? null}
-          onSave={(input) => upsertLlmProfileMutation.mutate(input)}
-          onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
-        />
-      )}
-
-      {selectedTab === 'llm' && (
-        <LlmPricingCard
-          prices={systemLlm.prices}
-          pending={upsertLlmModelPriceMutation.isPending}
-          error={upsertLlmModelPriceMutation.error?.message ?? null}
-          onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
-        />
-      )}
-
-      {selectedTab === 'auth' && (
-        <OauthSyncCard
-          state={oauthState}
-          pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
-          error={syncOauthMutation.error?.message ?? null}
-          result={syncOauthMutation.data ?? null}
-          onSync={(providerId) => syncOauthMutation.mutate(providerId)}
-        />
-      )}
-
-      {selectedTab === 'migrations' && <MigrationStatusCard migrations={migrations} />}
-
-      {selectedTab === 'integrations' && <MigaduIntegrationCard
-        key={`migadu-${migaduIntegration?.updatedAt ?? 'new'}`}
-        integration={migaduIntegration}
-        pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'migadu'}
-        deleting={deleteIntegrationMutation.isPending && deleteIntegrationMutation.variables === 'migadu'}
-        error={getIntegrationError(
-          'migadu',
-          upsertIntegrationMutation.error?.message,
-          deleteIntegrationMutation.error?.message,
-          upsertIntegrationMutation.variables,
-          deleteIntegrationMutation.variables,
-        )}
-        onDelete={() => deleteIntegrationMutation.mutate('migadu')}
-        onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />}
-
-      {selectedTab === 'integrations' && <CoolifyIntegrationCard
-        key={`coolify-${coolifyIntegration?.updatedAt ?? 'new'}`}
-        integration={coolifyIntegration}
-        pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'coolify'}
-        deleting={deleteIntegrationMutation.isPending && deleteIntegrationMutation.variables === 'coolify'}
-        error={getIntegrationError(
-          'coolify',
-          upsertIntegrationMutation.error?.message,
-          deleteIntegrationMutation.error?.message,
-          upsertIntegrationMutation.variables,
-          deleteIntegrationMutation.variables,
-        )}
-        onDelete={() => deleteIntegrationMutation.mutate('coolify')}
-        onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />}
-
-      {selectedTab === 'integrations' && <GitHubIntegrationCard
-        key={`github-${githubIntegration?.updatedAt ?? 'new'}`}
-        integration={githubIntegration}
-        pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'github'}
-        deleting={deleteIntegrationMutation.isPending && deleteIntegrationMutation.variables === 'github'}
-        error={getIntegrationError(
-          'github',
-          upsertIntegrationMutation.error?.message,
-          deleteIntegrationMutation.error?.message,
-          upsertIntegrationMutation.variables,
-          deleteIntegrationMutation.variables,
-        )}
-        onDelete={() => deleteIntegrationMutation.mutate('github')}
-        onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />}
+      </div>
 
     </div>
   );
