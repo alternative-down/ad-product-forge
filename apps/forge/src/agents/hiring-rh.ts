@@ -76,7 +76,7 @@ export async function generateHiredAgentInstructions(db: Database, input: {
       'Use the capability management tools to inspect existing functions, roles, tool permissions, workflow permissions, and available capabilities before deciding the final structure.',
       'Reuse an existing function when it already matches the hiring request.',
       'When no existing function fits, create or update the required function, roles, role tool permissions, role workflow permissions, and role-to-function assignments through tools.',
-      'Return only valid JSON with exactly these keys: agentName, agentDescription, functionId, instructions.',
+      'Return a structured object with exactly these keys: agentName, agentDescription, functionId, instructions.',
       'The functionId must be the real internal function id that should be assigned to the hired agent.',
       'The instructions field must be the full system prompt for the hired agent.',
       'Write that system prompt in two layers: first a natural, conversational operational briefing that sounds like how the company would actually brief the collaborator; only after that organize the prompt into a more structured CrewAI-like operating style.',
@@ -84,7 +84,6 @@ export async function generateHiredAgentInstructions(db: Database, input: {
       'The structured part must reinforce primary objective, secondary objectives, operating context, constraints, communication style, and tool usage, but it must not replace the conversational opening.',
       'Do not use a heading named Role, because role already has another meaning in the internal capability system.',
       'Use this structure after the conversational opening: Primary objective, Secondary objectives, Operating context, Function inside the company, Constraints, Communication style, Tool usage rules, Autonomous execution rules.',
-      'Do not wrap the JSON in markdown fences.',
     ].join('\n'),
     model: resolveProfileRuntimeModel(defaults.hiringRhProfile),
     tools,
@@ -100,12 +99,12 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
     maxSteps: 8,
     toolChoice: 'required',
-    memory: {
-      thread: HIRING_RH_AGENT_ID,
-      resource: HIRING_RH_AGENT_ID,
+    structuredOutput: {
+      schema: hiringRhResultSchema,
+      jsonPromptInjection: true,
     },
   });
-  const parsed = hiringRhResultSchema.parse(JSON.parse(result.text));
+  const parsed = hiringRhResultSchema.parse(result.object);
   const agentFunction = await capabilities.getFunction(parsed.functionId);
 
   if (!agentFunction) {
@@ -141,14 +140,13 @@ function buildHiringPrompt(input: {
     `Hiring request:\n${input.hiringRequest.trim()}`,
     'The collaborator works inside the company and primarily communicates through internal-chat.',
     'Inspect the current capability structure with tools before deciding whether to reuse or change functions and roles.',
-    'Return only valid JSON with exactly these keys: agentName, agentDescription, functionId, instructions.',
+    'Return a structured object with exactly these keys: agentName, agentDescription, functionId, instructions.',
     'The functionId must be a real internal function id created or selected through tools.',
     'The instructions field must be the full system prompt for the hired agent.',
     'The prompt must begin with a natural operational briefing written in a conversational tone, as if the company were onboarding the collaborator directly.',
     'After that conversational opening, structure the prompt in a CrewAI-like style with explicit Primary objective, Secondary objectives, Operating context, Function inside the company, Constraints, Communication style, Tool usage rules, and Autonomous execution rules.',
     'Do not use a heading named Role.',
     'Do not make the whole prompt read like a sterile template. The first impression should feel human, direct, and operational.',
-    'Do not wrap the JSON in markdown fences.',
   ];
 
   if (input.companyName?.trim() || input.companyContext?.trim()) {
