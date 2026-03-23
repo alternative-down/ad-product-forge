@@ -313,6 +313,30 @@ function AgentsWorkspacePage(input: {
         eyebrow="Agents"
         title="Agent operations"
         description="Each area should answer one question at a time: hire a collaborator, inspect runtime state, review communications, manage schedules, or inspect execution history."
+        actions={
+          input.mode === 'hire' ? (
+            <Link
+              to="/agents"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-5 text-sm font-semibold text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+            >
+              Back to roster
+            </Link>
+          ) : input.mode === 'detail' ? (
+            <Link
+              to="/agents"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-5 text-sm font-semibold text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+            >
+              Back to agents
+            </Link>
+          ) : (
+            <Link
+              to="/agents/hire"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--accent)] bg-[color:var(--accent)] px-5 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              Hire agent
+            </Link>
+          )
+        }
       />
 
       {input.mode === 'hire' ? (
@@ -341,11 +365,6 @@ function AgentsWorkspacePage(input: {
         <WorkspaceCanvas
           title="Agent roster"
           description="Open an agent to inspect runtime, communications, schedules, and execution history. Hiring lives in its own route."
-          actions={
-            <Button type="button" onClick={() => void navigate({ to: '/agents/hire' })}>
-              Hire agent
-            </Button>
-          }
         >
           {agentsQuery.isLoading && <PanelLoading label="Loading agents" />}
           {agentsQuery.isError && <PanelError message={agentsQuery.error.message} />}

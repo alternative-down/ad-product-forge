@@ -6,6 +6,7 @@ export function PageHeader(input: {
   eyebrow: string;
   title: string;
   description: string;
+  actions?: ReactNode;
   className?: string;
 }) {
   return (
@@ -15,18 +16,21 @@ export function PageHeader(input: {
         input.className,
       )}
     >
-      <div className="space-y-3">
-        <span className="inline-flex items-center rounded-sm bg-[color:var(--panel-muted)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted-strong)]">
-          {input.eyebrow}
-        </span>
-        <div className="space-y-2">
-          <h1 className="font-serif text-3xl tracking-tight text-[color:var(--ink)] sm:text-4xl">
-            {input.title}
-          </h1>
-          <p className="max-w-3xl text-sm leading-6 text-[color:var(--muted)] sm:text-base">
-            {input.description}
-          </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-3">
+          <span className="inline-flex items-center rounded-sm bg-[color:var(--panel-muted)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted-strong)]">
+            {input.eyebrow}
+          </span>
+          <div className="space-y-2">
+            <h1 className="font-serif text-3xl tracking-tight text-[color:var(--ink)] sm:text-4xl">
+              {input.title}
+            </h1>
+            <p className="max-w-3xl text-sm leading-6 text-[color:var(--muted)] sm:text-base">
+              {input.description}
+            </p>
+          </div>
         </div>
+        {input.actions ? <div className="flex flex-wrap items-center gap-3">{input.actions}</div> : null}
       </div>
     </section>
   );

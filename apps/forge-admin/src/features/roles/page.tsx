@@ -244,6 +244,16 @@ function CapabilitiesWorkspacePage(input: {
         eyebrow="Capabilities"
         title="Capability graph"
         description="Roles define permissions. Functions compose roles. Keep one editor open at a time."
+        actions={
+          input.mode === 'detail' ? (
+            <Link
+              to="/roles"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-5 text-sm font-semibold text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+            >
+              Back to capabilities
+            </Link>
+          ) : null
+        }
       />
 
       {input.mode === 'directory' ? (
