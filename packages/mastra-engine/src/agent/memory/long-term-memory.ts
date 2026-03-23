@@ -171,46 +171,29 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       return args.messageList;
     }
 
-    const observationsByDay = new Map<string, ObservationRecord[]>();
-
+    // Save each observation as an individual file (no day grouping)
     for (const observation of pendingObservations) {
-      const day = observation.createdAt.toISOString().slice(0, 10);
-      const bucket = observationsByDay.get(day) ?? [];
-      bucket.push(observation);
-      observationsByDay.set(day, bucket);
-    }
+      const filePath = path.posix.join(this.observationsDir, `${observation.id}.md`);
+      const content = [
+        `# Observation`,
+        '',
+        `## observation:${observation.id}`,
+        `Type: ${observation.originType}`,
+        `CreatedAt: ${observation.createdAt.toISOString()}`,
+        '',
+        observation.activeObservations.trim(),
+      ]
+        .filter(Boolean)
+        .join('\n');
 
-    for (const [day, dayObservations] of observationsByDay.entries()) {
-      const filePath = path.posix.join(this.observationsDir, `${day}.md`);
-      const currentContent = await this.readFile(filePath);
-      const header = currentContent.trim() || `# Observations for ${day}`;
-      const additions = dayObservations
-        .filter((observation) => !currentContent.includes(`## observation:${observation.id}`))
-        .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
-        .map((observation) =>
-          [
-            `## observation:${observation.id}`,
-            `Type: ${observation.originType}`,
-            `CreatedAt: ${observation.createdAt.toISOString()}`,
-            '',
-            observation.activeObservations.trim(),
-          ].join('\n'),
-        );
-
-      if (additions.length === 0) {
-        continue;
-      }
-
-      const nextContent = [header, ...additions].filter(Boolean).join('\n\n').trim();
-      await this.workspace.filesystem?.writeFile(filePath, nextContent, {
+      await this.workspace.filesystem?.writeFile(filePath, content, {
         recursive: true,
         overwrite: true,
       });
-      await this.workspace.index(filePath, nextContent, {
+      await this.workspace.index(filePath, content, {
         metadata: {
-          day,
+          observationId: observation.id,
           indexName: this.searchIndexName,
-          observationCount: dayObservations.length,
         },
       });
     }
