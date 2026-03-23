@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo, useState } from 'react';
 import { Bot, Cable, LoaderCircle, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 
 import {
   deleteLlmProfile,
@@ -31,6 +32,7 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 import { Textarea } from '../../components/ui/textarea';
 import { formatDateTime } from '../../lib/format';
 import { MetricStrip, PageHeader } from '../../components/layout/page-header';
@@ -68,6 +70,8 @@ type LlmModelPriceDraft = UpsertLlmModelPriceInput;
 
 export function SystemPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate({ from: '/system' });
+  const search = useSearch({ from: '/system' });
   const integrationsQuery = useQuery({
     queryKey: ['admin', 'system-integrations'],
     queryFn: listSystemIntegrations,
@@ -169,6 +173,7 @@ export function SystemPage() {
   const systemSettings = settingsQuery.data!;
   const oauthState = oauthQuery.data!;
   const migrations = migrationsQuery.data!;
+  const selectedTab = search.tab ?? 'company';
 
   return (
     <div className="space-y-6">
@@ -216,15 +221,36 @@ export function SystemPage() {
         ]}
       />
 
-      <SystemSettingsCard
-        key={`system-settings-${systemSettings.updatedAt ?? 'unset'}`}
-        settings={systemSettings}
-        pending={upsertSystemSettingsMutation.isPending}
-        error={upsertSystemSettingsMutation.error?.message ?? null}
-        onSave={(input) => upsertSystemSettingsMutation.mutate(input)}
+      <SegmentedTabs
+        value={selectedTab}
+        items={[
+          { value: 'company', label: 'Company', description: 'context injected into every agent prompt' },
+          { value: 'llm', label: 'LLM', description: 'profiles, defaults, and pricing' },
+          { value: 'auth', label: 'OAuth', description: 'provider sync and credential visibility' },
+          { value: 'integrations', label: 'Integrations', description: 'Migadu, Coolify, GitHub' },
+          { value: 'migrations', label: 'Migrations', description: 'application migration state' },
+        ]}
+        onChange={(tab) =>
+          void navigate({
+            to: '/system',
+            search: {
+              tab,
+            },
+          })
+        }
       />
 
-      <Card className="p-6">
+      {selectedTab === 'company' && (
+        <SystemSettingsCard
+          key={`system-settings-${systemSettings.updatedAt ?? 'unset'}`}
+          settings={systemSettings}
+          pending={upsertSystemSettingsMutation.isPending}
+          error={upsertSystemSettingsMutation.error?.message ?? null}
+          onSave={(input) => upsertSystemSettingsMutation.mutate(input)}
+        />
+      )}
+
+      {selectedTab === 'llm' && <Card className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-strong)]">
@@ -237,45 +263,53 @@ export function SystemPage() {
           </div>
           <Bot className="h-5 w-5 text-slate-500" />
         </div>
-      </Card>
+      </Card>}
 
-      <LlmDefaultsCard
-        key={`llm-defaults-${systemLlm.defaults?.updatedAt ?? 'unset'}`}
-        defaults={systemLlm.defaults}
-        profiles={systemLlm.profiles}
-        pending={updateLlmDefaultsMutation.isPending}
-        error={updateLlmDefaultsMutation.error?.message ?? null}
-        onSave={(input) => updateLlmDefaultsMutation.mutate(input)}
-      />
+      {selectedTab === 'llm' && (
+        <LlmDefaultsCard
+          key={`llm-defaults-${systemLlm.defaults?.updatedAt ?? 'unset'}`}
+          defaults={systemLlm.defaults}
+          profiles={systemLlm.profiles}
+          pending={updateLlmDefaultsMutation.isPending}
+          error={updateLlmDefaultsMutation.error?.message ?? null}
+          onSave={(input) => updateLlmDefaultsMutation.mutate(input)}
+        />
+      )}
 
-      <LlmProfileEditorCard
-        profiles={systemLlm.profiles}
-        pending={upsertLlmProfileMutation.isPending}
-        deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
-        saveError={upsertLlmProfileMutation.error?.message ?? null}
-        deleteError={deleteLlmProfileMutation.error?.message ?? null}
-        onSave={(input) => upsertLlmProfileMutation.mutate(input)}
-        onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
-      />
+      {selectedTab === 'llm' && (
+        <LlmProfileEditorCard
+          profiles={systemLlm.profiles}
+          pending={upsertLlmProfileMutation.isPending}
+          deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
+          saveError={upsertLlmProfileMutation.error?.message ?? null}
+          deleteError={deleteLlmProfileMutation.error?.message ?? null}
+          onSave={(input) => upsertLlmProfileMutation.mutate(input)}
+          onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
+        />
+      )}
 
-      <LlmPricingCard
-        prices={systemLlm.prices}
-        pending={upsertLlmModelPriceMutation.isPending}
-        error={upsertLlmModelPriceMutation.error?.message ?? null}
-        onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
-      />
+      {selectedTab === 'llm' && (
+        <LlmPricingCard
+          prices={systemLlm.prices}
+          pending={upsertLlmModelPriceMutation.isPending}
+          error={upsertLlmModelPriceMutation.error?.message ?? null}
+          onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
+        />
+      )}
 
-      <OauthSyncCard
-        state={oauthState}
-        pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
-        error={syncOauthMutation.error?.message ?? null}
-        result={syncOauthMutation.data ?? null}
-        onSync={(providerId) => syncOauthMutation.mutate(providerId)}
-      />
+      {selectedTab === 'auth' && (
+        <OauthSyncCard
+          state={oauthState}
+          pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
+          error={syncOauthMutation.error?.message ?? null}
+          result={syncOauthMutation.data ?? null}
+          onSync={(providerId) => syncOauthMutation.mutate(providerId)}
+        />
+      )}
 
-      <MigrationStatusCard migrations={migrations} />
+      {selectedTab === 'migrations' && <MigrationStatusCard migrations={migrations} />}
 
-      <MigaduIntegrationCard
+      {selectedTab === 'integrations' && <MigaduIntegrationCard
         key={`migadu-${migaduIntegration?.updatedAt ?? 'new'}`}
         integration={migaduIntegration}
         pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'migadu'}
@@ -289,9 +323,9 @@ export function SystemPage() {
         )}
         onDelete={() => deleteIntegrationMutation.mutate('migadu')}
         onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />
+      />}
 
-      <CoolifyIntegrationCard
+      {selectedTab === 'integrations' && <CoolifyIntegrationCard
         key={`coolify-${coolifyIntegration?.updatedAt ?? 'new'}`}
         integration={coolifyIntegration}
         pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'coolify'}
@@ -305,9 +339,9 @@ export function SystemPage() {
         )}
         onDelete={() => deleteIntegrationMutation.mutate('coolify')}
         onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />
+      />}
 
-      <GitHubIntegrationCard
+      {selectedTab === 'integrations' && <GitHubIntegrationCard
         key={`github-${githubIntegration?.updatedAt ?? 'new'}`}
         integration={githubIntegration}
         pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'github'}
@@ -321,7 +355,7 @@ export function SystemPage() {
         )}
         onDelete={() => deleteIntegrationMutation.mutate('github')}
         onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />
+      />}
 
     </div>
   );

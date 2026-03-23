@@ -23,6 +23,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 import { MetricStrip, PageHeader } from '../../components/layout/page-header';
@@ -76,6 +77,7 @@ export function RolesPage() {
       to: '/roles',
       search: {
         roleId: rolesQuery.data.items[0].roleId,
+        tab: search.tab,
       },
       replace: true,
     });
@@ -106,6 +108,7 @@ export function RolesPage() {
         to: '/roles',
         search: {
           roleId: result.roleId,
+          tab: search.tab,
         },
       });
     },
@@ -158,6 +161,7 @@ export function RolesPage() {
         to: '/roles',
         search: {
           roleId: input.roleId,
+          tab: search.tab,
         },
       });
     },
@@ -176,6 +180,7 @@ export function RolesPage() {
         to: '/roles',
         search: {
           roleId: nextRoleId,
+          tab: search.tab,
         },
         replace: true,
       });
@@ -243,6 +248,7 @@ export function RolesPage() {
     () => groupIds(rolesQuery.data?.availableToolIds ?? []),
     [rolesQuery.data?.availableToolIds],
   );
+  const selectedTab = search.tab ?? 'roles';
 
   return (
     <div className="space-y-6">
@@ -277,6 +283,23 @@ export function RolesPage() {
         ]}
       />
 
+      <SegmentedTabs
+        value={selectedTab}
+        items={[
+          { value: 'roles', label: 'Roles', description: 'role metadata and permission grants' },
+          { value: 'functions', label: 'Functions', description: 'function definitions and role composition' },
+        ]}
+        onChange={(tab) =>
+          void navigate({
+            to: '/roles',
+            search: {
+              roleId: search.roleId,
+              tab,
+            },
+          })
+        }
+      />
+
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <div className="space-y-6">
         <Card className="overflow-hidden">
@@ -293,7 +316,7 @@ export function RolesPage() {
               <button
                 key={role.roleId}
                 type="button"
-                onClick={() => void navigate({ to: '/roles', search: { roleId: role.roleId } })}
+                onClick={() => void navigate({ to: '/roles', search: { roleId: role.roleId, tab: search.tab } })}
                 className={cn(
                   'mb-2 w-full rounded-lg border px-4 py-4 text-left transition last:mb-0',
                   search.roleId === role.roleId
@@ -331,7 +354,7 @@ export function RolesPage() {
           </div>
         </Card>
 
-        <Card className="p-6">
+        {selectedTab === 'roles' && <Card className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <Plus className="h-4 w-4 text-slate-500" />
             <h3 className="text-base font-semibold text-slate-950">Create role</h3>
@@ -368,14 +391,14 @@ export function RolesPage() {
               {createRoleMutation.isPending ? 'Creating...' : 'Create role'}
             </Button>
           </form>
-        </Card>
+        </Card>}
       </div>
 
       <div className="space-y-6">
         {functionsQuery.isLoading && <PanelLoading label="Loading functions" />}
         {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
 
-        {selectedRole && rolesQuery.data && functionsQuery.data && selectedRoleDraft && (
+        {selectedTab === 'roles' && selectedRole && rolesQuery.data && functionsQuery.data && selectedRoleDraft && (
           <Card className="p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -515,7 +538,7 @@ export function RolesPage() {
           </Card>
         )}
 
-        {functionsQuery.data && rolesQuery.data && (
+        {selectedTab === 'functions' && functionsQuery.data && rolesQuery.data && (
           <Card className="p-6">
             <div className="flex items-center justify-between gap-4">
               <div>

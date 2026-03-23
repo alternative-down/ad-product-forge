@@ -32,6 +32,7 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 import { MetricStrip, PageHeader } from '../../components/layout/page-header';
@@ -117,6 +118,7 @@ export function AgentsPage() {
       to: '/agents',
       search: {
         agentId: agentsQuery.data[0].agentId,
+        tab: search.tab,
       },
       replace: true,
     });
@@ -130,6 +132,7 @@ export function AgentsPage() {
     agentDetailQuery.data && configDraft?.agentId === agentDetailQuery.data.agentId
       ? configDraft.value
       : (agentDetailQuery.data ? createAgentConfigDraft(agentDetailQuery.data) : null);
+  const selectedTab = search.tab ?? (search.agentId ? 'runtime' : 'hire');
 
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
@@ -179,6 +182,7 @@ export function AgentsPage() {
         to: '/agents',
         search: {
           agentId: result.agentId,
+          tab: 'runtime',
         },
       });
     },
@@ -217,6 +221,7 @@ export function AgentsPage() {
         to: '/agents',
         search: {
           agentId: remainingAgents[0]?.agentId,
+          tab: search.tab,
         },
         replace: true,
       });
@@ -322,6 +327,26 @@ export function AgentsPage() {
         ]}
       />
 
+      <SegmentedTabs
+        value={selectedTab}
+        items={[
+          { value: 'hire', label: 'Hire', description: 'create and contract new agents' },
+          { value: 'runtime', label: 'Runtime', description: 'identity, function, config, github' },
+          { value: 'communications', label: 'Communications', description: 'providers, inbox, memory thread' },
+          { value: 'schedules', label: 'Schedules', description: 'agent schedules and heartbeat' },
+          { value: 'history', label: 'History', description: 'execution spend and recent steps' },
+        ]}
+        onChange={(tab) =>
+          void navigate({
+            to: '/agents',
+            search: {
+              agentId: search.agentId,
+              tab,
+            },
+          })
+        }
+      />
+
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-4">
@@ -341,7 +366,10 @@ export function AgentsPage() {
                 setScheduleDraft(null);
                 void navigate({
                   to: '/agents',
-                  search: { agentId: agent.agentId },
+                  search: {
+                    agentId: agent.agentId,
+                    tab: search.tab,
+                  },
                 });
               }}
               className={cn(
@@ -388,41 +416,45 @@ export function AgentsPage() {
       </Card>
 
       <div className="space-y-6">
-        <HireAgentCard
-          draft={hireDraft}
-          pending={hireMutation.isPending}
-          error={hireMutation.error?.message ?? null}
-          result={hireResult}
-          onChange={setHireDraft}
-          onSubmit={(draft) => {
-            hireMutation.mutate({
-              hiringRequest: draft.hiringRequest,
-              additionalContext: draft.additionalContext || undefined,
-              weeklyBudgetUsd: Number(draft.weeklyBudgetUsd),
-            });
-          }}
-        />
+        {selectedTab === 'hire' && (
+          <HireAgentCard
+            draft={hireDraft}
+            pending={hireMutation.isPending}
+            error={hireMutation.error?.message ?? null}
+            result={hireResult}
+            onChange={setHireDraft}
+            onSubmit={(draft) => {
+              hireMutation.mutate({
+                hiringRequest: draft.hiringRequest,
+                additionalContext: draft.additionalContext || undefined,
+                weeklyBudgetUsd: Number(draft.weeklyBudgetUsd),
+              });
+            }}
+          />
+        )}
         {agentDetailQuery.isLoading && <PanelLoading label="Loading agent detail" />}
         {agentDetailQuery.isError && <PanelError message={agentDetailQuery.error.message} />}
         {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
         {agentDetailQuery.data && (
           <>
-            <AgentHeader
-              agent={agentDetailQuery.data}
-              onWake={() => wakeMutation.mutate(agentDetailQuery.data!.agentId)}
-              onReload={() => reloadMutation.mutate(agentDetailQuery.data!.agentId)}
-              onTopUpContract={(amountUsd) =>
-                topUpContractMutation.mutate({
-                  agentId: agentDetailQuery.data!.agentId,
-                  amountUsd,
-                })
-              }
-              wakePending={wakeMutation.isPending}
-              reloadPending={reloadMutation.isPending}
-              topUpPending={topUpContractMutation.isPending}
-              topUpError={topUpContractMutation.error?.message ?? null}
-            />
-            {functionsQuery.data && (
+            {selectedTab !== 'hire' && (
+              <AgentHeader
+                agent={agentDetailQuery.data}
+                onWake={() => wakeMutation.mutate(agentDetailQuery.data!.agentId)}
+                onReload={() => reloadMutation.mutate(agentDetailQuery.data!.agentId)}
+                onTopUpContract={(amountUsd) =>
+                  topUpContractMutation.mutate({
+                    agentId: agentDetailQuery.data!.agentId,
+                    amountUsd,
+                  })
+                }
+                wakePending={wakeMutation.isPending}
+                reloadPending={reloadMutation.isPending}
+                topUpPending={topUpContractMutation.isPending}
+                topUpError={topUpContractMutation.error?.message ?? null}
+              />
+            )}
+            {selectedTab === 'runtime' && functionsQuery.data && (
               <AgentMaintenanceCard
                 agent={agentDetailQuery.data}
                 functions={functionsQuery.data}
@@ -450,8 +482,10 @@ export function AgentsPage() {
                 terminateError={terminateMutation.error?.message ?? null}
               />
             )}
-            <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
-            {selectedAgentConfig && (
+            {selectedTab === 'runtime' && (
+              <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
+            )}
+            {selectedTab === 'runtime' && selectedAgentConfig && (
               <AgentConfigurationCard
                 draft={selectedAgentConfig}
                 pending={updateConfigMutation.isPending}
@@ -479,73 +513,81 @@ export function AgentsPage() {
                 }
               />
             )}
-            <AgentProvidersCard
-              agent={agentDetailQuery.data}
-              draftByKey={providerDrafts}
-              newProviderDraft={newProviderDraft}
-              onChangeProviderDraft={(providerType, credentialsText) => {
-                const agentId = agentDetailQuery.data!.agentId;
-                const key = buildProviderDraftKey(agentId, providerType);
+            {selectedTab === 'communications' && (
+              <AgentProvidersCard
+                agent={agentDetailQuery.data}
+                draftByKey={providerDrafts}
+                newProviderDraft={newProviderDraft}
+                onChangeProviderDraft={(providerType, credentialsText) => {
+                  const agentId = agentDetailQuery.data!.agentId;
+                  const key = buildProviderDraftKey(agentId, providerType);
 
-                setProviderDrafts((current) => ({
-                  ...current,
-                  [key]: {
+                  setProviderDrafts((current) => ({
+                    ...current,
+                    [key]: {
+                      providerType,
+                      credentialsText,
+                    },
+                  }));
+                }}
+                onChangeNewProviderDraft={setNewProviderDraft}
+                onSaveProvider={(providerType, credentialsText) =>
+                  upsertProviderMutation.mutate({
+                    agentId: agentDetailQuery.data!.agentId,
                     providerType,
                     credentialsText,
-                  },
-                }));
-              }}
-              onChangeNewProviderDraft={setNewProviderDraft}
-              onSaveProvider={(providerType, credentialsText) =>
-                upsertProviderMutation.mutate({
-                  agentId: agentDetailQuery.data!.agentId,
-                  providerType,
-                  credentialsText,
-                })
-              }
-              onDeleteProvider={(providerType) =>
-                deleteProviderMutation.mutate({
-                  agentId: agentDetailQuery.data!.agentId,
-                  providerType,
-                })
-              }
-              onCreateProvider={() =>
-                upsertProviderMutation.mutate({
-                  agentId: agentDetailQuery.data!.agentId,
-                  providerType: newProviderDraft.providerType,
-                  credentialsText: newProviderDraft.credentialsText,
-                })
-              }
-              pendingProviderType={
-                upsertProviderMutation.variables?.providerType ??
-                deleteProviderMutation.variables?.providerType ??
-                null
-              }
-              error={
-                upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
-              }
-            />
-            <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
-            <AgentInboxCard
-              notifications={agentDetailQuery.data.recentNotifications}
-              conversations={agentDetailQuery.data.recentConversations}
-            />
-            <SchedulesCard
-              schedules={agentDetailQuery.data.schedules}
-              heartbeat={agentDetailQuery.data.heartbeat}
-              onCreateSchedule={() => setScheduleDraft(createEmptyScheduleDraft())}
-              onEditSchedule={(schedule) =>
-                setScheduleDraft(createScheduleDraftFromRecord(schedule))
-              }
-              onDeleteSchedule={(scheduleId) =>
-                deleteScheduleMutation.mutate({
-                  agentId: agentDetailQuery.data!.agentId,
-                  scheduleId,
-                })
-              }
-              deletingScheduleId={deleteScheduleMutation.variables?.scheduleId}
-            />
-            {scheduleDraft && (
+                  })
+                }
+                onDeleteProvider={(providerType) =>
+                  deleteProviderMutation.mutate({
+                    agentId: agentDetailQuery.data!.agentId,
+                    providerType,
+                  })
+                }
+                onCreateProvider={() =>
+                  upsertProviderMutation.mutate({
+                    agentId: agentDetailQuery.data!.agentId,
+                    providerType: newProviderDraft.providerType,
+                    credentialsText: newProviderDraft.credentialsText,
+                  })
+                }
+                pendingProviderType={
+                  upsertProviderMutation.variables?.providerType ??
+                  deleteProviderMutation.variables?.providerType ??
+                  null
+                }
+                error={
+                  upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
+                }
+              />
+            )}
+            {selectedTab === 'communications' && (
+              <AgentThreadCard messages={agentDetailQuery.data.recentThreadMessages} />
+            )}
+            {selectedTab === 'communications' && (
+              <AgentInboxCard
+                notifications={agentDetailQuery.data.recentNotifications}
+                conversations={agentDetailQuery.data.recentConversations}
+              />
+            )}
+            {selectedTab === 'schedules' && (
+              <SchedulesCard
+                schedules={agentDetailQuery.data.schedules}
+                heartbeat={agentDetailQuery.data.heartbeat}
+                onCreateSchedule={() => setScheduleDraft(createEmptyScheduleDraft())}
+                onEditSchedule={(schedule) =>
+                  setScheduleDraft(createScheduleDraftFromRecord(schedule))
+                }
+                onDeleteSchedule={(scheduleId) =>
+                  deleteScheduleMutation.mutate({
+                    agentId: agentDetailQuery.data!.agentId,
+                    scheduleId,
+                  })
+                }
+                deletingScheduleId={deleteScheduleMutation.variables?.scheduleId}
+              />
+            )}
+            {selectedTab === 'schedules' && scheduleDraft && (
               <ScheduleEditorCard
                 draft={scheduleDraft}
                 pending={createScheduleMutation.isPending || updateScheduleMutation.isPending}
@@ -570,7 +612,7 @@ export function AgentsPage() {
                 }}
               />
             )}
-            <ExecutionCard agent={agentDetailQuery.data} />
+            {selectedTab === 'history' && <ExecutionCard agent={agentDetailQuery.data} />}
           </>
         )}
       </div>
