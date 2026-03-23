@@ -76,6 +76,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       workspaceBasePath: input.workspaceBasePath,
       githubApps: input.githubApps,
       emailMailboxes: input.emailMailboxes,
+      coolify: input.coolify,
       schedules: input.schedules,
     });
     throw error;
@@ -87,6 +88,7 @@ export async function runInternalTermination(db: Database, input: {
   workspaceBasePath: string;
   githubApps: RunInternalHiringInput['githubApps'];
   emailMailboxes: RunInternalHiringInput['emailMailboxes'];
+  coolify: RunInternalHiringInput['coolify'];
   schedules: RunInternalHiringInput['schedules'];
 }) {
   return terminateInternalAgent(db, input);

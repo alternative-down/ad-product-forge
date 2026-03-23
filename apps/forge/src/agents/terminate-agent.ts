@@ -8,6 +8,7 @@ import { agents } from '../database/schema';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
+import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 
 export async function terminateInternalAgent(db: Database, input: {
@@ -15,6 +16,7 @@ export async function terminateInternalAgent(db: Database, input: {
   workspaceBasePath: string;
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
+  coolify: CoolifyManager | null;
   schedules: ReturnType<typeof createAgentScheduleManager>;
 }) {
   const agent = await db.query.agents.findFirst({

@@ -70,6 +70,7 @@ export function createInternalAgentWorkflows(config: {
         workspaceBasePath: config.workspaceBasePath,
         githubApps: config.githubApps,
         emailMailboxes: config.emailMailboxes,
+        coolify: config.coolify,
         schedules: config.schedules,
       });
     },
