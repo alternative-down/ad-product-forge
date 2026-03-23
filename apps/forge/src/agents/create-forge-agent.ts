@@ -202,6 +202,7 @@ export async function createInternalAgentRuntime<
       agentId: config.id,
       om,
       memoryBasePath: agentMemoryPath,
+      consolidationTrigger: 'lastStep',
     });
     inputProcessors.push(longTermMemory);
     outputProcessors.push(longTermMemory);

@@ -25,12 +25,16 @@ export type LongTermMemoryConfig = {
   workspace: Workspace;
   vectorStore: LibSQLVector;
   searchIndexName: string;
+  consolidationTrigger?: 'lastStep' | 'onIdle';
+  consolidationInstructions?: string;
 };
 
 export class LongTermMemory implements Processor<'long-term-memory'> {
   readonly id = 'long-term-memory';
   readonly name = 'Long Term Memory';
   private readonly observationsDir = 'observations';
+  private readonly archivedDir = 'archived';
+  private readonly memoryDir = 'memory';
   private readonly maxRecentRecallMessages = 8;
   private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
   private readonly incrementalHistoryLimit = 12;
@@ -39,15 +43,27 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly workspace: Workspace;
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
+  private readonly consolidationTrigger: 'lastStep' | 'onIdle';
+  private readonly consolidationInstructions: string;
 
   constructor(config: LongTermMemoryConfig) {
     this.om = config.om;
     this.workspace = config.workspace;
     this.vectorStore = config.vectorStore;
     this.searchIndexName = config.searchIndexName;
+    this.consolidationTrigger = config.consolidationTrigger || 'lastStep';
+    this.consolidationInstructions =
+      config.consolidationInstructions ||
+      'Consolidate observations into organized knowledge. Extract insights, learnings, processes, and key information from /observations. Create organized files in /memory with meaningful names. Move processed observations to /archived.';
   }
 
-  static async create(config: { agentId: string; om: ObservationalMemory; memoryBasePath?: string }) {
+  static async create(config: {
+    agentId: string;
+    om: ObservationalMemory;
+    memoryBasePath?: string;
+    consolidationTrigger?: 'lastStep' | 'onIdle';
+    consolidationInstructions?: string;
+  }) {
     const indexName = `${config.agentId}_memory_search`.replace(/[^a-zA-Z0-9_]/g, '_');
     const memoryPath = config.memoryBasePath || path.resolve(process.cwd(), MEMORY_WORKSPACE_ROOT, config.agentId);
     const vectorStorePath = path.resolve(path.dirname(memoryPath), `${config.agentId}-memory-workspace.db`);
@@ -59,7 +75,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const workspace = new WorkspaceRuntime({
       bm25: true,
       autoSync: true,
-      autoIndexPaths: ['/'],
+      autoIndexPaths: ['/observations', '/memory', '/archived'],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({
         basePath: memoryPath,
@@ -80,6 +96,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       workspace,
       vectorStore,
       searchIndexName: indexName,
+      consolidationTrigger: config.consolidationTrigger,
+      consolidationInstructions: config.consolidationInstructions,
     });
   }
 
@@ -145,12 +163,12 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
     const context = this.getThreadContext(args.requestContext, args.messageList);
     if (!context) {
-      return args.messageList;
+      return args.messages;
     }
 
     const currentRecord = await this.om.getRecord(context.threadId, context.resourceId);
     if (!currentRecord) {
-      return args.messageList;
+      return args.messages;
     }
 
     const hasObservationsDir =
@@ -181,7 +199,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         `Type: ${observation.originType}`,
         `CreatedAt: ${observation.createdAt.toISOString()}`,
         '',
-        observation.activeObservations.trim(),
+        observation.activeObservations,
       ]
         .filter(Boolean)
         .join('\n');
@@ -198,7 +216,99 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       });
     }
 
+    // Check if this is the last step (no toolCalls + has text response)
+    // This triggers consolidation when the agent completes a run
+    if (this.consolidationTrigger === 'lastStep') {
+      const hasToolCalls = args.messages.some(
+        (msg) =>
+          msg.role === 'assistant' &&
+          Array.isArray(msg.content) &&
+          msg.content.some((c) => 'type' in c && c.type === 'tool-use'),
+      );
+      // Check for text content - look for string messages from assistant
+      const hasTextResponse = args.messages.some((msg) => {
+        if (msg.role !== 'assistant') return false;
+        const content = msg.content as unknown as string | undefined;
+        return typeof content === 'string' && content.trim().length > 0;
+      });
+
+      const isLastStep = !hasToolCalls && hasTextResponse;
+
+      if (isLastStep) {
+        // Fire-and-forget consolidation
+        this.runConsolidation(pendingObservations, currentRecord.id).catch((error: unknown) => {
+          forgeDebug('ltm', 'consolidation failed', { error: String(error) });
+        });
+      }
+    }
+
     return args.messageList;
+  }
+
+  private async runConsolidation(
+    observations: ObservationRecord[],
+    latestObservationId: string,
+  ): Promise<void> {
+    try {
+      if (observations.length === 0) {
+        return;
+      }
+
+      // Create consolidated knowledge file in /memory
+      const today = new Date().toISOString().split('T')[0];
+      const consolidatedFileName = `consolidated-${today}.md`;
+      const consolidatedPath = path.posix.join(this.memoryDir, consolidatedFileName);
+
+      const consolidatedContent = [
+        `# Consolidated Memory - ${today}`,
+        '',
+        `Generated from ${observations.length} observation(s).`,
+        '',
+        ...observations.map((obs) => [
+          `## observation:${obs.id}`,
+          `Type: ${obs.originType}`,
+          `CreatedAt: ${obs.createdAt.toISOString()}`,
+          '',
+          obs.activeObservations,
+        ].join('\n')),
+      ].join('\n\n');
+
+      await this.workspace.filesystem?.writeFile(consolidatedPath, consolidatedContent, {
+        recursive: true,
+        overwrite: true,
+      });
+
+      // Index the consolidated file
+      await this.workspace.index(consolidatedPath, consolidatedContent, {
+        metadata: {
+          type: 'consolidated',
+          indexName: this.searchIndexName,
+        },
+      });
+
+      // Move the latest observation to /archived
+      const observationFilePath = path.posix.join(this.observationsDir, `${latestObservationId}.md`);
+      const archivedFilePath = path.posix.join(this.archivedDir, `${latestObservationId}.md`);
+
+      const obsExists = (await this.workspace.filesystem?.exists(observationFilePath)) ?? false;
+      if (obsExists) {
+        const obsContent = await this.workspace.filesystem?.readFile(observationFilePath);
+        if (obsContent && typeof obsContent === 'string') {
+          await this.workspace.filesystem?.writeFile(archivedFilePath, obsContent, {
+            recursive: true,
+            overwrite: true,
+          });
+          forgeDebug('ltm', 'observation archived', { observationId: latestObservationId });
+        }
+      }
+
+      forgeDebug('ltm', 'consolidation completed', {
+        observationCount: observations.length,
+        consolidatedFile: consolidatedFileName,
+      });
+    } catch (error) {
+      forgeDebug('ltm', 'consolidation error', { error: String(error) });
+    }
   }
 
   private async readFile(filePath: string) {
