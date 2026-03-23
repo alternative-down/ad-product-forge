@@ -243,15 +243,32 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   }
 
   async function estimateStepCostUsd() {
-    const recentSteps = await store.listRecentSteps(runtime.id, RECENT_STEP_LIMIT);
-    const recentAgentSteps = recentSteps.filter((step) => step.kind === 'agent-step');
+    if (!runtime.modelProfileId) {
+      throw new Error(`Agent runtime is missing primary model profile: ${runtime.id}`);
+    }
 
-    if (recentAgentSteps.length === 0) {
+    const recentSteps = await store.listRecentSteps(runtime.id, RECENT_STEP_LIMIT);
+
+    if (recentSteps.length === 0) {
       return null;
     }
 
-    const totalRecentUsd = recentSteps.reduce((total, step) => total + step.costUsd, 0);
-    return totalRecentUsd / recentAgentSteps.length;
+    const averageStepUsd =
+      recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
+    const pricing = await store.getUsagePricing({
+      pricingModelKey: runtime.pricingModelKey,
+      profileId: runtime.modelProfileId,
+    });
+    const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
+
+    if (!pricing.modelPrice || !lastAgentStep) {
+      return averageStepUsd;
+    }
+
+    const inputEstimatedUsd =
+      ((lastAgentStep.inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd) *
+      pricing.contractCostMultiplier;
+    return (inputEstimatedUsd + averageStepUsd) / 2;
   }
 
   function calculateDelayMs(
