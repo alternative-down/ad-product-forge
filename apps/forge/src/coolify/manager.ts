@@ -32,6 +32,10 @@ const ApplicationSchema = z.object({
   repository: z.string().nullish(),
   git_branch: z.string().nullish(),
   ports_exposes: z.string().nullish(),
+  destination: z.object({
+    uuid: z.string(),
+    name: z.string().optional(),
+  }).optional(),
 }).passthrough();
 
 const ApplicationEnvSchema = z.object({
@@ -469,6 +473,7 @@ export function createCoolifyManager(config: {
   }
 
   async function getServerDestinationUuid(serverUuid: string, cachedServer?: z.infer<typeof ServerSchema>) {
+    // First try: direct fields on server (legacy compatibility)
     const server = cachedServer ?? extractItem(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`), ServerSchema);
     const directDestination = server.proxy?.uuid ?? server.proxy_uuid;
 
@@ -476,7 +481,17 @@ export function createCoolifyManager(config: {
       return directDestination;
     }
 
-    // Try to find destination from server resources
+    // Second try: get destination from an existing application on this server
+    // This is the correct approach for Coolify v4 where destinations are stored per-application
+    const applications = extractCollection(await requestJson('GET', '/applications'), ApplicationSchema);
+    const appWithDestination = applications.find((app) => app.destination?.uuid);
+
+    if (appWithDestination?.destination?.uuid) {
+      console.log(`[Coolify] Found destination ${appWithDestination.destination.uuid} from application ${appWithDestination.name} (${appWithDestination.uuid})`);
+      return appWithDestination.destination.uuid;
+    }
+
+    // Third try: find destination from server resources (legacy compatibility)
     const resources = await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}/resources`);
     const resource = extractFirstMatchingCollectionItem(resources, z.object({
       uuid: z.string(),
@@ -491,7 +506,7 @@ export function createCoolifyManager(config: {
       return resource.uuid;
     }
 
-    // Try searching all servers for destinations
+    // Fourth try: search all servers for destinations
     const servers = extractCollection(await requestJson('GET', '/servers'), ServerSchema);
     for (const s of servers) {
       if (s.proxy?.uuid || s.proxy_uuid) {
