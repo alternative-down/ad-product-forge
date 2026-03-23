@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Activity, Bot, Cable, KeyRound, Shield, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Activity, Bot, Cable, KeyRound, Moon, Shield, Sun, Wallet } from 'lucide-react';
 import { Link, Outlet } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
@@ -24,11 +24,20 @@ const navigationItems = [
 
 export function AppShell() {
   const [adminApiKey, setAdminApiKey] = useState(() => getStoredAdminApiKey());
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const storedTheme = window.localStorage.getItem('forge-admin-theme');
+    return storedTheme === 'dark' ? 'dark' : 'light';
+  });
   const overviewQuery = useQuery({
     queryKey: ['admin', 'overview', adminApiKey],
     queryFn: getOverview,
     enabled: Boolean(adminApiKey),
   });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('forge-admin-theme', theme);
+  }, [theme]);
 
   if (!adminApiKey || overviewQuery.error instanceof AdminApiKeyError) {
     return (
@@ -54,15 +63,27 @@ export function AppShell() {
         <aside className="rounded-md bg-[color:var(--bg-rail)] p-5 text-white">
           <div className="flex h-full flex-col">
             <div className="border-b border-white/10 pb-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/50">
-                Alternative Down
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/50">
+                    Alternative Down
+                  </div>
+                  <h1 className="mt-3 font-serif text-[2rem] leading-none tracking-tight">
+                    Forge Admin
+                  </h1>
+                  <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">
+                    Clear admin surfaces for agents, finance, system wiring, and capabilities.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                  onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
+                >
+                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
               </div>
-              <h1 className="mt-3 font-serif text-[2rem] leading-none tracking-tight">
-                Forge Admin
-              </h1>
-              <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">
-                Clear admin surfaces for agents, finance, system wiring, and capabilities.
-              </p>
             </div>
 
             <nav className="mt-6 space-y-2">
@@ -75,16 +96,16 @@ export function AppShell() {
                     to={item.to}
                     activeOptions={{ exact: item.to === '/' }}
                     activeProps={{
-                      className: 'border-[color:var(--accent)] bg-white text-slate-950',
+                      className: 'border-[color:var(--accent)] bg-[color:var(--panel-strong)] text-[color:var(--ink)]',
                     }}
                     className="group flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3.5 text-left transition hover:border-white/20 hover:bg-white/8"
                   >
-                    <div className="mt-0.5 rounded-md border border-white/10 bg-white/8 p-2 text-white/80 group-[.active]:text-slate-950">
+                    <div className="mt-0.5 rounded-md border border-white/10 bg-white/8 p-2 text-white/80 group-[.active]:text-[color:var(--ink)]">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-semibold">{item.label}</div>
-                      <div className="mt-1 text-xs leading-5 text-white/55 group-[.active]:text-slate-500">
+                      <div className="mt-1 text-xs leading-5 text-white/55 group-[.active]:text-[color:var(--muted)]">
                         {item.caption}
                       </div>
                     </div>
@@ -130,14 +151,33 @@ function AdminApiKeyGate(input: {
   onClear(): void;
 }) {
   const [value, setValue] = useState(input.initialValue);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const storedTheme = window.localStorage.getItem('forge-admin-theme');
+    return storedTheme === 'dark' ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('forge-admin-theme', theme);
+  }, [theme]);
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center">
         <Card className="grid w-full overflow-hidden lg:grid-cols-[1.1fr_0.9fr]">
           <div className="bg-[color:var(--bg-rail)] px-8 py-10 text-white">
-            <div className="inline-flex items-center rounded-md border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
-              Access gate
+            <div className="flex items-start justify-between gap-4">
+              <div className="inline-flex items-center rounded-md border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
+                Access gate
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
+              >
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
             </div>
             <h1 className="mt-6 font-serif text-4xl tracking-tight">Unlock Forge Admin</h1>
             <p className="mt-4 max-w-md text-sm leading-6 text-white/65">
