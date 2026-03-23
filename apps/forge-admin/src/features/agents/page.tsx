@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Bot, Clock3, LoaderCircle, Trash2, UserPlus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 
 import {
   changeAgentFunction,
@@ -357,10 +357,10 @@ function AgentsWorkspacePage(input: {
                 });
 
                 return (
-                  <button
+                  <Link
                     key={agent.agentId}
-                    type="button"
-                    onClick={() => void navigate(detailLocation)}
+                    to={detailLocation.to}
+                    params={detailLocation.params}
                     className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 text-left transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -377,7 +377,7 @@ function AgentsWorkspacePage(input: {
                       <div>Status: {agent.executionState}</div>
                     </div>
                     <div className="mt-5 text-sm font-semibold text-[color:var(--accent)]">Open agent</div>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
