@@ -77,7 +77,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       return;
     }
 
+    instant = true;
     needsWakePrompt = true;
+    lastWakeStartedAt = Date.now();
     await queueNextStep();
   }
 
