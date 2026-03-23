@@ -13,13 +13,14 @@ import { formatUsd } from '../../lib/format';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { cn } from '../../lib/utils';
 
 const navigationItems = [
-  { to: '/', label: 'Overview', icon: Activity, caption: 'signal and finance pulse' },
-  { to: '/agents', label: 'Agents', icon: Bot, caption: 'hire, runtime, communications' },
-  { to: '/finance', label: 'Finance', icon: Wallet, caption: 'cash, payables, ledger' },
-  { to: '/system', label: 'System', icon: Cable, caption: 'company, models, integrations' },
-  { to: '/roles', label: 'Roles', icon: Shield, caption: 'functions and capability graph' },
+  { to: '/', label: 'Overview', icon: Activity },
+  { to: '/agents', label: 'Agents', icon: Bot },
+  { to: '/finance', label: 'Finance', icon: Wallet },
+  { to: '/system', label: 'System', icon: Cable },
+  { to: '/roles', label: 'Capabilities', icon: Shield },
 ] as const;
 
 export function AppShell() {
@@ -44,6 +45,8 @@ export function AppShell() {
       <AdminApiKeyGate
         initialValue={adminApiKey}
         errorMessage={overviewQuery.error instanceof AdminApiKeyError ? overviewQuery.error.message : null}
+        theme={theme}
+        onThemeToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
         onSave={(value) => {
           setStoredAdminApiKey(value);
           setAdminApiKey(value.trim());
@@ -58,88 +61,57 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen text-[color:var(--ink)]">
-      <div className="grid min-h-screen gap-6 px-4 py-4 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-5">
-        <aside className="rounded-md bg-[color:var(--bg-rail)] p-5 text-white">
-          <div className="flex h-full flex-col">
-            <div className="border-b border-white/10 pb-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/50">
-                    Alternative Down
-                  </div>
-                  <h1 className="mt-3 font-serif text-[2rem] leading-none tracking-tight">
-                    Forge Admin
-                  </h1>
-                  <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">
-                    Clear admin surfaces for agents, finance, system wiring, and capabilities.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-                  onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
-                >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </Button>
+    <div className="min-h-screen bg-[color:var(--bg)] text-[color:var(--ink)]">
+      <header className="border-b border-[color:var(--panel-border)] bg-[color:var(--panel)] backdrop-blur">
+        <div className="flex flex-col gap-4 px-4 py-4 lg:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted)]">
+                Alternative Down
               </div>
+              <div className="mt-1 text-2xl font-semibold tracking-tight">Forge Admin</div>
             </div>
 
-            <nav className="mt-6 space-y-2">
-              {navigationItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    activeOptions={{ exact: item.to === '/' }}
-                    activeProps={{
-                      className: 'border-[color:var(--accent)] bg-[color:var(--panel-strong)] text-[color:var(--ink)]',
-                    }}
-                    className="group flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3.5 text-left transition hover:border-white/20 hover:bg-white/8"
-                  >
-                    <div className="mt-0.5 rounded-md border border-white/10 bg-white/8 p-2 text-white/80 group-[.active]:text-[color:var(--ink)]">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold">{item.label}</div>
-                      <div className="mt-1 text-xs leading-5 text-white/55 group-[.active]:text-[color:var(--muted)]">
-                        {item.caption}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="mt-6 rounded-md border border-white/10 bg-white/5 px-4 py-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/45">
-                Current state
+            <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-5 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-4 py-2 text-sm text-[color:var(--muted)] md:flex">
+                <span>Agents {overviewQuery.data?.totals.agents ?? '—'}</span>
+                <span>Running {overviewQuery.data?.totals.runningAgents ?? '—'}</span>
+                <span>Cash {formatUsd(overviewQuery.data?.cash.balanceUsd)}</span>
               </div>
-              <div className="mt-3 space-y-2 text-sm text-white/70">
-                <div className="flex items-center justify-between gap-4">
-                  <span>Agents</span>
-                  <span>{overviewQuery.data?.totals.agents ?? '—'}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span>Running</span>
-                  <span>{overviewQuery.data?.totals.runningAgents ?? '—'}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span>Cash</span>
-                  <span>{formatUsd(overviewQuery.data?.cash.balanceUsd)}</span>
-                </div>
-              </div>
+              <Button type="button" variant="secondary" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}>
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
             </div>
           </div>
-        </aside>
 
-        <main className="min-w-0 py-2 pr-1">
-          <Outlet />
-        </main>
-      </div>
+          <nav className="flex flex-wrap gap-2">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  activeOptions={{ exact: item.to === '/' }}
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-4 py-2 text-sm font-semibold text-[color:var(--muted-strong)] transition hover:border-[color:var(--panel-border-strong)] hover:text-[color:var(--ink)]',
+                  )}
+                  activeProps={{
+                    className: 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--ink)]',
+                  }}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      <main className="px-4 py-6 lg:px-6">
+        <Outlet />
+      </main>
     </div>
   );
 }
@@ -147,19 +119,12 @@ export function AppShell() {
 function AdminApiKeyGate(input: {
   initialValue: string;
   errorMessage: string | null;
+  theme: 'light' | 'dark';
+  onThemeToggle(): void;
   onSave(value: string): void;
   onClear(): void;
 }) {
   const [value, setValue] = useState(input.initialValue);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const storedTheme = window.localStorage.getItem('forge-admin-theme');
-    return storedTheme === 'dark' ? 'dark' : 'light';
-  });
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem('forge-admin-theme', theme);
-  }, [theme]);
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6">
@@ -174,9 +139,9 @@ function AdminApiKeyGate(input: {
                 type="button"
                 variant="ghost"
                 className="border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-                onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
+                onClick={input.onThemeToggle}
               >
-                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {input.theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
             </div>
             <h1 className="mt-6 font-serif text-4xl tracking-tight">Unlock Forge Admin</h1>

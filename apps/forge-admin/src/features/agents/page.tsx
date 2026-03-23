@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Bot, Clock3, LoaderCircle, Trash2, UserPlus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 
 import {
   changeAgentFunction,
@@ -71,10 +71,36 @@ type ProviderDraft = {
   credentialsText: string;
 };
 
+type AgentDetailTab = 'runtime' | 'communications' | 'schedules' | 'history';
+type AgentRuntimeView = 'assignment' | 'configuration' | 'contract' | 'github';
+type AgentCommunicationView = 'providers' | 'inbox' | 'thread';
+
 export function AgentsPage() {
+  return <AgentsWorkspacePage mode="directory" />;
+}
+
+export function AgentHirePage() {
+  return <AgentsWorkspacePage mode="hire" />;
+}
+
+export function AgentDetailPage(input: {
+  agentId: string;
+  tab: AgentDetailTab;
+  runtimeView?: AgentRuntimeView;
+  communicationView?: AgentCommunicationView;
+}) {
+  return <AgentsWorkspacePage {...input} mode="detail" />;
+}
+
+function AgentsWorkspacePage(input: {
+  mode: 'directory' | 'hire' | 'detail';
+  agentId?: string;
+  tab?: AgentDetailTab;
+  runtimeView?: AgentRuntimeView;
+  communicationView?: AgentCommunicationView;
+}) {
   const queryClient = useQueryClient();
-  const navigate = useNavigate({ from: '/agents' });
-  const search = useSearch({ from: '/agents' });
+  const navigate = useNavigate();
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft | null>(null);
   const [hireDraft, setHireDraft] = useState<HireAgentDraft>({
     hiringRequest: '',
@@ -105,27 +131,10 @@ export function AgentsPage() {
     queryFn: listFunctions,
   });
   const agentDetailQuery = useQuery({
-    queryKey: ['admin', 'agent', search.agentId],
-    queryFn: () => getAgent(search.agentId!),
-    enabled: Boolean(search.agentId),
+    queryKey: ['admin', 'agent', input.agentId],
+    queryFn: () => getAgent(input.agentId!),
+    enabled: Boolean(input.agentId),
   });
-
-  useEffect(() => {
-    if (search.agentId || !agentsQuery.data?.length) {
-      return;
-    }
-
-    void navigate({
-      to: '/agents',
-      search: {
-        agentId: agentsQuery.data[0].agentId,
-        tab: search.tab,
-        runtimeView: search.runtimeView,
-        communicationView: search.communicationView,
-      },
-      replace: true,
-    });
-  }, [agentsQuery.data, navigate, search.agentId, search.communicationView, search.runtimeView, search.tab]);
 
   const selectedAgentFunctionId =
     agentDetailQuery.data && functionDraft?.agentId === agentDetailQuery.data.agentId
@@ -135,9 +144,9 @@ export function AgentsPage() {
     agentDetailQuery.data && configDraft?.agentId === agentDetailQuery.data.agentId
       ? configDraft.value
       : (agentDetailQuery.data ? createAgentConfigDraft(agentDetailQuery.data) : null);
-  const selectedTab = search.tab ?? (search.agentId ? 'runtime' : 'hire');
-  const selectedRuntimeView = search.runtimeView ?? 'assignment';
-  const selectedCommunicationView = search.communicationView ?? 'providers';
+  const selectedTab: AgentDetailTab = input.tab ?? 'runtime';
+  const selectedRuntimeView = input.runtimeView ?? 'assignment';
+  const selectedCommunicationView = input.communicationView ?? 'providers';
 
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
@@ -183,15 +192,13 @@ export function AgentsPage() {
         queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
       ]);
 
-      void navigate({
-        to: '/agents',
-        search: {
-          agentId: result.agentId,
-          tab: 'runtime',
-          runtimeView: 'assignment',
-          communicationView: search.communicationView,
-        },
+      const nextLocation = buildAgentLocation({
+        agentId: result.agentId,
+        tab: 'runtime',
+        runtimeView: 'assignment',
       });
+
+      void navigate(nextLocation);
     },
   });
   const changeFunctionMutation = useMutation({
@@ -219,19 +226,8 @@ export function AgentsPage() {
         queryClient.removeQueries({ queryKey: ['admin', 'agent', agentId] }),
       ]);
 
-      const remainingAgents = await queryClient.fetchQuery({
-        queryKey: ['admin', 'agents'],
-        queryFn: listAgents,
-      });
-
       void navigate({
         to: '/agents',
-        search: {
-          agentId: remainingAgents[0]?.agentId,
-          tab: search.tab,
-          runtimeView: search.runtimeView,
-          communicationView: search.communicationView,
-        },
         replace: true,
       });
     },
@@ -302,12 +298,7 @@ export function AgentsPage() {
       setScheduleDraft(null);
     },
   });
-  const agentTabs: Array<{
-    value: 'hire' | 'runtime' | 'communications' | 'schedules' | 'history';
-    label: string;
-    detail: string;
-  }> = [
-    { value: 'hire', label: 'Hire', detail: 'one action: describe the collaborator to create' },
+  const detailTabs: Array<{ value: AgentDetailTab; label: string; detail: string }> = [
     { value: 'runtime', label: 'Runtime', detail: 'identity, config, contract, GitHub provisioning' },
     { value: 'communications', label: 'Communications', detail: 'providers, inbox, and memory thread' },
     { value: 'schedules', label: 'Schedules', detail: 'heartbeat and explicit wake schedules' },
@@ -322,7 +313,7 @@ export function AgentsPage() {
         description="Each area should answer one question at a time: hire a collaborator, inspect runtime state, review communications, manage schedules, or inspect execution history."
       />
 
-      {selectedTab === 'hire' ? (
+      {input.mode === 'hire' ? (
         <WorkspaceCanvas
           title="Hire an internal collaborator"
           description="Describe the collaborator you want. The hiring workflow will shape the function, generate the operating prompt, contract the agent, and return the onboarding links."
@@ -344,94 +335,81 @@ export function AgentsPage() {
             />
           </div>
         </WorkspaceCanvas>
-      ) : (
-        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <div className="space-y-4">
-            <SectionNav
-              title="Agent areas"
-              value={selectedTab}
-              items={agentTabs.filter((item) => item.value !== 'hire')}
-              onChange={(tab) =>
-                void navigate({
-                  to: '/agents',
-                  search: {
-                    agentId: search.agentId,
-                    tab,
-                    runtimeView: search.runtimeView,
-                    communicationView: search.communicationView,
-                  },
-                })
-              }
-            />
+      ) : input.mode === 'directory' ? (
+        <WorkspaceCanvas
+          title="Agent roster"
+          description="Open an agent to inspect runtime, communications, schedules, and execution history. Hiring lives in its own route."
+          actions={
+            <Button type="button" onClick={() => void navigate({ to: '/agents/hire' })}>
+              Hire agent
+            </Button>
+          }
+        >
+          {agentsQuery.isLoading && <PanelLoading label="Loading agents" />}
+          {agentsQuery.isError && <PanelError message={agentsQuery.error.message} />}
+          {agentsQuery.data ? (
+            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              {agentsQuery.data.map((agent) => {
+                const detailLocation = buildAgentLocation({
+                  agentId: agent.agentId,
+                  tab: 'runtime',
+                  runtimeView: 'assignment',
+                });
 
-            <Card className="overflow-hidden">
-              <div className="border-b border-[color:var(--panel-border)] px-4 py-4">
-                <h2 className="text-base font-semibold text-[color:var(--ink)]">Roster</h2>
-                <p className="mt-1 text-sm text-[color:var(--muted)]">
-                  Select one agent to inspect and edit.
-                </p>
-              </div>
-              <div className="max-h-[calc(100vh-18rem)] overflow-y-auto p-3">
-                {agentsQuery.isLoading && <PanelLoading label="Loading agents" />}
-                {agentsQuery.isError && <PanelError message={agentsQuery.error.message} />}
-                {agentsQuery.data?.map((agent) => (
+                return (
                   <button
                     key={agent.agentId}
                     type="button"
-                    onClick={() => {
-                      setScheduleDraft(null);
-                      void navigate({
-                        to: '/agents',
-                        search: {
-                          agentId: agent.agentId,
-                          tab: selectedTab,
-                          runtimeView: search.runtimeView,
-                          communicationView: search.communicationView,
-                        },
-                      });
-                    }}
-                    className={cn(
-                      'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
-                      search.agentId === agent.agentId
-                        ? 'border-slate-950 bg-slate-950 text-white'
-                        : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
-                    )}
+                    onClick={() => void navigate(detailLocation)}
+                    className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 text-left transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="font-semibold">{agent.name}</div>
-                        <div
-                          className={cn(
-                            'mt-1 text-xs',
-                            search.agentId === agent.agentId ? 'text-slate-300' : 'text-[color:var(--muted)]',
-                          )}
-                        >
-                          {agent.functionName ?? 'No function'}
+                        <div className="font-semibold text-[color:var(--ink)]">{agent.name}</div>
+                        <div className="mt-1 text-sm text-[color:var(--muted)]">
+                          {agent.functionName ?? 'No function assigned'}
                         </div>
                       </div>
-                      <Badge className={cn(search.agentId === agent.agentId && 'border-slate-700 bg-slate-800 text-slate-100')}>
-                        {agent.executionState}
-                      </Badge>
+                      <Badge>{agent.executionState}</Badge>
                     </div>
-                    <div
-                      className={cn(
-                        'mt-3 text-xs',
-                        search.agentId === agent.agentId ? 'text-slate-300' : 'text-[color:var(--muted)]',
-                      )}
-                    >
-                      {agent.providerTypes.join(', ') || 'no providers'}
+                    <div className="mt-4 grid gap-2 text-sm text-[color:var(--muted)]">
+                      <div>Providers: {agent.providerTypes.join(', ') || 'none'}</div>
+                      <div>Status: {agent.executionState}</div>
                     </div>
+                    <div className="mt-5 text-sm font-semibold text-[color:var(--accent)]">Open agent</div>
                   </button>
-                ))}
-              </div>
-            </Card>
-          </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </WorkspaceCanvas>
+      ) : (
+        <div className="space-y-6">
+          <SectionNav
+            title="Agent area"
+            value={selectedTab}
+            items={detailTabs}
+            onChange={(tab) => {
+              if (!input.agentId) {
+                return;
+              }
+
+              void navigate(
+                buildAgentLocation({
+                  agentId: input.agentId,
+                  tab,
+                  runtimeView: selectedRuntimeView,
+                  communicationView: selectedCommunicationView,
+                }),
+              );
+            }}
+          />
 
           <div className="space-y-6">
             {agentDetailQuery.isLoading && <PanelLoading label="Loading agent detail" />}
             {agentDetailQuery.isError && <PanelError message={agentDetailQuery.error.message} />}
             {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
-            {!search.agentId && !agentDetailQuery.isLoading ? (
+            {!input.agentId && !agentDetailQuery.isLoading ? (
               <WorkspaceCanvas
                 title="Select an agent"
                 description="Pick an agent from the roster to inspect runtime state, communications, schedules, or execution history."
@@ -473,15 +451,16 @@ export function AgentsPage() {
                         { value: 'github', label: 'GitHub', description: 'provisioning status and links' },
                       ]}
                       onChange={(runtimeView) =>
-                        void navigate({
-                          to: '/agents',
-                          search: {
-                            agentId: search.agentId,
-                            tab: 'runtime',
-                            runtimeView,
-                            communicationView: search.communicationView,
-                          },
-                        })
+                        input.agentId
+                          ? void navigate(
+                              buildAgentLocation({
+                                agentId: input.agentId,
+                                tab: 'runtime',
+                                runtimeView,
+                                communicationView: selectedCommunicationView,
+                              }),
+                            )
+                          : undefined
                       }
                     />
 
@@ -573,15 +552,16 @@ export function AgentsPage() {
                         { value: 'thread', label: 'Thread', description: 'latest persisted memory messages' },
                       ]}
                       onChange={(communicationView) =>
-                        void navigate({
-                          to: '/agents',
-                          search: {
-                            agentId: search.agentId,
-                            tab: 'communications',
-                            runtimeView: search.runtimeView,
-                            communicationView,
-                          },
-                        })
+                        input.agentId
+                          ? void navigate(
+                              buildAgentLocation({
+                                agentId: input.agentId,
+                                tab: 'communications',
+                                runtimeView: selectedRuntimeView,
+                                communicationView,
+                              }),
+                            )
+                          : undefined
                       }
                     />
 
@@ -1871,4 +1851,51 @@ function CompactStat(input: { label: string; value: ReactNode }) {
       <div className="mt-2 text-sm font-semibold text-[color:var(--ink)]">{input.value}</div>
     </div>
   );
+}
+
+function buildAgentLocation(input: {
+  agentId: string;
+  tab: AgentDetailTab;
+  runtimeView?: AgentRuntimeView;
+  communicationView?: AgentCommunicationView;
+}):
+  | { to: '/agents/$agentId/runtime/$runtimeView'; params: { agentId: string; runtimeView: AgentRuntimeView } }
+  | { to: '/agents/$agentId/communications/$communicationView'; params: { agentId: string; communicationView: AgentCommunicationView } }
+  | { to: '/agents/$agentId/schedules'; params: { agentId: string } }
+  | { to: '/agents/$agentId/history'; params: { agentId: string } } {
+  if (input.tab === 'runtime') {
+    return {
+      to: '/agents/$agentId/runtime/$runtimeView',
+      params: {
+        agentId: input.agentId,
+        runtimeView: input.runtimeView ?? 'assignment',
+      },
+    };
+  }
+
+  if (input.tab === 'communications') {
+    return {
+      to: '/agents/$agentId/communications/$communicationView',
+      params: {
+        agentId: input.agentId,
+        communicationView: input.communicationView ?? 'providers',
+      },
+    };
+  }
+
+  if (input.tab === 'schedules') {
+    return {
+      to: '/agents/$agentId/schedules',
+      params: {
+        agentId: input.agentId,
+      },
+    };
+  }
+
+  return {
+    to: '/agents/$agentId/history',
+    params: {
+      agentId: input.agentId,
+    },
+  };
 }

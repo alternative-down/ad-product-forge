@@ -14,6 +14,11 @@ import { Route as RolesRouteImport } from './routes/roles'
 import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgentsHireRouteImport } from './routes/agents.hire'
+import { Route as AgentsAgentIdSchedulesRouteImport } from './routes/agents.$agentId.schedules'
+import { Route as AgentsAgentIdHistoryRouteImport } from './routes/agents.$agentId.history'
+import { Route as AgentsAgentIdRuntimeRuntimeViewRouteImport } from './routes/agents.$agentId.runtime.$runtimeView'
+import { Route as AgentsAgentIdCommunicationsCommunicationViewRouteImport } from './routes/agents.$agentId.communications.$communicationView'
 
 const SystemRoute = SystemRouteImport.update({
   id: '/system',
@@ -40,40 +45,113 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentsHireRoute = AgentsHireRouteImport.update({
+  id: '/hire',
+  path: '/hire',
+  getParentRoute: () => AgentsRoute,
+} as any)
+const AgentsAgentIdSchedulesRoute = AgentsAgentIdSchedulesRouteImport.update({
+  id: '/$agentId/schedules',
+  path: '/$agentId/schedules',
+  getParentRoute: () => AgentsRoute,
+} as any)
+const AgentsAgentIdHistoryRoute = AgentsAgentIdHistoryRouteImport.update({
+  id: '/$agentId/history',
+  path: '/$agentId/history',
+  getParentRoute: () => AgentsRoute,
+} as any)
+const AgentsAgentIdRuntimeRuntimeViewRoute =
+  AgentsAgentIdRuntimeRuntimeViewRouteImport.update({
+    id: '/$agentId/runtime/$runtimeView',
+    path: '/$agentId/runtime/$runtimeView',
+    getParentRoute: () => AgentsRoute,
+  } as any)
+const AgentsAgentIdCommunicationsCommunicationViewRoute =
+  AgentsAgentIdCommunicationsCommunicationViewRouteImport.update({
+    id: '/$agentId/communications/$communicationView',
+    path: '/$agentId/communications/$communicationView',
+    getParentRoute: () => AgentsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/agents': typeof AgentsRoute
+  '/agents': typeof AgentsRouteWithChildren
   '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
   '/system': typeof SystemRoute
+  '/agents/hire': typeof AgentsHireRoute
+  '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
+  '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
+  '/agents/$agentId/communications/$communicationView': typeof AgentsAgentIdCommunicationsCommunicationViewRoute
+  '/agents/$agentId/runtime/$runtimeView': typeof AgentsAgentIdRuntimeRuntimeViewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/agents': typeof AgentsRoute
+  '/agents': typeof AgentsRouteWithChildren
   '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
   '/system': typeof SystemRoute
+  '/agents/hire': typeof AgentsHireRoute
+  '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
+  '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
+  '/agents/$agentId/communications/$communicationView': typeof AgentsAgentIdCommunicationsCommunicationViewRoute
+  '/agents/$agentId/runtime/$runtimeView': typeof AgentsAgentIdRuntimeRuntimeViewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/agents': typeof AgentsRoute
+  '/agents': typeof AgentsRouteWithChildren
   '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
   '/system': typeof SystemRoute
+  '/agents/hire': typeof AgentsHireRoute
+  '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
+  '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
+  '/agents/$agentId/communications/$communicationView': typeof AgentsAgentIdCommunicationsCommunicationViewRoute
+  '/agents/$agentId/runtime/$runtimeView': typeof AgentsAgentIdRuntimeRuntimeViewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agents' | '/finance' | '/roles' | '/system'
+  fullPaths:
+    | '/'
+    | '/agents'
+    | '/finance'
+    | '/roles'
+    | '/system'
+    | '/agents/hire'
+    | '/agents/$agentId/history'
+    | '/agents/$agentId/schedules'
+    | '/agents/$agentId/communications/$communicationView'
+    | '/agents/$agentId/runtime/$runtimeView'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agents' | '/finance' | '/roles' | '/system'
-  id: '__root__' | '/' | '/agents' | '/finance' | '/roles' | '/system'
+  to:
+    | '/'
+    | '/agents'
+    | '/finance'
+    | '/roles'
+    | '/system'
+    | '/agents/hire'
+    | '/agents/$agentId/history'
+    | '/agents/$agentId/schedules'
+    | '/agents/$agentId/communications/$communicationView'
+    | '/agents/$agentId/runtime/$runtimeView'
+  id:
+    | '__root__'
+    | '/'
+    | '/agents'
+    | '/finance'
+    | '/roles'
+    | '/system'
+    | '/agents/hire'
+    | '/agents/$agentId/history'
+    | '/agents/$agentId/schedules'
+    | '/agents/$agentId/communications/$communicationView'
+    | '/agents/$agentId/runtime/$runtimeView'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AgentsRoute: typeof AgentsRoute
+  AgentsRoute: typeof AgentsRouteWithChildren
   FinanceRoute: typeof FinanceRoute
   RolesRoute: typeof RolesRoute
   SystemRoute: typeof SystemRoute
@@ -116,12 +194,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agents/hire': {
+      id: '/agents/hire'
+      path: '/hire'
+      fullPath: '/agents/hire'
+      preLoaderRoute: typeof AgentsHireRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/agents/$agentId/schedules': {
+      id: '/agents/$agentId/schedules'
+      path: '/$agentId/schedules'
+      fullPath: '/agents/$agentId/schedules'
+      preLoaderRoute: typeof AgentsAgentIdSchedulesRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/agents/$agentId/history': {
+      id: '/agents/$agentId/history'
+      path: '/$agentId/history'
+      fullPath: '/agents/$agentId/history'
+      preLoaderRoute: typeof AgentsAgentIdHistoryRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/agents/$agentId/runtime/$runtimeView': {
+      id: '/agents/$agentId/runtime/$runtimeView'
+      path: '/$agentId/runtime/$runtimeView'
+      fullPath: '/agents/$agentId/runtime/$runtimeView'
+      preLoaderRoute: typeof AgentsAgentIdRuntimeRuntimeViewRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/agents/$agentId/communications/$communicationView': {
+      id: '/agents/$agentId/communications/$communicationView'
+      path: '/$agentId/communications/$communicationView'
+      fullPath: '/agents/$agentId/communications/$communicationView'
+      preLoaderRoute: typeof AgentsAgentIdCommunicationsCommunicationViewRouteImport
+      parentRoute: typeof AgentsRoute
+    }
   }
 }
 
+interface AgentsRouteChildren {
+  AgentsHireRoute: typeof AgentsHireRoute
+  AgentsAgentIdHistoryRoute: typeof AgentsAgentIdHistoryRoute
+  AgentsAgentIdSchedulesRoute: typeof AgentsAgentIdSchedulesRoute
+  AgentsAgentIdCommunicationsCommunicationViewRoute: typeof AgentsAgentIdCommunicationsCommunicationViewRoute
+  AgentsAgentIdRuntimeRuntimeViewRoute: typeof AgentsAgentIdRuntimeRuntimeViewRoute
+}
+
+const AgentsRouteChildren: AgentsRouteChildren = {
+  AgentsHireRoute: AgentsHireRoute,
+  AgentsAgentIdHistoryRoute: AgentsAgentIdHistoryRoute,
+  AgentsAgentIdSchedulesRoute: AgentsAgentIdSchedulesRoute,
+  AgentsAgentIdCommunicationsCommunicationViewRoute:
+    AgentsAgentIdCommunicationsCommunicationViewRoute,
+  AgentsAgentIdRuntimeRuntimeViewRoute: AgentsAgentIdRuntimeRuntimeViewRoute,
+}
+
+const AgentsRouteWithChildren =
+  AgentsRoute._addFileChildren(AgentsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AgentsRoute: AgentsRoute,
+  AgentsRoute: AgentsRouteWithChildren,
   FinanceRoute: FinanceRoute,
   RolesRoute: RolesRoute,
   SystemRoute: SystemRoute,
