@@ -106,7 +106,7 @@ export async function generateHiredAgentInstructions(
         description: 'Realiza contratação do agente e finaliza o processo',
         inputSchema,
         execute: async ({ agent }) => {
-          const agentFunction = await capabilities.getFunction(agent);
+          const agentFunction = await capabilities.getFunction(agent.functionId);
 
           if (!agentFunction) {
             throw new Error(`Hiring RH returned unknown functionId: ${agent.functionId}`);
