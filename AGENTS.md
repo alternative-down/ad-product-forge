@@ -15,6 +15,7 @@
 - Avoid defensive programming in the middle of the flow. Fix the shape of the flow instead.
 - Default to greenfield design. Do not add compatibility layers, repair flows, fallback behavior, or legacy-preservation logic unless the user explicitly asks for it.
 - For database schema changes, always use `drizzle-kit generate` for the structural migration first. If a manual data migration is needed, put it in a separate follow-up migration and validate the full upgrade path with the real Drizzle migrator before delivery.
+- Do not manually edit Drizzle structural migration SQL, `_journal.json`, or snapshot metadata. If `drizzle-kit generate` is blocked, stop and surface the issue instead of repairing Drizzle metadata by hand.
 - Validate unknown input at the boundary with Zod.
 - Do not leak provider-specific external ids or metadata through agent-facing tool outputs unless explicitly required.
 - Keep naming literal and obvious.
