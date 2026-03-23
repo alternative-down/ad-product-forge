@@ -1,7 +1,7 @@
 import { type ReactNode, useMemo, useState } from 'react';
 import { Cable, LoaderCircle, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 
 import {
   deleteLlmProfile,
@@ -70,9 +70,25 @@ type LlmProfileDraft = {
 type LlmModelPriceDraft = UpsertLlmModelPriceInput;
 
 export function SystemPage() {
+  return <SystemWorkspacePage mode="directory" />;
+}
+
+export function SystemDetailPage(input: {
+  section: 'company' | 'llm' | 'auth' | 'integrations' | 'migrations';
+  llmView?: 'defaults' | 'profiles' | 'prices';
+  integrationView?: 'migadu' | 'coolify' | 'github';
+}) {
+  return <SystemWorkspacePage mode="detail" {...input} />;
+}
+
+function SystemWorkspacePage(input: {
+  mode: 'directory' | 'detail';
+  section?: 'company' | 'llm' | 'auth' | 'integrations' | 'migrations';
+  llmView?: 'defaults' | 'profiles' | 'prices';
+  integrationView?: 'migadu' | 'coolify' | 'github';
+}) {
   const queryClient = useQueryClient();
-  const navigate = useNavigate({ from: '/system' });
-  const search = useSearch({ from: '/system' });
+  const navigate = useNavigate();
   const integrationsQuery = useQuery({
     queryKey: ['admin', 'system-integrations'],
     queryFn: listSystemIntegrations,
@@ -174,9 +190,9 @@ export function SystemPage() {
   const systemSettings = settingsQuery.data!;
   const oauthState = oauthQuery.data!;
   const migrations = migrationsQuery.data!;
-  const selectedTab = search.tab ?? 'company';
-  const selectedLlmView = search.llmView ?? 'defaults';
-  const selectedIntegrationView = search.integrationView ?? 'migadu';
+  const selectedTab = input.section ?? 'company';
+  const selectedLlmView = input.llmView ?? 'defaults';
+  const selectedIntegrationView = input.integrationView ?? 'migadu';
 
   return (
     <div className="space-y-6">
@@ -186,30 +202,71 @@ export function SystemPage() {
         description="Shared company context, model wiring, OAuth state, integrations, and migration visibility. Open one system area at a time."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
-        <SectionNav
+      {input.mode === 'directory' ? (
+        <WorkspaceCanvas
           title="System areas"
-          value={selectedTab}
-          items={[
-            { value: 'company', label: 'Company', detail: 'global prompt context' },
-            { value: 'llm', label: 'LLM', detail: `${systemLlm.profiles.length} profiles · ${systemLlm.prices.length} prices` },
-            { value: 'auth', label: 'OAuth', detail: `${Object.keys(oauthState).length} providers` },
-            { value: 'integrations', label: 'Integrations', detail: `${integrations.filter((integration) => integration.isEnabled).length} enabled` },
-            { value: 'migrations', label: 'Migrations', detail: `${migrations.entries.filter((entry) => !entry.applied).length} pending` },
-          ]}
-          onChange={(tab) =>
-            void navigate({
-              to: '/system',
-              search: {
-                tab,
-                llmView: search.llmView,
-                integrationView: search.integrationView,
-              },
-            })
-          }
-        />
+          description="Open one system concern at a time: company context, model wiring, OAuth, integrations, or migrations."
+        >
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <SystemEntryLink
+              to="/system/company"
+              title="Company"
+              detail="Global prompt context"
+            />
+            <SystemEntryLink
+              to="/system/llm/defaults"
+              title="LLM defaults"
+              detail={`${systemLlm.profiles.length} profiles configured`}
+            />
+            <SystemEntryLink
+              to="/system/llm/profiles"
+              title="LLM profiles"
+              detail="Runtime endpoints and API keys"
+            />
+            <SystemEntryLink
+              to="/system/llm/prices"
+              title="LLM pricing"
+              detail={`${systemLlm.prices.length} price rows`}
+            />
+            <SystemEntryLink
+              to="/system/oauth"
+              title="OAuth"
+              detail={`${Object.keys(oauthState).length} providers`}
+            />
+            <SystemEntryLink
+              to="/system/integrations/migadu"
+              title="Integrations"
+              detail={`${integrations.filter((integration) => integration.isEnabled).length} enabled`}
+            />
+            <SystemEntryLink
+              to="/system/migrations"
+              title="Migrations"
+              detail={`${migrations.entries.filter((entry) => !entry.applied).length} pending`}
+            />
+          </div>
+        </WorkspaceCanvas>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
+          <SectionNav
+            title="System areas"
+            value={selectedTab}
+            items={[
+              { value: 'company', label: 'Company', detail: 'global prompt context' },
+              { value: 'llm', label: 'LLM', detail: `${systemLlm.profiles.length} profiles · ${systemLlm.prices.length} prices` },
+              { value: 'auth', label: 'OAuth', detail: `${Object.keys(oauthState).length} providers` },
+              { value: 'integrations', label: 'Integrations', detail: `${integrations.filter((integration) => integration.isEnabled).length} enabled` },
+              { value: 'migrations', label: 'Migrations', detail: `${migrations.entries.filter((entry) => !entry.applied).length} pending` },
+            ]}
+            onChange={(section) =>
+              void navigate(buildSystemLocation({
+                section,
+                llmView: selectedLlmView,
+                integrationView: selectedIntegrationView,
+              }))
+            }
+          />
 
-        <div className="space-y-6">
+          <div className="space-y-6">
           {selectedTab === 'company' ? (
             <WorkspaceCanvas
               title="Company context"
@@ -237,14 +294,11 @@ export function SystemPage() {
                   { value: 'prices', label: 'Prices', description: 'contract accounting rows' },
                 ]}
                 onChange={(llmView) =>
-                  void navigate({
-                    to: '/system',
-                    search: {
-                      tab: 'llm',
-                      llmView,
-                      integrationView: search.integrationView,
-                    },
-                  })
+                  void navigate(buildSystemLocation({
+                    section: 'llm',
+                    llmView,
+                    integrationView: selectedIntegrationView,
+                  }))
                 }
               />
 
@@ -331,14 +385,11 @@ export function SystemPage() {
                   { value: 'github', label: 'GitHub', description: 'app provisioning' },
                 ]}
                 onChange={(integrationView) =>
-                  void navigate({
-                    to: '/system',
-                    search: {
-                      tab: 'integrations',
-                      llmView: search.llmView,
-                      integrationView,
-                    },
-                  })
+                  void navigate(buildSystemLocation({
+                    section: 'integrations',
+                    llmView: selectedLlmView,
+                    integrationView,
+                  }))
                 }
               />
 
@@ -406,11 +457,11 @@ export function SystemPage() {
                 </WorkspaceCanvas>
               ) : null}
             </div>
-          ) : null}
-        </div>
+              ) : null}
+            </div>
+          </div>
+        )}
       </div>
-
-    </div>
   );
 }
 
@@ -482,6 +533,78 @@ function SystemSettingsCard(input: {
       </div>
     </Card>
   );
+}
+
+function SystemEntryLink(input: {
+  to:
+    | '/system/company'
+    | '/system/llm/defaults'
+    | '/system/llm/profiles'
+    | '/system/llm/prices'
+    | '/system/oauth'
+    | '/system/integrations/migadu'
+    | '/system/migrations';
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Link
+      to={input.to}
+      className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
+    >
+      <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
+      <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
+    </Link>
+  );
+}
+
+function buildSystemLocation(input: {
+  section: 'company' | 'llm' | 'auth' | 'integrations' | 'migrations';
+  llmView?: 'defaults' | 'profiles' | 'prices';
+  integrationView?: 'migadu' | 'coolify' | 'github';
+}):
+  | { to: '/system/company' }
+  | { to: '/system/llm/defaults' }
+  | { to: '/system/llm/profiles' }
+  | { to: '/system/llm/prices' }
+  | { to: '/system/oauth' }
+  | { to: '/system/integrations/migadu' }
+  | { to: '/system/integrations/coolify' }
+  | { to: '/system/integrations/github' }
+  | { to: '/system/migrations' } {
+  if (input.section === 'company') {
+    return { to: '/system/company' };
+  }
+
+  if (input.section === 'llm') {
+    if (input.llmView === 'profiles') {
+      return { to: '/system/llm/profiles' };
+    }
+
+    if (input.llmView === 'prices') {
+      return { to: '/system/llm/prices' };
+    }
+
+    return { to: '/system/llm/defaults' };
+  }
+
+  if (input.section === 'auth') {
+    return { to: '/system/oauth' };
+  }
+
+  if (input.section === 'integrations') {
+    if (input.integrationView === 'coolify') {
+      return { to: '/system/integrations/coolify' };
+    }
+
+    if (input.integrationView === 'github') {
+      return { to: '/system/integrations/github' };
+    }
+
+    return { to: '/system/integrations/migadu' };
+  }
+
+  return { to: '/system/migrations' };
 }
 
 function MigrationStatusCard(input: {

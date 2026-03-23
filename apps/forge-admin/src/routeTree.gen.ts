@@ -14,7 +14,18 @@ import { Route as RolesRouteImport } from './routes/roles'
 import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SystemIndexRouteImport } from './routes/system.index'
+import { Route as AgentsIndexRouteImport } from './routes/agents.index'
+import { Route as SystemOauthRouteImport } from './routes/system.oauth'
+import { Route as SystemMigrationsRouteImport } from './routes/system.migrations'
+import { Route as SystemCompanyRouteImport } from './routes/system.company'
 import { Route as AgentsHireRouteImport } from './routes/agents.hire'
+import { Route as SystemLlmProfilesRouteImport } from './routes/system.llm.profiles'
+import { Route as SystemLlmPricesRouteImport } from './routes/system.llm.prices'
+import { Route as SystemLlmDefaultsRouteImport } from './routes/system.llm.defaults'
+import { Route as SystemIntegrationsMigaduRouteImport } from './routes/system.integrations.migadu'
+import { Route as SystemIntegrationsGithubRouteImport } from './routes/system.integrations.github'
+import { Route as SystemIntegrationsCoolifyRouteImport } from './routes/system.integrations.coolify'
 import { Route as AgentsAgentIdSchedulesRouteImport } from './routes/agents.$agentId.schedules'
 import { Route as AgentsAgentIdHistoryRouteImport } from './routes/agents.$agentId.history'
 import { Route as AgentsAgentIdRuntimeRuntimeViewRouteImport } from './routes/agents.$agentId.runtime.$runtimeView'
@@ -45,11 +56,69 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SystemIndexRoute = SystemIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SystemRoute,
+} as any)
+const AgentsIndexRoute = AgentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentsRoute,
+} as any)
+const SystemOauthRoute = SystemOauthRouteImport.update({
+  id: '/oauth',
+  path: '/oauth',
+  getParentRoute: () => SystemRoute,
+} as any)
+const SystemMigrationsRoute = SystemMigrationsRouteImport.update({
+  id: '/migrations',
+  path: '/migrations',
+  getParentRoute: () => SystemRoute,
+} as any)
+const SystemCompanyRoute = SystemCompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
+  getParentRoute: () => SystemRoute,
+} as any)
 const AgentsHireRoute = AgentsHireRouteImport.update({
   id: '/hire',
   path: '/hire',
   getParentRoute: () => AgentsRoute,
 } as any)
+const SystemLlmProfilesRoute = SystemLlmProfilesRouteImport.update({
+  id: '/llm/profiles',
+  path: '/llm/profiles',
+  getParentRoute: () => SystemRoute,
+} as any)
+const SystemLlmPricesRoute = SystemLlmPricesRouteImport.update({
+  id: '/llm/prices',
+  path: '/llm/prices',
+  getParentRoute: () => SystemRoute,
+} as any)
+const SystemLlmDefaultsRoute = SystemLlmDefaultsRouteImport.update({
+  id: '/llm/defaults',
+  path: '/llm/defaults',
+  getParentRoute: () => SystemRoute,
+} as any)
+const SystemIntegrationsMigaduRoute =
+  SystemIntegrationsMigaduRouteImport.update({
+    id: '/integrations/migadu',
+    path: '/integrations/migadu',
+    getParentRoute: () => SystemRoute,
+  } as any)
+const SystemIntegrationsGithubRoute =
+  SystemIntegrationsGithubRouteImport.update({
+    id: '/integrations/github',
+    path: '/integrations/github',
+    getParentRoute: () => SystemRoute,
+  } as any)
+const SystemIntegrationsCoolifyRoute =
+  SystemIntegrationsCoolifyRouteImport.update({
+    id: '/integrations/coolify',
+    path: '/integrations/coolify',
+    getParentRoute: () => SystemRoute,
+  } as any)
 const AgentsAgentIdSchedulesRoute = AgentsAgentIdSchedulesRouteImport.update({
   id: '/$agentId/schedules',
   path: '/$agentId/schedules',
@@ -78,22 +147,42 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AgentsRouteWithChildren
   '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
-  '/system': typeof SystemRoute
+  '/system': typeof SystemRouteWithChildren
   '/agents/hire': typeof AgentsHireRoute
+  '/system/company': typeof SystemCompanyRoute
+  '/system/migrations': typeof SystemMigrationsRoute
+  '/system/oauth': typeof SystemOauthRoute
+  '/agents/': typeof AgentsIndexRoute
+  '/system/': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
+  '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
+  '/system/integrations/github': typeof SystemIntegrationsGithubRoute
+  '/system/integrations/migadu': typeof SystemIntegrationsMigaduRoute
+  '/system/llm/defaults': typeof SystemLlmDefaultsRoute
+  '/system/llm/prices': typeof SystemLlmPricesRoute
+  '/system/llm/profiles': typeof SystemLlmProfilesRoute
   '/agents/$agentId/communications/$communicationView': typeof AgentsAgentIdCommunicationsCommunicationViewRoute
   '/agents/$agentId/runtime/$runtimeView': typeof AgentsAgentIdRuntimeRuntimeViewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/agents': typeof AgentsRouteWithChildren
   '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
-  '/system': typeof SystemRoute
   '/agents/hire': typeof AgentsHireRoute
+  '/system/company': typeof SystemCompanyRoute
+  '/system/migrations': typeof SystemMigrationsRoute
+  '/system/oauth': typeof SystemOauthRoute
+  '/agents': typeof AgentsIndexRoute
+  '/system': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
+  '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
+  '/system/integrations/github': typeof SystemIntegrationsGithubRoute
+  '/system/integrations/migadu': typeof SystemIntegrationsMigaduRoute
+  '/system/llm/defaults': typeof SystemLlmDefaultsRoute
+  '/system/llm/prices': typeof SystemLlmPricesRoute
+  '/system/llm/profiles': typeof SystemLlmProfilesRoute
   '/agents/$agentId/communications/$communicationView': typeof AgentsAgentIdCommunicationsCommunicationViewRoute
   '/agents/$agentId/runtime/$runtimeView': typeof AgentsAgentIdRuntimeRuntimeViewRoute
 }
@@ -103,10 +192,21 @@ export interface FileRoutesById {
   '/agents': typeof AgentsRouteWithChildren
   '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
-  '/system': typeof SystemRoute
+  '/system': typeof SystemRouteWithChildren
   '/agents/hire': typeof AgentsHireRoute
+  '/system/company': typeof SystemCompanyRoute
+  '/system/migrations': typeof SystemMigrationsRoute
+  '/system/oauth': typeof SystemOauthRoute
+  '/agents/': typeof AgentsIndexRoute
+  '/system/': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
+  '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
+  '/system/integrations/github': typeof SystemIntegrationsGithubRoute
+  '/system/integrations/migadu': typeof SystemIntegrationsMigaduRoute
+  '/system/llm/defaults': typeof SystemLlmDefaultsRoute
+  '/system/llm/prices': typeof SystemLlmPricesRoute
+  '/system/llm/profiles': typeof SystemLlmProfilesRoute
   '/agents/$agentId/communications/$communicationView': typeof AgentsAgentIdCommunicationsCommunicationViewRoute
   '/agents/$agentId/runtime/$runtimeView': typeof AgentsAgentIdRuntimeRuntimeViewRoute
 }
@@ -119,20 +219,40 @@ export interface FileRouteTypes {
     | '/roles'
     | '/system'
     | '/agents/hire'
+    | '/system/company'
+    | '/system/migrations'
+    | '/system/oauth'
+    | '/agents/'
+    | '/system/'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
+    | '/system/integrations/coolify'
+    | '/system/integrations/github'
+    | '/system/integrations/migadu'
+    | '/system/llm/defaults'
+    | '/system/llm/prices'
+    | '/system/llm/profiles'
     | '/agents/$agentId/communications/$communicationView'
     | '/agents/$agentId/runtime/$runtimeView'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/agents'
     | '/finance'
     | '/roles'
-    | '/system'
     | '/agents/hire'
+    | '/system/company'
+    | '/system/migrations'
+    | '/system/oauth'
+    | '/agents'
+    | '/system'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
+    | '/system/integrations/coolify'
+    | '/system/integrations/github'
+    | '/system/integrations/migadu'
+    | '/system/llm/defaults'
+    | '/system/llm/prices'
+    | '/system/llm/profiles'
     | '/agents/$agentId/communications/$communicationView'
     | '/agents/$agentId/runtime/$runtimeView'
   id:
@@ -143,8 +263,19 @@ export interface FileRouteTypes {
     | '/roles'
     | '/system'
     | '/agents/hire'
+    | '/system/company'
+    | '/system/migrations'
+    | '/system/oauth'
+    | '/agents/'
+    | '/system/'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
+    | '/system/integrations/coolify'
+    | '/system/integrations/github'
+    | '/system/integrations/migadu'
+    | '/system/llm/defaults'
+    | '/system/llm/prices'
+    | '/system/llm/profiles'
     | '/agents/$agentId/communications/$communicationView'
     | '/agents/$agentId/runtime/$runtimeView'
   fileRoutesById: FileRoutesById
@@ -154,7 +285,7 @@ export interface RootRouteChildren {
   AgentsRoute: typeof AgentsRouteWithChildren
   FinanceRoute: typeof FinanceRoute
   RolesRoute: typeof RolesRoute
-  SystemRoute: typeof SystemRoute
+  SystemRoute: typeof SystemRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -194,12 +325,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/system/': {
+      id: '/system/'
+      path: '/'
+      fullPath: '/system/'
+      preLoaderRoute: typeof SystemIndexRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/agents/': {
+      id: '/agents/'
+      path: '/'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof AgentsIndexRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/system/oauth': {
+      id: '/system/oauth'
+      path: '/oauth'
+      fullPath: '/system/oauth'
+      preLoaderRoute: typeof SystemOauthRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/system/migrations': {
+      id: '/system/migrations'
+      path: '/migrations'
+      fullPath: '/system/migrations'
+      preLoaderRoute: typeof SystemMigrationsRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/system/company': {
+      id: '/system/company'
+      path: '/company'
+      fullPath: '/system/company'
+      preLoaderRoute: typeof SystemCompanyRouteImport
+      parentRoute: typeof SystemRoute
+    }
     '/agents/hire': {
       id: '/agents/hire'
       path: '/hire'
       fullPath: '/agents/hire'
       preLoaderRoute: typeof AgentsHireRouteImport
       parentRoute: typeof AgentsRoute
+    }
+    '/system/llm/profiles': {
+      id: '/system/llm/profiles'
+      path: '/llm/profiles'
+      fullPath: '/system/llm/profiles'
+      preLoaderRoute: typeof SystemLlmProfilesRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/system/llm/prices': {
+      id: '/system/llm/prices'
+      path: '/llm/prices'
+      fullPath: '/system/llm/prices'
+      preLoaderRoute: typeof SystemLlmPricesRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/system/llm/defaults': {
+      id: '/system/llm/defaults'
+      path: '/llm/defaults'
+      fullPath: '/system/llm/defaults'
+      preLoaderRoute: typeof SystemLlmDefaultsRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/system/integrations/migadu': {
+      id: '/system/integrations/migadu'
+      path: '/integrations/migadu'
+      fullPath: '/system/integrations/migadu'
+      preLoaderRoute: typeof SystemIntegrationsMigaduRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/system/integrations/github': {
+      id: '/system/integrations/github'
+      path: '/integrations/github'
+      fullPath: '/system/integrations/github'
+      preLoaderRoute: typeof SystemIntegrationsGithubRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/system/integrations/coolify': {
+      id: '/system/integrations/coolify'
+      path: '/integrations/coolify'
+      fullPath: '/system/integrations/coolify'
+      preLoaderRoute: typeof SystemIntegrationsCoolifyRouteImport
+      parentRoute: typeof SystemRoute
     }
     '/agents/$agentId/schedules': {
       id: '/agents/$agentId/schedules'
@@ -234,6 +442,7 @@ declare module '@tanstack/react-router' {
 
 interface AgentsRouteChildren {
   AgentsHireRoute: typeof AgentsHireRoute
+  AgentsIndexRoute: typeof AgentsIndexRoute
   AgentsAgentIdHistoryRoute: typeof AgentsAgentIdHistoryRoute
   AgentsAgentIdSchedulesRoute: typeof AgentsAgentIdSchedulesRoute
   AgentsAgentIdCommunicationsCommunicationViewRoute: typeof AgentsAgentIdCommunicationsCommunicationViewRoute
@@ -242,6 +451,7 @@ interface AgentsRouteChildren {
 
 const AgentsRouteChildren: AgentsRouteChildren = {
   AgentsHireRoute: AgentsHireRoute,
+  AgentsIndexRoute: AgentsIndexRoute,
   AgentsAgentIdHistoryRoute: AgentsAgentIdHistoryRoute,
   AgentsAgentIdSchedulesRoute: AgentsAgentIdSchedulesRoute,
   AgentsAgentIdCommunicationsCommunicationViewRoute:
@@ -252,12 +462,41 @@ const AgentsRouteChildren: AgentsRouteChildren = {
 const AgentsRouteWithChildren =
   AgentsRoute._addFileChildren(AgentsRouteChildren)
 
+interface SystemRouteChildren {
+  SystemCompanyRoute: typeof SystemCompanyRoute
+  SystemMigrationsRoute: typeof SystemMigrationsRoute
+  SystemOauthRoute: typeof SystemOauthRoute
+  SystemIndexRoute: typeof SystemIndexRoute
+  SystemIntegrationsCoolifyRoute: typeof SystemIntegrationsCoolifyRoute
+  SystemIntegrationsGithubRoute: typeof SystemIntegrationsGithubRoute
+  SystemIntegrationsMigaduRoute: typeof SystemIntegrationsMigaduRoute
+  SystemLlmDefaultsRoute: typeof SystemLlmDefaultsRoute
+  SystemLlmPricesRoute: typeof SystemLlmPricesRoute
+  SystemLlmProfilesRoute: typeof SystemLlmProfilesRoute
+}
+
+const SystemRouteChildren: SystemRouteChildren = {
+  SystemCompanyRoute: SystemCompanyRoute,
+  SystemMigrationsRoute: SystemMigrationsRoute,
+  SystemOauthRoute: SystemOauthRoute,
+  SystemIndexRoute: SystemIndexRoute,
+  SystemIntegrationsCoolifyRoute: SystemIntegrationsCoolifyRoute,
+  SystemIntegrationsGithubRoute: SystemIntegrationsGithubRoute,
+  SystemIntegrationsMigaduRoute: SystemIntegrationsMigaduRoute,
+  SystemLlmDefaultsRoute: SystemLlmDefaultsRoute,
+  SystemLlmPricesRoute: SystemLlmPricesRoute,
+  SystemLlmProfilesRoute: SystemLlmProfilesRoute,
+}
+
+const SystemRouteWithChildren =
+  SystemRoute._addFileChildren(SystemRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRoute: AgentsRouteWithChildren,
   FinanceRoute: FinanceRoute,
   RolesRoute: RolesRoute,
-  SystemRoute: SystemRoute,
+  SystemRoute: SystemRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
