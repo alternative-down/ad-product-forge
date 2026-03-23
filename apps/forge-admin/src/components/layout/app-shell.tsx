@@ -59,7 +59,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen text-[color:var(--ink)]">
-      <div className="mx-auto grid min-h-screen max-w-[1540px] gap-8 px-5 py-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8">
+      <div className="grid min-h-screen gap-6 px-4 py-4 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-5">
         <aside className="rounded-md bg-[color:var(--bg-rail)] p-5 text-white">
           <div className="flex h-full flex-col">
             <div className="border-b border-white/10 pb-4">
@@ -136,7 +136,7 @@ export function AppShell() {
           </div>
         </aside>
 
-        <main className="min-w-0 py-2">
+        <main className="min-w-0 py-2 pr-1">
           <Outlet />
         </main>
       </div>
