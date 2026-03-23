@@ -193,6 +193,16 @@ function SystemWorkspacePage(input: {
   const selectedTab = input.section ?? 'company';
   const selectedLlmView = input.llmView ?? 'defaults';
   const selectedIntegrationView = input.integrationView ?? 'migadu';
+  const enabledProfilesCount = systemLlm.profiles.filter((profile) => profile.isEnabled).length;
+  const syncedOauthProviders = oauthState.providers.filter((provider) => provider.synced).length;
+  const appliedMigrationsCount = migrations.entries.filter((entry) => entry.applied).length;
+  const pendingMigrationsCount = migrations.entries.filter((entry) => !entry.applied).length;
+  const selectedIntegration =
+    selectedIntegrationView === 'coolify'
+      ? coolifyIntegration
+      : selectedIntegrationView === 'github'
+        ? githubIntegration
+        : migaduIntegration;
 
   return (
     <div className="space-y-6">
@@ -286,6 +296,21 @@ function SystemWorkspacePage(input: {
 
           {selectedTab === 'llm' ? (
             <div className="space-y-6">
+              <WorkspaceCanvas
+                title="LLM status"
+                description="Global model inventory, defaults, and pricing coverage."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField label="Profiles" value={String(systemLlm.profiles.length)} />
+                  <ReadOnlyField label="Enabled profiles" value={String(enabledProfilesCount)} />
+                  <ReadOnlyField label="Price rows" value={String(systemLlm.prices.length)} />
+                  <ReadOnlyField
+                    label="Defaults configured"
+                    value={systemLlm.defaults ? 'yes' : 'no'}
+                  />
+                </div>
+              </WorkspaceCanvas>
+
               <SegmentedTabs
                 value={selectedLlmView}
                 items={[
@@ -352,31 +377,86 @@ function SystemWorkspacePage(input: {
           ) : null}
 
           {selectedTab === 'auth' ? (
-            <WorkspaceCanvas
-              title="OAuth sync"
-              description="Provider-side account sync used by the custom gateway and synced integrations."
-            >
-              <OauthSyncCard
-                state={oauthState}
-                pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
-                error={syncOauthMutation.error?.message ?? null}
-                result={syncOauthMutation.data ?? null}
-                onSync={(providerId) => syncOauthMutation.mutate(providerId)}
-              />
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="OAuth status"
+                description="CLI account availability and persisted sync state."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField label="Providers" value={String(oauthState.providers.length)} />
+                  <ReadOnlyField label="Synced" value={String(syncedOauthProviders)} />
+                  <ReadOnlyField
+                    label="Unsynced"
+                    value={String(oauthState.providers.length - syncedOauthProviders)}
+                  />
+                  <ReadOnlyField label="Store path" value={oauthState.storePath} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="OAuth sync"
+                description="Provider-side account sync used by the custom gateway and synced integrations."
+              >
+                <OauthSyncCard
+                  state={oauthState}
+                  pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
+                  error={syncOauthMutation.error?.message ?? null}
+                  result={syncOauthMutation.data ?? null}
+                  onSync={(providerId) => syncOauthMutation.mutate(providerId)}
+                />
+              </WorkspaceCanvas>
+            </div>
           ) : null}
 
           {selectedTab === 'migrations' ? (
-            <WorkspaceCanvas
-              title="Application migrations"
-              description="Repository journal entries matched against __drizzle_migrations."
-            >
-              <MigrationStatusCard migrations={migrations} />
-            </WorkspaceCanvas>
+            <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Migration status"
+                description="Applied versus pending journal entries for the application database."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField label="Entries" value={String(migrations.entries.length)} />
+                  <ReadOnlyField label="Applied" value={String(appliedMigrationsCount)} />
+                  <ReadOnlyField label="Pending" value={String(pendingMigrationsCount)} />
+                  <ReadOnlyField
+                    label="Latest applied row"
+                    value={migrations.applied.at(-1)?.id != null ? String(migrations.applied.at(-1)?.id) : '—'}
+                  />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Application migrations"
+                description="Repository journal entries matched against __drizzle_migrations."
+              >
+                <MigrationStatusCard migrations={migrations} />
+              </WorkspaceCanvas>
+            </div>
           ) : null}
 
           {selectedTab === 'integrations' ? (
             <div className="space-y-6">
+              <WorkspaceCanvas
+                title="Integration status"
+                description="Current provisioning and automation endpoints configured for the platform."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField
+                    label="Enabled integrations"
+                    value={String(integrations.filter((integration) => integration.isEnabled).length)}
+                  />
+                  <ReadOnlyField label="Selected" value={selectedIntegrationView} />
+                  <ReadOnlyField
+                    label="Configured"
+                    value={selectedIntegration ? 'yes' : 'no'}
+                  />
+                  <ReadOnlyField
+                    label="Enabled"
+                    value={selectedIntegration?.isEnabled ? 'yes' : 'no'}
+                  />
+                </div>
+              </WorkspaceCanvas>
+
               <SegmentedTabs
                 value={selectedIntegrationView}
                 items={[
@@ -1493,6 +1573,17 @@ function LabeledField(input: { label: string; children: ReactNode }) {
       <span className="font-medium text-slate-800">{input.label}</span>
       {input.children}
     </label>
+  );
+}
+
+function ReadOnlyField(input: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-strong)]">
+        {input.label}
+      </div>
+      <div className="mt-2 break-all text-sm font-semibold text-[color:var(--ink)]">{input.value}</div>
+    </div>
   );
 }
 
