@@ -1,7 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router';
-
-import { SystemPage } from '../features/system/page';
+import { Outlet, createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/system')({
-  component: SystemPage,
+  component: Outlet,
 });

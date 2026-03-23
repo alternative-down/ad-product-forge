@@ -14,6 +14,8 @@ import { Route as RolesRouteImport } from './routes/roles'
 import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SystemIndexRouteImport } from './routes/system.index'
+import { Route as AgentsIndexRouteImport } from './routes/agents.index'
 import { Route as SystemOauthRouteImport } from './routes/system.oauth'
 import { Route as SystemMigrationsRouteImport } from './routes/system.migrations'
 import { Route as SystemCompanyRouteImport } from './routes/system.company'
@@ -53,6 +55,16 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SystemIndexRoute = SystemIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SystemRoute,
+} as any)
+const AgentsIndexRoute = AgentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentsRoute,
 } as any)
 const SystemOauthRoute = SystemOauthRouteImport.update({
   id: '/oauth',
@@ -140,6 +152,8 @@ export interface FileRoutesByFullPath {
   '/system/company': typeof SystemCompanyRoute
   '/system/migrations': typeof SystemMigrationsRoute
   '/system/oauth': typeof SystemOauthRoute
+  '/agents/': typeof AgentsIndexRoute
+  '/system/': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
@@ -153,14 +167,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/agents': typeof AgentsRouteWithChildren
   '/finance': typeof FinanceRoute
   '/roles': typeof RolesRoute
-  '/system': typeof SystemRouteWithChildren
   '/agents/hire': typeof AgentsHireRoute
   '/system/company': typeof SystemCompanyRoute
   '/system/migrations': typeof SystemMigrationsRoute
   '/system/oauth': typeof SystemOauthRoute
+  '/agents': typeof AgentsIndexRoute
+  '/system': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
@@ -183,6 +197,8 @@ export interface FileRoutesById {
   '/system/company': typeof SystemCompanyRoute
   '/system/migrations': typeof SystemMigrationsRoute
   '/system/oauth': typeof SystemOauthRoute
+  '/agents/': typeof AgentsIndexRoute
+  '/system/': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
@@ -206,6 +222,8 @@ export interface FileRouteTypes {
     | '/system/company'
     | '/system/migrations'
     | '/system/oauth'
+    | '/agents/'
+    | '/system/'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
     | '/system/integrations/coolify'
@@ -219,14 +237,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/agents'
     | '/finance'
     | '/roles'
-    | '/system'
     | '/agents/hire'
     | '/system/company'
     | '/system/migrations'
     | '/system/oauth'
+    | '/agents'
+    | '/system'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
     | '/system/integrations/coolify'
@@ -248,6 +266,8 @@ export interface FileRouteTypes {
     | '/system/company'
     | '/system/migrations'
     | '/system/oauth'
+    | '/agents/'
+    | '/system/'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
     | '/system/integrations/coolify'
@@ -304,6 +324,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/system/': {
+      id: '/system/'
+      path: '/'
+      fullPath: '/system/'
+      preLoaderRoute: typeof SystemIndexRouteImport
+      parentRoute: typeof SystemRoute
+    }
+    '/agents/': {
+      id: '/agents/'
+      path: '/'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof AgentsIndexRouteImport
+      parentRoute: typeof AgentsRoute
     }
     '/system/oauth': {
       id: '/system/oauth'
@@ -408,6 +442,7 @@ declare module '@tanstack/react-router' {
 
 interface AgentsRouteChildren {
   AgentsHireRoute: typeof AgentsHireRoute
+  AgentsIndexRoute: typeof AgentsIndexRoute
   AgentsAgentIdHistoryRoute: typeof AgentsAgentIdHistoryRoute
   AgentsAgentIdSchedulesRoute: typeof AgentsAgentIdSchedulesRoute
   AgentsAgentIdCommunicationsCommunicationViewRoute: typeof AgentsAgentIdCommunicationsCommunicationViewRoute
@@ -416,6 +451,7 @@ interface AgentsRouteChildren {
 
 const AgentsRouteChildren: AgentsRouteChildren = {
   AgentsHireRoute: AgentsHireRoute,
+  AgentsIndexRoute: AgentsIndexRoute,
   AgentsAgentIdHistoryRoute: AgentsAgentIdHistoryRoute,
   AgentsAgentIdSchedulesRoute: AgentsAgentIdSchedulesRoute,
   AgentsAgentIdCommunicationsCommunicationViewRoute:
@@ -430,6 +466,7 @@ interface SystemRouteChildren {
   SystemCompanyRoute: typeof SystemCompanyRoute
   SystemMigrationsRoute: typeof SystemMigrationsRoute
   SystemOauthRoute: typeof SystemOauthRoute
+  SystemIndexRoute: typeof SystemIndexRoute
   SystemIntegrationsCoolifyRoute: typeof SystemIntegrationsCoolifyRoute
   SystemIntegrationsGithubRoute: typeof SystemIntegrationsGithubRoute
   SystemIntegrationsMigaduRoute: typeof SystemIntegrationsMigaduRoute
@@ -442,6 +479,7 @@ const SystemRouteChildren: SystemRouteChildren = {
   SystemCompanyRoute: SystemCompanyRoute,
   SystemMigrationsRoute: SystemMigrationsRoute,
   SystemOauthRoute: SystemOauthRoute,
+  SystemIndexRoute: SystemIndexRoute,
   SystemIntegrationsCoolifyRoute: SystemIntegrationsCoolifyRoute,
   SystemIntegrationsGithubRoute: SystemIntegrationsGithubRoute,
   SystemIntegrationsMigaduRoute: SystemIntegrationsMigaduRoute,
