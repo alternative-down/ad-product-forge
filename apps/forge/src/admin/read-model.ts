@@ -110,21 +110,26 @@ export function createAdminReadModel(input: {
 
     return agentRows.map((agent) => {
       const loadedAgent = registry.get(agent.id);
+      const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
       const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
       const modelProfile = llmProfileMap.get(agent.modelProfileId);
       const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
+      const executionState =
+        runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
+          ? 'running'
+          : agent.executionState;
 
       return {
         agentId: agent.id,
         name: agent.name,
         description: agent.description ?? undefined,
-        executionState: agent.executionState,
+        executionState,
         functionId: agent.functionId,
         functionName: agentFunction?.name ?? null,
         modelProfile: modelProfile ?? null,
         omModelProfile: omModelProfile ?? null,
         loaded: Boolean(loadedAgent),
-        runner: loadedAgent?.runner.getSnapshot() ?? null,
+        runner: runnerSnapshot,
         providerTypes: (providerTypesByAgentId.get(agent.id) ?? []).sort(),
         createdAt: agent.createdAt,
         updatedAt: agent.updatedAt,
@@ -192,6 +197,11 @@ export function createAdminReadModel(input: {
     const modelProfile = llmProfileMap.get(agent.modelProfileId);
     const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
     const heartbeat = agentScheduleRows.find((schedule) => schedule.kind === 'heartbeat') ?? null;
+    const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
+    const executionState =
+      runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
+        ? 'running'
+        : agent.executionState;
     const contractSpendRows = activeContract
       ? await db
           .select({
@@ -207,7 +217,7 @@ export function createAdminReadModel(input: {
       name: agent.name,
       description: agent.description ?? undefined,
       instructions: agent.instructions,
-      executionState: agent.executionState,
+      executionState,
       modelProfile: modelProfile ?? null,
       omModelProfile: omModelProfile ?? null,
       function: agentFunction && {
@@ -215,7 +225,7 @@ export function createAdminReadModel(input: {
         description: agentFunction.description ?? null,
       },
       loaded: Boolean(loadedAgent),
-      runner: loadedAgent?.runner.getSnapshot() ?? null,
+      runner: runnerSnapshot,
       workspace: {
         autoSync: agent.workspaceAutoSync === 1,
         bm25: agent.workspaceBm25 === 1,
