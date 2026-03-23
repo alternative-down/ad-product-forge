@@ -673,12 +673,16 @@ function AgentHeader(input: {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MiniMetric label="Runner" value={agent.runner?.executing ? 'executing' : 'idle'} />
-        <MiniMetric label="Timer scheduled" value={agent.runner?.scheduled ? 'yes' : 'no'} />
+        <MiniMetric label="Wake pending" value={agent.runner?.wake.pending ? 'yes' : 'no'} />
         <MiniMetric
-          label="Backoff"
-          value={agent.runner ? `${Math.round(agent.runner.backoffMs / 1000)}s` : '—'}
+          label="Next step"
+          value={agent.runner?.nextStepAt ? formatDateTime(agent.runner.nextStepAt) : '—'}
+        />
+        <MiniMetric
+          label="Step interval"
+          value={agent.runner?.estimatedDelayMs != null ? `${Math.round(agent.runner.estimatedDelayMs / 1000)}s` : '—'}
         />
         <MiniMetric label="Providers" value={formatInteger(agent.providers.length)} />
       </div>
@@ -706,14 +710,18 @@ function AgentHeader(input: {
               label="Weekly budget"
               value={formatUsd(agent.activeContract?.weeklyValueUsd)}
             />
+            <ReadOnlyField
+              label="Spent"
+              value={agent.activeContract ? `${formatUsdPrecise(agent.activeContract.spentUsd)} (${agent.activeContract.spentPercent.toFixed(1)}%)` : '—'}
+            />
             <ReadOnlyField label="Ends at" value={formatDateTime(agent.activeContract?.endsAt)} />
             <ReadOnlyField
               label="Auto renew"
               value={agent.activeContract?.autoRenew ? 'yes' : 'no'}
             />
             <ReadOnlyField
-              label="Providers"
-              value={agent.providers.map((provider) => provider.providerType).join(', ') || '—'}
+              label="Wake queued for"
+              value={agent.runner?.wake.nextTriggerAt ? formatDateTime(agent.runner.wake.nextTriggerAt) : '—'}
             />
           </div>
         </div>
@@ -1503,6 +1511,21 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
         <Bot className="h-5 w-5 text-slate-500" />
       </div>
       <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+        <div className="grid gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-4">
+          <ReadOnlyField label="Contract value" value={formatUsd(agent.activeContract?.weeklyValueUsd)} />
+          <ReadOnlyField
+            label="Used"
+            value={agent.activeContract ? `${formatUsdPrecise(agent.activeContract.spentUsd)} (${agent.activeContract.spentPercent.toFixed(1)}%)` : '—'}
+          />
+          <ReadOnlyField
+            label="Estimated step interval"
+            value={agent.runner?.estimatedDelayMs != null ? `${Math.round(agent.runner.estimatedDelayMs / 1000)}s` : '—'}
+          />
+          <ReadOnlyField
+            label="Wake pending"
+            value={agent.runner?.wake.pending ? `yes${agent.runner.wake.nextTriggerAt ? ` · ${formatDateTime(agent.runner.wake.nextTriggerAt)}` : ''}` : 'no'}
+          />
+        </div>
         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>

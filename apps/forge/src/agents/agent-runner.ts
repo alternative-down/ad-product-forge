@@ -37,6 +37,8 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let executing = false;
   let backoffMs = ONE_MINUTE_MS;
   let needsWakePrompt = true;
+  let nextStepAt: number | null = null;
+  let lastWakeStartedAt: number | null = null;
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
@@ -47,6 +49,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
     clearTimeout(timer);
     timer = null;
+    nextStepAt = null;
   }
 
   function schedule(delayMs: number) {
@@ -54,9 +57,11 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       return;
     }
 
+    nextStepAt = Date.now() + Math.max(delayMs, 0);
     timer = setTimeout(
       () => {
         timer = null;
+        nextStepAt = null;
         void queueNextStep();
       },
       Math.max(delayMs, 0),
@@ -88,6 +93,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     instant = true;
     backoffMs = ONE_MINUTE_MS;
     needsWakePrompt = true;
+    lastWakeStartedAt = Date.now();
     await store.setExecutionState(runtime.id, 'running');
     await queueNextStep();
   }
@@ -119,9 +125,11 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
       const delayMs = nextAttempt.delayMs;
       instant = false;
+      nextStepAt = Date.now() + Math.max(delayMs, 0);
       timer = setTimeout(
         () => {
           timer = null;
+          nextStepAt = null;
           void executeStep(nextAttempt.contractId);
         },
         Math.max(delayMs, 0),
@@ -176,6 +184,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
       if (result.toolCalls.length === 0 && !checkpointRequested) {
         needsWakePrompt = true;
+        nextStepAt = null;
         await store.setExecutionState(runtime.id, 'idle');
         return;
       }
@@ -398,6 +407,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       executing,
       scheduled: timer !== null,
       backoffMs,
+      nextStepAt,
+      estimatedDelayMs: nextStepAt ? Math.max(nextStepAt - Date.now(), 0) : null,
+      wake: wakeQueue.getSnapshot(),
+      lastWakeStartedAt,
     };
   }
 

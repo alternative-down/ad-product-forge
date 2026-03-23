@@ -78,6 +78,14 @@ export type AgentListItem = {
     executing: boolean;
     scheduled: boolean;
     backoffMs: number;
+    nextStepAt: number | null;
+    estimatedDelayMs: number | null;
+    lastWakeStartedAt: number | null;
+    wake: {
+      pending: boolean;
+      firstPendingAt: number | null;
+      nextTriggerAt: number | null;
+    };
   } | null;
   providerTypes: string[];
   createdAt: number;
@@ -148,6 +156,8 @@ export type AgentDetail = {
     startsAt: number;
     endsAt: number;
     weeklyValueUsd: number;
+    spentUsd: number;
+    spentPercent: number;
     autoRenew: boolean;
   } | null;
   schedules: AgentSchedule[];

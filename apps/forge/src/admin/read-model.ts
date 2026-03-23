@@ -192,6 +192,15 @@ export function createAdminReadModel(input: {
     const modelProfile = llmProfileMap.get(agent.modelProfileId);
     const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
     const heartbeat = agentScheduleRows.find((schedule) => schedule.kind === 'heartbeat') ?? null;
+    const contractSpendRows = activeContract
+      ? await db
+          .select({
+            total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
+          })
+          .from(agentExecutionSteps)
+          .where(eq(agentExecutionSteps.contractId, activeContract.contractId))
+      : [];
+    const spentUsd = contractSpendRows[0]?.total ?? 0;
 
     return {
       agentId: agent.id,
@@ -226,7 +235,13 @@ export function createAdminReadModel(input: {
         }))
         .sort((left, right) => left.providerType.localeCompare(right.providerType)),
       githubProvisioning,
-      activeContract,
+      activeContract: activeContract && {
+        ...activeContract,
+        spentUsd,
+        spentPercent: activeContract.weeklyValueUsd > 0
+          ? (spentUsd / activeContract.weeklyValueUsd) * 100
+          : 0,
+      },
       schedules: agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')
         .map(toScheduleSummary),
