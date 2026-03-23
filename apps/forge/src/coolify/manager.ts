@@ -476,6 +476,7 @@ export function createCoolifyManager(config: {
       return directDestination;
     }
 
+    // Try to find destination from resources
     const resources = await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}/resources`);
     const resource = extractFirstMatchingCollectionItem(resources, z.object({
       uuid: z.string(),
@@ -488,6 +489,18 @@ export function createCoolifyManager(config: {
 
     if (resource) {
       return resource.uuid;
+    }
+
+    // Fallback: try to get destinations from dedicated endpoint
+    const destinations = await requestJson('GET', '/destinations');
+    const destination = extractFirstMatchingCollectionItem(destinations, z.object({
+      uuid: z.string(),
+      type: z.string().optional(),
+      name: z.string().optional(),
+    }).passthrough(), () => true);
+
+    if (destination) {
+      return destination.uuid;
     }
 
     throw new Error(`Could not determine Coolify destination UUID for server ${serverUuid}`);
