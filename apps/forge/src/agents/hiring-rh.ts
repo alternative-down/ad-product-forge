@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
+import { createSystemSettingsStore } from '../system-settings/store';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
@@ -40,13 +41,19 @@ export async function generateHiredAgentInstructions(db: Database, input: {
 }) {
   const llmSettings = createLlmSettingsStore(db);
   const capabilities = createCapabilityStore(db);
+  const systemSettings = createSystemSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
+  const companySettings = await systemSettings.getSettings();
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
   const modelPrice = await db.query.llmModelPrices.findFirst({
     where: eq(llmModelPrices.modelKey, hiringRhModelKey),
   });
-  const hiringPrompt = buildHiringPrompt(input);
+  const hiringPrompt = buildHiringPrompt({
+    ...input,
+    companyName: companySettings.companyName,
+    companyContext: companySettings.companyContext,
+  });
 
   if (!modelPrice) {
     throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelKey}`);
@@ -126,6 +133,8 @@ export async function generateHiredAgentInstructions(db: Database, input: {
 function buildHiringPrompt(input: {
   hiringRequest: string;
   additionalContext?: string;
+  companyName?: string;
+  companyContext?: string;
 }) {
   const sections = [
     'Design one newly hired permanent internal collaborator from the hiring request.',
@@ -141,6 +150,14 @@ function buildHiringPrompt(input: {
     'Do not make the whole prompt read like a sterile template. The first impression should feel human, direct, and operational.',
     'Do not wrap the JSON in markdown fences.',
   ];
+
+  if (input.companyName?.trim() || input.companyContext?.trim()) {
+    sections.push([
+      'Company context:',
+      input.companyName?.trim() ? `Company name: ${input.companyName.trim()}` : null,
+      input.companyContext?.trim() ? `Company information: ${input.companyContext.trim()}` : null,
+    ].filter(Boolean).join('\n'));
+  }
 
   if (input.additionalContext?.trim()) {
     sections.push(`Additional hiring context:\n${input.additionalContext.trim()}`);

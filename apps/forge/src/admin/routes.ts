@@ -39,6 +39,7 @@ import { createCompanyPayables } from '../finance/company-payables';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
+import { createSystemSettingsStore } from '../system-settings/store';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -224,6 +225,11 @@ const upsertLlmModelPriceSchema = z.object({
   outputPerMillionUsd: z.coerce.number().nonnegative(),
 });
 
+const upsertSystemSettingsSchema = z.object({
+  companyName: z.string(),
+  companyContext: z.string(),
+});
+
 const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
 
 const syncOauthSchema = z.object({
@@ -284,6 +290,7 @@ export function registerAdminRoutes(input: {
   const integrations = input.integrations;
   const llmSettings = createLlmSettingsStore(input.db);
   const llmModelPrices = createLlmModelPriceStore(input.db);
+  const systemSettings = createSystemSettingsStore(input.db);
   const registry = getInternalAgentRegistry();
   const companyCash = createCompanyCashOperations(input.db);
   const companyPayables = createCompanyPayables(input.db);
@@ -337,6 +344,12 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'GET',
+    path: '/admin/system/settings',
+    handler: async () => jsonResponse(await readModel.getSystemSettings()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
     path: '/admin/system/llm',
     handler: async () => jsonResponse(await readModel.getSystemLlm()),
   });
@@ -345,6 +358,30 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/system/migrations',
     handler: async () => jsonResponse(await readModel.getApplicationMigrations()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/settings/upsert',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, upsertSystemSettingsSchema);
+      const result = await systemSettings.upsertSettings({
+        companyName: body.companyName.trim(),
+        companyContext: body.companyContext.trim(),
+      });
+      const registry = getInternalAgentRegistry();
+
+      for (const entry of registry.list()) {
+        const runtime = await loadAgent(input.db, {
+          ...input.loaderConfig,
+          agentId: entry.runtime.id,
+        });
+
+        await registry.add(input.db, runtime);
+      }
+
+      return jsonResponse(result);
+    },
   });
 
   input.httpServer.registerRoute({

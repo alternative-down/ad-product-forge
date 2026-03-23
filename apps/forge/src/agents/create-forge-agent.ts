@@ -29,6 +29,8 @@ export type CreateForgeAgentConfig<
   omPricingModelKey?: string;
   modelProfileId?: string;
   omModelProfileId?: string;
+  companyName?: string;
+  companyContext?: string;
   providers?: CommunicationProvider[];
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
@@ -73,6 +75,8 @@ export interface CreateAgentConfig<
     | 'omPricingModelKey'
     | 'modelProfileId'
     | 'omModelProfileId'
+    | 'companyName'
+    | 'companyContext'
     | 'providers'
     | 'workspaceFilesystem'
     | 'workspaceSandbox'
@@ -86,6 +90,33 @@ const CHECKPOINT_INSTRUCTIONS = [
   '- Use `CHECKPOINT:` only to report execution progress or the next immediate step you are taking.',
   '- Any visible text that does not start with `CHECKPOINT:` is treated as a final stop for the current run.',
 ].join('\n');
+
+function buildAgentSystemPrompt(instructions: string, companyName?: string, companyContext?: string): string;
+function buildAgentSystemPrompt<T>(instructions: T, companyName?: string, companyContext?: string): T;
+function buildAgentSystemPrompt(instructions: unknown, companyName?: string, companyContext?: string) {
+  if (typeof instructions !== 'string') {
+    return instructions;
+  }
+
+  const sections = [];
+
+  if (companyName?.trim() || companyContext?.trim()) {
+    sections.push('Company context:');
+
+    if (companyName?.trim()) {
+      sections.push(`- Company name: ${companyName.trim()}`);
+    }
+
+    if (companyContext?.trim()) {
+      sections.push(`- Company information: ${companyContext.trim()}`);
+    }
+  }
+
+  sections.push(instructions);
+  sections.push(CHECKPOINT_INSTRUCTIONS);
+
+  return sections.join('\n\n');
+}
 
 export async function createAgent<
   TAgentId extends string = string,
@@ -179,7 +210,11 @@ export async function createInternalAgentRuntime<
     id: config.id,
     name: config.name,
     description: config.description,
-    instructions: appendWorkingMemoryInstructions(`${config.instructions}\n\n${CHECKPOINT_INSTRUCTIONS}`),
+    instructions: appendWorkingMemoryInstructions(buildAgentSystemPrompt(
+      config.instructions,
+      config.companyName,
+      config.companyContext,
+    )),
     model: config.model,
     tools: searchableTools as TTools,
     workflows: config.workflows,

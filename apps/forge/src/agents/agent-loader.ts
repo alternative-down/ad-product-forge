@@ -16,6 +16,7 @@ import { createCapabilityStore } from '../capabilities/store';
 import { createCapabilityTools } from '../capabilities/tools';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
+import { createSystemSettingsStore } from '../system-settings/store';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -52,10 +53,12 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   }
 
   const llmSettings = createLlmSettingsStore(db);
+  const systemSettings = createSystemSettingsStore(db);
   const [primaryProfile, omProfile] = await Promise.all([
     llmSettings.getProfile(agentConfig.modelProfileId),
     llmSettings.getProfile(agentConfig.omModelProfileId),
   ]);
+  const companySettings = await systemSettings.getSettings();
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
@@ -113,6 +116,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       omModel: resolveProfileRuntimeModel(omProfile),
       omPricingModelKey: omProfile.modelKey,
       omModelProfileId: omProfile.profileId,
+      companyName: companySettings.companyName,
+      companyContext: companySettings.companyContext,
       tools: customTools,
       providers,
       workflows: filteredWorkflows,

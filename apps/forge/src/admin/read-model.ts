@@ -24,6 +24,7 @@ import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import type { GitHubAppManager } from '../github/manager';
+import { createSystemSettingsStore } from '../system-settings/store';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -44,6 +45,7 @@ export function createAdminReadModel(input: {
   const integrations = createSystemIntegrationStore(db);
   const llmSettings = createLlmSettingsStore(db);
   const llmModelPrices = createLlmModelPriceStore(db);
+  const systemSettings = createSystemSettingsStore(db);
 
   async function getDashboard() {
     const [agentRows, balance, summary, activeContracts, cashMovements, functions, roles] =
@@ -378,6 +380,10 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function getSystemSettings() {
+    return systemSettings.getSettings();
+  }
+
   async function getApplicationMigrations() {
     const journalPath = path.resolve(process.cwd(), 'migrations/meta/_journal.json');
     const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
@@ -425,6 +431,7 @@ export function createAdminReadModel(input: {
     listFunctions,
     listRoles,
     listSystemIntegrations,
+    getSystemSettings,
     getSystemLlm,
     getApplicationMigrations,
     getFinance,

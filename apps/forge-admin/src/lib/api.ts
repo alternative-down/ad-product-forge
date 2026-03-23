@@ -336,6 +336,12 @@ export type SystemLlmResponse = {
   }>;
 };
 
+export type SystemSettings = {
+  companyName: string;
+  companyContext: string;
+  updatedAt: number | null;
+};
+
 export type SystemMigrationsResponse = {
   applied: Array<{
     id: number;
@@ -618,6 +624,10 @@ export function listSystemIntegrations() {
   return request<SystemIntegration[]>('/admin/system/integrations');
 }
 
+export function getSystemSettings() {
+  return request<SystemSettings>('/admin/system/settings');
+}
+
 export function getFinance() {
   return request<AdminFinance>('/admin/finance');
 }
@@ -632,6 +642,16 @@ export function getSystemMigrations() {
 
 export function upsertLlmModelPrice(input: UpsertLlmModelPriceInput) {
   return request<UpsertLlmModelPriceInput>('/admin/system/llm/price/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function upsertSystemSettings(input: {
+  companyName: string;
+  companyContext: string;
+}) {
+  return request<SystemSettings>('/admin/system/settings/upsert', {
     method: 'POST',
     body: JSON.stringify(input),
   });
