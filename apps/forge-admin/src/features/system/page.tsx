@@ -751,19 +751,19 @@ function LlmPricingCard(input: {
   const [draft, setDraft] = useState<LlmModelPriceDraft>(buildLlmModelPriceDraft(selectedPrice));
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-950">LLM model prices</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Pricing is used by hiring and contract accounting. Add or adjust any model key here.
-          </p>
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-950">LLM model prices</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Pricing is used by hiring and contract accounting. Add or adjust any model key here.
+            </p>
+          </div>
+          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
         </div>
-        {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
-      </div>
 
-      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <div className="space-y-4">
+        <div className="mt-5 space-y-4">
           <LabeledField label="Edit price">
             <Select
               value={selectedModelKey}
@@ -854,37 +854,37 @@ function LlmPricingCard(input: {
             </Button>
           </div>
         </div>
+      </Card>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered prices</h4>
-          <div className="mt-4 space-y-3">
-            {input.prices.map((price) => (
-              <div key={price.modelKey} className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="font-medium text-slate-950 break-all">{price.modelKey}</p>
-                <dl className="mt-3 space-y-1 text-sm text-slate-600">
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Input:</dt>{' '}
-                    <dd className="inline">{price.inputPerMillionUsd}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Cache input:</dt>{' '}
-                    <dd className="inline">{price.inputCachePerMillionUsd}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Output:</dt>{' '}
-                    <dd className="inline">{price.outputPerMillionUsd}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
-                    <dd className="inline">{formatDateTime(price.updatedAt)}</dd>
-                  </div>
-                </dl>
-              </div>
-            ))}
-          </div>
+      <Card className="p-6">
+        <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered prices</h4>
+        <div className="mt-4 space-y-3">
+          {input.prices.map((price) => (
+            <div key={price.modelKey} className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="font-medium text-slate-950 break-all">{price.modelKey}</p>
+              <dl className="mt-3 space-y-1 text-sm text-slate-600">
+                <div>
+                  <dt className="inline font-medium text-slate-800">Input:</dt>{' '}
+                  <dd className="inline">{price.inputPerMillionUsd}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Cache input:</dt>{' '}
+                  <dd className="inline">{price.inputCachePerMillionUsd}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Output:</dt>{' '}
+                  <dd className="inline">{price.outputPerMillionUsd}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
+                  <dd className="inline">{formatDateTime(price.updatedAt)}</dd>
+                </div>
+              </dl>
+            </div>
+          ))}
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
@@ -994,27 +994,27 @@ function LlmProfileEditorCard(input: {
   const selectedProfile = input.profiles.find((profile) => profile.profileId === selectedProfileId) ?? null;
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-950">LLM profiles</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Profiles are reusable model selections. Defaults point to one of these profiles.
-          </p>
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-950">LLM profiles</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Profiles are reusable model selections. Defaults point to one of these profiles.
+            </p>
+          </div>
+          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
         </div>
-        {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
-      </div>
 
-      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <div className="space-y-4">
+        <div className="mt-5 space-y-4">
           <LabeledField label="Edit profile">
             <Select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
               <option value="new">Create new profile</option>
               {input.profiles.map((profile) => (
-              <option key={profile.profileId} value={profile.profileId}>
+                <option key={profile.profileId} value={profile.profileId}>
                   {formatProfileOption(profile)}
-              </option>
-            ))}
+                </option>
+              ))}
             </Select>
           </LabeledField>
 
@@ -1029,50 +1029,50 @@ function LlmProfileEditorCard(input: {
             onDelete={input.onDelete}
           />
         </div>
+      </Card>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered profiles</h4>
-          <div className="mt-4 space-y-3">
-            {input.profiles.map((profile) => (
-              <div key={profile.profileId} className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-slate-950">{profile.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">{profile.profileId}</p>
-                    <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
-                  </div>
-                  <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                    {profile.isEnabled ? 'enabled' : 'disabled'}
-                  </span>
+      <Card className="p-6">
+        <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered profiles</h4>
+        <div className="mt-4 space-y-3">
+          {input.profiles.map((profile) => (
+            <div key={profile.profileId} className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-slate-950">{profile.name}</p>
+                  <p className="mt-1 text-xs text-slate-500">{profile.profileId}</p>
+                  <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
                 </div>
-                <dl className="mt-3 space-y-1 text-sm text-slate-600">
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Model key:</dt>{' '}
-                    <dd className="inline break-all">{profile.modelKey}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Base URL:</dt>{' '}
-                    <dd className="inline break-all">{profile.baseUrl ?? '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Direct token:</dt>{' '}
-                    <dd className="inline">configured</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Contract cost modifier:</dt>{' '}
-                    <dd className="inline">{profile.contractCostMultiplier.toFixed(3)}x</dd>
-                  </div>
-                  <div>
-                    <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
-                    <dd className="inline">{formatDateTime(profile.updatedAt)}</dd>
-                  </div>
-                </dl>
+                <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  {profile.isEnabled ? 'enabled' : 'disabled'}
+                </span>
               </div>
-            ))}
-          </div>
+              <dl className="mt-3 space-y-1 text-sm text-slate-600">
+                <div>
+                  <dt className="inline font-medium text-slate-800">Model key:</dt>{' '}
+                  <dd className="inline break-all">{profile.modelKey}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Base URL:</dt>{' '}
+                  <dd className="inline break-all">{profile.baseUrl ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Direct token:</dt>{' '}
+                  <dd className="inline">configured</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Contract cost modifier:</dt>{' '}
+                  <dd className="inline">{profile.contractCostMultiplier.toFixed(3)}x</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
+                  <dd className="inline">{formatDateTime(profile.updatedAt)}</dd>
+                </div>
+              </dl>
+            </div>
+          ))}
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
