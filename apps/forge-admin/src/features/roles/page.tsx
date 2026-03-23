@@ -23,8 +23,10 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
+import { MetricStrip, PageHeader } from '../../components/layout/page-header';
 
 type RoleDraft = {
   name: string;
@@ -75,6 +77,7 @@ export function RolesPage() {
       to: '/roles',
       search: {
         roleId: rolesQuery.data.items[0].roleId,
+        tab: search.tab,
       },
       replace: true,
     });
@@ -105,6 +108,7 @@ export function RolesPage() {
         to: '/roles',
         search: {
           roleId: result.roleId,
+          tab: search.tab,
         },
       });
     },
@@ -157,6 +161,7 @@ export function RolesPage() {
         to: '/roles',
         search: {
           roleId: input.roleId,
+          tab: search.tab,
         },
       });
     },
@@ -175,6 +180,7 @@ export function RolesPage() {
         to: '/roles',
         search: {
           roleId: nextRoleId,
+          tab: search.tab,
         },
         replace: true,
       });
@@ -242,9 +248,59 @@ export function RolesPage() {
     () => groupIds(rolesQuery.data?.availableToolIds ?? []),
     [rolesQuery.data?.availableToolIds],
   );
+  const selectedTab = search.tab ?? 'roles';
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Capabilities"
+        title="Roles, functions, and grants"
+        description="This is the capability graph for the company. Roles define rights, functions compose roles, and agents inherit that surface through function assignment."
+      />
+
+      <MetricStrip
+        items={[
+          {
+            label: 'Roles',
+            value: rolesQuery.data?.items.length ?? '—',
+            detail: `${functionsQuery.data?.length ?? 0} functions loaded`,
+          },
+          {
+            label: 'Tool ids',
+            value: rolesQuery.data?.availableToolIds.length ?? '—',
+            detail: 'permission catalog',
+          },
+          {
+            label: 'Workflow ids',
+            value: rolesQuery.data?.availableWorkflowIds.length ?? '—',
+            detail: 'workflow surface',
+          },
+          {
+            label: 'Selected role',
+            value: selectedRole?.name ?? '—',
+            detail: selectedRole ? `${selectedRole.assignedFunctionCount} function assignments` : 'pick a role',
+          },
+        ]}
+      />
+
+      <SegmentedTabs
+        value={selectedTab}
+        items={[
+          { value: 'roles', label: 'Roles', description: 'role metadata and permission grants' },
+          { value: 'functions', label: 'Functions', description: 'function definitions and role composition' },
+        ]}
+        onChange={(tab) =>
+          void navigate({
+            to: '/roles',
+            search: {
+              roleId: search.roleId,
+              tab,
+            },
+          })
+        }
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <div className="space-y-6">
         <Card className="overflow-hidden">
           <div className="border-b border-slate-200 px-5 py-4">
@@ -260,9 +316,9 @@ export function RolesPage() {
               <button
                 key={role.roleId}
                 type="button"
-                onClick={() => void navigate({ to: '/roles', search: { roleId: role.roleId } })}
+                onClick={() => void navigate({ to: '/roles', search: { roleId: role.roleId, tab: search.tab } })}
                 className={cn(
-                  'mb-2 w-full rounded-2xl border px-4 py-4 text-left transition last:mb-0',
+                  'mb-2 w-full rounded-lg border px-4 py-4 text-left transition last:mb-0',
                   search.roleId === role.roleId
                     ? 'border-slate-950 bg-slate-950 text-white'
                     : 'border-slate-200 bg-white hover:border-slate-400',
@@ -298,7 +354,7 @@ export function RolesPage() {
           </div>
         </Card>
 
-        <Card className="p-6">
+        {selectedTab === 'roles' && <Card className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <Plus className="h-4 w-4 text-slate-500" />
             <h3 className="text-base font-semibold text-slate-950">Create role</h3>
@@ -335,14 +391,14 @@ export function RolesPage() {
               {createRoleMutation.isPending ? 'Creating...' : 'Create role'}
             </Button>
           </form>
-        </Card>
+        </Card>}
       </div>
 
       <div className="space-y-6">
         {functionsQuery.isLoading && <PanelLoading label="Loading functions" />}
         {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
 
-        {selectedRole && rolesQuery.data && functionsQuery.data && selectedRoleDraft && (
+        {selectedTab === 'roles' && selectedRole && rolesQuery.data && functionsQuery.data && selectedRoleDraft && (
           <Card className="p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -482,7 +538,7 @@ export function RolesPage() {
           </Card>
         )}
 
-        {functionsQuery.data && rolesQuery.data && (
+        {selectedTab === 'functions' && functionsQuery.data && rolesQuery.data && (
           <Card className="p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -494,7 +550,7 @@ export function RolesPage() {
             </div>
 
             <form
-              className="mt-6 grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_1fr_auto]"
+              className="mt-6 grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_1fr_auto]"
               onSubmit={(event) => {
                 event.preventDefault();
                 createFunctionMutation.mutate({
@@ -539,7 +595,7 @@ export function RolesPage() {
                 return (
                   <div
                     key={agentFunction.functionId}
-                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                    className="rounded-lg border border-slate-200 bg-white p-4"
                   >
                     <div className="grid gap-4 xl:grid-cols-[1fr_1fr_260px_auto]">
                       <LabeledField label="Name">
@@ -571,7 +627,7 @@ export function RolesPage() {
                         />
                       </LabeledField>
                       <LabeledField label="Roles">
-                        <div className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
                           {rolesQuery.data.items.map((role) => {
                             return (
                               <PermissionToggle
@@ -650,13 +706,14 @@ export function RolesPage() {
           </Card>
         )}
       </div>
+      </div>
     </div>
   );
 }
 
 function PermissionGroup(input: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="mb-3 text-sm font-medium capitalize text-slate-900">{input.title}</div>
       <div className="grid gap-2">{input.children}</div>
     </div>
@@ -729,7 +786,7 @@ function LabeledField(input: { label: string; children: React.ReactNode }) {
 
 function InlineError(input: { message: string }) {
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
       {input.message}
     </div>
   );

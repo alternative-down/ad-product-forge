@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo, useState } from 'react';
 import { Bot, Cable, LoaderCircle, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 
 import {
   deleteLlmProfile,
@@ -31,8 +32,10 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
+import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 import { Textarea } from '../../components/ui/textarea';
 import { formatDateTime } from '../../lib/format';
+import { MetricStrip, PageHeader } from '../../components/layout/page-header';
 
 type MigaduDraft = {
   isEnabled: boolean;
@@ -67,6 +70,8 @@ type LlmModelPriceDraft = UpsertLlmModelPriceInput;
 
 export function SystemPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate({ from: '/system' });
+  const search = useSearch({ from: '/system' });
   const integrationsQuery = useQuery({
     queryKey: ['admin', 'system-integrations'],
     queryFn: listSystemIntegrations,
@@ -168,78 +173,143 @@ export function SystemPage() {
   const systemSettings = settingsQuery.data!;
   const oauthState = oauthQuery.data!;
   const migrations = migrationsQuery.data!;
+  const selectedTab = search.tab ?? 'company';
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-950">System configuration</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Global integrations, LLM profiles, and hiring defaults for the Forge runtime.
-            </p>
+      <PageHeader
+        eyebrow="System"
+        title="Global runtime wiring"
+        description="This surface controls shared company context, model defaults, provider integrations, OAuth sync, and migration visibility. It should feel like infrastructure, not an assorted form dump."
+        aside={
+          <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-5 py-4">
+            <div className="flex items-center gap-3 text-[color:var(--muted-strong)]">
+              <Cable className="h-4 w-4" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.24em]">
+                Runtime plane
+              </span>
+            </div>
+            <div className="mt-3 text-sm leading-6 text-[color:var(--muted)]">
+              Edit global settings here. Agent-local state belongs on the agent page.
+            </div>
           </div>
-          <Cable className="h-5 w-5 text-slate-500" />
-        </div>
-      </Card>
-
-      <SystemSettingsCard
-        key={`system-settings-${systemSettings.updatedAt ?? 'unset'}`}
-        settings={systemSettings}
-        pending={upsertSystemSettingsMutation.isPending}
-        error={upsertSystemSettingsMutation.error?.message ?? null}
-        onSave={(input) => upsertSystemSettingsMutation.mutate(input)}
+        }
       />
 
-      <Card className="p-6">
+      <MetricStrip
+        items={[
+          {
+            label: 'LLM profiles',
+            value: systemLlm.profiles.length,
+            detail: `${systemLlm.prices.length} price rows`,
+          },
+          {
+            label: 'Integrations',
+            value: integrations.length,
+            detail: integrations.filter((integration) => integration.isEnabled).length + ' enabled',
+          },
+          {
+            label: 'OAuth sources',
+            value: Object.keys(oauthState).length,
+            detail: 'sync-capable providers',
+          },
+          {
+            label: 'Migrations',
+            value: migrations.applied.length,
+            detail: `${migrations.entries.filter((entry) => !entry.applied).length} pending`,
+          },
+        ]}
+      />
+
+      <SegmentedTabs
+        value={selectedTab}
+        items={[
+          { value: 'company', label: 'Company', description: 'context injected into every agent prompt' },
+          { value: 'llm', label: 'LLM', description: 'profiles, defaults, and pricing' },
+          { value: 'auth', label: 'OAuth', description: 'provider sync and credential visibility' },
+          { value: 'integrations', label: 'Integrations', description: 'Migadu, Coolify, GitHub' },
+          { value: 'migrations', label: 'Migrations', description: 'application migration state' },
+        ]}
+        onChange={(tab) =>
+          void navigate({
+            to: '/system',
+            search: {
+              tab,
+            },
+          })
+        }
+      />
+
+      {selectedTab === 'company' && (
+        <SystemSettingsCard
+          key={`system-settings-${systemSettings.updatedAt ?? 'unset'}`}
+          settings={systemSettings}
+          pending={upsertSystemSettingsMutation.isPending}
+          error={upsertSystemSettingsMutation.error?.message ?? null}
+          onSave={(input) => upsertSystemSettingsMutation.mutate(input)}
+        />
+      )}
+
+      {selectedTab === 'llm' && <Card className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">LLM configuration</h2>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-strong)]">
+              Models
+            </div>
+            <h2 className="mt-2 text-lg font-semibold text-slate-950">LLM configuration</h2>
             <p className="mt-1 text-sm text-slate-500">
               Profiles define provider plus model pairs. Defaults drive internal hiring and OM selection.
             </p>
           </div>
           <Bot className="h-5 w-5 text-slate-500" />
         </div>
-      </Card>
+      </Card>}
 
-      <LlmDefaultsCard
-        key={`llm-defaults-${systemLlm.defaults?.updatedAt ?? 'unset'}`}
-        defaults={systemLlm.defaults}
-        profiles={systemLlm.profiles}
-        pending={updateLlmDefaultsMutation.isPending}
-        error={updateLlmDefaultsMutation.error?.message ?? null}
-        onSave={(input) => updateLlmDefaultsMutation.mutate(input)}
-      />
+      {selectedTab === 'llm' && (
+        <LlmDefaultsCard
+          key={`llm-defaults-${systemLlm.defaults?.updatedAt ?? 'unset'}`}
+          defaults={systemLlm.defaults}
+          profiles={systemLlm.profiles}
+          pending={updateLlmDefaultsMutation.isPending}
+          error={updateLlmDefaultsMutation.error?.message ?? null}
+          onSave={(input) => updateLlmDefaultsMutation.mutate(input)}
+        />
+      )}
 
-      <LlmProfileEditorCard
-        profiles={systemLlm.profiles}
-        pending={upsertLlmProfileMutation.isPending}
-        deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
-        saveError={upsertLlmProfileMutation.error?.message ?? null}
-        deleteError={deleteLlmProfileMutation.error?.message ?? null}
-        onSave={(input) => upsertLlmProfileMutation.mutate(input)}
-        onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
-      />
+      {selectedTab === 'llm' && (
+        <LlmProfileEditorCard
+          profiles={systemLlm.profiles}
+          pending={upsertLlmProfileMutation.isPending}
+          deletingProfileId={deleteLlmProfileMutation.isPending ? deleteLlmProfileMutation.variables ?? null : null}
+          saveError={upsertLlmProfileMutation.error?.message ?? null}
+          deleteError={deleteLlmProfileMutation.error?.message ?? null}
+          onSave={(input) => upsertLlmProfileMutation.mutate(input)}
+          onDelete={(profileId) => deleteLlmProfileMutation.mutate(profileId)}
+        />
+      )}
 
-      <LlmPricingCard
-        prices={systemLlm.prices}
-        pending={upsertLlmModelPriceMutation.isPending}
-        error={upsertLlmModelPriceMutation.error?.message ?? null}
-        onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
-      />
+      {selectedTab === 'llm' && (
+        <LlmPricingCard
+          prices={systemLlm.prices}
+          pending={upsertLlmModelPriceMutation.isPending}
+          error={upsertLlmModelPriceMutation.error?.message ?? null}
+          onSave={(input) => upsertLlmModelPriceMutation.mutate(input)}
+        />
+      )}
 
-      <OauthSyncCard
-        state={oauthState}
-        pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
-        error={syncOauthMutation.error?.message ?? null}
-        result={syncOauthMutation.data ?? null}
-        onSync={(providerId) => syncOauthMutation.mutate(providerId)}
-      />
+      {selectedTab === 'auth' && (
+        <OauthSyncCard
+          state={oauthState}
+          pendingProviderId={syncOauthMutation.isPending ? syncOauthMutation.variables : null}
+          error={syncOauthMutation.error?.message ?? null}
+          result={syncOauthMutation.data ?? null}
+          onSync={(providerId) => syncOauthMutation.mutate(providerId)}
+        />
+      )}
 
-      <MigrationStatusCard migrations={migrations} />
+      {selectedTab === 'migrations' && <MigrationStatusCard migrations={migrations} />}
 
-      <MigaduIntegrationCard
+      {selectedTab === 'integrations' && <MigaduIntegrationCard
         key={`migadu-${migaduIntegration?.updatedAt ?? 'new'}`}
         integration={migaduIntegration}
         pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'migadu'}
@@ -253,9 +323,9 @@ export function SystemPage() {
         )}
         onDelete={() => deleteIntegrationMutation.mutate('migadu')}
         onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />
+      />}
 
-      <CoolifyIntegrationCard
+      {selectedTab === 'integrations' && <CoolifyIntegrationCard
         key={`coolify-${coolifyIntegration?.updatedAt ?? 'new'}`}
         integration={coolifyIntegration}
         pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'coolify'}
@@ -269,9 +339,9 @@ export function SystemPage() {
         )}
         onDelete={() => deleteIntegrationMutation.mutate('coolify')}
         onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />
+      />}
 
-      <GitHubIntegrationCard
+      {selectedTab === 'integrations' && <GitHubIntegrationCard
         key={`github-${githubIntegration?.updatedAt ?? 'new'}`}
         integration={githubIntegration}
         pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'github'}
@@ -285,7 +355,7 @@ export function SystemPage() {
         )}
         onDelete={() => deleteIntegrationMutation.mutate('github')}
         onSave={(input) => upsertIntegrationMutation.mutate(input)}
-      />
+      />}
 
     </div>
   );
@@ -529,7 +599,7 @@ function LlmPricingCard(input: {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
           <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered prices</h4>
           <div className="mt-4 space-y-3">
             {input.prices.map((price) => (
@@ -704,7 +774,7 @@ function LlmProfileEditorCard(input: {
           />
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
           <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered profiles</h4>
           <div className="mt-4 space-y-3">
             {input.profiles.map((profile) => (
@@ -715,7 +785,7 @@ function LlmProfileEditorCard(input: {
                     <p className="mt-1 text-xs text-slate-500">{profile.profileId}</p>
                     <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                     {profile.isEnabled ? 'enabled' : 'disabled'}
                   </span>
                 </div>
@@ -1138,13 +1208,13 @@ function OauthSyncCard(input: {
         <Cable className="h-5 w-5 text-slate-500" />
       </div>
 
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
         Persistent store: <span className="font-mono text-slate-900">{input.state.storePath}</span>
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {input.state.providers.map((provider) => (
-          <div key={provider.providerId} className="rounded-2xl border border-slate-200 p-4">
+          <div key={provider.providerId} className="rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-slate-950">{provider.providerId}</h4>
@@ -1191,7 +1261,7 @@ function OauthSyncCard(input: {
       {input.error ? <p className="mt-4 text-sm text-rose-600">{input.error}</p> : null}
 
       {input.result ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+        <div className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
           <div className="font-medium text-slate-900">Last sync result</div>
           <ul className="mt-2 space-y-1">
             {input.result.results.map((result) => (

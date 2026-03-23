@@ -14,6 +14,7 @@ import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { formatDateTime, formatUsd } from '../../lib/format';
+import { MetricStrip, PageHeader } from '../../components/layout/page-header';
 
 type InvestmentDraft = {
   amountUsd: string;
@@ -91,12 +92,20 @@ export function FinancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Cash balance" value={formatUsd(finance.balanceUsd)} />
-        <MetricCard label="Total in" value={formatUsd(finance.summary.totalInUsd)} />
-        <MetricCard label="Total out" value={formatUsd(finance.summary.totalOutUsd)} />
-        <MetricCard label="Scheduled out" value={formatUsd(finance.summary.scheduledOutUsd)} />
-      </div>
+      <PageHeader
+        eyebrow="Finance"
+        title="Capital movement and obligations"
+        description="Cash events, payable scheduling, and recurring liabilities live here. This view should make operational cash intent legible before anything is posted."
+      />
+
+      <MetricStrip
+        items={[
+          { label: 'Cash balance', value: formatUsd(finance.balanceUsd) },
+          { label: 'Total in', value: formatUsd(finance.summary.totalInUsd) },
+          { label: 'Total out', value: formatUsd(finance.summary.totalOutUsd) },
+          { label: 'Scheduled out', value: formatUsd(finance.summary.scheduledOutUsd) },
+        ]}
+      />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <InvestmentCard
@@ -357,7 +366,7 @@ function RecurringPayablesCard(input: {
         </div>
         <Repeat className="h-5 w-5 text-slate-500" />
       </div>
-      <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
@@ -431,7 +440,7 @@ function LedgerCard(input: {
           </p>
         </div>
       </div>
-      <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
@@ -491,15 +500,6 @@ function LedgerCard(input: {
   );
 }
 
-function MetricCard(input: { label: string; value: string }) {
-  return (
-    <Card className="p-5">
-      <div className="text-sm font-medium text-slate-500">{input.label}</div>
-      <div className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">{input.value}</div>
-    </Card>
-  );
-}
-
 function LabeledField(input: { label: string; children: ReactNode }) {
   return (
     <label className="grid gap-2 text-sm text-slate-600">
@@ -511,7 +511,7 @@ function LabeledField(input: { label: string; children: ReactNode }) {
 
 function ErrorBanner(input: { message: string }) {
   return (
-    <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
       {input.message}
     </div>
   );
