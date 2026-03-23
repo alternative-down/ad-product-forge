@@ -34,11 +34,14 @@ const hiringRhResultSchema = z.object({
   instructions: z.string().min(1),
 });
 
-export async function generateHiredAgentInstructions(db: Database, input: {
-  hiringRequest: string;
-  additionalContext?: string;
-  loaderConfig: AgentLoaderConfig;
-}) {
+export async function generateHiredAgentInstructions(
+  db: Database,
+  input: {
+    hiringRequest: string;
+    additionalContext?: string;
+    loaderConfig: AgentLoaderConfig;
+  },
+) {
   const llmSettings = createLlmSettingsStore(db);
   const capabilities = createCapabilityStore(db);
   const systemSettings = createSystemSettingsStore(db);
@@ -62,7 +65,12 @@ export async function generateHiredAgentInstructions(db: Database, input: {
   const estimatedInputTokens = estimateTextTokens(hiringPrompt);
   const estimatedCostUsd = (estimatedInputTokens / 1_000_000) * modelPrice.inputPerMillionUsd;
   const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
-  const tools = createCapabilityTools(db, input.loaderConfig, HIRING_RH_AGENT_ID, HIRING_RH_TOOL_IDS);
+  const tools = createCapabilityTools(
+    db,
+    input.loaderConfig,
+    HIRING_RH_AGENT_ID,
+    HIRING_RH_TOOL_IDS,
+  );
 
   if (currentBalanceUsd < estimatedCostUsd) {
     throw new Error('Insufficient company cash for hiring workflow');
@@ -100,6 +108,11 @@ export async function generateHiredAgentInstructions(db: Database, input: {
     maxSteps: 1000,
     structuredOutput: {
       schema: hiringRhResultSchema,
+    },
+    providerOptions: {
+      anthropic: {
+        thinking: { type: 'enabled', budgetTokens: 12000 },
+      },
     },
   });
   const toolCalls = result.steps.flatMap((step) => step.toolCalls);
@@ -154,11 +167,15 @@ function buildHiringPrompt(input: {
   ];
 
   if (input.companyName?.trim() || input.companyContext?.trim()) {
-    sections.push([
-      'Company context:',
-      input.companyName?.trim() ? `Company name: ${input.companyName.trim()}` : null,
-      input.companyContext?.trim() ? `Company information: ${input.companyContext.trim()}` : null,
-    ].filter(Boolean).join('\n'));
+    sections.push(
+      [
+        'Company context:',
+        input.companyName?.trim() ? `Company name: ${input.companyName.trim()}` : null,
+        input.companyContext?.trim() ? `Company information: ${input.companyContext.trim()}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
   }
 
   if (input.additionalContext?.trim()) {
