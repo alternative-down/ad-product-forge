@@ -1,14 +1,5 @@
 import { useState } from 'react';
-import {
-  Activity,
-  Bot,
-  Cable,
-  CircleDollarSign,
-  KeyRound,
-  Shield,
-  Wallet,
-  Zap,
-} from 'lucide-react';
+import { Activity, Bot, Cable, KeyRound, Shield, Wallet } from 'lucide-react';
 import { Link, Outlet } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
@@ -19,16 +10,15 @@ import {
   setStoredAdminApiKey,
 } from '../../lib/api';
 import { formatUsd } from '../../lib/format';
-import { cn } from '../../lib/utils';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 
 const navigationItems = [
   { to: '/', label: 'Overview', icon: Activity, caption: 'signal and finance pulse' },
-  { to: '/agents', label: 'Agents', icon: Bot, caption: 'runtime, contacts, contracts' },
+  { to: '/agents', label: 'Agents', icon: Bot, caption: 'hire, runtime, communications' },
   { to: '/finance', label: 'Finance', icon: Wallet, caption: 'cash, payables, ledger' },
-  { to: '/system', label: 'System', icon: Cable, caption: 'models, integrations, migrations' },
+  { to: '/system', label: 'System', icon: Cable, caption: 'company, models, integrations' },
   { to: '/roles', label: 'Roles', icon: Shield, caption: 'functions and capability graph' },
 ] as const;
 
@@ -60,19 +50,18 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen text-[color:var(--ink)]">
-      <div className="mx-auto grid min-h-screen max-w-[1720px] gap-6 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
-        <aside className="relative overflow-hidden rounded-xl bg-[color:var(--bg-rail)] p-5 text-white shadow-[0_30px_120px_rgba(15,23,42,0.35)]">
-          <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,_rgba(184,92,56,0.35),_transparent_58%)]" />
-          <div className="relative flex h-full flex-col">
-            <div className="border-b border-white/10 pb-5">
+      <div className="mx-auto grid min-h-screen max-w-[1540px] gap-8 px-5 py-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8">
+        <aside className="rounded-md bg-[color:var(--bg-rail)] p-5 text-white">
+          <div className="flex h-full flex-col">
+            <div className="border-b border-white/10 pb-4">
               <div className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/50">
                 Alternative Down
               </div>
-              <h1 className="mt-3 font-serif text-[2.2rem] leading-none tracking-tight">
+              <h1 className="mt-3 font-serif text-[2rem] leading-none tracking-tight">
                 Forge Admin
               </h1>
-              <p className="mt-3 max-w-xs text-sm leading-6 text-white/65">
-                Operational cockpit for agents, capital, models, and runtime wiring.
+              <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">
+                Clear admin surfaces for agents, finance, system wiring, and capabilities.
               </p>
             </div>
 
@@ -86,10 +75,9 @@ export function AppShell() {
                     to={item.to}
                     activeOptions={{ exact: item.to === '/' }}
                     activeProps={{
-                      className:
-                        'border-[color:var(--accent)] bg-white text-slate-950 shadow-[0_12px_40px_rgba(0,0,0,0.18)]',
+                      className: 'border-[color:var(--accent)] bg-white text-slate-950',
                     }}
-                    className="group flex w-full items-start gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-4 text-left transition hover:border-white/20 hover:bg-white/8"
+                    className="group flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3.5 text-left transition hover:border-white/20 hover:bg-white/8"
                   >
                     <div className="mt-0.5 rounded-md border border-white/10 bg-white/8 p-2 text-white/80 group-[.active]:text-slate-950">
                       <Icon className="h-4 w-4" />
@@ -105,47 +93,29 @@ export function AppShell() {
               })}
             </nav>
 
-            <div className="mt-6 grid gap-3">
-              <RailStat label="Agents" value={overviewQuery.data?.totals.agents} icon={Bot} />
-              <RailStat label="Loaded" value={overviewQuery.data?.totals.loadedAgents} icon={Zap} />
-              <RailStat label="Running" value={overviewQuery.data?.totals.runningAgents} icon={Activity} />
-              <RailStat
-                label="Cash"
-                value={formatUsd(overviewQuery.data?.cash.balanceUsd)}
-                icon={CircleDollarSign}
-              />
+            <div className="mt-6 rounded-md border border-white/10 bg-white/5 px-4 py-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/45">
+                Current state
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-white/70">
+                <div className="flex items-center justify-between gap-4">
+                  <span>Agents</span>
+                  <span>{overviewQuery.data?.totals.agents ?? '—'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Running</span>
+                  <span>{overviewQuery.data?.totals.runningAgents ?? '—'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Cash</span>
+                  <span>{formatUsd(overviewQuery.data?.cash.balanceUsd)}</span>
+                </div>
+              </div>
             </div>
           </div>
         </aside>
 
-        <main className="min-w-0 space-y-6 py-1">
-          <section className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-6 py-5 shadow-[0_20px_80px_rgba(15,23,42,0.08)]">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div className="space-y-2">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted-strong)]">
-                  Runtime maintenance console
-                </div>
-                <h2 className="font-serif text-3xl tracking-tight text-[color:var(--ink)]">
-                  Watch the system. Edit with intent.
-                </h2>
-                <p className="max-w-3xl text-sm leading-6 text-[color:var(--muted)]">
-                  This console is intentionally human-facing: fast inspection, controlled edits, and
-                  clearer separation between live runtime state and administrative action.
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <TopMetric label="Functions" value={overviewQuery.data?.totals.functions} />
-                <TopMetric label="Roles" value={overviewQuery.data?.totals.roles} />
-                <TopMetric label="Contracts" value={overviewQuery.data?.totals.activeContracts} />
-                <TopMetric
-                  label="Balance"
-                  value={formatUsd(overviewQuery.data?.cash.balanceUsd)}
-                />
-              </div>
-            </div>
-          </section>
-
+        <main className="min-w-0 py-2">
           <Outlet />
         </main>
       </div>
@@ -164,7 +134,7 @@ function AdminApiKeyGate(input: {
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center">
-        <Card className="grid w-full overflow-hidden rounded-xl lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="grid w-full overflow-hidden lg:grid-cols-[1.1fr_0.9fr]">
           <div className="bg-[color:var(--bg-rail)] px-8 py-10 text-white">
             <div className="inline-flex items-center rounded-md border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
               Access gate
@@ -178,7 +148,7 @@ function AdminApiKeyGate(input: {
 
           <div className="px-8 py-10">
             <div className="flex items-start gap-4">
-              <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-3 text-[color:var(--ink)]">
+              <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-3 text-[color:var(--ink)]">
                 <KeyRound className="h-5 w-5" />
               </div>
               <div>
@@ -186,8 +156,8 @@ function AdminApiKeyGate(input: {
                   Admin API key
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
-                  Paste the current key and enter the cockpit. If the backend rejects it, the console
-                  will clear the session and ask again.
+                  Paste the current key and enter the console. If the backend rejects it, the session
+                  is cleared and the gate opens again.
                 </p>
               </div>
             </div>
@@ -200,7 +170,7 @@ function AdminApiKeyGate(input: {
                 placeholder="Forge admin API key"
               />
               {input.errorMessage ? (
-                <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {input.errorMessage}
                 </p>
               ) : null}
@@ -222,39 +192,6 @@ function AdminApiKeyGate(input: {
             </div>
           </div>
         </Card>
-      </div>
-    </div>
-  );
-}
-
-function RailStat(input: {
-  label: string;
-  value: string | number | undefined;
-  icon: typeof Activity;
-}) {
-  const Icon = input.icon;
-
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-4">
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/50">
-        <Icon className="h-4 w-4" />
-        {input.label}
-      </div>
-      <div className={cn('mt-3 text-2xl font-semibold tracking-tight', !input.value && 'text-white/35')}>
-        {input.value ?? '—'}
-      </div>
-    </div>
-  );
-}
-
-function TopMetric(input: { label: string; value: string | number | undefined }) {
-  return (
-    <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-strong)]">
-        {input.label}
-      </div>
-      <div className={cn('mt-3 text-2xl font-semibold tracking-tight', !input.value && 'text-slate-400')}>
-        {input.value ?? '—'}
       </div>
     </div>
   );
