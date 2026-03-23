@@ -472,32 +472,52 @@ function AgentsWorkspacePage(input: {
                     />
 
                     {selectedRuntimeView === 'assignment' ? (
-                      <AgentMaintenanceCard
-                        agent={agentDetailQuery.data}
-                        functions={functionsQuery.data}
-                        selectedFunctionId={selectedAgentFunctionId}
-                        onSelectedFunctionIdChange={(functionId) => {
-                          if (!agentDetailQuery.data) {
-                            return;
-                          }
+                      <div className="space-y-6">
+                        <WorkspaceCanvas
+                          title="Current assignment"
+                          description="The agent keeps one function assignment. Capability changes happen through the function and its linked roles."
+                        >
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <ReadOnlyField label="Assigned function" value={agentDetailQuery.data.function?.name ?? '—'} />
+                            <ReadOnlyField label="Roles" value={formatInteger(agentDetailQuery.data.function?.roles.length ?? 0)} />
+                            <ReadOnlyField
+                              label="Primary model"
+                              value={agentDetailQuery.data.modelProfile?.name ?? '—'}
+                            />
+                            <ReadOnlyField
+                              label="Observational memory model"
+                              value={agentDetailQuery.data.omModelProfile?.name ?? '—'}
+                            />
+                          </div>
+                        </WorkspaceCanvas>
 
-                          setFunctionDraft({
-                            agentId: agentDetailQuery.data.agentId,
-                            functionId,
-                          });
-                        }}
-                        onApplyFunctionChange={() =>
-                          changeFunctionMutation.mutate({
-                            agentId: agentDetailQuery.data!.agentId,
-                            functionId: selectedAgentFunctionId,
-                          })
-                        }
-                        functionPending={changeFunctionMutation.isPending}
-                        functionError={changeFunctionMutation.error?.message ?? null}
-                        onTerminate={() => terminateMutation.mutate(agentDetailQuery.data!.agentId)}
-                        terminatePending={terminateMutation.isPending}
-                        terminateError={terminateMutation.error?.message ?? null}
-                      />
+                        <AgentMaintenanceCard
+                          agent={agentDetailQuery.data}
+                          functions={functionsQuery.data}
+                          selectedFunctionId={selectedAgentFunctionId}
+                          onSelectedFunctionIdChange={(functionId) => {
+                            if (!agentDetailQuery.data) {
+                              return;
+                            }
+
+                            setFunctionDraft({
+                              agentId: agentDetailQuery.data.agentId,
+                              functionId,
+                            });
+                          }}
+                          onApplyFunctionChange={() =>
+                            changeFunctionMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              functionId: selectedAgentFunctionId,
+                            })
+                          }
+                          functionPending={changeFunctionMutation.isPending}
+                          functionError={changeFunctionMutation.error?.message ?? null}
+                          onTerminate={() => terminateMutation.mutate(agentDetailQuery.data!.agentId)}
+                          terminatePending={terminateMutation.isPending}
+                          terminateError={terminateMutation.error?.message ?? null}
+                        />
+                      </div>
                     ) : null}
 
                     {selectedRuntimeView === 'configuration' ? (
@@ -530,21 +550,68 @@ function AgentsWorkspacePage(input: {
                     ) : null}
 
                     {selectedRuntimeView === 'contract' ? (
-                      <ContractTopUpCard
-                        pending={topUpContractMutation.isPending}
-                        error={topUpContractMutation.error?.message ?? null}
-                        disabled={!agentDetailQuery.data.activeContract}
-                        onSubmit={(amountUsd) =>
-                          topUpContractMutation.mutate({
-                            agentId: agentDetailQuery.data!.agentId,
-                            amountUsd,
-                          })
-                        }
-                      />
+                      <div className="space-y-6">
+                        <WorkspaceCanvas
+                          title="Contract status"
+                          description="Budget, spend, and remaining runway of the active contract."
+                        >
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                            <ReadOnlyField label="Value" value={formatUsd(agentDetailQuery.data.activeContract?.weeklyValueUsd)} />
+                            <ReadOnlyField
+                              label="Used"
+                              value={agentDetailQuery.data.activeContract ? formatUsdPrecise(agentDetailQuery.data.activeContract.spentUsd) : '—'}
+                            />
+                            <ReadOnlyField
+                              label="Used percent"
+                              value={agentDetailQuery.data.activeContract ? `${agentDetailQuery.data.activeContract.spentPercent.toFixed(1)}%` : '—'}
+                            />
+                            <ReadOnlyField
+                              label="Starts"
+                              value={formatDateTime(agentDetailQuery.data.activeContract?.startsAt ?? null)}
+                            />
+                            <ReadOnlyField
+                              label="Ends"
+                              value={formatDateTime(agentDetailQuery.data.activeContract?.endsAt ?? null)}
+                            />
+                          </div>
+                        </WorkspaceCanvas>
+
+                        <ContractTopUpCard
+                          pending={topUpContractMutation.isPending}
+                          error={topUpContractMutation.error?.message ?? null}
+                          disabled={!agentDetailQuery.data.activeContract}
+                          onSubmit={(amountUsd) =>
+                            topUpContractMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              amountUsd,
+                            })
+                          }
+                        />
+                      </div>
                     ) : null}
 
                     {selectedRuntimeView === 'github' ? (
-                      <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
+                      <div className="space-y-6">
+                        <WorkspaceCanvas
+                          title="GitHub status"
+                          description="Provisioning state and installation links for the GitHub App tied to this agent."
+                        >
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <ReadOnlyField label="Provisioning" value={agentDetailQuery.data.githubProvisioning?.status ?? 'none'} />
+                            <ReadOnlyField label="Loaded" value={agentDetailQuery.data.loaded ? 'yes' : 'no'} />
+                            <ReadOnlyField
+                              label="Registration link"
+                              value={agentDetailQuery.data.githubProvisioning?.registrationUrl ? 'available' : '—'}
+                            />
+                            <ReadOnlyField
+                              label="Install link"
+                              value={agentDetailQuery.data.githubProvisioning?.installUrl ? 'available' : '—'}
+                            />
+                          </div>
+                        </WorkspaceCanvas>
+
+                        <GitHubProvisioningCard provisioning={agentDetailQuery.data.githubProvisioning} />
+                      </div>
                     ) : null}
                   </div>
                 )}
@@ -1263,8 +1330,26 @@ function AgentInboxCard(input: {
   notifications: AgentDetail['recentNotifications'];
   conversations: AgentDetail['recentConversations'];
 }) {
+  const unreadNotificationCount = input.notifications.filter((notification) => !notification.read).length;
+  const unreadMessageCount = input.conversations.reduce(
+    (total, conversation) => total + conversation.messages.filter((message) => message.unread).length,
+    0,
+  );
+
   return (
-    <div className="grid gap-6 xl:grid-cols-2">
+    <div className="space-y-6">
+      <WorkspaceCanvas
+        title="Inbox summary"
+        description="Unread operational signals and the latest conversation activity visible from this agent workspace."
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <ReadOnlyField label="Notifications" value={formatInteger(input.notifications.length)} />
+          <ReadOnlyField label="Unread notifications" value={formatInteger(unreadNotificationCount)} />
+          <ReadOnlyField label="Conversations" value={formatInteger(input.conversations.length)} />
+          <ReadOnlyField label="Unread messages" value={formatInteger(unreadMessageCount)} />
+        </div>
+      </WorkspaceCanvas>
+
       <Card className="p-6">
         <div>
           <h2 className="text-lg font-semibold text-slate-950">Recent notifications</h2>
