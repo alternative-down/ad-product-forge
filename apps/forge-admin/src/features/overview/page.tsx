@@ -5,6 +5,7 @@ import { getOverview, listFunctions } from '../../lib/api';
 import { formatDateTime, formatUsd } from '../../lib/format';
 import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
+import { MetricStrip, PageHeader } from '../../components/layout/page-header';
 
 export function OverviewPage() {
   const overviewQuery = useQuery({
@@ -32,28 +33,36 @@ export function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Agent count"
-          value={overview.totals.agents}
-          detail={`${overview.totals.loadedAgents} loaded`}
-        />
-        <MetricCard
-          label="Execution"
-          value={`${overview.totals.runningAgents} running`}
-          detail={`${overview.totals.idleAgents} idle`}
-        />
-        <MetricCard
-          label="Functions / Roles"
-          value={`${overview.totals.functions} / ${overview.totals.roles}`}
-          detail="Current capability topology"
-        />
-        <MetricCard
-          label="Cash balance"
-          value={formatUsd(overview.cash.balanceUsd)}
-          detail={`${overview.totals.activeContracts} active contracts`}
-        />
-      </div>
+      <PageHeader
+        eyebrow="Overview"
+        title="Operational posture at a glance"
+        description="The overview should answer three questions quickly: what is running, what is funded, and where the capability graph is drifting."
+      />
+
+      <MetricStrip
+        items={[
+          {
+            label: 'Agents',
+            value: overview.totals.agents,
+            detail: `${overview.totals.loadedAgents} loaded`,
+          },
+          {
+            label: 'Execution',
+            value: `${overview.totals.runningAgents} running`,
+            detail: `${overview.totals.idleAgents} idle`,
+          },
+          {
+            label: 'Functions / Roles',
+            value: `${overview.totals.functions} / ${overview.totals.roles}`,
+            detail: 'Current capability topology',
+          },
+          {
+            label: 'Cash balance',
+            value: formatUsd(overview.cash.balanceUsd),
+            detail: `${overview.totals.activeContracts} active contracts`,
+          },
+        ]}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <Card className="p-6">
@@ -145,16 +154,6 @@ export function OverviewPage() {
         </Card>
       </div>
     </div>
-  );
-}
-
-function MetricCard(input: { label: string; value: string | number; detail: string }) {
-  return (
-    <Card className="p-5">
-      <div className="text-sm font-medium text-slate-500">{input.label}</div>
-      <div className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">{input.value}</div>
-      <div className="mt-2 text-sm text-slate-500">{input.detail}</div>
-    </Card>
   );
 }
 

@@ -14,6 +14,7 @@ import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { formatDateTime, formatUsd } from '../../lib/format';
+import { MetricStrip, PageHeader } from '../../components/layout/page-header';
 
 type InvestmentDraft = {
   amountUsd: string;
@@ -91,12 +92,20 @@ export function FinancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Cash balance" value={formatUsd(finance.balanceUsd)} />
-        <MetricCard label="Total in" value={formatUsd(finance.summary.totalInUsd)} />
-        <MetricCard label="Total out" value={formatUsd(finance.summary.totalOutUsd)} />
-        <MetricCard label="Scheduled out" value={formatUsd(finance.summary.scheduledOutUsd)} />
-      </div>
+      <PageHeader
+        eyebrow="Finance"
+        title="Capital movement and obligations"
+        description="Cash events, payable scheduling, and recurring liabilities live here. This view should make operational cash intent legible before anything is posted."
+      />
+
+      <MetricStrip
+        items={[
+          { label: 'Cash balance', value: formatUsd(finance.balanceUsd) },
+          { label: 'Total in', value: formatUsd(finance.summary.totalInUsd) },
+          { label: 'Total out', value: formatUsd(finance.summary.totalOutUsd) },
+          { label: 'Scheduled out', value: formatUsd(finance.summary.scheduledOutUsd) },
+        ]}
+      />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <InvestmentCard
@@ -487,15 +496,6 @@ function LedgerCard(input: {
         </table>
       </div>
       {input.error ? <ErrorBanner message={input.error} /> : null}
-    </Card>
-  );
-}
-
-function MetricCard(input: { label: string; value: string }) {
-  return (
-    <Card className="p-5">
-      <div className="text-sm font-medium text-slate-500">{input.label}</div>
-      <div className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">{input.value}</div>
     </Card>
   );
 }

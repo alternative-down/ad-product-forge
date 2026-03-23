@@ -33,6 +33,7 @@ import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { formatDateTime } from '../../lib/format';
+import { MetricStrip, PageHeader } from '../../components/layout/page-header';
 
 type MigaduDraft = {
   isEnabled: boolean;
@@ -171,17 +172,49 @@ export function SystemPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-950">System configuration</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Global integrations, LLM profiles, and hiring defaults for the Forge runtime.
-            </p>
+      <PageHeader
+        eyebrow="System"
+        title="Global runtime wiring"
+        description="This surface controls shared company context, model defaults, provider integrations, OAuth sync, and migration visibility. It should feel like infrastructure, not an assorted form dump."
+        aside={
+          <div className="rounded-[1.5rem] border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-5 py-4">
+            <div className="flex items-center gap-3 text-[color:var(--muted-strong)]">
+              <Cable className="h-4 w-4" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.24em]">
+                Runtime plane
+              </span>
+            </div>
+            <div className="mt-3 text-sm leading-6 text-[color:var(--muted)]">
+              Edit global settings here. Agent-local state belongs on the agent page.
+            </div>
           </div>
-          <Cable className="h-5 w-5 text-slate-500" />
-        </div>
-      </Card>
+        }
+      />
+
+      <MetricStrip
+        items={[
+          {
+            label: 'LLM profiles',
+            value: systemLlm.profiles.length,
+            detail: `${systemLlm.prices.length} price rows`,
+          },
+          {
+            label: 'Integrations',
+            value: integrations.length,
+            detail: integrations.filter((integration) => integration.isEnabled).length + ' enabled',
+          },
+          {
+            label: 'OAuth sources',
+            value: Object.keys(oauthState).length,
+            detail: 'sync-capable providers',
+          },
+          {
+            label: 'Migrations',
+            value: migrations.applied.length,
+            detail: `${migrations.entries.filter((entry) => !entry.applied).length} pending`,
+          },
+        ]}
+      />
 
       <SystemSettingsCard
         key={`system-settings-${systemSettings.updatedAt ?? 'unset'}`}
@@ -194,7 +227,10 @@ export function SystemPage() {
       <Card className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">LLM configuration</h2>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-strong)]">
+              Models
+            </div>
+            <h2 className="mt-2 text-lg font-semibold text-slate-950">LLM configuration</h2>
             <p className="mt-1 text-sm text-slate-500">
               Profiles define provider plus model pairs. Defaults drive internal hiring and OM selection.
             </p>

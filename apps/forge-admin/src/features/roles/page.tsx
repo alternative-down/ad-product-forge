@@ -25,6 +25,7 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
+import { MetricStrip, PageHeader } from '../../components/layout/page-header';
 
 type RoleDraft = {
   name: string;
@@ -244,7 +245,39 @@ export function RolesPage() {
   );
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Capabilities"
+        title="Roles, functions, and grants"
+        description="This is the capability graph for the company. Roles define rights, functions compose roles, and agents inherit that surface through function assignment."
+      />
+
+      <MetricStrip
+        items={[
+          {
+            label: 'Roles',
+            value: rolesQuery.data?.items.length ?? '—',
+            detail: `${functionsQuery.data?.length ?? 0} functions loaded`,
+          },
+          {
+            label: 'Tool ids',
+            value: rolesQuery.data?.availableToolIds.length ?? '—',
+            detail: 'permission catalog',
+          },
+          {
+            label: 'Workflow ids',
+            value: rolesQuery.data?.availableWorkflowIds.length ?? '—',
+            detail: 'workflow surface',
+          },
+          {
+            label: 'Selected role',
+            value: selectedRole?.name ?? '—',
+            detail: selectedRole ? `${selectedRole.assignedFunctionCount} function assignments` : 'pick a role',
+          },
+        ]}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <div className="space-y-6">
         <Card className="overflow-hidden">
           <div className="border-b border-slate-200 px-5 py-4">
@@ -649,6 +682,7 @@ export function RolesPage() {
             )}
           </Card>
         )}
+      </div>
       </div>
     </div>
   );

@@ -34,6 +34,7 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
+import { MetricStrip, PageHeader } from '../../components/layout/page-header';
 
 type ScheduleDraft = {
   mode: 'create' | 'edit';
@@ -289,7 +290,39 @@ export function AgentsPage() {
   });
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Agents"
+        title="Runtime roster and maintenance surface"
+        description="This page mixes hiring, runtime inspection, contracts, providers, conversations, and provisioning. The goal here is to separate roster navigation from the selected agent’s working state."
+      />
+
+      <MetricStrip
+        items={[
+          {
+            label: 'Agents',
+            value: agentsQuery.data?.length ?? '—',
+            detail: `${agentsQuery.data?.filter((agent) => agent.loaded).length ?? 0} loaded`,
+          },
+          {
+            label: 'Running',
+            value: agentsQuery.data?.filter((agent) => agent.executionState === 'running').length ?? '—',
+            detail: 'persisted or live runner activity',
+          },
+          {
+            label: 'Selected function',
+            value: agentDetailQuery.data?.function?.name ?? '—',
+            detail: agentDetailQuery.data?.executionState ?? 'no agent selected',
+          },
+          {
+            label: 'Providers',
+            value: agentDetailQuery.data?.providers.length ?? '—',
+            detail: agentDetailQuery.data ? agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none' : 'select an agent',
+          },
+        ]}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">Agents</h2>
@@ -540,6 +573,7 @@ export function AgentsPage() {
             <ExecutionCard agent={agentDetailQuery.data} />
           </>
         )}
+      </div>
       </div>
     </div>
   );
