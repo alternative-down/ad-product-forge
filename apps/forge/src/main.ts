@@ -13,6 +13,7 @@ import { createGitHubAppManager } from './github/manager';
 import { createAgentEmailManager } from './email/migadu-manager';
 import { createCoolifyManager } from './coolify/manager';
 import { createAgentScheduleManager } from './schedules/manager';
+import { createAgentPendingSummaryReader } from './agents/pending-summary';
 import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
 
@@ -44,8 +45,13 @@ export async function main() {
     db,
     integrations,
   });
+  const getAgentPendingSummary = createAgentPendingSummaryReader({
+    db,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+  });
   const schedules = createAgentScheduleManager({
     db,
+    getAgentPendingSummary,
     notifyAgent(input) {
       const entry = registry.get(input.agentId);
 
