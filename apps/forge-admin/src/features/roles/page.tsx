@@ -331,12 +331,19 @@ function CapabilitiesWorkspacePage(input: {
                 className={cn(
                   'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
                   input.roleId === role.roleId
-                    ? 'border-slate-950 bg-slate-950 text-white'
+                    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                     : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                 )}
               >
                 <div className="font-semibold">{role.name}</div>
-                <div className={cn('mt-1 text-xs', input.roleId === role.roleId ? 'text-slate-300' : 'text-[color:var(--muted)]')}>
+                <div
+                  className={cn(
+                    'mt-1 text-xs',
+                    input.roleId === role.roleId
+                      ? 'text-[color:var(--accent)]/80'
+                      : 'text-[color:var(--muted)]',
+                  )}
+                >
                   {role.assignedFunctionCount} function assignments
                 </div>
               </Link>
@@ -351,12 +358,19 @@ function CapabilitiesWorkspacePage(input: {
                 className={cn(
                   'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
                   input.functionId === item.functionId
-                    ? 'border-slate-950 bg-slate-950 text-white'
+                    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                     : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                 )}
               >
                 <div className="font-semibold">{item.name}</div>
-                <div className={cn('mt-1 text-xs', input.functionId === item.functionId ? 'text-slate-300' : 'text-[color:var(--muted)]')}>
+                <div
+                  className={cn(
+                    'mt-1 text-xs',
+                    input.functionId === item.functionId
+                      ? 'text-[color:var(--accent)]/80'
+                      : 'text-[color:var(--muted)]',
+                  )}
+                >
                   {item.roleIds.length} roles
                 </div>
               </Link>

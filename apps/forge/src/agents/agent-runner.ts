@@ -20,6 +20,10 @@ type AgentUsage = {
   promptTokens?: number;
   completionTokens?: number;
   cachedInputTokens?: number;
+  inputTokenDetails?: {
+    noCacheTokens?: number;
+    cacheReadTokens?: number;
+  };
 };
 
 type OmObservationEndPart = {
@@ -233,8 +237,15 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         },
       });
       const usage = result.usage as AgentUsage;
-      const inputTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
-      const cachedInputTokens = usage.cachedInputTokens ?? 0;
+      const inputTokens =
+        usage.inputTokenDetails?.noCacheTokens ??
+        usage.inputTokens ??
+        usage.promptTokens ??
+        0;
+      const cachedInputTokens =
+        usage.inputTokenDetails?.cacheReadTokens ??
+        usage.cachedInputTokens ??
+        0;
       const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0;
 
       await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
