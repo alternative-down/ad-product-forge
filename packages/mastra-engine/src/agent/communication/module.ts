@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/libsql';
 import { runMigrations } from '../../database/migrate';
 import { createCommunicationStore } from './store';
 import * as communicationSchema from './schema';
+import type { AgentWakeEvent } from '../wake-queue';
 import type {
   CommunicationConversationView,
   CommunicationMessageView,
@@ -20,7 +21,7 @@ export async function createCommunicationModule(config: {
   console.log('[Communication] Database initialized successfully');
   const store = await createCommunicationStore(db);
   const providers = new Map<string, CommunicationProvider>();
-  let receiveMessageHandler: (() => void) | null = null;
+  let receiveMessageHandler: ((event: AgentWakeEvent) => void) | null = null;
 
   async function syncProviderContacts(provider: CommunicationProvider) {
     if (!provider.syncContacts) {
@@ -113,7 +114,12 @@ export async function createCommunicationModule(config: {
 
         if (receiveMessageHandler) {
           try {
-            receiveMessageHandler();
+            receiveMessageHandler({
+              type: `message:${provider.id}`,
+              id: `${provider.id}:${message.providerMessageId}`,
+              content: message.content,
+              timestamp: Date.parse(message.createdAt) || Date.now(),
+            });
           } catch (error) {
             console.error('Error in receiveMessageHandler:', error);
           }
@@ -121,7 +127,7 @@ export async function createCommunicationModule(config: {
       });
   }
 
-  function onReceiveMessage(handler: () => void) {
+  function onReceiveMessage(handler: (event: AgentWakeEvent) => void) {
     receiveMessageHandler = handler;
   }
 

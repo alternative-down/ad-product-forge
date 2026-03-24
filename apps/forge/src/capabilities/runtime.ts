@@ -116,7 +116,12 @@ export async function changeAgentFunction(input: {
   await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
 
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
-  targetEntry?.runner.notifyExternalEvent();
+  targetEntry?.runner.notifyExternalEvent({
+    type: 'function-change',
+    id: `function-change:${input.targetAgentId}:${Date.now()}`,
+    content: `Function changed to "${agentFunction.name}" by ${actorLabel}.`,
+    timestamp: Date.now(),
+  });
 
   return {
     agentId: input.targetAgentId,
@@ -172,7 +177,12 @@ export async function changeAgentFunctionFromAdmin(input: {
   await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
 
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
-  targetEntry?.runner.notifyExternalEvent();
+  targetEntry?.runner.notifyExternalEvent({
+    type: 'function-change',
+    id: `function-change:${input.targetAgentId}:${Date.now()}`,
+    content: `Function changed to "${agentFunction.name}" by admin console.`,
+    timestamp: Date.now(),
+  });
 
   return {
     agentId: input.targetAgentId,

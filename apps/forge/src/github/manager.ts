@@ -40,7 +40,7 @@ export function createGitHubAppManager(config: {
   httpServer: ReturnType<typeof createForgeHttpServer>;
   publicBaseUrl: string;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
-  notifyAgent(agentId: string): void;
+  notifyAgent(input: { agentId: string; id: string; content: string; timestamp: number; type: string }): void;
 }) {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
@@ -1131,7 +1131,13 @@ export function createGitHubAppManager(config: {
       agentId,
       content: `GitHub App ${activeCredentials.appSlug} installed in organization ${githubConfig.organization}.`,
     });
-    config.notifyAgent(agentId);
+    config.notifyAgent({
+      agentId,
+      type: 'github-install',
+      id: `github-install:${agentId}:${installationId}`,
+      content: `GitHub App ${activeCredentials.appSlug} installed in organization ${githubConfig.organization}.`,
+      timestamp: Date.now(),
+    });
 
     return html(200, '<h1>GitHub App installed successfully</h1><p>The agent is now connected to GitHub.</p>');
   }
@@ -1182,7 +1188,13 @@ export function createGitHubAppManager(config: {
         content,
       });
       console.log(`[GitHubWebhook] Created notification for agent ${agentId}: ${content}`);
-      config.notifyAgent(agentId);
+      config.notifyAgent({
+        agentId,
+        type: `github:${name}`,
+        id: `github:${deliveryId}`,
+        content,
+        timestamp: Date.now(),
+      });
       console.log(`[GitHubWebhook] Requested wake for agent ${agentId}`);
     });
 
