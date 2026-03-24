@@ -1,11 +1,12 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
 import { LibSQLStore } from '@mastra/libsql';
 import {
+  chatGroupMembers,
   communicationConversations,
   communicationMessages,
   communicationSchema,
@@ -29,7 +30,7 @@ import { createSystemSettingsStore } from '../system-settings/store';
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
-const RECENT_CONVERSATION_LIMIT = 5;
+const RECENT_CONVERSATION_LIMIT = 10;
 const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
 
 export function createAdminReadModel(input: {
@@ -456,23 +457,41 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
         },
       },
     });
+    const groupConversationIds = rows
+      .filter((conversation) => conversation.type === 'group')
+      .map((conversation) => conversation.conversationId);
+    const groupMembers = groupConversationIds.length > 0
+      ? await db.query.chatGroupMembers.findMany({
+          where: inArray(chatGroupMembers.groupId, groupConversationIds),
+          orderBy: [chatGroupMembers.createdAt],
+        })
+      : [];
+    const groupParticipantsByConversationId = new Map<string, string[]>();
+
+    for (const member of groupMembers) {
+      const participants = groupParticipantsByConversationId.get(member.groupId) ?? [];
+      participants.push(member.participantName);
+      groupParticipantsByConversationId.set(member.groupId, participants);
+    }
 
     return rows.map((conversation) => {
       const participants = new Set<string>();
 
-      if (conversation.contact?.displayName) {
-        participants.add(conversation.contact.displayName);
-      }
+      if (conversation.type === 'group') {
+        for (const participantName of groupParticipantsByConversationId.get(conversation.conversationId) ?? []) {
+          participants.add(participantName);
+        }
+      } else {
+        if (conversation.contact?.displayName) {
+          participants.add(conversation.contact.displayName);
+        }
 
-      if (conversation.name) {
-        participants.add(conversation.name);
-      }
+        participants.add(agentName);
 
-      participants.add(agentName);
-
-      for (const message of conversation.messages) {
-        if (message.authorDisplayName) {
-          participants.add(message.authorDisplayName);
+        for (const message of conversation.messages) {
+          if (message.authorDisplayName) {
+            participants.add(message.authorDisplayName);
+          }
         }
       }
 
@@ -480,6 +499,7 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
         conversationId: conversation.conversationId,
         conversationKey: conversation.providerConversationKey,
         provider: conversation.provider,
+        type: conversation.type,
         name: conversation.name ?? undefined,
         contactSlug: conversation.contactSlug ?? undefined,
         contactDisplayName: conversation.contact?.displayName ?? undefined,

@@ -375,13 +375,20 @@ export function createCoolifyManager(config: {
       is_shown_once: input.isShownOnce ?? false,
     };
 
-    if (existing?.envUuid) {
+    if (existing) {
       const data = await requestJson(
         'PATCH',
-        `/applications/${encodeURIComponent(input.applicationUuid)}/envs/${encodeURIComponent(existing.envUuid)}`,
-        body,
+        `/applications/${encodeURIComponent(input.applicationUuid)}/envs/bulk`,
+        {
+          data: [body],
+        },
       );
-      const env = extractItem(data, ApplicationEnvSchema);
+      const env = extractCollection(data, ApplicationEnvSchema).find((item) => item.key === input.key);
+
+      if (!env) {
+        throw new Error(`Coolify API did not return env ${input.key} after bulk update`);
+      }
+
       return toEnvDetails(env);
     }
 

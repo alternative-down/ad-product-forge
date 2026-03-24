@@ -1492,7 +1492,7 @@ function AgentInboxCard(input: {
               Latest notifications recorded in the central Forge database.
             </p>
           </div>
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
             {input.notifications.length === 0 && (
               <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
                 No notifications for this agent.
@@ -1554,7 +1554,7 @@ function AgentInboxCard(input: {
                                 : 'text-slate-500',
                             )}
                           >
-                            {conversation.provider} · {formatDateTimeText(conversation.updatedAt)}
+                            {conversation.provider} · {conversation.type} · {formatDateTimeText(conversation.updatedAt)}
                           </div>
                         </div>
                         {unreadCount > 0 ? <Badge>{formatInteger(unreadCount)}</Badge> : null}
@@ -1569,17 +1569,20 @@ function AgentInboxCard(input: {
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="font-medium text-slate-950">{selectedConversation.conversationKey}</div>
                     <Badge>{selectedConversation.provider}</Badge>
+                    <Badge>{selectedConversation.type}</Badge>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedConversation.participants.map((participant) => (
-                      <Badge key={`${selectedConversation.conversationId}-${participant}`}>{participant}</Badge>
-                    ))}
-                  </div>
+                  {selectedConversation.type === 'group' ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedConversation.participants.map((participant) => (
+                        <Badge key={`${selectedConversation.conversationId}-${participant}`}>{participant}</Badge>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="mt-2 space-y-1 text-xs text-slate-500">
                     <div>Updated at {formatDateTimeText(selectedConversation.updatedAt)}</div>
                     <div>{selectedConversation.name ?? selectedConversation.contactDisplayName ?? selectedConversation.contactSlug ?? 'Conversation'}</div>
                   </div>
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-4 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
                     {selectedConversation.messages.map((message) => (
                       <div key={message.messageId} className="rounded-xl bg-white px-4 py-3 text-sm text-slate-700">
                         <div className="flex items-center justify-between gap-3">
@@ -1619,7 +1622,7 @@ function AgentThreadCard(input: {
           assistant replies, and tool-driven flow.
         </p>
       </div>
-      <div className="mt-5 space-y-3">
+      <div className="mt-5 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
         {input.messages.length === 0 && (
           <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
             No thread messages for this agent.

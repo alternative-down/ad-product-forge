@@ -195,6 +195,7 @@ export type AgentDetail = {
     conversationId: string;
     conversationKey: string;
     provider: string;
+    type: string;
     name?: string;
     contactSlug?: string;
     contactDisplayName?: string;
