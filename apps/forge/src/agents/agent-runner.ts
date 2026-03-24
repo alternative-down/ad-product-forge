@@ -7,8 +7,6 @@ import type { Database } from '../database/index';
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
-const AUTONOMOUS_STEP_PROMPT =
-  'System wake: continue your autonomous work using current memory, unread notifications, pending conversations, schedules, and available tools. If nothing requires action right now, stop without calling tools.';
 const CHECKPOINT_PREFIX = 'CHECKPOINT:';
 type AgentUsage = {
   inputTokens?: number;
@@ -37,7 +35,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let instant = false;
   let executing = false;
   let backoffMs = ONE_MINUTE_MS;
-  let needsWakePrompt = true;
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
   let pendingExecutePrompt: string | null = null;
@@ -79,7 +76,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     instant = true;
-    needsWakePrompt = true;
     lastWakeStartedAt = Date.now();
     await queueNextStep();
   }
@@ -102,7 +98,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     pendingExecutePrompt = nextContent;
     instant = true;
     backoffMs = ONE_MINUTE_MS;
-    needsWakePrompt = false;
     lastWakeStartedAt = Date.now();
     await store.setExecutionState(runtime.id, 'running');
     await queueNextStep();
@@ -191,7 +186,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
-      const prompt = takePendingExecutePrompt() ?? (needsWakePrompt ? AUTONOMOUS_STEP_PROMPT : []);
+      const prompt = takePendingExecutePrompt() ?? [];
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       const result = await runtime.agent.generate(prompt, {
@@ -230,14 +225,12 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       const checkpointRequested = result.text.trimStart().startsWith(CHECKPOINT_PREFIX);
 
       if (result.toolCalls.length === 0 && !checkpointRequested) {
-        needsWakePrompt = true;
         nextStepAt = null;
         await store.setExecutionState(runtime.id, 'idle');
         await wakeQueue.onRunnerIdle();
         return;
       }
 
-      needsWakePrompt = false;
       backoffMs = ONE_MINUTE_MS;
       continueRunning = true;
     } catch (error) {
