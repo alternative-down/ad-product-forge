@@ -48,6 +48,7 @@ export async function generateHiredAgentInstructions(
   const capabilities = createCapabilityStore(db);
   const systemSettings = createSystemSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
+  const hiringRhRuntimeModel = await resolveProfileRuntimeModel(defaults.hiringRhProfile);
   const companySettings = await systemSettings.getSettings();
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
@@ -99,7 +100,7 @@ export async function generateHiredAgentInstructions(
       'Use Backstory to make the collaborator feel like a specific person with identity, motivation, and way of operating inside the company.',
       'Use Instructions only for the practical operating guidance that this persona should follow in day-to-day work.',
     ].join('\n'),
-    model: resolveProfileRuntimeModel(defaults.hiringRhProfile),
+    model: hiringRhRuntimeModel,
     tools: {
       hireAgent: createTool({
         id: 'hireAgent',
