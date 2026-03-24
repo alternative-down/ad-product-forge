@@ -30,7 +30,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
   const wakeQueue = createAgentWakeQueue({
     label: runtime.id,
-    isRunning: async () => (await store.getExecutionState(runtime.id)) === 'running',
     wake,
   });
   let timer: NodeJS.Timeout | null = null;
