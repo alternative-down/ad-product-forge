@@ -105,7 +105,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       return;
     }
 
-    pendingExecutePrompt = nextContent;
+    appendPendingExecutePrompt(nextContent);
     instant = true;
     backoffMs = ONE_MINUTE_MS;
     lastWakeStartedAt = Date.now();
