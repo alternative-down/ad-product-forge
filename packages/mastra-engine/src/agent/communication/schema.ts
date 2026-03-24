@@ -58,6 +58,7 @@ export const communicationConversations = sqliteTable(
     provider: text('provider').notNull(),
     providerConversationKey: text('provider_conversation_key').notNull(),
     name: text('name'),
+    type: text('type').notNull().default('dm'), // 'dm' or 'group'
     contactSlug: text('contact_slug'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -73,6 +74,8 @@ export const communicationConversations = sqliteTable(
       providerIdx: index('idx_conversations_provider').on(table.provider),
       // Index for filtering by contact_slug
       contactSlugIdx: index('idx_conversations_contact_slug').on(table.contactSlug),
+      // Index for filtering by type
+      typeIdx: index('idx_conversations_type').on(table.type),
     };
   },
 );
@@ -155,6 +158,40 @@ export const communicationMessagesRelations = relations(
 );
 
 /**
+ * Stores chat group members (participants in group conversations)
+ */
+export const chatGroupMembers = sqliteTable(
+  'forge_chat_group_members',
+  {
+    groupId: text('group_id').notNull(),
+    participantId: text('participant_id').notNull(),
+    participantName: text('participant_name').notNull(),
+    role: text('role').notNull().default('normal'), // 'admin' or 'normal'
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => {
+    return {
+      // Primary key on group_id + participant_id
+      pkGroupParticipant: unique().on(table.groupId, table.participantId),
+      // Index for filtering by group_id
+      groupIdIdx: index('idx_chat_group_members_group_id').on(table.groupId),
+      // Index for filtering by participant_id
+      participantIdIdx: index('idx_chat_group_members_participant_id').on(table.participantId),
+    };
+  },
+);
+
+/**
+ * Relations for chat group members
+ */
+export const chatGroupMembersRelations = relations(chatGroupMembers, ({ one }) => ({
+  group: one(communicationConversations, {
+    fields: [chatGroupMembers.groupId],
+    references: [communicationConversations.conversationId],
+  }),
+}));
+
+/**
  * Type definitions for TypeScript
  */
 export type CommunicationAccount = typeof communicationAccounts.$inferSelect;
@@ -171,3 +208,6 @@ export type NewCommunicationConversation = typeof communicationConversations.$in
 
 export type CommunicationMessage = typeof communicationMessages.$inferSelect;
 export type NewCommunicationMessage = typeof communicationMessages.$inferInsert;
+
+export type ChatGroupMember = typeof chatGroupMembers.$inferSelect;
+export type NewChatGroupMember = typeof chatGroupMembers.$inferInsert;
