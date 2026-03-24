@@ -410,26 +410,6 @@ function AgentsWorkspacePage(input: {
         </WorkspaceCanvas>
       ) : (
         <div className="space-y-6">
-          <SectionNav
-            title="Agent area"
-            value={selectedTab}
-            items={detailTabs}
-            onChange={(tab) => {
-              if (!input.agentId) {
-                return;
-              }
-
-              void navigate(
-                buildAgentLocation({
-                  agentId: input.agentId,
-                  tab,
-                  runtimeView: selectedRuntimeView,
-                  communicationView: selectedCommunicationView,
-                }),
-              );
-            }}
-          />
-
           <div className="space-y-6">
             {agentDetailQuery.isLoading && <PanelLoading label="Loading agent detail" />}
             {agentDetailQuery.isError && <PanelError message={agentDetailQuery.error.message} />}
@@ -445,8 +425,8 @@ function AgentsWorkspacePage(input: {
             {agentDetailQuery.data ? (
               <>
                 <WorkspaceCanvas
-                  title={agentDetailQuery.data.name}
-                  description={`${agentDetailQuery.data.function?.name ?? 'No function assigned'} · ${agentDetailQuery.data.executionState}`}
+                  title="Run state"
+                  description="Live runner status, wake queue condition, latest activity, and direct runtime actions."
                   actions={
                     <div className="flex flex-wrap gap-3">
                       <Button type="button" variant="secondary" onClick={() => wakeMutation.mutate(agentDetailQuery.data!.agentId)} disabled={wakeMutation.isPending}>
@@ -458,17 +438,65 @@ function AgentsWorkspacePage(input: {
                     </div>
                   }
                 >
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                    <CompactStat label="Function" value={agentDetailQuery.data.function?.name ?? '—'} />
-                    <CompactStat label="Providers" value={agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none'} />
-                    <CompactStat label="Contract" value={agentDetailQuery.data.activeContract ? `${formatUsd(agentDetailQuery.data.activeContract.weeklyValueUsd)} / week` : 'no contract'} />
-                    <CompactStat label="Runner" value={getRunnerStateLabel(agentDetailQuery.data)} />
-                    <CompactStat
-                      label="Next activity"
-                      value={agentDetailQuery.data.runner?.nextStepAt ? formatDateTime(agentDetailQuery.data.runner.nextStepAt) : '—'}
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <ReadOnlyField label="Runner state" value={getRunnerStateLabel(agentDetailQuery.data)} />
+                    <ReadOnlyField label="Wake queue" value={getWakeQueueLabel(agentDetailQuery.data)} />
+                    <ReadOnlyField label="Last wake" value={formatDateTime(agentDetailQuery.data.runner?.lastWakeStartedAt ?? null)} />
+                    <ReadOnlyField
+                      label="Next scheduled step"
+                      value={agentDetailQuery.data.runner?.nextStepAt ? `${formatDateTime(agentDetailQuery.data.runner.nextStepAt)}${agentDetailQuery.data.runner.estimatedDelayMs != null ? ` · ${formatDurationShort(agentDetailQuery.data.runner.estimatedDelayMs)}` : ''}` : '—'}
+                    />
+                    <ReadOnlyField
+                      label="Latest step"
+                      value={agentDetailQuery.data.recentExecutionSteps[0] ? `${formatDateTime(agentDetailQuery.data.recentExecutionSteps[0].createdAt)} · ${agentDetailQuery.data.recentExecutionSteps[0].kind}` : '—'}
+                    />
+                    <ReadOnlyField
+                      label="Unread notifications"
+                      value={formatInteger(agentDetailQuery.data.recentNotifications.filter((notification) => !notification.read).length)}
+                    />
+                    <ReadOnlyField
+                      label="Unread conversations"
+                      value={formatInteger(agentDetailQuery.data.recentConversations.length)}
+                    />
+                    <ReadOnlyField
+                      label="Estimated next interval"
+                      value={agentDetailQuery.data.runner?.estimatedDelayMs != null ? formatDurationShort(agentDetailQuery.data.runner.estimatedDelayMs) : '—'}
                     />
                   </div>
                 </WorkspaceCanvas>
+
+                <WorkspaceCanvas
+                  title={agentDetailQuery.data.name}
+                  description={`${agentDetailQuery.data.function?.name ?? 'No function assigned'} · ${agentDetailQuery.data.executionState}`}
+                >
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <CompactStat label="Function" value={agentDetailQuery.data.function?.name ?? '—'} />
+                    <CompactStat label="Providers" value={agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none'} />
+                    <CompactStat label="Contract" value={agentDetailQuery.data.activeContract ? `${formatUsd(agentDetailQuery.data.activeContract.weeklyValueUsd)} / week` : 'no contract'} />
+                    <CompactStat label="Model" value={agentDetailQuery.data.modelProfile?.name ?? '—'} />
+                  </div>
+                </WorkspaceCanvas>
+
+                <SectionNav
+                  title="Agent area"
+                  value={selectedTab}
+                  orientation="horizontal"
+                  items={detailTabs}
+                  onChange={(tab) => {
+                    if (!input.agentId) {
+                      return;
+                    }
+
+                    void navigate(
+                      buildAgentLocation({
+                        agentId: input.agentId,
+                        tab,
+                        runtimeView: selectedRuntimeView,
+                        communicationView: selectedCommunicationView,
+                      }),
+                    );
+                  }}
+                />
 
                 {selectedTab === 'runtime' && functionsQuery.data && (
                   <div className="space-y-6">
@@ -1420,11 +1448,18 @@ function AgentInboxCard(input: {
   notifications: AgentDetail['recentNotifications'];
   conversations: AgentDetail['recentConversations'];
 }) {
+  const [view, setView] = useState<'conversations' | 'notifications'>('conversations');
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
+    input.conversations[0]?.conversationId ?? null,
+  );
   const unreadNotificationCount = input.notifications.filter((notification) => !notification.read).length;
   const unreadMessageCount = input.conversations.reduce(
     (total, conversation) => total + conversation.messages.filter((message) => message.unread).length,
     0,
   );
+  const selectedConversation = input.conversations.find(
+    (conversation) => conversation.conversationId === selectedConversationId,
+  ) ?? input.conversations[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -1440,88 +1475,127 @@ function AgentInboxCard(input: {
         </div>
       </WorkspaceCanvas>
 
-      <Card className="p-6">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">Recent notifications</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Latest notifications recorded in the central Forge database.
-          </p>
-        </div>
-        <div className="mt-5 space-y-3">
-          {input.notifications.length === 0 && (
-            <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
-              No notifications for this agent.
-            </div>
-          )}
-          {input.notifications.map((notification) => (
-            <div key={notification.notificationId} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <Badge>{notification.read ? 'read' : 'unread'}</Badge>
-                <div className="text-xs text-slate-500">{formatDateTime(notification.timestamp)}</div>
-              </div>
-              <div className="mt-3 text-sm text-slate-700">{notification.content}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <SegmentedTabs
+        value={view}
+        items={[
+          { value: 'conversations', label: 'Conversations', description: 'browse and inspect recent threads' },
+          { value: 'notifications', label: 'Notifications', description: 'central operational alerts' },
+        ]}
+        onChange={(nextView) => setView(nextView as 'conversations' | 'notifications')}
+      />
 
-      <Card className="p-6">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">Recent conversations</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Read-only communication preview from the selected agent workspace database.
-          </p>
-        </div>
-        <div className="mt-5 space-y-4">
-          {input.conversations.length === 0 && (
-            <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+      {view === 'notifications' ? (
+        <Card className="p-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Notifications</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Latest notifications recorded in the central Forge database.
+            </p>
+          </div>
+          <div className="mt-5 space-y-3">
+            {input.notifications.length === 0 && (
+              <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+                No notifications for this agent.
+              </div>
+            )}
+            {input.notifications.map((notification) => (
+              <div key={notification.notificationId} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Badge>{notification.read ? 'read' : 'unread'}</Badge>
+                    <span className="text-xs text-slate-500">{formatDateTime(notification.timestamp)}</span>
+                  </div>
+                </div>
+                <div className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{notification.content}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Conversations</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Read-only communication preview from the selected agent workspace database.
+            </p>
+          </div>
+          {input.conversations.length === 0 ? (
+            <div className="mt-5 rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
               No conversations for this agent.
             </div>
-          )}
-          {input.conversations.map((conversation) => (
-            <div
-              key={conversation.conversationId}
-              className="rounded-lg border border-slate-200 bg-slate-50 p-4"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="font-medium text-slate-950">{conversation.conversationKey}</div>
-                <Badge>{conversation.provider}</Badge>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {conversation.participants.map((participant) => (
-                  <Badge key={`${conversation.conversationId}-${participant}`}>{participant}</Badge>
-                ))}
-              </div>
-              <div className="mt-1 space-y-1 text-xs text-slate-500">
-                <div>
-                  Updated at {formatDateTimeText(conversation.updatedAt)}
-                </div>
-                <div>
-                  {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? 'Conversation'}
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                {conversation.messages.map((message) => (
-                  <div key={message.messageId} className="rounded-xl bg-white px-3 py-3 text-sm text-slate-700">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-medium text-slate-900">
-                        {message.authorDisplayName ?? 'Unknown author'}
+          ) : (
+            <div className="mt-5 grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="space-y-2">
+                {input.conversations.map((conversation) => {
+                  const unreadCount = conversation.messages.filter((message) => message.unread).length;
+
+                  return (
+                    <button
+                      key={conversation.conversationId}
+                      type="button"
+                      onClick={() => setSelectedConversationId(conversation.conversationId)}
+                      className={cn(
+                        'w-full rounded-lg border px-4 py-4 text-left transition',
+                        selectedConversation?.conversationId === conversation.conversationId
+                          ? 'border-slate-900 bg-slate-900 text-white'
+                          : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:bg-white',
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">
+                            {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? conversation.conversationKey}
+                          </div>
+                          <div className={cn('mt-1 text-xs', selectedConversation?.conversationId === conversation.conversationId ? 'text-white/70' : 'text-slate-500')}>
+                            {conversation.provider} · {formatDateTimeText(conversation.updatedAt)}
+                          </div>
+                        </div>
+                        {unreadCount > 0 ? <Badge>{formatInteger(unreadCount)}</Badge> : null}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {message.unread && <Badge>unread</Badge>}
-                        <span className="text-xs text-slate-500">
-                          {formatDateTimeText(message.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2 whitespace-pre-wrap">{message.content}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {selectedConversation ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="font-medium text-slate-950">{selectedConversation.conversationKey}</div>
+                    <Badge>{selectedConversation.provider}</Badge>
                   </div>
-                ))}
-              </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedConversation.participants.map((participant) => (
+                      <Badge key={`${selectedConversation.conversationId}-${participant}`}>{participant}</Badge>
+                    ))}
+                  </div>
+                  <div className="mt-2 space-y-1 text-xs text-slate-500">
+                    <div>Updated at {formatDateTimeText(selectedConversation.updatedAt)}</div>
+                    <div>{selectedConversation.name ?? selectedConversation.contactDisplayName ?? selectedConversation.contactSlug ?? 'Conversation'}</div>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {selectedConversation.messages.map((message) => (
+                      <div key={message.messageId} className="rounded-xl bg-white px-4 py-3 text-sm text-slate-700">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="font-medium text-slate-900">
+                            {message.authorDisplayName ?? 'Unknown author'}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {message.unread && <Badge>unread</Badge>}
+                            <span className="text-xs text-slate-500">
+                              {formatDateTimeText(message.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="mt-2 whitespace-pre-wrap">{message.content}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
-          ))}
-        </div>
-      </Card>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
@@ -1834,10 +1908,6 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
           <ReadOnlyField
             label="Average recent gap"
             value={recentAverageStepGapMs ? formatDurationShort(recentAverageStepGapMs) : '—'}
-          />
-          <ReadOnlyField
-            label="Auto refresh"
-            value="5s"
           />
         </div>
       </WorkspaceCanvas>
