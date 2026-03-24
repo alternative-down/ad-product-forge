@@ -1,4 +1,5 @@
 const WAKE_DEBOUNCE_MS = 5000;
+const WAKE_MAX_ACCUMULATION_MS = 30000;
 
 export type AgentWakeQueue = {
   notifyExternalEvent(): void;
@@ -31,14 +32,14 @@ export function createAgentWakeQueue(config: {
     nextTriggerAt = null;
   }
 
-  function scheduleTrigger() {
+  function scheduleTrigger(delayMs: number) {
     clearTimer();
-    nextTriggerAt = Date.now() + WAKE_DEBOUNCE_MS;
+    nextTriggerAt = Date.now() + delayMs;
     timer = setTimeout(() => {
       timer = null;
       nextTriggerAt = null;
       void trigger();
-    }, WAKE_DEBOUNCE_MS);
+    }, delayMs);
   }
 
   async function trigger() {
@@ -58,9 +59,20 @@ export function createAgentWakeQueue(config: {
 
   return {
     notifyExternalEvent() {
+      const now = Date.now();
+
       pending = true;
-      firstPendingAt ??= Date.now();
-      scheduleTrigger();
+      firstPendingAt ??= now;
+
+      const accumulatedMs = now - firstPendingAt;
+      if (accumulatedMs >= WAKE_MAX_ACCUMULATION_MS) {
+        clearTimer();
+        void trigger();
+        return;
+      }
+
+      const remainingAccumulationMs = WAKE_MAX_ACCUMULATION_MS - accumulatedMs;
+      scheduleTrigger(Math.min(WAKE_DEBOUNCE_MS, remainingAccumulationMs));
     },
     async onRunnerIdle() {
     },
