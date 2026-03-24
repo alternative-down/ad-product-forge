@@ -74,7 +74,7 @@ type ProviderDraft = {
 
 type AgentDetailTab = 'runtime' | 'communications' | 'schedules' | 'history';
 type AgentRuntimeView = 'assignment' | 'configuration' | 'contract' | 'github';
-type AgentCommunicationView = 'providers' | 'inbox' | 'thread';
+type AgentCommunicationView = 'inbox' | 'thread' | 'providers';
 
 export function AgentsPage() {
   return <AgentsWorkspacePage mode="directory" />;
@@ -149,7 +149,7 @@ function AgentsWorkspacePage(input: {
       : (agentDetailQuery.data ? createAgentConfigDraft(agentDetailQuery.data) : null);
   const selectedTab: AgentDetailTab = input.tab ?? 'runtime';
   const selectedRuntimeView = input.runtimeView ?? 'assignment';
-  const selectedCommunicationView = input.communicationView ?? 'providers';
+  const selectedCommunicationView = input.communicationView ?? 'inbox';
 
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
@@ -672,9 +672,9 @@ function AgentsWorkspacePage(input: {
                     <SegmentedTabs
                       value={selectedCommunicationView}
                       items={[
-                        { value: 'providers', label: 'Providers', description: 'channel credentials and provider wiring' },
                         { value: 'inbox', label: 'Inbox', description: 'notifications and recent conversations' },
                         { value: 'thread', label: 'Thread', description: 'latest persisted memory messages' },
+                        { value: 'providers', label: 'Providers', description: 'channel credentials and provider wiring' },
                       ]}
                       onChange={(communicationView) =>
                         input.agentId
@@ -2239,11 +2239,11 @@ function buildAgentLocation(input: {
   if (input.tab === 'communications') {
     return {
       to: '/agents/$agentId/communications/$communicationView',
-      params: {
-        agentId: input.agentId,
-        communicationView: input.communicationView ?? 'providers',
-      },
-    };
+        params: {
+          agentId: input.agentId,
+        communicationView: input.communicationView ?? 'inbox',
+        },
+      };
   }
 
   if (input.tab === 'schedules') {
