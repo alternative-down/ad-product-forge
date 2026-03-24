@@ -47,8 +47,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let backoffMs = ONE_MINUTE_MS;
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
-  let pendingExecutePrompt: string | null = null;
-  let pendingFeedbackMessages: string[] = [];
+  let pendingRunMessages: string[] = [];
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
@@ -98,14 +97,12 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     const nextContent = content.trim();
     const executionState = await store.getExecutionState(runtime.id);
 
+    appendPendingRunMessage(nextContent);
+
     if (executionState === 'running') {
-      if (nextContent) {
-        pendingFeedbackMessages.push(nextContent);
-      }
       return;
     }
 
-    appendPendingExecutePrompt(nextContent);
     instant = true;
     backoffMs = ONE_MINUTE_MS;
     lastWakeStartedAt = Date.now();
@@ -113,32 +110,24 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await queueNextStep();
   }
 
-  function takePendingExecutePrompt() {
-    const prompt = pendingExecutePrompt?.trim() || null;
-    pendingExecutePrompt = null;
-    return prompt;
-  }
-
-  function appendPendingExecutePrompt(content: string) {
+  function appendPendingRunMessage(content: string) {
     const nextContent = content.trim();
 
     if (!nextContent) {
       return;
     }
 
-    pendingExecutePrompt = pendingExecutePrompt
-      ? `${pendingExecutePrompt}\n\n---\n\n${nextContent}`
-      : nextContent;
+    pendingRunMessages.push(nextContent);
   }
 
-  function flushPendingFeedback() {
-    if (pendingFeedbackMessages.length === 0) {
+  function flushPendingRunMessages() {
+    if (pendingRunMessages.length === 0) {
       return null;
     }
 
-    const feedback = pendingFeedbackMessages.join('\n\n---\n\n').trim();
-    pendingFeedbackMessages = [];
-    return feedback || null;
+    const content = pendingRunMessages.join('\n\n---\n\n').trim();
+    pendingRunMessages = [];
+    return content || null;
   }
 
   function stop() {
@@ -208,7 +197,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
-      const prompt = takePendingExecutePrompt() ?? [];
+      const prompt = flushPendingRunMessages() ?? [];
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       const result = await runtime.agent.generate(prompt, {
@@ -224,7 +213,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           },
         },
         onIterationComplete: () => {
-          const feedback = flushPendingFeedback();
+          const feedback = flushPendingRunMessages();
 
           if (!feedback) {
             return;
@@ -261,7 +250,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       }
 
       if (result.toolCalls.length === 0) {
-        appendPendingExecutePrompt(RUN_STOP_REMINDER);
+        appendPendingRunMessage(RUN_STOP_REMINDER);
       }
 
       backoffMs = ONE_MINUTE_MS;
