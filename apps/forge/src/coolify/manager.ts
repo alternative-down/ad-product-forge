@@ -196,14 +196,13 @@ export function createCoolifyManager(config: {
     branch: string;
     name: string;
     slug: string;
-    domain?: string;
     port: number;
     buildCommand?: string;
     startCommand?: string;
     installCommand?: string;
   }) {
     const deploymentContext = await loadDefaultDeploymentContext();
-    const domain = input.domain ?? await buildApplicationDomain(input.slug, deploymentContext.serverUuid);
+    const domain = await buildApplicationDomain(input.slug, deploymentContext.serverUuid);
     
     const payload: Record<string, unknown> = {
       project_uuid: deploymentContext.projectUuid,
@@ -243,7 +242,6 @@ export function createCoolifyManager(config: {
     installCommand?: string;
     branch?: string;
     slug?: string;
-    domain?: string;
   }) {
     const body: Record<string, unknown> = {};
 
@@ -254,8 +252,7 @@ export function createCoolifyManager(config: {
     if (input.startCommand !== undefined) body.start_command = input.startCommand;
     if (input.installCommand !== undefined) body.install_command = input.installCommand;
     if (input.branch !== undefined) body.branch = input.branch;
-    if (input.domain !== undefined) body.fqdn = input.domain;
-    if (input.domain === undefined && input.slug !== undefined) {
+    if (input.slug !== undefined) {
       body.fqdn = await buildApplicationDomain(input.slug);
     }
 

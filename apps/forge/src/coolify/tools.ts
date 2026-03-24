@@ -76,7 +76,6 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         branch: z.string().min(1).optional(),
         name: z.string().min(1).optional(),
         slug: coolifyApplicationSlugSchema.optional(),
-        domain: z.string().min(1).optional(),
         port: z.number().int().positive().optional(),
         buildCommand: z.string().optional(),
         startCommand: z.string().optional(),
@@ -104,7 +103,6 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
             branch: input.branch!,
             name: input.name!,
             slug: input.slug!,
-            domain: input.domain,
             port: input.port!,
             buildCommand: input.buildCommand,
             startCommand: input.startCommand,
@@ -130,7 +128,6 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           installCommand: input.installCommand,
           branch: input.branch,
           slug: input.slug,
-          domain: input.domain,
         });
       },
     });
