@@ -14,7 +14,7 @@ export function createListConversationsTool(communication: CommunicationModule) 
   return createTool({
     id: 'list_conversations',
     description:
-      'List message conversations from the agent inbox. If unread preview messages are returned, they are automatically marked as read.',
+      'List message conversations from the agent inbox. Returns both conversationId and providerConversationKey. Use conversationId first for send_message/get_messages. If unread preview messages are returned, they are automatically marked as read.',
     inputSchema: listConversationsInputSchema,
     execute: async (input) => ({
       conversations: await communication.listConversations({

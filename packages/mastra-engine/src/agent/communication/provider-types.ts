@@ -34,6 +34,7 @@ export type CommunicationProvider = {
   sendMessage(input: {
     providerConversationKey?: string;
     contactExternalId?: string;
+    conversationName?: string;
     content: string;
     replyToProviderMessageId?: string;
   }): Promise<{
@@ -46,9 +47,11 @@ export type CommunicationProvider = {
 export type CommunicationConversationView = {
   conversationId: string;
   provider: string;
+  providerConversationKey: string;
   latestMessageAt: string;
   unreadCount: number;
   name?: string;
+  type?: string;
   contactSlug?: string;
   contactDisplayName?: string;
   messages: CommunicationMessageView[];
