@@ -43,10 +43,6 @@ export function createDiscordProvider(config: {
   }
 
   async function toInboundMessage(message: Message, botUserId: string): Promise<CommunicationInboundMessage | null> {
-    if (message.author.bot) {
-      return null;
-    }
-
     if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
       return null;
     }
