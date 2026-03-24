@@ -32,44 +32,49 @@ export function createCapabilityTools(
     tools.manage_agent_function = createTool({
       id: 'manage_agent_function',
       description: 'Create, update, or delete one internal agent function.',
-      inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete']),
-        functionId: z.string().min(1).optional(),
-        name: z.string().min(1).optional(),
-        description: z.string().optional().nullable(),
-      }).superRefine((input, ctx) => {
-        if (input.action === 'create' && !input.name) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'name is required when action is create' });
-        }
-
-        if ((input.action === 'update' || input.action === 'delete') && !input.functionId) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['functionId'], message: 'functionId is required when action is not create' });
-        }
-
-        if (input.action === 'update' && Object.keys(input).length <= 2) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides action and functionId must be provided' });
-        }
-      }),
+      inputSchema: z.discriminatedUnion('action', [
+        z.object({
+          action: z.literal('create'),
+          functionId: z.string().min(1).optional(),
+          name: z.string().min(1),
+          description: z.string().optional().nullable(),
+        }),
+        z.object({
+          action: z.literal('update'),
+          functionId: z.string().min(1),
+          name: z.string().min(1).optional(),
+          description: z.string().optional().nullable(),
+        }).refine(
+          (data) => data.name !== undefined || data.description !== undefined,
+          { message: 'At least one field besides action and functionId must be provided' }
+        ),
+        z.object({
+          action: z.literal('delete'),
+          functionId: z.string().min(1),
+          name: z.string().min(1).optional(),
+          description: z.string().optional().nullable(),
+        }),
+      ]),
       execute: async (input) => {
         if (input.action === 'create') {
           return capabilities.createFunction({
-            name: input.name!,
+            name: input.name,
             description: input.description ?? undefined,
           });
         }
 
         if (input.action === 'delete') {
-          const result = await capabilities.deleteFunction(input.functionId!);
-          await reloadAgentsForFunction(db, loaderConfig, input.functionId!);
+          const result = await capabilities.deleteFunction(input.functionId);
+          await reloadAgentsForFunction(db, loaderConfig, input.functionId);
           return result;
         }
 
         const result = await capabilities.updateFunction({
-          functionId: input.functionId!,
+          functionId: input.functionId,
           name: input.name,
           description: input.description,
         });
-        await reloadAgentsForFunction(db, loaderConfig, input.functionId!);
+        await reloadAgentsForFunction(db, loaderConfig, input.functionId);
         return result;
       },
     });
@@ -88,44 +93,49 @@ export function createCapabilityTools(
     tools.manage_agent_role = createTool({
       id: 'manage_agent_role',
       description: 'Create, update, or delete one internal agent role.',
-      inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete']),
-        roleId: z.string().min(1).optional(),
-        name: z.string().min(1).optional(),
-        description: z.string().optional().nullable(),
-      }).superRefine((input, ctx) => {
-        if (input.action === 'create' && !input.name) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'name is required when action is create' });
-        }
-
-        if ((input.action === 'update' || input.action === 'delete') && !input.roleId) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['roleId'], message: 'roleId is required when action is not create' });
-        }
-
-        if (input.action === 'update' && Object.keys(input).length <= 2) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides action and roleId must be provided' });
-        }
-      }),
+      inputSchema: z.discriminatedUnion('action', [
+        z.object({
+          action: z.literal('create'),
+          roleId: z.string().min(1).optional(),
+          name: z.string().min(1),
+          description: z.string().optional().nullable(),
+        }),
+        z.object({
+          action: z.literal('update'),
+          roleId: z.string().min(1),
+          name: z.string().min(1).optional(),
+          description: z.string().optional().nullable(),
+        }).refine(
+          (data) => data.name !== undefined || data.description !== undefined,
+          { message: 'At least one field besides action and roleId must be provided' }
+        ),
+        z.object({
+          action: z.literal('delete'),
+          roleId: z.string().min(1),
+          name: z.string().min(1).optional(),
+          description: z.string().optional().nullable(),
+        }),
+      ]),
       execute: async (input) => {
         if (input.action === 'create') {
           return capabilities.createRole({
-            name: input.name!,
+            name: input.name,
             description: input.description ?? undefined,
           });
         }
 
         if (input.action === 'delete') {
-          const result = await capabilities.deleteRole(input.roleId!);
-          await reloadAgentsForRole(db, loaderConfig, input.roleId!);
+          const result = await capabilities.deleteRole(input.roleId);
+          await reloadAgentsForRole(db, loaderConfig, input.roleId);
           return result;
         }
 
         const result = await capabilities.updateRole({
-          roleId: input.roleId!,
+          roleId: input.roleId,
           name: input.name,
           description: input.description,
         });
-        await reloadAgentsForRole(db, loaderConfig, input.roleId!);
+        await reloadAgentsForRole(db, loaderConfig, input.roleId);
         return result;
       },
     });
