@@ -595,6 +595,11 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       name: input.name,
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
+      creatorMember: {
+        participantId: input.creatorId,
+        participantName: input.creatorName,
+        role: 'admin',
+      },
       createdAt: now,
     };
   }
