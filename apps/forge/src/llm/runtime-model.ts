@@ -1,5 +1,5 @@
-import { createAnthropic } from '@ai-sdk/anthropic';
 import type { AgentConfig } from '@mastra/core/agent';
+import { createOAuthGateway, OAUTH_GATEWAY_ID } from '@mastra-engine/core';
 
 type RuntimeProfile = {
   modelKey: string;
@@ -7,22 +7,25 @@ type RuntimeProfile = {
   apiKey: string;
 };
 
-export function resolveProfileRuntimeModel(profile: RuntimeProfile): AgentConfig['model'] {
-  if (profile.modelKey.startsWith('account-oauth/')) {
-    return profile.modelKey;
-  }
+export async function resolveProfileRuntimeModel(
+  profile: RuntimeProfile,
+): Promise<AgentConfig['model']> {
+  if (profile.modelKey.startsWith(`${OAUTH_GATEWAY_ID}/`)) {
+    const [, providerId, ...modelIdParts] = profile.modelKey.split('/');
+    const modelId = modelIdParts.join('/');
 
-  if (profile.baseUrl?.includes('/anthropic')) {
-    const modelId = profile.modelKey.split('/').at(-1);
-
-    if (!modelId) {
-      throw new Error(`Invalid anthropic-compatible model key: ${profile.modelKey}`);
+    if (!providerId || !modelId) {
+      throw new Error(`Invalid account OAuth model key: ${profile.modelKey}`);
     }
 
-    return createAnthropic({
-      apiKey: profile.apiKey,
-      baseURL: profile.baseUrl,
-    }).messages(modelId);
+    const gateway = createOAuthGateway();
+    const apiKey = await gateway.getApiKey(profile.modelKey);
+
+    return gateway.resolveLanguageModel({
+      modelId,
+      providerId,
+      apiKey,
+    });
   }
 
   return {
