@@ -61,16 +61,37 @@ export function createDiscordProvider(config: {
     }
 
     const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
-    const content = message.content
+    const textContent = message.content
       .replaceAll(`<@${botUserId}>`, '')
       .replaceAll(`<@!${botUserId}>`, '')
       .trim();
-    
-    // Skip messages with no content (webhook status badges, etc)
+
+    const embedContent = message.embeds
+      .map((embed) =>
+        [
+          embed.title?.trim(),
+          embed.description?.trim(),
+          embed.fields
+            .map((field) => `${field.name}: ${field.value}`.trim())
+            .filter(Boolean)
+            .join('\n'),
+          embed.footer?.text?.trim(),
+          embed.url?.trim(),
+        ]
+          .filter((value) => value && value.length > 0)
+          .join('\n'),
+      )
+      .filter((value) => value.length > 0)
+      .join('\n\n');
+
+    const content = [textContent, embedContent]
+      .filter((value) => value.length > 0)
+      .join('\n\n');
+
     if (!content && message.attachments.size === 0) {
       return null;
     }
-    
+
     const attachments = Array.from(message.attachments.values()).map((attachment) => ({
       id: attachment.id,
       name: attachment.name,
@@ -88,7 +109,7 @@ export function createDiscordProvider(config: {
       authorExternalId: message.author.id,
       authorDisplayName,
       authorUsername: message.author.username,
-      content: content || '[embed/attachment only]',
+      content: content || '[attachment only]',
       attachments,
       createdAt: new Date(message.createdTimestamp).toISOString(),
       metadata: {
