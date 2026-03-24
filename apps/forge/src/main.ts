@@ -46,16 +46,21 @@ export async function main() {
   });
   const schedules = createAgentScheduleManager({
     db,
-    notifyAgent(agentId) {
-      const entry = registry.get(agentId);
+    notifyAgent(input) {
+      const entry = registry.get(input.agentId);
 
       if (!entry) {
-        console.warn(`[Forge] Schedule wake requested for unloaded agent ${agentId}`);
+        console.warn(`[Forge] Schedule wake requested for unloaded agent ${input.agentId}`);
         return;
       }
 
-      console.log(`[Forge] Schedule wake requested for agent ${agentId}`);
-      entry.runner.notifyExternalEvent();
+      console.log(`[Forge] Schedule wake requested for agent ${input.agentId}`);
+      entry.runner.notifyExternalEvent({
+        type: 'schedule',
+        id: `schedule:${input.scheduleId}:${input.timestamp}`,
+        content: input.content,
+        timestamp: input.timestamp,
+      });
     },
   });
   const githubApps = createGitHubAppManager({
@@ -63,16 +68,21 @@ export async function main() {
     httpServer,
     publicBaseUrl,
     integrations,
-    notifyAgent(agentId) {
-      const entry = registry.get(agentId);
+    notifyAgent(input) {
+      const entry = registry.get(input.agentId);
 
       if (!entry) {
-        console.warn(`[Forge] GitHub wake requested for unloaded agent ${agentId}`);
+        console.warn(`[Forge] GitHub wake requested for unloaded agent ${input.agentId}`);
         return;
       }
 
-      console.log(`[Forge] GitHub wake requested for agent ${agentId}`);
-      entry.runner.notifyExternalEvent();
+      console.log(`[Forge] GitHub wake requested for agent ${input.agentId}`);
+      entry.runner.notifyExternalEvent({
+        type: input.type,
+        id: input.id,
+        content: input.content,
+        timestamp: input.timestamp,
+      });
     },
   });
   const coolify = createCoolifyManager({

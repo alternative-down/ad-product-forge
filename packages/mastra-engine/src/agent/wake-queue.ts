@@ -1,8 +1,15 @@
 const WAKE_DEBOUNCE_MS = 5000;
 const WAKE_MAX_ACCUMULATION_MS = 30000;
 
+export type AgentWakeEvent = {
+  type: string;
+  id: string;
+  content: string;
+  timestamp: number;
+};
+
 export type AgentWakeQueue = {
-  notifyExternalEvent(): void;
+  notifyExternalEvent(event: AgentWakeEvent): void;
   onRunnerIdle(): Promise<void>;
   stop(): void;
   getSnapshot(): {
@@ -10,6 +17,7 @@ export type AgentWakeQueue = {
     waitingForIdle: boolean;
     firstPendingAt: number | null;
     nextTriggerAt: number | null;
+    events: AgentWakeEvent[];
   };
 };
 
@@ -21,6 +29,7 @@ export function createAgentWakeQueue(config: {
   let pending = false;
   let firstPendingAt: number | null = null;
   let nextTriggerAt: number | null = null;
+  const events = new Map<string, AgentWakeEvent>();
 
   function clearTimer() {
     if (!timer) {
@@ -49,6 +58,7 @@ export function createAgentWakeQueue(config: {
 
     pending = false;
     firstPendingAt = null;
+    events.clear();
 
     try {
       await config.wake();
@@ -58,11 +68,16 @@ export function createAgentWakeQueue(config: {
   }
 
   return {
-    notifyExternalEvent() {
+    notifyExternalEvent(event: AgentWakeEvent) {
       const now = Date.now();
+
+      if (events.has(event.id)) {
+        return;
+      }
 
       pending = true;
       firstPendingAt ??= now;
+      events.set(event.id, event);
 
       const accumulatedMs = now - firstPendingAt;
       if (accumulatedMs >= WAKE_MAX_ACCUMULATION_MS) {
@@ -79,6 +94,7 @@ export function createAgentWakeQueue(config: {
     stop() {
       pending = false;
       firstPendingAt = null;
+      events.clear();
       clearTimer();
     },
     getSnapshot() {
@@ -87,6 +103,7 @@ export function createAgentWakeQueue(config: {
         waitingForIdle: false,
         firstPendingAt,
         nextTriggerAt,
+        events: Array.from(events.values()),
       };
     },
   };

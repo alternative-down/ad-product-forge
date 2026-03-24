@@ -416,7 +416,12 @@ export function registerAdminRoutes(input: {
         return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
       }
 
-      entry.runner.notifyExternalEvent();
+      entry.runner.notifyExternalEvent({
+        type: 'manual-wake',
+        id: `manual-wake:${agentId}:${Date.now()}`,
+        content: 'Manual wake requested from admin console.',
+        timestamp: Date.now(),
+      });
       return jsonResponse({ success: true });
     },
   });

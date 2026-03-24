@@ -55,7 +55,7 @@ const updateScheduleSchema = z.object({
 
 export function createAgentScheduleManager(input: {
   db: Database;
-  notifyAgent(agentId: string): void;
+  notifyAgent(input: { agentId: string; scheduleId: string; content: string; timestamp: number }): void;
 }) {
   const store = createAgentScheduleStore(input.db);
   const notifications = createAgentNotificationStore(input.db);
@@ -328,7 +328,14 @@ export function createAgentScheduleManager(input: {
       nextTriggerAt,
       isActive: remainsActive,
     });
-    input.notifyAgent(scheduleRecord.agentId);
+    input.notifyAgent({
+      agentId: scheduleRecord.agentId,
+      scheduleId: scheduleRecord.scheduleId,
+      content: scheduleRecord.kind === 'agent'
+        ? scheduleRecord.content
+        : `Heartbeat triggered for ${scheduleRecord.agentId}.`,
+      timestamp: fireDate.getTime(),
+    });
   }
 
   function cancelCompletedDateJob(scheduleId: string, remainsActive: boolean) {
