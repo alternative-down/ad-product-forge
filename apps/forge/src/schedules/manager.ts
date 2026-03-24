@@ -55,7 +55,7 @@ const updateScheduleSchema = z.object({
 
 export function createAgentScheduleManager(input: {
   db: Database;
-  notifyAgent(agentId: string): void;
+  notifyAgent(input: { agentId: string; scheduleId: string; content: string; timestamp: number }): void;
 }) {
   const store = createAgentScheduleStore(input.db);
   const notifications = createAgentNotificationStore(input.db);
@@ -314,8 +314,15 @@ export function createAgentScheduleManager(input: {
       await notifications.createNotification({
         agentId: scheduleRecord.agentId,
         content: createNotificationContent({
+          agentId: scheduleRecord.agentId,
+          scheduleId: scheduleRecord.scheduleId,
+          kind: scheduleRecord.kind,
           name: scheduleRecord.name,
           description: scheduleRecord.description,
+          scheduleType: scheduleRecord.scheduleType,
+          cronExpression: scheduleRecord.cronExpression,
+          scheduledDate: scheduleRecord.scheduledDate,
+          timezone: scheduleRecord.timezone,
           content: scheduleRecord.content,
           fireDate,
         }),
@@ -328,7 +335,26 @@ export function createAgentScheduleManager(input: {
       nextTriggerAt,
       isActive: remainsActive,
     });
-    input.notifyAgent(scheduleRecord.agentId);
+    input.notifyAgent({
+      agentId: scheduleRecord.agentId,
+      scheduleId: scheduleRecord.scheduleId,
+      content: createWakeContent({
+        agentId: scheduleRecord.agentId,
+        scheduleId: scheduleRecord.scheduleId,
+        kind: scheduleRecord.kind,
+        name: scheduleRecord.name,
+        description: scheduleRecord.description,
+        scheduleType: scheduleRecord.scheduleType,
+        cronExpression: scheduleRecord.cronExpression,
+        scheduledDate: scheduleRecord.scheduledDate,
+        timezone: scheduleRecord.timezone,
+        fireDate,
+        content: scheduleRecord.kind === 'agent'
+          ? scheduleRecord.content
+          : `Heartbeat triggered for ${scheduleRecord.agentId}.`,
+      }),
+      timestamp: fireDate.getTime(),
+    });
   }
 
   function cancelCompletedDateJob(scheduleId: string, remainsActive: boolean) {
@@ -397,21 +423,83 @@ function assertFutureScheduledDate(scheduleType: 'cron' | 'date', scheduledDate?
 }
 
 function createNotificationContent(input: {
+  agentId: string;
+  scheduleId: string;
+  kind: 'agent' | 'heartbeat';
   name: string;
   description?: string;
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string | null;
+  scheduledDate?: number | null;
+  timezone: string;
   content: string;
   fireDate: Date;
 }) {
   const lines = [
-    `Scheduled task: ${input.name}`,
-    '',
+    'Scheduled notification received.',
+    `Agent id: ${input.agentId}`,
+    `Schedule id: ${input.scheduleId}`,
+    `Schedule kind: ${input.kind}`,
+    `Schedule name: ${input.name}`,
+    `Schedule type: ${input.scheduleType}`,
+    `Triggered at: ${input.fireDate.toISOString()}`,
+    `Timezone: ${input.timezone}`,
   ];
 
   if (input.description) {
-    lines.push(`Description: ${input.description}`, '');
+    lines.push(`Description: ${input.description}`);
   }
 
-  lines.push(`Triggered at: ${input.fireDate.toISOString()}`, '', 'Content:', input.content);
+  if (input.cronExpression) {
+    lines.push(`Cron expression: ${input.cronExpression}`);
+  }
+
+  if (input.scheduledDate) {
+    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
+  }
+
+  lines.push('', 'Content:', input.content);
+
+  return lines.join('\n');
+}
+
+function createWakeContent(input: {
+  agentId: string;
+  scheduleId: string;
+  kind: 'agent' | 'heartbeat';
+  name: string;
+  description?: string | null;
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string | null;
+  scheduledDate?: number | null;
+  timezone: string;
+  fireDate: Date;
+  content: string;
+}) {
+  const lines = [
+    'Scheduled wake event received.',
+    `Agent id: ${input.agentId}`,
+    `Schedule id: ${input.scheduleId}`,
+    `Schedule kind: ${input.kind}`,
+    `Schedule name: ${input.name}`,
+    `Schedule type: ${input.scheduleType}`,
+    `Triggered at: ${input.fireDate.toISOString()}`,
+    `Timezone: ${input.timezone}`,
+  ];
+
+  if (input.description) {
+    lines.push(`Schedule description: ${input.description}`);
+  }
+
+  if (input.cronExpression) {
+    lines.push(`Cron expression: ${input.cronExpression}`);
+  }
+
+  if (input.scheduledDate) {
+    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
+  }
+
+  lines.push('', 'Scheduled content:', input.content.trim());
 
   return lines.join('\n');
 }

@@ -1,8 +1,15 @@
 const WAKE_DEBOUNCE_MS = 5000;
-const WAKE_MAX_DELAY_MS = 60000;
+const WAKE_MAX_ACCUMULATION_MS = 30000;
+
+export type AgentWakeEvent = {
+  type: string;
+  id: string;
+  content: string;
+  timestamp: number;
+};
 
 export type AgentWakeQueue = {
-  notifyExternalEvent(): void;
+  notifyExternalEvent(event: AgentWakeEvent): void;
   onRunnerIdle(): Promise<void>;
   stop(): void;
   getSnapshot(): {
@@ -10,19 +17,19 @@ export type AgentWakeQueue = {
     waitingForIdle: boolean;
     firstPendingAt: number | null;
     nextTriggerAt: number | null;
+    events: AgentWakeEvent[];
   };
 };
 
 export function createAgentWakeQueue(config: {
   label?: string;
-  isRunning(): Promise<boolean>;
-  wake(): Promise<void>;
+  execute(content: string): Promise<void>;
 }): AgentWakeQueue {
   let timer: NodeJS.Timeout | null = null;
   let pending = false;
-  let waitingForIdle = false;
   let firstPendingAt: number | null = null;
   let nextTriggerAt: number | null = null;
+  const events = new Map<string, AgentWakeEvent>();
 
   function clearTimer() {
     if (!timer) {
@@ -36,65 +43,53 @@ export function createAgentWakeQueue(config: {
 
   function scheduleTrigger(delayMs: number) {
     clearTimer();
-    nextTriggerAt = Date.now() + Math.max(delayMs, 0);
-    timer = setTimeout(
-      () => {
-        void trigger();
-      },
-      Math.max(delayMs, 0),
-    );
+    nextTriggerAt = Date.now() + delayMs;
+    timer = setTimeout(() => {
+      timer = null;
+      nextTriggerAt = null;
+      void trigger();
+    }, delayMs);
   }
 
   async function trigger() {
-    clearTimer();
-
     if (!pending) {
-      console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} trigger called but pending=false, skipping`);
       return;
     }
 
-    const isAgentRunning = await config.isRunning();
-    console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} trigger executing, isRunning=${isAgentRunning}, pending=${pending}, waitingForIdle=${waitingForIdle}`);
+    const content = formatWakeEvents(Array.from(events.values()));
+
+    pending = false;
+    firstPendingAt = null;
+    events.clear();
 
     try {
-      if (isAgentRunning) {
-        waitingForIdle = true;
-        console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} is still running, scheduling retry`);
-        // Reagendar para verificar novamente após o agente terminar
-        scheduleTrigger(WAKE_DEBOUNCE_MS);
-        return;
-      }
-
-      pending = false;
-      waitingForIdle = false;
-      firstPendingAt = null;
-      console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} waking now`);
-      await config.wake();
+      await config.execute(content);
     } catch (error) {
-      console.error('[AgentWakeQueue] Failed to wake agent:', error);
-      scheduleTrigger(WAKE_DEBOUNCE_MS);
+      console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to execute:`, error);
     }
   }
 
   return {
-    notifyExternalEvent() {
-      pending = true;
-
+    notifyExternalEvent(event: AgentWakeEvent) {
       const now = Date.now();
 
-      firstPendingAt ??= now;
-      console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} received external event`);
-
-      if (waitingForIdle) {
+      if (events.has(event.id)) {
         return;
       }
 
-      if (now - firstPendingAt >= WAKE_MAX_DELAY_MS) {
+      pending = true;
+      firstPendingAt ??= now;
+      events.set(event.id, event);
+
+      const accumulatedMs = now - firstPendingAt;
+      if (accumulatedMs >= WAKE_MAX_ACCUMULATION_MS) {
+        clearTimer();
         void trigger();
         return;
       }
 
-      scheduleTrigger(Math.min(WAKE_DEBOUNCE_MS, firstPendingAt + WAKE_MAX_DELAY_MS - now));
+      const remainingAccumulationMs = WAKE_MAX_ACCUMULATION_MS - accumulatedMs;
+      scheduleTrigger(Math.min(WAKE_DEBOUNCE_MS, remainingAccumulationMs));
     },
     async onRunnerIdle() {
       console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} onRunnerIdle called, was waitingForIdle=${waitingForIdle}, pending=${pending}, timer=${!!timer}`);
@@ -116,17 +111,33 @@ export function createAgentWakeQueue(config: {
     },
     stop() {
       pending = false;
-      waitingForIdle = false;
       firstPendingAt = null;
+      events.clear();
       clearTimer();
     },
     getSnapshot() {
       return {
         pending,
-        waitingForIdle,
+        waitingForIdle: false,
         firstPendingAt,
         nextTriggerAt,
+        events: Array.from(events.values()),
       };
     },
   };
+}
+
+function formatWakeEvents(events: AgentWakeEvent[]) {
+  return events
+    .sort((left, right) => left.timestamp - right.timestamp)
+    .map((event) =>
+      [
+        `Type: ${event.type}`,
+        `Id: ${event.id}`,
+        `At: ${new Date(event.timestamp).toISOString()}`,
+        `Content:`,
+        event.content.trim(),
+      ].join('\n'),
+    )
+    .join('\n\n---\n\n');
 }

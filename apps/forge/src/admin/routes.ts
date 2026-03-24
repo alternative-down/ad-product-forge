@@ -411,12 +411,23 @@ export function registerAdminRoutes(input: {
     handler: async (request) => {
       const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
       const entry = registry.get(agentId);
+      const timestamp = Date.now();
 
       if (!entry) {
         return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
       }
 
-      entry.runner.notifyExternalEvent();
+      entry.runner.notifyExternalEvent({
+        type: 'manual-wake',
+        id: `manual-wake:${agentId}:${timestamp}`,
+        content: [
+          'Manual wake requested from admin console.',
+          `Agent id: ${agentId}`,
+          `Source: admin-console`,
+          `Timestamp: ${new Date(timestamp).toISOString()}`,
+        ].join('\n'),
+        timestamp,
+      });
       return jsonResponse({ success: true });
     },
   });

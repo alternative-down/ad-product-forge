@@ -11,7 +11,7 @@ const sendMessageInputSchema = z
       .string()
       .optional()
       .describe(
-        'Send to a known contact. Without replyToMessageId, the provider will use direct messaging when supported.',
+        'Send to a known contact using the exact contact.slug returned by list_contacts or get_contact. Without replyToMessageId, the provider will use direct messaging when supported.',
       ),
     content: z.string().min(1),
     replyToMessageId: z

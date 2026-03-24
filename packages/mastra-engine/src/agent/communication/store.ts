@@ -452,6 +452,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     const filteredConversations = conversations
       .map((conv) => {
         const recentMessages = conv.messages.slice(-5);
+        const unreadMessages = conv.messages.filter((message) => message.unread === 1);
 
         if (options.provider && conv.provider !== options.provider) {
           return null;
@@ -465,7 +466,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
           return null;
         }
 
-        const unreadCount = recentMessages.filter((msg) => msg.unread === 1).length;
+        const unreadCount = unreadMessages.length;
 
         if (options.unread !== undefined && (unreadCount > 0) !== options.unread) {
           return null;

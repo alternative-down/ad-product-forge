@@ -4,6 +4,7 @@ import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra
 
 type RegisteredAgent = {
   id: string;
+  slug: string;
   displayName: string;
   description?: string;
   onMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null;
@@ -16,6 +17,7 @@ export function createInternalChatPreset() {
     createProvider(config: { id: string; displayName: string; description?: string }): CommunicationProvider {
       const agent: RegisteredAgent = {
         id: config.id,
+        slug: createInternalChatSlug(config.displayName, config.id),
         displayName: config.displayName,
         description: config.description,
         onMessage: null,
@@ -38,11 +40,11 @@ export function createInternalChatPreset() {
           return Array.from(agents.values())
             .filter((currentAgent) => currentAgent.id !== config.id)
             .map((currentAgent) => ({
-              slug: currentAgent.id,
+              slug: currentAgent.slug,
               displayName: currentAgent.displayName,
               description: currentAgent.description,
               externalUserId: currentAgent.id,
-              username: currentAgent.id,
+              username: currentAgent.slug,
             }));
         },
         async sendMessage(input) {
@@ -65,7 +67,7 @@ export function createInternalChatPreset() {
             conversationName: config.displayName,
             authorExternalId: config.id,
             authorDisplayName: config.displayName,
-            authorUsername: config.id,
+            authorUsername: agent.slug,
             content: input.content,
             attachments: [],
             createdAt: new Date().toISOString(),
@@ -83,4 +85,16 @@ export function createInternalChatPreset() {
       };
     },
   };
+}
+
+function createInternalChatSlug(displayName: string, agentId: string) {
+  const baseSlug = displayName
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'agent';
+
+  return `${baseSlug}-${agentId.slice(0, 6).toLowerCase()}`;
 }

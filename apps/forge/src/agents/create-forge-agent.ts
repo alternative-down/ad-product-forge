@@ -15,6 +15,7 @@ import {
   type CommunicationProvider,
   createExternalAccountTools,
   LongTermMemory,
+  type AgentWakeEvent,
   createAgentMemory,
   createObservationalMemory,
   appendWorkingMemoryInstructions,
@@ -56,7 +57,7 @@ export type InternalAgentRuntime<
   omPricingModelKey: string;
   omModelProfileId?: string;
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
-  onReceiveMessage(handler: () => void): void;
+  onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
 };
 
 export interface CreateAgentConfig<
