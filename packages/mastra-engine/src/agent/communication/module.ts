@@ -117,7 +117,18 @@ export async function createCommunicationModule(config: {
             receiveMessageHandler({
               type: `message:${provider.id}`,
               id: `${provider.id}:${message.providerMessageId}`,
-              content: message.content,
+              content: formatInboundWakeMessage({
+                providerId: provider.id,
+                contactSlug: contact?.slug,
+                providerConversationKey: message.providerConversationKey,
+                providerMessageId: message.providerMessageId,
+                conversationName: message.conversationName,
+                authorExternalId: message.authorExternalId,
+                authorDisplayName: message.authorDisplayName,
+                authorUsername: message.authorUsername,
+                createdAt: message.createdAt,
+                content: message.content,
+              }),
               timestamp: Date.parse(message.createdAt) || Date.now(),
             });
           } catch (error) {
@@ -387,6 +398,51 @@ export async function createCommunicationModule(config: {
     getMessages,
     sendMessage,
   };
+}
+
+function formatInboundWakeMessage(input: {
+  providerId: string;
+  contactSlug?: string;
+  providerConversationKey: string;
+  providerMessageId: string;
+  conversationName?: string;
+  authorExternalId?: string;
+  authorDisplayName?: string;
+  authorUsername?: string;
+  createdAt: string;
+  content: string;
+}) {
+  const lines = [
+    'Inbound communication received.',
+    `Provider: ${input.providerId}`,
+    `Conversation key: ${input.providerConversationKey}`,
+    `Message id: ${input.providerMessageId}`,
+    `Timestamp: ${input.createdAt}`,
+  ];
+
+  if (input.conversationName) {
+    lines.push(`Conversation name: ${input.conversationName}`);
+  }
+
+  if (input.contactSlug) {
+    lines.push(`Contact slug: ${input.contactSlug}`);
+  }
+
+  if (input.authorDisplayName) {
+    lines.push(`Author display name: ${input.authorDisplayName}`);
+  }
+
+  if (input.authorUsername) {
+    lines.push(`Author username: ${input.authorUsername}`);
+  }
+
+  if (input.authorExternalId) {
+    lines.push(`Author external id: ${input.authorExternalId}`);
+  }
+
+  lines.push('', 'Message content:', input.content.trim());
+
+  return lines.join('\n');
 }
 
 export type CommunicationModule = Awaited<ReturnType<typeof createCommunicationModule>>;

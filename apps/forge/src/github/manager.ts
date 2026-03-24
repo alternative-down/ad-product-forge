@@ -1127,16 +1127,26 @@ export function createGitHubAppManager(config: {
 
     await saveCredentials(agentId, activeCredentials);
     const githubConfig = await getGlobalConfig();
+    const installTimestamp = Date.now();
+    const installContent = createGitHubInstallWakeContent({
+      agentId,
+      installationId,
+      organization: githubConfig.organization,
+      appName: activeCredentials.appName,
+      appSlug: activeCredentials.appSlug,
+      timestamp: installTimestamp,
+    });
+
     await notifications.createNotification({
       agentId,
-      content: `GitHub App ${activeCredentials.appSlug} installed in organization ${githubConfig.organization}.`,
+      content: installContent,
     });
     config.notifyAgent({
       agentId,
       type: 'github-install',
       id: `github-install:${agentId}:${installationId}`,
-      content: `GitHub App ${activeCredentials.appSlug} installed in organization ${githubConfig.organization}.`,
-      timestamp: Date.now(),
+      content: installContent,
+      timestamp: installTimestamp,
     });
 
     return html(200, '<h1>GitHub App installed successfully</h1><p>The agent is now connected to GitHub.</p>');
@@ -1175,12 +1185,23 @@ export function createGitHubAppManager(config: {
           ? (typeof payloadRecord.sender.login === 'string' ? payloadRecord.sender.login : undefined)
           : undefined;
       const action = typeof payloadRecord.action === 'string' ? payloadRecord.action : undefined;
-      const content = summarizeGitHubEvent({
+      const summary = summarizeGitHubEvent({
         event: name,
         action,
         repository,
         sender,
         payload,
+      });
+      const receivedAt = Date.now();
+      const content = createGitHubWebhookWakeContent({
+        agentId,
+        deliveryId,
+        event: name,
+        action,
+        repository,
+        sender,
+        summary,
+        timestamp: receivedAt,
       });
 
       await notifications.createNotification({
@@ -1193,7 +1214,7 @@ export function createGitHubAppManager(config: {
         type: `github:${name}`,
         id: `github:${deliveryId}`,
         content,
-        timestamp: Date.now(),
+        timestamp: receivedAt,
       });
       console.log(`[GitHubWebhook] Requested wake for agent ${agentId}`);
     });
@@ -1402,6 +1423,60 @@ function summarizeGitHubEvent(input: {
   }
 
   return `GitHub event ${input.event}${actionText}${repositoryText}${senderText}`.trim();
+}
+
+function createGitHubInstallWakeContent(input: {
+  agentId: string;
+  installationId: number;
+  organization: string;
+  appName: string;
+  appSlug: string;
+  timestamp: number;
+}) {
+  return [
+    'GitHub App installation completed.',
+    `Agent id: ${input.agentId}`,
+    `Installation id: ${input.installationId}`,
+    `Organization: ${input.organization}`,
+    `App name: ${input.appName}`,
+    `App slug: ${input.appSlug}`,
+    `Timestamp: ${new Date(input.timestamp).toISOString()}`,
+  ].join('\n');
+}
+
+function createGitHubWebhookWakeContent(input: {
+  agentId: string;
+  deliveryId: string;
+  event: string;
+  action?: string;
+  repository?: string;
+  sender?: string;
+  summary: string;
+  timestamp: number;
+}) {
+  const lines = [
+    'GitHub webhook received.',
+    `Agent id: ${input.agentId}`,
+    `Delivery id: ${input.deliveryId}`,
+    `Event: ${input.event}`,
+    `Timestamp: ${new Date(input.timestamp).toISOString()}`,
+  ];
+
+  if (input.action) {
+    lines.push(`Action: ${input.action}`);
+  }
+
+  if (input.repository) {
+    lines.push(`Repository: ${input.repository}`);
+  }
+
+  if (input.sender) {
+    lines.push(`Sender: ${input.sender}`);
+  }
+
+  lines.push('', 'Summary:', input.summary);
+
+  return lines.join('\n');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

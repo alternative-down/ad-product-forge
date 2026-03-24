@@ -117,6 +117,7 @@ function formatWakeEvents(events: AgentWakeEvent[]) {
     .map((event) =>
       [
         `Type: ${event.type}`,
+        `Id: ${event.id}`,
         `At: ${new Date(event.timestamp).toISOString()}`,
         `Content:`,
         event.content.trim(),
