@@ -60,11 +60,16 @@ export function createInternalChatPreset() {
           }
 
           const providerMessageId = `internal:${crypto.randomUUID()}`;
+          const isGroupConversation = input.conversationType === 'group';
 
           await recipient.onMessage({
-            providerConversationKey: input.providerConversationKey ?? config.id,
+            providerConversationKey: isGroupConversation
+              ? (input.providerConversationKey ?? config.id)
+              : config.id,
             providerMessageId,
-            conversationName: input.conversationName ?? config.displayName,
+            conversationName: isGroupConversation
+              ? (input.conversationName ?? config.displayName)
+              : config.displayName,
             authorExternalId: config.id,
             authorDisplayName: config.displayName,
             authorUsername: agent.slug,
