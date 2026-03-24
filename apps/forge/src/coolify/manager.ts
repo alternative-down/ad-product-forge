@@ -196,13 +196,14 @@ export function createCoolifyManager(config: {
     branch: string;
     name: string;
     slug: string;
+    domain?: string;
     port: number;
     buildCommand?: string;
     startCommand?: string;
     installCommand?: string;
   }) {
     const deploymentContext = await loadDefaultDeploymentContext();
-    const domain = await buildApplicationDomain(input.slug, deploymentContext.serverUuid);
+    const domain = input.domain ?? await buildApplicationDomain(input.slug, deploymentContext.serverUuid);
     
     const payload: Record<string, unknown> = {
       project_uuid: deploymentContext.projectUuid,
@@ -213,6 +214,7 @@ export function createCoolifyManager(config: {
       git_repository: `${input.repositoryOwner}/${input.repositoryName}`,
       git_branch: input.branch,
       name: input.name,
+      domains: domain,
       ports_exposes: String(input.port),
       build_pack: 'nixpacks', // Use nixpacks for Next.js
       build_command: input.buildCommand,
@@ -241,6 +243,7 @@ export function createCoolifyManager(config: {
     installCommand?: string;
     branch?: string;
     slug?: string;
+    domain?: string;
   }) {
     const body: Record<string, unknown> = {};
 
@@ -251,7 +254,10 @@ export function createCoolifyManager(config: {
     if (input.startCommand !== undefined) body.start_command = input.startCommand;
     if (input.installCommand !== undefined) body.install_command = input.installCommand;
     if (input.branch !== undefined) body.branch = input.branch;
-    if (input.slug !== undefined) body.fqdn = await buildApplicationDomain(input.slug);
+    if (input.domain !== undefined) body.fqdn = input.domain;
+    if (input.domain === undefined && input.slug !== undefined) {
+      body.fqdn = await buildApplicationDomain(input.slug);
+    }
 
     const data = await requestJson('PATCH', `/applications/${encodeURIComponent(input.applicationUuid)}`, body);
     const application = extractItem(data, ApplicationSchema);
@@ -357,7 +363,6 @@ export function createCoolifyManager(config: {
     applicationUuid: string;
     key: string;
     value: string;
-    isBuildTime?: boolean;
     isPreview?: boolean;
     isLiteral?: boolean;
     isMultiline?: boolean;
@@ -367,7 +372,6 @@ export function createCoolifyManager(config: {
     const body = {
       key: input.key,
       value: input.value,
-      is_build_time: input.isBuildTime ?? false,
       is_preview: input.isPreview ?? false,
       is_literal: input.isLiteral ?? false,
       is_multiline: input.isMultiline ?? false,
