@@ -356,6 +356,7 @@ export async function createCommunicationModule(config: {
               providerConversationKey: conversation.providerConversationKey,
               contactExternalId: member.participantId,
               conversationName: conversation.name,
+              conversationType: conversation.type,
               content: input.content,
               replyToProviderMessageId: replyMessage?.providerMessageId,
             }),
@@ -381,6 +382,7 @@ export async function createCommunicationModule(config: {
       const sent = await provider.sendMessage({
         providerConversationKey: conversation.providerConversationKey,
         conversationName: conversation.name,
+        conversationType: conversation.type,
         contactExternalId: contactExternalId || undefined,
         content: input.content,
         replyToProviderMessageId: replyMessage?.providerMessageId,
@@ -423,6 +425,7 @@ export async function createCommunicationModule(config: {
 
     const sent = await provider.sendMessage({
       contactExternalId,
+      conversationType: 'dm',
       content: input.content,
       replyToProviderMessageId: replyMessage?.providerMessageId,
     });

@@ -35,6 +35,7 @@ export type CommunicationProvider = {
     providerConversationKey?: string;
     contactExternalId?: string;
     conversationName?: string;
+    conversationType?: string;
     content: string;
     replyToProviderMessageId?: string;
   }): Promise<{
