@@ -23,7 +23,7 @@ export type AgentWakeQueue = {
 
 export function createAgentWakeQueue(config: {
   label?: string;
-  wake(): Promise<void>;
+  execute(content: string): Promise<void>;
 }): AgentWakeQueue {
   let timer: NodeJS.Timeout | null = null;
   let pending = false;
@@ -56,14 +56,16 @@ export function createAgentWakeQueue(config: {
       return;
     }
 
+    const content = formatWakeEvents(Array.from(events.values()));
+
     pending = false;
     firstPendingAt = null;
     events.clear();
 
     try {
-      await config.wake();
+      await config.execute(content);
     } catch (error) {
-      console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to wake:`, error);
+      console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to execute:`, error);
     }
   }
 
@@ -107,4 +109,18 @@ export function createAgentWakeQueue(config: {
       };
     },
   };
+}
+
+function formatWakeEvents(events: AgentWakeEvent[]) {
+  return events
+    .sort((left, right) => left.timestamp - right.timestamp)
+    .map((event) =>
+      [
+        `Type: ${event.type}`,
+        `At: ${new Date(event.timestamp).toISOString()}`,
+        `Content:`,
+        event.content.trim(),
+      ].join('\n'),
+    )
+    .join('\n\n---\n\n');
 }

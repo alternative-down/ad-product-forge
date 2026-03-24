@@ -30,7 +30,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
   const wakeQueue = createAgentWakeQueue({
     label: runtime.id,
-    wake,
+    execute,
   });
   let timer: NodeJS.Timeout | null = null;
   let stopped = false;
@@ -40,6 +40,8 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let needsWakePrompt = true;
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
+  let pendingExecutePrompt: string | null = null;
+  let pendingFeedbackMessages: string[] = [];
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
@@ -82,23 +84,44 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await queueNextStep();
   }
 
-  async function wake() {
+  async function execute(content: string) {
     if (stopped) {
       return;
     }
 
+    const nextContent = content.trim();
     const executionState = await store.getExecutionState(runtime.id);
 
     if (executionState === 'running') {
+      if (nextContent) {
+        pendingFeedbackMessages.push(nextContent);
+      }
       return;
     }
 
+    pendingExecutePrompt = nextContent;
     instant = true;
     backoffMs = ONE_MINUTE_MS;
-    needsWakePrompt = true;
+    needsWakePrompt = false;
     lastWakeStartedAt = Date.now();
     await store.setExecutionState(runtime.id, 'running');
     await queueNextStep();
+  }
+
+  function takePendingExecutePrompt() {
+    const prompt = pendingExecutePrompt?.trim() || null;
+    pendingExecutePrompt = null;
+    return prompt;
+  }
+
+  function flushPendingFeedback() {
+    if (pendingFeedbackMessages.length === 0) {
+      return null;
+    }
+
+    const feedback = pendingFeedbackMessages.join('\n\n---\n\n').trim();
+    pendingFeedbackMessages = [];
+    return feedback || null;
   }
 
   function stop() {
@@ -168,7 +191,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
-      const prompt = needsWakePrompt ? AUTONOMOUS_STEP_PROMPT : [];
+      const prompt = takePendingExecutePrompt() ?? (needsWakePrompt ? AUTONOMOUS_STEP_PROMPT : []);
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       const result = await runtime.agent.generate(prompt, {
@@ -182,6 +205,18 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           anthropic: {
             thinking: { type: 'enabled', budgetTokens: 12000 },
           },
+        },
+        onIterationComplete: () => {
+          const feedback = flushPendingFeedback();
+
+          if (!feedback) {
+            return;
+          }
+
+          return {
+            continue: true,
+            feedback,
+          };
         },
       });
       const usage = result.usage as AgentUsage;
@@ -431,7 +466,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   return {
     start,
     stop,
-    wake,
+    execute,
     getSnapshot,
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
