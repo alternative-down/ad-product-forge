@@ -107,10 +107,19 @@ export async function changeAgentFunction(input: {
 
   const notifications = createAgentNotificationStore(input.db);
   const actorLabel = input.actorAgentId === input.targetAgentId ? `${actorAgent.name} (self)` : actorAgent.name;
+  const changeTimestamp = Date.now();
+  const eventContent = createFunctionChangeContent({
+    targetAgentId: input.targetAgentId,
+    functionId: agentFunction.id,
+    functionName: agentFunction.name,
+    changedBy: actorLabel,
+    changedByAgentId: input.actorAgentId,
+    timestamp: changeTimestamp,
+  });
 
   await notifications.createNotification({
     agentId: input.targetAgentId,
-    content: `Function changed to "${agentFunction.name}" by ${actorLabel}.`,
+    content: eventContent,
   });
 
   await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
@@ -118,9 +127,9 @@ export async function changeAgentFunction(input: {
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
   targetEntry?.runner.notifyExternalEvent({
     type: 'function-change',
-    id: `function-change:${input.targetAgentId}:${Date.now()}`,
-    content: `Function changed to "${agentFunction.name}" by ${actorLabel}.`,
-    timestamp: Date.now(),
+    id: `function-change:${input.targetAgentId}:${changeTimestamp}`,
+    content: eventContent,
+    timestamp: changeTimestamp,
   });
 
   return {
@@ -168,10 +177,18 @@ export async function changeAgentFunctionFromAdmin(input: {
   });
 
   const notifications = createAgentNotificationStore(input.db);
+  const changeTimestamp = Date.now();
+  const eventContent = createFunctionChangeContent({
+    targetAgentId: input.targetAgentId,
+    functionId: agentFunction.id,
+    functionName: agentFunction.name,
+    changedBy: 'admin console',
+    timestamp: changeTimestamp,
+  });
 
   await notifications.createNotification({
     agentId: input.targetAgentId,
-    content: `Function changed to "${agentFunction.name}" by admin console.`,
+    content: eventContent,
   });
 
   await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
@@ -179,9 +196,9 @@ export async function changeAgentFunctionFromAdmin(input: {
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
   targetEntry?.runner.notifyExternalEvent({
     type: 'function-change',
-    id: `function-change:${input.targetAgentId}:${Date.now()}`,
-    content: `Function changed to "${agentFunction.name}" by admin console.`,
-    timestamp: Date.now(),
+    id: `function-change:${input.targetAgentId}:${changeTimestamp}`,
+    content: eventContent,
+    timestamp: changeTimestamp,
   });
 
   return {
@@ -228,4 +245,28 @@ export async function updateInternalChatProviderProfile(
       encryptedCredentials: encryptSecret(JSON.stringify(nextCredentials)),
     })
     .where(eq(agentProviders.id, provider.id));
+}
+
+function createFunctionChangeContent(input: {
+  targetAgentId: string;
+  functionId: string;
+  functionName: string;
+  changedBy: string;
+  changedByAgentId?: string;
+  timestamp: number;
+}) {
+  const lines = [
+    'Agent function assignment changed.',
+    `Target agent id: ${input.targetAgentId}`,
+    `Function id: ${input.functionId}`,
+    `Function name: ${input.functionName}`,
+    `Changed by: ${input.changedBy}`,
+    `Timestamp: ${new Date(input.timestamp).toISOString()}`,
+  ];
+
+  if (input.changedByAgentId) {
+    lines.push(`Changed by agent id: ${input.changedByAgentId}`);
+  }
+
+  return lines.join('\n');
 }
