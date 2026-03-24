@@ -1875,50 +1875,14 @@ function ScheduleEditorCard(input: {
 
 function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
   const agent = input.agent!;
-  const latestStep = agent.recentExecutionSteps[0] ?? null;
-  const unreadNotificationCount = agent.recentNotifications.filter((notification) => !notification.read).length;
   const recentStepCostUsd = agent.recentExecutionSteps.reduce((total, step) => total + step.costUsd, 0);
   const recentStepTokenCount = agent.recentExecutionSteps.reduce(
     (total, step) => total + step.inputTokens + step.cachedInputTokens + step.outputTokens,
     0,
   );
-  const recentAverageStepGapMs = computeAverageStepGapMs(agent.recentExecutionSteps);
 
   return (
     <div className="space-y-6">
-      <WorkspaceCanvas
-        title="Run state"
-        description="Live runner state, wake queue condition, and the latest observed activity from the agent."
-      >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <ReadOnlyField label="Runner state" value={getRunnerStateLabel(agent)} />
-          <ReadOnlyField
-            label="Wake queue"
-            value={getWakeQueueLabel(agent)}
-          />
-          <ReadOnlyField
-            label="Last wake"
-            value={formatDateTime(agent.runner?.lastWakeStartedAt ?? null)}
-          />
-          <ReadOnlyField
-            label="Next scheduled step"
-            value={agent.runner?.nextStepAt ? `${formatDateTime(agent.runner.nextStepAt)}${agent.runner.estimatedDelayMs != null ? ` · ${formatDurationShort(agent.runner.estimatedDelayMs)}` : ''}` : '—'}
-          />
-          <ReadOnlyField
-            label="Latest step"
-            value={latestStep ? `${formatDateTime(latestStep.createdAt)} · ${latestStep.kind}` : '—'}
-          />
-          <ReadOnlyField
-            label="Unread notifications"
-            value={formatInteger(unreadNotificationCount)}
-          />
-          <ReadOnlyField
-            label="Average recent gap"
-            value={recentAverageStepGapMs ? formatDurationShort(recentAverageStepGapMs) : '—'}
-          />
-        </div>
-      </WorkspaceCanvas>
-
       <WorkspaceCanvas
         title="Execution summary"
         description="Budget context and the recent execution footprint visible from the central step ledger."
@@ -2055,24 +2019,6 @@ function getWakeQueueLabel(agent: Awaited<ReturnType<typeof getAgent>>) {
   }
 
   return 'pending';
-}
-
-function computeAverageStepGapMs(
-  steps: Array<{
-    createdAt: number;
-  }>,
-) {
-  if (steps.length < 2) {
-    return null;
-  }
-
-  let totalGapMs = 0;
-
-  for (let index = 0; index < steps.length - 1; index += 1) {
-    totalGapMs += Math.abs(steps[index].createdAt - steps[index + 1].createdAt);
-  }
-
-  return totalGapMs / (steps.length - 1);
 }
 
 function formatDurationShort(value: number) {
