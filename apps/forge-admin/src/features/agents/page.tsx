@@ -9,6 +9,7 @@ import {
   deleteAgentProvider,
   deleteSchedule,
   getAgent,
+  getSystemLlm,
   hireAgent,
   listAgents,
   listFunctions,
@@ -65,6 +66,8 @@ type AgentConfigDraft = {
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
   workspaceEmbedder: string;
+  modelProfileId: string;
+  omModelProfileId: string;
 };
 
 type ProviderDraft = {
@@ -130,6 +133,10 @@ function AgentsWorkspacePage(input: {
   const functionsQuery = useQuery({
     queryKey: ['admin', 'functions'],
     queryFn: listFunctions,
+  });
+  const systemLlmQuery = useQuery({
+    queryKey: ['admin', 'system', 'llm'],
+    queryFn: getSystemLlm,
   });
   const agentDetailQuery = useQuery({
     queryKey: ['admin', 'agent', input.agentId],
@@ -594,9 +601,11 @@ function AgentsWorkspacePage(input: {
                             instructions: draft.instructions,
                             workspaceAutoSync: draft.workspaceAutoSync,
                             workspaceBm25: draft.workspaceBm25,
-                            workspaceEmbedder: draft.workspaceEmbedder,
+                            modelProfileId: draft.modelProfileId,
+                            omModelProfileId: draft.omModelProfileId,
                           })
                         }
+                        profiles={systemLlmQuery.data?.profiles ?? []}
                       />
                     ) : null}
 
@@ -1078,6 +1087,7 @@ function AgentMaintenanceCard(input: {
 
 function AgentConfigurationCard(input: {
   draft: AgentConfigDraft;
+  profiles: Array<{ profileId: string; name: string; modelKey: string }>;
   pending: boolean;
   error: string | null;
   onChange(draft: AgentConfigDraft): void;
@@ -1108,13 +1118,42 @@ function AgentConfigurationCard(input: {
             />
           </LabeledField>
           <LabeledField label="Workspace embedder">
-            <Input
-              value={input.draft.workspaceEmbedder}
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              {input.draft.workspaceEmbedder}
+            </div>
+          </LabeledField>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <LabeledField label="Primary LLM profile">
+            <Select
+              value={input.draft.modelProfileId}
               onChange={(event) =>
-                input.onChange({ ...input.draft, workspaceEmbedder: event.target.value })
+                input.onChange({ ...input.draft, modelProfileId: event.target.value })
               }
               required
-            />
+            >
+              {input.profiles.map((profile) => (
+                <option key={profile.profileId} value={profile.profileId}>
+                  {profile.name} · {profile.modelKey}
+                </option>
+              ))}
+            </Select>
+          </LabeledField>
+          <LabeledField label="OM profile">
+            <Select
+              value={input.draft.omModelProfileId}
+              onChange={(event) =>
+                input.onChange({ ...input.draft, omModelProfileId: event.target.value })
+              }
+              required
+            >
+              {input.profiles.map((profile) => (
+                <option key={profile.profileId} value={profile.profileId}>
+                  {profile.name} · {profile.modelKey}
+                </option>
+              ))}
+            </Select>
           </LabeledField>
         </div>
 
@@ -2114,6 +2153,8 @@ function createAgentConfigDraft(agent: AgentDetail): AgentConfigDraft {
     workspaceAutoSync: agent.workspace.autoSync,
     workspaceBm25: agent.workspace.bm25,
     workspaceEmbedder: agent.workspace.embedder,
+    modelProfileId: agent.modelProfile?.profileId ?? '',
+    omModelProfileId: agent.omModelProfile?.profileId ?? '',
   };
 }
 
