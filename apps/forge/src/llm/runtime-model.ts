@@ -1,4 +1,3 @@
-import { createAnthropic } from '@ai-sdk/anthropic';
 import type { AgentConfig } from '@mastra/core/agent';
 import { createOAuthGateway, OAUTH_GATEWAY_ID } from '@mastra-engine/core';
 
@@ -27,19 +26,6 @@ export async function resolveProfileRuntimeModel(
       providerId,
       apiKey,
     });
-  }
-
-  if (profile.baseUrl?.includes('/anthropic')) {
-    const modelId = profile.modelKey.split('/').at(-1);
-
-    if (!modelId) {
-      throw new Error(`Invalid anthropic-compatible model key: ${profile.modelKey}`);
-    }
-
-    return createAnthropic({
-      apiKey: profile.apiKey,
-      baseURL: profile.baseUrl,
-    }).messages(modelId);
   }
 
   return {
