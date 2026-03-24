@@ -329,13 +329,13 @@ function CapabilitiesWorkspacePage(input: {
                 to="/roles/roles/$roleId"
                 params={{ roleId: role.roleId }}
                 className={cn(
-                  'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
+                  'mb-2 block w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
                   input.roleId === role.roleId
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                     : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                 )}
               >
-                <div className="font-semibold">{role.name}</div>
+                <div className="truncate font-semibold">{role.name}</div>
                 <div
                   className={cn(
                     'mt-1 text-xs',
@@ -356,13 +356,13 @@ function CapabilitiesWorkspacePage(input: {
                 to="/roles/functions/$functionId"
                 params={{ functionId: item.functionId }}
                 className={cn(
-                  'mb-2 w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
+                  'mb-2 block w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
                   input.functionId === item.functionId
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                     : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                 )}
               >
-                <div className="font-semibold">{item.name}</div>
+                <div className="truncate font-semibold">{item.name}</div>
                 <div
                   className={cn(
                     'mt-1 text-xs',
