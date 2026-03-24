@@ -389,6 +389,37 @@ export async function createCommunicationModule(config: {
     });
   }
 
+  async function createChatGroup(input: {
+    provider: string;
+    providerConversationKey: string;
+    name: string;
+    creatorId: string;
+    creatorName: string;
+  }) {
+    return store.createChatGroup(input);
+  }
+
+  async function addMemberToGroup(input: {
+    groupId: string;
+    participantId: string;
+    participantName: string;
+    role?: string;
+  }) {
+    return store.addMemberToGroup(input);
+  }
+
+  async function removeMemberFromGroup(input: { groupId: string; participantId: string }) {
+    return store.removeMemberFromGroup(input);
+  }
+
+  async function listChatGroups(input: { provider?: string; limit?: number }) {
+    return store.listChatGroups(input);
+  }
+
+  async function listGroupMembers(groupId: string) {
+    return store.listGroupMembers(groupId);
+  }
+
   return {
     onReceiveMessage,
     listContacts,
@@ -397,6 +428,11 @@ export async function createCommunicationModule(config: {
     listConversations,
     getMessages,
     sendMessage,
+    createChatGroup,
+    addMemberToGroup,
+    removeMemberFromGroup,
+    listChatGroups,
+    listGroupMembers,
   };
 }
 

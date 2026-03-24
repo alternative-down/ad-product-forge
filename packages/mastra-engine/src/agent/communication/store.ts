@@ -32,9 +32,18 @@ const conversationSchema = z.object({
   provider: z.string(),
   providerConversationKey: z.string(),
   name: z.string().optional(),
+  type: z.string().default('dm'), // 'dm' or 'group'
   contactSlug: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+const chatGroupMemberSchema = z.object({
+  groupId: z.string(),
+  participantId: z.string(),
+  participantName: z.string(),
+  role: z.string().default('normal'), // 'admin' or 'normal'
+  createdAt: z.string(),
 });
 
 const messageSchema = z.object({
@@ -105,6 +114,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: conversation.provider,
       providerConversationKey: conversation.providerConversationKey,
       name: conversation.name ?? undefined,
+      type: conversation.type,
       contactSlug: conversation.contactSlug ?? undefined,
       createdAt: conversation.createdAt,
       updatedAt: conversation.updatedAt,
@@ -282,6 +292,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     provider: string;
     providerConversationKey: string;
     name?: string;
+    type?: string;
     contactSlug?: string;
     createdAt?: string;
   }) {
@@ -299,6 +310,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
         .update(schema.communicationConversations)
         .set({
           name: input.name ?? existing.name,
+          type: input.type ?? existing.type,
           contactSlug: input.contactSlug ?? existing.contactSlug,
           updatedAt: now,
         })
@@ -314,6 +326,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
       name: input.name ?? null,
+      type: input.type ?? 'dm',
       contactSlug: input.contactSlug ?? null,
       createdAt: now,
       updatedAt: now,
@@ -546,6 +559,149 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     }));
   }
 
+  async function createChatGroup(input: {
+    provider: string;
+    providerConversationKey: string;
+    name: string;
+    creatorId: string;
+    creatorName: string;
+  }) {
+    const now = new Date().toISOString();
+
+    // Create the group conversation
+    const conversation = await upsertConversation({
+      provider: input.provider,
+      providerConversationKey: input.providerConversationKey,
+      name: input.name,
+      type: 'group',
+      createdAt: now,
+    });
+
+    if (!conversation) {
+      throw new Error('Failed to create chat group');
+    }
+
+    // Add creator as admin member
+    await db.insert(schema.chatGroupMembers).values({
+      groupId: conversation.conversationId,
+      participantId: input.creatorId,
+      participantName: input.creatorName,
+      role: 'admin',
+      createdAt: now,
+    });
+
+    return {
+      groupId: conversation.conversationId,
+      name: input.name,
+      provider: input.provider,
+      providerConversationKey: input.providerConversationKey,
+      createdAt: now,
+    };
+  }
+
+  async function addMemberToGroup(input: {
+    groupId: string;
+    participantId: string;
+    participantName: string;
+    role?: string;
+  }) {
+    const now = new Date().toISOString();
+
+    // Verify group exists
+    const group = await db.query.communicationConversations.findFirst({
+      where: and(
+        eq(schema.communicationConversations.conversationId, input.groupId),
+        eq(schema.communicationConversations.type, 'group'),
+      ),
+    });
+
+    if (!group) {
+      throw new Error('Chat group not found');
+    }
+
+    // Add member
+    await db.insert(schema.chatGroupMembers).values({
+      groupId: input.groupId,
+      participantId: input.participantId,
+      participantName: input.participantName,
+      role: input.role ?? 'normal',
+      createdAt: now,
+    }).onConflictDoUpdate({
+      target: [schema.chatGroupMembers.groupId, schema.chatGroupMembers.participantId],
+      set: {
+        participantName: input.participantName,
+        role: input.role ?? 'normal',
+      },
+    });
+
+    return {
+      groupId: input.groupId,
+      participantId: input.participantId,
+      participantName: input.participantName,
+      role: input.role ?? 'normal',
+      createdAt: now,
+    };
+  }
+
+  async function removeMemberFromGroup(input: { groupId: string; participantId: string }) {
+    // Verify group exists
+    const group = await db.query.communicationConversations.findFirst({
+      where: and(
+        eq(schema.communicationConversations.conversationId, input.groupId),
+        eq(schema.communicationConversations.type, 'group'),
+      ),
+    });
+
+    if (!group) {
+      throw new Error('Chat group not found');
+    }
+
+    await db.delete(schema.chatGroupMembers).where(
+      and(
+        eq(schema.chatGroupMembers.groupId, input.groupId),
+        eq(schema.chatGroupMembers.participantId, input.participantId),
+      ),
+    );
+
+    return { success: true };
+  }
+
+  async function listChatGroups(input: { provider?: string; limit?: number }) {
+    const limit = input.limit ?? 50;
+
+    const conversations = await db.query.communicationConversations.findMany({
+      where: and(
+        input.provider ? eq(schema.communicationConversations.provider, input.provider) : undefined,
+        eq(schema.communicationConversations.type, 'group'),
+      ),
+      orderBy: [schema.communicationConversations.createdAt],
+    });
+
+    return conversations.slice(0, limit).map((conv) => ({
+      groupId: conv.conversationId,
+      name: conv.name ?? undefined,
+      provider: conv.provider,
+      providerConversationKey: conv.providerConversationKey,
+      createdAt: conv.createdAt,
+      updatedAt: conv.updatedAt,
+    }));
+  }
+
+  async function listGroupMembers(groupId: string) {
+    const members = await db.query.chatGroupMembers.findMany({
+      where: eq(schema.chatGroupMembers.groupId, groupId),
+      orderBy: [schema.chatGroupMembers.createdAt],
+    });
+
+    return members.map((member) => chatGroupMemberSchema.parse({
+      groupId: member.groupId,
+      participantId: member.participantId,
+      participantName: member.participantName,
+      role: member.role,
+      createdAt: member.createdAt,
+    }));
+  }
+
   return {
     upsertSelfAccount,
     listSelfAccounts,
@@ -560,5 +716,10 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     getMessage,
     listConversations,
     getMessages,
+    createChatGroup,
+    addMemberToGroup,
+    removeMemberFromGroup,
+    listChatGroups,
+    listGroupMembers,
   };
 }

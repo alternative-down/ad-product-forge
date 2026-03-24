@@ -36,6 +36,7 @@ export {
   communicationContactAccounts,
   communicationConversations,
   communicationMessages,
+  chatGroupMembers,
   type CommunicationAccount,
   type NewCommunicationAccount,
   type CommunicationContact,
@@ -46,6 +47,8 @@ export {
   type NewCommunicationConversation,
   type CommunicationMessage,
   type NewCommunicationMessage,
+  type ChatGroupMember,
+  type NewChatGroupMember,
 } from './schema';
 
 export type { Attachment } from './store';
