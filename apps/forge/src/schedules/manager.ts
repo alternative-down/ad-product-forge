@@ -55,6 +55,11 @@ const updateScheduleSchema = z.object({
 
 export function createAgentScheduleManager(input: {
   db: Database;
+  getAgentPendingSummary?(agentId: string): Promise<{
+    unreadNotificationCount: number;
+    unreadConversationCount: number;
+    unreadMessageCount: number;
+  }>;
   notifyAgent(input: { agentId: string; scheduleId: string; content: string; timestamp: number }): void;
 }) {
   const store = createAgentScheduleStore(input.db);
@@ -309,6 +314,9 @@ export function createAgentScheduleManager(input: {
     nextTriggerAt: number | null = null,
   ) {
     cancelCompletedDateJob(scheduleRecord.scheduleId, remainsActive);
+    const pendingSummary = input.getAgentPendingSummary
+      ? await input.getAgentPendingSummary(scheduleRecord.agentId)
+      : null;
 
     if (scheduleRecord.kind === 'agent') {
       await notifications.createNotification({
@@ -349,6 +357,7 @@ export function createAgentScheduleManager(input: {
         scheduledDate: scheduleRecord.scheduledDate,
         timezone: scheduleRecord.timezone,
         fireDate,
+        pendingSummary,
         content: scheduleRecord.kind === 'agent'
           ? scheduleRecord.content
           : createHeartbeatWakeInstruction(scheduleRecord.agentId),
@@ -474,6 +483,11 @@ function createWakeContent(input: {
   scheduledDate?: number | null;
   timezone: string;
   fireDate: Date;
+  pendingSummary?: {
+    unreadNotificationCount: number;
+    unreadConversationCount: number;
+    unreadMessageCount: number;
+  } | null;
   content: string;
 }) {
   const lines = [
@@ -497,6 +511,16 @@ function createWakeContent(input: {
 
   if (input.scheduledDate) {
     lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
+  }
+
+  if (input.pendingSummary) {
+    lines.push(
+      '',
+      'Pending summary:',
+      `Unread notifications: ${input.pendingSummary.unreadNotificationCount}`,
+      `Unread conversations: ${input.pendingSummary.unreadConversationCount}`,
+      `Unread messages: ${input.pendingSummary.unreadMessageCount}`,
+    );
   }
 
   lines.push('', 'Scheduled content:', input.content.trim());
