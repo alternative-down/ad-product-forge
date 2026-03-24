@@ -1231,7 +1231,7 @@ function GitHubProvisioningCard(input: {
                 href={input.provisioning.installUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-950 bg-slate-950 px-4 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-[color:var(--accent)] bg-[color:var(--accent)] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90"
               >
                 Open install
               </a>
@@ -1537,7 +1537,7 @@ function AgentInboxCard(input: {
                       className={cn(
                         'w-full rounded-lg border px-4 py-4 text-left transition',
                         selectedConversation?.conversationId === conversation.conversationId
-                          ? 'border-slate-900 bg-slate-900 text-white'
+                          ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                           : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:bg-white',
                       )}
                     >
@@ -1546,7 +1546,14 @@ function AgentInboxCard(input: {
                           <div className="truncate font-medium">
                             {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? conversation.conversationKey}
                           </div>
-                          <div className={cn('mt-1 text-xs', selectedConversation?.conversationId === conversation.conversationId ? 'text-white/70' : 'text-slate-500')}>
+                          <div
+                            className={cn(
+                              'mt-1 text-xs',
+                              selectedConversation?.conversationId === conversation.conversationId
+                                ? 'text-[color:var(--accent)]/80'
+                                : 'text-slate-500',
+                            )}
+                          >
                             {conversation.provider} · {formatDateTimeText(conversation.updatedAt)}
                           </div>
                         </div>

@@ -39,7 +39,7 @@ export function SectionNav<TValue extends string>(input: {
                 ? 'min-w-[180px] flex-1 rounded-md px-4 py-3 text-left transition'
                 : 'block w-full rounded-md px-3 py-3 text-left transition',
               input.value === item.value
-                ? 'bg-[color:var(--bg-deep)] text-white'
+                ? 'border border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                 : 'text-[color:var(--ink)] hover:bg-[color:var(--panel-muted)]',
             )}
           >
@@ -48,7 +48,9 @@ export function SectionNav<TValue extends string>(input: {
               <div
                 className={cn(
                   'mt-1 text-xs leading-5',
-                  input.value === item.value ? 'text-white/65' : 'text-[color:var(--muted)]',
+                  input.value === item.value
+                    ? 'text-[color:var(--accent)]/80'
+                    : 'text-[color:var(--muted)]',
                 )}
               >
                 {item.detail}
