@@ -29,10 +29,8 @@ export function createCapabilityTools(
   }
 
   if (hasToolPermission(allowedToolIds, 'manage_agent_function')) {
-    tools.manage_agent_function = createTool({
-      id: 'manage_agent_function',
-      description: 'Create, update, or delete one internal agent function.',
-      inputSchema: z.discriminatedUnion('action', [
+    const manageAgentFunctionSchema = z
+      .discriminatedUnion('action', [
         z.object({
           action: z.literal('create'),
           functionId: z.string().min(1).optional(),
@@ -44,17 +42,33 @@ export function createCapabilityTools(
           functionId: z.string().min(1),
           name: z.string().min(1).optional(),
           description: z.string().optional().nullable(),
-        }).refine(
-          (data) => data.name !== undefined || data.description !== undefined,
-          { message: 'At least one field besides action and functionId must be provided' }
-        ),
+        }),
         z.object({
           action: z.literal('delete'),
           functionId: z.string().min(1),
           name: z.string().min(1).optional(),
           description: z.string().optional().nullable(),
         }),
-      ]),
+      ])
+      .superRefine((data, context) => {
+        if (data.action !== 'update') {
+          return;
+        }
+
+        if (data.name !== undefined || data.description !== undefined) {
+          return;
+        }
+
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'At least one field besides action and functionId must be provided',
+        });
+      });
+
+    tools.manage_agent_function = createTool({
+      id: 'manage_agent_function',
+      description: 'Create, update, or delete one internal agent function.',
+      inputSchema: manageAgentFunctionSchema,
       execute: async (input) => {
         if (input.action === 'create') {
           return capabilities.createFunction({
@@ -90,10 +104,8 @@ export function createCapabilityTools(
   }
 
   if (hasToolPermission(allowedToolIds, 'manage_agent_role')) {
-    tools.manage_agent_role = createTool({
-      id: 'manage_agent_role',
-      description: 'Create, update, or delete one internal agent role.',
-      inputSchema: z.discriminatedUnion('action', [
+    const manageAgentRoleSchema = z
+      .discriminatedUnion('action', [
         z.object({
           action: z.literal('create'),
           roleId: z.string().min(1).optional(),
@@ -105,17 +117,33 @@ export function createCapabilityTools(
           roleId: z.string().min(1),
           name: z.string().min(1).optional(),
           description: z.string().optional().nullable(),
-        }).refine(
-          (data) => data.name !== undefined || data.description !== undefined,
-          { message: 'At least one field besides action and roleId must be provided' }
-        ),
+        }),
         z.object({
           action: z.literal('delete'),
           roleId: z.string().min(1),
           name: z.string().min(1).optional(),
           description: z.string().optional().nullable(),
         }),
-      ]),
+      ])
+      .superRefine((data, context) => {
+        if (data.action !== 'update') {
+          return;
+        }
+
+        if (data.name !== undefined || data.description !== undefined) {
+          return;
+        }
+
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'At least one field besides action and roleId must be provided',
+        });
+      });
+
+    tools.manage_agent_role = createTool({
+      id: 'manage_agent_role',
+      description: 'Create, update, or delete one internal agent role.',
+      inputSchema: manageAgentRoleSchema,
       execute: async (input) => {
         if (input.action === 'create') {
           return capabilities.createRole({
