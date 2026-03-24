@@ -43,6 +43,11 @@ export function createDiscordProvider(config: {
   }
 
   async function toInboundMessage(message: Message, botUserId: string): Promise<CommunicationInboundMessage | null> {
+    // Ignore messages from the bot itself
+    if (message.author.id === botUserId) {
+      return null;
+    }
+
     if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
       return null;
     }
@@ -60,6 +65,12 @@ export function createDiscordProvider(config: {
       .replaceAll(`<@${botUserId}>`, '')
       .replaceAll(`<@!${botUserId}>`, '')
       .trim();
+    
+    // Skip messages with no content (webhook status badges, etc)
+    if (!content && message.attachments.size === 0) {
+      return null;
+    }
+    
     const attachments = Array.from(message.attachments.values()).map((attachment) => ({
       id: attachment.id,
       name: attachment.name,
@@ -77,7 +88,7 @@ export function createDiscordProvider(config: {
       authorExternalId: message.author.id,
       authorDisplayName,
       authorUsername: message.author.username,
-      content: content || '[no text content]',
+      content: content || '[embed/attachment only]',
       attachments,
       createdAt: new Date(message.createdTimestamp).toISOString(),
       metadata: {
