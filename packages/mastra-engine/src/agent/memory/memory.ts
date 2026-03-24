@@ -13,7 +13,7 @@ export function createAgentMemory(config: {
     storage: config.storage,
     vector: config.vector,
     options: {
-      lastMessages: Number.MAX_SAFE_INTEGER,
+      lastMessages: 20,
       semanticRecall: false,
       observationalMemory: false,
       workingMemory: {
