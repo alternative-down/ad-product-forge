@@ -7,6 +7,7 @@ export function createDiscordProvider(config: {
   allowedChannelIds?: string[];
   respondToMentionsOnly?: boolean;
 }): CommunicationProvider {
+  const OUTBOUND_ECHO_TTL_MS = 2 * 60_000;
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -20,6 +21,35 @@ export function createDiscordProvider(config: {
   const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
+  const recentOutboundMessages = new Map<string, Array<{ content: string; createdAt: number }>>();
+
+  function pruneRecentOutboundMessages(now: number) {
+    for (const [conversationKey, messages] of recentOutboundMessages.entries()) {
+      const visibleMessages = messages.filter((message) => now - message.createdAt <= OUTBOUND_ECHO_TTL_MS);
+
+      if (visibleMessages.length === 0) {
+        recentOutboundMessages.delete(conversationKey);
+        continue;
+      }
+
+      recentOutboundMessages.set(conversationKey, visibleMessages);
+    }
+  }
+
+  function rememberOutboundMessage(conversationKey: string, content: string) {
+    const now = Date.now();
+    pruneRecentOutboundMessages(now);
+    const messages = recentOutboundMessages.get(conversationKey) ?? [];
+    messages.push({ content: content.trim(), createdAt: now });
+    recentOutboundMessages.set(conversationKey, messages);
+  }
+
+  function isRecentOutboundEcho(conversationKey: string, content: string, createdAt: number) {
+    pruneRecentOutboundMessages(createdAt);
+    const messages = recentOutboundMessages.get(conversationKey) ?? [];
+
+    return messages.some((message) => message.content === content);
+  }
 
   async function withTyping<T extends { sendTyping(): Promise<unknown> }>(
     channel: T,
@@ -89,6 +119,10 @@ export function createDiscordProvider(config: {
       .join('\n\n');
 
     if (!content && message.attachments.size === 0) {
+      return null;
+    }
+
+    if (isRecentOutboundEcho(message.channelId, content, message.createdTimestamp)) {
       return null;
     }
 
@@ -199,6 +233,7 @@ export function createDiscordProvider(config: {
 
         return withTyping(channel, async () => {
           const sent = await channel.send(input.content);
+          rememberOutboundMessage(channel.id, input.content);
 
           return {
             providerConversationKey: channel.id,
@@ -222,6 +257,7 @@ export function createDiscordProvider(config: {
         if (input.replyToProviderMessageId) {
           const replyTarget = await channel.messages.fetch(input.replyToProviderMessageId);
           const sent = await replyTarget.reply(input.content);
+          rememberOutboundMessage(sent.channelId, input.content);
 
           return {
             providerConversationKey: sent.channelId,
@@ -231,6 +267,7 @@ export function createDiscordProvider(config: {
         }
 
         const sent = await channel.send(input.content);
+        rememberOutboundMessage(sent.channelId, input.content);
 
         return {
           providerConversationKey: sent.channelId,

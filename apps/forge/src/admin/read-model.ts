@@ -496,7 +496,8 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
           })),
       };
     });
-  } catch {
+  } catch (error) {
+    console.error(`[AdminReadModel] Failed to load recent conversations for agent ${agentId}:`, error);
     return [];
   }
 }
@@ -536,7 +537,8 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
       content: extractMessageText(message.content),
       createdAt: message.createdAt.getTime(),
     }));
-  } catch {
+  } catch (error) {
+    console.error(`[AdminReadModel] Failed to load recent thread messages for agent ${agentId}:`, error);
     return [];
   }
 }
