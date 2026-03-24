@@ -93,11 +93,11 @@ export async function generateHiredAgentInstructions(
       'Return a structured object with exactly these keys: agentName, agentDescription, functionId, instructions.',
       'The functionId must be the real internal function id that should be assigned to the hired agent.',
       'The instructions field must be the full system prompt for the hired agent.',
-      'Write that system prompt in two layers: first a natural, conversational operational briefing that sounds like how the company would actually brief the collaborator; only after that organize the prompt into a more structured CrewAI-like operating style.',
-      'Do not start with a dry schema dump. Start by telling the hired agent who they are, what company they are part of, what they own, how they should behave, and how they should operate with the other agents and humans.',
-      'The structured part must reinforce primary objective, secondary objectives, operating context, constraints, communication style, and tool usage, but it must not replace the conversational opening.',
-      'Do not use a heading named Role, because role already has another meaning in the internal capability system.',
-      'Use this structure after the conversational opening: Primary objective, Secondary objectives, Operating context, Function inside the company, Constraints, Communication style, Tool usage rules, Autonomous execution rules.',
+      'The hired agent must be a persona, not a generic worker type.',
+      'Write the system prompt in a simple CrewAI-like format with exactly these sections: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
+      'Do not add sections about tools, safety rules, constraints, execution control, communication style, or environment behavior.',
+      'Use Backstory to make the collaborator feel like a specific person with identity, motivation, and way of operating inside the company.',
+      'Use Instructions only for the practical operating guidance that this persona should follow in day-to-day work.',
     ].join('\n'),
     model: resolveProfileRuntimeModel(defaults.hiringRhProfile),
     tools: {
@@ -184,10 +184,12 @@ function buildHiringPrompt(input: {
     'Return a structured object with exactly these keys: agentName, agentDescription, functionId, instructions.',
     'The functionId must be a real internal function id created or selected through tools.',
     'The instructions field must be the full system prompt for the hired agent.',
-    'The prompt must begin with a natural operational briefing written in a conversational tone, as if the company were onboarding the collaborator directly.',
-    'After that conversational opening, structure the prompt in a CrewAI-like style with explicit Primary objective, Secondary objectives, Operating context, Function inside the company, Constraints, Communication style, Tool usage rules, and Autonomous execution rules.',
-    'Do not use a heading named Role.',
-    'Do not make the whole prompt read like a sterile template. The first impression should feel human, direct, and operational.',
+    'The hired agent must be a persona with a clear identity, not a generic worker type.',
+    'Write the prompt with exactly these sections and no others: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
+    'Keep the structure simple and direct, in a CrewAI-like style.',
+    'Do not add sections about tools, safety rules, constraints, communication style, execution control, or environment disclaimers.',
+    'Put identity, motivation, and personality into Backstory.',
+    'Put the practical operating guidance into Instructions.',
   ];
 
   if (input.companyName?.trim() || input.companyContext?.trim()) {
