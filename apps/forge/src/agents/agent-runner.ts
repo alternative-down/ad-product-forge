@@ -7,7 +7,13 @@ import type { Database } from '../database/index';
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
-const CHECKPOINT_PREFIX = 'CHECKPOINT:';
+const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
+const RUN_STOP_REMINDER = [
+  'System reminder:',
+  '- Plain text responses are not routed to any external counterpart.',
+  '- The current run only stops when you explicitly respond with `NO_ACTION_NEEDED` and do not call a tool.',
+  '- If you still need to inspect, decide, or act, use the appropriate tools.',
+].join('\n');
 type AgentUsage = {
   inputTokens?: number;
   outputTokens?: number;
@@ -107,6 +113,18 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     const prompt = pendingExecutePrompt?.trim() || null;
     pendingExecutePrompt = null;
     return prompt;
+  }
+
+  function appendPendingExecutePrompt(content: string) {
+    const nextContent = content.trim();
+
+    if (!nextContent) {
+      return;
+    }
+
+    pendingExecutePrompt = pendingExecutePrompt
+      ? `${pendingExecutePrompt}\n\n---\n\n${nextContent}`
+      : nextContent;
   }
 
   function flushPendingFeedback() {
@@ -222,13 +240,17 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       await recordObservationalMemorySteps(contractId, result.steps);
 
-      const checkpointRequested = result.text.trimStart().startsWith(CHECKPOINT_PREFIX);
+      const stopRequested = result.text.trimStart().startsWith(NO_ACTION_NEEDED_PREFIX);
 
-      if (result.toolCalls.length === 0 && !checkpointRequested) {
+      if (result.toolCalls.length === 0 && stopRequested) {
         nextStepAt = null;
         await store.setExecutionState(runtime.id, 'idle');
         await wakeQueue.onRunnerIdle();
         return;
+      }
+
+      if (result.toolCalls.length === 0) {
+        appendPendingExecutePrompt(RUN_STOP_REMINDER);
       }
 
       backoffMs = ONE_MINUTE_MS;
