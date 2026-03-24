@@ -136,14 +136,6 @@ export async function generateHiredAgentInstructions(
     maxSteps: 1000,
     toolChoice: 'required',
     stopWhen: [hasToolCall('hireAgent')],
-    // structuredOutput: {
-    //   schema: hiringRhResultSchema,
-    // },
-    providerOptions: {
-      anthropic: {
-        thinking: { type: 'enabled', budgetTokens: 12000 },
-      },
-    },
   });
 
   const inputTokens = result.usage.inputTokens ?? 0;
