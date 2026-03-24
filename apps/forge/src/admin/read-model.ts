@@ -30,7 +30,7 @@ import { createSystemSettingsStore } from '../system-settings/store';
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
-const RECENT_CONVERSATION_LIMIT = 5;
+const RECENT_CONVERSATION_LIMIT = 10;
 const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
 
 export function createAdminReadModel(input: {
