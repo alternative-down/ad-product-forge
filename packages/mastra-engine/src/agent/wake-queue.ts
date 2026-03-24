@@ -98,7 +98,13 @@ export function createAgentWakeQueue(config: {
     },
     async onRunnerIdle() {
       console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} onRunnerIdle called, was waitingForIdle=${waitingForIdle}, pending=${pending}, timer=${!!timer}`);
-      waitingForIdle = false; // ALWAYS reset when agent becomes idle
+
+      // Don't reset waitingForIdle if a timer is pending — that timer will fire
+      // and call trigger() which will wake the agent. Resetting here would
+      // cause the second scheduled trigger to never wake the agent.
+      if (!timer) {
+        waitingForIdle = false;
+      }
 
       if (timer || !pending) {
         console.log(`[AgentWakeQueue] ${config.label ?? 'agent'} onRunnerIdle: no action (timer=${!!timer}, pending=${pending})`);
