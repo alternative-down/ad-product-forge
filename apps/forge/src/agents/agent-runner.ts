@@ -202,7 +202,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
       const result = await runtime.agent.generate(prompt, {
         maxSteps: 1,
-        toolChoice: 'required',
+        // toolChoice: 'required', removio para não requerer tool call obrigatoriamente
         memory: {
           thread: runtime.id,
           resource: runtime.id,
@@ -227,14 +227,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       });
       const usage = result.usage as AgentUsage;
       const inputTokens =
-        usage.inputTokenDetails?.noCacheTokens ??
-        usage.inputTokens ??
-        usage.promptTokens ??
-        0;
+        usage.inputTokenDetails?.noCacheTokens ?? usage.inputTokens ?? usage.promptTokens ?? 0;
       const cachedInputTokens =
-        usage.inputTokenDetails?.cacheReadTokens ??
-        usage.cachedInputTokens ??
-        0;
+        usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
       const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0;
 
       await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
