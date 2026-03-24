@@ -13,9 +13,9 @@ import { resolveOpenAICodexCredential } from './auth/openai-codex';
 const OPENAI_CODEX_URL = 'https://chatgpt.com/backend-api/codex';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_BETA_HEADER = [
-  'oauth-2025-04-20',                    // OAuth 2.0 support
-  'claude-code-20250219',                // Claude Code CLI integration
-  'interleaved-thinking-2025-05-14',     // Extended thinking / reasoning
+  'oauth-2025-04-20', // OAuth 2.0 support
+  'claude-code-20250219', // Claude Code CLI integration
+  'interleaved-thinking-2025-05-14', // Extended thinking / reasoning
   'fine-grained-tool-streaming-2025-05-14', // Fine-grained tool call streaming
 ].join(',');
 const CLAUDE_CODE_IDENTITY = "You are Claude Code, Anthropic's official CLI for Claude.";
@@ -70,9 +70,10 @@ export class OAuthGateway extends MastraModelGateway {
     wrapGenerate: async ({ doGenerate: _doGenerate, doStream }) => {
       const { request, response: initialResponse, stream } = await doStream();
       type GenerateResult = Awaited<ReturnType<typeof _doGenerate>>;
-      type StreamPart = Awaited<ReturnType<typeof doStream>>['stream'] extends ReadableStream<infer Part>
-        ? Part
-        : never;
+      type StreamPart =
+        Awaited<ReturnType<typeof doStream>>['stream'] extends ReadableStream<infer Part>
+          ? Part
+          : never;
       type FinishPart = Extract<StreamPart, { type: 'finish' }>;
       type StreamStartPart = Extract<StreamPart, { type: 'stream-start' }>;
       type ContentPart = GenerateResult['content'][number];
@@ -122,7 +123,8 @@ export class OAuthGateway extends MastraModelGateway {
           }
           case 'reasoning-delta': {
             const reasoningPart = reasoningParts.get(part.id);
-            if (!reasoningPart) throw new Error(`Missing reasoning part for stream id "${part.id}"`);
+            if (!reasoningPart)
+              throw new Error(`Missing reasoning part for stream id "${part.id}"`);
             reasoningPart.text += part.delta;
             break;
           }
@@ -182,7 +184,6 @@ export class OAuthGateway extends MastraModelGateway {
           ...params.providerOptions,
           anthropic: {
             ...anthropicOptions,
-            effort: anthropicOptions.effort ?? 'medium',
           },
         },
       };
@@ -203,9 +204,10 @@ export class OAuthGateway extends MastraModelGateway {
       const systemIndex = [...prompt].reverse().findIndex((m) => m.role === 'system');
 
       // Build list of indices to cache: system message (if found) and last message
-      const indicesToCache = systemIndex >= 0
-        ? [lastIndex - systemIndex, lastIndex].filter((v, i, a) => a.indexOf(v) === i)
-        : [lastIndex];
+      const indicesToCache =
+        systemIndex >= 0
+          ? [lastIndex - systemIndex, lastIndex].filter((v, i, a) => a.indexOf(v) === i)
+          : [lastIndex];
 
       const indices = indicesToCache;
 
