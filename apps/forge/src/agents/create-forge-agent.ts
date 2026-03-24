@@ -89,6 +89,14 @@ export interface CreateAgentConfig<
   workspaceBasePath: string;
 }
 
+const EXECUTION_ENVIRONMENT_INSTRUCTIONS = [
+  'Execution environment:',
+  '- This execution environment is not a chat interface.',
+  '- Plain text responses are not routed back to the original sender or counterparty.',
+  '- Any text you produce without using a tool call only becomes part of the internal execution flow of this agent.',
+  '- No message, reply, or update is delivered to any external person, contact, or agent unless you send it through the appropriate tool call.',
+].join('\n');
+
 const CHECKPOINT_INSTRUCTIONS = [
   'Execution control:',
   '- If you want the system to continue the current autonomous run without stopping, your visible text response must start with `CHECKPOINT:`.',
@@ -130,6 +138,7 @@ function buildAgentSystemPrompt(
   }
 
   sections.push(instructions);
+  sections.push(EXECUTION_ENVIRONMENT_INSTRUCTIONS);
   sections.push(CHECKPOINT_INSTRUCTIONS);
 
   return sections.join('\n\n');
