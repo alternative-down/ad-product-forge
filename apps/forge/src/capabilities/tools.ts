@@ -29,6 +29,9 @@ export function createCapabilityTools(
   }
 
   if (hasToolPermission(allowedToolIds, 'manage_agent_function')) {
+    // Keep branch-specific validation outside the discriminated union.
+    // In Zod v3, adding `.refine()` to one branch wraps it in ZodEffects and
+    // breaks `z.discriminatedUnion('action', ...)` at schema creation time.
     const manageAgentFunctionSchema = z
       .discriminatedUnion('action', [
         z.object({
@@ -104,6 +107,9 @@ export function createCapabilityTools(
   }
 
   if (hasToolPermission(allowedToolIds, 'manage_agent_role')) {
+    // Keep branch-specific validation outside the discriminated union.
+    // In Zod v3, adding `.refine()` to one branch wraps it in ZodEffects and
+    // breaks `z.discriminatedUnion('action', ...)` at schema creation time.
     const manageAgentRoleSchema = z
       .discriminatedUnion('action', [
         z.object({
