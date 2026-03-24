@@ -1554,7 +1554,7 @@ function AgentInboxCard(input: {
                                 : 'text-slate-500',
                             )}
                           >
-                            {conversation.provider} · {formatDateTimeText(conversation.updatedAt)}
+                            {conversation.provider} · {conversation.type} · {formatDateTimeText(conversation.updatedAt)}
                           </div>
                         </div>
                         {unreadCount > 0 ? <Badge>{formatInteger(unreadCount)}</Badge> : null}
@@ -1569,12 +1569,15 @@ function AgentInboxCard(input: {
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="font-medium text-slate-950">{selectedConversation.conversationKey}</div>
                     <Badge>{selectedConversation.provider}</Badge>
+                    <Badge>{selectedConversation.type}</Badge>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedConversation.participants.map((participant) => (
-                      <Badge key={`${selectedConversation.conversationId}-${participant}`}>{participant}</Badge>
-                    ))}
-                  </div>
+                  {selectedConversation.type === 'group' ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedConversation.participants.map((participant) => (
+                        <Badge key={`${selectedConversation.conversationId}-${participant}`}>{participant}</Badge>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="mt-2 space-y-1 text-xs text-slate-500">
                     <div>Updated at {formatDateTimeText(selectedConversation.updatedAt)}</div>
                     <div>{selectedConversation.name ?? selectedConversation.contactDisplayName ?? selectedConversation.contactSlug ?? 'Conversation'}</div>
