@@ -48,7 +48,7 @@ export function createInternalChatPreset() {
             }));
         },
         async sendMessage(input) {
-          const recipientId = input.providerConversationKey ?? input.contactExternalId;
+          const recipientId = input.contactExternalId ?? input.providerConversationKey;
           const recipient = recipientId ? agents.get(recipientId) : null;
 
           if (!recipient) {
@@ -62,9 +62,9 @@ export function createInternalChatPreset() {
           const providerMessageId = `internal:${crypto.randomUUID()}`;
 
           await recipient.onMessage({
-            providerConversationKey: config.id,
+            providerConversationKey: input.providerConversationKey ?? config.id,
             providerMessageId,
-            conversationName: config.displayName,
+            conversationName: input.conversationName ?? config.displayName,
             authorExternalId: config.id,
             authorDisplayName: config.displayName,
             authorUsername: agent.slug,
@@ -77,9 +77,9 @@ export function createInternalChatPreset() {
           });
 
           return {
-            providerConversationKey: recipient.id,
+            providerConversationKey: input.providerConversationKey ?? recipient.id,
             providerMessageId,
-            conversationName: recipient.displayName,
+            conversationName: input.conversationName ?? recipient.displayName,
           };
         },
       };
