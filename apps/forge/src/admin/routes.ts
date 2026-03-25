@@ -111,7 +111,8 @@ const updateAgentConfigSchema = z.object({
   instructions: z.string().min(1),
   workspaceAutoSync: z.boolean(),
   workspaceBm25: z.boolean(),
-  workspaceEmbedder: z.string().min(1),
+  modelProfileId: z.string().min(1),
+  omModelProfileId: z.string().min(1),
 });
 
 const upsertAgentProviderSchema = z.object({

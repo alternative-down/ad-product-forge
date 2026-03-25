@@ -60,6 +60,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     llmSettings.getProfile(agentConfig.omModelProfileId),
   ]);
   const companySettings = await systemSettings.getSettings();
+  const [primaryRuntimeModel, omRuntimeModel] = await Promise.all([
+    resolveProfileRuntimeModel(primaryProfile),
+    resolveProfileRuntimeModel(omProfile),
+  ]);
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
 
@@ -113,10 +117,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       name: agentConfig.name,
       description: agentConfig.description || undefined,
       instructions: agentConfig.instructions,
-      model: resolveProfileRuntimeModel(primaryProfile),
+      model: primaryRuntimeModel,
       pricingModelKey: primaryProfile.modelKey,
       modelProfileId: primaryProfile.profileId,
-      omModel: resolveProfileRuntimeModel(omProfile),
+      omModel: omRuntimeModel,
       omPricingModelKey: omProfile.modelKey,
       omModelProfileId: omProfile.profileId,
       companyName: companySettings.companyName,

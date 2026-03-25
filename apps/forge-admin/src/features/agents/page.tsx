@@ -9,6 +9,7 @@ import {
   deleteAgentProvider,
   deleteSchedule,
   getAgent,
+  getSystemLlm,
   hireAgent,
   listAgents,
   listFunctions,
@@ -65,6 +66,8 @@ type AgentConfigDraft = {
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
   workspaceEmbedder: string;
+  modelProfileId: string;
+  omModelProfileId: string;
 };
 
 type ProviderDraft = {
@@ -74,7 +77,7 @@ type ProviderDraft = {
 
 type AgentDetailTab = 'runtime' | 'communications' | 'schedules' | 'history';
 type AgentRuntimeView = 'assignment' | 'configuration' | 'contract' | 'github';
-type AgentCommunicationView = 'providers' | 'inbox' | 'thread';
+type AgentCommunicationView = 'inbox' | 'thread' | 'providers';
 
 export function AgentsPage() {
   return <AgentsWorkspacePage mode="directory" />;
@@ -131,6 +134,10 @@ function AgentsWorkspacePage(input: {
     queryKey: ['admin', 'functions'],
     queryFn: listFunctions,
   });
+  const systemLlmQuery = useQuery({
+    queryKey: ['admin', 'system', 'llm'],
+    queryFn: getSystemLlm,
+  });
   const agentDetailQuery = useQuery({
     queryKey: ['admin', 'agent', input.agentId],
     queryFn: () => getAgent(input.agentId!),
@@ -149,7 +156,7 @@ function AgentsWorkspacePage(input: {
       : (agentDetailQuery.data ? createAgentConfigDraft(agentDetailQuery.data) : null);
   const selectedTab: AgentDetailTab = input.tab ?? 'runtime';
   const selectedRuntimeView = input.runtimeView ?? 'assignment';
-  const selectedCommunicationView = input.communicationView ?? 'providers';
+  const selectedCommunicationView = input.communicationView ?? 'inbox';
 
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
@@ -410,26 +417,6 @@ function AgentsWorkspacePage(input: {
         </WorkspaceCanvas>
       ) : (
         <div className="space-y-6">
-          <SectionNav
-            title="Agent area"
-            value={selectedTab}
-            items={detailTabs}
-            onChange={(tab) => {
-              if (!input.agentId) {
-                return;
-              }
-
-              void navigate(
-                buildAgentLocation({
-                  agentId: input.agentId,
-                  tab,
-                  runtimeView: selectedRuntimeView,
-                  communicationView: selectedCommunicationView,
-                }),
-              );
-            }}
-          />
-
           <div className="space-y-6">
             {agentDetailQuery.isLoading && <PanelLoading label="Loading agent detail" />}
             {agentDetailQuery.isError && <PanelError message={agentDetailQuery.error.message} />}
@@ -445,8 +432,8 @@ function AgentsWorkspacePage(input: {
             {agentDetailQuery.data ? (
               <>
                 <WorkspaceCanvas
-                  title={agentDetailQuery.data.name}
-                  description={`${agentDetailQuery.data.function?.name ?? 'No function assigned'} · ${agentDetailQuery.data.executionState}`}
+                  title="Run state"
+                  description="Live runner status, wake queue condition, latest activity, and direct runtime actions."
                   actions={
                     <div className="flex flex-wrap gap-3">
                       <Button type="button" variant="secondary" onClick={() => wakeMutation.mutate(agentDetailQuery.data!.agentId)} disabled={wakeMutation.isPending}>
@@ -458,17 +445,65 @@ function AgentsWorkspacePage(input: {
                     </div>
                   }
                 >
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                    <CompactStat label="Function" value={agentDetailQuery.data.function?.name ?? '—'} />
-                    <CompactStat label="Providers" value={agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none'} />
-                    <CompactStat label="Contract" value={agentDetailQuery.data.activeContract ? `${formatUsd(agentDetailQuery.data.activeContract.weeklyValueUsd)} / week` : 'no contract'} />
-                    <CompactStat label="Runner" value={getRunnerStateLabel(agentDetailQuery.data)} />
-                    <CompactStat
-                      label="Next activity"
-                      value={agentDetailQuery.data.runner?.nextStepAt ? formatDateTime(agentDetailQuery.data.runner.nextStepAt) : '—'}
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <ReadOnlyField label="Runner state" value={getRunnerStateLabel(agentDetailQuery.data)} />
+                    <ReadOnlyField label="Wake queue" value={getWakeQueueLabel(agentDetailQuery.data)} />
+                    <ReadOnlyField label="Last wake" value={formatDateTime(agentDetailQuery.data.runner?.lastWakeStartedAt ?? null)} />
+                    <ReadOnlyField
+                      label="Next scheduled step"
+                      value={agentDetailQuery.data.runner?.nextStepAt ? `${formatDateTime(agentDetailQuery.data.runner.nextStepAt)}${agentDetailQuery.data.runner.estimatedDelayMs != null ? ` · ${formatDurationShort(agentDetailQuery.data.runner.estimatedDelayMs)}` : ''}` : '—'}
+                    />
+                    <ReadOnlyField
+                      label="Latest step"
+                      value={agentDetailQuery.data.recentExecutionSteps[0] ? `${formatDateTime(agentDetailQuery.data.recentExecutionSteps[0].createdAt)} · ${agentDetailQuery.data.recentExecutionSteps[0].kind}` : '—'}
+                    />
+                    <ReadOnlyField
+                      label="Unread notifications"
+                      value={formatInteger(agentDetailQuery.data.recentNotifications.filter((notification) => !notification.read).length)}
+                    />
+                    <ReadOnlyField
+                      label="Unread conversations"
+                      value={formatInteger(agentDetailQuery.data.recentConversations.length)}
+                    />
+                    <ReadOnlyField
+                      label="Estimated next interval"
+                      value={agentDetailQuery.data.runner?.estimatedDelayMs != null ? formatDurationShort(agentDetailQuery.data.runner.estimatedDelayMs) : '—'}
                     />
                   </div>
                 </WorkspaceCanvas>
+
+                <WorkspaceCanvas
+                  title={agentDetailQuery.data.name}
+                  description={`${agentDetailQuery.data.function?.name ?? 'No function assigned'} · ${agentDetailQuery.data.executionState}`}
+                >
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <CompactStat label="Function" value={agentDetailQuery.data.function?.name ?? '—'} />
+                    <CompactStat label="Providers" value={agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none'} />
+                    <CompactStat label="Contract" value={agentDetailQuery.data.activeContract ? `${formatUsd(agentDetailQuery.data.activeContract.weeklyValueUsd)} / week` : 'no contract'} />
+                    <CompactStat label="Model" value={agentDetailQuery.data.modelProfile?.name ?? '—'} />
+                  </div>
+                </WorkspaceCanvas>
+
+                <SectionNav
+                  title="Agent area"
+                  value={selectedTab}
+                  orientation="horizontal"
+                  items={detailTabs}
+                  onChange={(tab) => {
+                    if (!input.agentId) {
+                      return;
+                    }
+
+                    void navigate(
+                      buildAgentLocation({
+                        agentId: input.agentId,
+                        tab,
+                        runtimeView: selectedRuntimeView,
+                        communicationView: selectedCommunicationView,
+                      }),
+                    );
+                  }}
+                />
 
                 {selectedTab === 'runtime' && functionsQuery.data && (
                   <div className="space-y-6">
@@ -566,9 +601,11 @@ function AgentsWorkspacePage(input: {
                             instructions: draft.instructions,
                             workspaceAutoSync: draft.workspaceAutoSync,
                             workspaceBm25: draft.workspaceBm25,
-                            workspaceEmbedder: draft.workspaceEmbedder,
+                            modelProfileId: draft.modelProfileId,
+                            omModelProfileId: draft.omModelProfileId,
                           })
                         }
+                        profiles={systemLlmQuery.data?.profiles ?? []}
                       />
                     ) : null}
 
@@ -644,9 +681,9 @@ function AgentsWorkspacePage(input: {
                     <SegmentedTabs
                       value={selectedCommunicationView}
                       items={[
-                        { value: 'providers', label: 'Providers', description: 'channel credentials and provider wiring' },
                         { value: 'inbox', label: 'Inbox', description: 'notifications and recent conversations' },
                         { value: 'thread', label: 'Thread', description: 'latest persisted memory messages' },
+                        { value: 'providers', label: 'Providers', description: 'channel credentials and provider wiring' },
                       ]}
                       onChange={(communicationView) =>
                         input.agentId
@@ -1050,6 +1087,7 @@ function AgentMaintenanceCard(input: {
 
 function AgentConfigurationCard(input: {
   draft: AgentConfigDraft;
+  profiles: Array<{ profileId: string; name: string; modelKey: string }>;
   pending: boolean;
   error: string | null;
   onChange(draft: AgentConfigDraft): void;
@@ -1080,13 +1118,42 @@ function AgentConfigurationCard(input: {
             />
           </LabeledField>
           <LabeledField label="Workspace embedder">
-            <Input
-              value={input.draft.workspaceEmbedder}
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              {input.draft.workspaceEmbedder}
+            </div>
+          </LabeledField>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <LabeledField label="Primary LLM profile">
+            <Select
+              value={input.draft.modelProfileId}
               onChange={(event) =>
-                input.onChange({ ...input.draft, workspaceEmbedder: event.target.value })
+                input.onChange({ ...input.draft, modelProfileId: event.target.value })
               }
               required
-            />
+            >
+              {input.profiles.map((profile) => (
+                <option key={profile.profileId} value={profile.profileId}>
+                  {profile.name} · {profile.modelKey}
+                </option>
+              ))}
+            </Select>
+          </LabeledField>
+          <LabeledField label="OM profile">
+            <Select
+              value={input.draft.omModelProfileId}
+              onChange={(event) =>
+                input.onChange({ ...input.draft, omModelProfileId: event.target.value })
+              }
+              required
+            >
+              {input.profiles.map((profile) => (
+                <option key={profile.profileId} value={profile.profileId}>
+                  {profile.name} · {profile.modelKey}
+                </option>
+              ))}
+            </Select>
           </LabeledField>
         </div>
 
@@ -1203,7 +1270,7 @@ function GitHubProvisioningCard(input: {
                 href={input.provisioning.installUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-950 bg-slate-950 px-4 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-[color:var(--accent)] bg-[color:var(--accent)] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90"
               >
                 Open install
               </a>
@@ -1420,11 +1487,18 @@ function AgentInboxCard(input: {
   notifications: AgentDetail['recentNotifications'];
   conversations: AgentDetail['recentConversations'];
 }) {
+  const [view, setView] = useState<'conversations' | 'notifications'>('conversations');
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
+    input.conversations[0]?.conversationId ?? null,
+  );
   const unreadNotificationCount = input.notifications.filter((notification) => !notification.read).length;
   const unreadMessageCount = input.conversations.reduce(
     (total, conversation) => total + conversation.messages.filter((message) => message.unread).length,
     0,
   );
+  const selectedConversation = input.conversations.find(
+    (conversation) => conversation.conversationId === selectedConversationId,
+  ) ?? input.conversations[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -1440,88 +1514,137 @@ function AgentInboxCard(input: {
         </div>
       </WorkspaceCanvas>
 
-      <Card className="p-6">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">Recent notifications</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Latest notifications recorded in the central Forge database.
-          </p>
-        </div>
-        <div className="mt-5 space-y-3">
-          {input.notifications.length === 0 && (
-            <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
-              No notifications for this agent.
-            </div>
-          )}
-          {input.notifications.map((notification) => (
-            <div key={notification.notificationId} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <Badge>{notification.read ? 'read' : 'unread'}</Badge>
-                <div className="text-xs text-slate-500">{formatDateTime(notification.timestamp)}</div>
-              </div>
-              <div className="mt-3 text-sm text-slate-700">{notification.content}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <SegmentedTabs
+        value={view}
+        items={[
+          { value: 'conversations', label: 'Conversations', description: 'browse and inspect recent threads' },
+          { value: 'notifications', label: 'Notifications', description: 'central operational alerts' },
+        ]}
+        onChange={(nextView) => setView(nextView as 'conversations' | 'notifications')}
+      />
 
-      <Card className="p-6">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">Recent conversations</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Read-only communication preview from the selected agent workspace database.
-          </p>
-        </div>
-        <div className="mt-5 space-y-4">
-          {input.conversations.length === 0 && (
-            <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+      {view === 'notifications' ? (
+        <Card className="p-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Notifications</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Latest notifications recorded in the central Forge database.
+            </p>
+          </div>
+          <div className="mt-5 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
+            {input.notifications.length === 0 && (
+              <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+                No notifications for this agent.
+              </div>
+            )}
+            {input.notifications.map((notification) => (
+              <div key={notification.notificationId} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Badge>{notification.read ? 'read' : 'unread'}</Badge>
+                    <span className="text-xs text-slate-500">{formatDateTime(notification.timestamp)}</span>
+                  </div>
+                </div>
+                <div className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{notification.content}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Conversations</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Read-only communication preview from the selected agent workspace database.
+            </p>
+          </div>
+          {input.conversations.length === 0 ? (
+            <div className="mt-5 rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
               No conversations for this agent.
             </div>
-          )}
-          {input.conversations.map((conversation) => (
-            <div
-              key={conversation.conversationId}
-              className="rounded-lg border border-slate-200 bg-slate-50 p-4"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="font-medium text-slate-950">{conversation.conversationKey}</div>
-                <Badge>{conversation.provider}</Badge>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {conversation.participants.map((participant) => (
-                  <Badge key={`${conversation.conversationId}-${participant}`}>{participant}</Badge>
-                ))}
-              </div>
-              <div className="mt-1 space-y-1 text-xs text-slate-500">
-                <div>
-                  Updated at {formatDateTimeText(conversation.updatedAt)}
-                </div>
-                <div>
-                  {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? 'Conversation'}
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                {conversation.messages.map((message) => (
-                  <div key={message.messageId} className="rounded-xl bg-white px-3 py-3 text-sm text-slate-700">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-medium text-slate-900">
-                        {message.authorDisplayName ?? 'Unknown author'}
+          ) : (
+            <div className="mt-5 grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="space-y-2">
+                {input.conversations.map((conversation) => {
+                  const unreadCount = conversation.messages.filter((message) => message.unread).length;
+
+                  return (
+                    <button
+                      key={conversation.conversationId}
+                      type="button"
+                      onClick={() => setSelectedConversationId(conversation.conversationId)}
+                      className={cn(
+                        'w-full rounded-lg border px-4 py-4 text-left transition',
+                        selectedConversation?.conversationId === conversation.conversationId
+                          ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
+                          : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:bg-white',
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">
+                            {conversation.name ?? conversation.contactDisplayName ?? conversation.contactSlug ?? conversation.conversationKey}
+                          </div>
+                          <div
+                            className={cn(
+                              'mt-1 text-xs',
+                              selectedConversation?.conversationId === conversation.conversationId
+                                ? 'text-[color:var(--accent)]/80'
+                                : 'text-slate-500',
+                            )}
+                          >
+                            {conversation.provider} · {conversation.type} · {formatDateTimeText(conversation.updatedAt)}
+                          </div>
+                        </div>
+                        {unreadCount > 0 ? <Badge>{formatInteger(unreadCount)}</Badge> : null}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {message.unread && <Badge>unread</Badge>}
-                        <span className="text-xs text-slate-500">
-                          {formatDateTimeText(message.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2 whitespace-pre-wrap">{message.content}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {selectedConversation ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="font-medium text-slate-950">{selectedConversation.conversationKey}</div>
+                    <Badge>{selectedConversation.provider}</Badge>
+                    <Badge>{selectedConversation.type}</Badge>
                   </div>
-                ))}
-              </div>
+                  {selectedConversation.type === 'group' ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedConversation.participants.map((participant) => (
+                        <Badge key={`${selectedConversation.conversationId}-${participant}`}>{participant}</Badge>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="mt-2 space-y-1 text-xs text-slate-500">
+                    <div>Updated at {formatDateTimeText(selectedConversation.updatedAt)}</div>
+                    <div>{selectedConversation.name ?? selectedConversation.contactDisplayName ?? selectedConversation.contactSlug ?? 'Conversation'}</div>
+                  </div>
+                  <div className="mt-4 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
+                    {selectedConversation.messages.map((message) => (
+                      <div key={message.messageId} className="rounded-xl bg-white px-4 py-3 text-sm text-slate-700">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="font-medium text-slate-900">
+                            {message.authorDisplayName ?? 'Unknown author'}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {message.unread && <Badge>unread</Badge>}
+                            <span className="text-xs text-slate-500">
+                              {formatDateTimeText(message.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="mt-2 whitespace-pre-wrap">{message.content}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
-          ))}
-        </div>
-      </Card>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
@@ -1538,7 +1661,7 @@ function AgentThreadCard(input: {
           assistant replies, and tool-driven flow.
         </p>
       </div>
-      <div className="mt-5 space-y-3">
+      <div className="mt-5 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
         {input.messages.length === 0 && (
           <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
             No thread messages for this agent.
@@ -1794,54 +1917,14 @@ function ScheduleEditorCard(input: {
 
 function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
   const agent = input.agent!;
-  const latestStep = agent.recentExecutionSteps[0] ?? null;
-  const unreadNotificationCount = agent.recentNotifications.filter((notification) => !notification.read).length;
   const recentStepCostUsd = agent.recentExecutionSteps.reduce((total, step) => total + step.costUsd, 0);
   const recentStepTokenCount = agent.recentExecutionSteps.reduce(
     (total, step) => total + step.inputTokens + step.cachedInputTokens + step.outputTokens,
     0,
   );
-  const recentAverageStepGapMs = computeAverageStepGapMs(agent.recentExecutionSteps);
 
   return (
     <div className="space-y-6">
-      <WorkspaceCanvas
-        title="Run state"
-        description="Live runner state, wake queue condition, and the latest observed activity from the agent."
-      >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <ReadOnlyField label="Runner state" value={getRunnerStateLabel(agent)} />
-          <ReadOnlyField
-            label="Wake queue"
-            value={getWakeQueueLabel(agent)}
-          />
-          <ReadOnlyField
-            label="Last wake"
-            value={formatDateTime(agent.runner?.lastWakeStartedAt ?? null)}
-          />
-          <ReadOnlyField
-            label="Next scheduled step"
-            value={agent.runner?.nextStepAt ? `${formatDateTime(agent.runner.nextStepAt)}${agent.runner.estimatedDelayMs != null ? ` · ${formatDurationShort(agent.runner.estimatedDelayMs)}` : ''}` : '—'}
-          />
-          <ReadOnlyField
-            label="Latest step"
-            value={latestStep ? `${formatDateTime(latestStep.createdAt)} · ${latestStep.kind}` : '—'}
-          />
-          <ReadOnlyField
-            label="Unread notifications"
-            value={formatInteger(unreadNotificationCount)}
-          />
-          <ReadOnlyField
-            label="Average recent gap"
-            value={recentAverageStepGapMs ? formatDurationShort(recentAverageStepGapMs) : '—'}
-          />
-          <ReadOnlyField
-            label="Auto refresh"
-            value="5s"
-          />
-        </div>
-      </WorkspaceCanvas>
-
       <WorkspaceCanvas
         title="Execution summary"
         description="Budget context and the recent execution footprint visible from the central step ledger."
@@ -1980,24 +2063,6 @@ function getWakeQueueLabel(agent: Awaited<ReturnType<typeof getAgent>>) {
   return 'pending';
 }
 
-function computeAverageStepGapMs(
-  steps: Array<{
-    createdAt: number;
-  }>,
-) {
-  if (steps.length < 2) {
-    return null;
-  }
-
-  let totalGapMs = 0;
-
-  for (let index = 0; index < steps.length - 1; index += 1) {
-    totalGapMs += Math.abs(steps[index].createdAt - steps[index + 1].createdAt);
-  }
-
-  return totalGapMs / (steps.length - 1);
-}
-
 function formatDurationShort(value: number) {
   const totalSeconds = Math.max(Math.round(value / 1000), 0);
 
@@ -2088,6 +2153,8 @@ function createAgentConfigDraft(agent: AgentDetail): AgentConfigDraft {
     workspaceAutoSync: agent.workspace.autoSync,
     workspaceBm25: agent.workspace.bm25,
     workspaceEmbedder: agent.workspace.embedder,
+    modelProfileId: agent.modelProfile?.profileId ?? '',
+    omModelProfileId: agent.omModelProfile?.profileId ?? '',
   };
 }
 
@@ -2213,11 +2280,11 @@ function buildAgentLocation(input: {
   if (input.tab === 'communications') {
     return {
       to: '/agents/$agentId/communications/$communicationView',
-      params: {
-        agentId: input.agentId,
-        communicationView: input.communicationView ?? 'providers',
-      },
-    };
+        params: {
+          agentId: input.agentId,
+        communicationView: input.communicationView ?? 'inbox',
+        },
+      };
   }
 
   if (input.tab === 'schedules') {

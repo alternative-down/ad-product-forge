@@ -256,9 +256,11 @@ export async function createCommunicationModule(config: {
       return {
         conversationId: conversation.conversationId,
         provider: conversation.provider,
+        providerConversationKey: conversation.providerConversationKey,
         latestMessageAt: conversation.latestMessageAt,
         unreadCount: conversation.unreadCount,
         name: conversation.name,
+        type: conversation.type,
         contactSlug: conversation.contactSlug,
         contactDisplayName,
         messages: conversation.messages.map((message) => ({
@@ -305,6 +307,7 @@ export async function createCommunicationModule(config: {
   async function sendMessage(input: {
     provider: string;
     conversationId?: string;
+    providerConversationKey?: string;
     contactSlug?: string;
     content: string;
     replyToMessageId?: string;
@@ -321,15 +324,54 @@ export async function createCommunicationModule(config: {
       throw new Error(`Message ${input.replyToMessageId} does not belong to provider ${input.provider}`);
     }
 
-    if (input.conversationId) {
-      const conversation = await store.getConversation(input.conversationId);
+    const conversation =
+      input.conversationId
+        ? await store.getConversation(input.conversationId)
+        : input.providerConversationKey
+          ? await store.getConversationByProviderConversationKey(input.provider, input.providerConversationKey)
+          : null;
 
-      if (!conversation) {
-        throw new Error(`Conversation not found: ${input.conversationId}`);
-      }
-
+    if (conversation) {
       if (conversation.provider !== input.provider) {
         throw new Error(`Conversation ${input.conversationId} does not belong to provider ${input.provider}`);
+      }
+
+      if (conversation.type === 'group') {
+        const selfParticipantIds = new Set(
+          (await store.listSelfAccounts())
+            .filter((account) => account.provider === input.provider)
+            .map((account) => account.externalAccountId),
+        );
+        const recipients = (await store.listGroupMembers(conversation.conversationId)).filter(
+          (member) => !selfParticipantIds.has(member.participantId),
+        );
+
+        if (recipients.length === 0) {
+          throw new Error(`Chat group has no reachable recipients: ${conversation.conversationId}`);
+        }
+
+        const sentMessages = await Promise.all(
+          recipients.map((member) =>
+            provider.sendMessage({
+              providerConversationKey: conversation.providerConversationKey,
+              contactExternalId: member.participantId,
+              conversationName: conversation.name,
+              conversationType: conversation.type,
+              content: input.content,
+              replyToProviderMessageId: replyMessage?.providerMessageId,
+            }),
+          ),
+        );
+        const firstSent = sentMessages[0]!;
+
+        return saveSentMessage({
+          provider: input.provider,
+          providerConversationKey: conversation.providerConversationKey,
+          providerMessageId: firstSent.providerMessageId,
+          conversationName: conversation.name ?? firstSent.conversationName,
+          contactSlug: conversation.contactSlug,
+          content: input.content,
+        });
       }
 
       let contactExternalId: string | null = null;
@@ -339,6 +381,8 @@ export async function createCommunicationModule(config: {
 
       const sent = await provider.sendMessage({
         providerConversationKey: conversation.providerConversationKey,
+        conversationName: conversation.name,
+        conversationType: conversation.type,
         contactExternalId: contactExternalId || undefined,
         content: input.content,
         replyToProviderMessageId: replyMessage?.providerMessageId,
@@ -352,6 +396,12 @@ export async function createCommunicationModule(config: {
         contactSlug: conversation.contactSlug,
         content: input.content,
       });
+    }
+
+    if (input.conversationId || input.providerConversationKey) {
+      throw new Error(
+        `Conversation not found for provider ${input.provider}: ${input.conversationId ?? input.providerConversationKey}`,
+      );
     }
 
     if (!input.contactSlug) {
@@ -375,6 +425,7 @@ export async function createCommunicationModule(config: {
 
     const sent = await provider.sendMessage({
       contactExternalId,
+      conversationType: 'dm',
       content: input.content,
       replyToProviderMessageId: replyMessage?.providerMessageId,
     });

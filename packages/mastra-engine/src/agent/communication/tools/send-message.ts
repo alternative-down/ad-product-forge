@@ -7,6 +7,12 @@ const sendMessageInputSchema = z
   .object({
     provider: z.string(),
     conversationId: z.string().optional().describe('Send inside an existing conversation by its internal conversation id.'),
+    providerConversationKey: z
+      .string()
+      .optional()
+      .describe(
+        'Send inside an existing conversation by its provider conversation key. Prefer conversationId when available. Useful for internal chat groups and provider-native thread keys.',
+      ),
     contactSlug: z
       .string()
       .optional()
@@ -21,9 +27,16 @@ const sendMessageInputSchema = z
         'Optional message id to reply to. Use only a recent messageId from the same conversation. If unsure, omit it and send without reply.',
       ),
   })
-  .refine((input) => Number(Boolean(input.conversationId)) + Number(Boolean(input.contactSlug)) === 1, {
-    message: 'Provide exactly one of conversationId or contactSlug.',
-  });
+  .refine(
+    (input) =>
+      Number(Boolean(input.conversationId)) +
+        Number(Boolean(input.providerConversationKey)) +
+        Number(Boolean(input.contactSlug)) ===
+      1,
+    {
+      message: 'Provide exactly one of conversationId, providerConversationKey, or contactSlug.',
+    },
+  );
 
 export function createSendMessageTool(communication: CommunicationModule) {
   return createTool({
@@ -34,6 +47,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
       communication.sendMessage({
         provider: input.provider,
         conversationId: input.conversationId,
+        providerConversationKey: input.providerConversationKey,
         contactSlug: input.contactSlug,
         content: input.content,
         replyToMessageId: input.replyToMessageId,

@@ -7,13 +7,23 @@ import type { Database } from '../database/index';
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
-const CHECKPOINT_PREFIX = 'CHECKPOINT:';
+const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
+const RUN_STOP_REMINDER = [
+  'System reminder:',
+  '- Plain text responses are not routed to any external counterpart.',
+  '- The current run only stops when you explicitly respond with NO_ACTION_NEEDED and do not call a tool.',
+  '- If you still need to inspect, decide, or act, use the appropriate tools.',
+].join('\n');
 type AgentUsage = {
   inputTokens?: number;
   outputTokens?: number;
   promptTokens?: number;
   completionTokens?: number;
   cachedInputTokens?: number;
+  inputTokenDetails?: {
+    noCacheTokens?: number;
+    cacheReadTokens?: number;
+  };
 };
 
 type OmObservationEndPart = {
@@ -37,8 +47,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let backoffMs = ONE_MINUTE_MS;
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
-  let pendingExecutePrompt: string | null = null;
-  let pendingFeedbackMessages: string[] = [];
+  let pendingRunMessages: string[] = [];
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
@@ -88,14 +97,12 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     const nextContent = content.trim();
     const executionState = await store.getExecutionState(runtime.id);
 
+    appendPendingRunMessage(nextContent);
+
     if (executionState === 'running') {
-      if (nextContent) {
-        pendingFeedbackMessages.push(nextContent);
-      }
       return;
     }
 
-    pendingExecutePrompt = nextContent;
     instant = true;
     backoffMs = ONE_MINUTE_MS;
     lastWakeStartedAt = Date.now();
@@ -103,20 +110,24 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await queueNextStep();
   }
 
-  function takePendingExecutePrompt() {
-    const prompt = pendingExecutePrompt?.trim() || null;
-    pendingExecutePrompt = null;
-    return prompt;
+  function appendPendingRunMessage(content: string) {
+    const nextContent = content.trim();
+
+    if (!nextContent) {
+      return;
+    }
+
+    pendingRunMessages.push(nextContent);
   }
 
-  function flushPendingFeedback() {
-    if (pendingFeedbackMessages.length === 0) {
+  function flushPendingRunMessages() {
+    if (pendingRunMessages.length === 0) {
       return null;
     }
 
-    const feedback = pendingFeedbackMessages.join('\n\n---\n\n').trim();
-    pendingFeedbackMessages = [];
-    return feedback || null;
+    const content = pendingRunMessages.join('\n\n---\n\n').trim();
+    pendingRunMessages = [];
+    return content || null;
   }
 
   function stop() {
@@ -186,23 +197,23 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
-      const prompt = takePendingExecutePrompt() ?? [];
+      const prompt = flushPendingRunMessages() ?? [];
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       const result = await runtime.agent.generate(prompt, {
         maxSteps: 1,
-        toolChoice: 'required',
+        // toolChoice: 'required', removio para não requerer tool call obrigatoriamente
         memory: {
           thread: runtime.id,
           resource: runtime.id,
         },
         providerOptions: {
           anthropic: {
-            thinking: { type: 'enabled', budgetTokens: 12000 },
+            thinking: { type: 'enabled', budgetTokens: 2000 },
           },
         },
         onIterationComplete: () => {
-          const feedback = flushPendingFeedback();
+          const feedback = flushPendingRunMessages();
 
           if (!feedback) {
             return;
@@ -215,20 +226,26 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         },
       });
       const usage = result.usage as AgentUsage;
-      const inputTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
-      const cachedInputTokens = usage.cachedInputTokens ?? 0;
+      const inputTokens =
+        usage.inputTokenDetails?.noCacheTokens ?? usage.inputTokens ?? usage.promptTokens ?? 0;
+      const cachedInputTokens =
+        usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
       const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0;
 
       await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       await recordObservationalMemorySteps(contractId, result.steps);
 
-      const checkpointRequested = result.text.trimStart().startsWith(CHECKPOINT_PREFIX);
+      const stopRequested = result.text.trimStart().includes(NO_ACTION_NEEDED_PREFIX);
 
-      if (result.toolCalls.length === 0 && !checkpointRequested) {
+      if (result.toolCalls.length === 0 && stopRequested) {
         nextStepAt = null;
         await store.setExecutionState(runtime.id, 'idle');
         await wakeQueue.onRunnerIdle();
         return;
+      }
+
+      if (result.toolCalls.length === 0) {
+        appendPendingRunMessage(RUN_STOP_REMINDER);
       }
 
       backoffMs = ONE_MINUTE_MS;

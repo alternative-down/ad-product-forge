@@ -97,11 +97,12 @@ const EXECUTION_ENVIRONMENT_INSTRUCTIONS = [
   '- No message, reply, or update is delivered to any external person, contact, or agent unless you send it through the appropriate tool call.',
 ].join('\n');
 
-const CHECKPOINT_INSTRUCTIONS = [
+const RUN_STOP_INSTRUCTIONS = [
   'Execution control:',
-  '- If you want the system to continue the current autonomous run without stopping, your visible text response must start with `CHECKPOINT:`.',
-  '- Use `CHECKPOINT:` only to report execution progress or the next immediate step you are taking.',
-  '- Any visible text that does not start with `CHECKPOINT:` is treated as a final stop for the current run.',
+  '- The current run only stops when you explicitly respond with `NO_ACTION_NEEDED` and do not call a tool.',
+  '- Use `NO_ACTION_NEEDED` only when you have checked the current state and there is truly nothing else to do right now.',
+  '- Any other visible text does not stop the run.',
+  '- Plain text remains internal to the execution flow. If you need to communicate with any external counterpart, use the appropriate tool call.',
 ].join('\n');
 
 function buildAgentSystemPrompt(
@@ -139,7 +140,7 @@ function buildAgentSystemPrompt(
 
   sections.push(instructions);
   sections.push(EXECUTION_ENVIRONMENT_INSTRUCTIONS);
-  sections.push(CHECKPOINT_INSTRUCTIONS);
+  sections.push(RUN_STOP_INSTRUCTIONS);
 
   return sections.join('\n\n');
 }
@@ -224,11 +225,11 @@ export async function createInternalAgentRuntime<
   const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
-    const longTermMemory = await LongTermMemory.create({
-      agentId: config.id,
+    const longTermMemory = new LongTermMemory({
       om,
+      agentId: config.id,
       memoryBasePath: agentMemoryPath,
-      consolidationTrigger: 'lastStep',
+      omModel: omModelKey,
     });
     inputProcessors.push(longTermMemory);
     outputProcessors.push(longTermMemory);

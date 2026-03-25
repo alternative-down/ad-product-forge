@@ -195,6 +195,7 @@ export type AgentDetail = {
     conversationId: string;
     conversationKey: string;
     provider: string;
+    type: string;
     name?: string;
     contactSlug?: string;
     contactDisplayName?: string;
@@ -219,7 +220,8 @@ export type UpdateAgentConfigInput = {
   instructions: string;
   workspaceAutoSync: boolean;
   workspaceBm25: boolean;
-  workspaceEmbedder: string;
+  modelProfileId: string;
+  omModelProfileId: string;
 };
 
 export type UpsertAgentProviderInput = {

@@ -339,6 +339,30 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     return loadConversation(conversationId);
   }
 
+  async function getConversationByProviderConversationKey(provider: string, providerConversationKey: string) {
+    const conversation = await db.query.communicationConversations.findFirst({
+      where: and(
+        eq(schema.communicationConversations.provider, provider),
+        eq(schema.communicationConversations.providerConversationKey, providerConversationKey),
+      ),
+    });
+
+    if (!conversation) {
+      return null;
+    }
+
+    return conversationSchema.parse({
+      conversationId: conversation.conversationId,
+      provider: conversation.provider,
+      providerConversationKey: conversation.providerConversationKey,
+      name: conversation.name ?? undefined,
+      type: conversation.type,
+      contactSlug: conversation.contactSlug ?? undefined,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+    });
+  }
+
   async function saveInboundMessage(input: {
     provider: string;
     providerConversationKey: string;
@@ -511,6 +535,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: conv.provider,
       providerConversationKey: conv.providerConversationKey,
       name: conv.name ?? undefined,
+      type: conv.type,
       contactSlug: conv.contactSlug ?? undefined,
       createdAt: conv.createdAt,
       updatedAt: conv.updatedAt,
@@ -595,6 +620,11 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       name: input.name,
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
+      creatorMember: {
+        participantId: input.creatorId,
+        participantName: input.creatorName,
+        role: 'admin',
+      },
       createdAt: now,
     };
   }
@@ -711,6 +741,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     upsertContact,
     upsertConversation,
     getConversation,
+    getConversationByProviderConversationKey,
     saveInboundMessage,
     saveOutboundMessage,
     getMessage,
