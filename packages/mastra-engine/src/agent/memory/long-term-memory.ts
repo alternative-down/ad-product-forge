@@ -88,6 +88,14 @@ vectorStore: this.vectorStore,
   private async doInitialize() {
     await this.workspace.init();
     await this.createWorkspaceVectorIndexIfMissing(this.vectorStore, this.searchIndexName);
+    
+    // Create required directories if they don't exist
+    await Promise.all([
+      this.workspace.filesystem?.mkdir(this.memoryDir, { recursive: true }),
+      this.workspace.filesystem?.mkdir(this.observationsDir, { recursive: true }),
+      this.workspace.filesystem?.mkdir(this.archivedDir, { recursive: true }),
+    ]);
+    
     this.initialized = true;
 
     this.memoryAgent = new Agent({
