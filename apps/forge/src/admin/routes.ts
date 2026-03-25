@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { registerAgentRoutes } from './routes-agents';
+import { registerFunctionRoutes } from './routes-functions';
+import { registerRoleRoutes } from './routes-roles';
 import fs from 'node:fs';
 import {
   getAnthropicCliAuthFilePath,
@@ -54,36 +56,6 @@ const roleToolPermissionSchema = z.object({
 const roleWorkflowPermissionSchema = z.object({
   roleId: z.string().min(1),
   workflowId: z.string().min(1),
-});
-
-const createRoleSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-});
-
-const updateRoleSchema = z.object({
-  roleId: z.string().min(1),
-  name: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-});
-
-const deleteRoleSchema = z.object({
-  roleId: z.string().min(1),
-});
-
-const createFunctionSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-});
-
-const updateFunctionSchema = z.object({
-  functionId: z.string().min(1),
-  name: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-});
-
-const deleteFunctionSchema = z.object({
-  functionId: z.string().min(1),
 });
 
 const functionRoleSchema = z.object({
@@ -299,17 +271,11 @@ export function registerAdminRoutes(input: {
   // Agent routes — extracted to routes-agents.ts
   registerAgentRoutes(input);
 
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/functions',
-    handler: async () => jsonResponse(await readModel.listFunctions()),
-  });
+  // Function routes — extracted to routes-functions.ts
+  registerFunctionRoutes(input, readModel);
 
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/roles',
-    handler: async () => jsonResponse(await readModel.listRoles()),
-  });
+  // Role routes — extracted to routes-roles.ts
+  registerRoleRoutes(input, readModel);
 
   input.httpServer.registerRoute({
     method: 'GET',
@@ -378,64 +344,6 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/finance',
     handler: async () => jsonResponse(await readModel.getFinance()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/role/create',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createRoleSchema);
-      return jsonResponse(await capabilities.createRole(body), 201);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/role/update',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateRoleSchema);
-      const result = await capabilities.updateRole(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/role/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteRoleSchema);
-      return jsonResponse(await capabilities.deleteRole(body.roleId));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function/create',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createFunctionSchema);
-      return jsonResponse(await capabilities.createFunction(body), 201);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function/update',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateFunctionSchema);
-      const result = await capabilities.updateFunction(body);
-      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteFunctionSchema);
-      return jsonResponse(await capabilities.deleteFunction(body.functionId));
-    },
   });
 
   input.httpServer.registerRoute({
