@@ -73,45 +73,9 @@ vectorStore: this.vectorStore,
     });
   }
 
-  private async ensureInitialized() {
-    if (this.initialized) {
-      return;
-    }
-    if (this.initPromise) {
-      return this.initPromise;
-    }
-
-    this.initPromise = this.doInitialize();
-    await this.initPromise;
-  }
-
   private async doInitialize() {
     await this.workspace.init();
     await this.createWorkspaceVectorIndexIfMissing(this.vectorStore, this.searchIndexName);
-    
-    // Create required directories if they don't exist
-    await Promise.all([
-      this.workspace.filesystem?.mkdir(this.memoryDir, { recursive: true }),
-      this.workspace.filesystem?.mkdir(this.observationsDir, { recursive: true }),
-      this.workspace.filesystem?.mkdir(this.archivedDir, { recursive: true }),
-    ]);
-    
-    this.initialized = true;
-
-    this.memoryAgent = new Agent({
-      id: this.id + '-agent',
-      name: 'Memory Consolidation Agent',
-      instructions:
-        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to read /observations, extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed observations to /archived.',
-      model: this.omModel,
-      workspace: this.workspace,
-    });
-
-    this.cleanupConsolidatedFiles().catch((error: unknown) => {
-      forgeDebug('ltm', 'cleanup failed', { error: String(error) });
-    });
-
-    forgeDebug('ltm', 'initialized');
   }
 
   private async createWorkspaceVectorIndexIfMissing(vectorStore: LibSQLVector, indexName: string) {
@@ -132,7 +96,7 @@ vectorStore: this.vectorStore,
       return args.messages;
     }
 
-    await this.ensureInitialized();
+    await this.doInitialize();
 
     const context = this.getThreadContext(args.requestContext, args.messageList);
     if (!context) {
@@ -175,7 +139,7 @@ vectorStore: this.vectorStore,
       return args.messages;
     }
 
-    await this.ensureInitialized();
+    await this.doInitialize();
 
     const context = this.getThreadContext(args.requestContext, args.messageList);
     if (!context) {
