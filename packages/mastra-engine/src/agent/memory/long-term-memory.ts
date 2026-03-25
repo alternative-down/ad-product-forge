@@ -4,11 +4,12 @@ import { Agent } from '@mastra/core/agent';
 import type { AgentConfig } from '@mastra/core/agent';
 import type { MastraDBMessage, MessageList } from '@mastra/core/agent';
 import type {
+  ProcessInputArgs,
   ProcessInputStepArgs,
   ProcessOutputStepArgs,
   Processor,
 } from '@mastra/core/processors';
-import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
+import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
@@ -23,7 +24,7 @@ export type LongTermMemoryConfig = {
   om: ObservationalMemory;
   agentId: string;
   omModel: AgentConfig['model'];
-  memoryBasePath?: string;
+  memoryBasePath: string;
 };
 
 export class LongTermMemory implements Processor<'long-term-memory'> {
@@ -33,6 +34,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly observationsDir = 'observations';
   private readonly archivedDir = 'archived';
   private readonly maxRecentRecallMessages = 8;
+  private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
+  private readonly incrementalHistoryLimit = 12;
 
   private readonly om: ObservationalMemory;
   private readonly workspace: WorkspaceRuntime;
@@ -41,18 +44,17 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly omModel: AgentConfig['model'];
   private memoryAgent: Agent<string, never, string> | null = null;
   private initialized = false;
+  private memoryAgentRunning = false;
 
   constructor(config: LongTermMemoryConfig) {
     this.om = config.om;
 
-    const memoryPath =
-      config.memoryBasePath ||
-      path.resolve(process.cwd(), '.forge-memory', config.agentId);
+    const memoryPath = config.memoryBasePath;
 
-    const vectorStorePath = path.join(memoryPath, config.agentId + '-memory-workspace.db');
+    const vectorStorePath = `${memoryPath}/${config.agentId}-memory-workspace.db`;
     this.vectorStore = new LibSQLVector({
-      id: config.agentId + '-memory-workspace-vector',
-      url: 'file:' + vectorStorePath,
+      `${config.agentId}-memory-workspace-vector`
+      `url: 'file:${vectorStorePath}',
     });
 
     this.searchIndexName = config.agentId + '_memory_search';
@@ -63,8 +65,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       autoIndexPaths: ['/observations', '/memory'],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({ basePath: memoryPath }),
-      sandbox: new LocalSandbox({ isolation: 'none', workingDirectory: memoryPath }),
-      vectorStore: this.vectorStore,
+vectorStore: this.vectorStore,
       searchIndexName: this.searchIndexName,
     });
   }
@@ -98,7 +99,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     try {
       await vectorStore.describeIndex({ indexName });
     } catch {
-      const sampleEmbedding = await embedTextWithFastembed('forge-memory-bootstrap');
+      const sampleEmbedding = await embedTextWithFastembed('memory-bootstrap');
       await vectorStore.createIndex({
         indexName,
         dimension: sampleEmbedding.length,
@@ -128,8 +129,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const workspaceResults = await this.searchWorkspace(queryText);
     const graphContext = await this.searchGraph(queryText, workspaceResults);
     const sections = [
-      workspaceResults ? 'Workspace memory:\n' + workspaceResults : '',
-      graphContext ? 'Graph memory:\n' + graphContext : '',
+      workspaceResults ? 'Workspace memory:n' + workspaceResults : '',
+      graphContext ? 'Graph memory:n' + graphContext : '',
     ].filter(Boolean);
 
     if (sections.length === 0) {
@@ -141,8 +142,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         role: 'system',
         content: [
           'Recovered past memory relevant to the current step. Use it as supporting recall, not as a replacement for the current conversation.',
-          sections.join('\n\n'),
-        ].join('\n\n'),
+          sections.join('nn'),
+        ].join('nn'),
       },
       this.id,
     );
@@ -196,7 +197,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         observation.activeObservations,
       ]
         .filter(Boolean)
-        .join('\n');
+        .join('n');
 
       await this.workspace.filesystem?.writeFile(filePath, content, {
         recursive: true,
@@ -204,11 +205,18 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       });
     }
 
-    // Fire-and-forget: call memory agent to organize observations
-    this.memoryAgent
-      ?.generate(
-        {
-          messages: [
+    // Only call memory agent if this is the last step (no toolCalls + has text response)
+    const hasToolCalls = args.toolCalls && args.toolCalls.length > 0;
+    const hasTextResponse = args.text && args.text.trim().length > 0;
+    const isLastStep = !hasToolCalls && hasTextResponse;
+
+    if (isLastStep && !this.memoryAgentRunning && this.memoryAgent) {
+      this.memoryAgentRunning = true;
+      // Fire-and-forget: call memory agent to organize observations
+      this.memoryAgent
+        .generate(
+          {
+            messages: [
             {
               role: 'user',
               content:
@@ -216,7 +224,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
             },
           ],
         },
-        { threadId: context.threadId, resourceId: context.resourceId },
+        { threadId: context.threadId, resourceId: context.resourceId, maxSteps: 1000 },
       )
       .catch((error: unknown) => {
         forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
@@ -253,8 +261,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       }
 
       return results
-        .map((result) => result.id + '\n' + String(result.content).trim())
-        .join('\n\n---\n\n');
+        .map((result) => `${result.id}n${String(result.content).trim()}`)
+        .join('nn---nn');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
@@ -278,12 +286,12 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       });
 
       const workspaceContext = workspaceResults
-        .map((r) => r.id + ': ' + r.content)
-        .join('\n\n');
+        .map((r) => `${r.id}: ${r.content}`)
+        .join('nn');
 
       const graphResult = await graphTool.execute(
         {
-          queryText: workspaceContext ? queryText + '\n\nContext:\n' + workspaceContext : queryText,
+          queryText: workspaceContext ? `${queryText}nnContext:n${workspaceContext}` : queryText,
           topK: 3,
         },
         {} as never,
@@ -301,7 +309,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
           typeof chunk === 'string' ? chunk.trim() : JSON.stringify(chunk).trim(),
         )
         .filter(Boolean)
-        .join('\n\n---\n\n');
+        .join('nn---nn');
     } catch (error) {
       forgeDebug('ltm', 'graph search failed', {
         error: error instanceof Error ? error.message : String(error),
@@ -321,24 +329,24 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         } else if (Array.isArray(message.content)) {
           text = message.content
             .map((part) => (typeof part === 'string' ? part : JSON.stringify(part)))
-            .join('\n');
+            .join('n');
         } else {
           const parts = Array.isArray(message.content?.parts) ? message.content.parts : [];
           text = parts
             .map((part) =>
               'text' in part && typeof part.text === 'string' ? part.text : JSON.stringify(part),
             )
-            .join('\n');
+            .join('n');
         }
         text = text.trim();
-        return text ? '[' + message.role + '] ' + text : '';
+        return text ? `[${message.role}] ${text}` : '';
       })
       .filter(Boolean)
-      .join('\n');
+      .join('n');
   }
 
   private getThreadContext(
-    requestContext: { get(key: string): unknown; has(key: string): boolean },
+    requestContext: ProcessInputArgs['requestContext'],
     messageList: MessageList,
   ) {
     const memoryContext = requestContext?.get('MastraMemory') as
