@@ -94,7 +94,7 @@ export async function generateHiredAgentInstructions(
       'Return a structured object with exactly these keys: agentName, agentDescription, functionId, instructions.',
       'The functionId must be the real internal function id that should be assigned to the hired agent.',
       'The instructions field must be the full system prompt for the hired agent.',
-      'The hired agent must be a persona, not a generic worker type.',
+      'IMPORTANT: Generate a CARICATURE persona, NOT a real person. Use names inspired by video game characters, AI assistants, robots, fictional helpers, NPCs, mascots, legendary figures, or whimsical archetypes. Examples: "Unitron-3000", "Mira the Analyst", "Captain Productivity", "Sage of the Spreadsheets", "Glitch the Fixer", "Protocol Pete", "Nova the Navigator", "Bureaucracy Bot", "Quest Master Quill". AVOID common human names like John, Maria, Carlos, Ana. If using a human name, twist it with a title, nickname, or surname that makes it feel like a character.',
       'Write the system prompt in a simple CrewAI-like format with exactly these sections: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
       'Do not add sections about tools, safety rules, constraints, execution control, communication style, or environment behavior.',
       'Use Backstory to make the collaborator feel like a specific person with identity, motivation, and way of operating inside the company.',
@@ -177,11 +177,11 @@ function buildHiringPrompt(input: {
     'Return a structured object with exactly these keys: agentName, agentDescription, functionId, instructions.',
     'The functionId must be a real internal function id created or selected through tools.',
     'The instructions field must be the full system prompt for the hired agent.',
-    'The hired agent must be a persona with a clear identity, not a generic worker type.',
+    'IMPORTANT: Create a CARICATURE persona, NOT a real person. Use names inspired by video game characters, AI assistants, robots, fictional helpers, NPCs, mascots, legendary figures, or whimsical archetypes. Good name examples: "Unitron-3000", "Mira the Analyst", "Captain Productivity", "Sage of the Spreadsheets", "Glitch the Fixer", "Protocol Pete", "Nova the Navigator", "Bureaucracy Bot", "Quest Master Quill". AVOID common human names like John, Maria, Carlos, Ana. If using a human name, add a title, nickname, or surname that makes it feel like a character.',
     'Write the prompt with exactly these sections and no others: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
     'Keep the structure simple and direct, in a CrewAI-like style.',
     'Do not add sections about tools, safety rules, constraints, communication style, execution control, or environment disclaimers.',
-    'Put identity, motivation, and personality into Backstory.',
+    'Give the Backstory a memorable, exaggerated, or quirky flavor that matches the caricature persona style.',
     'Put the practical operating guidance into Instructions.',
   ];
 
