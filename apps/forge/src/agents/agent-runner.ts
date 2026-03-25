@@ -11,7 +11,7 @@ const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const RUN_STOP_REMINDER = [
   'System reminder:',
   '- Plain text responses are not routed to any external counterpart.',
-  '- The current run only stops when you explicitly respond with `NO_ACTION_NEEDED` and do not call a tool.',
+  '- The current run only stops when you explicitly respond with NO_ACTION_NEEDED and do not call a tool.',
   '- If you still need to inspect, decide, or act, use the appropriate tools.',
 ].join('\n');
 type AgentUsage = {
