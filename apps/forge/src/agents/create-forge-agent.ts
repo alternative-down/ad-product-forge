@@ -225,11 +225,11 @@ export async function createInternalAgentRuntime<
   const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
-    const longTermMemory = await LongTermMemory.create({
-      agentId: config.id,
+    const longTermMemory = new LongTermMemory({
       om,
+      agentId: config.id,
       memoryBasePath: agentMemoryPath,
-      consolidationTrigger: 'lastStep',
+      omModel: omModelKey,
     });
     inputProcessors.push(longTermMemory);
     outputProcessors.push(longTermMemory);
