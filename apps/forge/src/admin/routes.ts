@@ -658,8 +658,13 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/role/create',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createRoleSchema);
+      try {
+        const body = parseJsonBody(request.bodyText, createRoleSchema);
       return jsonResponse(await capabilities.createRole(body), 201);
+      } catch (error) {
+        console.error('[Admin] Failed to create role:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -667,10 +672,17 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/role/update',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateRoleSchema);
-      const result = await capabilities.updateRole(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
+      try {
+        const body = parseJsonBody(request.bodyText, updateRoleSchema);
+        const result = await capabilities.updateRole(body);
+        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
+          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
+        });
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to update role:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -678,8 +690,13 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/role/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteRoleSchema);
-      return jsonResponse(await capabilities.deleteRole(body.roleId));
+      try {
+        const body = parseJsonBody(request.bodyText, deleteRoleSchema);
+        return jsonResponse(await capabilities.deleteRole(body.roleId));
+      } catch (error) {
+        console.error('[Admin] Failed to delete role:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -744,10 +761,17 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/role-tool-permission/add',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-      const result = await capabilities.addRoleToolPermission(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
+      try {
+        const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
+        const result = await capabilities.addRoleToolPermission(body);
+        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
+          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
+        });
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to add role tool permission:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -755,10 +779,17 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/role-workflow-permission/add',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
-      const result = await capabilities.addRoleWorkflowPermission(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
+      try {
+        const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
+        const result = await capabilities.addRoleWorkflowPermission(body);
+        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
+          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
+        });
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to add role workflow permission:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -766,10 +797,17 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/role-workflow-permission/remove',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
-      const result = await capabilities.removeRoleWorkflowPermission(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
+      try {
+        const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
+        const result = await capabilities.removeRoleWorkflowPermission(body);
+        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
+          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
+        });
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to remove role workflow permission:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -777,10 +815,17 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/role-tool-permission/remove',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-      const result = await capabilities.removeRoleToolPermission(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
+      try {
+        const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
+        const result = await capabilities.removeRoleToolPermission(body);
+        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
+          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
+        });
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to remove role tool permission:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
