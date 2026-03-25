@@ -4,6 +4,7 @@ import { registerAgentRoutes } from './routes-agents';
 import { registerFunctionRoutes } from './routes-functions';
 import { registerRoleRoutes } from './routes-roles';
 import { registerCapabilityRoutes } from './routes-capabilities';
+import { registerSystemRoutes } from './routes-system';
 import fs from 'node:fs';
 import {
   getAnthropicCliAuthFilePath,
@@ -266,163 +267,22 @@ export function registerAdminRoutes(input: {
   // Capability routes — extracted to routes-capabilities.ts
   registerCapabilityRoutes(input);
 
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/integrations',
-    handler: async () => jsonResponse(await readModel.listSystemIntegrations()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/settings',
-    handler: async () => jsonResponse(await readModel.getSystemSettings()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/llm',
-    handler: async () => jsonResponse(await readModel.getSystemLlm()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/migrations',
-    handler: async () => jsonResponse(await readModel.getApplicationMigrations()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/settings/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertSystemSettingsSchema);
-      const result = await systemSettings.upsertSettings({
-        companyName: body.companyName.trim(),
-        companyContext: body.companyContext.trim(),
-      });
-      const registry = getInternalAgentRegistry();
-
-      for (const entry of registry.list()) {
-        const runtime = await loadAgent(input.db, {
-          ...input.loaderConfig,
-          agentId: entry.runtime.id,
-        });
-
-        await registry.add(input.db, runtime);
-      }
-
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/llm/price/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
-      return jsonResponse(await llmModelPrices.upsertPrice(body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/oauth',
-    handler: async () => jsonResponse(readOauthState()),
+  // System routes — extracted to routes-system.ts
+  registerSystemRoutes({
+    db: input.db,
+    httpServer: input.httpServer,
+    loaderConfig: input.loaderConfig,
+    readModel,
+    integrations,
+    llmSettings,
+    llmModelPrices,
+    systemSettings,
   });
 
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/finance',
     handler: async () => jsonResponse(await readModel.getFinance()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/integration/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
-      const result = await integrations.upsertIntegration(body);
-
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/integration/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
-      await integrations.deleteIntegration(body.providerType);
-      return jsonResponse({ success: true, providerType: body.providerType });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/llm/profile/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
-      return jsonResponse(await llmSettings.upsertProfile(body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/llm/profile/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteLlmProfileSchema);
-      await llmSettings.deleteProfile(body.profileId);
-      return jsonResponse({ success: true, profileId: body.profileId });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/llm/defaults/update',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
-      return jsonResponse(await llmSettings.updateDefaults(body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/oauth/sync',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, syncOauthSchema);
-      const providerIds: Array<'openai-codex' | 'anthropic'> =
-        body.providerId === 'all' ? ['openai-codex', 'anthropic'] : [body.providerId];
-      const results: Array<{
-        providerId: 'openai-codex' | 'anthropic';
-        synced: boolean;
-        error?: string;
-      }> = [];
-
-      for (const providerId of providerIds) {
-        try {
-          if (providerId === 'openai-codex') {
-            await syncOpenAICodexCredential();
-          } else {
-            await syncAnthropicCredential();
-          }
-
-          results.push({
-            providerId,
-            synced: true,
-          });
-        } catch (error) {
-          results.push({
-            providerId,
-            synced: false,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-
-      return jsonResponse({
-        state: readOauthState(),
-        results,
-      });
-    },
   });
 
   input.httpServer.registerRoute({
