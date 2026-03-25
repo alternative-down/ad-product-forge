@@ -303,29 +303,15 @@ vectorStore: this.vectorStore,
 
   private buildRecallQuery(messages: MastraDBMessage[]) {
     return messages
-      .filter((message) => ['user', 'assistant', 'tool'].includes(message.role))
+      .filter((message) => !['system'].includes(message.role))
       .slice(-this.maxRecentRecallMessages)
-      .map((message) => {
-        let text = '';
-        if (typeof message.content === 'string') {
-          text = message.content;
-        } else if (Array.isArray(message.content)) {
-          text = message.content
-            .map((part) => (typeof part === 'string' ? part : JSON.stringify(part)))
-            .join('n');
-        } else {
-          const parts = Array.isArray(message.content?.parts) ? message.content.parts : [];
-          text = parts
-            .map((part) =>
-              'text' in part && typeof part.text === 'string' ? part.text : JSON.stringify(part),
-            )
-            .join('n');
-        }
-        text = text.trim();
-        return text ? `[${message.role}] ${text}` : '';
-      })
-      .filter(Boolean)
-      .join('n');
+      .map(message => {
+        return `
+        ${message.content.content || ''}
+        ${message.content.reasoning || ''}
+        ${message.content.toolInvocations?.flatMap(tool => JSON.stringify(tool.args)).join('\n') || ''}
+        `.trim();
+      }).filter(Boolean).join('\n');
   }
 
   private getThreadContext(
