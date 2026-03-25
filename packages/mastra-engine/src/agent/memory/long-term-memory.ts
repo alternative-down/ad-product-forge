@@ -50,11 +50,12 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     this.om = config.om;
 
     const memoryPath = config.memoryBasePath;
+    const forgeMemoryPath = `${memoryPath}/.forge-memory`;
 
-    const vectorStorePath = `${memoryPath}/${config.agentId}-memory-workspace.db`;
+    const vectorStorePath = `${forgeMemoryPath}/${config.agentId}-memory-workspace.db`;
     this.vectorStore = new LibSQLVector({
-      `${config.agentId}-memory-workspace-vector`
-      `url: 'file:${vectorStorePath}',
+      id: `${config.agentId}-memory-workspace-vector`,
+      url: `file:${vectorStorePath}`,
     });
 
     this.searchIndexName = config.agentId + '_memory_search';
@@ -64,7 +65,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       bm25: true,
       autoIndexPaths: ['/observations', '/memory'],
       embedder: embedTextWithFastembed,
-      filesystem: new LocalFilesystem({ basePath: memoryPath }),
+      filesystem: new LocalFilesystem({ basePath: forgeMemoryPath }),
 vectorStore: this.vectorStore,
       searchIndexName: this.searchIndexName,
     });
