@@ -3,6 +3,7 @@ import { eq, and } from 'drizzle-orm';
 import { registerAgentRoutes } from './routes-agents';
 import { registerFunctionRoutes } from './routes-functions';
 import { registerRoleRoutes } from './routes-roles';
+import { registerCapabilityRoutes } from './routes-capabilities';
 import fs from 'node:fs';
 import {
   getAnthropicCliAuthFilePath,
@@ -46,21 +47,6 @@ import { createSystemSettingsStore } from '../system-settings/store';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
-});
-
-const roleToolPermissionSchema = z.object({
-  roleId: z.string().min(1),
-  toolId: z.string().min(1),
-});
-
-const roleWorkflowPermissionSchema = z.object({
-  roleId: z.string().min(1),
-  workflowId: z.string().min(1),
-});
-
-const functionRoleSchema = z.object({
-  functionId: z.string().min(1),
-  roleId: z.string().min(1),
 });
 
 const createScheduleSchema = z.object({
@@ -277,6 +263,9 @@ export function registerAdminRoutes(input: {
   // Role routes — extracted to routes-roles.ts
   registerRoleRoutes(input, readModel);
 
+  // Capability routes — extracted to routes-capabilities.ts
+  registerCapabilityRoutes(input);
+
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/integrations',
@@ -344,78 +333,6 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/finance',
     handler: async () => jsonResponse(await readModel.getFinance()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function-role/add',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, functionRoleSchema);
-      const result = await capabilities.addRoleToFunction(body);
-
-      void reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId).catch((error) => {
-        console.error(`[Admin] Failed to reload agents for function ${body.functionId}:`, error);
-      });
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function-role/remove',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, functionRoleSchema);
-      const result = await capabilities.removeRoleFromFunction(body);
-
-      void reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId).catch((error) => {
-        console.error(`[Admin] Failed to reload agents for function ${body.functionId}:`, error);
-      });
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/role-tool-permission/add',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-      const result = await capabilities.addRoleToolPermission(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/role-workflow-permission/add',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
-      const result = await capabilities.addRoleWorkflowPermission(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/role-workflow-permission/remove',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
-      const result = await capabilities.removeRoleWorkflowPermission(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/role-tool-permission/remove',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-      const result = await capabilities.removeRoleToolPermission(body);
-      await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
-      return jsonResponse(result);
-    },
   });
 
   input.httpServer.registerRoute({
