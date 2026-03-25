@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import type { Database } from '~/lib/db';
-import type { AgentLoaderConfig } from '~/lib/loader';
-import type { HttpServer } from '~/lib/http-server';
+import type { Database } from './lib/db';
+import type { AgentLoaderConfig } from './lib/loader';
+import type { HttpServer } from './lib/http-server';
 import type { AdminReadModel } from './read-model';
-import { parseJsonBody, jsonResponse } from '~/lib/http';
-import { loadAgent, getInternalAgentRegistry } from '~/capabilities/runtime';
+import { parseJsonBody, jsonResponse } from './lib/http';
+import { loadAgent, getInternalAgentRegistry } from './capabilities/runtime';
 import { syncOpenAICodexCredential, syncAnthropicCredential } from '@mastra-engine/core';
 
 // Schemas
