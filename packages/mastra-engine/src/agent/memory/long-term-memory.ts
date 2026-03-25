@@ -8,8 +8,7 @@ import type {
   ProcessOutputStepArgs,
   Processor,
 } from '@mastra/core/processors';
-import type { Workspace } from '@mastra/core/workspace';
-import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
+import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
@@ -22,10 +21,9 @@ type ObservationRecord = Awaited<ReturnType<ObservationalMemory['getHistory']>>[
 
 export type LongTermMemoryConfig = {
   om: ObservationalMemory;
-  workspace: Workspace;
-  vectorStore: LibSQLVector;
-  searchIndexName: string;
+  agentId: string;
   omModel: AgentConfig['model'];
+  memoryBasePath?: string;
 };
 
 export class LongTermMemory implements Processor<'long-term-memory'> {
@@ -35,11 +33,9 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly observationsDir = 'observations';
   private readonly archivedDir = 'archived';
   private readonly maxRecentRecallMessages = 8;
-  private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
-  private readonly incrementalHistoryLimit = 12;
 
   private readonly om: ObservationalMemory;
-  private readonly workspace: Workspace;
+  private readonly workspace: WorkspaceRuntime;
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
   private readonly omModel: AgentConfig['model'];
@@ -48,20 +44,42 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
   constructor(config: LongTermMemoryConfig) {
     this.om = config.om;
-    this.workspace = config.workspace;
-    this.vectorStore = config.vectorStore;
-    this.searchIndexName = config.searchIndexName;
-    this.omModel = config.omModel;
+
+    const memoryPath =
+      config.memoryBasePath ||
+      path.resolve(process.cwd(), '.forge-memory', config.agentId);
+
+    const vectorStorePath = path.join(memoryPath, config.agentId + '-memory-workspace.db');
+    this.vectorStore = new LibSQLVector({
+      id: config.agentId + '-memory-workspace-vector',
+      url: 'file:' + vectorStorePath,
+    });
+
+    this.searchIndexName = config.agentId + '_memory_search';
+
+    this.workspace = new WorkspaceRuntime({
+      autoSync: true,
+      bm25: true,
+      autoIndexPaths: ['/observations', '/memory'],
+      embedder: embedTextWithFastembed,
+      filesystem: new LocalFilesystem({ basePath: memoryPath }),
+      sandbox: new LocalSandbox({ isolation: 'none', workingDirectory: memoryPath }),
+      vectorStore: this.vectorStore,
+      searchIndexName: this.searchIndexName,
+    });
   }
 
-  async init() {
+  private async ensureInitialized() {
     if (this.initialized) {
       return;
     }
+
+    await this.workspace.init();
+    await this.createWorkspaceVectorIndexIfMissing(this.vectorStore, this.searchIndexName);
     this.initialized = true;
 
     this.memoryAgent = new Agent({
-      id: `${this.id}-agent`,
+      id: this.id + '-agent',
       name: 'Memory Consolidation Agent',
       instructions:
         'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to read /observations, extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed observations to /archived.',
@@ -76,9 +94,16 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     forgeDebug('ltm', 'initialized');
   }
 
-  private async ensureInitialized() {
-    if (!this.initialized) {
-      await this.init();
+  private async createWorkspaceVectorIndexIfMissing(vectorStore: LibSQLVector, indexName: string) {
+    try {
+      await vectorStore.describeIndex({ indexName });
+    } catch {
+      const sampleEmbedding = await embedTextWithFastembed('forge-memory-bootstrap');
+      await vectorStore.createIndex({
+        indexName,
+        dimension: sampleEmbedding.length,
+        metric: 'cosine',
+      });
     }
   }
 
@@ -86,6 +111,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     if (!args.messageList) {
       return args.messages;
     }
+
+    await this.ensureInitialized();
 
     const context = this.getThreadContext(args.requestContext, args.messageList);
     if (!context) {
@@ -101,8 +128,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const workspaceResults = await this.searchWorkspace(queryText);
     const graphContext = await this.searchGraph(queryText, workspaceResults);
     const sections = [
-      workspaceResults ? `Workspace memory:\n${workspaceResults}` : '',
-      graphContext ? `Graph memory:\n${graphContext}` : '',
+      workspaceResults ? 'Workspace memory:\n' + workspaceResults : '',
+      graphContext ? 'Graph memory:\n' + graphContext : '',
     ].filter(Boolean);
 
     if (sections.length === 0) {
@@ -128,12 +155,12 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       return args.messages;
     }
 
+    await this.ensureInitialized();
+
     const context = this.getThreadContext(args.requestContext, args.messageList);
     if (!context) {
       return args.messages;
     }
-
-    await this.ensureInitialized();
 
     const currentRecord = await this.om.getRecord(context.threadId, context.resourceId);
     if (!currentRecord) {
@@ -142,9 +169,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
     const hasObservationsDir =
       (await this.workspace.filesystem?.exists(this.observationsDir)) ?? false;
-    const historyLimit = hasObservationsDir
-      ? this.incrementalHistoryLimit
-      : this.bootstrapHistoryLimit;
+    const historyLimit = hasObservationsDir ? 12 : Number.MAX_SAFE_INTEGER;
     const observations = await this.om.getHistory(
       context.threadId,
       context.resourceId,
@@ -155,17 +180,18 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     );
 
     if (pendingObservations.length === 0) {
-      return args.messages;
+      return args.messageList;
     }
 
+    // Save each observation as an individual file (no day grouping)
     for (const observation of pendingObservations) {
-      const filePath = path.posix.join(this.observationsDir, `${observation.id}.md`);
+      const filePath = path.posix.join(this.observationsDir, observation.id + '.md');
       const content = [
-        `# Observation`,
+        '# Observation',
         '',
-        `## observation:${observation.id}`,
-        `Type: ${observation.originType}`,
-        `CreatedAt: ${observation.createdAt.toISOString()}`,
+        '## observation:' + observation.id,
+        'Type: ' + observation.originType,
+        'CreatedAt: ' + observation.createdAt.toISOString(),
         '',
         observation.activeObservations,
       ]
@@ -178,7 +204,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       });
     }
 
-    // Fire-and-forget: call memory agent for consolidation
+    // Fire-and-forget: call memory agent to organize observations
     this.memoryAgent
       ?.generate(
         {
@@ -201,16 +227,13 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
   private async readFile(filePath: string) {
     const exists = (await this.workspace.filesystem?.exists(filePath)) ?? false;
-
     if (!exists) {
       return '';
     }
-
     const content = await this.workspace.filesystem?.readFile(filePath);
     if (typeof content === 'string') {
       return content;
     }
-
     return content?.toString('utf8') ?? '';
   }
 
@@ -230,14 +253,13 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       }
 
       return results
-        .map((result) => `${result.id}\n${String(result.content).trim()}`)
+        .map((result) => result.id + '\n' + String(result.content).trim())
         .join('\n\n---\n\n');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
         return '';
       }
-
       forgeDebug('ltm', 'workspace search failed', { error: message });
       return '';
     }
@@ -256,12 +278,12 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       });
 
       const workspaceContext = workspaceResults
-        .map((r) => `${r.id}: ${r.content}`)
+        .map((r) => r.id + ': ' + r.content)
         .join('\n\n');
 
       const graphResult = await graphTool.execute(
         {
-          queryText: workspaceContext ? `${queryText}\n\nContext:\n${workspaceContext}` : queryText,
+          queryText: workspaceContext ? queryText + '\n\nContext:\n' + workspaceContext : queryText,
           topK: 3,
         },
         {} as never,
@@ -294,7 +316,6 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       .slice(-this.maxRecentRecallMessages)
       .map((message) => {
         let text = '';
-
         if (typeof message.content === 'string') {
           text = message.content;
         } else if (Array.isArray(message.content)) {
@@ -309,9 +330,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
             )
             .join('\n');
         }
-
         text = text.trim();
-        return text ? `[${message.role}] ${text}` : '';
+        return text ? '[' + message.role + '] ' + text : '';
       })
       .filter(Boolean)
       .join('\n');
@@ -353,17 +373,12 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         this.memoryDir,
       );
       const memoryDirExists = await this.workspace.filesystem?.exists(memoryDirPath);
-
       if (!memoryDirExists) {
         return;
       }
 
       const files = (await this.workspace.filesystem?.listFiles(memoryDirPath)) || [];
       const consolidatedFiles = files.filter((f) => f.includes('/consolidated-'));
-
-      if (consolidatedFiles.length === 0) {
-        return;
-      }
 
       for (const filePath of consolidatedFiles) {
         await this.workspace.filesystem?.deleteFile(filePath);

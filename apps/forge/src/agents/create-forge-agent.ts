@@ -3,6 +3,7 @@ import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastr
 import type { Tool } from '@mastra/core/tools';
 import {
   LocalFilesystem,
+  LocalSandbox,
   Workspace as WorkspaceRuntime,
 } from '@mastra/core/workspace';
 import { createClient } from '@libsql/client';
@@ -172,6 +173,9 @@ export async function createInternalAgentRuntime<
     ? path.resolve(agentWorkspacePath, config.workspaceFilesystem.basePath)
     : path.resolve(agentWorkspacePath, 'workspace');
   const agentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
+  const sandboxWorkingDirectory = config.workspaceSandbox?.workingDirectory
+    ? path.resolve(agentWorkspacePath, config.workspaceSandbox.workingDirectory)
+    : agentWorkspaceDir;
 
   await fs.mkdir(agentWorkspacePath, {
     recursive: true,
@@ -184,12 +188,17 @@ export async function createInternalAgentRuntime<
   const workspaceVector = new LibSQLVector({ id: `${config.id}-workspace-vector`, url: dbUrl });
   const workspaceSearchIndex = `${config.id}_workspace_search`.replace(/[^a-zA-Z0-9_]/g, '_');
   const workspace = new WorkspaceRuntime({
+    autoSync: true,
     bm25: true,
     vectorStore: workspaceVector,
     embedder: embedTextWithFastembed,
     searchIndexName: workspaceSearchIndex,
     filesystem: new LocalFilesystem({
       basePath: agentWorkspaceDir,
+    }),
+    sandbox: new LocalSandbox({
+      isolation: 'none',
+      workingDirectory: sandboxWorkingDirectory,
     }),
   });
 
@@ -216,29 +225,12 @@ export async function createInternalAgentRuntime<
   const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
-    const memoryIndexName = `${config.id}_memory_search`.replace(/[^a-zA-Z0-9_]/g, '_');
-    const memoryVectorStore = new LibSQLVector({
-      id: `${config.id}-memory-vector`,
-      url: dbUrl,
-    });
-    const memoryWorkspace = new WorkspaceRuntime({
-      bm25: true,
-      embedder: embedTextWithFastembed,
-      filesystem: new LocalFilesystem({
-        basePath: agentMemoryPath,
-      }),
-      vectorStore: memoryVectorStore,
-      searchIndexName: memoryIndexName,
-    });
-    await memoryWorkspace.init();
     const longTermMemory = new LongTermMemory({
       om,
-      workspace: memoryWorkspace,
-      vectorStore: memoryVectorStore,
-      searchIndexName: memoryIndexName,
+      agentId: config.id,
+      memoryBasePath: agentMemoryPath,
       omModel: omModelKey,
     });
-    await longTermMemory.init();
     inputProcessors.push(longTermMemory);
     outputProcessors.push(longTermMemory);
   }
