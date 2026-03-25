@@ -65,6 +65,9 @@ export function createInternalChatPreset() {
             }
 
             const groupId = recipientId;
+            if (!groupId) {
+              throw new Error('Group conversation requires a group ID');
+            }
             const groupMembers = await getGroupMembers(groupId);
             const providerMessageId = `internal:${crypto.randomUUID()}`;
             const timestamp = new Date().toISOString();
@@ -84,7 +87,7 @@ export function createInternalChatPreset() {
               }
 
               await memberAgent.onMessage({
-                providerConversationKey: groupId,
+                providerConversationKey: groupId!,
                 providerMessageId,
                 conversationName: input.conversationName ?? config.displayName,
                 authorExternalId: config.id,
@@ -103,7 +106,7 @@ export function createInternalChatPreset() {
             await Promise.allSettled(deliveryPromises);
 
             return {
-              providerConversationKey: groupId,
+              providerConversationKey: groupId!,
               providerMessageId,
               conversationName: input.conversationName ?? config.displayName,
             };
