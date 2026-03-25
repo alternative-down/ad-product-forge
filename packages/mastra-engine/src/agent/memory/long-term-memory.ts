@@ -230,6 +230,7 @@ vectorStore: this.vectorStore,
       .catch((error: unknown) => {
         forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
       });
+    }
 
     return args.messageList;
   }
