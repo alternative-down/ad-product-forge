@@ -44,6 +44,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly omModel: AgentConfig['model'];
   private memoryAgent: Agent<string, never, string> | null = null;
   private initialized = false;
+  private initPromise: Promise<void> | null = null;
   private memoryAgentRunning = false;
 
   constructor(config: LongTermMemoryConfig) {
@@ -76,7 +77,15 @@ vectorStore: this.vectorStore,
     if (this.initialized) {
       return;
     }
+    if (this.initPromise) {
+      return this.initPromise;
+    }
 
+    this.initPromise = this.doInitialize();
+    await this.initPromise;
+  }
+
+  private async doInitialize() {
     await this.workspace.init();
     await this.createWorkspaceVectorIndexIfMissing(this.vectorStore, this.searchIndexName);
     this.initialized = true;
