@@ -14,6 +14,7 @@ import { LibSQLVector } from '@mastra/libsql';
 import { ObservationalMemory } from '@mastra/memory/processors';
 
 import { forgeDebug } from '../../debug';
+import { embedTextWithFastembed } from './embedder';
 
 type ObservationRecord = Awaited<ReturnType<ObservationalMemory['getHistory']>>[number];
 const MEMORY_WORKSPACE_ROOT = '.forge-memory';
@@ -45,6 +46,11 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     this.workspace = config.workspace;
     this.vectorStore = config.vectorStore;
     this.searchIndexName = config.searchIndexName;
+
+    // Clean up any previously consolidated files
+    this.cleanupConsolidatedFiles().catch((error: unknown) => {
+      forgeDebug('ltm', 'cleanup failed', { error: String(error) });
+    });
   }
 
   static async create(config: {
@@ -60,10 +66,6 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       id: `${config.agentId}-memory-workspace-vector`,
       url: `file:${vectorStorePath}`,
     });
-
-    // Clean up any previously consolidated files from /memory directory
-    await LongTermMemory.cleanupConsolidatedFiles(memoryPath, indexName, vectorStore);
-
     const workspace = new WorkspaceRuntime({
       bm25: true,
       autoSync: true,
@@ -101,26 +103,21 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   }
 
   /**
-   * Clean up previously consolidated files from /memory directory.
-   * This removes any files created by the old consolidation process.
+   * Delete previously consolidated files from /memory directory.
+   * This removes files created by the old consolidation process.
    */
-  private static async cleanupConsolidatedFiles(
-    memoryPath: string,
-    indexName: string,
-    vectorStore: LibSQLVector,
-  ): Promise<void> {
+  private async cleanupConsolidatedFiles(): Promise<void> {
     try {
-      const memoryDir = path.posix.join(memoryPath, 'memory');
-      const filesystem = new LocalFilesystem({ basePath: memoryPath });
+      const memoryDirPath = path.posix.join(this.workspace.filesystem?.basePath || '', this.memoryDir);
+      const memoryDirExists = await this.workspace.filesystem?.exists(memoryDirPath);
 
-      const memoryDirExists = await filesystem.exists(memoryDir);
       if (!memoryDirExists) {
         return;
       }
 
       // List files in /memory directory
-      const memoryFiles = await filesystem.listFiles(memoryDir);
-      const consolidatedFiles = memoryFiles.filter((f) => f.includes('/consolidated-'));
+      const files = await this.workspace.filesystem?.listFiles(memoryDirPath) || [];
+      const consolidatedFiles = files.filter((f) => f.includes('/consolidated-'));
 
       if (consolidatedFiles.length === 0) {
         return;
@@ -130,7 +127,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
       // Delete each consolidated file
       for (const filePath of consolidatedFiles) {
-        await filesystem.deleteFile(filePath);
+        await this.workspace.filesystem?.deleteFile(filePath);
         forgeDebug('ltm', 'deleted consolidated file', { filePath });
       }
     } catch (error) {
@@ -192,7 +189,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
     const currentRecord = await this.om.getRecord(context.threadId, context.resourceId);
     if (!currentRecord) {
-      return args.messageList;
+      return args.messages;
     }
 
     const hasObservationsDir =
@@ -280,38 +277,33 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         })
         .join('\n\n---\n\n');
     } catch (error) {
-      forgeDebug('ltm', 'workspace search failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
+        return '';
+      }
+
+      forgeDebug('ltm', 'workspace search failed', { error: message });
       return '';
     }
   }
 
   private async searchGraph(queryText: string) {
     try {
-      const results = await this.vectorStore.query({
-        query: queryText,
-        topK: 3,
+      const graphTool = createGraphRAGTool({
+        vectorStore: this.vectorStore,
         indexName: this.searchIndexName,
-        includeVector: false,
+        model: fastembed,
+        graphOptions: {
+          threshold: 0.7,
+          randomWalkSteps: 50,
+        },
       });
+      const result = await graphTool.execute({ queryText, topK: 3 }, {} as never);
+      const relevantContext = Array.isArray(result?.relevantContext) ? result.relevantContext : [];
 
-      if (results.length === 0) {
-        return '';
-      }
-
-      const relevantContext = results
-        .map((result) => {
-          if (!result.text) {
-            return '';
-          }
-          return result.text;
-        })
-        .filter(Boolean);
-
-      if (relevantContext.length === 0) {
-        return '';
-      }
+      forgeDebug('ltm', 'graph search completed', {
+        resultCount: relevantContext.length,
+      });
 
       return relevantContext
         .map((chunk: unknown) =>
