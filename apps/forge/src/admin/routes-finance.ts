@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import type { Database } from '~/lib/db';
-import type { HttpServer } from '~/lib/http-server';
+import type { Database } from './lib/db';
+import type { HttpServer } from './lib/http-server';
 import type { AdminReadModel } from './read-model';
-import { parseJsonBody, jsonResponse } from '~/lib/http';
-import { createId } from '~/lib/id';
+import { parseJsonBody, jsonResponse } from './lib/http';
+import { createId } from './lib/id';
 
 // Schemas
 const createInvestmentSchema = z.object({
