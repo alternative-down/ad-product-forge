@@ -207,19 +207,6 @@ vectorStore: this.vectorStore,
 
     return args.messageList;
   }
-
-  private async readFile(filePath: string) {
-    const exists = (await this.workspace.filesystem?.exists(filePath)) ?? false;
-    if (!exists) {
-      return '';
-    }
-    const content = await this.workspace.filesystem?.readFile(filePath);
-    if (typeof content === 'string') {
-      return content;
-    }
-    return content?.toString('utf8') ?? '';
-  }
-
   private async searchWorkspace(queryText: string): Promise<{ formatted: string; results: SearchResult[] }> {
     try {
       const results = await this.workspace.search(queryText, {
@@ -342,31 +329,7 @@ vectorStore: this.vectorStore,
 
   /**
    * Delete previously consolidated files from /memory directory.
-   */
-  private async cleanupConsolidatedFiles(): Promise<void> {
-    try {
-      const memoryDirPath = path.posix.join(
-        this.workspace.filesystem?.basePath || '',
-        this.memoryDir,
-      );
-      const memoryDirExists = await this.workspace.filesystem?.exists(memoryDirPath);
-      if (!memoryDirExists) {
-        return;
-      }
-
-      const entries = (await this.workspace.filesystem?.readdir(memoryDirPath)) || [];
-      const consolidatedFiles = entries
-        .filter((entry) => entry.type === 'file' && entry.name.includes('consolidated-'))
-        .map((entry) => entry.name);
-
-      for (const fileName of consolidatedFiles) {
-        await this.workspace.filesystem?.deleteFile(`${memoryDirPath}/${fileName}`);
-      }
-    } catch (error) {
-      forgeDebug('ltm', 'cleanup failed', { error: String(error) });
-    }
-  }
-}
+   */}
 
 type SearchResult = {
   id: string;
