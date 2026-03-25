@@ -14,7 +14,12 @@ export function createInternalChatPreset() {
   const agents = new Map<string, RegisteredAgent>();
 
   return {
-    createProvider(config: { id: string; displayName: string; description?: string }): CommunicationProvider {
+    createProvider(config: {
+      id: string;
+      displayName: string;
+      description?: string;
+      getGroupMembers?: (groupId: string) => Promise<{ id: string; displayName: string }[]>;
+    }): CommunicationProvider {
       const agent: RegisteredAgent = {
         id: config.id,
         slug: createInternalChatSlug(config.displayName, config.id),
@@ -24,6 +29,8 @@ export function createInternalChatPreset() {
       };
 
       agents.set(config.id, agent);
+
+      const getGroupMembers = config.getGroupMembers;
 
       return {
         id: 'internal-chat',
@@ -48,7 +55,61 @@ export function createInternalChatPreset() {
             }));
         },
         async sendMessage(input) {
+          const isGroupConversation = input.conversationType === 'group';
           const recipientId = input.contactExternalId ?? input.providerConversationKey;
+
+          // Handle group conversations
+          if (isGroupConversation) {
+            if (!getGroupMembers) {
+              throw new Error(`Group messaging requires getGroupMembers to be configured for agent ${config.id}`);
+            }
+
+            const groupId = recipientId;
+            const groupMembers = await getGroupMembers(groupId);
+            const providerMessageId = `internal:${crypto.randomUUID()}`;
+            const timestamp = new Date().toISOString();
+
+            // Deliver message to each group member
+            const deliveryPromises = groupMembers.map(async (member) => {
+              const memberAgent = agents.get(member.id);
+              
+              if (!memberAgent) {
+                // Agent not registered in this instance, skip silently
+                return;
+              }
+
+              if (!memberAgent.onMessage) {
+                // Agent not listening, skip silently
+                return;
+              }
+
+              await memberAgent.onMessage({
+                providerConversationKey: groupId,
+                providerMessageId,
+                conversationName: input.conversationName ?? config.displayName,
+                authorExternalId: config.id,
+                authorDisplayName: config.displayName,
+                authorUsername: agent.slug,
+                content: input.content,
+                attachments: [],
+                createdAt: timestamp,
+                metadata: {
+                  replyToProviderMessageId: input.replyToProviderMessageId,
+                  groupDelivery: true,
+                },
+              });
+            });
+
+            await Promise.allSettled(deliveryPromises);
+
+            return {
+              providerConversationKey: groupId,
+              providerMessageId,
+              conversationName: input.conversationName ?? config.displayName,
+            };
+          }
+
+          // Handle direct messages (existing logic)
           const recipient = recipientId ? agents.get(recipientId) : null;
 
           if (!recipient) {
@@ -60,16 +121,11 @@ export function createInternalChatPreset() {
           }
 
           const providerMessageId = `internal:${crypto.randomUUID()}`;
-          const isGroupConversation = input.conversationType === 'group';
 
           await recipient.onMessage({
-            providerConversationKey: isGroupConversation
-              ? (input.providerConversationKey ?? config.id)
-              : config.id,
+            providerConversationKey: config.id,
             providerMessageId,
-            conversationName: isGroupConversation
-              ? (input.conversationName ?? config.displayName)
-              : config.displayName,
+            conversationName: config.displayName,
             authorExternalId: config.id,
             authorDisplayName: config.displayName,
             authorUsername: agent.slug,
