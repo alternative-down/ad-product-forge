@@ -200,6 +200,7 @@ vectorStore: this.vectorStore,
         .generate('Review the /observations directory, organize insights into /memory, and archive processed files in /archived.', {
           maxSteps: 1000,
         })
+        .then(() => this.memoryAgentRunning = false)
       .catch((error: unknown) => {
         forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
       });
