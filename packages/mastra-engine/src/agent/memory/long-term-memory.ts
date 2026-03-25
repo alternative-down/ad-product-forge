@@ -48,6 +48,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
   constructor(config: LongTermMemoryConfig) {
     this.om = config.om;
+    this.omModel = config.omModel;
 
     const memoryPath = config.memoryBasePath;
     
@@ -127,8 +128,8 @@ vectorStore: this.vectorStore,
       return args.messageList;
     }
 
-    const workspaceResults = await this.searchWorkspace(queryText);
-    const graphContext = await this.searchGraph(queryText, workspaceResults);
+    const { formatted: workspaceResults, results: workspaceSearchResults } = await this.searchWorkspace(queryText);
+    const graphContext = await this.searchGraph(queryText, workspaceSearchResults);
     const sections = [
       workspaceResults ? 'Workspace memory:n' + workspaceResults : '',
       graphContext ? 'Graph memory:n' + graphContext : '',
@@ -215,18 +216,9 @@ vectorStore: this.vectorStore,
       this.memoryAgentRunning = true;
       // Fire-and-forget: call memory agent to organize observations
       this.memoryAgent
-        .generate(
-          {
-            messages: [
-            {
-              role: 'user',
-              content:
-                'Review the /observations directory, organize insights into /memory, and archive processed files in /archived.',
-            },
-          ],
-        },
-        { threadId: context.threadId, resourceId: context.resourceId, maxSteps: 1000 },
-      )
+        .generate('Review the /observations directory, organize insights into /memory, and archive processed files in /archived.', {
+          maxSteps: 1000,
+        })
       .catch((error: unknown) => {
         forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
       });
@@ -247,7 +239,7 @@ vectorStore: this.vectorStore,
     return content?.toString('utf8') ?? '';
   }
 
-  private async searchWorkspace(queryText: string) {
+  private async searchWorkspace(queryText: string): Promise<{ formatted: string; results: SearchResult[] }> {
     try {
       const results = await this.workspace.search(queryText, {
         topK: 3,
@@ -258,20 +250,28 @@ vectorStore: this.vectorStore,
         resultCount: results.length,
       });
 
+      const searchResults: SearchResult[] = results.map((r) => ({
+        id: r.id,
+        content: String(r.content).trim(),
+        score: r.score,
+      }));
+
       if (results.length === 0) {
-        return '';
+        return { formatted: '', results: [] };
       }
 
-      return results
+      const formatted = results
         .map((result) => `${result.id}n${String(result.content).trim()}`)
         .join('nn---nn');
+
+      return { formatted, results: searchResults };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
-        return '';
+        return { formatted: '', results: [] };
       }
       forgeDebug('ltm', 'workspace search failed', { error: message });
-      return '';
+      return { formatted: '', results: [] };
     }
   }
 
@@ -387,11 +387,13 @@ vectorStore: this.vectorStore,
         return;
       }
 
-      const files = (await this.workspace.filesystem?.listFiles(memoryDirPath)) || [];
-      const consolidatedFiles = files.filter((f) => f.includes('/consolidated-'));
+      const entries = (await this.workspace.filesystem?.readdir(memoryDirPath)) || [];
+      const consolidatedFiles = entries
+        .filter((entry) => entry.type === 'file' && entry.name.includes('consolidated-'))
+        .map((entry) => entry.name);
 
-      for (const filePath of consolidatedFiles) {
-        await this.workspace.filesystem?.deleteFile(filePath);
+      for (const fileName of consolidatedFiles) {
+        await this.workspace.filesystem?.deleteFile(`${memoryDirPath}/${fileName}`);
       }
     } catch (error) {
       forgeDebug('ltm', 'cleanup failed', { error: String(error) });
