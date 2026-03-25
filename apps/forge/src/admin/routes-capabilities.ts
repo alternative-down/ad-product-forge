@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import type { Database } from '~/lib/db';
-import type { AgentLoaderConfig } from '~/lib/loader';
-import type { HttpServer } from '~/lib/http-server';
-import { parseJsonBody, jsonResponse } from '~/lib/http';
-import { reloadAgentsForFunction, reloadAgentsForRole } from '~/capabilities/runtime';
+import type { Database } from './lib/db';
+import type { AgentLoaderConfig } from './lib/loader';
+import type { HttpServer } from './lib/http-server';
+import { parseJsonBody, jsonResponse } from './lib/http';
+import { reloadAgentsForFunction, reloadAgentsForRole } from './capabilities/runtime';
 
 const functionRoleSchema = z.object({
   functionId: z.string().min(1),
