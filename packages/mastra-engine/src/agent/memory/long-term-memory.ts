@@ -8,9 +8,10 @@ import type {
   Processor,
 } from '@mastra/core/processors';
 import type { Workspace } from '@mastra/core/workspace';
-import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
-import { embedTextWithFastembed } from '@mastra/fastembed';
+import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
+import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector } from '@mastra/libsql';
+import { createGraphRAGTool } from '@mastra/rag';
 import { ObservationalMemory } from '@mastra/memory/processors';
 
 import { forgeDebug } from '../../debug';
@@ -24,6 +25,8 @@ export type LongTermMemoryConfig = {
   workspace: Workspace;
   vectorStore: LibSQLVector;
   searchIndexName: string;
+  consolidationTrigger?: 'lastStep' | 'onIdle';
+  consolidationInstructions?: string;
 };
 
 export class LongTermMemory implements Processor<'long-term-memory'> {
@@ -40,14 +43,19 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly workspace: Workspace;
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
+  private readonly consolidationTrigger: 'lastStep' | 'onIdle';
+  private readonly consolidationInstructions: string;
 
   constructor(config: LongTermMemoryConfig) {
     this.om = config.om;
     this.workspace = config.workspace;
     this.vectorStore = config.vectorStore;
     this.searchIndexName = config.searchIndexName;
+    this.consolidationTrigger = config.consolidationTrigger || 'lastStep';
+    this.consolidationInstructions =
+      config.consolidationInstructions ||
+      'Consolidate observations into organized knowledge. Extract insights, learnings, processes, and key information from /observations. Create organized files in /memory with meaningful names. Move processed observations to /archived.';
 
-    // Clean up any previously consolidated files
     this.cleanupConsolidatedFiles().catch((error: unknown) => {
       forgeDebug('ltm', 'cleanup failed', { error: String(error) });
     });
@@ -57,6 +65,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     agentId: string;
     om: ObservationalMemory;
     memoryBasePath?: string;
+    consolidationTrigger?: 'lastStep' | 'onIdle';
+    consolidationInstructions?: string;
   }) {
     const indexName = `${config.agentId}_memory_search`.replace(/[^a-zA-Z0-9_]/g, '_');
     const memoryPath = config.memoryBasePath || path.resolve(process.cwd(), MEMORY_WORKSPACE_ROOT, config.agentId);
@@ -86,6 +96,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       workspace,
       vectorStore,
       searchIndexName: indexName,
+      consolidationTrigger: config.consolidationTrigger,
+      consolidationInstructions: config.consolidationInstructions,
     });
   }
 
@@ -104,7 +116,6 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
   /**
    * Delete previously consolidated files from /memory directory.
-   * This removes files created by the old consolidation process.
    */
   private async cleanupConsolidatedFiles(): Promise<void> {
     try {
@@ -115,7 +126,6 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         return;
       }
 
-      // List files in /memory directory
       const files = await this.workspace.filesystem?.listFiles(memoryDirPath) || [];
       const consolidatedFiles = files.filter((f) => f.includes('/consolidated-'));
 
@@ -123,12 +133,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         return;
       }
 
-      forgeDebug('ltm', 'cleaning up consolidated files', { count: consolidatedFiles.length });
-
-      // Delete each consolidated file
       for (const filePath of consolidatedFiles) {
         await this.workspace.filesystem?.deleteFile(filePath);
-        forgeDebug('ltm', 'deleted consolidated file', { filePath });
       }
     } catch (error) {
       forgeDebug('ltm', 'cleanup failed', { error: String(error) });
