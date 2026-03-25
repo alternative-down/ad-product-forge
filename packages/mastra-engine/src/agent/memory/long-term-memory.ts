@@ -1,14 +1,15 @@
 import path from 'node:path';
 
+import { Agent } from '@mastra/core/agent';
+import type { AgentConfig } from '@mastra/core/agent';
 import type { MastraDBMessage, MessageList } from '@mastra/core/agent';
 import type {
-  ProcessInputArgs,
   ProcessInputStepArgs,
   ProcessOutputStepArgs,
   Processor,
 } from '@mastra/core/processors';
 import type { Workspace } from '@mastra/core/workspace';
-import { LocalFilesystem, LocalSandbox, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
+import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
@@ -18,23 +19,21 @@ import { forgeDebug } from '../../debug';
 import { embedTextWithFastembed } from './embedder';
 
 type ObservationRecord = Awaited<ReturnType<ObservationalMemory['getHistory']>>[number];
-const MEMORY_WORKSPACE_ROOT = '.forge-memory';
 
 export type LongTermMemoryConfig = {
   om: ObservationalMemory;
   workspace: Workspace;
   vectorStore: LibSQLVector;
   searchIndexName: string;
-  consolidationTrigger?: 'lastStep' | 'onIdle';
-  consolidationInstructions?: string;
+  omModel: AgentConfig['model'];
 };
 
 export class LongTermMemory implements Processor<'long-term-memory'> {
   readonly id = 'long-term-memory';
   readonly name = 'Long Term Memory';
+  private readonly memoryDir = 'memory';
   private readonly observationsDir = 'observations';
   private readonly archivedDir = 'archived';
-  private readonly memoryDir = 'memory';
   private readonly maxRecentRecallMessages = 8;
   private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
   private readonly incrementalHistoryLimit = 12;
@@ -43,101 +42,43 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly workspace: Workspace;
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
-  private readonly consolidationTrigger: 'lastStep' | 'onIdle';
-  private readonly consolidationInstructions: string;
+  private readonly omModel: AgentConfig['model'];
+  private memoryAgent: Agent<string, never, string> | null = null;
+  private initialized = false;
 
   constructor(config: LongTermMemoryConfig) {
     this.om = config.om;
     this.workspace = config.workspace;
     this.vectorStore = config.vectorStore;
     this.searchIndexName = config.searchIndexName;
-    this.consolidationTrigger = config.consolidationTrigger || 'lastStep';
-    this.consolidationInstructions =
-      config.consolidationInstructions ||
-      'Consolidate observations into organized knowledge. Extract insights, learnings, processes, and key information from /observations. Create organized files in /memory with meaningful names. Move processed observations to /archived.';
+    this.omModel = config.omModel;
+  }
+
+  async init() {
+    if (this.initialized) {
+      return;
+    }
+    this.initialized = true;
+
+    this.memoryAgent = new Agent({
+      id: `${this.id}-agent`,
+      name: 'Memory Consolidation Agent',
+      instructions:
+        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to read /observations, extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed observations to /archived.',
+      model: this.omModel,
+      workspace: this.workspace,
+    });
 
     this.cleanupConsolidatedFiles().catch((error: unknown) => {
       forgeDebug('ltm', 'cleanup failed', { error: String(error) });
     });
+
+    forgeDebug('ltm', 'initialized');
   }
 
-  static async create(config: {
-    agentId: string;
-    om: ObservationalMemory;
-    memoryBasePath?: string;
-    consolidationTrigger?: 'lastStep' | 'onIdle';
-    consolidationInstructions?: string;
-  }) {
-    const indexName = `${config.agentId}_memory_search`.replace(/[^a-zA-Z0-9_]/g, '_');
-    const memoryPath = config.memoryBasePath || path.resolve(process.cwd(), MEMORY_WORKSPACE_ROOT, config.agentId);
-    const vectorStorePath = path.resolve(path.dirname(memoryPath), `${config.agentId}-memory-workspace.db`);
-
-    const vectorStore = new LibSQLVector({
-      id: `${config.agentId}-memory-workspace-vector`,
-      url: `file:${vectorStorePath}`,
-    });
-    const workspace = new WorkspaceRuntime({
-      bm25: true,
-      autoSync: true,
-      autoIndexPaths: ['/observations', '/memory'],
-      embedder: embedTextWithFastembed,
-      filesystem: new LocalFilesystem({
-        basePath: memoryPath,
-      }),
-      vectorStore,
-      searchIndexName: indexName,
-    });
-
-    await workspace.init();
-    await this.createWorkspaceVectorIndexIfMissing(vectorStore, indexName);
-
-    return new LongTermMemory({
-      om: config.om,
-      workspace,
-      vectorStore,
-      searchIndexName: indexName,
-      consolidationTrigger: config.consolidationTrigger,
-      consolidationInstructions: config.consolidationInstructions,
-    });
-  }
-
-  static async createWorkspaceVectorIndexIfMissing(vectorStore: LibSQLVector, indexName: string) {
-    try {
-      await vectorStore.describeIndex({ indexName });
-    } catch {
-      const sampleEmbedding = await embedTextWithFastembed('forge-memory-bootstrap');
-      await vectorStore.createIndex({
-        indexName,
-        dimension: sampleEmbedding.length,
-        metric: 'cosine',
-      });
-    }
-  }
-
-  /**
-   * Delete previously consolidated files from /memory directory.
-   */
-  private async cleanupConsolidatedFiles(): Promise<void> {
-    try {
-      const memoryDirPath = path.posix.join(this.workspace.filesystem?.basePath || '', this.memoryDir);
-      const memoryDirExists = await this.workspace.filesystem?.exists(memoryDirPath);
-
-      if (!memoryDirExists) {
-        return;
-      }
-
-      const files = await this.workspace.filesystem?.listFiles(memoryDirPath) || [];
-      const consolidatedFiles = files.filter((f) => f.includes('/consolidated-'));
-
-      if (consolidatedFiles.length === 0) {
-        return;
-      }
-
-      for (const filePath of consolidatedFiles) {
-        await this.workspace.filesystem?.deleteFile(filePath);
-      }
-    } catch (error) {
-      forgeDebug('ltm', 'cleanup failed', { error: String(error) });
+  private async ensureInitialized() {
+    if (!this.initialized) {
+      await this.init();
     }
   }
 
@@ -152,16 +93,15 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     }
 
     const queryText = this.buildRecallQuery(args.messages);
-    args.messageList.clearSystemMessages(this.id);
 
     if (!queryText) {
       return args.messageList;
     }
 
-    const workspaceContext = await this.searchWorkspace(queryText);
-    const graphContext = await this.searchGraph(queryText);
+    const workspaceResults = await this.searchWorkspace(queryText);
+    const graphContext = await this.searchGraph(queryText, workspaceResults);
     const sections = [
-      workspaceContext ? `Workspace memory:\n${workspaceContext}` : '',
+      workspaceResults ? `Workspace memory:\n${workspaceResults}` : '',
       graphContext ? `Graph memory:\n${graphContext}` : '',
     ].filter(Boolean);
 
@@ -193,6 +133,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       return args.messages;
     }
 
+    await this.ensureInitialized();
+
     const currentRecord = await this.om.getRecord(context.threadId, context.resourceId);
     if (!currentRecord) {
       return args.messages;
@@ -213,10 +155,9 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     );
 
     if (pendingObservations.length === 0) {
-      return args.messageList;
+      return args.messages;
     }
 
-    // Save each observation as an individual file (no day grouping)
     for (const observation of pendingObservations) {
       const filePath = path.posix.join(this.observationsDir, `${observation.id}.md`);
       const content = [
@@ -235,13 +176,25 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         recursive: true,
         overwrite: true,
       });
-      await this.workspace.index(filePath, content, {
-        metadata: {
-          observationId: observation.id,
-          indexName: this.searchIndexName,
-        },
-      });
     }
+
+    // Fire-and-forget: call memory agent for consolidation
+    this.memoryAgent
+      ?.generate(
+        {
+          messages: [
+            {
+              role: 'user',
+              content:
+                'Review the /observations directory, organize insights into /memory, and archive processed files in /archived.',
+            },
+          ],
+        },
+        { threadId: context.threadId, resourceId: context.resourceId },
+      )
+      .catch((error: unknown) => {
+        forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
+      });
 
     return args.messageList;
   }
@@ -277,10 +230,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       }
 
       return results
-        .map((result) => {
-          const score = typeof result.score === 'number' ? ` (score ${result.score.toFixed(2)})` : '';
-          return `${result.id}${score}\n${String(result.content).trim()}`;
-        })
+        .map((result) => `${result.id}\n${String(result.content).trim()}`)
         .join('\n\n---\n\n');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -293,7 +243,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     }
   }
 
-  private async searchGraph(queryText: string) {
+  private async searchGraph(queryText: string, workspaceResults: SearchResult[]) {
     try {
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
@@ -304,8 +254,21 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
           randomWalkSteps: 50,
         },
       });
-      const result = await graphTool.execute({ queryText, topK: 3 }, {} as never);
-      const relevantContext = Array.isArray(result?.relevantContext) ? result.relevantContext : [];
+
+      const workspaceContext = workspaceResults
+        .map((r) => `${r.id}: ${r.content}`)
+        .join('\n\n');
+
+      const graphResult = await graphTool.execute(
+        {
+          queryText: workspaceContext ? `${queryText}\n\nContext:\n${workspaceContext}` : queryText,
+          topK: 3,
+        },
+        {} as never,
+      );
+      const relevantContext = Array.isArray(graphResult?.relevantContext)
+        ? graphResult.relevantContext
+        : [];
 
       forgeDebug('ltm', 'graph search completed', {
         resultCount: relevantContext.length,
@@ -355,7 +318,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   }
 
   private getThreadContext(
-    requestContext: ProcessInputArgs['requestContext'],
+    requestContext: { get(key: string): unknown; has(key: string): boolean },
     messageList: MessageList,
   ) {
     const memoryContext = requestContext?.get('MastraMemory') as
@@ -379,4 +342,40 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
     return null;
   }
+
+  /**
+   * Delete previously consolidated files from /memory directory.
+   */
+  private async cleanupConsolidatedFiles(): Promise<void> {
+    try {
+      const memoryDirPath = path.posix.join(
+        this.workspace.filesystem?.basePath || '',
+        this.memoryDir,
+      );
+      const memoryDirExists = await this.workspace.filesystem?.exists(memoryDirPath);
+
+      if (!memoryDirExists) {
+        return;
+      }
+
+      const files = (await this.workspace.filesystem?.listFiles(memoryDirPath)) || [];
+      const consolidatedFiles = files.filter((f) => f.includes('/consolidated-'));
+
+      if (consolidatedFiles.length === 0) {
+        return;
+      }
+
+      for (const filePath of consolidatedFiles) {
+        await this.workspace.filesystem?.deleteFile(filePath);
+      }
+    } catch (error) {
+      forgeDebug('ltm', 'cleanup failed', { error: String(error) });
+    }
+  }
 }
+
+type SearchResult = {
+  id: string;
+  content: string;
+  score?: number;
+};
