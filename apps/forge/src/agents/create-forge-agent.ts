@@ -225,6 +225,7 @@ export async function createInternalAgentRuntime<
   const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
+    try {
     const longTermMemory = new LongTermMemory({
       om,
       agentId: config.id,
@@ -233,6 +234,10 @@ export async function createInternalAgentRuntime<
     });
     inputProcessors.push(longTermMemory);
     outputProcessors.push(longTermMemory);
+    } catch (error) {
+      console.error(`[create-forge-agent] Failed to initialize LongTermMemory for agent ${config.id}:`, error);
+      // Continue without long-term memory - agent can still function with observational memory
+    }
   }
 
   const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({
