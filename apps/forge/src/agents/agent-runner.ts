@@ -235,7 +235,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       await recordObservationalMemorySteps(contractId, result.steps);
 
-      const stopRequested = result.text.trimStart().startsWith(NO_ACTION_NEEDED_PREFIX);
+      const stopRequested = result.text.trimStart().includes(NO_ACTION_NEEDED_PREFIX);
 
       if (result.toolCalls.length === 0 && stopRequested) {
         nextStepAt = null;
