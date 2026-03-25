@@ -89,7 +89,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     }
   }
 
-  const providers = loadCommunicationProviders(providerCredentials);
+  const providers = loadCommunicationProviders(providerCredentials, { workspaceBasePath: config.workspaceBasePath });
   const capabilities = createCapabilityStore(db);
   const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
   const allowedToolIds = new Set(capabilitySet.toolIds);
