@@ -35,7 +35,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly archivedDir = 'archived';
   private readonly maxRecentRecallMessages = 8;
   private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
-  private readonly incrementalHistoryLimit = 12;
+  private readonly incrementalHistoryLimit = 6;
 
   private readonly om: ObservationalMemory;
   private readonly workspace: WorkspaceRuntime;
@@ -162,7 +162,7 @@ vectorStore: this.vectorStore,
 
     const hasObservationsDir =
       (await this.workspace.filesystem?.exists(this.observationsDir)) ?? false;
-    const historyLimit = hasObservationsDir ? 12 : Number.MAX_SAFE_INTEGER;
+    const historyLimit = hasObservationsDir ? this.incrementalHistoryLimit : this.bootstrapHistoryLimit;
     const observations = await this.om.getHistory(
       context.threadId,
       context.resourceId,
