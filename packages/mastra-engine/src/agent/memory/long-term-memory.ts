@@ -19,7 +19,6 @@ import { ObservationalMemory } from '@mastra/memory/processors';
 import { forgeDebug } from '../../debug';
 import { embedTextWithFastembed } from './embedder';
 
-type ObservationRecord = Awaited<ReturnType<ObservationalMemory['getHistory']>>[number];
 
 export type LongTermMemoryConfig = {
   om: ObservationalMemory;
