@@ -13,6 +13,7 @@ import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/wor
 import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
+import type { MastraToolInvocationOptions } from '@mastra/core/tools';
 import { ObservationalMemory } from '@mastra/memory/processors';
 
 import { forgeDebug } from '../../debug';
@@ -255,7 +256,7 @@ vectorStore: this.vectorStore,
       });
 
       const workspaceContext = workspaceResults
-        .map((r) => `${r.id}: ${r.content}`)
+        .map((r) => r.content)
         .join('nn');
 
       const graphResult = await graphTool.execute(
@@ -263,7 +264,7 @@ vectorStore: this.vectorStore,
           queryText: workspaceContext ? `${queryText}nnContext:n${workspaceContext}` : queryText,
           topK: 3,
         },
-        {} as never,
+        {} as MastraToolInvocationOptions,
       );
       const relevantContext = Array.isArray(graphResult?.relevantContext)
         ? graphResult.relevantContext
@@ -287,15 +288,38 @@ vectorStore: this.vectorStore,
     }
   }
 
+  private extractTextFromArgs(args: Record<string, unknown>): string {
+    const textParts: string[] = [];
+    for (const value of Object.values(args)) {
+      if (typeof value === 'string') {
+        textParts.push(value);
+      } else if (Array.isArray(value)) {
+        for (const item of value) {
+          if (typeof item === 'string') {
+            textParts.push(item);
+          } else if (typeof item === 'object' && item !== null) {
+            textParts.push(this.extractTextFromArgs(item as Record<string, unknown>));
+          }
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        textParts.push(this.extractTextFromArgs(value as Record<string, unknown>));
+      }
+    }
+    return textParts.filter(Boolean).join(' ');
+  }
+
   private buildRecallQuery(messages: MastraDBMessage[]) {
     return messages
       .filter((message) => !['system'].includes(message.role))
       .slice(-this.maxRecentRecallMessages)
       .map(message => {
+        const toolText = message.content.toolInvocations?.flatMap(
+          tool => this.extractTextFromArgs(tool.args),
+        ).filter(Boolean).join(' ') || '';
         return `
         ${message.content.content || ''}
         ${message.content.reasoning || ''}
-        ${message.content.toolInvocations?.flatMap(tool => JSON.stringify(tool.args)).join('\n') || ''}
+        ${toolText}
         `.trim();
       }).filter(Boolean).join('\n');
   }
