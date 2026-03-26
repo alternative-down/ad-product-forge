@@ -398,10 +398,37 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    if (input.conversationId || input.providerConversationKey) {
+    if (input.conversationId) {
       throw new Error(
-        `Conversation not found for provider ${input.provider}: ${input.conversationId ?? input.providerConversationKey}`,
+        `Conversation not found: ${input.conversationId}`,
       );
+    }
+
+    // If providerConversationKey is provided but conversation doesn't exist,
+    // create it on-the-fly (Issue #214 - conversation may not exist if inbound message wasn't received)
+    if (input.providerConversationKey) {
+      const newConversation = await store.upsertConversation({
+        provider: input.provider,
+        providerConversationKey: input.providerConversationKey,
+        type: 'dm',
+      });
+      // Continue with the sending logic using the newly created conversation
+      const sent = await provider.sendMessage({
+        providerConversationKey: newConversation.providerConversationKey,
+        conversationName: newConversation.name,
+        conversationType: newConversation.type,
+        content: input.content,
+        replyToProviderMessageId: replyMessage?.providerMessageId,
+      });
+
+      return saveSentMessage({
+        provider: input.provider,
+        providerConversationKey: sent.providerConversationKey,
+        providerMessageId: sent.providerMessageId,
+        conversationName: sent.conversationName,
+        contactSlug: newConversation.contactSlug,
+        content: input.content,
+      });
     }
 
     if (!input.contactSlug) {
