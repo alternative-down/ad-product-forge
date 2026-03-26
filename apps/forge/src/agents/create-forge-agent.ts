@@ -21,6 +21,7 @@ import {
   appendWorkingMemoryInstructions,
   embedTextWithFastembed,
 } from '@mastra-engine/core';
+import type { LibSQLVector } from '@mastra/libsql';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
 
 export type CreateForgeAgentConfig<
@@ -203,6 +204,7 @@ export async function createInternalAgentRuntime<
   });
 
   await workspace.init();
+  await createWorkspaceVectorIndexIfMissing(workspaceVector, workspaceSearchIndex);
 
   const communication = await createCommunicationModule({
     client,
@@ -272,4 +274,17 @@ export async function createForgeAgent<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   return createAgent(config, { longTermMemory: true });
+}
+
+async function createWorkspaceVectorIndexIfMissing(vectorStore: LibSQLVector, indexName: string) {
+  try {
+    await vectorStore.describeIndex({ indexName });
+  } catch {
+    const sampleEmbedding = await embedTextWithFastembed('workspace-bootstrap');
+    await vectorStore.createIndex({
+      indexName,
+      dimension: sampleEmbedding.length,
+      metric: 'cosine',
+    });
+  }
 }
