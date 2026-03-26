@@ -43,8 +43,6 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly searchIndexName: string;
   private readonly omModel: AgentConfig['model'];
   private memoryAgent: Agent<string, never, string> | null = null;
-  private initialized = false;
-  private initPromise: Promise<void> | null = null;
   private memoryAgentRunning = false;
 
   constructor(config: LongTermMemoryConfig) {
