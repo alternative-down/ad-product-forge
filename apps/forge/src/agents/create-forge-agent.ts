@@ -186,14 +186,9 @@ export async function createInternalAgentRuntime<
   const client = createClient({ url: dbUrl });
   const storage = new LibSQLStore({ id: `${config.id}-storage`, client });
   const vector = new LibSQLVector({ id: `${config.id}-vector`, url: dbUrl });
-  const workspaceVector = new LibSQLVector({ id: `${config.id}-workspace-vector`, url: dbUrl });
-  const workspaceSearchIndex = `${config.id}_workspace_search`.replace(/[^a-zA-Z0-9_]/g, '_');
   const workspace = new WorkspaceRuntime({
     autoSync: true,
     bm25: true,
-    vectorStore: workspaceVector,
-    embedder: embedTextWithFastembed,
-    searchIndexName: workspaceSearchIndex,
     filesystem: new LocalFilesystem({
       basePath: agentWorkspaceDir,
     }),
@@ -204,7 +199,6 @@ export async function createInternalAgentRuntime<
   });
 
   await workspace.init();
-  await createWorkspaceVectorIndexIfMissing(workspaceVector, workspaceSearchIndex);
 
   const communication = await createCommunicationModule({
     client,
@@ -274,17 +268,4 @@ export async function createForgeAgent<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
   return createAgent(config, { longTermMemory: true });
-}
-
-async function createWorkspaceVectorIndexIfMissing(vectorStore: LibSQLVector, indexName: string) {
-  try {
-    await vectorStore.describeIndex({ indexName });
-  } catch {
-    const sampleEmbedding = await embedTextWithFastembed('workspace-bootstrap');
-    await vectorStore.createIndex({
-      indexName,
-      dimension: sampleEmbedding.length,
-      metric: 'cosine',
-    });
-  }
 }
