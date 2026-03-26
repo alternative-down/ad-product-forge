@@ -184,6 +184,8 @@ export async function createInternalAgentRuntime<
   const dbUrl = `file:${agentDatabasePath}`;
   const client = createClient({ url: dbUrl });
   const storage = new LibSQLStore({ id: `${config.id}-storage`, client });
+  // Initialize memory store to ensure mastra_messages table exists (Issue #212)
+  await storage.getStore('memory');
   const vector = new LibSQLVector({ id: `${config.id}-vector`, url: dbUrl });
   const workspaceVector = new LibSQLVector({ id: `${config.id}-workspace-vector`, url: dbUrl });
   const workspaceSearchIndex = `${config.id}_workspace_search`.replace(/[^a-zA-Z0-9_]/g, '_');
