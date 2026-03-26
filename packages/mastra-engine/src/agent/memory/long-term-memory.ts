@@ -13,12 +13,12 @@ import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/wor
 import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
+import type { MastraToolInvocationOptions } from '@mastra/core/tools';
 import { ObservationalMemory } from '@mastra/memory/processors';
 
 import { forgeDebug } from '../../debug';
 import { embedTextWithFastembed } from './embedder';
 
-type ObservationRecord = Awaited<ReturnType<ObservationalMemory['getHistory']>>[number];
 
 export type LongTermMemoryConfig = {
   om: ObservationalMemory;
@@ -35,7 +35,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly archivedDir = 'archived';
   private readonly maxRecentRecallMessages = 8;
   private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
-  private readonly incrementalHistoryLimit = 12;
+  private readonly incrementalHistoryLimit = 6;
 
   private readonly om: ObservationalMemory;
   private readonly workspace: WorkspaceRuntime;
@@ -43,8 +43,6 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly searchIndexName: string;
   private readonly omModel: AgentConfig['model'];
   private memoryAgent: Agent<string, never, string> | null = null;
-  private initialized = false;
-  private initPromise: Promise<void> | null = null;
   private memoryAgentRunning = false;
 
   constructor(config: LongTermMemoryConfig) {
@@ -71,33 +69,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 vectorStore: this.vectorStore,
       searchIndexName: this.searchIndexName,
     });
-  }
 
-  private async ensureInitialized() {
-    if (this.initialized) {
-      return;
-    }
-    if (this.initPromise) {
-      return this.initPromise;
-    }
-
-    this.initPromise = this.doInitialize();
-    await this.initPromise;
-  }
-
-  private async doInitialize() {
-    await this.workspace.init();
-    await this.createWorkspaceVectorIndexIfMissing(this.vectorStore, this.searchIndexName);
-    
-    // Create required directories if they don't exist
-    await Promise.all([
-      this.workspace.filesystem?.mkdir(this.memoryDir, { recursive: true }),
-      this.workspace.filesystem?.mkdir(this.observationsDir, { recursive: true }),
-      this.workspace.filesystem?.mkdir(this.archivedDir, { recursive: true }),
-    ]);
-    
-    this.initialized = true;
-
+    // Create memory consolidation agent
     this.memoryAgent = new Agent({
       id: this.id + '-agent',
       name: 'Memory Consolidation Agent',
@@ -106,12 +79,12 @@ vectorStore: this.vectorStore,
       model: this.omModel,
       workspace: this.workspace,
     });
+  }
 
-    this.cleanupConsolidatedFiles().catch((error: unknown) => {
-      forgeDebug('ltm', 'cleanup failed', { error: String(error) });
-    });
 
-    forgeDebug('ltm', 'initialized');
+  private async doInitialize() {
+    await this.workspace.init();
+    await this.createWorkspaceVectorIndexIfMissing(this.vectorStore, this.searchIndexName);
   }
 
   private async createWorkspaceVectorIndexIfMissing(vectorStore: LibSQLVector, indexName: string) {
@@ -132,7 +105,7 @@ vectorStore: this.vectorStore,
       return args.messages;
     }
 
-    await this.ensureInitialized();
+    await this.doInitialize();
 
     const context = this.getThreadContext(args.requestContext, args.messageList);
     if (!context) {
@@ -161,8 +134,8 @@ vectorStore: this.vectorStore,
         role: 'system',
         content: [
           'Recovered past memory relevant to the current step. Use it as supporting recall, not as a replacement for the current conversation.',
-          sections.join('nn'),
-        ].join('nn'),
+          sections.join('\n'),
+        ].join('\n'),
       },
       this.id,
     );
@@ -175,7 +148,7 @@ vectorStore: this.vectorStore,
       return args.messages;
     }
 
-    await this.ensureInitialized();
+    await this.doInitialize();
 
     const context = this.getThreadContext(args.requestContext, args.messageList);
     if (!context) {
@@ -189,7 +162,7 @@ vectorStore: this.vectorStore,
 
     const hasObservationsDir =
       (await this.workspace.filesystem?.exists(this.observationsDir)) ?? false;
-    const historyLimit = hasObservationsDir ? 12 : Number.MAX_SAFE_INTEGER;
+    const historyLimit = hasObservationsDir ? this.incrementalHistoryLimit : this.bootstrapHistoryLimit;
     const observations = await this.om.getHistory(
       context.threadId,
       context.resourceId,
@@ -216,7 +189,7 @@ vectorStore: this.vectorStore,
         observation.activeObservations,
       ]
         .filter(Boolean)
-        .join('n');
+        .join('\n');
 
       await this.workspace.filesystem?.writeFile(filePath, content, {
         recursive: true,
@@ -236,6 +209,7 @@ vectorStore: this.vectorStore,
         .generate('Review the /observations directory, organize insights into /memory, and archive processed files in /archived.', {
           maxSteps: 1000,
         })
+        .then(() => this.memoryAgentRunning = false)
       .catch((error: unknown) => {
         forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
       });
@@ -243,19 +217,6 @@ vectorStore: this.vectorStore,
 
     return args.messageList;
   }
-
-  private async readFile(filePath: string) {
-    const exists = (await this.workspace.filesystem?.exists(filePath)) ?? false;
-    if (!exists) {
-      return '';
-    }
-    const content = await this.workspace.filesystem?.readFile(filePath);
-    if (typeof content === 'string') {
-      return content;
-    }
-    return content?.toString('utf8') ?? '';
-  }
-
   private async searchWorkspace(queryText: string): Promise<{ formatted: string; results: SearchResult[] }> {
     try {
       const results = await this.workspace.search(queryText, {
@@ -278,8 +239,8 @@ vectorStore: this.vectorStore,
       }
 
       const formatted = results
-        .map((result) => `${result.id}n${String(result.content).trim()}`)
-        .join('nn---nn');
+        .map((result) => `${result.id}\n${String(result.content).trim()}`)
+        .join('\n');
 
       return { formatted, results: searchResults };
     } catch (error) {
@@ -305,30 +266,26 @@ vectorStore: this.vectorStore,
       });
 
       const workspaceContext = workspaceResults
-        .map((r) => `${r.id}: ${r.content}`)
-        .join('nn');
+        .map((r) => r.content)
+        .join('\n');
 
       const graphResult = await graphTool.execute(
         {
-          queryText: workspaceContext ? `${queryText}nnContext:n${workspaceContext}` : queryText,
+          queryText: workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText,
           topK: 3,
         },
-        {} as never,
+        {} as MastraToolInvocationOptions,
       );
-      const relevantContext = Array.isArray(graphResult?.relevantContext)
-        ? graphResult.relevantContext
-        : [];
+
+      const relevantContext = typeof graphResult?.relevantContext === 'string' 
+        ? graphResult.relevantContext 
+        : '';
 
       forgeDebug('ltm', 'graph search completed', {
         resultCount: relevantContext.length,
       });
 
-      return relevantContext
-        .map((chunk: unknown) =>
-          typeof chunk === 'string' ? chunk.trim() : JSON.stringify(chunk).trim(),
-        )
-        .filter(Boolean)
-        .join('nn---nn');
+      return relevantContext.trim();
     } catch (error) {
       forgeDebug('ltm', 'graph search failed', {
         error: error instanceof Error ? error.message : String(error),
@@ -337,31 +294,40 @@ vectorStore: this.vectorStore,
     }
   }
 
+  private extractTextFromArgs(args: Record<string, unknown>): string {
+    const textParts: string[] = [];
+    for (const value of Object.values(args)) {
+      if (typeof value === 'string') {
+        textParts.push(value);
+      } else if (Array.isArray(value)) {
+        for (const item of value) {
+          if (typeof item === 'string') {
+            textParts.push(item);
+          } else if (typeof item === 'object' && item !== null) {
+            textParts.push(this.extractTextFromArgs(item as Record<string, unknown>));
+          }
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        textParts.push(this.extractTextFromArgs(value as Record<string, unknown>));
+      }
+    }
+    return textParts.filter(Boolean).join(' ');
+  }
+
   private buildRecallQuery(messages: MastraDBMessage[]) {
     return messages
-      .filter((message) => ['user', 'assistant', 'tool'].includes(message.role))
+      .filter((message) => !['system'].includes(message.role))
       .slice(-this.maxRecentRecallMessages)
-      .map((message) => {
-        let text = '';
-        if (typeof message.content === 'string') {
-          text = message.content;
-        } else if (Array.isArray(message.content)) {
-          text = message.content
-            .map((part) => (typeof part === 'string' ? part : JSON.stringify(part)))
-            .join('n');
-        } else {
-          const parts = Array.isArray(message.content?.parts) ? message.content.parts : [];
-          text = parts
-            .map((part) =>
-              'text' in part && typeof part.text === 'string' ? part.text : JSON.stringify(part),
-            )
-            .join('n');
-        }
-        text = text.trim();
-        return text ? `[${message.role}] ${text}` : '';
-      })
-      .filter(Boolean)
-      .join('n');
+      .map(message => {
+        const toolText = message.content.toolInvocations?.flatMap(
+          tool => this.extractTextFromArgs(tool.args),
+        ).filter(Boolean).join(' ') || '';
+        return `
+        ${message.content.content || ''}
+        ${message.content.reasoning || ''}
+        ${toolText}
+        `.trim();
+      }).filter(Boolean).join('\n');
   }
 
   private getThreadContext(
@@ -392,31 +358,7 @@ vectorStore: this.vectorStore,
 
   /**
    * Delete previously consolidated files from /memory directory.
-   */
-  private async cleanupConsolidatedFiles(): Promise<void> {
-    try {
-      const memoryDirPath = path.posix.join(
-        this.workspace.filesystem?.basePath || '',
-        this.memoryDir,
-      );
-      const memoryDirExists = await this.workspace.filesystem?.exists(memoryDirPath);
-      if (!memoryDirExists) {
-        return;
-      }
-
-      const entries = (await this.workspace.filesystem?.readdir(memoryDirPath)) || [];
-      const consolidatedFiles = entries
-        .filter((entry) => entry.type === 'file' && entry.name.includes('consolidated-'))
-        .map((entry) => entry.name);
-
-      for (const fileName of consolidatedFiles) {
-        await this.workspace.filesystem?.deleteFile(`${memoryDirPath}/${fileName}`);
-      }
-    } catch (error) {
-      forgeDebug('ltm', 'cleanup failed', { error: String(error) });
-    }
-  }
-}
+   */}
 
 type SearchResult = {
   id: string;
