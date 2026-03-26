@@ -69,7 +69,18 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 vectorStore: this.vectorStore,
       searchIndexName: this.searchIndexName,
     });
+
+    // Create memory consolidation agent
+    this.memoryAgent = new Agent({
+      id: this.id + '-agent',
+      name: 'Memory Consolidation Agent',
+      instructions:
+        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to read /observations, extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed observations to /archived.',
+      model: this.omModel,
+      workspace: this.workspace,
+    });
   }
+
 
   private async doInitialize() {
     await this.workspace.init();

@@ -98,40 +98,21 @@ export function createCoolifyManager(config: {
     }));
   }
 
-  async function createGitHubApp(input: {
-    name: string;
-    organization: string;
-    appId: string;
-    installationId: string;
-    clientId: string;
-    clientSecret: string;
-    webhookSecret: string;
-    privateKey: string;
-    apiUrl?: string;
-    htmlUrl?: string;
-  }) {
-    const data = await requestJson('POST', '/github-apps', {
-      name: input.name,
-      organization: input.organization,
-      app_id: input.appId,
-      installation_id: input.installationId,
-      client_id: input.clientId,
-      client_secret: input.clientSecret,
-      webhook_secret: input.webhookSecret,
-      private_key: input.privateKey,
-      api_url: input.apiUrl ?? 'https://api.github.com',
-      html_url: input.htmlUrl ?? 'https://github.com',
-    });
-    const app = extractItem(data, GitHubAppSchema);
 
-    return {
-      githubAppId: app.id ?? app.uuid,
-      githubAppUuid: app.uuid,
-      name: app.name ?? null,
-      organization: app.organization ?? null,
-    };
+  async function getGithubAppId(githubAppUuid: string): Promise<number> {
+    const apps = await listGitHubApps();
+    const app = apps.find((a) => a.githubAppUuid === githubAppUuid);
+
+    if (!app) {
+      throw new Error(`GitHub App with UUID ${githubAppUuid} not found`);
+    }
+
+    if (typeof app.githubAppId !== 'number') {
+      throw new Error(`GitHub App ${githubAppUuid} is missing numeric githubAppId in Coolify`);
+    }
+
+    return app.githubAppId;
   }
-
   async function listGitHubAppRepositories(input: { githubAppId: string | number }) {
     const data = await requestJson('GET', `/github-apps/${encodeURIComponent(String(input.githubAppId))}/repositories`);
     const repositories = extractCollection(data, GitHubRepositorySchema);
@@ -403,7 +384,7 @@ export function createCoolifyManager(config: {
 
   return {
     listGitHubApps,
-    createGitHubApp,
+    getGithubAppId,
     listGitHubAppRepositories,
     listGitHubAppRepositoryBranches,
     listApplications,
