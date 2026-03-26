@@ -19,7 +19,6 @@ import {
   createAgentMemory,
   createObservationalMemory,
   appendWorkingMemoryInstructions,
-  embedTextWithFastembed,
 } from '@mastra-engine/core';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
 
