@@ -412,6 +412,10 @@ export async function createCommunicationModule(config: {
         providerConversationKey: input.providerConversationKey,
         type: 'dm',
       });
+
+      if (!newConversation) {
+        throw new Error(`Failed to create conversation for provider ${input.provider}: ${input.providerConversationKey}`);
+      }
       // Continue with the sending logic using the newly created conversation
       const sent = await provider.sendMessage({
         providerConversationKey: newConversation.providerConversationKey,
