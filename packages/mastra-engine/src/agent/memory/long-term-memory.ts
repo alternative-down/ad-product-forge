@@ -189,7 +189,7 @@ vectorStore: this.vectorStore,
         observation.activeObservations,
       ]
         .filter(Boolean)
-        .join('\\n');
+        .join('\n');
 
       await this.workspace.filesystem?.writeFile(filePath, content, {
         recursive: true,
