@@ -134,8 +134,8 @@ vectorStore: this.vectorStore,
         role: 'system',
         content: [
           'Recovered past memory relevant to the current step. Use it as supporting recall, not as a replacement for the current conversation.',
-          sections.join('nn'),
-        ].join('nn'),
+          sections.join('\n'),
+        ].join('\n'),
       },
       this.id,
     );
@@ -189,7 +189,7 @@ vectorStore: this.vectorStore,
         observation.activeObservations,
       ]
         .filter(Boolean)
-        .join('n');
+        .join('\\n');
 
       await this.workspace.filesystem?.writeFile(filePath, content, {
         recursive: true,
@@ -239,8 +239,8 @@ vectorStore: this.vectorStore,
       }
 
       const formatted = results
-        .map((result) => `${result.id}n${String(result.content).trim()}`)
-        .join('nn---nn');
+        .map((result) => `${result.id}\n${String(result.content).trim()}`)
+        .join('\n');
 
       return { formatted, results: searchResults };
     } catch (error) {
@@ -267,29 +267,25 @@ vectorStore: this.vectorStore,
 
       const workspaceContext = workspaceResults
         .map((r) => r.content)
-        .join('nn');
+        .join('\n');
 
       const graphResult = await graphTool.execute(
         {
-          queryText: workspaceContext ? `${queryText}nnContext:n${workspaceContext}` : queryText,
+          queryText: workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText,
           topK: 3,
         },
         {} as MastraToolInvocationOptions,
       );
-      const relevantContext = Array.isArray(graphResult?.relevantContext)
-        ? graphResult.relevantContext
-        : [];
+
+      const relevantContext = typeof graphResult?.relevantContext === 'string' 
+        ? graphResult.relevantContext 
+        : '';
 
       forgeDebug('ltm', 'graph search completed', {
         resultCount: relevantContext.length,
       });
 
-      return relevantContext
-        .map((chunk: unknown) =>
-          typeof chunk === 'string' ? chunk.trim() : JSON.stringify(chunk).trim(),
-        )
-        .filter(Boolean)
-        .join('nn---nn');
+      return relevantContext.trim();
     } catch (error) {
       forgeDebug('ltm', 'graph search failed', {
         error: error instanceof Error ? error.message : String(error),
