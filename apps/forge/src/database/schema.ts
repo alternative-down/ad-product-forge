@@ -233,6 +233,43 @@ export const agentSchedules = sqliteTable('agent_schedules', {
 export type AgentSchedule = typeof agentSchedules.$inferSelect;
 export type NewAgentSchedule = typeof agentSchedules.$inferInsert;
 
+// Scheduled Tasks (for agent-to-agent task scheduling, Issue #225)
+export const scheduledTasks = sqliteTable('scheduled_tasks', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  taskType: text('task_type').notNull().default('schedule'), // 'schedule' | 'task'
+  status: text('status').notNull().default('pending'), // 'pending' | 'completed' | 'failed' | 'cancelled'
+  priority: text('priority').notNull().default('normal'), // 'low' | 'normal' | 'high' | 'urgent'
+  scheduleType: text('schedule_type').notNull(),
+  cronExpression: text('cron_expression'),
+  scheduledDate: integer('scheduled_date'),
+  timezone: text('timezone').notNull(),
+  content: text('content').notNull(),
+  result: text('result'),
+  error: text('error'),
+  isActive: integer('is_active').notNull().default(1),
+  sourceCoordinatorId: text('source_coordinator_id'),
+  targetAgentId: text('target_agent_id'),
+  lastTriggeredAt: integer('last_triggered_at'),
+  nextTriggerAt: integer('next_trigger_at'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  scheduledTasksAgentIdIdx: index('scheduled_tasks_agent_id_idx').on(table.agentId),
+  scheduledTasksIsActiveIdx: index('scheduled_tasks_is_active_idx').on(table.isActive),
+  scheduledTasksNextTriggerAtIdx: index('scheduled_tasks_next_trigger_at_idx').on(table.nextTriggerAt),
+  // Partial indexes for task-type queries
+  scheduledTasksTargetStatusIdx: index('scheduled_tasks_target_status_idx').on(table.targetAgentId, table.status),
+  scheduledTasksCoordinatorIdx: index('scheduled_tasks_coordinator_idx').on(table.sourceCoordinatorId),
+}));
+
+export type ScheduledTask = typeof scheduledTasks.$inferSelect;
+export type NewScheduledTask = typeof scheduledTasks.$inferInsert;
+
 export const llmModelPrices = sqliteTable('llm_model_prices', {
   modelKey: text('model_key').primaryKey(),
   inputPerMillionUsd: real('input_per_million_usd').notNull(),
