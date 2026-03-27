@@ -79,7 +79,7 @@ export async function createTask(params: CreateTaskParams): Promise<ScheduledTas
   };
 
   await db.insert(scheduledTasks).values(newTask);
-  return newTask;
+  return newTask as ScheduledTask;
 }
 
 // List tasks for an agent (heartbeat query)
