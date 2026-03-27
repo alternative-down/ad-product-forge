@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useWizardStore, validateContract, type BudgetType, type ScheduleType } from '../stores/wizard-store';
-import { Input } from '../../components/ui/input';
-import { Select } from '../../components/ui/select';
-import { Button } from '../../components/ui/button';
+import { useWizardStore, validateContract, type BudgetType } from '../stores/wizard-store';
+import { Input } from '../../../../components/ui/input';
+import { Select } from '../../../../components/ui/select';
+import { Button } from '../../../../components/ui/button';
 
 const DAYS = [
   { value: 'mon', label: 'Seg' },
@@ -20,7 +20,7 @@ const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
 }));
 
 export function Step3Contract() {
-  const { contract, setContract, nextStep, prevStep } = useWizardStore();
+  const { contract, setContract } = useWizardStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -39,14 +39,6 @@ export function Step3Contract() {
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
     setErrors(validateContract(contract));
-  };
-
-  const handleNext = () => {
-    setErrors(validateContract(contract));
-    setTouched({ budgetAmount: true, scheduleDays: true });
-    if (Object.keys(validateContract(contract)).length === 0) {
-      nextStep();
-    }
   };
 
   const toggleDay = (day: string) => {
@@ -187,8 +179,7 @@ export function Step3Contract() {
                     <Button
                       key={day.value}
                       type="button"
-                      variant={contract.scheduleDays?.includes(day.value) ? 'default' : 'outline'}
-                      size="sm"
+                      variant={contract.scheduleDays?.includes(day.value) ? 'primary' : 'ghost'}
                       onClick={() => toggleDay(day.value)}
                     >
                       {day.label}

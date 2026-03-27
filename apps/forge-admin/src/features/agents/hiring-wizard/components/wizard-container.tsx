@@ -1,13 +1,13 @@
 import { X } from 'lucide-react';
-import { useWizardStore, WIZARD_STEPS, validateBasicInfo, validateConfiguration, validateContract } from './stores/wizard-store';
-import { StepIndicator } from './components/step-indicator';
-import { Step1BasicInfo } from './components/step1-basic-info';
-import { Step2Configuration } from './components/step2-configuration';
-import { Step3Contract } from './components/step3-contract';
-import { Step4Review } from './components/step4-review';
-import { Step5Confirm } from './components/step5-confirm';
-import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
+import { useWizardStore, WIZARD_STEPS, validateBasicInfo, validateConfiguration, validateContract } from '../stores/wizard-store';
+import { StepIndicator } from './step-indicator';
+import { Step1BasicInfo } from './step1-basic-info';
+import { Step2Configuration } from './step2-configuration';
+import { Step3Contract } from './step3-contract';
+import { Step4Review } from './step4-review';
+import { Step5Confirm } from './step5-confirm';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
 
 interface WizardContainerProps {
   onCancel?: () => void;
@@ -28,7 +28,6 @@ export function WizardContainer({ onCancel, onComplete }: WizardContainerProps) 
     }
   };
 
-  const isLastStep = currentStep === 4; // Step 4 is the review step, clicking next submits
   const isFirstStep = currentStep === 1;
 
   const handleNext = async () => {
@@ -67,7 +66,7 @@ export function WizardContainer({ onCancel, onComplete }: WizardContainerProps) 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Hiring Wizard</h1>
           {onCancel && (
-            <Button variant="ghost" size="icon" onClick={onCancel}>
+            <Button variant="ghost" onClick={onCancel}>
               <X className="w-4 h-4" />
             </Button>
           )}
@@ -85,7 +84,7 @@ export function WizardContainer({ onCancel, onComplete }: WizardContainerProps) 
         {!isComplete && currentStep < 5 && (
           <div className="flex justify-between mt-8 pt-6 border-t">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={isFirstStep ? onCancel : prevStep}
               disabled={isFirstStep}
             >

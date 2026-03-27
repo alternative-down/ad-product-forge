@@ -1,7 +1,7 @@
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useWizardStore } from '../stores/wizard-store';
-import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
 import { Link } from '@tanstack/react-router';
 
 export function Step5Confirm() {
@@ -16,7 +16,7 @@ export function Step5Confirm() {
           <h2 className="text-xl font-semibold mb-2">Falha ao Contratar</h2>
           <p className="text-muted-foreground mb-6">{error}</p>
           <div className="flex gap-4 justify-center">
-            <Button variant="outline" onClick={prevStep}>
+            <Button variant="secondary" onClick={prevStep}>
               Voltar
             </Button>
             <Button onClick={() => window.location.reload()}>
@@ -52,7 +52,7 @@ export function Step5Confirm() {
             {basicInfo.agentName} está inicializando...
           </p>
           <div className="flex gap-4 justify-center">
-            <Button variant="outline" onClick={reset}>
+            <Button variant="secondary" onClick={reset}>
               Contratar Novo Agent
             </Button>
             {createdAgentId && (

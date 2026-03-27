@@ -1,8 +1,8 @@
-import { Edit2, Check } from 'lucide-react';
+import { Edit2 } from 'lucide-react';
 import { useWizardStore } from '../stores/wizard-store';
-import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Badge } from '../../../../components/ui/badge';
 
 const FUNCTION_LABELS: Record<string, string> = {
   copywriter: 'Copywriter',
@@ -37,7 +37,7 @@ function ReviewCard({ title, onEdit, children }: ReviewCardProps) {
     <Card className="p-4">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-medium">{title}</h3>
-        <Button variant="ghost" size="sm" onClick={onEdit} className="gap-1">
+        <Button variant="ghost" onClick={onEdit} className="gap-1">
           <Edit2 className="w-3 h-3" /> Editar
         </Button>
       </div>
@@ -47,7 +47,7 @@ function ReviewCard({ title, onEdit, children }: ReviewCardProps) {
 }
 
 export function Step4Review() {
-  const { basicInfo, configuration, contract, setStep, nextStep, prevStep } = useWizardStore();
+  const { basicInfo, configuration, contract, setStep } = useWizardStore();
 
   const getMonthlyEstimate = () => {
     const amount = parseFloat(contract.budgetAmount) || 0;
@@ -132,7 +132,7 @@ export function Step4Review() {
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold">${getMonthlyEstimate().toFixed(2)}</div>
-              <Badge variant="outline" className="mt-1">Aguardando confirmação</Badge>
+              <Badge className="mt-1">Aguardando confirmação</Badge>
             </div>
           </div>
         </Card>

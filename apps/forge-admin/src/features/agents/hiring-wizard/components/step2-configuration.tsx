@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { Info, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useWizardStore, validateConfiguration, type AIModel } from '../stores/wizard-store';
-import { listWorkspaces } from '../../lib/api';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import { Select } from '../../components/ui/select';
-import { Card } from '../../components/ui/card';
+import { listWorkspaces } from '../../../../lib/api';
+import { Textarea } from '../../../../components/ui/textarea';
+import { Select } from '../../../../components/ui/select';
+import { Card } from '../../../../components/ui/card';
 
 const MODEL_OPTIONS: { value: AIModel; label: string; cost: string; description: string }[] = [
   { value: 'gpt-4o', label: 'GPT-4o', cost: '💰💰💰', description: 'Mais capaz, mais caro' },
@@ -17,7 +16,7 @@ const MODEL_OPTIONS: { value: AIModel; label: string; cost: string; description:
 ];
 
 export function Step2Configuration() {
-  const { configuration, setConfiguration, nextStep, prevStep } = useWizardStore();
+  const { configuration, setConfiguration } = useWizardStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -32,14 +31,6 @@ export function Step2Configuration() {
     setErrors(validateConfiguration(configuration));
   };
 
-  const handleNext = () => {
-    setErrors(validateConfiguration(configuration));
-    setTouched({ model: true, instructions: true, workspace: true });
-    if (Object.keys(validateConfiguration(configuration)).length === 0) {
-      nextStep();
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -52,7 +43,7 @@ export function Step2Configuration() {
         <div>
           <label className="text-sm font-medium flex items-center gap-1">
             Modelo <span className="text-destructive">*</span>
-            <Info className="w-3 h-3 text-muted-foreground" title="Modelo de IA usado para gerar respostas." />
+            <span title="Modelo de IA usado para gerar respostas."><Info className="w-3 h-3 text-muted-foreground" /></span>
           </label>
           <Select
             value={configuration.model}
@@ -74,9 +65,9 @@ export function Step2Configuration() {
             {MODEL_OPTIONS.map((opt) => (
               <div
                 key={opt.value}
-                className={\`p-2 rounded border text-xs \${
+                className={`p-2 rounded border text-xs ${
                   configuration.model === opt.value ? 'border-primary bg-primary/5' : 'border-muted'
-                }\`}
+                }`}
               >
                 <div className="font-medium">{opt.label}</div>
                 <div className="text-muted-foreground">{opt.cost}</div>
@@ -89,7 +80,7 @@ export function Step2Configuration() {
         <div>
           <label className="text-sm font-medium flex items-center gap-1">
             Instructions <span className="text-destructive">*</span>
-            <Info className="w-3 h-3 text-muted-foreground" title="Instruções detalhadas que guiam o comportamento do agent." />
+            <span title="Instruções detalhadas que guiam o comportamento do agent."><Info className="w-3 h-3 text-muted-foreground" /></span>
           </label>
           <Textarea
             placeholder="Descreva o que este agent deve fazer..."
@@ -111,7 +102,7 @@ export function Step2Configuration() {
         <div>
           <label className="text-sm font-medium flex items-center gap-1">
             Workspace <span className="text-destructive">*</span>
-            <Info className="w-3 h-3 text-muted-foreground" title="Espaço de armazenamento para arquivos e memória persistente." />
+            <span title="Espaço de armazenamento para arquivos e memória persistente."><Info className="w-3 h-3 text-muted-foreground" /></span>
           </label>
           {workspacesLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

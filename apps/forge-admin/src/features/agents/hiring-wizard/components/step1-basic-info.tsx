@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Info } from 'lucide-react';
 import { useWizardStore, validateBasicInfo, type AgentFunction } from '../stores/wizard-store';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import { Select } from '../../components/ui/select';
+import { Input } from '../../../../components/ui/input';
+import { Textarea } from '../../../../components/ui/textarea';
+import { Select } from '../../../../components/ui/select';
 
 const FUNCTION_OPTIONS: { value: AgentFunction; label: string; description: string }[] = [
   { value: 'copywriter', label: 'Copywriter', description: 'Gera textos de marketing' },
@@ -14,7 +14,7 @@ const FUNCTION_OPTIONS: { value: AgentFunction; label: string; description: stri
 ];
 
 export function Step1BasicInfo() {
-  const { basicInfo, setBasicInfo, nextStep } = useWizardStore();
+  const { basicInfo, setBasicInfo } = useWizardStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -22,15 +22,6 @@ export function Step1BasicInfo() {
     setTouched((prev) => ({ ...prev, [field]: true }));
     const validationErrors = validateBasicInfo(basicInfo);
     setErrors(validationErrors);
-  };
-
-  const handleNext = () => {
-    const validationErrors = validateBasicInfo(basicInfo);
-    setErrors(validationErrors);
-    setTouched({ agentName: true, function: true, description: true });
-    if (Object.keys(validationErrors).length === 0) {
-      nextStep();
-    }
   };
 
   return (
@@ -62,7 +53,7 @@ export function Step1BasicInfo() {
         <div>
           <label className="text-sm font-medium flex items-center gap-1">
             Function <span className="text-destructive">*</span>
-            <Info className="w-3 h-3 text-muted-foreground" title="Define permissões e ferramentas disponíveis." />
+            <span title="Define permissões e ferramentas disponíveis."><Info className="w-3 h-3 text-muted-foreground" /></span>
           </label>
           <Select
             value={basicInfo.function}
