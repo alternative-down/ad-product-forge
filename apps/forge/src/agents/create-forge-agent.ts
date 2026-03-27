@@ -200,7 +200,7 @@ export async function createInternalAgentRuntime<
   // Initialize memory store by creating a thread (Issue #212)
   // This ensures mastra_messages and mastra_threads tables exist
   if (storage.stores.memory) {
-    await storage.stores.memory.createThread({ threadId: config.id });
+    await (storage.stores.memory as any).createThread({ threadId: config.id });
   }
 
   const communication = await createCommunicationModule({
