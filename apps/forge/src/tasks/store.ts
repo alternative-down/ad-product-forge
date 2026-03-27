@@ -1,14 +1,13 @@
 /**
- * Task Store — agent-to-agent task scheduling (Issue #225)
+ * Task Store — agent-to-agent task scheduling (Issue #225 rework)
  *
- * Manages scheduled_tasks table for coordinator-assigned tasks.
+ * Uses agent_schedules table with additional columns for cross-agent task management.
  * Reuses pattern from schedules/store.ts.
  */
 
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { getDatabase } from '../database';
-import { scheduledTasks, type ScheduledTask, type NewScheduledTask } from '../database/schema';
-import { generateId } from './id';
+import { agentSchedules, type AgentSchedule, type NewAgentSchedule } from '../database/schema';
 
 const db = getDatabase();
 
@@ -46,40 +45,42 @@ export interface UpdateTaskParams {
   nextTriggerAt?: number | null;
 }
 
-// TaskRecord type alias for future extensibility
-export type TaskRecord = ScheduledTask;
+// TaskRecord type alias for compatibility
+export type TaskRecord = AgentSchedule;
 
 // Create a new task (for self or assigned to another agent)
-export async function createTask(params: CreateTaskParams): Promise<ScheduledTask> {
+export async function createTask(params: CreateTaskParams): Promise<AgentSchedule> {
   const now = Date.now();
-  const id = generateId();
+  const id = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-  const newTask: NewScheduledTask = {
+  const newTask: NewAgentSchedule = {
     id,
     agentId: params.agentId,
+    kind: 'agent',
     name: params.name,
     description: params.description ?? null,
-    taskType: params.taskType,
-    status: 'pending',
-    priority: params.priority ?? 'normal',
     scheduleType: params.scheduleType,
     cronExpression: params.cronExpression ?? null,
     scheduledDate: params.scheduledDate ?? null,
     timezone: params.timezone ?? 'UTC',
     content: params.content,
-    result: null,
-    error: null,
     isActive: 1,
-    sourceCoordinatorId: params.sourceCoordinatorId ?? null,
-    targetAgentId: params.targetAgentId ?? null,
     lastTriggeredAt: null,
     nextTriggerAt: null,
+    // Cross-agent task fields
+    sourceCoordinatorId: params.sourceCoordinatorId ?? null,
+    targetAgentId: params.targetAgentId ?? null,
+    taskType: params.taskType,
+    status: 'pending',
+    priority: params.priority ?? 'normal',
+    result: null,
+    error: null,
     createdAt: now,
     updatedAt: now,
   };
 
-  await db.insert(scheduledTasks).values(newTask);
-  return newTask as ScheduledTask;
+  await db.insert(agentSchedules).values(newTask);
+  return newTask as AgentSchedule;
 }
 
 // List tasks for an agent (heartbeat query)
@@ -87,19 +88,19 @@ export async function listAgentTasks(
   targetAgentId: string,
   status: TaskStatus = 'pending',
   limit = 50
-): Promise<ScheduledTask[]> {
+): Promise<AgentSchedule[]> {
   const results = await db
     .select()
-    .from(scheduledTasks)
+    .from(agentSchedules)
     .where(
       and(
-        eq(scheduledTasks.targetAgentId, targetAgentId),
-        eq(scheduledTasks.taskType, 'task'),
-        eq(scheduledTasks.status, status),
-        eq(scheduledTasks.isActive, 1)
+        eq(agentSchedules.targetAgentId, targetAgentId),
+        eq(agentSchedules.taskType, 'task'),
+        eq(agentSchedules.status, status),
+        eq(agentSchedules.isActive, 1)
       )
     )
-    .orderBy(scheduledTasks.scheduledDate, scheduledTasks.createdAt)
+    .orderBy(agentSchedules.scheduledDate, agentSchedules.createdAt)
     .limit(limit);
 
   return results;
@@ -109,38 +110,38 @@ export async function listAgentTasks(
 export async function listCoordinatorTasks(
   sourceCoordinatorId: string,
   limit = 100
-): Promise<ScheduledTask[]> {
+): Promise<AgentSchedule[]> {
   const results = await db
     .select()
-    .from(scheduledTasks)
+    .from(agentSchedules)
     .where(
       and(
-        eq(scheduledTasks.sourceCoordinatorId, sourceCoordinatorId),
-        eq(scheduledTasks.taskType, 'task')
+        eq(agentSchedules.sourceCoordinatorId, sourceCoordinatorId),
+        eq(agentSchedules.taskType, 'task')
       )
     )
-    .orderBy(desc(scheduledTasks.createdAt))
+    .orderBy(desc(agentSchedules.createdAt))
     .limit(limit);
 
   return results;
 }
 
 // Get a single task by ID
-export async function getTask(taskId: string, agentId: string): Promise<ScheduledTask | undefined> {
+export async function getTask(taskId: string, agentId: string): Promise<AgentSchedule | undefined> {
   const result = await db
     .select()
-    .from(scheduledTasks)
-    .where(and(eq(scheduledTasks.id, taskId), eq(scheduledTasks.agentId, agentId)))
+    .from(agentSchedules)
+    .where(and(eq(agentSchedules.id, taskId), eq(agentSchedules.agentId, agentId)))
     .limit(1);
 
   return result[0];
 }
 
 // Update a task
-export async function updateTask(params: UpdateTaskParams): Promise<ScheduledTask | undefined> {
+export async function updateTask(params: UpdateTaskParams): Promise<AgentSchedule | undefined> {
   const now = Date.now();
 
-  const updates: Partial<NewScheduledTask> = {
+  const updates: Partial<NewAgentSchedule> = {
     updatedAt: now,
   };
 
@@ -155,9 +156,9 @@ export async function updateTask(params: UpdateTaskParams): Promise<ScheduledTas
   if (params.nextTriggerAt !== undefined) updates.nextTriggerAt = params.nextTriggerAt;
 
   await db
-    .update(scheduledTasks)
+    .update(agentSchedules)
     .set(updates)
-    .where(and(eq(scheduledTasks.id, params.taskId), eq(scheduledTasks.agentId, params.agentId)));
+    .where(and(eq(agentSchedules.id, params.taskId), eq(agentSchedules.agentId, params.agentId)));
 
   return getTask(params.taskId, params.agentId);
 }
@@ -165,96 +166,78 @@ export async function updateTask(params: UpdateTaskParams): Promise<ScheduledTas
 // Cancel a task (soft delete - sets status to cancelled)
 export async function cancelTask(taskId: string, agentId: string): Promise<boolean> {
   await db
-    .update(scheduledTasks)
+    .update(agentSchedules)
     .set({ status: 'cancelled', isActive: 0, updatedAt: Date.now() })
-    .where(and(eq(scheduledTasks.id, taskId), eq(scheduledTasks.agentId, agentId)));
+    .where(and(eq(agentSchedules.id, taskId), eq(agentSchedules.agentId, agentId)));
 
   return true;
 }
 
-// Mark task as completed with result
-export async function completeTask(
-  taskId: string,
-  result: string,
-  lastTriggeredAt: number
-): Promise<void> {
+// Mark task as completed
+export async function completeTask(taskId: string, agentId: string, result?: string): Promise<boolean> {
   await db
-    .update(scheduledTasks)
-    .set({
-      status: 'completed',
-      isActive: 0,
-      result,
-      lastTriggeredAt,
-      updatedAt: Date.now(),
-    })
-    .where(eq(scheduledTasks.id, taskId));
+    .update(agentSchedules)
+    .set({ status: 'completed', isActive: 0, result: result ?? null, updatedAt: Date.now() })
+    .where(and(eq(agentSchedules.id, taskId), eq(agentSchedules.agentId, agentId)));
+
+  return true;
 }
 
-// Mark task as failed with error
-export async function failTask(
-  taskId: string,
-  error: string,
-  lastTriggeredAt: number
-): Promise<void> {
+// Mark task as failed
+export async function failTask(taskId: string, agentId: string, error?: string): Promise<boolean> {
   await db
-    .update(scheduledTasks)
-    .set({
-      status: 'failed',
-      isActive: 0,
-      error,
-      lastTriggeredAt,
-      updatedAt: Date.now(),
-    })
-    .where(eq(scheduledTasks.id, taskId));
+    .update(agentSchedules)
+    .set({ status: 'failed', error: error ?? null, updatedAt: Date.now() })
+    .where(and(eq(agentSchedules.id, taskId), eq(agentSchedules.agentId, agentId)));
+
+  return true;
 }
 
-// Rate limit: count tasks created by coordinator in last hour
-export async function countCoordinatorTasksLastHour(coordinatorId: string): Promise<number> {
+// Count tasks created by coordinator in the last hour (for rate limiting)
+export async function countCoordinatorTasksLastHour(sourceCoordinatorId: string): Promise<number> {
   const oneHourAgo = Date.now() - 60 * 60 * 1000;
-
   const result = await db
     .select({ count: sql<number>`count(*)` })
-    .from(scheduledTasks)
+    .from(agentSchedules)
     .where(
       and(
-        eq(scheduledTasks.sourceCoordinatorId, coordinatorId),
-        eq(scheduledTasks.taskType, 'task'),
-        sql`${scheduledTasks.createdAt} > ${oneHourAgo}`
+        eq(agentSchedules.sourceCoordinatorId, sourceCoordinatorId),
+        eq(agentSchedules.taskType, 'task'),
+        sql`${agentSchedules.createdAt} >= ${oneHourAgo}`
       )
     );
 
   return result[0]?.count ?? 0;
 }
 
-// Rate limit: count tasks assigned to an agent (total)
-export async function countAgentTasks(agentId: string): Promise<number> {
+// Count total tasks assigned to an agent (for rate limiting)
+export async function countAgentTasks(targetAgentId: string): Promise<number> {
   const result = await db
     .select({ count: sql<number>`count(*)` })
-    .from(scheduledTasks)
+    .from(agentSchedules)
     .where(
       and(
-        eq(scheduledTasks.targetAgentId, agentId),
-        eq(scheduledTasks.taskType, 'task')
+        eq(agentSchedules.targetAgentId, targetAgentId),
+        eq(agentSchedules.taskType, 'task')
       )
     );
 
   return result[0]?.count ?? 0;
 }
 
-// Check for duplicate task (same agent, same scheduled time)
-export async function hasDuplicateTask(
-  targetAgentId: string,
-  scheduledDate: number
-): Promise<boolean> {
+// Check for duplicate tasks at the same scheduled time
+export async function hasDuplicateTask(targetAgentId: string, scheduledDateMs: number): Promise<boolean> {
+  const timeWindow = 60 * 1000; // 1 minute window
   const result = await db
     .select({ count: sql<number>`count(*)` })
-    .from(scheduledTasks)
+    .from(agentSchedules)
     .where(
       and(
-        eq(scheduledTasks.targetAgentId, targetAgentId),
-        eq(scheduledTasks.taskType, 'task'),
-        eq(scheduledTasks.scheduledDate, scheduledDate),
-        eq(scheduledTasks.status, 'pending')
+        eq(agentSchedules.targetAgentId, targetAgentId),
+        eq(agentSchedules.taskType, 'task'),
+        eq(agentSchedules.status, 'pending'),
+        sql`${agentSchedules.scheduledDate} >= ${scheduledDateMs - timeWindow}`,
+        sql`${agentSchedules.scheduledDate} <= ${scheduledDateMs + timeWindow}`
       )
     );
 
