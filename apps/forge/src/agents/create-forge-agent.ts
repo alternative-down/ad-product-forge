@@ -20,7 +20,6 @@ import {
   createObservationalMemory,
   appendWorkingMemoryInstructions,
 } from '@mastra-engine/core';
-import type { LibSQLVector } from '@mastra/libsql';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
 
 export type CreateForgeAgentConfig<
@@ -200,7 +199,9 @@ export async function createInternalAgentRuntime<
   await workspace.init();
   // Initialize memory store by creating a thread (Issue #212)
   // This ensures mastra_messages and mastra_threads tables exist
-  await storage.stores.memory.createThread({ threadId: config.id });
+  if (storage.stores.memory) {
+    await (storage.stores.memory as any).createThread({ threadId: config.id });
+  }
 
   const communication = await createCommunicationModule({
     client,
