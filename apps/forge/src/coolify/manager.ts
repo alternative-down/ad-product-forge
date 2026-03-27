@@ -160,7 +160,7 @@ export function createCoolifyManager(config: {
     }));
   }
 
-  async function getGithubAppId(githubAppUuid: string): Promise<number> {
+  async function _getGithubAppId(githubAppUuid: string): Promise<number> {
     const apps = await listGitHubApps();
     const app = apps.find((a) => a.githubAppUuid === githubAppUuid);
 
