@@ -10,6 +10,23 @@ import { createClient } from '@libsql/client';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+
+/**
+ * Interface for Mastra memory store with createThread method.
+ * This extends the type definition to include the createThread method.
+ */
+interface MastraMemoryStore {
+  createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
+}
+
+function hasCreateThread(store: unknown): store is MastraMemoryStore {
+  return (
+    typeof store === 'object' &&
+    store !== null &&
+    'createThread' in store &&
+    typeof (store as MastraMemoryStore).createThread === 'function'
+  );
+}
 import {
   createCommunicationModule,
   type CommunicationProvider,
@@ -199,8 +216,8 @@ export async function createInternalAgentRuntime<
   await workspace.init();
   // Initialize memory store by creating a thread (Issue #212)
   // This ensures mastra_messages and mastra_threads tables exist
-  if (storage.stores.memory) {
-    await (storage.stores.memory as any).createThread({ threadId: config.id });
+  if (hasCreateThread(storage.stores.memory)) {
+    await storage.stores.memory.createThread({ threadId: config.id });
   }
 
   const communication = await createCommunicationModule({
