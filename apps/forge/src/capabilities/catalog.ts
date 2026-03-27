@@ -25,6 +25,7 @@ export const forgeCustomToolIds = [
   'list_github_pull_requests',
   'get_github_pull_request',
   'manage_github_pull_request',
+  'list_github_pull_request_comments',
   'list_github_issues',
   'get_github_issue',
   'manage_github_issue',
@@ -97,6 +98,9 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
   ],
   manage_github_pull_request: [
     'create_github_pull_request',
+  ],
+  list_github_pull_request_comments: [
+    'list_github_pull_request_comments',
   ],
   manage_github_issue: [
     'create_github_issue',

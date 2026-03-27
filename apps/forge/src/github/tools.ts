@@ -119,6 +119,21 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
     });
   }
 
+  if (hasToolPermission(allowedToolIds, 'list_github_pull_request_comments')) {
+    tools.list_github_pull_request_comments = createTool({
+      id: 'list_github_pull_request_comments',
+      description: 'List review comments on a pull request.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        pullRequestNumber: z.number().int().positive(),
+        direction: z.enum(['asc', 'desc']).default('asc'),
+        limit: z.number().int().positive().max(100).default(100),
+      }),
+      execute: async (input) => githubApps.listPullRequestComments(agentId, input),
+    });
+  }
+
   if (hasToolPermission(allowedToolIds, 'manage_github_pull_request')) {
     tools.manage_github_pull_request = createTool({
       id: 'manage_github_pull_request',
