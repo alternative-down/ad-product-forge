@@ -20,6 +20,7 @@ import {
   createObservationalMemory,
   appendWorkingMemoryInstructions,
 } from '@mastra-engine/core';
+import type { LibSQLVector } from '@mastra/libsql';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
 
 export type CreateForgeAgentConfig<
