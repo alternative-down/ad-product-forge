@@ -1,4 +1,14 @@
 import { create } from 'zustand';
+import { hireAgent, type HireAgentInput } from '../../lib/api';
+
+// Wizard step labels
+export const WIZARD_STEPS = [
+  { id: 1, label: 'Basic Info' },
+  { id: 2, label: 'Configuration' },
+  { id: 3, label: 'Contract' },
+  { id: 4, label: 'Review' },
+  { id: 5, label: 'Confirm' },
+];
 
 // Types based on wireframes
 export type AgentFunction = 'copywriter' | 'researcher' | 'developer' | 'support' | 'analyst';
@@ -50,6 +60,7 @@ export interface WizardActions {
   setError: (error: string | null) => void;
   setComplete: (agentId: string) => void;
   reset: () => void;
+  submit: () => Promise<void>;
 }
 
 const initialState: WizardState = {
@@ -62,6 +73,7 @@ const initialState: WizardState = {
 
 export const useWizardStore = create<WizardState & WizardActions>((set, get) => ({
   ...initialState,
+
   setStep: (step) => set({ currentStep: step }),
   nextStep: () => { const { currentStep } = get(); if (currentStep < 5) set({ currentStep: currentStep + 1 }); },
   prevStep: () => { const { currentStep } = get(); if (currentStep > 1) set({ currentStep: currentStep - 1 }); },
@@ -72,6 +84,64 @@ export const useWizardStore = create<WizardState & WizardActions>((set, get) => 
   setError: (error) => set({ error, isSubmitting: false }),
   setComplete: (agentId) => set({ isComplete: true, createdAgentId: agentId, isSubmitting: false, error: null }),
   reset: () => set(initialState),
+
+  submit: async () => {
+    const { basicInfo, configuration, contract } = get();
+    
+    set({ isSubmitting: true, error: null });
+
+    try {
+      // Build hiring request from wizard data
+      const scheduleDescription = contract.scheduleType === 'always'
+        ? 'Always active'
+        : `${contract.scheduleDays?.join(', ')} ${contract.scheduleStartTime}-${contract.scheduleEndTime}`;
+
+      const hiringRequest = `
+Agent: ${basicInfo.agentName}
+Function: ${basicInfo.function}
+Description: ${basicInfo.description || 'N/A'}
+
+Configuration:
+- Model: ${configuration.model}
+- Workspace: ${configuration.workspace}
+- Instructions: ${configuration.instructions}
+
+Contract:
+- Budget: $${contract.budgetAmount} per ${contract.budgetType}
+- Schedule: ${scheduleDescription}
+      `.trim();
+
+      // Calculate weekly budget (API expects weekly)
+      let weeklyBudgetUsd: number;
+      const amount = parseFloat(contract.budgetAmount);
+      switch (contract.budgetType) {
+        case 'week':
+          weeklyBudgetUsd = amount;
+          break;
+        case 'month':
+          weeklyBudgetUsd = amount / 4; // Approximate
+          break;
+        case 'year':
+          weeklyBudgetUsd = amount / 52; // Approximate
+          break;
+        default:
+          weeklyBudgetUsd = amount;
+      }
+
+      const input: HireAgentInput = {
+        hiringRequest,
+        additionalContext: `Model: ${configuration.model}, Workspace: ${configuration.workspace}, Schedule: ${scheduleDescription}`,
+        weeklyBudgetUsd,
+      };
+
+      const result = await hireAgent(input);
+      set({ isComplete: true, createdAgentId: result.agentId, isSubmitting: false, error: null });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao contratar agent';
+      set({ error: errorMessage, isSubmitting: false });
+      throw err;
+    }
+  },
 }));
 
 export const validateBasicInfo = (info: BasicInfo): Record<string, string> => {

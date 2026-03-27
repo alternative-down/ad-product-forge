@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useWizardStore, WIZARD_STEPS } from './stores/wizard-store';
+import { useWizardStore, WIZARD_STEPS, validateBasicInfo, validateConfiguration, validateContract } from './stores/wizard-store';
 import { StepIndicator } from './components/step-indicator';
 import { Step1BasicInfo } from './components/step1-basic-info';
 import { Step2Configuration } from './components/step2-configuration';
@@ -15,7 +15,7 @@ interface WizardContainerProps {
 }
 
 export function WizardContainer({ onCancel, onComplete }: WizardContainerProps) {
-  const { currentStep, nextStep, prevStep, isSubmitting, isComplete } = useWizardStore();
+  const { currentStep, nextStep, prevStep, isSubmitting, isComplete, basicInfo, configuration, contract, submit } = useWizardStore();
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -28,8 +28,37 @@ export function WizardContainer({ onCancel, onComplete }: WizardContainerProps) 
     }
   };
 
-  const isLastStep = currentStep === 5;
+  const isLastStep = currentStep === 4; // Step 4 is the review step, clicking next submits
   const isFirstStep = currentStep === 1;
+
+  const handleNext = async () => {
+    if (currentStep === 4) {
+      // Review step - validate all and submit
+      try {
+        await submit();
+        onComplete?.();
+      } catch {
+        // Error handled in store
+      }
+    } else {
+      nextStep();
+    }
+  };
+
+  const canProceed = () => {
+    switch (currentStep) {
+      case 1:
+        return Object.keys(validateBasicInfo(basicInfo)).length === 0;
+      case 2:
+        return Object.keys(validateConfiguration(configuration)).length === 0;
+      case 3:
+        return Object.keys(validateContract(contract)).length === 0;
+      case 4:
+        return true; // Review is always valid
+      default:
+        return true;
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -62,8 +91,8 @@ export function WizardContainer({ onCancel, onComplete }: WizardContainerProps) 
             >
               {isFirstStep ? 'Cancelar' : 'Voltar ◀'}
             </Button>
-            <Button onClick={nextStep} disabled={isSubmitting}>
-              Próximo ▶
+            <Button onClick={handleNext} disabled={isSubmitting || !canProceed()}>
+              {isSubmitting ? 'Processando...' : currentStep === 4 ? 'Contratar Agent ✓' : 'Próximo ▶'}
             </Button>
           </div>
         )}
