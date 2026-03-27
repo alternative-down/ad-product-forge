@@ -156,9 +156,9 @@ export const BUDGET_TOAST_MESSAGES = {
     title: 'Falha no top-up',
     description: 'Não foi possível adicionar funds. Tente novamente.',
   },
-  adjustSuccess: (newBudget: number, _previousBudget: number) => ({
+  adjustSuccess: (newBudget: number, previousBudget: number) => ({
     title: 'Budget atualizado!',
-    description: `Novo budget: $${newBudget.toFixed(2)}`,
+    description: `De $${previousBudget.toFixed(2)} → $${newBudget.toFixed(2)}`,
   }),
   adjustError: {
     title: 'Falha ao ajustar budget',
