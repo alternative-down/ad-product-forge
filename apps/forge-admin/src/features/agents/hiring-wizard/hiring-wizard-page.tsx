@@ -5,7 +5,7 @@ import { useWizardStore } from './stores/wizard-store';
 
 export function HiringWizardPage() {
   const navigate = useNavigate();
-  const { isComplete, reset } = useWizardStore();
+  const { reset } = useWizardStore();
 
   // Check URL param for step restoration
   useEffect(() => {

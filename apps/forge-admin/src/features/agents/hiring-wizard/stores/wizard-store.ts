@@ -1,13 +1,13 @@
 import { create } from 'zustand';
-import { hireAgent, type HireAgentInput } from '../../lib/api';
+import { hireAgent, type HireAgentInput } from '../../../../lib/api';
 
 // Wizard step labels
 export const WIZARD_STEPS = [
-  { id: 1, label: 'Basic Info' },
-  { id: 2, label: 'Configuration' },
-  { id: 3, label: 'Contract' },
-  { id: 4, label: 'Review' },
-  { id: 5, label: 'Confirm' },
+  { number: 1, label: 'Basic Info' },
+  { number: 2, label: 'Configuration' },
+  { number: 3, label: 'Contract' },
+  { number: 4, label: 'Review' },
+  { number: 5, label: 'Confirm' },
 ];
 
 // Types based on wireframes
@@ -74,15 +74,15 @@ const initialState: WizardState = {
 export const useWizardStore = create<WizardState & WizardActions>((set, get) => ({
   ...initialState,
 
-  setStep: (step) => set({ currentStep: step }),
+  setStep: (step: number) => set({ currentStep: step }),
   nextStep: () => { const { currentStep } = get(); if (currentStep < 5) set({ currentStep: currentStep + 1 }); },
   prevStep: () => { const { currentStep } = get(); if (currentStep > 1) set({ currentStep: currentStep - 1 }); },
-  setBasicInfo: (info) => set((state) => ({ basicInfo: { ...state.basicInfo, ...info } })),
-  setConfiguration: (config) => set((state) => ({ configuration: { ...state.configuration, ...config } })),
-  setContract: (contract) => set((state) => ({ contract: { ...state.contract, ...contract } })),
-  setSubmitting: (submitting) => set({ isSubmitting: submitting }),
-  setError: (error) => set({ error, isSubmitting: false }),
-  setComplete: (agentId) => set({ isComplete: true, createdAgentId: agentId, isSubmitting: false, error: null }),
+  setBasicInfo: (info: Partial<BasicInfo>) => set((state: WizardState) => ({ basicInfo: { ...state.basicInfo, ...info } })),
+  setConfiguration: (config: Partial<Configuration>) => set((state: WizardState) => ({ configuration: { ...state.configuration, ...config } })),
+  setContract: (contract: Partial<Contract>) => set((state: WizardState) => ({ contract: { ...state.contract, ...contract } })),
+  setSubmitting: (submitting: boolean) => set({ isSubmitting: submitting }),
+  setError: (error: string | null) => set({ error, isSubmitting: false }),
+  setComplete: (agentId: string) => set({ isComplete: true, createdAgentId: agentId, isSubmitting: false, error: null }),
   reset: () => set(initialState),
 
   submit: async () => {
