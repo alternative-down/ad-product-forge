@@ -1,7 +1,7 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
-import { agentExecutionContracts, agentExecutionSteps } from '../database/schema';
+import { agentExecutionContracts } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createAgentContractStore } from './agent-contract-store';
