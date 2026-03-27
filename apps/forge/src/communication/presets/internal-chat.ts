@@ -54,11 +54,11 @@ export function createInternalChatPreset() {
           return Array.from(agents.values())
             .filter((currentAgent) => currentAgent.id !== config.id)
             .map((currentAgent) => ({
-              slug: currentAgent.slug,
+              slug: currentAgent.id, // Use stable agentId as slug to prevent duplicates when displayName changes
               displayName: currentAgent.displayName,
               description: currentAgent.description,
               externalUserId: currentAgent.id,
-              username: currentAgent.slug,
+              username: currentAgent.slug, // Keep descriptive slug for display
             }));
         },
         async sendMessage(input) {
