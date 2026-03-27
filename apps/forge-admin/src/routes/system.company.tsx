@@ -3,9 +3,9 @@ import { createFileRoute } from '@tanstack/react-router';
 import { SystemDetailPage } from '../features/system/page';
 
 export const Route = createFileRoute('/system/company')({
-  component: SystemCompanyRoute,
+  component: _SystemCompanyRoute,
 });
 
-function SystemCompanyRoute() {
+function _SystemCompanyRoute() {
   return <SystemDetailPage section="company" />;
 }

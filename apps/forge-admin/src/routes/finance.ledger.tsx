@@ -3,9 +3,9 @@ import { createFileRoute } from '@tanstack/react-router';
 import { FinanceDetailPage } from '../features/finance/page';
 
 export const Route = createFileRoute('/finance/ledger')({
-  component: FinanceLedgerRoute,
+  component: _FinanceLedgerRoute,
 });
 
-function FinanceLedgerRoute() {
+function _FinanceLedgerRoute() {
   return <FinanceDetailPage section="ledger" />;
 }
