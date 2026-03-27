@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { cn } from '@forge/ui';
-import { AlertTriangle, AlertCircle, CheckCircle, Info, X } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@forge/ui';
 
 export type BudgetToastVariant = 'success' | 'warning' | 'error' | 'info';
@@ -156,7 +156,7 @@ export const BUDGET_TOAST_MESSAGES = {
     title: 'Falha no top-up',
     description: 'Não foi possível adicionar funds. Tente novamente.',
   },
-  adjustSuccess: (newBudget: number, previousBudget: number) => ({
+  adjustSuccess: (newBudget: number, _previousBudget: number) => ({
     title: 'Budget atualizado!',
     description: `Novo budget: $${newBudget.toFixed(2)}`,
   }),

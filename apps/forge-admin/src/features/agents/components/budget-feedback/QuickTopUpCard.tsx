@@ -30,7 +30,6 @@ const HIGH_VALUE_THRESHOLD = 100;
 export function QuickTopUpCard({
   budgetRemaining,
   onTopUp,
-  isLoading,
   className,
 }: QuickTopUpCardProps) {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);

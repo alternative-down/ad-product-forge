@@ -38,7 +38,6 @@ export function BudgetAdjustCard({
   minBudget = 5,
   canDecrease = false,
   onAdjust,
-  isLoading,
   className,
 }: BudgetAdjustCardProps) {
   const [customBudget, setCustomBudget] = useState(currentBudget.toString());
