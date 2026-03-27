@@ -687,6 +687,16 @@ export function topUpAgentContract(input: { agentId: string; amountUsd: number }
   );
 }
 
+export function adjustAgentContractBudget(input: { agentId: string; newBudgetUsd: number }) {
+  return request<{ agentId: string; contractId: string; newBudgetUsd: number }>(
+    '/admin/agent/contract/adjust-budget',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
 export function hireAgent(input: HireAgentInput) {
   return request<HireAgentResult>('/admin/agent/hire', {
     method: 'POST',

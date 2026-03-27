@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 
 import {
+  adjustAgentContractBudget,
   changeAgentFunction,
   createSchedule,
   deleteAgentProvider,
@@ -178,6 +179,16 @@ function AgentsWorkspacePage(input: {
   });
   const topUpContractMutation = useMutation({
     mutationFn: topUpAgentContract,
+    onSuccess: async (_, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
+      ]);
+    },
+  });
+  const adjustBudgetMutation = useMutation({
+    mutationFn: adjustAgentContractBudget,
     onSuccess: async (_, input) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
@@ -644,6 +655,20 @@ function AgentsWorkspacePage(input: {
                             topUpContractMutation.mutate({
                               agentId: agentDetailQuery.data!.agentId,
                               amountUsd,
+                            })
+                          }
+                        />
+
+                        <ContractBudgetAdjustCard
+                          pending={adjustBudgetMutation.isPending}
+                          error={adjustBudgetMutation.error?.message ?? null}
+                          disabled={!agentDetailQuery.data.activeContract}
+                          currentBudgetUsd={agentDetailQuery.data.activeContract?.weeklyValueUsd ?? 0}
+                          spentUsd={agentDetailQuery.data.activeContract?.spentUsd ?? 0}
+                          onSubmit={(newBudgetUsd) =>
+                            adjustBudgetMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              newBudgetUsd,
                             })
                           }
                         />
@@ -1325,6 +1350,76 @@ function ContractTopUpCard(input: {
             </>
           ) : (
             'Top up budget'
+          )}
+        </Button>
+      </form>
+
+      {input.error ? (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {input.error}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function ContractBudgetAdjustCard(input: {
+  pending: boolean;
+  error: string | null;
+  disabled: boolean;
+  currentBudgetUsd: number;
+  spentUsd: number;
+  onSubmit(newBudgetUsd: number): void;
+}) {
+  const [newBudgetUsd, setNewBudgetUsd] = useState('');
+
+  const difference = newBudgetUsd ? Number(newBudgetUsd) - input.currentBudgetUsd : 0;
+  const isIncrease = difference > 0;
+
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-950">Adjust budget</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Set a new weekly budget for this contract. Decrease only allowed when agent is not running and above spent amount.
+        </p>
+      </div>
+
+      <form
+        className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end"
+        onSubmit={(event) => {
+          event.preventDefault();
+          input.onSubmit(Number(newBudgetUsd));
+        }}
+      >
+        <LabeledField label="New budget (USD)" className="min-w-[220px]">
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={newBudgetUsd}
+            onChange={(event) => setNewBudgetUsd(event.target.value)}
+            disabled={input.disabled || input.pending}
+            required
+          />
+        </LabeledField>
+        {newBudgetUsd && difference !== 0 ? (
+          <div className="text-sm">
+            {isIncrease ? (
+              <span className="text-green-600">+${difference.toFixed(2)}/week</span>
+            ) : (
+              <span className="text-orange-600">${difference.toFixed(2)}/week</span>
+            )}
+          </div>
+        ) : null}
+        <Button type="submit" disabled={input.disabled || input.pending || !newBudgetUsd}>
+          {input.pending ? (
+            <>
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+              Adjusting...
+            </>
+          ) : (
+            'Apply budget'
           )}
         </Button>
       </form>

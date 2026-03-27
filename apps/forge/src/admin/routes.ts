@@ -39,6 +39,7 @@ import { createCompanyPayables } from '../finance/company-payables';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
+import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 import { createSystemSettingsStore } from '../system-settings/store';
 
 const agentIdQuerySchema = z.object({
@@ -126,6 +127,11 @@ const agentActionSchema = z.object({
 const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
   amountUsd: z.coerce.number().positive(),
+});
+
+const adjustAgentContractBudgetSchema = z.object({
+  agentId: z.string().min(1),
+  newBudgetUsd: z.coerce.number().min(0),
 });
 
 const hireAgentSchema = z.object({
@@ -454,6 +460,15 @@ export function registerAdminRoutes(input: {
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
       return jsonResponse(await topUpActiveAgentContract(input.db, body));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/contract/adjust-budget',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
+      return jsonResponse(await adjustAgentContractBudget(input.db, body));
     },
   });
 

@@ -5,6 +5,7 @@ import type { Database } from '../database/index';
 import { hasToolPermission } from '../capabilities/catalog';
 import { createMicroErpReadModel } from './read-model';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
+import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 
 const listCompanyCashInputSchema = z.object({
   direction: z.enum(['in', 'out']).optional(),
@@ -59,6 +60,21 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
       execute: async (input) => topUpActiveAgentContract(db, {
         agentId: input.agentId,
         amountUsd: input.amountUsd,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'adjust_agent_contract_budget')) {
+    tools.adjust_agent_contract_budget = createTool({
+      id: 'adjust_agent_contract_budget',
+      description: 'Adjust (increase or decrease) the budget of an internal agent contract. Use to set a new target budget. Cannot reduce below the already-spent amount. Cannot adjust while agent is running.',
+      inputSchema: z.object({
+        agentId: z.string().min(1),
+        newBudgetUsd: z.number().min(0),
+      }),
+      execute: async (input) => adjustAgentContractBudget(db, {
+        agentId: input.agentId,
+        newBudgetUsd: input.newBudgetUsd,
       }),
     });
   }
