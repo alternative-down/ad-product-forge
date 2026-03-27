@@ -6,20 +6,10 @@
 ALTER TABLE `communication_contacts` ADD COLUMN `contact_id` text;
 
 -- Step 2: Generate UUIDs for existing contacts
--- For duplicates, we use rowid to create unique UUIDs
--- This ensures each row gets a unique contact_id even if slugs are duplicated
-WITH ranked AS (
-  SELECT 
-    rowid,
-    `slug`,
-    lower(hex(sha1(`slug` || '-' || rowid))) || '-0000-0000-0000-000000000000' as new_id
-  FROM `communication_contacts`
-  WHERE `contact_id` IS NULL
-)
-UPDATE `communication_contacts`
-SET `contact_id` = (
-  SELECT new_id FROM ranked WHERE ranked.rowid = `communication_contacts`.rowid
-)
+-- Each contact gets a unique UUID using rowid to ensure uniqueness even for duplicate slugs
+-- Format: first 16 chars from sha1(slug+rowid) + rowid hex suffix for guaranteed uniqueness
+UPDATE `communication_contacts` 
+SET `contact_id` = lower(hex(sha1(`slug` || rowid))) || '-' || lower(hex(rowid))
 WHERE `contact_id` IS NULL;
 
 -- Step 3: Update communicationContactAccounts to use contactId
