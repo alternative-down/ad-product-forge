@@ -1034,7 +1034,7 @@ function AgentMaintenanceCard(input: {
             <LabeledField label="Assigned function">
               <Select
                 value={input.selectedFunctionId}
-                onChange={(event) => input.onSelectedFunctionIdChange(event.target.value)}
+                onChange={(value) => input.onSelectedFunctionIdChange(value)}
               >
                 <option value="" disabled>
                   Select function
@@ -1153,8 +1153,8 @@ function AgentConfigurationCard(input: {
           <LabeledField label="Primary LLM profile">
             <Select
               value={input.draft.modelProfileId}
-              onChange={(event) =>
-                input.onChange({ ...input.draft, modelProfileId: event.target.value })
+              onChange={(value) =>
+                input.onChange({ ...input.draft, modelProfileId: value })
               }
               required
             >
@@ -1168,8 +1168,8 @@ function AgentConfigurationCard(input: {
           <LabeledField label="OM profile">
             <Select
               value={input.draft.omModelProfileId}
-              onChange={(event) =>
-                input.onChange({ ...input.draft, omModelProfileId: event.target.value })
+              onChange={(value) =>
+                input.onChange({ ...input.draft, omModelProfileId: value })
               }
               required
             >
@@ -1530,11 +1530,11 @@ function AgentProvidersCard(input: {
               <LabeledField label="Provider type">
                 <Select
                   value={input.newProviderDraft.providerType}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     input.onChangeNewProviderDraft({
-                      providerType: event.target.value as 'discord' | 'email',
+                      providerType: value as 'discord' | 'email',
                       credentialsText: createProviderTemplate(
-                        event.target.value as 'discord' | 'email',
+                        value as 'discord' | 'email',
                       ),
                     })
                   }
@@ -1929,10 +1929,10 @@ function ScheduleEditorCard(input: {
           <LabeledField label="Schedule type">
             <Select
               value={input.draft.scheduleType}
-              onChange={(event) =>
+              onChange={(value) =>
                 input.onChange({
                   ...input.draft,
-                  scheduleType: event.target.value as 'cron' | 'date',
+                  scheduleType: value as 'cron' | 'date',
                 })
               }
             >
