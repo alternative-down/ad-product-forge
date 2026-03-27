@@ -1,5 +1,7 @@
 # ad-product-forge — Análise Comercial
 
+> ⚠️ **AVISO IMPORTANTE:** Este documento é uma **PROPOSTA ESTRATÉGICA** de valor para transformação do ad-product-forge em um produto vendável. **NÃO é uma lista de tarefas de implementação.** As oportunidades aqui descritas são hipóteses para discussão estratégica — a decisão de implementação cabe à equipe.
+
 > **Público:** Nicolas  
 > **Data:** 27 de março de 2026  
 > **Objetivo:** Levantamento de insights comerciais, oportunidades de mercado e propostas de valor

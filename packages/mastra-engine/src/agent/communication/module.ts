@@ -398,10 +398,11 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    if (input.conversationId) {
-      throw new Error(
-        `Conversation not found: ${input.conversationId}`,
-      );
+    // If conversationId is provided but not found, fall through to on-the-fly creation
+    // (same pattern as Issue #214 for providerConversationKey)
+    // Only throw if we have no fallback option (providerConversationKey or contactSlug)
+    if (input.conversationId && !input.providerConversationKey && !input.contactSlug) {
+      throw new Error(`Conversation not found: ${input.conversationId}`);
     }
 
     // If providerConversationKey is provided but conversation doesn't exist,

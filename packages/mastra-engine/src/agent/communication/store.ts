@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 import { z } from 'zod';
-import { eq, and, inArray, or } from 'drizzle-orm';
+import { eq, and, inArray, or, ne } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from './schema';
 
@@ -44,6 +44,7 @@ const chatGroupMemberSchema = z.object({
   participantName: z.string(),
   role: z.string().default('normal'), // 'admin' or 'normal'
   createdAt: z.string(),
+  instanceId: z.string().optional(),
 });
 
 const messageSchema = z.object({
@@ -634,6 +635,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     participantId: string;
     participantName: string;
     role?: string;
+    instanceId?: string;
   }) {
     const now = new Date().toISOString();
 
@@ -656,11 +658,13 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       participantName: input.participantName,
       role: input.role ?? 'normal',
       createdAt: now,
+      instanceId: input.instanceId ?? null,
     }).onConflictDoUpdate({
       target: [schema.chatGroupMembers.groupId, schema.chatGroupMembers.participantId],
       set: {
         participantName: input.participantName,
         role: input.role ?? 'normal',
+        instanceId: input.instanceId ?? null,
       },
     });
 
@@ -670,6 +674,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       participantName: input.participantName,
       role: input.role ?? 'normal',
       createdAt: now,
+      instanceId: input.instanceId,
     };
   }
 
@@ -729,7 +734,82 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       participantName: member.participantName,
       role: member.role,
       createdAt: member.createdAt,
+      instanceId: member.instanceId,
     }));
+  }
+
+  // ============= Instance Management for Cross-Instance Fan-Out =============
+
+  async function upsertInstance(input: {
+    instanceId: string;
+    baseUrl: string;
+    displayName?: string;
+    isLocal?: boolean;
+  }) {
+    const now = new Date().toISOString();
+    const existing = await db.query.mastraInstances.findFirst({
+      where: eq(schema.mastraInstances.instanceId, input.instanceId),
+    });
+
+    if (existing) {
+      await db.update(schema.mastraInstances)
+        .set({
+          baseUrl: input.baseUrl,
+          displayName: input.displayName,
+          isLocal: input.isLocal ? 1 : 0,
+          updatedAt: now,
+        })
+        .where(eq(schema.mastraInstances.instanceId, input.instanceId));
+    } else {
+      await db.insert(schema.mastraInstances).values({
+        instanceId: input.instanceId,
+        baseUrl: input.baseUrl,
+        displayName: input.displayName,
+        isLocal: input.isLocal ? 1 : 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return { instanceId: input.instanceId, baseUrl: input.baseUrl, displayName: input.displayName };
+  }
+
+  async function getInstance(instanceId: string) {
+    return db.query.mastraInstances.findFirst({
+      where: eq(schema.mastraInstances.instanceId, instanceId),
+    });
+  }
+
+  async function getInstanceByUrl(baseUrl: string) {
+    return db.query.mastraInstances.findFirst({
+      where: eq(schema.mastraInstances.baseUrl, baseUrl),
+    });
+  }
+
+  async function listInstances() {
+    return db.query.mastraInstances.findMany();
+  }
+
+  async function getLocalInstance() {
+    return db.query.mastraInstances.findFirst({
+      where: eq(schema.mastraInstances.isLocal, 1),
+    });
+  }
+
+  async function getGroupMembersByInstance(groupId: string, excludeInstanceId: string) {
+    // Get members from other instances (for fan-out delivery)
+    const members = await db.query.chatGroupMembers.findMany({
+      where: and(
+        eq(schema.chatGroupMembers.groupId, groupId),
+        schema.chatGroupMembers.instanceId ? 
+          and(
+            ne(schema.chatGroupMembers.instanceId, excludeInstanceId),
+            ne(schema.chatGroupMembers.instanceId, '')
+          ) : 
+          eq(schema.chatGroupMembers.instanceId, '')
+      ),
+    });
+    return members;
   }
 
   return {
@@ -752,5 +832,12 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     removeMemberFromGroup,
     listChatGroups,
     listGroupMembers,
+    // Instance management
+    upsertInstance,
+    getInstance,
+    getInstanceByUrl,
+    listInstances,
+    getLocalInstance,
+    getGroupMembersByInstance,
   };
 }

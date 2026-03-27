@@ -16,13 +16,13 @@ export type HttpResponse = {
   body?: string | Buffer;
 };
 
-type HttpHandler = (request: HttpRequest) => Promise<HttpResponse> | HttpResponse;
+export type HttpHandler = (request: HttpRequest) => Promise<HttpResponse> | HttpResponse;
 
 type RouteKey = `${string} ${string}`;
 
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET,POST,OPTIONS',
+  'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS',
   'access-control-allow-headers': 'content-type,x-forge-admin-api-key',
 };
 
@@ -113,7 +113,7 @@ export function createForgeHttpServer(config: { port: number; adminApiKey?: stri
     }
   });
 
-  function registerRoute(input: { method: 'GET' | 'POST'; path: string; handler: HttpHandler }) {
+  function registerRoute(input: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: HttpHandler }) {
     const key = `${input.method} ${input.path}` as RouteKey;
     routes.set(key, input.handler);
 
