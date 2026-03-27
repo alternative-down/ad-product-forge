@@ -348,6 +348,32 @@ export function createGitHubAppManager(config: {
     };
   }
 
+  async function listPullRequestComments(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    pullRequestNumber: number;
+    direction?: 'asc' | 'desc';
+    limit?: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}/comments', {
+      owner,
+      repo: input.repositoryName,
+      pull_number: input.pullRequestNumber,
+      direction: input.direction ?? 'asc',
+      per_page: Math.min(input.limit ?? 100, 100),
+    });
+
+    return response.data.map((comment) => ({
+      id: comment.id,
+      body: comment.body,
+      user: comment.user?.login ?? null,
+      createdAt: comment.created_at,
+      updatedAt: comment.updated_at,
+    }));
+  }
+
   async function updatePullRequest(agentId: string, input: {
     owner?: string;
     repositoryName: string;
@@ -876,6 +902,7 @@ export function createGitHubAppManager(config: {
     createPullRequest,
     getPullRequest,
     updatePullRequest,
+    listPullRequestComments,
     listIssues,
     getIssue,
     createIssue,
