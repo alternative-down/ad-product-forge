@@ -251,6 +251,13 @@ export type HireAgentInput = {
   weeklyBudgetUsd: number;
 };
 
+export type Workspace = {
+  workspaceId: string;
+  name: string;
+  description?: string;
+  createdAt: number;
+};
+
 export type HireAgentResult = {
   agentId: string;
   emailAddress: string | null;
@@ -616,6 +623,10 @@ export function getAgent(agentId: string) {
 
 export function listFunctions() {
   return request<AgentFunction[]>('/admin/functions');
+}
+
+export function listWorkspaces() {
+  return request<Workspace[]>('/admin/workspaces');
 }
 
 export function listRoles() {
