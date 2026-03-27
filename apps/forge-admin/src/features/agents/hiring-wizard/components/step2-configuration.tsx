@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Info } from 'lucide-react';
+import { Info, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useWizardStore, validateConfiguration, type AIModel } from '../stores/wizard-store';
+import { listWorkspaces } from '../../lib/api';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Select } from '../../components/ui/select';
@@ -14,17 +16,16 @@ const MODEL_OPTIONS: { value: AIModel; label: string; cost: string; description:
   { value: 'claude-3-5-haiku', label: 'Claude 3.5 Haiku', cost: '💰', description: 'Rápido, econômico' },
 ];
 
-// Mock workspaces - in real implementation, fetch from API
-const WORKSPACE_OPTIONS = [
-  { value: 'vox-workspace', label: 'vox-workspace' },
-  { value: 'brand-voice-workspace', label: 'brand-voice-workspace' },
-  { value: 'analytics-workspace', label: 'analytics-workspace' },
-];
-
 export function Step2Configuration() {
   const { configuration, setConfiguration, nextStep, prevStep } = useWizardStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Fetch workspaces from API
+  const { data: workspaces, isLoading: workspacesLoading } = useQuery({
+    queryKey: ['workspaces'],
+    queryFn: listWorkspaces,
+  });
 
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -73,9 +74,9 @@ export function Step2Configuration() {
             {MODEL_OPTIONS.map((opt) => (
               <div
                 key={opt.value}
-                className={`p-2 rounded border text-xs ${
+                className={\`p-2 rounded border text-xs \${
                   configuration.model === opt.value ? 'border-primary bg-primary/5' : 'border-muted'
-                }`}
+                }\`}
               >
                 <div className="font-medium">{opt.label}</div>
                 <div className="text-muted-foreground">{opt.cost}</div>
@@ -112,17 +113,26 @@ export function Step2Configuration() {
             Workspace <span className="text-destructive">*</span>
             <Info className="w-3 h-3 text-muted-foreground" title="Espaço de armazenamento para arquivos e memória persistente." />
           </label>
-          <Select
-            value={configuration.workspace}
-            onChange={(value) => setConfiguration({ workspace: value })}
-            onBlur={() => handleBlur('workspace')}
-            className={touched.workspace && errors.workspace ? 'border-destructive' : ''}
-          >
-            <option value="">Selecione um workspace</option>
-            {WORKSPACE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </Select>
+          {workspacesLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Carregando workspaces...
+            </div>
+          ) : (
+            <Select
+              value={configuration.workspace}
+              onChange={(value) => setConfiguration({ workspace: value })}
+              onBlur={() => handleBlur('workspace')}
+              className={touched.workspace && errors.workspace ? 'border-destructive' : ''}
+            >
+              <option value="">Selecione um workspace</option>
+              {workspaces?.map((ws) => (
+                <option key={ws.workspaceId} value={ws.workspaceId}>
+                  {ws.name}
+                </option>
+              ))}
+            </Select>
+          )}
           {touched.workspace && errors.workspace && <p className="text-xs text-destructive mt-1">{errors.workspace}</p>}
           <p className="text-xs text-muted-foreground mt-1">Diretório de trabalho para arquivos e memória.</p>
         </div>
