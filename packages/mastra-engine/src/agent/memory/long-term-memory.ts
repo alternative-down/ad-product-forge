@@ -75,7 +75,7 @@ vectorStore: this.vectorStore,
       id: this.id + '-agent',
       name: 'Memory Consolidation Agent',
       instructions:
-        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to read /observations, extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed observations to /archived.',
+        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to list the contents of /observations first using list_files, then read only the FILES (not directories), extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed files to /archived. IMPORTANT: Always check with list_files to see what exists before reading, and never attempt to read_file on a directory path - this will cause an IsDirectoryError.',
       model: this.omModel,
       workspace: this.workspace,
     });
