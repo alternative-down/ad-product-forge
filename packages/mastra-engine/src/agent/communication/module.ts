@@ -29,13 +29,32 @@ export async function createCommunicationModule(config: {
     }
 
     for (const contact of await provider.syncContacts()) {
-      await store.upsertContact({
-        slug: contact.slug,
-        displayName: contact.displayName,
-        provider: provider.id,
-        externalUserId: contact.externalUserId,
-        username: contact.username,
-      });
+      // First check if contact exists by externalUserId (stable identifier)
+      const existingByIdentity = contact.externalUserId
+        ? await store.findContactByIdentity(provider.id, contact.externalUserId)
+        : null;
+
+      if (existingByIdentity) {
+        // Contact exists with different slug - update it to use new slug
+        // This handles migration from displayName-based slugs to agentId-based slugs
+        await store.updateContactSlug({
+          oldSlug: existingByIdentity.slug,
+          newSlug: contact.slug,
+          displayName: contact.displayName,
+          provider: provider.id,
+          externalUserId: contact.externalUserId,
+          username: contact.username,
+        });
+      } else {
+        // New contact - insert it
+        await store.upsertContact({
+          slug: contact.slug,
+          displayName: contact.displayName,
+          provider: provider.id,
+          externalUserId: contact.externalUserId,
+          username: contact.username,
+        });
+      }
     }
   }
 

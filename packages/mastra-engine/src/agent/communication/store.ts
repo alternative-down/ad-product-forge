@@ -289,6 +289,48 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     return loadContact(slug);
   }
 
+  async function updateContactSlug(input: {
+    oldSlug: string;
+    newSlug: string;
+    displayName: string;
+    provider: string;
+    externalUserId?: string;
+    username?: string;
+  }) {
+    // Update the contact's slug
+    await db
+      .update(schema.communicationContacts)
+      .set({
+        slug: input.newSlug,
+        displayName: input.displayName,
+      })
+      .where(eq(schema.communicationContacts.slug, input.oldSlug));
+
+    // Update all related contact accounts to use the new slug
+    await db
+      .update(schema.communicationContactAccounts)
+      .set({ slug: input.newSlug })
+      .where(
+        and(
+          eq(schema.communicationContactAccounts.slug, input.oldSlug),
+          eq(schema.communicationContactAccounts.provider, input.provider)
+        )
+      );
+
+    // Update any conversations referencing the old slug
+    await db
+      .update(schema.communicationConversations)
+      .set({ contactSlug: input.newSlug })
+      .where(
+        and(
+          eq(schema.communicationConversations.contactSlug, input.oldSlug),
+          eq(schema.communicationConversations.provider, input.provider)
+        )
+      );
+
+    return loadContact(input.newSlug);
+  }
+
   async function upsertConversation(input: {
     provider: string;
     providerConversationKey: string;
@@ -819,6 +861,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     getContact,
     findContactByIdentity,
     upsertContact,
+    updateContactSlug,
     upsertConversation,
     getConversation,
     getConversationByProviderConversationKey,
