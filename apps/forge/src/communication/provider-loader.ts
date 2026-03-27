@@ -61,6 +61,7 @@ export type ProviderCredentialsMap = {
 
 export interface ProviderLoaderConfig {
   workspaceBasePath: string;
+  propagateMessage?: (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>;
 }
 
 /**
@@ -83,6 +84,7 @@ function createGroupMembersGetter(workspaceBasePath: string, agentId: string) {
       return members.map((member) => ({
         id: member.participantId,
         displayName: member.participantName,
+        instanceId: member.instanceId ?? null,
       }));
     } catch (error) {
       console.error(`[ProviderLoader] Failed to list group members for group ${groupId}:`, error);
@@ -108,7 +110,8 @@ export function loadCommunicationProviders(
       id: string;
       displayName: string;
       description?: string;
-      getGroupMembers?: (groupId: string) => Promise<{ id: string; displayName: string }[]>;
+      getGroupMembers?: (groupId: string) => Promise<{ id: string; displayName: string; instanceId: string | null }[]>;
+      propagateMessage?: (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>;
     } = {
       id: agentId,
       displayName: displayName ?? agentId,
@@ -118,6 +121,11 @@ export function loadCommunicationProviders(
     // Only add getGroupMembers if we have workspace config
     if (config?.workspaceBasePath) {
       providerConfig.getGroupMembers = createGroupMembersGetter(config.workspaceBasePath, agentId);
+    }
+
+    // Add propagateMessage if configured (for cross-instance fan-out)
+    if (config?.propagateMessage) {
+      providerConfig.propagateMessage = config.propagateMessage;
     }
 
     providers.push(internalChatPreset.createProvider(providerConfig));

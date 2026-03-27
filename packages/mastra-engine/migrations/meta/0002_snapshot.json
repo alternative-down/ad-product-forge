@@ -1,0 +1,40 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "0002_fan_out_instance_tracking",
+  "prevId": "0001_tearful_shaman",
+  "tags": ["fan-out", "cross-instance"],
+  "createdAt": 1743072000000,
+  "checksum": "X",
+  "tables": {
+    "mastra_instances": {
+      "name": "mastra_instances",
+      "columns": {
+        "instance_id": { "name": "instance_id", "type": "text", "primaryKey": true },
+        "base_url": { "name": "base_url", "type": "text", "notNull": true },
+        "display_name": { "name": "display_name", "type": "text" },
+        "is_local": { "name": "is_local", "type": "integer", "notNull": true, "default": 0 },
+        "created_at": { "name": "created_at", "type": "text", "notNull": true },
+        "updated_at": { "name": "updated_at", "type": "text", "notNull": true }
+      },
+      "indexes": [
+        { "name": "idx_mastra_instances_base_url", "columns": ["base_url"] },
+        { "name": "idx_mastra_instances_is_local", "columns": ["is_local"] }
+      ]
+    },
+    "forge_chat_group_members": {
+      "name": "forge_chat_group_members",
+      "columns": {
+        "group_id": { "name": "group_id", "type": "text", "notNull": true },
+        "participant_id": { "name": "participant_id", "type": "text", "notNull": true },
+        "participant_name": { "name": "participant_name", "type": "text", "notNull": true },
+        "role": { "name": "role", "type": "text", "notNull": true, "default": "'normal'" },
+        "created_at": { "name": "created_at", "type": "text", "notNull": true },
+        "instance_id": { "name": "instance_id", "type": "text" }
+      },
+      "indexes": [
+        { "name": "idx_chat_group_members_instance_id", "columns": ["instance_id"] }
+      ]
+    }
+  }
+}
