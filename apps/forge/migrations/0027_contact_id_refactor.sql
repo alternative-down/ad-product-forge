@@ -5,10 +5,21 @@
 -- Step 1: Add contactId column to communicationContacts (nullable initially)
 ALTER TABLE `communication_contacts` ADD COLUMN `contact_id` text;
 
--- Step 2: Generate UUIDs for existing contacts using slug as seed
--- Using hex(sha1(slug))[:16] to create deterministic-ish UUIDs for existing data
-UPDATE `communication_contacts` 
-SET `contact_id` = lower(hex(sha1(`slug`))) || '00000000-0000-0000-0000-000000000000'
+-- Step 2: Generate UUIDs for existing contacts
+-- For duplicates, we use rowid to create unique UUIDs
+-- This ensures each row gets a unique contact_id even if slugs are duplicated
+WITH ranked AS (
+  SELECT 
+    rowid,
+    `slug`,
+    lower(hex(sha1(`slug` || '-' || rowid))) || '-0000-0000-0000-000000000000' as new_id
+  FROM `communication_contacts`
+  WHERE `contact_id` IS NULL
+)
+UPDATE `communication_contacts`
+SET `contact_id` = (
+  SELECT new_id FROM ranked WHERE ranked.rowid = `communication_contacts`.rowid
+)
 WHERE `contact_id` IS NULL;
 
 -- Step 3: Update communicationContactAccounts to use contactId
