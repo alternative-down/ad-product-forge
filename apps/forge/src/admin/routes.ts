@@ -776,11 +776,10 @@ export function registerAdminRoutes(input: {
     path: '/admin/agent-task/list',
     handler: async (request) => {
       try {
-        const url = new URL(request.url, 'http://localhost');
-        const targetAgentId = url.searchParams.get('targetAgentId');
-        const status = (url.searchParams.get('status') ?? 'pending') as TaskStatus;
-        const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '50', 10), 100);
-        const agentId = url.searchParams.get('agentId');
+        const targetAgentId = request.query.get('targetAgentId');
+        const status = (request.query.get('status') ?? 'pending') as TaskStatus;
+        const limit = Math.min(parseInt(request.query.get('limit') ?? '50', 10), 100);
+        const agentId = request.query.get('agentId');
 
         if (!agentId) {
           return jsonResponse({ error: 'agentId query parameter is required.' }, 400);

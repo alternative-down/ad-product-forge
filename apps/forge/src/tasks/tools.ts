@@ -120,7 +120,7 @@ export function createTaskTools(
       description: 'Create a task for another agent to execute. Requires COORDINATOR role. Use this when you need to delegate work to a specific agent.',
       inputSchema: createTaskForAgentInputSchema,
       execute: async (input, context) => {
-        const coordinatorId = context?.agentId ?? agentId;
+        const coordinatorId = context?.agent?.agentId ?? agentId;
 
         // Check COORDINATOR role
         const isCoordinator = await checkCoordinatorRole(coordinatorId);
@@ -189,7 +189,7 @@ export function createTaskTools(
       description: 'List tasks. Without filter, shows only your own created tasks. With targetAgentId filter, requires COORDINATOR role.',
       inputSchema: listAgentTasksInputSchema,
       execute: async (input, context) => {
-        const callerId = context?.agentId ?? agentId;
+        const callerId = context?.agent?.agentId ?? agentId;
 
         // If filtering by targetAgentId, require COORDINATOR role
         if (input.targetAgentId) {
