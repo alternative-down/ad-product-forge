@@ -176,6 +176,20 @@
       "when": 1775000000001,
       "tag": "0024_classy_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1775080000000,
+      "tag": "0025_chat_groups_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1775081000000,
+      "tag": "0026_agent_task_scheduling",
+      "breakpoints": true
     }
   ]
 }
