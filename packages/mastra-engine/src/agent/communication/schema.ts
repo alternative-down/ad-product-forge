@@ -168,6 +168,7 @@ export const chatGroupMembers = sqliteTable(
     participantName: text('participant_name').notNull(),
     role: text('role').notNull().default('normal'), // 'admin' or 'normal'
     createdAt: text('created_at').notNull(),
+    instanceId: text('instance_id'), // null = same instance, string = remote instance ID
   },
   (table) => {
     return {
@@ -211,3 +212,39 @@ export type NewCommunicationMessage = typeof communicationMessages.$inferInsert;
 
 export type ChatGroupMember = typeof chatGroupMembers.$inferSelect;
 export type NewChatGroupMember = typeof chatGroupMembers.$inferInsert;
+
+/**
+ * Stores Mastra instance information for cross-instance communication
+ */
+export const mastraInstances = sqliteTable(
+  'mastra_instances',
+  {
+    instanceId: text('instance_id').primaryKey(),
+    baseUrl: text('base_url').notNull(),
+    displayName: text('display_name'),
+    isLocal: integer('is_local').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => {
+    return {
+      // Index for fast lookup by base_url
+      baseUrlIdx: index('idx_mastra_instances_base_url').on(table.baseUrl),
+      // Index for finding local instance
+      isLocalIdx: index('idx_mastra_instances_is_local').on(table.isLocal),
+    };
+  },
+);
+
+/**
+ * Relations for mastra_instances
+ */
+export const mastraInstancesRelations = relations(mastraInstances, ({ many }) => ({
+  groupMembers: many(chatGroupMembers),
+}));
+
+/**
+ * Type definitions for Mastra instances
+ */
+export type MastraInstance = typeof mastraInstances.$inferSelect;
+export type NewMastraInstance = typeof mastraInstances.$inferInsert;
