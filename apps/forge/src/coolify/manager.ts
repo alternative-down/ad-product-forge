@@ -160,6 +160,21 @@ export function createCoolifyManager(config: {
     }));
   }
 
+  async function _getGithubAppId(githubAppUuid: string): Promise<number> {
+    const apps = await listGitHubApps();
+    const app = apps.find((a) => a.githubAppUuid === githubAppUuid);
+
+    if (!app) {
+      throw new Error(`GitHub App with UUID ${githubAppUuid} not found`);
+    }
+
+    if (typeof app.githubAppId !== 'number') {
+      throw new Error(`GitHub App ${githubAppUuid} is missing numeric githubAppId in Coolify`);
+    }
+
+    return app.githubAppId;
+  }
+
   async function listApplications() {
     const data = await requestJson('GET', '/applications');
     const applications = extractCollection(data, ApplicationSchema);
