@@ -410,6 +410,66 @@ export function createGitHubAppManager(config: {
     };
   }
 
+  async function mergePullRequest(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    pullRequestNumber: number;
+    commitTitle?: string;
+    commitMessage?: string;
+    mergeMethod?: 'merge' | 'squash' | 'rebase';
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+
+    const mutation = `
+      mutation MergePullRequest($input: MergePullRequestInput!) {
+        mergePullRequest(input: $input) {
+          pullRequest {
+            number
+            title
+            merged
+            state
+            url
+          }
+        }
+      }
+    `;
+
+    // GitHub GraphQL requires node IDs, so we fetch the PR first
+    const prResponse = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+      owner,
+      repo: input.repositoryName,
+      pull_number: input.pullRequestNumber,
+    });
+
+    const response = (await octokit.graphql(mutation, {
+      input: {
+        pullRequestId: prResponse.data.node_id,
+        commitHeadline: input.commitTitle,
+        commitBody: input.commitMessage,
+        mergeMethod: input.mergeMethod,
+      },
+    })) as {
+      mergePullRequest: {
+        pullRequest: {
+          number: number;
+          title: string;
+          merged: boolean;
+          state: string;
+          url: string;
+        };
+      };
+    };
+
+    return {
+      number: response.mergePullRequest.pullRequest.number,
+      title: response.mergePullRequest.pullRequest.title,
+      merged: response.mergePullRequest.pullRequest.merged,
+      state: response.mergePullRequest.pullRequest.state,
+      url: response.mergePullRequest.pullRequest.url,
+    };
+  }
+
   async function listIssues(agentId: string, input: {
     owner?: string;
     repositoryName: string;
@@ -902,6 +962,7 @@ export function createGitHubAppManager(config: {
     createPullRequest,
     getPullRequest,
     updatePullRequest,
+    mergePullRequest,
     listPullRequestComments,
     listIssues,
     getIssue,
