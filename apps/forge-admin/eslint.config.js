@@ -19,6 +19,12 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true, allowExportNames: ['Route'], extraHOCs: ['Route'] }
+      ],
+    },
   },
   // TanStack Router route files export Route objects alongside components
   {

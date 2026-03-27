@@ -41,6 +41,21 @@ import { createLlmModelPriceStore } from '../llm/model-price-store';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 import { createSystemSettingsStore } from '../system-settings/store';
+import {
+  createTask,
+  listAgentTasks,
+  listCoordinatorTasks,
+  updateTask,
+  cancelTask,
+  countCoordinatorTasksLastHour,
+  countAgentTasks,
+  hasDuplicateTask,
+  type TaskStatus,
+} from '../tasks/store';
+
+// Rate limit constants for task routes
+const MAX_TASKS_PER_COORDINATOR_PER_HOUR = 10;
+const MAX_TASKS_PER_AGENT_TOTAL = 100;
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -666,6 +681,183 @@ export function registerAdminRoutes(input: {
       const body = parseJsonBody(request.bodyText, deleteScheduleSchema);
       const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
       return jsonResponse(result);
+    },
+  });
+
+  // ============================================================
+  // Agent Task Routes (Issue #225 — agent-to-agent task scheduling)
+  // Requires COORDINATOR role (graceful placeholder until #242 deploys)
+  // ============================================================
+
+  // POST /admin/agent-task/create — Create a task for another agent
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-task/create',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, z.object({
+          agentId: z.string().min(1),
+          targetAgentId: z.string().min(1),
+          name: z.string().min(1),
+          description: z.string().optional(),
+          priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+          scheduleType: z.enum(['cron', 'date']),
+          cronExpression: z.string().min(1).optional(),
+          scheduledDate: z.string().min(1),
+          timezone: z.string().min(1).default('UTC'),
+          content: z.string().min(1),
+        }));
+
+        // COORDINATOR role placeholder check (Issue #242)
+        const coordinatorCheck = await input.db.all(`
+          SELECT id FROM agent_roles WHERE name = 'COORDINATOR' LIMIT 1
+        `);
+        if (!coordinatorCheck || coordinatorCheck.length === 0) {
+          return jsonResponse(
+            { error: 'COORDINATOR role not defined yet. Issue #242 must be deployed first.' },
+            503
+          );
+        }
+
+        // Rate limit: coordinator per hour
+        const coordinatorCount = await countCoordinatorTasksLastHour(body.agentId);
+        if (coordinatorCount >= MAX_TASKS_PER_COORDINATOR_PER_HOUR) {
+          return jsonResponse(
+            { error: `Rate limit exceeded: max ${MAX_TASKS_PER_COORDINATOR_PER_HOUR} tasks per coordinator per hour.` },
+            429
+          );
+        }
+
+        // Rate limit: agent total
+        const agentTaskCount = await countAgentTasks(body.targetAgentId);
+        if (agentTaskCount >= MAX_TASKS_PER_AGENT_TOTAL) {
+          return jsonResponse(
+            { error: `Rate limit exceeded: max ${MAX_TASKS_PER_AGENT_TOTAL} tasks per agent total.` },
+            429
+          );
+        }
+
+        // Duplicate check
+        const scheduledDateMs = new Date(body.scheduledDate).getTime();
+        const duplicate = await hasDuplicateTask(body.targetAgentId, scheduledDateMs);
+        if (duplicate) {
+          return jsonResponse(
+            { error: `Duplicate task: agent ${body.targetAgentId} already has a task for ${body.scheduledDate}.` },
+            409
+          );
+        }
+
+        const task = await createTask({
+          agentId: body.targetAgentId,
+          name: body.name,
+          description: body.description ?? null,
+          taskType: 'task',
+          priority: body.priority,
+          scheduleType: body.scheduleType,
+          cronExpression: body.cronExpression ?? null,
+          scheduledDate: scheduledDateMs,
+          timezone: body.timezone,
+          content: body.content,
+          sourceCoordinatorId: body.agentId,
+          targetAgentId: body.targetAgentId,
+        });
+
+        return jsonResponse(task, 201);
+      } catch (error) {
+        console.error('[Admin] Failed to create agent task:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
+  });
+
+  // GET /admin/agent-task/list — List tasks (by targetAgentId filter or coordinator's tasks)
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agent-task/list',
+    handler: async (request) => {
+      try {
+        const url = new URL(request.url, 'http://localhost');
+        const targetAgentId = url.searchParams.get('targetAgentId');
+        const status = (url.searchParams.get('status') ?? 'pending') as TaskStatus;
+        const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '50', 10), 100);
+        const agentId = url.searchParams.get('agentId');
+
+        if (!agentId) {
+          return jsonResponse({ error: 'agentId query parameter is required.' }, 400);
+        }
+
+        // With targetAgentId filter → COORDINATOR only (placeholder check)
+        if (targetAgentId) {
+          const coordinatorCheck = await input.db.all(`
+            SELECT id FROM agent_roles WHERE name = 'COORDINATOR' LIMIT 1
+          `);
+          if (!coordinatorCheck || coordinatorCheck.length === 0) {
+            return jsonResponse(
+              { error: 'COORDINATOR role not defined yet. Issue #242 must be deployed first.' },
+              503
+            );
+          }
+          const tasks = await listAgentTasks(targetAgentId, status, limit);
+          return jsonResponse(tasks);
+        }
+
+        // Without filter → list coordinator's own tasks
+        const tasks = await listCoordinatorTasks(agentId, limit);
+        return jsonResponse(tasks);
+      } catch (error) {
+        console.error('[Admin] Failed to list agent tasks:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
+  });
+
+  // PATCH /admin/agent-task/update — Update a task
+  input.httpServer.registerRoute({
+    method: 'PATCH',
+    path: '/admin/agent-task/update',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, z.object({
+          taskId: z.string().min(1),
+          agentId: z.string().min(1),
+          name: z.string().min(1).optional(),
+          description: z.string().optional().nullable(),
+          status: z.enum(['pending', 'completed', 'failed']).optional(),
+          priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+          isActive: z.boolean().optional(),
+          result: z.string().optional().nullable(),
+          error: z.string().optional().nullable(),
+        }));
+
+        const task = await updateTask(body);
+        if (!task) {
+          return jsonResponse({ error: 'Task not found.' }, 404);
+        }
+        return jsonResponse(task);
+      } catch (error) {
+        console.error('[Admin] Failed to update agent task:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
+  });
+
+  // DELETE /admin/agent-task/cancel — Cancel a task
+  input.httpServer.registerRoute({
+    method: 'DELETE',
+    path: '/admin/agent-task/cancel',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, z.object({
+          taskId: z.string().min(1),
+          agentId: z.string().min(1),
+        }));
+
+        await cancelTask(body.taskId, body.agentId);
+        return jsonResponse({ success: true, taskId: body.taskId });
+      } catch (error) {
+        console.error('[Admin] Failed to cancel agent task:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 

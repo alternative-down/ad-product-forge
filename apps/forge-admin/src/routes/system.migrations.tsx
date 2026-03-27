@@ -3,9 +3,9 @@ import { createFileRoute } from '@tanstack/react-router';
 import { SystemDetailPage } from '../features/system/page';
 
 export const Route = createFileRoute('/system/migrations')({
-  component: SystemMigrationsRoute,
+  component: _SystemMigrationsRoute,
 });
 
-function SystemMigrationsRoute() {
+function _SystemMigrationsRoute() {
   return <SystemDetailPage section="migrations" />;
 }
