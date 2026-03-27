@@ -22,14 +22,8 @@ export default defineConfig([
     rules: {
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true, extraHOCs: ['Route'] }
+        { allowConstantExport: true, allowExportNames: ['Route'], extraHOCs: ['Route'] }
       ],
-    },
-  },
-  {
-    files: ['src/routes/**/*.tsx'],
-    rules: {
-      'react-refresh/only-export-components': 'off',
     },
   },
 ])
