@@ -788,8 +788,8 @@ function LlmPricingCard(input: {
           <LabeledField label="Edit price">
             <Select
               value={selectedModelKey}
-              onChange={(event) => {
-                const nextModelKey = event.target.value;
+              onChange={(value) => {
+                const nextModelKey = value;
                 const nextSelectedPrice = input.prices.find((price) => price.modelKey === nextModelKey) ?? null;
                 setSelectedModelKey(nextModelKey);
                 setDraft(buildLlmModelPriceDraft(nextSelectedPrice));
@@ -942,7 +942,7 @@ function LlmDefaultsCard(input: {
         <LabeledField label="Primary model profile">
           <Select
             value={draft.primaryProfileId}
-            onChange={(event) => setDraft((current) => ({ ...current, primaryProfileId: event.target.value }))}
+            onChange={(value) => setDraft((current) => ({ ...current, primaryProfileId: value }))}
           >
             {selectableProfiles.map((profile) => (
               <option key={profile.profileId} value={profile.profileId}>
@@ -954,7 +954,7 @@ function LlmDefaultsCard(input: {
         <LabeledField label="OM model profile">
           <Select
             value={draft.omProfileId}
-            onChange={(event) => setDraft((current) => ({ ...current, omProfileId: event.target.value }))}
+            onChange={(value) => setDraft((current) => ({ ...current, omProfileId: value }))}
           >
             {selectableProfiles.map((profile) => (
               <option key={profile.profileId} value={profile.profileId}>
@@ -966,7 +966,7 @@ function LlmDefaultsCard(input: {
         <LabeledField label="Hiring RH model profile">
           <Select
             value={draft.hiringRhProfileId}
-            onChange={(event) => setDraft((current) => ({ ...current, hiringRhProfileId: event.target.value }))}
+            onChange={(value) => setDraft((current) => ({ ...current, hiringRhProfileId: value }))}
           >
             {selectableProfiles.map((profile) => (
               <option key={profile.profileId} value={profile.profileId}>
@@ -1029,7 +1029,7 @@ function LlmProfileEditorCard(input: {
 
         <div className="mt-5 space-y-4">
           <LabeledField label="Edit profile">
-            <Select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
+            <Select value={selectedProfileId} onChange={(value) => setSelectedProfileId(value)}>
               <option value="new">Create new profile</option>
               {input.profiles.map((profile) => (
                 <option key={profile.profileId} value={profile.profileId}>
