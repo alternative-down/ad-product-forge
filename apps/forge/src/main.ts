@@ -16,6 +16,7 @@ import { createAgentScheduleManager } from './schedules/manager';
 import { createAgentPendingSummaryReader } from './agents/pending-summary';
 import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
+import { createPropagateMessageFn } from './fanout/client';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -24,6 +25,7 @@ const envSchema = z.object({
   FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
   FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
+  FORGE_INSTANCE_ID: z.string().default('default'),
 });
 
 export async function main() {
@@ -108,6 +110,7 @@ export async function main() {
     githubApps,
     coolify,
     schedules,
+    propagateMessage: createPropagateMessageFn(db, env.FORGE_INSTANCE_ID) as (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>,
   };
   registerAdminRoutes({
     db,

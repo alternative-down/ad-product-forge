@@ -25,6 +25,11 @@ export interface AgentLoaderConfig {
   githubApps: GitHubAppManager;
   coolify: CoolifyManager | null;
   schedules: ReturnType<typeof createAgentScheduleManager>;
+  /**
+   * Optional function to propagate messages to remote Mastra instances.
+   * Used for cross-instance fan-out in group messaging.
+   */
+  propagateMessage?: (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>;
 }
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
@@ -89,7 +94,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     }
   }
 
-  const providers = loadCommunicationProviders(providerCredentials, { workspaceBasePath: config.workspaceBasePath });
+  const providers = loadCommunicationProviders(providerCredentials, {
+    workspaceBasePath: config.workspaceBasePath,
+    propagateMessage: config.propagateMessage,
+  });
   const capabilities = createCapabilityStore(db);
   const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
   const allowedToolIds = new Set(capabilitySet.toolIds);
