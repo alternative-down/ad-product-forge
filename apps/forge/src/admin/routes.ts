@@ -52,6 +52,18 @@ import {
   hasDuplicateTask,
   type TaskStatus,
 } from '../tasks/store';
+import {
+  createPrompt,
+  getPrompt,
+  getAgentPrompts,
+  getGlobalPrompts,
+  getActiveSystemPrompts,
+  updatePrompt,
+  deletePrompt,
+  listAllPrompts,
+  searchPrompts,
+  type PromptType,
+} from '../agents/prompts/store';
 
 // Rate limit constants for task routes
 const MAX_TASKS_PER_COORDINATOR_PER_HOUR = 10;
@@ -290,6 +302,24 @@ const ledgerEntryActionSchema = z.object({
 const recurringPayableStatusSchema = z.object({
   payableId: z.string().min(1),
   isActive: z.boolean(),
+});
+
+// Agent Prompts Schemas
+const createPromptSchema = z.object({
+  agentId: z.string().optional().nullable(),
+  promptType: z.enum(['system', 'user', 'assistant', 'custom']),
+  name: z.string().min(1),
+  description: z.string().optional().nullable(),
+  content: z.string().min(1),
+  createdBy: z.string().optional().nullable(),
+});
+
+const updatePromptSchema = z.object({
+  promptId: z.string().min(1),
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  content: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export function registerAdminRoutes(input: {
@@ -1224,6 +1254,135 @@ export function registerAdminRoutes(input: {
       const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
       const result = await companyPayables.setRecurringPayableActive(body.payableId, body.isActive);
       return jsonResponse(result);
+    },
+  });
+
+  // ========== Agent Prompts Routes ==========
+
+  // GET /admin/prompts - List all prompts (admin)
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/prompts',
+    handler: async (request) => {
+      const limit = parseInt(request.query.get('limit') ?? '100', 10);
+      const offset = parseInt(request.query.get('offset') ?? '0', 10);
+      const prompts = await listAllPrompts(limit, offset);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // GET /admin/prompts/search - Search prompts by name
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/prompts/search',
+    handler: async (request) => {
+      const query = request.query.get('q') ?? '';
+      const limit = parseInt(request.query.get('limit') ?? '50', 10);
+      const prompts = await searchPrompts(query, limit);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // GET /admin/prompts/:promptId - Get a single prompt
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/prompts/:promptId',
+    handler: async (request) => {
+      const promptId = request.query.get('promptId') ?? '';
+      const prompt = await getPrompt(promptId);
+
+      if (!prompt) {
+        return jsonResponse({ error: `Prompt not found: ${promptId}` }, 404);
+      }
+
+      return jsonResponse(prompt);
+    },
+  });
+
+  // GET /admin/agents/:agentId/prompts - Get prompts for an agent
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agents/:agentId/prompts',
+    handler: async (request) => {
+      const agentId = request.query.get('agentId') ?? '';
+      const promptType = request.query.get('type') as PromptType | undefined;
+      const activeOnly = request.query.get('activeOnly') !== 'false';
+      const prompts = await getAgentPrompts(agentId, promptType, activeOnly);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // GET /admin/prompts/global - Get global prompts (not bound to specific agent)
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/prompts/global',
+    handler: async (request) => {
+      const promptType = request.query.get('type') as PromptType | undefined;
+      const activeOnly = request.query.get('activeOnly') !== 'false';
+      const prompts = await getGlobalPrompts(promptType, activeOnly);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // GET /admin/agents/:agentId/system-prompts - Get active system prompts for an agent
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agents/:agentId/system-prompts',
+    handler: async (request) => {
+      const agentId = request.query.get('agentId') ?? '';
+      const prompts = await getActiveSystemPrompts(agentId);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // POST /admin/prompts - Create a new prompt
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/prompts',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createPromptSchema);
+      const prompt = await createPrompt({
+        agentId: body.agentId,
+        promptType: body.promptType,
+        name: body.name,
+        description: body.description,
+        content: body.content,
+        createdBy: body.createdBy,
+      });
+      return jsonResponse(prompt, 201);
+    },
+  });
+
+  // PATCH /admin/prompts - Update a prompt
+  input.httpServer.registerRoute({
+    method: 'PATCH',
+    path: '/admin/prompts',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updatePromptSchema);
+      const prompt = await updatePrompt({
+        promptId: body.promptId,
+        name: body.name,
+        description: body.description,
+        content: body.content,
+        isActive: body.isActive,
+      });
+
+      if (!prompt) {
+        return jsonResponse({ error: `Prompt not found: ${body.promptId}` }, 404);
+      }
+
+      return jsonResponse(prompt);
+    },
+  });
+
+  // DELETE /admin/prompts - Delete (soft) a prompt
+  input.httpServer.registerRoute({
+    method: 'DELETE',
+    path: '/admin/prompts',
+    handler: async (request) => {
+      const promptId = request.query.get('promptId') ?? '';
+      await deletePrompt(promptId);
+      return jsonResponse({ success: true });
     },
   });
 }
