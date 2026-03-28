@@ -1,4 +1,4 @@
--- Migration: 0027_agent_prompts
+-- Migration: 0028_agent_prompts
 -- Feature: Allow editing agent prompts/system messages (Issue #265)
 -- Allows runtime editing of prompts that are injected into agent system context
 
