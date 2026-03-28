@@ -15,14 +15,9 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     console.log('[Migrations] Working directory:', process.cwd());
     console.log('[Migrations] Migrations folder:', migrationsFolder);
 
-    // Clear ONLY the corrupted migration tracking entries (id 10 onwards)
-    // The corruption was caused by duplicate migration file prefixes (two 0027_ files)
-    // causing sequential ID misalignment from id 10 onwards.
-    // Entries 0-9 are correctly applied and should be preserved.
-    // Entries 10+ have wrong mappings and must be cleared to allow fresh migration run.
-    console.log('[Migrations] Clearing corrupted __drizzle_migrations entries (id >= 10)...');
-    await db.run(sql`DELETE FROM __drizzle_migrations WHERE id >= 10`);
-    console.log('[Migrations] Corrupted entries cleared');
+    // Note: Migration tracking table (__drizzle_migrations) had corruption from
+    // duplicate 0027_ migration file prefix. This was fixed by renaming one file to 0028_.
+    // Any remaining tracking issues are handled by migration 0030_fix_migration_tracking.sql.
 
     console.log('[Migrations] Applied rows before migrate:', await getAppliedMigrationRows(db));
 
