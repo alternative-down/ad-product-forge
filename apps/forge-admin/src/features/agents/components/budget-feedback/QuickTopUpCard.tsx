@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { cn } from '@forge/ui';
 import { Plus, Loader2 } from 'lucide-react';
 import { Button } from '@forge/ui';

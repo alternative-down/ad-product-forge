@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { cn } from '@forge/ui';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
 
