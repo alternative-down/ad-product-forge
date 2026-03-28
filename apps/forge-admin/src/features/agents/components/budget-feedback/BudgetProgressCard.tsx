@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@forge/ui';
+import { cn } from '../../../../components/ui';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
 
 export type BudgetState = 'empty' | 'loading' | 'error' | 'normal' | 'caution' | 'warning' | 'critical' | 'over';
