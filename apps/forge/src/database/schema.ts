@@ -400,6 +400,34 @@ export type AgentPrompt = typeof agentPrompts.$inferSelect;
 export type NewAgentPrompt = typeof agentPrompts.$inferInsert;
 
 /**
+ * Tabela: agent_mcp_tools
+ * Configuração de MCP tools que agentes podem usar (client only)
+ * Suporta ferramentas globais (agentId = null) e específicas por agente
+ */
+export const agentMcpTools = sqliteTable('agent_mcp_tools', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  command: text('command').notNull(),
+  args: text('args').notNull(), // JSON array stored as text
+  env: text('env'), // JSON object stored as text
+  transport: text('transport').notNull().default('stdio'), // stdio | sse | http
+  version: integer('version').notNull().default(1),
+  isActive: integer('is_active').notNull().default(1),
+  createdBy: text('created_by'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  agentMcpToolsAgentIdIdx: index('agent_mcp_tools_agent_id_idx').on(table.agentId),
+  agentMcpToolsIsActiveIdx: index('agent_mcp_tools_is_active_idx').on(table.isActive),
+}));
+
+export type AgentMcpTool = typeof agentMcpTools.$inferSelect;
+export type NewAgentMcpTool = typeof agentMcpTools.$inferInsert;
+
+/**
  * Relações
  */
 export const agentsRelations = relations(agents, ({ one, many }) => ({
@@ -423,6 +451,7 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
   prompts: many(agentPrompts),
+  mcpTools: many(agentMcpTools),
 }));
 
 export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
@@ -513,6 +542,13 @@ export const agentSchedulesRelations = relations(agentSchedules, ({ one }) => ({
 export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
   agent: one(agents, {
     fields: [agentPrompts.agentId],
+    references: [agents.id],
+  }),
+}));
+
+export const agentMcpToolsRelations = relations(agentMcpTools, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentMcpTools.agentId],
     references: [agents.id],
   }),
 }));

@@ -53,6 +53,16 @@ import {
   searchPrompts,
   type PromptType,
 } from '../agents/prompts/store';
+import {
+  createMcpTool,
+  getMcpTool,
+  listMcpTools,
+  searchMcpTools,
+  getAgentMcpTools,
+  getGlobalMcpTools,
+  updateMcpTool,
+  deleteMcpTool,
+} from '../agents/mcp-tools/store';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -1191,6 +1201,161 @@ export function registerAdminRoutes(input: {
     handler: async (request) => {
       const promptId = request.query.get('promptId') ?? '';
       await deletePrompt(promptId);
+      return jsonResponse({ success: true });
+    },
+  });
+
+  // ========== MCP Tools Routes ==========
+
+  // Zod schemas for MCP tools
+  const createMcpToolSchema = z.object({
+    agentId: z.string().optional().nullable(),
+    name: z.string().min(1),
+    description: z.string().optional().nullable(),
+    command: z.string().min(1),
+    args: z.array(z.string()),
+    env: z.record(z.string()).optional(),
+    transport: z.enum(['stdio', 'sse', 'http']).optional(),
+    createdBy: z.string().optional().nullable(),
+  });
+
+  const updateMcpToolSchema = z.object({
+    toolId: z.string().min(1),
+    name: z.string().min(1).optional(),
+    description: z.string().optional().nullable(),
+    command: z.string().min(1).optional(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string()).optional(),
+    transport: z.enum(['stdio', 'sse', 'http']).optional(),
+    isActive: z.number().optional(),
+  });
+
+  // GET /admin/mcp-tools - List all MCP tools
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/mcp-tools',
+    handler: async (request) => {
+      const limit = parseInt(request.query.get('limit') ?? '100', 10);
+      const offset = parseInt(request.query.get('offset') ?? '0', 10);
+      const sortBy = (request.query.get('sortBy') ?? 'created_at') as 'created_at' | 'name' | 'updated_at';
+      const sortOrder = (request.query.get('sortOrder') ?? 'desc') as 'asc' | 'desc';
+      
+      const { tools, total } = await listMcpTools({ limit, offset, sortBy, sortOrder });
+      return jsonResponse({ tools, total });
+    },
+  });
+
+  // GET /admin/mcp-tools/search - Search MCP tools by name
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/mcp-tools/search',
+    handler: async (request) => {
+      const query = request.query.get('q') ?? '';
+      const limit = parseInt(request.query.get('limit') ?? '50', 10);
+      const offset = parseInt(request.query.get('offset') ?? '0', 10);
+      
+      const { tools, total } = await searchMcpTools({ query, limit, offset });
+      return jsonResponse({ tools, total });
+    },
+  });
+
+  // GET /admin/mcp-tools/:toolId - Get a single MCP tool
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/mcp-tools/:toolId',
+    handler: async (request) => {
+      const toolId = request.query.get('toolId') ?? '';
+      const tool = await getMcpTool(toolId);
+      
+      if (!tool) {
+        return jsonResponse({ error: `MCP tool not found: ${toolId}` }, 404);
+      }
+      
+      return jsonResponse(tool);
+    },
+  });
+
+  // GET /admin/agents/:agentId/mcp-tools - Get MCP tools for an agent (including global)
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agents/:agentId/mcp-tools',
+    handler: async (request) => {
+      const agentId = request.query.get('agentId') ?? '';
+      const limit = parseInt(request.query.get('limit') ?? '50', 10);
+      const offset = parseInt(request.query.get('offset') ?? '0', 10);
+      const activeOnly = request.query.get('activeOnly') !== 'false';
+      
+      const { tools, total } = await getAgentMcpTools(agentId, { activeOnly, limit, offset });
+      return jsonResponse({ tools, total });
+    },
+  });
+
+  // GET /admin/mcp-tools/global - Get global MCP tools (not bound to any agent)
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/mcp-tools/global',
+    handler: async (request) => {
+      const limit = parseInt(request.query.get('limit') ?? '50', 10);
+      const offset = parseInt(request.query.get('offset') ?? '0', 10);
+      const activeOnly = request.query.get('activeOnly') !== 'false';
+      
+      const { tools, total } = await getGlobalMcpTools({ activeOnly, limit, offset });
+      return jsonResponse({ tools, total });
+    },
+  });
+
+  // POST /admin/mcp-tools - Create a new MCP tool
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/mcp-tools',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createMcpToolSchema);
+      const tool = await createMcpTool({
+        agentId: body.agentId,
+        name: body.name,
+        description: body.description,
+        command: body.command,
+        args: body.args,
+        env: body.env,
+        transport: body.transport,
+        createdBy: body.createdBy,
+      });
+      return jsonResponse(tool, 201);
+    },
+  });
+
+  // PATCH /admin/mcp-tools - Update an MCP tool
+  input.httpServer.registerRoute({
+    method: 'PATCH',
+    path: '/admin/mcp-tools',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateMcpToolSchema);
+      const tool = await updateMcpTool({
+        toolId: body.toolId,
+        name: body.name,
+        description: body.description,
+        command: body.command,
+        args: body.args,
+        env: body.env,
+        transport: body.transport,
+        isActive: body.isActive,
+      });
+
+      if (!tool) {
+        return jsonResponse({ error: `MCP tool not found: ${body.toolId}` }, 404);
+      }
+
+      return jsonResponse(tool);
+    },
+  });
+
+  // DELETE /admin/mcp-tools - Delete (soft) an MCP tool
+  input.httpServer.registerRoute({
+    method: 'DELETE',
+    path: '/admin/mcp-tools',
+    handler: async (request) => {
+      const toolId = request.query.get('toolId') ?? '';
+      await deleteMcpTool(toolId);
       return jsonResponse({ success: true });
     },
   });
