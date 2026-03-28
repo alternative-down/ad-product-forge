@@ -36,7 +36,7 @@ export function QuickTopUpCard({
   const [confirmHighValue, setConfirmHighValue] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const finalAmount = (selectedAmount ?? (parseFloat(customAmount) || 0));
+  const finalAmount = (selectedAmount ?? parseFloat(customAmount)) || 0;
   const requiresConfirmation = finalAmount >= HIGH_VALUE_THRESHOLD;
   const canSubmit = finalAmount > 0 && (!requiresConfirmation || confirmHighValue) && !isSubmitting;
 
@@ -116,6 +116,7 @@ export function QuickTopUpCard({
               checked={confirmHighValue}
               onChange={(e) => setConfirmHighValue(e.target.checked)}
               className="mt-0.5 h-4 w-4 rounded border-yellow-300 text-yellow-600 focus:ring-yellow-500"
+              disabled={isSubmitting}
             />
             <span className="text-xs text-yellow-800">
               Confirmo que desejo adicionar <strong>${finalAmount.toFixed(2)}</strong> ao budget. 
