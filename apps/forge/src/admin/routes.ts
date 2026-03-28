@@ -32,7 +32,7 @@ import type { GitHubAppManager } from '../github/manager';
 import { agentFunctions, agents, agentProviders } from '../database/schema';
 import { encryptSecret } from '../encryption/crypto';
 import { parseProviderCredentials } from '../communication/provider-loader';
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createCompanyPayables } from '../finance/company-payables';

@@ -1,5 +1,5 @@
 import { and, eq, gte } from 'drizzle-orm';
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 
 import type { Database } from '../database/index';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
