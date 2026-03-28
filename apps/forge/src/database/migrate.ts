@@ -14,6 +14,14 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     console.log('[Migrations] Application database path:', databasePath);
     console.log('[Migrations] Working directory:', process.cwd());
     console.log('[Migrations] Migrations folder:', migrationsFolder);
+
+    // Clear corrupted migration tracking table before running migrations
+    // This prevents crashes when __drizzle_migrations has inconsistent IDs
+    // (e.g., from duplicate migration file prefixes causing wrong sequential IDs)
+    console.log('[Migrations] Clearing __drizzle_migrations tracking table...');
+    await db.run(sql`DELETE FROM __drizzle_migrations`);
+    console.log('[Migrations] Tracking table cleared');
+
     console.log('[Migrations] Applied rows before migrate:', await getAppliedMigrationRows(db));
 
     await migrate(db, {
