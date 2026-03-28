@@ -1,11 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@forge/ui';
+import { cn, Button, Input, Label } from '../../../../components/ui';
 import { Plus, Loader2 } from 'lucide-react';
-import { Button } from '@forge/ui';
-import { Input } from '@forge/ui';
-import { Label } from '@forge/ui';
 
 export interface QuickTopUpCardProps {
   /** Current budget remaining */
