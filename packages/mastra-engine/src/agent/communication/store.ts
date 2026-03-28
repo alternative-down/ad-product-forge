@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { eq, and, inArray, or, ne } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { createId } from '@paralleldrive/cuid2';
 import * as schema from './schema';
 
 const attachmentSchema = z.object({
@@ -33,7 +34,7 @@ const conversationSchema = z.object({
   providerConversationKey: z.string(),
   name: z.string().optional(),
   type: z.string().default('dm'), // 'dm' or 'group'
-  contactSlug: z.string().optional(),
+  contactId: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -90,6 +91,32 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     }
 
     return contactSchema.parse({
+      contactId: contact.contactId,
+      slug: contact.slug,
+      displayName: contact.displayName,
+      description: contact.description ?? undefined,
+      accounts: contact.accounts.map((account) => ({
+        provider: account.provider,
+        externalUserId: account.externalUserId ?? undefined,
+        username: account.username ?? undefined,
+      })),
+    });
+  }
+
+  async function loadContactById(contactId: string) {
+    const contact = await db.query.communicationContacts.findFirst({
+      where: eq(schema.communicationContacts.contactId, contactId),
+      with: {
+        accounts: true,
+      },
+    });
+
+    if (!contact) {
+      return null;
+    }
+
+    return contactSchema.parse({
+      contactId: contact.contactId,
       slug: contact.slug,
       displayName: contact.displayName,
       description: contact.description ?? undefined,
@@ -116,7 +143,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       providerConversationKey: conversation.providerConversationKey,
       name: conversation.name ?? undefined,
       type: conversation.type,
-      contactSlug: conversation.contactSlug ?? undefined,
+      contactId: conversation.contactId ?? undefined,
       createdAt: conversation.createdAt,
       updatedAt: conversation.updatedAt,
     });
@@ -246,7 +273,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       return null;
     }
 
-    return loadContact(contactAccount.slug);
+    return loadContactById(contactAccount.contactId);
   }
 
   async function upsertContact(input: {
@@ -258,35 +285,86 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     username?: string;
   }) {
     const slug = slugify(input.slug);
+    const normalizedSlug = slug || 'contact';
 
-    await db
-      .insert(schema.communicationContacts)
-      .values({
-        slug,
-        displayName: input.displayName,
-        description: input.description ?? null,
-      })
-      .onConflictDoUpdate({
-        target: schema.communicationContacts.slug,
-        set: {
-          displayName: input.displayName,
-          description: input.description ?? null,
-        },
+    // If we have provider + externalUserId, find existing contact by identity first
+    if (input.provider && input.externalUserId) {
+      const existingAccount = await db.query.communicationContactAccounts.findFirst({
+        where: and(
+          eq(schema.communicationContactAccounts.provider, input.provider),
+          eq(schema.communicationContactAccounts.externalUserId, input.externalUserId),
+        ),
       });
 
-    if (input.provider && (input.externalUserId || input.username)) {
-      await db
-        .insert(schema.communicationContactAccounts)
-        .values({
-          slug,
-          provider: input.provider,
-          externalUserId: input.externalUserId ?? null,
-          username: input.username ?? null,
-        })
-        .onConflictDoNothing();
+      if (existingAccount) {
+        // Contact exists, update it if needed
+        await db
+          .update(schema.communicationContacts)
+          .set({
+            slug: normalizedSlug,
+            displayName: input.displayName,
+            description: input.description ?? null,
+          })
+          .where(eq(schema.communicationContacts.contactId, existingAccount.contactId));
+
+        return loadContactById(existingAccount.contactId);
+      }
+
+      // No existing contact, create new one with UUID
+      const contactId = createId();
+
+      await db.insert(schema.communicationContacts).values({
+        contactId,
+        slug: normalizedSlug,
+        displayName: input.displayName,
+        description: input.description ?? null,
+      });
+
+      // Create account link
+      if (input.provider && (input.externalUserId || input.username)) {
+        await db
+          .insert(schema.communicationContactAccounts)
+          .values({
+            contactId,
+            provider: input.provider,
+            externalUserId: input.externalUserId ?? null,
+            username: input.username ?? null,
+          })
+          .onConflictDoNothing();
+      }
+
+      return loadContactById(contactId);
     }
 
-    return loadContact(slug);
+    // No externalUserId, use slug-based lookup (for contacts without provider accounts)
+    const existingBySlug = await db.query.communicationContacts.findFirst({
+      where: eq(schema.communicationContacts.slug, normalizedSlug),
+    });
+
+    if (existingBySlug) {
+      // Update existing contact
+      await db
+        .update(schema.communicationContacts)
+        .set({
+          displayName: input.displayName,
+          description: input.description ?? null,
+        })
+        .where(eq(schema.communicationContacts.contactId, existingBySlug.contactId));
+
+      return loadContactById(existingBySlug.contactId);
+    }
+
+    // Create new contact by slug
+    const contactId = createId();
+
+    await db.insert(schema.communicationContacts).values({
+      contactId,
+      slug: normalizedSlug,
+      displayName: input.displayName,
+      description: input.description ?? null,
+    });
+
+    return loadContactById(contactId);
   }
 
   async function upsertConversation(input: {
@@ -294,7 +372,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     providerConversationKey: string;
     name?: string;
     type?: string;
-    contactSlug?: string;
+    contactId?: string;
     createdAt?: string;
   }) {
     const now = input.createdAt ?? new Date().toISOString();
@@ -312,7 +390,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
         .set({
           name: input.name ?? existing.name,
           type: input.type ?? existing.type,
-          contactSlug: input.contactSlug ?? existing.contactSlug,
+          contactId: input.contactId ?? existing.contactId,
           updatedAt: now,
         })
         .where(eq(schema.communicationConversations.conversationId, existing.conversationId));
@@ -328,7 +406,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       providerConversationKey: input.providerConversationKey,
       name: input.name ?? null,
       type: input.type ?? 'dm',
-      contactSlug: input.contactSlug ?? null,
+      contactId: input.contactId ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -358,7 +436,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       providerConversationKey: conversation.providerConversationKey,
       name: conversation.name ?? undefined,
       type: conversation.type,
-      contactSlug: conversation.contactSlug ?? undefined,
+      contactId: conversation.contactId ?? undefined,
       createdAt: conversation.createdAt,
       updatedAt: conversation.updatedAt,
     });
@@ -369,7 +447,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     providerConversationKey: string;
     providerMessageId: string;
     conversationName?: string;
-    contactSlug?: string;
+    contactId?: string;
     authorExternalId?: string;
     authorDisplayName?: string;
     authorUsername?: string;
@@ -382,7 +460,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
       name: input.conversationName,
-      contactSlug: input.contactSlug,
+      contactId: input.contactId,
       createdAt: input.createdAt,
     });
 
@@ -426,7 +504,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     providerConversationKey: string;
     providerMessageId?: string;
     conversationName?: string;
-    contactSlug?: string;
+    contactId?: string;
     content: string;
     createdAt?: string;
     metadata?: Record<string, unknown>;
@@ -435,7 +513,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
       name: input.conversationName,
-      contactSlug: input.contactSlug,
+      contactId: input.contactId,
       createdAt: input.createdAt,
     });
 
@@ -478,7 +556,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       .where(and(inArray(schema.communicationMessages.messageId, messageIds), eq(schema.communicationMessages.unread, 1)));
   }
 
-  async function listConversations(options: { provider?: string; contactSlug?: string; unread?: boolean; limit: number }) {
+  async function listConversations(options: { provider?: string; contactId?: string; unread?: boolean; limit: number }) {
     const conversations = await db.query.communicationConversations.findMany({
       with: {
         messages: {
@@ -496,7 +574,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
           return null;
         }
 
-        if (options.contactSlug && conv.contactSlug !== options.contactSlug) {
+        if (options.contactId && conv.contactId !== options.contactId) {
           return null;
         }
 
@@ -537,7 +615,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       providerConversationKey: conv.providerConversationKey,
       name: conv.name ?? undefined,
       type: conv.type,
-      contactSlug: conv.contactSlug ?? undefined,
+      contactId: conv.contactId ?? undefined,
       createdAt: conv.createdAt,
       updatedAt: conv.updatedAt,
       unreadCount: conv.unreadCount,
