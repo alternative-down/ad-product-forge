@@ -36,21 +36,21 @@ export function createCapabilityTools(
       .discriminatedUnion('action', [
         z.object({
           action: z.literal('create'),
-          functionId: z.string().min(1).nullish(),
-          name: z.string().min(1),
-          description: z.string().nullish().nullable(),
+          functionId: z.string().min(1).nullish().describe('Function ID (optional, auto-generated if omitted).'),
+          name: z.string().min(1).describe('Function name.'),
+          description: z.string().nullish().nullable().describe('Function description.'),
         }),
         z.object({
           action: z.literal('update'),
-          functionId: z.string().min(1),
-          name: z.string().min(1).nullish(),
-          description: z.string().nullish().nullable(),
+          functionId: z.string().min(1).describe('Function ID to update.'),
+          name: z.string().min(1).nullish().describe('New function name.'),
+          description: z.string().nullish().nullable().describe('New function description.'),
         }),
         z.object({
           action: z.literal('delete'),
-          functionId: z.string().min(1),
-          name: z.string().min(1).nullish(),
-          description: z.string().nullish().nullable(),
+          functionId: z.string().min(1).describe('Function ID to delete.'),
+          name: z.string().min(1).nullish().describe('Name (ignored for delete).'),
+          description: z.string().nullish().nullable().describe('Description (ignored for delete).'),
         }),
       ])
       .superRefine((data, context) => {
@@ -114,21 +114,21 @@ export function createCapabilityTools(
       .discriminatedUnion('action', [
         z.object({
           action: z.literal('create'),
-          roleId: z.string().min(1).nullish(),
-          name: z.string().min(1),
-          description: z.string().nullish().nullable(),
+          roleId: z.string().min(1).nullish().describe('Role ID (optional, auto-generated if omitted).'),
+          name: z.string().min(1).describe('Role name.'),
+          description: z.string().nullish().nullable().describe('Role description.'),
         }),
         z.object({
           action: z.literal('update'),
-          roleId: z.string().min(1),
-          name: z.string().min(1).nullish(),
-          description: z.string().nullish().nullable(),
+          roleId: z.string().min(1).describe('Role ID to update.'),
+          name: z.string().min(1).nullish().describe('New role name.'),
+          description: z.string().nullish().nullable().describe('New role description.'),
         }),
         z.object({
           action: z.literal('delete'),
-          roleId: z.string().min(1),
-          name: z.string().min(1).nullish(),
-          description: z.string().nullish().nullable(),
+          roleId: z.string().min(1).describe('Role ID to delete.'),
+          name: z.string().min(1).nullish().describe('Name (ignored for delete).'),
+          description: z.string().nullish().nullable().describe('Description (ignored for delete).'),
         }),
       ])
       .superRefine((data, context) => {
@@ -180,8 +180,8 @@ export function createCapabilityTools(
       id: 'assign_role_to_function',
       description: 'Associate a role with a function. Multiple roles can be assigned to the same function to combine different capability sets.',
       inputSchema: z.object({
-        functionId: z.string().min(1),
-        roleId: z.string().min(1),
+        functionId: z.string().min(1).describe('Function ID to assign the role to.'),
+        roleId: z.string().min(1).describe('Role ID to assign.'),
       }),
       execute: async (input) => {
         const result = await capabilities.addRoleToFunction(input);
@@ -196,8 +196,8 @@ export function createCapabilityTools(
       id: 'change_agent_function',
       description: 'Change another agent\'s assigned function. The target agent will receive a notification and wake up with the new function context.',
       inputSchema: z.object({
-        agentId: z.string().min(1),
-        functionId: z.string().min(1),
+        agentId: z.string().min(1).describe('Target agent ID to change function.'),
+        functionId: z.string().min(1).describe('New function ID to assign.'),
       }),
       execute: async (input) => changeAgentFunction({
         db,
@@ -214,7 +214,7 @@ export function createCapabilityTools(
       id: 'change_own_function',
       description: 'Switch your own assigned function to a different one. You will receive a notification and wake up with the new function\'s context and capabilities.',
       inputSchema: z.object({
-        functionId: z.string().min(1),
+        functionId: z.string().min(1).describe('Function ID to switch to.'),
       }),
       execute: async (input) => changeAgentFunction({
         db,
@@ -242,9 +242,9 @@ export function createCapabilityTools(
       id: 'manage_role_tool_permissions',
       description: 'Add or remove individual tool permissions for a role. Revoking prevents agents with that role from using the specified tool.',
       inputSchema: z.object({
-        action: z.enum(['add', 'remove']),
-        roleId: z.string().min(1),
-        toolId: toolIdSchema,
+        action: z.enum(['add', 'remove']).describe('Action to perform: add or remove permission.'),
+        roleId: z.string().min(1).describe('Role ID to modify.'),
+        toolId: toolIdSchema.describe('Tool ID to add or remove.'),
       }),
       execute: async (input) => {
         const result = input.action === 'add'
@@ -272,9 +272,9 @@ export function createCapabilityTools(
       id: 'manage_role_workflow_permissions',
       description: 'Add or remove individual workflow permissions for a role. Revoking prevents agents with that role from triggering the specified workflow.',
       inputSchema: z.object({
-        action: z.enum(['add', 'remove']),
-        roleId: z.string().min(1),
-        workflowId: workflowIdSchema,
+        action: z.enum(['add', 'remove']).describe('Action to perform: add or remove permission.'),
+        roleId: z.string().min(1).describe('Role ID to modify.'),
+        workflowId: workflowIdSchema.describe('Workflow ID to add or remove.'),
       }),
       execute: async (input) => {
         const result = input.action === 'add'
