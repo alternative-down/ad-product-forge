@@ -3,7 +3,6 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { eq, and, inArray, or, ne } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { createId } from '@paralleldrive/cuid2';
 import * as schema from './schema';
 
 const attachmentSchema = z.object({
@@ -311,7 +310,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       }
 
       // No existing contact, create new one with UUID
-      const contactId = createId();
+      const contactId = crypto.randomUUID();
 
       await db.insert(schema.communicationContacts).values({
         contactId,
@@ -355,7 +354,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     }
 
     // Create new contact by slug
-    const contactId = createId();
+    const contactId = crypto.randomUUID();
 
     await db.insert(schema.communicationContacts).values({
       contactId,
