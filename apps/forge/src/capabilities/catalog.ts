@@ -22,19 +22,38 @@ export const forgeCustomToolIds = [
   'list_github_repositories',
   'get_github_repository',
   'manage_github_repository',
+  'create_github_repository',
+  'update_github_repository',
+  'delete_github_repository',
   'list_github_pull_requests',
   'get_github_pull_request',
   'manage_github_pull_request',
+  'create_github_pull_request',
+  'update_github_pull_request',
+  'merge_github_pull_request',
+  'delete_github_pull_request',
   'list_github_pull_request_comments',
   'list_github_issues',
   'get_github_issue',
   'manage_github_issue',
+  'create_github_issue',
+  'update_github_issue',
+  'delete_github_issue',
   'toggle_github_issue',
   'manage_github_issue_comment',
+  'create_github_issue_comment',
+  'update_github_issue_comment',
+  'delete_github_issue_comment',
   'list_github_labels',
   'manage_github_label',
+  'create_github_label',
+  'update_github_label',
+  'delete_github_label',
   'list_github_milestones',
   'manage_github_milestone',
+  'create_github_milestone',
+  'update_github_milestone',
+  'delete_github_milestone',
   'list_coolify_github_apps',
   'list_coolify_github_app_repositories',
   'list_coolify_github_app_repository_branches',
@@ -50,6 +69,9 @@ export const forgeCustomToolIds = [
   'list_agent_schedules',
   'manage_agent_schedule',
   'toggle_agent_schedule',
+  'create_cron_for_agent',
+  'edit_cron',
+  'delete_cron',
   'create_task_for_agent',
   'list_agent_tasks',
   'cancel_agent_task',
@@ -77,6 +99,7 @@ export type ForgeCustomToolId = typeof forgeCustomToolIds[number];
 export type ForgeWorkflowId = typeof forgeWorkflowIds[number];
 
 export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, readonly string[]>> = {
+  // @deprecated - use create_github_repository, update_github_repository, delete_github_repository
   list_company_cash: [
     'list_company_cash_movements',
     'get_company_cash_summary',
@@ -97,25 +120,30 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
   list_agent_notifications: [
     'get_agent_notification',
   ],
+  // @deprecated - redirects to manage_github_repository (tool split in progress)
   manage_github_repository: [
     'create_github_repository',
   ],
+  // @deprecated - redirects to manage_github_pull_request (tool split in progress)
   manage_github_pull_request: [
     'create_github_pull_request',
   ],
   list_github_pull_request_comments: [
     'list_github_pull_request_comments',
   ],
+  // @deprecated - redirects to manage_github_issue (tool split in progress)
   manage_github_issue: [
     'create_github_issue',
     'update_github_issue',
     'add_github_issue_labels',
     'remove_github_issue_labels',
   ],
+  // @deprecated - redirects to toggle_github_issue (tool split in progress)
   toggle_github_issue: [
     'close_github_issue',
     'reopen_github_issue',
   ],
+  // @deprecated - redirects to manage_github_issue_comment (tool split in progress)
   manage_github_issue_comment: [
     'list_github_issue_comments',
     'create_github_issue_comment',
@@ -144,6 +172,16 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
   ],
   toggle_agent_schedule: [
     'update_agent_schedule',
+  ],
+  // @deprecated - redirects to split tools (Issue #225)
+  create_cron_for_agent: [
+    'create_schedule_for_agent',
+  ],
+  edit_cron: [
+    'edit_schedule',
+  ],
+  delete_cron: [
+    'delete_schedule',
   ],
   manage_agent_function: [
     'create_agent_function',

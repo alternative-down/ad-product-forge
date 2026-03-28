@@ -222,22 +222,16 @@ export const agentSchedules = sqliteTable('agent_schedules', {
   isActive: integer('is_active').notNull().default(1),
   lastTriggeredAt: integer('last_triggered_at'),
   nextTriggerAt: integer('next_trigger_at'),
-  // Cross-agent task scheduling fields (Issue #225 rework)
-  sourceCoordinatorId: text('source_coordinator_id'),
-  targetAgentId: text('target_agent_id'),
-  taskType: text('task_type').notNull().default('schedule'),
-  status: text('status').notNull().default('pending'),
-  priority: text('priority').notNull().default('normal'),
-  result: text('result'),
-  error: text('error'),
+  // Cross-agent scheduling: creatorId = agent that created the schedule
+  // null = self-created (agent created for itself)
+  creatorId: text('creator_id'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   agentSchedulesAgentIdIdx: index('agent_schedules_agent_id_idx').on(table.agentId),
   agentSchedulesIsActiveIdx: index('agent_schedules_is_active_idx').on(table.isActive),
   agentSchedulesNextTriggerAtIdx: index('agent_schedules_next_trigger_at_idx').on(table.nextTriggerAt),
-  agentSchedulesTargetStatusIdx: index('agent_schedules_target_status_idx').on(table.targetAgentId, table.status),
-  agentSchedulesCoordinatorIdx: index('agent_schedules_coordinator_idx').on(table.sourceCoordinatorId),
+  agentSchedulesCreatorIdIdx: index('idx_schedules_creator_id').on(table.creatorId),
 }));
 
 export type AgentSchedule = typeof agentSchedules.$inferSelect;

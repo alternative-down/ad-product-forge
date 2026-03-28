@@ -205,6 +205,7 @@ export function createGitHubAppManager(config: {
     description?: string;
     private?: boolean;
     autoInit?: boolean;
+    defaultBranch?: string;
   }) {
     const octokit = await getInstallationOctokit(agentId);
     const githubConfig = await getGlobalConfig();
@@ -214,6 +215,7 @@ export function createGitHubAppManager(config: {
       description: input.description,
       private: input.private ?? true,
       auto_init: input.autoInit ?? false,
+      ...(input.defaultBranch && { default_branch: input.defaultBranch }),
     });
 
     return {
