@@ -593,6 +593,42 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
 
   // --- Split Issue Comment tools (individual operations) ---
 
+  if (hasToolPermission(allowedToolIds, 'list_github_issue_comments')) {
+    tools.list_github_issue_comments = createTool({
+      id: 'list_github_issue_comments',
+      description: 'List all comments from an issue. Use to read existing comments before replying to a conversation or adding new information.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        issueNumber: z.number().int().positive(),
+        limit: z.number().int().positive().max(100).default(100),
+      }),
+      execute: async (input) => githubApps.listIssueComments(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        issueNumber: input.issueNumber,
+        limit: input.limit,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'get_github_issue_comment')) {
+    tools.get_github_issue_comment = createTool({
+      id: 'get_github_issue_comment',
+      description: 'Get one specific comment by its ID. Use when you need to read the full content of a single comment.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        commentId: z.number().int().positive(),
+      }),
+      execute: async (input) => githubApps.getIssueComment(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        commentId: input.commentId,
+      }),
+    });
+  }
+
   if (hasToolPermission(allowedToolIds, 'create_github_issue_comment')) {
     tools.create_github_issue_comment = createTool({
       id: 'create_github_issue_comment',

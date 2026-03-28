@@ -612,6 +612,29 @@ export function createGitHubAppManager(config: {
     }));
   }
 
+  async function getIssueComment(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    commentId: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+      owner,
+      repo: input.repositoryName,
+      comment_id: input.commentId,
+    });
+
+    return {
+      id: response.data.id,
+      url: response.data.html_url,
+      body: response.data.body ?? '',
+      author: response.data.user?.login ?? null,
+      createdAt: response.data.created_at,
+      updatedAt: response.data.updated_at,
+    };
+  }
+
   async function createIssueComment(agentId: string, input: {
     owner?: string;
     repositoryName: string;
@@ -968,6 +991,7 @@ export function createGitHubAppManager(config: {
     closeIssue,
     reopenIssue,
     listIssueComments,
+    getIssueComment,
     createIssueComment,
     updateIssueComment,
     deleteIssueComment,
