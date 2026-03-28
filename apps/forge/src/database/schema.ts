@@ -11,7 +11,7 @@
  * - Este schema é APENAS para a aplicação central
  */
 
-import { integer, real, sqliteTable, text, uniqueIndex, index, unique } from 'drizzle-orm/sqlite-core';
+import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
 
