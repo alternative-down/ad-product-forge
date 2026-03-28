@@ -18,6 +18,8 @@ import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createWebTools } from '../web/tools';
+import { getMCPClientManager } from './mcp/client-manager';
+import { getAgentMcpServers } from './mcp/store';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -34,6 +36,56 @@ export interface AgentLoaderConfig {
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
   agentId: string;
+}
+
+/**
+ * Load MCP tools for an agent
+ * Connects to all configured MCP servers and returns the available tools
+ */
+async function loadMCPToolsForAgent(agentId: string): Promise<Record<string, unknown>> {
+  const mcpManager = getMCPClientManager();
+  
+  try {
+    // Get configured MCP servers for this agent
+    const mcpServers = await getAgentMcpServers(agentId);
+    
+    if (mcpServers.length === 0) {
+      return {};
+    }
+    
+    console.log(`[AgentLoader] Connecting to ${mcpServers.length} MCP server(s) for agent ${agentId}`);
+    
+    // Connect to each MCP server
+    for (const { server } of mcpServers) {
+      try {
+        await mcpManager.connectToServer(agentId, server);
+        console.log(`[AgentLoader] Connected to MCP server: ${server.name}`);
+      } catch (error) {
+        console.warn(`[AgentLoader] Failed to connect to MCP server ${server.name}:`, error);
+      }
+    }
+    
+    // Get the tools from all connected servers
+    const mcpTools = mcpManager.getAgentTools(agentId);
+    
+    if (mcpTools.length > 0) {
+      console.log(`[AgentLoader] Loaded ${mcpTools.length} MCP tool(s) for agent ${agentId}`);
+      
+      // Convert array to record with tool id as key
+      const toolsRecord: Record<string, unknown> = {};
+      for (const tool of mcpTools) {
+        if (tool.id) {
+          toolsRecord[tool.id] = tool;
+        }
+      }
+      return toolsRecord;
+    }
+    
+    return {};
+  } catch (error) {
+    console.warn(`[AgentLoader] Failed to load MCP tools for agent ${agentId}:`, error);
+    return {};
+  }
 }
 
 /**
@@ -108,6 +160,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
   const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
   const webTools = createWebTools(allowedToolIds);
+  
+  // Load MCP tools for this agent
+  const mcpTools = await loadMCPToolsForAgent(agentConfig.id);
+  
   const customTools = {
     ...tools,
     ...notificationTools,
@@ -116,7 +172,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...scheduleTools,
     ...capabilityTools,
     ...webTools,
-  };
+    ...mcpTools,
+  } as CreateAgentConfig['tools'];
   const filteredWorkflows = filterWorkflows(config.workflows, capabilitySet.workflowIds);
 
   const runtime = await createInternalAgentRuntime(
