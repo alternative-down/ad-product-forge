@@ -204,6 +204,20 @@
       "when": 1775083000000,
       "tag": "0028_agent_prompts",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1775084000000,
+      "tag": "0029_add_get_github_issue_comment_permission",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1775085000000,
+      "tag": "0030_fix_migration_tracking",
+      "breakpoints": true
     }
   ]
 }
