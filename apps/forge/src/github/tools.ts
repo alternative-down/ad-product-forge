@@ -10,7 +10,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_git_credentials')) {
     tools.get_github_git_credentials = createTool({
       id: 'get_github_git_credentials',
-      description: 'Generate short-lived HTTPS Git credentials for this agent GitHub App.',
+      description: 'Generate HTTPS Git credentials for pushing to repositories.',
       inputSchema: z.object({
         repositoryName: z.string().nullish(),
       }),
@@ -24,7 +24,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_repositories')) {
     tools.list_github_repositories = createTool({
       id: 'list_github_repositories',
-      description: 'List the repositories currently accessible to this agent GitHub App installation.',
+      description: 'List repositories accessible to your GitHub App installation.',
       inputSchema: z.object({}),
       execute: async () => githubApps.listRepositories(agentId),
     });
@@ -33,7 +33,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_repository')) {
     tools.get_github_repository = createTool({
       id: 'get_github_repository',
-      description: 'Get repository metadata from GitHub for one repository.',
+      description: 'Get repository details from GitHub.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -158,7 +158,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_pull_requests')) {
     tools.list_github_pull_requests = createTool({
       id: 'list_github_pull_requests',
-      description: 'List pull requests for one repository.',
+      description: 'List pull requests in a repository filtered by state.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -171,7 +171,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_pull_request')) {
     tools.get_github_pull_request = createTool({
       id: 'get_github_pull_request',
-      description: 'Get one pull request from one repository.',
+      description: 'Get a single pull request with all its details.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -199,7 +199,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_pull_request')) {
     tools.manage_github_pull_request = createTool({
       id: 'manage_github_pull_request',
-      description: 'Create, update, merge, or delete one pull request.',
+      description: 'Manage pull requests: create, update, merge, or delete.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'merge', 'delete']),
         owner: z.string().nullish(),
@@ -357,7 +357,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_issues')) {
     tools.list_github_issues = createTool({
       id: 'list_github_issues',
-      description: 'List issues for one repository.',
+      description: 'List issues in a repository filtered by state, labels, or assignee.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -376,7 +376,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_issue')) {
     tools.get_github_issue = createTool({
       id: 'get_github_issue',
-      description: 'Get one issue from one repository.',
+      description: 'Get a single issue with all its details.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -389,7 +389,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_issue')) {
     tools.manage_github_issue = createTool({
       id: 'manage_github_issue',
-      description: 'Create, update, or delete one issue in a repository.',
+      description: 'Manage issues: create, update, or delete.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']),
         owner: z.string().nullish(),
@@ -520,7 +520,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'toggle_github_issue')) {
     tools.toggle_github_issue = createTool({
       id: 'toggle_github_issue',
-      description: 'Open or close one issue in a repository.',
+      description: 'Open or close an issue.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -536,7 +536,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_issue_comment')) {
     tools.manage_github_issue_comment = createTool({
       id: 'manage_github_issue_comment',
-      description: 'Create, update, or delete one issue comment.',
+      description: 'Manage issue comments: create, update, delete, list, or get.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']),
         owner: z.string().nullish(),
@@ -811,7 +811,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_milestones')) {
     tools.list_github_milestones = createTool({
       id: 'list_github_milestones',
-      description: 'List milestones for one repository.',
+      description: 'List milestones in a repository filtered by state.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),

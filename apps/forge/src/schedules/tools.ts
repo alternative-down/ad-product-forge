@@ -55,7 +55,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'list_agent_schedules')) {
     tools.list_agent_schedules = createTool({
       id: 'list_agent_schedules',
-      description: 'List this agent scheduled wakes.',
+      description: 'List your scheduled wakes.',
       inputSchema: z.object({}),
       execute: async () => schedules.listSchedules(agentId),
     });
@@ -64,7 +64,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'manage_agent_schedule')) {
     tools.manage_agent_schedule = createTool({
       id: 'manage_agent_schedule',
-      description: 'Create, update, or delete one scheduled wake for this agent.',
+      description: 'Manage scheduled wakes: create, update, or delete.',
       inputSchema: manageScheduleInputSchema,
       execute: async (input) => {
         if (input.action === 'create') {
@@ -99,7 +99,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'toggle_agent_schedule')) {
     tools.toggle_agent_schedule = createTool({
       id: 'toggle_agent_schedule',
-      description: 'Activate or pause one scheduled wake for this agent.',
+      description: 'Activate or pause a scheduled wake.',
       inputSchema: toggleScheduleInputSchema,
       execute: async (input) => schedules.updateSchedule(agentId, input.scheduleId, {
         isActive: input.isActive,
