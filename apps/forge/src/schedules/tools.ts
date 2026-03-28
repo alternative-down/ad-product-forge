@@ -6,14 +6,14 @@ import type { createAgentScheduleManager } from './manager';
 
 const manageScheduleInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']),
-  scheduleId: z.string().min(1).optional(),
-  name: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-  scheduleType: z.enum(['cron', 'date']).optional(),
-  cronExpression: z.string().min(1).optional().nullable(),
-  scheduledDate: z.string().min(1).optional().nullable(),
-  timezone: z.string().min(1).optional(),
-  content: z.string().min(1).optional(),
+  scheduleId: z.string().min(1).nullish(),
+  name: z.string().min(1).nullish(),
+  description: z.string().nullish().nullable(),
+  scheduleType: z.enum(['cron', 'date']).nullish(),
+  cronExpression: z.string().min(1).nullish().nullable(),
+  scheduledDate: z.string().min(1).nullish().nullable(),
+  timezone: z.string().min(1).nullish(),
+  content: z.string().min(1).nullish(),
 }).superRefine((input, ctx) => {
   if (input.action === 'create') {
     if (!input.name) {
@@ -112,10 +112,10 @@ export function createAgentScheduleTools(
     const createCronInputSchema = z.object({
       targetAgentId: z.string().min(1).describe('The agent ID to create the cron for'),
       name: z.string().min(1).describe('Name of the cron/schedule'),
-      description: z.string().optional().describe('Optional description'),
+      description: z.string().nullish().describe('Optional description'),
       scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time'),
-      cronExpression: z.string().min(1).optional().describe('Cron expression (required for cron type)'),
-      scheduledDate: z.string().min(1).optional().describe('ISO date string (required for date type)'),
+      cronExpression: z.string().min(1).nullish().describe('Cron expression (required for cron type)'),
+      scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type)'),
       timezone: z.string().min(1).default('UTC').describe('Timezone for the schedule'),
       content: z.string().min(1).describe('Content/payload to execute when the cron triggers'),
     }).superRefine((input, ctx) => {
@@ -147,14 +147,14 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'edit_cron')) {
     const editCronInputSchema = z.object({
       scheduleId: z.string().min(1).describe('ID of the schedule to edit'),
-      name: z.string().min(1).optional().describe('New name'),
-      description: z.string().optional().nullable().describe('New description'),
-      scheduleType: z.enum(['cron', 'date']).optional().describe('New schedule type'),
-      cronExpression: z.string().min(1).optional().nullable().describe('New cron expression'),
-      scheduledDate: z.string().min(1).optional().nullable().describe('New scheduled date (ISO string)'),
-      timezone: z.string().min(1).optional().describe('New timezone'),
-      content: z.string().min(1).optional().describe('New content'),
-      isActive: z.boolean().optional().describe('Activate or pause the schedule'),
+      name: z.string().min(1).nullish().describe('New name'),
+      description: z.string().nullish().nullable().describe('New description'),
+      scheduleType: z.enum(['cron', 'date']).nullish().describe('New schedule type'),
+      cronExpression: z.string().min(1).nullish().nullable().describe('New cron expression'),
+      scheduledDate: z.string().min(1).nullish().nullable().describe('New scheduled date (ISO string)'),
+      timezone: z.string().min(1).nullish().describe('New timezone'),
+      content: z.string().min(1).nullish().describe('New content'),
+      isActive: z.boolean().nullish().describe('Activate or pause the schedule'),
     }).superRefine((input, ctx) => {
       if (Object.keys(input).length <= 1) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides scheduleId must be provided' });

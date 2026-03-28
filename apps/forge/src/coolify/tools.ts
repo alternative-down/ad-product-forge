@@ -69,18 +69,18 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
       description: 'Manage Coolify applications: create new applications linked to GitHub repositories, update configurations, delete applications, or restart running applications. Each action has different required parameters - check inputSchema for details.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete', 'restart']),
-        applicationUuid: z.string().min(1).optional(),
-        githubAppUuid: z.string().min(1).optional(),
-        repositoryOwner: z.string().min(1).optional(),
-        repositoryName: z.string().min(1).optional(),
-        branch: z.string().min(1).optional(),
-        name: z.string().min(1).optional(),
-        slug: coolifyApplicationSlugSchema.optional(),
-        port: z.number().int().positive().optional(),
-        buildCommand: z.string().optional(),
-        startCommand: z.string().optional(),
-        installCommand: z.string().optional(),
-        description: z.string().optional(),
+        applicationUuid: z.string().min(1).nullish(),
+        githubAppUuid: z.string().min(1).nullish(),
+        repositoryOwner: z.string().min(1).nullish(),
+        repositoryName: z.string().min(1).nullish(),
+        branch: z.string().min(1).nullish(),
+        name: z.string().min(1).nullish(),
+        slug: coolifyApplicationSlugSchema.nullish(),
+        port: z.number().int().positive().nullish(),
+        buildCommand: z.string().nullish(),
+        startCommand: z.string().nullish(),
+        installCommand: z.string().nullish(),
+        description: z.string().nullish(),
       }).superRefine((input, ctx) => {
         if (input.action === 'create') {
           for (const field of ['githubAppUuid', 'repositoryOwner', 'repositoryName', 'branch', 'name', 'slug', 'port'] as const) {
@@ -165,7 +165,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
       description: 'Get deployment logs for one Coolify application. If deploymentUuid is omitted, the latest deployment is used.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
-        deploymentUuid: z.string().optional(),
+        deploymentUuid: z.string().nullish(),
       }),
       execute: async (input) => coolify.getDeploymentLogs(input),
     });
@@ -177,8 +177,8 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
       description: 'Get runtime logs for one Coolify application.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
-        lines: z.number().int().positive().max(5000).optional(),
-        since: z.number().int().positive().optional(),
+        lines: z.number().int().positive().max(5000).nullish(),
+        since: z.number().int().positive().nullish(),
       }),
       execute: async (input) => coolify.getApplicationLogs(input),
     });
@@ -203,11 +203,11 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         action: z.enum(['create', 'update', 'delete']),
         applicationUuid: z.string().min(1),
         key: z.string().min(1),
-        value: z.string().optional(),
-        isPreview: z.boolean().optional(),
-        isLiteral: z.boolean().optional(),
-        isMultiline: z.boolean().optional(),
-        isShownOnce: z.boolean().optional(),
+        value: z.string().nullish(),
+        isPreview: z.boolean().nullish(),
+        isLiteral: z.boolean().nullish(),
+        isMultiline: z.boolean().nullish(),
+        isShownOnce: z.boolean().nullish(),
       }).superRefine((input, ctx) => {
         if (input.action !== 'delete' && input.value === undefined) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['value'], message: 'value is required when action is not delete' });

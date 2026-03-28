@@ -36,21 +36,21 @@ export function createCapabilityTools(
       .discriminatedUnion('action', [
         z.object({
           action: z.literal('create'),
-          functionId: z.string().min(1).optional(),
+          functionId: z.string().min(1).nullish(),
           name: z.string().min(1),
-          description: z.string().optional().nullable(),
+          description: z.string().nullish().nullable(),
         }),
         z.object({
           action: z.literal('update'),
           functionId: z.string().min(1),
-          name: z.string().min(1).optional(),
-          description: z.string().optional().nullable(),
+          name: z.string().min(1).nullish(),
+          description: z.string().nullish().nullable(),
         }),
         z.object({
           action: z.literal('delete'),
           functionId: z.string().min(1),
-          name: z.string().min(1).optional(),
-          description: z.string().optional().nullable(),
+          name: z.string().min(1).nullish(),
+          description: z.string().nullish().nullable(),
         }),
       ])
       .superRefine((data, context) => {
@@ -114,21 +114,21 @@ export function createCapabilityTools(
       .discriminatedUnion('action', [
         z.object({
           action: z.literal('create'),
-          roleId: z.string().min(1).optional(),
+          roleId: z.string().min(1).nullish(),
           name: z.string().min(1),
-          description: z.string().optional().nullable(),
+          description: z.string().nullish().nullable(),
         }),
         z.object({
           action: z.literal('update'),
           roleId: z.string().min(1),
-          name: z.string().min(1).optional(),
-          description: z.string().optional().nullable(),
+          name: z.string().min(1).nullish(),
+          description: z.string().nullish().nullable(),
         }),
         z.object({
           action: z.literal('delete'),
           roleId: z.string().min(1),
-          name: z.string().min(1).optional(),
-          description: z.string().optional().nullable(),
+          name: z.string().min(1).nullish(),
+          description: z.string().nullish().nullable(),
         }),
       ])
       .superRefine((data, context) => {
