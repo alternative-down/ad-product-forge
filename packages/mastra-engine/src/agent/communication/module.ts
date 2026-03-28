@@ -202,6 +202,10 @@ export async function createCommunicationModule(config: {
         slug: contact.slug,
         displayName: contact.displayName,
         description: contact.description,
+        accounts: contact.accounts.map((account) => ({
+          provider: account.provider,
+          username: account.username,
+        })),
       })),
     };
   }
@@ -305,41 +309,69 @@ export async function createCommunicationModule(config: {
   // This requires extending the sendMessage input contract in provider-types.ts
   // and updating the agent-facing communication tools accordingly.
   async function sendMessage(input: {
-    provider: string;
+    provider?: string;
     conversationId?: string;
     providerConversationKey?: string;
     contactId?: string;
     content: string;
     replyToMessageId?: string;
   }) {
-    const provider = providers.get(input.provider);
+    // Fallback logic: resolve provider if not provided
+    let resolvedProvider: CommunicationProvider | undefined = input.provider
+      ? providers.get(input.provider)
+      : undefined;
 
-    if (!provider) {
-      throw new Error(`Provider not registered for agent: ${input.provider}`);
+    if (!resolvedProvider) {
+      // Try to find provider from contact's accounts
+      if (input.contactId) {
+        const contact = await store.getContact(input.contactId);
+        if (contact) {
+          const matchingAccount = contact.accounts.find((account) => providers.has(account.provider));
+          if (matchingAccount) {
+            resolvedProvider = providers.get(matchingAccount.provider);
+          }
+        }
+      }
+
+      // Fallback to first available provider
+      if (!resolvedProvider && providers.size > 0) {
+        resolvedProvider = Array.from(providers.values())[0];
+      }
     }
+
+    if (!resolvedProvider) {
+      const availableProviders = Array.from(providers.keys());
+      throw new Error(
+        `Provider not available. ` +
+        `Available providers: ${availableProviders.join(', ') || 'none'}. ` +
+        `Tip: Call list_contacts with filter='self' to see your available providers.`,
+      );
+    }
+
+    const provider = resolvedProvider;
 
     const replyMessage = input.replyToMessageId ? await store.getMessage(input.replyToMessageId) : null;
 
-    if (replyMessage && replyMessage.provider !== input.provider) {
-      throw new Error(`Message ${input.replyToMessageId} does not belong to provider ${input.provider}`);
+    if (replyMessage && replyMessage.provider !== provider.id) {
+      throw new Error(`Message ${input.replyToMessageId} does not belong to provider ${provider.id}`);
     }
 
     const conversation =
       input.conversationId
         ? await store.getConversation(input.conversationId)
         : input.providerConversationKey
-          ? await store.getConversationByProviderConversationKey(input.provider, input.providerConversationKey)
+          ? await store.getConversationByProviderConversationKey(provider.id, input.providerConversationKey)
           : null;
 
     if (conversation) {
-      if (conversation.provider !== input.provider) {
-        throw new Error(`Conversation ${input.conversationId} does not belong to provider ${input.provider}`);
+      if (conversation.provider !== provider.id) {
+        throw new Error(`Conversation ${input.conversationId} does not belong to provider ${provider.id}`);
       }
 
       if (conversation.type === 'group') {
         const selfParticipantIds = new Set(
           (await store.listSelfAccounts())
-            .filter((account) => account.provider === input.provider)
+            .filter((account) => account.provider === provider.id)
             .map((account) => account.externalAccountId),
         );
         const recipients = (await store.listGroupMembers(conversation.conversationId)).filter(
@@ -365,7 +397,7 @@ export async function createCommunicationModule(config: {
         const firstSent = sentMessages[0]!;
 
         return saveSentMessage({
-          provider: input.provider,
+          provider: provider.id,
           providerConversationKey: conversation.providerConversationKey,
           providerMessageId: firstSent.providerMessageId,
           conversationName: conversation.name ?? firstSent.conversationName,
@@ -376,7 +408,7 @@ export async function createCommunicationModule(config: {
 
       let contactExternalId: string | null = null;
       if (conversation.contactId) {
-        contactExternalId = await getContactExternalId(input.provider, conversation.contactId);
+        contactExternalId = await getContactExternalId(provider.id, conversation.contactId);
       }
 
       const sent = await provider.sendMessage({
@@ -389,7 +421,7 @@ export async function createCommunicationModule(config: {
       });
 
       return saveSentMessage({
-        provider: input.provider,
+        provider: provider.id,
         providerConversationKey: sent.providerConversationKey,
         providerMessageId: sent.providerMessageId,
         conversationName: sent.conversationName,
@@ -409,13 +441,13 @@ export async function createCommunicationModule(config: {
     // create it on-the-fly (Issue #214 - conversation may not exist if inbound message wasn't received)
     if (input.providerConversationKey) {
       const newConversation = await store.upsertConversation({
-        provider: input.provider,
+        provider: provider.id,
         providerConversationKey: input.providerConversationKey,
         type: 'dm',
       });
 
       if (!newConversation) {
-        throw new Error(`Failed to create conversation for provider ${input.provider}: ${input.providerConversationKey}`);
+        throw new Error(`Failed to create conversation for provider ${provider.id}: ${input.providerConversationKey}`);
       }
       // Continue with the sending logic using the newly created conversation
       const sent = await provider.sendMessage({
@@ -427,7 +459,7 @@ export async function createCommunicationModule(config: {
       });
 
       return saveSentMessage({
-        provider: input.provider,
+        provider: provider.id,
         providerConversationKey: sent.providerConversationKey,
         providerMessageId: sent.providerMessageId,
         conversationName: sent.conversationName,
@@ -437,10 +469,10 @@ export async function createCommunicationModule(config: {
     }
 
     if (!input.contactId) {
-      throw new Error(`No destination provided for provider: ${input.provider}`);
+      throw new Error(`No destination provided for provider: ${provider.id}`);
     }
 
-    let contactExternalId = await getContactExternalId(input.provider, input.contactId);
+    let contactExternalId = await getContactExternalId(provider.id, input.contactId);
 
     if (!contactExternalId) {
       // No registered identity found — treat the slug as the external ID directly
@@ -450,7 +482,7 @@ export async function createCommunicationModule(config: {
       await store.upsertContact({
         slug: input.contactId,
         displayName: input.contactId,
-        provider: input.provider,
+        provider: provider.id,
         externalUserId: input.contactId,
       });
     }
@@ -463,7 +495,7 @@ export async function createCommunicationModule(config: {
     });
 
     return saveSentMessage({
-      provider: input.provider,
+      provider: provider.id,
       providerConversationKey: sent.providerConversationKey,
       providerMessageId: sent.providerMessageId,
       conversationName: sent.conversationName,

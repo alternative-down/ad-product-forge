@@ -11,11 +11,12 @@ export function createListContactsTool(communication: CommunicationModule) {
   return createTool({
     id: 'list_contacts',
     description:
-      "List contacts. Returns 'self' (the agent's own accounts on each communication provider as { accountId, provider, displayName } pairs) and 'others' (external contacts). " +
-      "The 'self' accounts show your identity on each provider without external IDs. " +
-      "When sending to one of the returned 'others', use the returned contact.slug as send_message.contactSlug. " +
-      "Use filter='self' to know your own identity on each provider before sending. " +
-      "Use filter='all' to get both. Defaults to 'others'.",
+      'List your contacts and accounts. ' +
+      "'self': Returns your agent's accounts on each provider as { accountId, provider, displayName }. " +
+      "'others': Returns external contacts with their slug, displayName, description, and accounts (provider + username pairs, no external IDs exposed). " +
+      'Use contact.slug as the contactId parameter in send_message. ' +
+      "Use filter='self' to see which providers your agent is connected to. " +
+      "Defaults to 'others'.",
     inputSchema: listContactsInputSchema,
     execute: async (input) => {
       return communication.listContacts(input.filter);

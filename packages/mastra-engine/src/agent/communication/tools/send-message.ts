@@ -5,7 +5,7 @@ import type { CommunicationModule } from '../module';
 
 const sendMessageInputSchema = z
   .object({
-    provider: z.string(),
+    provider: z.string().optional().describe('The provider to send through. If not provided, the agent will automatically select the best available provider.'),
     conversationId: z.string().optional().describe('Send inside an existing conversation by its internal conversation id.'),
     providerConversationKey: z
       .string()
@@ -31,10 +31,10 @@ const sendMessageInputSchema = z
     (input) =>
       Number(Boolean(input.conversationId)) +
         Number(Boolean(input.providerConversationKey)) +
-        Number(Boolean(input.contactId)) ===
+        Number(Boolean(input.contactId)) >=
       1,
     {
-      message: 'Provide exactly one of conversationId, providerConversationKey, or contactId.',
+      message: 'Provide at least one of conversationId, providerConversationKey, or contactId.',
     },
   );
 
