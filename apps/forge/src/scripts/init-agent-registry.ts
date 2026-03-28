@@ -7,7 +7,7 @@ import { eq, and } from 'drizzle-orm';
 
 import * as schema from '../database/schema';
 import { getDatabase, runMigrations, seedModelPrices } from '../database/index';
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';
 
