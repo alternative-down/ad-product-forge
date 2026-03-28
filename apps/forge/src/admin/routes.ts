@@ -54,6 +54,23 @@ import {
   type PromptType,
 } from '../agents/prompts/store';
 
+import {
+  createMcpServerConfig,
+  getMcpServerConfig,
+  listMcpServerConfigs,
+  searchMcpServerConfigs,
+  updateMcpServerConfig,
+  deleteMcpServerConfig,
+  type TransportType,
+} from '../agents/mcp-server-configs/store';
+import {
+  createAgentMcpConfig,
+  getAgentMcpConfig,
+  getAgentMcpServers,
+  listAgentMcpConfigs,
+  updateAgentMcpConfig,
+  deleteAgentMcpConfig,
+} from '../agents/agent-mcp-configs/store';
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
 });
@@ -1194,6 +1211,181 @@ export function registerAdminRoutes(input: {
       return jsonResponse({ success: true });
     },
   });
+
+  // ============================================
+  // MCP Server Configs Routes (Issue #263)
+  // ============================================
+
+  // GET /admin/mcp-servers - List all MCP server configs
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/mcp-servers',
+    handler: async (request) => {
+      const limit = parseInt(request.query.get('limit') ?? '50', 10);
+      const offset = parseInt(request.query.get('offset') ?? '0', 10);
+      const activeOnly = request.query.get('activeOnly') === 'true';
+      const { servers, total } = await listMcpServerConfigs({ limit, offset, activeOnly });
+      return jsonResponse({ servers, total, limit, offset });
+    },
+  });
+
+  // GET /admin/mcp-servers/search - Search MCP servers by name
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/mcp-servers/search',
+    handler: async (request) => {
+      const query = request.query.get('q') ?? '';
+      const limit = parseInt(request.query.get('limit') ?? '50', 10);
+      const offset = parseInt(request.query.get('offset') ?? '0', 10);
+      const servers = await searchMcpServerConfigs(query, { limit, offset });
+      return jsonResponse({ servers, query: query || null });
+    },
+  });
+
+  // GET /admin/mcp-servers/:serverId - Get a single MCP server config
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/mcp-servers/:serverId',
+    handler: async (request) => {
+      const serverId = request.query.get('serverId') ?? '';
+      const server = await getMcpServerConfig(serverId);
+      if (!server) {
+        return jsonResponse({ error: 'MCP server config not found' }, 404);
+      }
+      return jsonResponse(server);
+    },
+  });
+
+  // POST /admin/mcp-servers - Create a new MCP server config
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/mcp-servers',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText ?? '{}', z.object({
+          name: z.string().min(1),
+          transportType: z.enum(['stdio', 'http_streamable']),
+          command: z.string().nullable().optional(),
+          url: z.string().nullable().optional(),
+          envVars: z.record(z.string()).nullable().optional(),
+          headers: z.record(z.string()).nullable().optional(),
+          createdBy: z.string().nullable().optional(),
+        }));
+        const server = await createMcpServerConfig(body);
+        return jsonResponse(server, 201);
+      } catch (error) {
+        return jsonResponse({ error: String(error) }, 400);
+      }
+    },
+  });
+
+  // PATCH /admin/mcp-servers - Update an MCP server config
+  input.httpServer.registerRoute({
+    method: 'PATCH',
+    path: '/admin/mcp-servers',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText ?? '{}', z.object({
+          serverId: z.string().min(1),
+          name: z.string().min(1).optional(),
+          transportType: z.enum(['stdio', 'http_streamable']).optional(),
+          command: z.string().nullable().optional(),
+          url: z.string().nullable().optional(),
+          envVars: z.record(z.string()).nullable().optional(),
+          headers: z.record(z.string()).nullable().optional(),
+          isActive: z.boolean().optional(),
+        }));
+        const server = await updateMcpServerConfig(body);
+        if (!server) {
+          return jsonResponse({ error: 'MCP server config not found' }, 404);
+        }
+        return jsonResponse(server);
+      } catch (error) {
+        return jsonResponse({ error: String(error) }, 400);
+      }
+    },
+  });
+
+  // DELETE /admin/mcp-servers - Soft delete an MCP server config
+  input.httpServer.registerRoute({
+    method: 'DELETE',
+    path: '/admin/mcp-servers',
+    handler: async (request) => {
+      const serverId = request.query.get('serverId') ?? '';
+      await deleteMcpServerConfig(serverId);
+      return jsonResponse({ success: true });
+    },
+  });
+
+  // ============================================
+  // Agent MCP Configs Routes (Issue #263)
+  // ============================================
+
+  // GET /admin/agents/:agentId/mcp-servers - Get MCP servers for an agent
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agents/:agentId/mcp-servers',
+    handler: async (request) => {
+      const agentId = request.query.get('agentId') ?? '';
+      const activeOnly = request.query.get('activeOnly') !== 'false';
+      const configs = await getAgentMcpServers(agentId, { activeOnly });
+      return jsonResponse({ configs });
+    },
+  });
+
+  // POST /admin/agents/:agentId/mcp-servers - Assign MCP server to agent
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agents/:agentId/mcp-servers',
+    handler: async (request) => {
+      try {
+        const agentId = request.query.get('agentId') ?? '';
+        const body = parseJsonBody(request.bodyText ?? '{}', z.object({
+          serverId: z.string().min(1),
+        }));
+        const config = await createAgentMcpConfig({
+          agentId,
+          serverId: body.serverId,
+        });
+        return jsonResponse(config, 201);
+      } catch (error) {
+        return jsonResponse({ error: String(error) }, 400);
+      }
+    },
+  });
+
+  // PATCH /admin/agents/:agentId/mcp-servers - Update agent-MCP config
+  input.httpServer.registerRoute({
+    method: 'PATCH',
+    path: '/admin/agents/:agentId/mcp-servers',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText ?? '{}', z.object({
+          configId: z.string().min(1),
+          isActive: z.boolean().optional(),
+        }));
+        const config = await updateAgentMcpConfig(body);
+        if (!config) {
+          return jsonResponse({ error: 'Agent MCP config not found' }, 404);
+        }
+        return jsonResponse(config);
+      } catch (error) {
+        return jsonResponse({ error: String(error) }, 400);
+      }
+    },
+  });
+
+  // DELETE /admin/agents/:agentId/mcp-servers - Remove MCP server from agent
+  input.httpServer.registerRoute({
+    method: 'DELETE',
+    path: '/admin/agents/:agentId/mcp-servers',
+    handler: async (request) => {
+      const configId = request.query.get('configId') ?? '';
+      await deleteAgentMcpConfig(configId);
+      return jsonResponse({ success: true });
+    },
+  });
+
 }
 
 function parseJsonBody<TSchema extends z.ZodTypeAny>(

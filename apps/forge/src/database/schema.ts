@@ -11,7 +11,7 @@
  * - Este schema é APENAS para a aplicação central
  */
 
-import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
+import { integer, real, sqliteTable, text, uniqueIndex, index, unique } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -423,6 +423,7 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
   prompts: many(agentPrompts),
+  mcpConfigs: many(agentMcpConfigs),
 }));
 
 export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
@@ -539,3 +540,61 @@ export const mastraInstances = sqliteTable(
 
 export type MastraInstance = typeof mastraInstances.$inferSelect;
 export type NewMastraInstance = typeof mastraInstances.$inferInsert;
+
+// MCP Server Configurations - Issue #263
+export const mcpServerConfigs = sqliteTable('mcp_server_configs', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  transportType: text('transport_type').notNull(), // 'stdio' | 'http_streamable'
+  command: text('command'),
+  url: text('url'),
+  envVars: text('env_vars'),
+  headers: text('headers'),
+  isActive: integer('is_active').notNull().default(1),
+  createdBy: text('created_by'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  isActiveIdx: index('idx_mcp_server_configs_is_active').on(table.isActive),
+  nameIdx: index('idx_mcp_server_configs_name').on(table.name),
+}));
+
+export type McpServerConfig = typeof mcpServerConfigs.$inferSelect;
+export type NewMcpServerConfig = typeof mcpServerConfigs.$inferInsert;
+
+// Agent to MCP Server Relations - Issue #263
+export const agentMcpConfigs = sqliteTable('agent_mcp_configs', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  serverId: text('server_id')
+    .notNull()
+    .references(() => mcpServerConfigs.id, { onDelete: 'cascade' }),
+  isActive: integer('is_active').notNull().default(1),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  agentIdIdx: index('idx_agent_mcp_configs_agent_id').on(table.agentId),
+  serverIdIdx: index('idx_agent_mcp_configs_server_id').on(table.serverId),
+  isActiveIdx: index('idx_agent_mcp_configs_is_active').on(table.isActive),
+  uniqueAgentServer: unique('unique_agent_server').on(table.agentId, table.serverId),
+}));
+
+export type AgentMcpConfig = typeof agentMcpConfigs.$inferSelect;
+export type NewAgentMcpConfig = typeof agentMcpConfigs.$inferInsert;
+
+// MCP Relations
+export const mcpServerConfigsRelations = relations(mcpServerConfigs, ({ many }) => ({
+  agentConfigs: many(agentMcpConfigs),
+}));
+
+export const agentMcpConfigsRelations = relations(agentMcpConfigs, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentMcpConfigs.agentId],
+    references: [agents.id],
+  }),
+  server: one(mcpServerConfigs, {
+    fields: [agentMcpConfigs.serverId],
+    references: [mcpServerConfigs.id],
+  }),
+}));
