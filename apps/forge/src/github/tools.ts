@@ -137,9 +137,9 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_pull_request')) {
     tools.manage_github_pull_request = createTool({
       id: 'manage_github_pull_request',
-      description: 'Create, update, or delete one pull request.',
+      description: 'Create, update, merge, or delete one pull request.',
       inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete']),
+        action: z.enum(['create', 'update', 'merge', 'delete']),
         owner: z.string().optional(),
         repositoryName: z.string().min(1),
         pullRequestNumber: z.number().int().positive().optional(),
@@ -148,6 +148,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         base: z.string().min(1).optional(),
         body: z.string().optional(),
         state: z.enum(['open', 'closed']).optional(),
+        mergeMethod: z.enum(['merge', 'squash', 'rebase']).optional(),
       }).superRefine((input, ctx) => {
         if (input.action === 'create') {
           for (const field of ['title', 'head', 'base'] as const) {
@@ -157,7 +158,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
           }
         }
 
-        if ((input.action === 'update' || input.action === 'delete') && !input.pullRequestNumber) {
+        if ((input.action === 'update' || input.action === 'delete' || input.action === 'merge') && !input.pullRequestNumber) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pullRequestNumber'], message: 'pullRequestNumber is required when action is not create' });
         }
       }),
@@ -179,6 +180,15 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             repositoryName: input.repositoryName,
             pullRequestNumber: input.pullRequestNumber!,
             state: 'closed',
+          });
+        }
+
+        if (input.action === 'merge') {
+          return githubApps.mergePullRequest(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            pullRequestNumber: input.pullRequestNumber!,
+            mergeMethod: input.mergeMethod,
           });
         }
 

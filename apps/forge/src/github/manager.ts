@@ -439,6 +439,32 @@ export function createGitHubAppManager(config: {
     };
   }
 
+  async function mergePullRequest(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    pullRequestNumber: number;
+    mergeMethod?: 'merge' | 'squash' | 'rebase';
+    commitTitle?: string;
+    commitMessage?: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge', {
+      owner,
+      repo: input.repositoryName,
+      pull_number: input.pullRequestNumber,
+      merge_method: input.mergeMethod ?? 'merge',
+      commit_title: input.commitTitle,
+      commit_message: input.commitMessage,
+    });
+
+    return {
+      merged: response.data.merged,
+      message: response.data.message,
+      sha: response.data.sha,
+    };
+  }
+
   async function listIssues(agentId: string, input: {
     owner?: string;
     repositoryName: string;
@@ -931,6 +957,7 @@ export function createGitHubAppManager(config: {
     createPullRequest,
     getPullRequest,
     updatePullRequest,
+    mergePullRequest,
     listPullRequestComments,
     listIssues,
     getIssue,
