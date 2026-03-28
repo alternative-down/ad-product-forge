@@ -188,7 +188,7 @@ export function BudgetAdjustCard({
         onClick={handleSubmit}
         disabled={!canSubmit}
         className="w-full"
-        variant={isDecrease ? 'destructive' : 'default'}
+        variant={isDecrease ? 'danger' : 'primary'}
       >
         {isSubmitting ? (
           <>
