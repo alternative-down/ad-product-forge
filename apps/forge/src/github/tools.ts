@@ -122,7 +122,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_pull_request')) {
     tools.manage_github_pull_request = createTool({
       id: 'manage_github_pull_request',
-      description: 'Create, update, or delete one pull request.',
+      description: 'Create, update, or delete one pull request. Note: The merge action is not available via this tool - to merge PRs, use GitHub GraphQL API directly.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']),
         owner: z.string().optional(),
@@ -348,7 +348,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_labels')) {
     tools.list_github_labels = createTool({
       id: 'list_github_labels',
-      description: 'List labels for one repository.',
+      description: 'List labels available in one repository for filtering or applying to issues and PRs. Labels help categorize and track work. Use with repositoryName to get all labels, optionally filtered by owner.',
       inputSchema: z.object({
         owner: z.string().optional(),
         repositoryName: z.string().min(1),
