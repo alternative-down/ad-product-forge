@@ -5,7 +5,7 @@ import type { CommunicationModule } from '../module';
 
 const sendMessageInputSchema = z
   .object({
-    provider: z.string().optional().describe('The provider to send through. If not provided, the agent will automatically select the best available provider.'),
+    provider: z.string().optional().describe('The provider to send through. If not provided, the system will select an available provider.'),
     conversationId: z.string().optional().describe('Send inside an existing conversation by its internal conversation id.'),
     providerConversationKey: z
       .string()
