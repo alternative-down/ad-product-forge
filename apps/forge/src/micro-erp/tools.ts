@@ -8,11 +8,11 @@ import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 
 const listCompanyCashInputSchema = z.object({
-  direction: z.enum(['in', 'out']).optional(),
-  status: z.enum(['planned', 'posted', 'canceled']).optional(),
-  type: z.string().optional(),
-  periodStart: z.number().int().optional(),
-  periodEnd: z.number().int().optional(),
+  direction: z.enum(['in', 'out']).nullish(),
+  status: z.enum(['planned', 'posted', 'canceled']).nullish(),
+  type: z.string().nullish(),
+  periodStart: z.number().int().nullish(),
+  periodEnd: z.number().int().nullish(),
   limit: z.number().int().positive().max(100).default(20),
   offset: z.number().int().min(0).default(0),
 });

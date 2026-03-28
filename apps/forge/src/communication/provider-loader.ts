@@ -17,14 +17,14 @@ const internalChatPreset = createInternalChatPreset();
 
 export const internalChatCredentialsSchema = z.object({
   agentId: z.string(),
-  displayName: z.string().min(1).optional(),
-  description: z.string().optional(),
+  displayName: z.string().min(1).nullish(),
+  description: z.string().nullish(),
 });
 
 export const discordCredentialsSchema = z.object({
   token: z.string(),
-  allowedChannelIds: z.array(z.string()).optional(),
-  respondToMentionsOnly: z.boolean().optional(),
+  allowedChannelIds: z.array(z.string()).nullish(),
+  respondToMentionsOnly: z.boolean().nullish(),
 });
 
 export const emailCredentialsSchema = z.object({
@@ -42,7 +42,7 @@ export const emailCredentialsSchema = z.object({
     user: z.string(),
     password: z.string(),
   }),
-  bcc: z.string().optional(),
+  bcc: z.string().nullish(),
 });
 
 export type ProviderCredentialsMap = {
