@@ -13,7 +13,7 @@ const sendMessageInputSchema = z
       .describe(
         'Send inside an existing conversation by its provider conversation key. Prefer conversationId when available. Useful for internal chat groups and provider-native thread keys.',
       ),
-    contactSlug: z
+    contactId: z
       .string()
       .optional()
       .describe(
@@ -31,10 +31,10 @@ const sendMessageInputSchema = z
     (input) =>
       Number(Boolean(input.conversationId)) +
         Number(Boolean(input.providerConversationKey)) +
-        Number(Boolean(input.contactSlug)) ===
+        Number(Boolean(input.contactId)) ===
       1,
     {
-      message: 'Provide exactly one of conversationId, providerConversationKey, or contactSlug.',
+      message: 'Provide exactly one of conversationId, providerConversationKey, or contactId.',
     },
   );
 
@@ -48,7 +48,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
         provider: input.provider,
         conversationId: input.conversationId,
         providerConversationKey: input.providerConversationKey,
-        contactSlug: input.contactSlug,
+        contactId: input.contactId,
         content: input.content,
         replyToMessageId: input.replyToMessageId,
       }),

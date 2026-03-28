@@ -66,7 +66,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'manage_coolify_application')) {
     tools.manage_coolify_application = createTool({
       id: 'manage_coolify_application',
-      description: 'Create, update, delete, or restart one Coolify application.',
+      description: 'Manage Coolify applications: create new applications linked to GitHub repositories, update configurations, delete applications, or restart running applications. Each action has different required parameters - check inputSchema for details.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete', 'restart']),
         applicationUuid: z.string().min(1).optional(),

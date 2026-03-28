@@ -42,20 +42,17 @@ import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 import { createSystemSettingsStore } from '../system-settings/store';
 import {
-  createTask,
-  listAgentTasks,
-  listCoordinatorTasks,
-  updateTask,
-  cancelTask,
-  countCoordinatorTasksLastHour,
-  countAgentTasks,
-  hasDuplicateTask,
-  type TaskStatus,
-} from '../tasks/store';
-
-// Rate limit constants for task routes
-const MAX_TASKS_PER_COORDINATOR_PER_HOUR = 10;
-const MAX_TASKS_PER_AGENT_TOTAL = 100;
+  createPrompt,
+  getPrompt,
+  getAgentPrompts,
+  getGlobalPrompts,
+  getActiveSystemPrompts,
+  updatePrompt,
+  deletePrompt,
+  listAllPrompts,
+  searchPrompts,
+  type PromptType,
+} from '../agents/prompts/store';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -290,6 +287,24 @@ const ledgerEntryActionSchema = z.object({
 const recurringPayableStatusSchema = z.object({
   payableId: z.string().min(1),
   isActive: z.boolean(),
+});
+
+// Agent Prompts Schemas
+const createPromptSchema = z.object({
+  agentId: z.string().optional().nullable(),
+  promptType: z.enum(['system', 'user', 'assistant', 'custom']),
+  name: z.string().min(1),
+  description: z.string().optional().nullable(),
+  content: z.string().min(1),
+  createdBy: z.string().optional().nullable(),
+});
+
+const updatePromptSchema = z.object({
+  promptId: z.string().min(1),
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  content: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export function registerAdminRoutes(input: {
@@ -684,182 +699,6 @@ export function registerAdminRoutes(input: {
     },
   });
 
-  // ============================================================
-  // Agent Task Routes (Issue #225 — agent-to-agent task scheduling)
-  // Requires COORDINATOR role (graceful placeholder until #242 deploys)
-  // ============================================================
-
-  // POST /admin/agent-task/create — Create a task for another agent
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-task/create',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, z.object({
-          agentId: z.string().min(1),
-          targetAgentId: z.string().min(1),
-          name: z.string().min(1),
-          description: z.string().optional(),
-          priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
-          scheduleType: z.enum(['cron', 'date']),
-          cronExpression: z.string().min(1).optional(),
-          scheduledDate: z.string().min(1),
-          timezone: z.string().min(1).default('UTC'),
-          content: z.string().min(1),
-        }));
-
-        // COORDINATOR role placeholder check (Issue #242)
-        const coordinatorCheck = await input.db.all(`
-          SELECT id FROM agent_roles WHERE name = 'COORDINATOR' LIMIT 1
-        `);
-        if (!coordinatorCheck || coordinatorCheck.length === 0) {
-          return jsonResponse(
-            { error: 'COORDINATOR role not defined yet. Issue #242 must be deployed first.' },
-            503
-          );
-        }
-
-        // Rate limit: coordinator per hour
-        const coordinatorCount = await countCoordinatorTasksLastHour(body.agentId);
-        if (coordinatorCount >= MAX_TASKS_PER_COORDINATOR_PER_HOUR) {
-          return jsonResponse(
-            { error: `Rate limit exceeded: max ${MAX_TASKS_PER_COORDINATOR_PER_HOUR} tasks per coordinator per hour.` },
-            429
-          );
-        }
-
-        // Rate limit: agent total
-        const agentTaskCount = await countAgentTasks(body.targetAgentId);
-        if (agentTaskCount >= MAX_TASKS_PER_AGENT_TOTAL) {
-          return jsonResponse(
-            { error: `Rate limit exceeded: max ${MAX_TASKS_PER_AGENT_TOTAL} tasks per agent total.` },
-            429
-          );
-        }
-
-        // Duplicate check
-        const scheduledDateMs = new Date(body.scheduledDate).getTime();
-        const duplicate = await hasDuplicateTask(body.targetAgentId, scheduledDateMs);
-        if (duplicate) {
-          return jsonResponse(
-            { error: `Duplicate task: agent ${body.targetAgentId} already has a task for ${body.scheduledDate}.` },
-            409
-          );
-        }
-
-        const task = await createTask({
-          agentId: body.targetAgentId,
-          name: body.name,
-          description: body.description ?? null,
-          taskType: 'task',
-          priority: body.priority,
-          scheduleType: body.scheduleType,
-          cronExpression: body.cronExpression ?? null,
-          scheduledDate: scheduledDateMs,
-          timezone: body.timezone,
-          content: body.content,
-          sourceCoordinatorId: body.agentId,
-          targetAgentId: body.targetAgentId,
-        });
-
-        return jsonResponse(task, 201);
-      } catch (error) {
-        console.error('[Admin] Failed to create agent task:', error);
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // GET /admin/agent-task/list — List tasks (by targetAgentId filter or coordinator's tasks)
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent-task/list',
-    handler: async (request) => {
-      try {
-        const targetAgentId = request.query.get('targetAgentId');
-        const status = (request.query.get('status') ?? 'pending') as TaskStatus;
-        const limit = Math.min(parseInt(request.query.get('limit') ?? '50', 10), 100);
-        const agentId = request.query.get('agentId');
-
-        if (!agentId) {
-          return jsonResponse({ error: 'agentId query parameter is required.' }, 400);
-        }
-
-        // With targetAgentId filter → COORDINATOR only (placeholder check)
-        if (targetAgentId) {
-          const coordinatorCheck = await input.db.all(`
-            SELECT id FROM agent_roles WHERE name = 'COORDINATOR' LIMIT 1
-          `);
-          if (!coordinatorCheck || coordinatorCheck.length === 0) {
-            return jsonResponse(
-              { error: 'COORDINATOR role not defined yet. Issue #242 must be deployed first.' },
-              503
-            );
-          }
-          const tasks = await listAgentTasks(targetAgentId, status, limit);
-          return jsonResponse(tasks);
-        }
-
-        // Without filter → list coordinator's own tasks
-        const tasks = await listCoordinatorTasks(agentId, limit);
-        return jsonResponse(tasks);
-      } catch (error) {
-        console.error('[Admin] Failed to list agent tasks:', error);
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // PATCH /admin/agent-task/update — Update a task
-  input.httpServer.registerRoute({
-    method: 'PATCH',
-    path: '/admin/agent-task/update',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, z.object({
-          taskId: z.string().min(1),
-          agentId: z.string().min(1),
-          name: z.string().min(1).optional(),
-          description: z.string().optional().nullable(),
-          status: z.enum(['pending', 'completed', 'failed']).optional(),
-          priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
-          isActive: z.boolean().optional(),
-          result: z.string().optional().nullable(),
-          error: z.string().optional().nullable(),
-        }));
-
-        const task = await updateTask(body);
-        if (!task) {
-          return jsonResponse({ error: 'Task not found.' }, 404);
-        }
-        return jsonResponse(task);
-      } catch (error) {
-        console.error('[Admin] Failed to update agent task:', error);
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // DELETE /admin/agent-task/cancel — Cancel a task
-  input.httpServer.registerRoute({
-    method: 'DELETE',
-    path: '/admin/agent-task/cancel',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, z.object({
-          taskId: z.string().min(1),
-          agentId: z.string().min(1),
-        }));
-
-        await cancelTask(body.taskId, body.agentId);
-        return jsonResponse({ success: true, taskId: body.taskId });
-      } catch (error) {
-        console.error('[Admin] Failed to cancel agent task:', error);
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
   input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/role/create',
@@ -1224,6 +1063,135 @@ export function registerAdminRoutes(input: {
       const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
       const result = await companyPayables.setRecurringPayableActive(body.payableId, body.isActive);
       return jsonResponse(result);
+    },
+  });
+
+  // ========== Agent Prompts Routes ==========
+
+  // GET /admin/prompts - List all prompts (admin)
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/prompts',
+    handler: async (request) => {
+      const limit = parseInt(request.query.get('limit') ?? '100', 10);
+      const offset = parseInt(request.query.get('offset') ?? '0', 10);
+      const prompts = await listAllPrompts(limit, offset);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // GET /admin/prompts/search - Search prompts by name
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/prompts/search',
+    handler: async (request) => {
+      const query = request.query.get('q') ?? '';
+      const limit = parseInt(request.query.get('limit') ?? '50', 10);
+      const prompts = await searchPrompts(query, limit);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // GET /admin/prompts/:promptId - Get a single prompt
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/prompts/:promptId',
+    handler: async (request) => {
+      const promptId = request.query.get('promptId') ?? '';
+      const prompt = await getPrompt(promptId);
+
+      if (!prompt) {
+        return jsonResponse({ error: `Prompt not found: ${promptId}` }, 404);
+      }
+
+      return jsonResponse(prompt);
+    },
+  });
+
+  // GET /admin/agents/:agentId/prompts - Get prompts for an agent
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agents/:agentId/prompts',
+    handler: async (request) => {
+      const agentId = request.query.get('agentId') ?? '';
+      const promptType = request.query.get('type') as PromptType | undefined;
+      const activeOnly = request.query.get('activeOnly') !== 'false';
+      const prompts = await getAgentPrompts(agentId, promptType, activeOnly);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // GET /admin/prompts/global - Get global prompts (not bound to specific agent)
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/prompts/global',
+    handler: async (request) => {
+      const promptType = request.query.get('type') as PromptType | undefined;
+      const activeOnly = request.query.get('activeOnly') !== 'false';
+      const prompts = await getGlobalPrompts(promptType, activeOnly);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // GET /admin/agents/:agentId/system-prompts - Get active system prompts for an agent
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agents/:agentId/system-prompts',
+    handler: async (request) => {
+      const agentId = request.query.get('agentId') ?? '';
+      const prompts = await getActiveSystemPrompts(agentId);
+      return jsonResponse(prompts);
+    },
+  });
+
+  // POST /admin/prompts - Create a new prompt
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/prompts',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createPromptSchema);
+      const prompt = await createPrompt({
+        agentId: body.agentId,
+        promptType: body.promptType,
+        name: body.name,
+        description: body.description,
+        content: body.content,
+        createdBy: body.createdBy,
+      });
+      return jsonResponse(prompt, 201);
+    },
+  });
+
+  // PATCH /admin/prompts - Update a prompt
+  input.httpServer.registerRoute({
+    method: 'PATCH',
+    path: '/admin/prompts',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updatePromptSchema);
+      const prompt = await updatePrompt({
+        promptId: body.promptId,
+        name: body.name,
+        description: body.description,
+        content: body.content,
+        isActive: body.isActive,
+      });
+
+      if (!prompt) {
+        return jsonResponse({ error: `Prompt not found: ${body.promptId}` }, 404);
+      }
+
+      return jsonResponse(prompt);
+    },
+  });
+
+  // DELETE /admin/prompts - Delete (soft) a prompt
+  input.httpServer.registerRoute({
+    method: 'DELETE',
+    path: '/admin/prompts',
+    handler: async (request) => {
+      const promptId = request.query.get('promptId') ?? '';
+      await deletePrompt(promptId);
+      return jsonResponse({ success: true });
     },
   });
 }

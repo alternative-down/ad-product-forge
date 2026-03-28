@@ -20,6 +20,35 @@ const INSTALLATION_READY_ATTEMPTS = 10;
 const INSTALLATION_READY_DELAY_MS = 1500;
 const GITHUB_APP_NAME_SUFFIX_LENGTH = 6;
 const GITHUB_APP_NAME_MAX_LENGTH = 32;
+
+/**
+ * Normalizes GitHub usernames for API calls.
+ * GitHub App bot accounts require the [bot] suffix when used as assignees.
+ * For example: "architectron-the-scalabil-sykutp" -> "architectron-the-scalabil-sykutp[bot]"
+ */
+function normalizeAssignees(assignees?: string[]): string[] | undefined {
+  if (!assignees || assignees.length === 0) {
+    return undefined;
+  }
+
+  return assignees.map((assignee) => {
+    // If already has [bot] suffix, return as-is
+    if (assignee.endsWith('[bot]')) {
+      return assignee;
+    }
+
+    // GitHub App bot accounts follow the pattern: app-name-appId
+    // They have at least 2 kebab-case segments and end with an alphanumeric ID
+    // Examples: architectron-the-scalabil-sykutp, pixel-quill-4c1jvk
+    const gitHubAppPattern = /^[a-z0-9]+(-[a-z0-9]+)+$/;
+
+    if (gitHubAppPattern.test(assignee)) {
+      return `${assignee}[bot]`;
+    }
+
+    return assignee;
+  });
+}
 const manifestConversionSchema = z.object({
   id: z.number().int(),
   pem: z.string(),
@@ -176,6 +205,7 @@ export function createGitHubAppManager(config: {
     description?: string;
     private?: boolean;
     autoInit?: boolean;
+    defaultBranch?: string;
   }) {
     const octokit = await getInstallationOctokit(agentId);
     const githubConfig = await getGlobalConfig();
@@ -185,6 +215,7 @@ export function createGitHubAppManager(config: {
       description: input.description,
       private: input.private ?? true,
       auto_init: input.autoInit ?? false,
+      ...(input.defaultBranch && { default_branch: input.defaultBranch }),
     });
 
     return {
@@ -410,6 +441,32 @@ export function createGitHubAppManager(config: {
     };
   }
 
+  async function mergePullRequest(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    pullRequestNumber: number;
+    mergeMethod?: 'merge' | 'squash' | 'rebase';
+    commitTitle?: string;
+    commitMessage?: string;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge', {
+      owner,
+      repo: input.repositoryName,
+      pull_number: input.pullRequestNumber,
+      merge_method: input.mergeMethod ?? 'merge',
+      commit_title: input.commitTitle,
+      commit_message: input.commitMessage,
+    });
+
+    return {
+      merged: response.data.merged,
+      message: response.data.message,
+      sha: response.data.sha,
+    };
+  }
+
   async function listIssues(agentId: string, input: {
     owner?: string;
     repositoryName: string;
@@ -473,7 +530,7 @@ export function createGitHubAppManager(config: {
       title: input.title,
       body: input.body,
       labels: input.labels,
-      assignees: input.assignees,
+      assignees: normalizeAssignees(input.assignees),
       milestone: input.milestone,
     });
 
@@ -501,7 +558,7 @@ export function createGitHubAppManager(config: {
       body: input.body,
       state: input.state,
       labels: input.labels,
-      assignees: input.assignees,
+      assignees: normalizeAssignees(input.assignees),
       milestone: input.milestone,
     });
 
@@ -902,6 +959,7 @@ export function createGitHubAppManager(config: {
     createPullRequest,
     getPullRequest,
     updatePullRequest,
+    mergePullRequest,
     listPullRequestComments,
     listIssues,
     getIssue,

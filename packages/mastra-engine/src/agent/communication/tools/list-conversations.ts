@@ -5,7 +5,7 @@ import type { CommunicationModule } from '../module';
 
 const listConversationsInputSchema = z.object({
   provider: z.string().optional(),
-  contactSlug: z.string().optional(),
+  contactId: z.string().optional(),
   unread: z.boolean().optional(),
   limit: z.number().int().positive().max(100).default(20),
 });
@@ -19,7 +19,7 @@ export function createListConversationsTool(communication: CommunicationModule) 
     execute: async (input) => ({
       conversations: await communication.listConversations({
         provider: input.provider,
-        contactSlug: input.contactSlug,
+        contactId: input.contactId,
         unread: input.unread,
         limit: input.limit ?? 20,
       }),

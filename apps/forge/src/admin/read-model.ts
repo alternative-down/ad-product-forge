@@ -501,7 +501,7 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
         provider: conversation.provider,
         type: conversation.type,
         name: conversation.name ?? undefined,
-        contactSlug: conversation.contactSlug ?? undefined,
+        contactId: conversation.contactId ?? undefined,
         contactDisplayName: conversation.contact?.displayName ?? undefined,
         participants: [...participants],
         updatedAt: conversation.updatedAt,

@@ -13,6 +13,11 @@ const createScheduleSchema = z.object({
   scheduledDate: z.string().min(1).optional(),
   timezone: z.string().min(1).default('UTC'),
   content: z.string().min(1),
+});
+
+// Schema for creating schedule for another agent (cross-agent)
+const createScheduleForAgentSchema = createScheduleSchema.extend({
+  targetAgentId: z.string().min(1),
 }).superRefine((input, ctx) => {
   if (input.scheduleType === 'cron' && !input.cronExpression) {
     ctx.addIssue({
@@ -241,6 +246,101 @@ export function createAgentScheduleManager(input: {
     };
   }
 
+  // Cross-agent: Create schedule for another agent
+  // creatorId = agent that created this schedule (for authorization)
+  async function createScheduleForAgent(
+    creatorAgentId: string,
+    rawInput: z.input<typeof createScheduleForAgentSchema>,
+  ) {
+    const parsed = createScheduleForAgentSchema.parse(rawInput);
+    const scheduledDate = parsed.scheduledDate ? parseScheduleDate(parsed.scheduledDate) : undefined;
+    validateScheduleShape({
+      scheduleType: parsed.scheduleType,
+      cronExpression: parsed.cronExpression,
+      scheduledDate,
+    });
+    assertFutureScheduledDate(parsed.scheduleType, scheduledDate);
+
+    // Create schedule for target agent with creatorId set to calling agent
+    const record = await store.createSchedule({
+      agentId: parsed.targetAgentId,
+      kind: 'agent',
+      name: parsed.name,
+      description: parsed.description,
+      scheduleType: parsed.scheduleType,
+      cronExpression: parsed.cronExpression,
+      scheduledDate,
+      timezone: parsed.timezone,
+      content: parsed.content,
+      creatorId: creatorAgentId,
+    });
+
+    const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, record.id);
+
+    if (!scheduleRecord) {
+      throw new Error(`Failed to load created schedule: ${record.id}`);
+    }
+
+    try {
+      await registerSchedule(scheduleRecord);
+    } catch (error) {
+      await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
+      throw error;
+    }
+
+    return {
+      targetAgentId: parsed.targetAgentId,
+      createdBy: creatorAgentId,
+      ...toToolOutput(scheduleRecord),
+    };
+  }
+
+  // Cross-agent: Edit schedule (only creator can edit)
+  async function editCron(
+    editorAgentId: string,
+    scheduleId: string,
+    rawInput: z.input<typeof updateScheduleSchema>,
+  ) {
+    const schedule = await store.getScheduleById(scheduleId);
+
+    if (!schedule) {
+      throw new Error(`Schedule not found: ${scheduleId}`);
+    }
+
+    // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
+    const isCreator = schedule.creatorId === editorAgentId;
+    const isSelfCreated = schedule.creatorId === null && schedule.agentId === editorAgentId;
+
+    if (!isCreator && !isSelfCreated) {
+      throw new Error(`Not authorized to edit schedule: ${scheduleId}`);
+    }
+
+    // Delegate to updateSchedule with the target agent's ID
+    return updateSchedule(schedule.agentId, scheduleId, rawInput);
+  }
+
+  // Cross-agent: Delete schedule (only creator can delete)
+  async function deleteCron(editorAgentId: string, scheduleId: string) {
+    const schedule = await store.getScheduleById(scheduleId);
+
+    if (!schedule) {
+      throw new Error(`Schedule not found: ${scheduleId}`);
+    }
+
+    // Authorization: only creator can delete (or null creator = self-created, only agentId can delete)
+    const isCreator = schedule.creatorId === editorAgentId;
+    const isSelfCreated = schedule.creatorId === null && schedule.agentId === editorAgentId;
+
+    if (!isCreator && !isSelfCreated) {
+      throw new Error(`Not authorized to delete schedule: ${scheduleId}`);
+    }
+
+    cancelJob(scheduleId);
+    return {
+      success: await store.deleteAgentSchedule(schedule.agentId, scheduleId),
+    };
+  }
+
   async function removeAgent(agentId: string) {
     const schedules = await store.listAgentSchedules(agentId);
 
@@ -394,6 +494,9 @@ export function createAgentScheduleManager(input: {
     deleteSchedule,
     removeAgent,
     stop,
+    createScheduleForAgent,
+    editCron,
+    deleteCron,
   };
 }
 

@@ -17,6 +17,7 @@ type CreateAgentScheduleInput = {
   scheduledDate?: number;
   timezone: string;
   content: string;
+  creatorId?: string; // agent that created this schedule (for cross-agent auth)
 };
 
 type UpdateAgentScheduleInput = {
@@ -47,6 +48,7 @@ export function createAgentScheduleStore(db: Database) {
       isActive: 1,
       lastTriggeredAt: null,
       nextTriggerAt: null,
+      creatorId: input.creatorId ?? null,
       createdAt: now,
       updatedAt: now,
     };
@@ -95,6 +97,19 @@ export function createAgentScheduleStore(db: Database) {
     });
 
     if (!row) {
+      return null;
+    }
+
+    return toScheduleRecord(row);
+  }
+
+  // Get schedule by ID (for cross-agent authorization)
+  async function getScheduleById(scheduleId: string) {
+    const row = await db.query.agentSchedules.findFirst({
+      where: eq(agentSchedules.id, scheduleId),
+    });
+
+    if (!row || row.kind !== 'agent') {
       return null;
     }
 
@@ -203,6 +218,7 @@ export function createAgentScheduleStore(db: Database) {
     listActiveSchedules,
     getAgentSchedule,
     getScheduleByKind,
+    getScheduleById,
     updateAgentSchedule,
     deleteAgentSchedule,
     deactivateSchedule,
@@ -225,6 +241,7 @@ function toScheduleRecord(row: typeof agentSchedules.$inferSelect) {
     isActive: rest.isActive === 1,
     lastTriggeredAt: rest.lastTriggeredAt ?? undefined,
     nextTriggerAt: rest.nextTriggerAt ?? undefined,
+    creatorId: rest.creatorId ?? undefined,
   };
 }
 

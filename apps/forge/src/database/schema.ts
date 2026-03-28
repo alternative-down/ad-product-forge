@@ -222,53 +222,20 @@ export const agentSchedules = sqliteTable('agent_schedules', {
   isActive: integer('is_active').notNull().default(1),
   lastTriggeredAt: integer('last_triggered_at'),
   nextTriggerAt: integer('next_trigger_at'),
+  // Cross-agent scheduling: creatorId = agent that created the schedule
+  // null = self-created (agent created for itself)
+  creatorId: text('creator_id'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   agentSchedulesAgentIdIdx: index('agent_schedules_agent_id_idx').on(table.agentId),
   agentSchedulesIsActiveIdx: index('agent_schedules_is_active_idx').on(table.isActive),
   agentSchedulesNextTriggerAtIdx: index('agent_schedules_next_trigger_at_idx').on(table.nextTriggerAt),
+  agentSchedulesCreatorIdIdx: index('idx_schedules_creator_id').on(table.creatorId),
 }));
 
 export type AgentSchedule = typeof agentSchedules.$inferSelect;
 export type NewAgentSchedule = typeof agentSchedules.$inferInsert;
-
-// Scheduled Tasks (for agent-to-agent task scheduling, Issue #225)
-export const scheduledTasks = sqliteTable('scheduled_tasks', {
-  id: text('id').primaryKey(),
-  agentId: text('agent_id')
-    .notNull()
-    .references(() => agents.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  description: text('description'),
-  taskType: text('task_type').notNull().default('schedule'), // 'schedule' | 'task'
-  status: text('status').notNull().default('pending'), // 'pending' | 'completed' | 'failed' | 'cancelled'
-  priority: text('priority').notNull().default('normal'), // 'low' | 'normal' | 'high' | 'urgent'
-  scheduleType: text('schedule_type').notNull(),
-  cronExpression: text('cron_expression'),
-  scheduledDate: integer('scheduled_date'),
-  timezone: text('timezone').notNull(),
-  content: text('content').notNull(),
-  result: text('result'),
-  error: text('error'),
-  isActive: integer('is_active').notNull().default(1),
-  sourceCoordinatorId: text('source_coordinator_id'),
-  targetAgentId: text('target_agent_id'),
-  lastTriggeredAt: integer('last_triggered_at'),
-  nextTriggerAt: integer('next_trigger_at'),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-}, (table) => ({
-  scheduledTasksAgentIdIdx: index('scheduled_tasks_agent_id_idx').on(table.agentId),
-  scheduledTasksIsActiveIdx: index('scheduled_tasks_is_active_idx').on(table.isActive),
-  scheduledTasksNextTriggerAtIdx: index('scheduled_tasks_next_trigger_at_idx').on(table.nextTriggerAt),
-  // Partial indexes for task-type queries
-  scheduledTasksTargetStatusIdx: index('scheduled_tasks_target_status_idx').on(table.targetAgentId, table.status),
-  scheduledTasksCoordinatorIdx: index('scheduled_tasks_coordinator_idx').on(table.sourceCoordinatorId),
-}));
-
-export type ScheduledTask = typeof scheduledTasks.$inferSelect;
-export type NewScheduledTask = typeof scheduledTasks.$inferInsert;
 
 export const llmModelPrices = sqliteTable('llm_model_prices', {
   modelKey: text('model_key').primaryKey(),
@@ -407,6 +374,32 @@ export type AgentProvider = typeof agentProviders.$inferSelect;
 export type NewAgentProvider = typeof agentProviders.$inferInsert;
 
 /**
+ * Tabela: agent_prompts
+ * Prompts customizáveis injetados no contexto do sistema do agente
+ */
+export const agentPrompts = sqliteTable('agent_prompts', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  promptType: text('prompt_type').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  content: text('content').notNull(),
+  version: integer('version').notNull().default(1),
+  isActive: integer('is_active').notNull().default(1),
+  createdBy: text('created_by'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  agentPromptsAgentIdIdx: index('agent_prompts_agent_id_idx').on(table.agentId),
+  agentPromptsPromptTypeIdx: index('agent_prompts_prompt_type_idx').on(table.promptType),
+  agentPromptsIsActiveIdx: index('agent_prompts_is_active_idx').on(table.isActive),
+}));
+
+export type AgentPrompt = typeof agentPrompts.$inferSelect;
+export type NewAgentPrompt = typeof agentPrompts.$inferInsert;
+
+/**
  * Relações
  */
 export const agentsRelations = relations(agents, ({ one, many }) => ({
@@ -429,6 +422,7 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   executionSteps: many(agentExecutionSteps),
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
+  prompts: many(agentPrompts),
 }));
 
 export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
@@ -515,3 +509,33 @@ export const agentSchedulesRelations = relations(agentSchedules, ({ one }) => ({
     references: [agents.id],
   }),
 }));
+
+export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentPrompts.agentId],
+    references: [agents.id],
+  }),
+}));
+
+/**
+ * Mastra Instances - for cross-instance communication fan-out
+ * This table is shared with the mastra-engine communication module
+ */
+export const mastraInstances = sqliteTable(
+  'mastra_instances',
+  {
+    instanceId: text('instance_id').primaryKey(),
+    baseUrl: text('base_url').notNull(),
+    displayName: text('display_name'),
+    isLocal: integer('is_local').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    baseUrlIdx: index('idx_mastra_instances_base_url').on(table.baseUrl),
+    isLocalIdx: index('idx_mastra_instances_is_local').on(table.isLocal),
+  }),
+);
+
+export type MastraInstance = typeof mastraInstances.$inferSelect;
+export type NewMastraInstance = typeof mastraInstances.$inferInsert;
