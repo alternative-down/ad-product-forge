@@ -14,7 +14,7 @@ export function createWebTools(allowedToolIds?: Set<string> | null) {
       description: 'Search the public web using DuckDuckGo and return matching results with titles and URLs. Use for factual queries, definitions, and current events. Note: Results are parsed from HTML, so dynamic or JavaScript-rendered pages may not work correctly.',
       inputSchema: z.object({
         query: z.string().min(1),
-        limit: z.number().int().positive().max(SEARCH_RESULT_LIMIT).optional(),
+        limit: z.number().int().positive().max(SEARCH_RESULT_LIMIT).nullish(),
       }),
       execute: async (input) => {
         const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(input.query)}`, {

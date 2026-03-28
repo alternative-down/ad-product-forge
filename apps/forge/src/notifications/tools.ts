@@ -12,7 +12,7 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
   if (hasToolPermission(allowedToolIds, 'list_agent_notifications')) {
     tools.list_agent_notifications = createTool({
       id: 'list_agent_notifications',
-      description: 'List the latest notifications for this agent.',
+      description: 'View all your notifications including task assignments, system alerts, and messages from other agents.',
       inputSchema: z.object({
         unreadOnly: z.boolean().default(false),
         limit: z.number().int().positive().max(100).default(20),
@@ -28,7 +28,7 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
   if (hasToolPermission(allowedToolIds, 'mark_agent_notification_read')) {
     tools.mark_agent_notification_read = createTool({
       id: 'mark_agent_notification_read',
-      description: 'Mark one notification for this agent as read.',
+      description: 'Mark a notification as read to remove it from your unread count. Use after reviewing or acting on a notification.',
       inputSchema: z.object({
         notificationId: z.string().min(1),
       }),
