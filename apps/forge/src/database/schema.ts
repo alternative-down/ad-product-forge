@@ -539,3 +539,76 @@ export const mastraInstances = sqliteTable(
 
 export type MastraInstance = typeof mastraInstances.$inferSelect;
 export type NewMastraInstance = typeof mastraInstances.$inferInsert;
+
+/**
+ * MCP Server Configs - Configuration for MCP servers that agents can connect to
+ */
+export const mcpServerConfigs = sqliteTable(
+  'mcp_server_configs',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    transport: text('transport').notNull(), // 'stdio' | 'http_streamable'
+    command: text('command'), // For stdio transport
+    args: text('args'), // JSON array for stdio args
+    envVars: text('env_vars'), // JSON object for env vars
+    url: text('url'), // For http_streamable transport
+    headers: text('headers'), // JSON object for HTTP headers
+    version: integer('version').notNull().default(1),
+    isActive: integer('is_active').notNull().default(1),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    nameIdx: index('idx_mcp_server_configs_name').on(table.name),
+    isActiveIdx: index('idx_mcp_server_configs_is_active').on(table.isActive),
+  }),
+);
+
+export type McpServerConfig = typeof mcpServerConfigs.$inferSelect;
+export type NewMcpServerConfig = typeof mcpServerConfigs.$inferInsert;
+
+/**
+ * Agent MCP Configs - Association table linking agents to MCP servers
+ */
+export const agentMcpConfigs = sqliteTable(
+  'agent_mcp_configs',
+  {
+    id: text('id').primaryKey(),
+    agentId: text('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    serverId: text('server_id')
+      .notNull()
+      .references(() => mcpServerConfigs.id, { onDelete: 'cascade' }),
+    isActive: integer('is_active').notNull().default(1),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    agentIdIdx: index('idx_agent_mcp_configs_agent_id').on(table.agentId),
+    serverIdIdx: index('idx_agent_mcp_configs_server_id').on(table.serverId),
+    isActiveIdx: index('idx_agent_mcp_configs_is_active').on(table.isActive),
+    uniqueAgentServer: uniqueIndex('unique_agent_server').on(table.agentId, table.serverId),
+  }),
+);
+
+export type AgentMcpConfig = typeof agentMcpConfigs.$inferSelect;
+export type NewAgentMcpConfig = typeof agentMcpConfigs.$inferInsert;
+
+// Relations
+export const mcpServerConfigsRelations = relations(mcpServerConfigs, ({ many }) => ({
+  agentConfigs: many(agentMcpConfigs),
+}));
+
+export const agentMcpConfigsRelations = relations(agentMcpConfigs, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentMcpConfigs.agentId],
+    references: [agents.id],
+  }),
+  server: one(mcpServerConfigs, {
+    fields: [agentMcpConfigs.serverId],
+    references: [mcpServerConfigs.id],
+  }),
+}));

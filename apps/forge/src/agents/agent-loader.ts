@@ -18,6 +18,8 @@ import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createWebTools } from '../web/tools';
+import { getMCPToolsForAgent } from './mcp/client-manager';
+
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -34,6 +36,26 @@ export interface AgentLoaderConfig {
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
   agentId: string;
+}
+
+/**
+ * Load MCP tools for an agent
+ * Connects to all configured MCP servers and returns the available tools
+ */
+async function loadMCPToolsForAgent(agentId: string): Promise<Record<string, unknown>> {
+  try {
+    const mcpTools = await getMCPToolsForAgent(agentId);
+    
+    if (!mcpTools || Object.keys(mcpTools).length === 0) {
+      return {};
+    }
+    
+    console.log(`[AgentLoader] Loaded ${Object.keys(mcpTools).length} MCP tool(s) for agent ${agentId}`);
+    return mcpTools;
+  } catch (error) {
+    console.warn(`[AgentLoader] Failed to load MCP tools for agent ${agentId}:`, error);
+    return {};
+  }
 }
 
 /**
@@ -108,6 +130,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
   const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
   const webTools = createWebTools(allowedToolIds);
+  
+  // Load MCP tools for this agent
+  const mcpTools = await loadMCPToolsForAgent(agentConfig.id);
+  
   const customTools = {
     ...tools,
     ...notificationTools,
@@ -116,7 +142,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...scheduleTools,
     ...capabilityTools,
     ...webTools,
-  };
+    ...mcpTools,
+  } as CreateAgentConfig['tools'];
   const filteredWorkflows = filterWorkflows(config.workflows, capabilitySet.workflowIds);
 
   const runtime = await createInternalAgentRuntime(
