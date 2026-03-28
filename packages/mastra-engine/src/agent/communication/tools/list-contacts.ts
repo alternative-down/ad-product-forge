@@ -12,7 +12,7 @@ export function createListContactsTool(communication: CommunicationModule) {
     id: 'list_contacts',
     description:
       'List your contacts organized by category. ' +
-      "'self': Returns your agent's accounts on each provider. " +
+      "'self': Returns your accounts on each provider. " +
       "'others': Returns external contacts. " +
       "Use the contact's slug to send messages via send_message. " +
       "Defaults to 'others'.",
