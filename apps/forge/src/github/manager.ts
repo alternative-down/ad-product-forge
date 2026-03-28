@@ -22,10 +22,11 @@ const GITHUB_APP_NAME_SUFFIX_LENGTH = 6;
 const GITHUB_APP_NAME_MAX_LENGTH = 32;
 
 /**
- * Normalizes GitHub usernames for API calls.
- * GitHub App bot accounts use kebab-case format (e.g., "architectron-the-scalabil-sykutp")
- * and do NOT need the [bot] suffix - they should be passed as-is.
- * Regular bot accounts (e.g., "lintbot") require the [bot] suffix.
+ * Normalizes GitHub usernames for assignees.
+ * - Accounts already ending with [bot] are used as-is
+ * - GitHub App bot accounts (kebab-case like "architectron-the-scalabil-sykutp") 
+ *   need [bot] suffix appended
+ * - Regular accounts are used as-is
  */
 function normalizeAssignees(assignees?: string[]): string[] | undefined {
   if (!assignees || assignees.length === 0) {
@@ -35,17 +36,20 @@ function normalizeAssignees(assignees?: string[]): string[] | undefined {
   // GitHub App bot accounts follow the pattern: app-name-appId
   // They have at least 2 kebab-case segments and end with an alphanumeric ID
   // Examples: architectron-the-scalabil-sykutp, wireframe-wizard-pixelia-l85akb
-  // These accounts do NOT need the [bot] suffix - use as-is
   const gitHubAppPattern = /^[a-z0-9]+(-[a-z0-9]+)+$/;
 
   return assignees.map((assignee) => {
-    // GitHub App bot accounts (kebab-case): return as-is
-    if (gitHubAppPattern.test(assignee)) {
+    // Already has [bot] suffix - use as-is
+    if (assignee.endsWith('[bot]')) {
       return assignee;
     }
 
-    // For non-kebab-case accounts, return as-is
-    // Regular bot accounts like "lintbot" should already have [bot] if needed
+    // GitHub App bot accounts (kebab-case): add [bot] suffix
+    if (gitHubAppPattern.test(assignee)) {
+      return `${assignee}[bot]`;
+    }
+
+    // Regular accounts: use as-is
     return assignee;
   });
 }
