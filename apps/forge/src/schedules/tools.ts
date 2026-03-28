@@ -55,7 +55,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'list_agent_schedules')) {
     tools.list_agent_schedules = createTool({
       id: 'list_agent_schedules',
-      description: 'List your scheduled wakes.',
+      description: 'View all your scheduled wakes including cron-based schedules and one-time scheduled tasks with their current active/paused status.',
       inputSchema: z.object({}),
       execute: async () => schedules.listSchedules(agentId),
     });
@@ -64,7 +64,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'manage_agent_schedule')) {
     tools.manage_agent_schedule = createTool({
       id: 'manage_agent_schedule',
-      description: 'Manage scheduled wakes: create, update, or delete.',
+      description: 'Create scheduled wakes using cron expressions for recurring tasks or specific dates for one-time triggers. Update or delete existing schedules.',
       inputSchema: manageScheduleInputSchema,
       execute: async (input) => {
         if (input.action === 'create') {
@@ -99,7 +99,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'toggle_agent_schedule')) {
     tools.toggle_agent_schedule = createTool({
       id: 'toggle_agent_schedule',
-      description: 'Activate or pause a scheduled wake.',
+      description: 'Enable or disable a scheduled wake without deleting it. Paused schedules will not trigger until reactivated.',
       inputSchema: toggleScheduleInputSchema,
       execute: async (input) => schedules.updateSchedule(agentId, input.scheduleId, {
         isActive: input.isActive,

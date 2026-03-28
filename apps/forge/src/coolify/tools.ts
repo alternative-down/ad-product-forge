@@ -14,7 +14,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_github_apps')) {
     tools.list_coolify_github_apps = createTool({
       id: 'list_coolify_github_apps',
-      description: 'List GitHub Apps registered in Coolify.',
+      description: 'List all GitHub Apps that have been registered and connected to Coolify for deployment automation.',
       inputSchema: z.object({}),
       execute: async () => coolify.listGitHubApps(),
     });
@@ -23,7 +23,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_github_app_repositories')) {
     tools.list_coolify_github_app_repositories = createTool({
       id: 'list_coolify_github_app_repositories',
-      description: 'List repositories accessible to a Coolify GitHub App.',
+      description: 'View all repositories that a specific GitHub App has access to. Useful for identifying which repos can be deployed through Coolify.',
       inputSchema: z.object({
         githubAppId: z.union([z.string().min(1), z.number().int()]),
       }),
@@ -34,7 +34,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_github_app_repository_branches')) {
     tools.list_coolify_github_app_repository_branches = createTool({
       id: 'list_coolify_github_app_repository_branches',
-      description: 'List branches for a repository accessible to a Coolify GitHub App.',
+      description: 'View all available branches for a repository. Essential for selecting the correct branch when creating or updating a deployment.',
       inputSchema: z.object({
         githubAppId: z.union([z.string().min(1), z.number().int()]),
         repositoryName: z.string().min(1),
@@ -46,7 +46,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_applications')) {
     tools.list_coolify_applications = createTool({
       id: 'list_coolify_applications',
-      description: 'List applications managed by Coolify.',
+      description: 'Get an overview of all applications deployed and managed through Coolify, including their current status and deployment state.',
       inputSchema: z.object({}),
       execute: async () => coolify.listApplications(),
     });
@@ -55,7 +55,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'get_coolify_application')) {
     tools.get_coolify_application = createTool({
       id: 'get_coolify_application',
-      description: 'Get a single Coolify application by its UUID.',
+      description: 'Retrieve detailed configuration and status information for a specific application, including its linked repository, build settings, and current deployment state.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
       }),
@@ -66,7 +66,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'manage_coolify_application')) {
     tools.manage_coolify_application = createTool({
       id: 'manage_coolify_application',
-      description: 'Manage Coolify applications: create, update, delete, or restart.',
+      description: 'Create new application deployments linked to GitHub repositories, update existing configurations (branch, build commands, environment variables), delete applications, or restart running deployments.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete', 'restart']),
         applicationUuid: z.string().min(1).nullish(),
@@ -136,7 +136,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'toggle_coolify_application')) {
     tools.toggle_coolify_application = createTool({
       id: 'toggle_coolify_application',
-      description: 'Start or stop a Coolify application.',
+      description: 'Immediately start or stop a deployed application. Starting activates the application; stopping deactivates it without removing configuration.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
         state: z.enum(['running', 'stopped']),
@@ -150,7 +150,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_application_deployments')) {
     tools.list_coolify_application_deployments = createTool({
       id: 'list_coolify_application_deployments',
-      description: 'List recent deployments for a Coolify application.',
+      description: 'View deployment history for an application including timestamps, status, triggered by information, and deployment UUIDs for log retrieval.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
         limit: z.number().int().positive().max(100).default(20),
@@ -162,7 +162,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'get_coolify_deployment_logs')) {
     tools.get_coolify_deployment_logs = createTool({
       id: 'get_coolify_deployment_logs',
-      description: 'Get deployment logs for a Coolify application.',
+      description: 'View build and deployment logs for troubleshooting failed deployments. If deploymentUuid is omitted, retrieves logs from the most recent deployment.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
         deploymentUuid: z.string().nullish(),
@@ -174,7 +174,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'get_coolify_application_logs')) {
     tools.get_coolify_application_logs = createTool({
       id: 'get_coolify_application_logs',
-      description: 'Get runtime logs for a Coolify application.',
+      description: 'View application runtime logs including application output, errors, and access logs. Useful for monitoring live application behavior.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
         lines: z.number().int().positive().max(5000).nullish(),
@@ -187,7 +187,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'get_coolify_application_envs')) {
     tools.get_coolify_application_envs = createTool({
       id: 'get_coolify_application_envs',
-      description: 'Get environment variables for a Coolify application.',
+      description: 'Retrieve all environment variables configured for an application, including sensitive values and their current settings.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
       }),
@@ -198,7 +198,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'manage_coolify_application_env')) {
     tools.manage_coolify_application_env = createTool({
       id: 'manage_coolify_application_env',
-      description: 'Manage environment variables for a Coolify application: create, update, or delete.',
+      description: 'Add, update, or remove environment variables for an application. Supports literal values, multiline values, and one-time secrets.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']),
         applicationUuid: z.string().min(1),

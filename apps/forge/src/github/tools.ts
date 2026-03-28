@@ -10,7 +10,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_git_credentials')) {
     tools.get_github_git_credentials = createTool({
       id: 'get_github_git_credentials',
-      description: 'Generate HTTPS Git credentials for pushing to repositories.',
+      description: 'Generate temporary HTTPS credentials for authenticating with GitHub repositories. Use repositoryName to get credentials for a specific repo, or omit to get credentials for all accessible repos.',
       inputSchema: z.object({
         repositoryName: z.string().nullish(),
       }),
@@ -24,7 +24,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_repositories')) {
     tools.list_github_repositories = createTool({
       id: 'list_github_repositories',
-      description: 'List repositories accessible to your GitHub App installation.',
+      description: 'Returns a list of all repositories your GitHub App has access to, including their names, visibility, and default branch.',
       inputSchema: z.object({}),
       execute: async () => githubApps.listRepositories(agentId),
     });
@@ -33,7 +33,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_repository')) {
     tools.get_github_repository = createTool({
       id: 'get_github_repository',
-      description: 'Get repository details from GitHub.',
+      description: 'Fetch detailed information about a specific repository including description, privacy status, language, topics, and contributor count. Provide repositoryName (required) and optional owner if the repository belongs to a different organization.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -158,7 +158,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_pull_requests')) {
     tools.list_github_pull_requests = createTool({
       id: 'list_github_pull_requests',
-      description: 'List pull requests in a repository filtered by state.',
+      description: 'Retrieve a list of pull requests filtered by state (open, closed, or all). Useful for reviewing pending work, closed PRs, or tracking team progress.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -171,7 +171,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_pull_request')) {
     tools.get_github_pull_request = createTool({
       id: 'get_github_pull_request',
-      description: 'Get a single pull request with all its details.',
+      description: 'Retrieve complete details of a specific pull request including title, description, author, reviewers, status, and associated branch information.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -184,7 +184,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_pull_request_comments')) {
     tools.list_github_pull_request_comments = createTool({
       id: 'list_github_pull_request_comments',
-      description: 'List review comments on a pull request.',
+      description: 'Retrieve all review comments on a pull request, including the author, timestamp, and file locations for each comment.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -199,7 +199,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_pull_request')) {
     tools.manage_github_pull_request = createTool({
       id: 'manage_github_pull_request',
-      description: 'Manage pull requests: create, update, merge, or delete.',
+      description: 'Create new pull requests, update existing PRs (title, body, base branch, state), merge completed PRs, or delete/close PRs.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'merge', 'delete']),
         owner: z.string().nullish(),
@@ -357,7 +357,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_issues')) {
     tools.list_github_issues = createTool({
       id: 'list_github_issues',
-      description: 'List issues in a repository filtered by state, labels, or assignee.',
+      description: 'Search and filter issues by state (open/closed/all), labels, assignees, or creator. Returns issue details including title, body, labels, and metadata.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -376,7 +376,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_issue')) {
     tools.get_github_issue = createTool({
       id: 'get_github_issue',
-      description: 'Get a single issue with all its details.',
+      description: 'Fetch complete details of a specific issue including title, body, author, labels, assignees, milestone, and creation/update timestamps.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -389,7 +389,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_issue')) {
     tools.manage_github_issue = createTool({
       id: 'manage_github_issue',
-      description: 'Manage issues: create, update, or delete.',
+      description: 'Create new issues with title, body, labels, and assignees. Update existing issues or delete/close them.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']),
         owner: z.string().nullish(),
@@ -520,7 +520,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'toggle_github_issue')) {
     tools.toggle_github_issue = createTool({
       id: 'toggle_github_issue',
-      description: 'Open or close an issue.',
+      description: 'Quickly open or close an issue by specifying its number and desired state (open or closed).',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -536,7 +536,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_issue_comment')) {
     tools.manage_github_issue_comment = createTool({
       id: 'manage_github_issue_comment',
-      description: 'Manage issue comments: create, update, delete, list, or get.',
+      description: 'List all comments on an issue. Get comment details by ID. Create new comments, update existing ones, or delete comments.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']),
         owner: z.string().nullish(),
