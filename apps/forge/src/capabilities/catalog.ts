@@ -146,6 +146,7 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
   // @deprecated - redirects to manage_github_issue_comment (tool split in progress)
   manage_github_issue_comment: [
     'list_github_issue_comments',
+    'get_github_issue_comment',
     'create_github_issue_comment',
   ],
   manage_coolify_application: [
