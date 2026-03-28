@@ -102,7 +102,7 @@ export async function createCommunicationModule(config: {
           providerConversationKey: message.providerConversationKey,
           providerMessageId: message.providerMessageId,
           conversationName: message.conversationName,
-          contactSlug: contact?.slug,
+          contactId: contact?.slug,
           authorExternalId: message.authorExternalId,
           authorDisplayName: message.authorDisplayName,
           authorUsername: message.authorUsername,
@@ -119,7 +119,7 @@ export async function createCommunicationModule(config: {
               id: `${provider.id}:${message.providerMessageId}`,
               content: formatInboundWakeMessage({
                 providerId: provider.id,
-                contactSlug: contact?.slug,
+                contactId: contact?.slug,
                 providerConversationKey: message.providerConversationKey,
                 providerMessageId: message.providerMessageId,
                 conversationName: message.conversationName,
@@ -147,7 +147,7 @@ export async function createCommunicationModule(config: {
     providerConversationKey: string;
     providerMessageId?: string;
     conversationName?: string;
-    contactSlug?: string;
+    contactId?: string;
     content: string;
   }) {
     const message = await store.saveOutboundMessage(input);
@@ -163,8 +163,8 @@ export async function createCommunicationModule(config: {
     };
   }
 
-  async function getContactExternalId(providerId: string, contactSlug: string) {
-    const contact = await store.getContact(contactSlug);
+  async function getContactExternalId(providerId: string, contactId: string) {
+    const contact = await store.getContact(contactId);
     const identity = contact?.accounts.find((account) => account.provider === providerId);
 
     if (identity) {
@@ -175,7 +175,7 @@ export async function createCommunicationModule(config: {
     if (provider) {
       await syncProviderContacts(provider);
 
-      const syncedContact = await store.getContact(contactSlug);
+      const syncedContact = await store.getContact(contactId);
       const syncedIdentity = syncedContact?.accounts.find((account) => account.provider === providerId);
 
       return syncedIdentity?.externalUserId || syncedIdentity?.username || null;
@@ -241,7 +241,7 @@ export async function createCommunicationModule(config: {
 
   async function listConversations(input: {
     provider?: string;
-    contactSlug?: string;
+    contactId?: string;
     unread?: boolean;
     limit: number;
   }): Promise<CommunicationConversationView[]> {
@@ -251,7 +251,7 @@ export async function createCommunicationModule(config: {
     const contactMap = new Map(contacts.map((contact) => [contact.slug, contact]));
 
     return conversations.map((conversation) => {
-      const contactDisplayName = conversation.contactSlug ? contactMap.get(conversation.contactSlug)?.displayName : undefined;
+      const contactDisplayName = conversation.contactId ? contactMap.get(conversation.contactId)?.displayName : undefined;
 
       return {
         conversationId: conversation.conversationId,
@@ -261,7 +261,7 @@ export async function createCommunicationModule(config: {
         unreadCount: conversation.unreadCount,
         name: conversation.name,
         type: conversation.type,
-        contactSlug: conversation.contactSlug,
+        contactId: conversation.contactId,
         contactDisplayName,
         messages: conversation.messages.map((message) => ({
           messageId: message.messageId,
@@ -272,7 +272,7 @@ export async function createCommunicationModule(config: {
           unread: message.unread,
           createdAt: message.createdAt,
           authorDisplayName: message.authorDisplayName,
-          contactSlug: conversation.contactSlug,
+          contactId: conversation.contactId,
           contactDisplayName,
         })),
       };
@@ -285,7 +285,7 @@ export async function createCommunicationModule(config: {
   }): Promise<CommunicationMessageView[]> {
     const conversation = await store.getConversation(input.conversationId);
     const messages = await store.getMessages(input.conversationId, input.limit);
-    const contact = conversation?.contactSlug ? await store.getContact(conversation.contactSlug) : null;
+    const contact = conversation?.contactId ? await store.getContact(conversation.contactId) : null;
 
     return messages.map((message) => ({
       messageId: message.messageId,
@@ -296,7 +296,7 @@ export async function createCommunicationModule(config: {
       unread: message.unread,
       createdAt: message.createdAt,
       authorDisplayName: message.authorDisplayName,
-      contactSlug: conversation?.contactSlug,
+      contactId: conversation?.contactId,
       contactDisplayName: contact?.displayName,
     }));
   }
@@ -308,7 +308,7 @@ export async function createCommunicationModule(config: {
     provider: string;
     conversationId?: string;
     providerConversationKey?: string;
-    contactSlug?: string;
+    contactId?: string;
     content: string;
     replyToMessageId?: string;
   }) {
@@ -369,14 +369,14 @@ export async function createCommunicationModule(config: {
           providerConversationKey: conversation.providerConversationKey,
           providerMessageId: firstSent.providerMessageId,
           conversationName: conversation.name ?? firstSent.conversationName,
-          contactSlug: conversation.contactSlug,
+          contactId: conversation.contactId,
           content: input.content,
         });
       }
 
       let contactExternalId: string | null = null;
-      if (conversation.contactSlug) {
-        contactExternalId = await getContactExternalId(input.provider, conversation.contactSlug);
+      if (conversation.contactId) {
+        contactExternalId = await getContactExternalId(input.provider, conversation.contactId);
       }
 
       const sent = await provider.sendMessage({
@@ -393,15 +393,15 @@ export async function createCommunicationModule(config: {
         providerConversationKey: sent.providerConversationKey,
         providerMessageId: sent.providerMessageId,
         conversationName: sent.conversationName,
-        contactSlug: conversation.contactSlug,
+        contactId: conversation.contactId,
         content: input.content,
       });
     }
 
     // If conversationId is provided but not found, fall through to on-the-fly creation
     // (same pattern as Issue #214 for providerConversationKey)
-    // Only throw if we have no fallback option (providerConversationKey or contactSlug)
-    if (input.conversationId && !input.providerConversationKey && !input.contactSlug) {
+    // Only throw if we have no fallback option (providerConversationKey or contactId)
+    if (input.conversationId && !input.providerConversationKey && !input.contactId) {
       throw new Error(`Conversation not found: ${input.conversationId}`);
     }
 
@@ -431,27 +431,27 @@ export async function createCommunicationModule(config: {
         providerConversationKey: sent.providerConversationKey,
         providerMessageId: sent.providerMessageId,
         conversationName: sent.conversationName,
-        contactSlug: newConversation.contactSlug,
+        contactId: newConversation.contactId,
         content: input.content,
       });
     }
 
-    if (!input.contactSlug) {
+    if (!input.contactId) {
       throw new Error(`No destination provided for provider: ${input.provider}`);
     }
 
-    let contactExternalId = await getContactExternalId(input.provider, input.contactSlug);
+    let contactExternalId = await getContactExternalId(input.provider, input.contactId);
 
     if (!contactExternalId) {
       // No registered identity found — treat the slug as the external ID directly
       // (natural for email where slug = address, or any provider where the agent
       // uses the external ID as the slug). Auto-register so future lookups work.
-      contactExternalId = input.contactSlug;
+      contactExternalId = input.contactId;
       await store.upsertContact({
-        slug: input.contactSlug,
-        displayName: input.contactSlug,
+        slug: input.contactId,
+        displayName: input.contactId,
         provider: input.provider,
-        externalUserId: input.contactSlug,
+        externalUserId: input.contactId,
       });
     }
 
@@ -467,7 +467,7 @@ export async function createCommunicationModule(config: {
       providerConversationKey: sent.providerConversationKey,
       providerMessageId: sent.providerMessageId,
       conversationName: sent.conversationName,
-      contactSlug: input.contactSlug,
+      contactId: input.contactId,
       content: input.content,
     });
   }
@@ -521,7 +521,7 @@ export async function createCommunicationModule(config: {
 
 function formatInboundWakeMessage(input: {
   providerId: string;
-  contactSlug?: string;
+  contactId?: string;
   providerConversationKey: string;
   providerMessageId: string;
   conversationName?: string;
@@ -543,8 +543,8 @@ function formatInboundWakeMessage(input: {
     lines.push(`Conversation name: ${input.conversationName}`);
   }
 
-  if (input.contactSlug) {
-    lines.push(`Contact slug: ${input.contactSlug}`);
+  if (input.contactId) {
+    lines.push(`Contact slug: ${input.contactId}`);
   }
 
   if (input.authorDisplayName) {

@@ -15,12 +15,24 @@ export const communicationAccounts = sqliteTable('forge_communication_accounts',
 
 /**
  * Stores contacts (people we communicate with)
+ * contactId is the stable UUID primary key for identification
+ * slug is a unique descriptive field for routing/display (used by LLM)
  */
-export const communicationContacts = sqliteTable('forge_communication_contacts', {
-  slug: text('slug').primaryKey(),
-  displayName: text('display_name').notNull(),
-  description: text('description'),
-});
+export const communicationContacts = sqliteTable(
+  'forge_communication_contacts',
+  {
+    contactId: text('contact_id').primaryKey(), // UUID PK for stable identification
+    slug: text('slug').notNull().unique(), // Unique, for routing/display (LLM)
+    displayName: text('display_name').notNull(),
+    description: text('description'),
+  },
+  (table) => {
+    return {
+      // Index for slug lookups (used by loadContact/getContact)
+      slugIdx: index('idx_contacts_slug').on(table.slug),
+    };
+  },
+);
 
 /**
  * Maps contacts to their external identities across different providers
@@ -28,7 +40,7 @@ export const communicationContacts = sqliteTable('forge_communication_contacts',
 export const communicationContactAccounts = sqliteTable(
   'forge_communication_contact_accounts',
   {
-    slug: text('slug').notNull(),
+    contactId: text('contact_id').notNull(), // FK to communicationContacts.contactId
     provider: text('provider').notNull(),
     externalUserId: text('external_user_id'),
     username: text('username'),
@@ -37,13 +49,13 @@ export const communicationContactAccounts = sqliteTable(
     return {
       // UNIQUE constraint combining all fields
       uniqueContactAccountIdentity: unique().on(
-        table.slug,
+        table.contactId,
         table.provider,
         table.externalUserId,
         table.username,
       ),
       // Foreign key index
-      contactSlugIdx: index('idx_contact_accounts_slug').on(table.slug),
+      contactIdIdx: index('idx_contact_accounts_contact_id').on(table.contactId),
     };
   },
 );
@@ -59,7 +71,7 @@ export const communicationConversations = sqliteTable(
     providerConversationKey: text('provider_conversation_key').notNull(),
     name: text('name'),
     type: text('type').notNull().default('dm'), // 'dm' or 'group'
-    contactSlug: text('contact_slug'),
+    contactId: text('contact_id'), // FK to communicationContacts.contactId
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -72,8 +84,8 @@ export const communicationConversations = sqliteTable(
       ),
       // Index for filtering by provider
       providerIdx: index('idx_conversations_provider').on(table.provider),
-      // Index for filtering by contact_slug
-      contactSlugIdx: index('idx_conversations_contact_slug').on(table.contactSlug),
+      // Index for filtering by contact_id
+      contactIdIdx: index('idx_conversations_contact_id').on(table.contactId),
       // Index for filtering by type
       typeIdx: index('idx_conversations_type').on(table.type),
     };
@@ -130,8 +142,8 @@ export const communicationContactAccountsRelations = relations(
   communicationContactAccounts,
   ({ one }) => ({
     contact: one(communicationContacts, {
-      fields: [communicationContactAccounts.slug],
-      references: [communicationContacts.slug],
+      fields: [communicationContactAccounts.contactId],
+      references: [communicationContacts.contactId],
     }),
   }),
 );
@@ -140,8 +152,8 @@ export const communicationConversationsRelations = relations(
   communicationConversations,
   ({ one, many }) => ({
     contact: one(communicationContacts, {
-      fields: [communicationConversations.contactSlug],
-      references: [communicationContacts.slug],
+      fields: [communicationConversations.contactId],
+      references: [communicationContacts.contactId],
     }),
     messages: many(communicationMessages),
   }),
