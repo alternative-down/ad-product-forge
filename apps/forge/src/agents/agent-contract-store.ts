@@ -1,5 +1,5 @@
 import { and, desc, eq, lte, gte, sql } from 'drizzle-orm';
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 
 import type { Database } from '../database/index';
 import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles } from '../database/schema';

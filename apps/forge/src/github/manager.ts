@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 import { nanoid } from 'nanoid';
 import { createAppAuth } from '@octokit/auth-app';
 import { App, Octokit } from 'octokit';

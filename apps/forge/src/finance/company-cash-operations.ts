@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 
 import type { Database } from '../database/index';
 import { companyCashLedger } from '../database/schema';

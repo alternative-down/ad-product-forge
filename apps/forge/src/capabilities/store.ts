@@ -1,4 +1,4 @@
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 import { and, asc, eq } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
