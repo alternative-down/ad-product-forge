@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { cn } from '@forge/ui';
 import { Plus, Loader2 } from 'lucide-react';
 import { Button } from '@forge/ui';
 import { Input } from '@forge/ui';
 import { Label } from '@forge/ui';
-import { Checkbox } from '@forge/ui';
 
 export interface QuickTopUpCardProps {
   /** Current budget remaining */
@@ -37,7 +36,7 @@ export function QuickTopUpCard({
   const [confirmHighValue, setConfirmHighValue] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const finalAmount = selectedAmount ?? parseFloat(customAmount) || 0;
+  const finalAmount = (selectedAmount ?? (parseFloat(customAmount) || 0));
   const requiresConfirmation = finalAmount >= HIGH_VALUE_THRESHOLD;
   const canSubmit = finalAmount > 0 && (!requiresConfirmation || confirmHighValue) && !isSubmitting;
 
@@ -112,11 +111,12 @@ export function QuickTopUpCard({
       {requiresConfirmation && (
         <div className="mb-4 rounded-md border border-yellow-200 bg-yellow-50 p-3">
           <label className="flex cursor-pointer items-start gap-2">
-            <Checkbox
+            <input
+              type="checkbox"
               checked={confirmHighValue}
-              onCheckedChange={(checked) => setConfirmHighValue(checked === true)}
-              className="mt-0.5"
+              onChange={(e) => setConfirmHighValue(e.target.checked)}
               disabled={isSubmitting}
+              className="mt-0.5 h-4 w-4 rounded border-yellow-300 text-yellow-600 focus:ring-yellow-500"
             />
             <span className="text-xs text-yellow-800">
               Confirmo que desejo adicionar <strong>${finalAmount.toFixed(2)}</strong> ao budget. 

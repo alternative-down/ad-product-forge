@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
 import { cn } from '@forge/ui';
-import { AlertTriangle, AlertCircle, CheckCircle, Info } from 'lucide-react';
-import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@forge/ui';
+import { AlertTriangle, AlertCircle, CheckCircle, Info, X } from 'lucide-react';
+import { Card } from '@forge/ui';
 
 export type BudgetToastVariant = 'success' | 'warning' | 'error' | 'info';
 
@@ -65,35 +64,26 @@ export function BudgetToast({
   title,
   description,
   budgetInfo,
-  duration,
   onDismiss,
 }: BudgetToastProps) {
   const config = variantConfig[variant];
   const Icon = config.icon;
-  
-  // Error and warning toasts persist by default
-  const autoCloseDuration = duration ?? (variant === 'success' ? 3000 : undefined);
 
   return (
-    <Toast
+    <Card
       className={cn('border-l-4 shadow-md', config.className)}
-      duration={autoCloseDuration}
-      onOpenChange={(open) => {
-        if (!open && onDismiss) {
-          onDismiss(id);
-        }
-      }}
+      style={{ borderLeftWidth: '4px' }}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 p-3">
         <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', config.iconClassName)} />
         <div className="flex-1 space-y-1">
-          <ToastTitle className={cn('text-sm font-semibold', config.titleClassName)}>
+          <p className={cn('text-sm font-semibold', config.titleClassName)}>
             {title}
-          </ToastTitle>
+          </p>
           {description && (
-            <ToastDescription className={cn('text-sm', config.descClassName)}>
+            <p className={cn('text-sm', config.descClassName)}>
               {description}
-            </ToastDescription>
+            </p>
           )}
           {budgetInfo && (
             <div className="mt-2 rounded bg-white/50 p-2 text-xs">
@@ -114,9 +104,17 @@ export function BudgetToast({
             </div>
           )}
         </div>
-        <ToastClose className="text-slate-400 hover:text-slate-600" />
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={() => onDismiss(id)}
+            className="text-slate-400 hover:text-slate-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
-    </Toast>
+    </Card>
   );
 }
 
@@ -177,13 +175,3 @@ export const BUDGET_TOAST_MESSAGES = {
     description: 'Agent parado por budget. Faça um top-up para continuar.',
   }),
 };
-
-// Toast Provider wrapper for budget toasts
-export function BudgetToastProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <ToastProvider>
-      {children}
-      <ToastViewport />
-    </ToastProvider>
-  );
-}

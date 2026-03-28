@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { cn } from '@forge/ui';
 import { AlertCircle, ChevronDown, ChevronUp, Loader2, Minus, Plus } from 'lucide-react';
 import { Button } from '@forge/ui';
@@ -188,7 +188,7 @@ export function BudgetAdjustCard({
         onClick={handleSubmit}
         disabled={!canSubmit}
         className="w-full"
-        variant={isDecrease ? 'destructive' : 'default'}
+        variant={isDecrease ? 'danger' : 'primary'}
       >
         {isSubmitting ? (
           <>
