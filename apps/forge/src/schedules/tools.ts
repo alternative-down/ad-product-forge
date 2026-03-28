@@ -107,5 +107,89 @@ export function createAgentScheduleTools(
     });
   }
 
+  // Cross-agent tools (spec v4)
+  if (hasToolPermission(allowedToolIds, 'create_cron_for_agent')) {
+    const createCronInputSchema = z.object({
+      targetAgentId: z.string().min(1).describe('The agent ID to create the cron for'),
+      name: z.string().min(1).describe('Name of the cron/schedule'),
+      description: z.string().optional().describe('Optional description'),
+      scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time'),
+      cronExpression: z.string().min(1).optional().describe('Cron expression (required for cron type)'),
+      scheduledDate: z.string().min(1).optional().describe('ISO date string (required for date type)'),
+      timezone: z.string().min(1).default('UTC').describe('Timezone for the schedule'),
+      content: z.string().min(1).describe('Content/payload to execute when the cron triggers'),
+    }).superRefine((input, ctx) => {
+      if (input.scheduleType === 'cron' && !input.cronExpression) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cronExpression'], message: 'cronExpression is required when scheduleType is cron' });
+      }
+      if (input.scheduleType === 'date' && !input.scheduledDate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduledDate'], message: 'scheduledDate is required when scheduleType is date' });
+      }
+    });
+
+    tools.create_cron_for_agent = createTool({
+      id: 'create_cron_for_agent',
+      description: 'Create a cron/schedule for another agent. The target agent will receive the cron content when it triggers. Only the creator can edit or delete.',
+      inputSchema: createCronInputSchema,
+      execute: async (input) => schedules.createScheduleForAgent(agentId, {
+        targetAgentId: input.targetAgentId,
+        name: input.name,
+        description: input.description,
+        scheduleType: input.scheduleType,
+        cronExpression: input.cronExpression,
+        scheduledDate: input.scheduledDate,
+        timezone: input.timezone,
+        content: input.content,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'edit_cron')) {
+    const editCronInputSchema = z.object({
+      scheduleId: z.string().min(1).describe('ID of the schedule to edit'),
+      name: z.string().min(1).optional().describe('New name'),
+      description: z.string().optional().nullable().describe('New description'),
+      scheduleType: z.enum(['cron', 'date']).optional().describe('New schedule type'),
+      cronExpression: z.string().min(1).optional().nullable().describe('New cron expression'),
+      scheduledDate: z.string().min(1).optional().nullable().describe('New scheduled date (ISO string)'),
+      timezone: z.string().min(1).optional().describe('New timezone'),
+      content: z.string().min(1).optional().describe('New content'),
+      isActive: z.boolean().optional().describe('Activate or pause the schedule'),
+    }).superRefine((input, ctx) => {
+      if (Object.keys(input).length <= 1) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides scheduleId must be provided' });
+      }
+    });
+
+    tools.edit_cron = createTool({
+      id: 'edit_cron',
+      description: 'Edit an existing cron/schedule. Only the creator (or owner for self-created crons) can edit.',
+      inputSchema: editCronInputSchema,
+      execute: async (input) => schedules.editCron(agentId, input.scheduleId, {
+        name: input.name,
+        description: input.description,
+        scheduleType: input.scheduleType,
+        cronExpression: input.cronExpression,
+        scheduledDate: input.scheduledDate,
+        timezone: input.timezone,
+        content: input.content,
+        isActive: input.isActive,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_cron')) {
+    const deleteCronInputSchema = z.object({
+      scheduleId: z.string().min(1).describe('ID of the schedule to delete'),
+    });
+
+    tools.delete_cron = createTool({
+      id: 'delete_cron',
+      description: 'Delete a cron/schedule. Only the creator (or owner for self-created crons) can delete.',
+      inputSchema: deleteCronInputSchema,
+      execute: async (input) => schedules.deleteCron(agentId, input.scheduleId),
+    });
+  }
+
   return tools as Record<string, Tool<unknown, unknown>>;
 }

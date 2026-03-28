@@ -45,7 +45,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_repository')) {
     tools.manage_github_repository = createTool({
       id: 'manage_github_repository',
-      description: 'Create, update, or delete one repository in the company GitHub organization.',
+      description: 'Create, update, or delete one repository in the company GitHub organization. ⚠️ DEPRECATED: Use create_github_repository, update_github_repository, or delete_github_repository instead.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']),
         owner: z.string().optional(),
@@ -90,6 +90,68 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
           defaultBranch: input.defaultBranch,
         });
       },
+    });
+  }
+
+  // --- Split tools (individual operations) ---
+
+  if (hasToolPermission(allowedToolIds, 'create_github_repository')) {
+    tools.create_github_repository = createTool({
+      id: 'create_github_repository',
+      description: 'Create a new repository in the company GitHub organization.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        name: z.string().min(1),
+        description: z.string().optional(),
+        private: z.boolean().optional(),
+        autoInit: z.boolean().optional(),
+        defaultBranch: z.string().optional(),
+      }),
+      execute: async (input) => githubApps.createRepository(agentId, {
+        name: input.name,
+        description: input.description,
+        private: input.private,
+        autoInit: input.autoInit,
+        defaultBranch: input.defaultBranch,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'update_github_repository')) {
+    tools.update_github_repository = createTool({
+      id: 'update_github_repository',
+      description: 'Update an existing repository in the company GitHub organization.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        name: z.string().min(1).optional(),
+        description: z.string().optional(),
+        private: z.boolean().optional(),
+        defaultBranch: z.string().optional(),
+      }),
+      execute: async (input) => githubApps.updateRepository(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        name: input.name,
+        description: input.description,
+        private: input.private,
+        defaultBranch: input.defaultBranch,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_github_repository')) {
+    tools.delete_github_repository = createTool({
+      id: 'delete_github_repository',
+      description: 'Delete a repository from the company GitHub organization.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+      }),
+      execute: async (input) => githubApps.deleteRepository(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+      }),
     });
   }
 
@@ -205,6 +267,93 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
     });
   }
 
+  // --- Split PR tools (individual operations) ---
+
+  if (hasToolPermission(allowedToolIds, 'create_github_pull_request')) {
+    tools.create_github_pull_request = createTool({
+      id: 'create_github_pull_request',
+      description: 'Create a new pull request.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        title: z.string().min(1),
+        head: z.string().min(1),
+        base: z.string().min(1),
+        body: z.string().optional(),
+      }),
+      execute: async (input) => githubApps.createPullRequest(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        title: input.title,
+        head: input.head,
+        base: input.base,
+        body: input.body,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'update_github_pull_request')) {
+    tools.update_github_pull_request = createTool({
+      id: 'update_github_pull_request',
+      description: 'Update an existing pull request (title, body, base, or state).',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        pullRequestNumber: z.number().int().positive(),
+        title: z.string().min(1).optional(),
+        body: z.string().optional(),
+        base: z.string().min(1).optional(),
+        state: z.enum(['open', 'closed']).optional(),
+      }),
+      execute: async (input) => githubApps.updatePullRequest(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        pullRequestNumber: input.pullRequestNumber,
+        title: input.title,
+        body: input.body,
+        base: input.base,
+        state: input.state,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'merge_github_pull_request')) {
+    tools.merge_github_pull_request = createTool({
+      id: 'merge_github_pull_request',
+      description: 'Merge a pull request.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        pullRequestNumber: z.number().int().positive(),
+        mergeMethod: z.enum(['merge', 'squash', 'rebase']).optional(),
+      }),
+      execute: async (input) => githubApps.mergePullRequest(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        pullRequestNumber: input.pullRequestNumber,
+        mergeMethod: input.mergeMethod,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_github_pull_request')) {
+    tools.delete_github_pull_request = createTool({
+      id: 'delete_github_pull_request',
+      description: 'Delete/close a pull request.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        pullRequestNumber: z.number().int().positive(),
+      }),
+      execute: async (input) => githubApps.updatePullRequest(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        pullRequestNumber: input.pullRequestNumber,
+        state: 'closed',
+      }),
+    });
+  }
+
   if (hasToolPermission(allowedToolIds, 'list_github_issues')) {
     tools.list_github_issues = createTool({
       id: 'list_github_issues',
@@ -296,6 +445,78 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
     });
   }
 
+  // --- Split Issue tools (individual operations) ---
+
+  if (hasToolPermission(allowedToolIds, 'create_github_issue')) {
+    tools.create_github_issue = createTool({
+      id: 'create_github_issue',
+      description: 'Create a new issue in a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        title: z.string().min(1),
+        body: z.string().optional(),
+        labels: z.array(z.string().min(1)).optional(),
+        assignees: z.array(z.string().min(1)).optional(),
+        milestone: z.number().int().positive().nullable().optional(),
+      }),
+      execute: async (input) => githubApps.createIssue(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        title: input.title,
+        body: input.body,
+        labels: input.labels,
+        assignees: input.assignees,
+        milestone: input.milestone ?? undefined,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'update_github_issue')) {
+    tools.update_github_issue = createTool({
+      id: 'update_github_issue',
+      description: 'Update an existing issue in a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        issueNumber: z.number().int().positive(),
+        title: z.string().min(1).optional(),
+        body: z.string().optional(),
+        labels: z.array(z.string().min(1)).optional(),
+        assignees: z.array(z.string().min(1)).optional(),
+        milestone: z.number().int().positive().nullable().optional(),
+      }),
+      execute: async (input) => githubApps.updateIssue(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        issueNumber: input.issueNumber,
+        title: input.title,
+        body: input.body,
+        labels: input.labels,
+        assignees: input.assignees,
+        milestone: input.milestone,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_github_issue')) {
+    tools.delete_github_issue = createTool({
+      id: 'delete_github_issue',
+      description: 'Delete/close an issue in a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        issueNumber: z.number().int().positive(),
+      }),
+      execute: async (input) => githubApps.updateIssue(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        issueNumber: input.issueNumber,
+        state: 'closed',
+      }),
+    });
+  }
+
   if (hasToolPermission(allowedToolIds, 'toggle_github_issue')) {
     tools.toggle_github_issue = createTool({
       id: 'toggle_github_issue',
@@ -370,6 +591,63 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
     });
   }
 
+  // --- Split Issue Comment tools (individual operations) ---
+
+  if (hasToolPermission(allowedToolIds, 'create_github_issue_comment')) {
+    tools.create_github_issue_comment = createTool({
+      id: 'create_github_issue_comment',
+      description: 'Create a new comment on an issue.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        issueNumber: z.number().int().positive(),
+        body: z.string().min(1),
+      }),
+      execute: async (input) => githubApps.createIssueComment(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        issueNumber: input.issueNumber,
+        body: input.body,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'update_github_issue_comment')) {
+    tools.update_github_issue_comment = createTool({
+      id: 'update_github_issue_comment',
+      description: 'Update an existing issue comment.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        commentId: z.number().int().positive(),
+        body: z.string().min(1),
+      }),
+      execute: async (input) => githubApps.updateIssueComment(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        commentId: input.commentId,
+        body: input.body,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_github_issue_comment')) {
+    tools.delete_github_issue_comment = createTool({
+      id: 'delete_github_issue_comment',
+      description: 'Delete an issue comment.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        commentId: z.number().int().positive(),
+      }),
+      execute: async (input) => githubApps.deleteIssueComment(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        commentId: input.commentId,
+      }),
+    });
+  }
+
   if (hasToolPermission(allowedToolIds, 'list_github_labels')) {
     tools.list_github_labels = createTool({
       id: 'list_github_labels',
@@ -428,6 +706,69 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
           description: input.description,
         });
       },
+    });
+  }
+
+  // --- Split Label tools (individual operations) ---
+
+  if (hasToolPermission(allowedToolIds, 'create_github_label')) {
+    tools.create_github_label = createTool({
+      id: 'create_github_label',
+      description: 'Create a new label in a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        labelName: z.string().min(1),
+        color: z.string(),
+        description: z.string().optional(),
+      }),
+      execute: async (input) => githubApps.createLabel(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        labelName: input.labelName,
+        color: input.color,
+        description: input.description,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'update_github_label')) {
+    tools.update_github_label = createTool({
+      id: 'update_github_label',
+      description: 'Update an existing label in a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        labelName: z.string().min(1),
+        newLabelName: z.string().min(1).optional(),
+        color: z.string().optional(),
+        description: z.string().optional(),
+      }),
+      execute: async (input) => githubApps.updateLabel(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        labelName: input.labelName,
+        newLabelName: input.newLabelName,
+        color: input.color,
+        description: input.description,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_github_label')) {
+    tools.delete_github_label = createTool({
+      id: 'delete_github_label',
+      description: 'Delete a label from a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        labelName: z.string().min(1),
+      }),
+      execute: async (input) => githubApps.deleteLabel(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        labelName: input.labelName,
+      }),
     });
   }
 
@@ -497,6 +838,73 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
           dueOn: input.dueOn,
         });
       },
+    });
+  }
+
+  // --- Split Milestone tools (individual operations) ---
+
+  if (hasToolPermission(allowedToolIds, 'create_github_milestone')) {
+    tools.create_github_milestone = createTool({
+      id: 'create_github_milestone',
+      description: 'Create a new milestone in a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        state: z.enum(['open', 'closed']).optional(),
+        dueOn: z.string().optional().nullable(),
+      }),
+      execute: async (input) => githubApps.createMilestone(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        title: input.title,
+        description: input.description,
+        state: input.state,
+        dueOn: input.dueOn ?? undefined,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'update_github_milestone')) {
+    tools.update_github_milestone = createTool({
+      id: 'update_github_milestone',
+      description: 'Update an existing milestone in a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        milestoneNumber: z.number().int().positive(),
+        title: z.string().min(1).optional(),
+        description: z.string().optional(),
+        state: z.enum(['open', 'closed']).optional(),
+        dueOn: z.string().optional().nullable(),
+      }),
+      execute: async (input) => githubApps.updateMilestone(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        milestoneNumber: input.milestoneNumber,
+        title: input.title,
+        description: input.description,
+        state: input.state,
+        dueOn: input.dueOn,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_github_milestone')) {
+    tools.delete_github_milestone = createTool({
+      id: 'delete_github_milestone',
+      description: 'Delete a milestone from a repository.',
+      inputSchema: z.object({
+        owner: z.string().optional(),
+        repositoryName: z.string().min(1),
+        milestoneNumber: z.number().int().positive(),
+      }),
+      execute: async (input) => githubApps.deleteMilestone(agentId, {
+        owner: input.owner,
+        repositoryName: input.repositoryName,
+        milestoneNumber: input.milestoneNumber,
+      }),
     });
   }
 
