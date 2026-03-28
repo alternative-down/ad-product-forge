@@ -443,59 +443,25 @@ export function createGitHubAppManager(config: {
     owner?: string;
     repositoryName: string;
     pullRequestNumber: number;
+    mergeMethod?: 'merge' | 'squash' | 'rebase';
     commitTitle?: string;
     commitMessage?: string;
-    mergeMethod?: 'merge' | 'squash' | 'rebase';
   }) {
     const octokit = await getInstallationOctokit(agentId);
     const owner = await getDefaultOwner(input.owner);
-
-    const mutation = `
-      mutation MergePullRequest($input: MergePullRequestInput!) {
-        mergePullRequest(input: $input) {
-          pullRequest {
-            number
-            title
-            merged
-            state
-            url
-          }
-        }
-      }
-    `;
-
-    // GitHub GraphQL requires node IDs, so we fetch the PR first
-    const prResponse = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+    const response = await octokit.request('PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge', {
       owner,
       repo: input.repositoryName,
       pull_number: input.pullRequestNumber,
+      merge_method: input.mergeMethod ?? 'merge',
+      commit_title: input.commitTitle,
+      commit_message: input.commitMessage,
     });
 
-    const response = (await octokit.graphql(mutation, {
-      input: {
-        pullRequestId: prResponse.data.node_id,
-        commitHeadline: input.commitTitle,
-        commitBody: input.commitMessage,
-        mergeMethod: input.mergeMethod,
-      },
-    })) as {
-      mergePullRequest: {
-        pullRequest: {
-          number: number;
-          title: string;
-          merged: boolean;
-          state: string;
-          url: string;
-        };
-      };
-    };
-
     return {
-      number: response.mergePullRequest.pullRequest.number,
-      title: response.mergePullRequest.pullRequest.title,
-      merged: response.mergePullRequest.pullRequest.merged,
-      state: response.mergePullRequest.pullRequest.state,
-      url: response.mergePullRequest.pullRequest.url,
+      merged: response.data.merged,
+      message: response.data.message,
+      sha: response.data.sha,
     };
   }
 

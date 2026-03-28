@@ -158,7 +158,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
           }
         }
 
-        if ((input.action === 'update' || input.action === 'merge' || input.action === 'delete') && !input.pullRequestNumber) {
+        if ((input.action === 'update' || input.action === 'delete' || input.action === 'merge') && !input.pullRequestNumber) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pullRequestNumber'], message: 'pullRequestNumber is required when action is not create' });
         }
       }),
