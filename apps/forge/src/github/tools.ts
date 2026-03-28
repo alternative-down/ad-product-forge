@@ -122,7 +122,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'manage_github_pull_request')) {
     tools.manage_github_pull_request = createTool({
       id: 'manage_github_pull_request',
-      description: 'Create, update, or delete one pull request. Note: The merge action is not available via this tool - to merge PRs, use GitHub GraphQL API directly.',
+      description: 'Create, update, or delete one pull request.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']),
         owner: z.string().optional(),
