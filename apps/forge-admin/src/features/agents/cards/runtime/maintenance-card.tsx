@@ -1,11 +1,11 @@
 import { LoaderCircle, Trash2 } from 'lucide-react';
-import type { AgentFunction } from '../../../lib/api';
+import type { AgentFunction } from '../../../../lib/api';
 import type { Awaited } from 'react';
-import type { getAgent } from '../../../lib/api';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Select } from '../../../components/ui/select';
-import { LabeledField } from '../ui';
+import type { getAgent } from '../../../../lib/api';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Select } from '../../../../components/ui/select';
+import { LabeledField } from '../../ui';
 
 export function AgentMaintenanceCard(input: {
   agent: Awaited<ReturnType<typeof getAgent>>;

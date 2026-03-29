@@ -1,8 +1,6 @@
-import type { AgentDetail } from '../../../lib/api';
-import { Card } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
-import { ReadOnlyField } from '../ui';
+import type { AgentDetail } from '../../../../lib/api';
+import { Card } from '../../../../components/ui/card';
+import { ReadOnlyField } from '../../ui';
 
 export function GitHubProvisioningCard(input: {
   provisioning: AgentDetail['githubProvisioning'];

@@ -1,10 +1,10 @@
 import { UserPlus, LoaderCircle } from 'lucide-react';
-import type { HireAgentResult } from '../../../lib/api';
+import type { HireAgentResult } from '../../../../lib/api';
 import type { HireAgentDraft } from '../types';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { Textarea } from '../../../components/ui/textarea';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Input } from '../../../../components/ui/input';
+import { Textarea } from '../../../../components/ui/textarea';
 import { LabeledField } from '../ui';
 
 export function HireAgentCard(input: {

@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import { Bot, LoaderCircle } from 'lucide-react';
-import type { AgentDetail } from '../../../lib/api';
-import { formatDateTimeText } from '../utils';
-import { cn } from '../../../lib/utils';
-import { Card } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
+import type { AgentDetail } from '../../../../lib/api';
+import { formatDateTimeText } from '../../utils';
+import { cn } from '../../../../lib/utils';
+import { Card } from '../../../../components/ui/card';
+import { Badge } from '../../../../components/ui/badge';
 
 export function AgentConversationsCard(input: {
   conversations: AgentDetail['conversations'];

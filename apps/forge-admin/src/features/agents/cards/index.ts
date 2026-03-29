@@ -11,7 +11,6 @@ export { AgentProvidersCard } from './communications/providers-card';
 export { AgentConversationsCard } from './communications/conversations-card';
 
 // Schedules card
-export { SchedulesCard } from './schedules/schedules-card';
 
 // Hire agent
 export { HireAgentCard } from './hire-agent-card';

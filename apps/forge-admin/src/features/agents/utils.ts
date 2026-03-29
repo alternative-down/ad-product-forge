@@ -1,14 +1,9 @@
+import type { AgentDetail, AgentSchedule, CreateScheduleInput, UpdateScheduleInput } from '../../lib/api';
 import type {
-  AgentDetail,
-  AgentSchedule,
-  CreateScheduleInput,
-  UpdateScheduleInput,
-} from '../../lib/api';
-import type {
+  AgentCommunicationView,
   AgentConfigDraft,
   AgentDetailTab,
   AgentRuntimeView,
-  ProviderDraft,
   ScheduleDraft,
 } from './types';
 
@@ -173,7 +168,7 @@ export function buildAgentLocation(input: {
   tab?: AgentDetailTab;
   runtimeView?: AgentRuntimeView;
   communicationView?: AgentCommunicationView;
-}) {
+}): string {
   const parts = ['/agents'];
   if (input.agentId) {
     parts.push(input.agentId);

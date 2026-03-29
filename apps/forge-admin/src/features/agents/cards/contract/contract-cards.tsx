@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { LabeledField } from '../ui';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Input } from '../../../../components/ui/input';
+import { LabeledField } from '../../ui';
 
 export function ContractTopUpCard(input: {
   pending: boolean;

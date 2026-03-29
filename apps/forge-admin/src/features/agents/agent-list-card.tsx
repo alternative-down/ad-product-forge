@@ -1,11 +1,11 @@
 import { Bot, UserPlus, Play, Square, LoaderCircle } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
-import type { AgentListItem } from '../../../lib/api';
-import { formatUsd } from '../../../lib/format';
-import { cn } from '../../../lib/utils';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
+import type { AgentListItem } from '../../lib/api';
+import { formatUsd } from '../../lib/format';
+import { cn } from '../../lib/utils';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 import { buildAgentLocation } from '../utils';
 
 export function AgentListCard(input: {

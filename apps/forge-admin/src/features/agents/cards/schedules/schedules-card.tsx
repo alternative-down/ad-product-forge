@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Calendar, Clock, LoaderCircle, Plus } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { LabeledField } from '../ui';
-import { toDateTimeLocalValue, formatDateTimeText, createEmptyScheduleDraft } from '../utils';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Input } from '../../../../components/ui/input';
+import { LabeledField } from '../../ui';
+import { toDateTimeLocalValue, formatDateTimeText, createEmptyScheduleDraft } from '../../utils';
 
 export function SchedulesCard(input: {
   schedules: Array<{

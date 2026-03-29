@@ -1,14 +1,12 @@
-import { useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
-import type { AgentDetail } from '../../../lib/api';
-import { formatDateTimeText } from '../utils';
-import { cn } from '../../../lib/utils';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Textarea } from '../../../components/ui/textarea';
-import { Badge } from '../../../components/ui/badge';
-import { LabeledField } from '../ui';
-import { buildProviderDraftKey, createProviderTemplate, toPrettyJson } from '../utils';
+import type { AgentDetail } from '../../../../lib/api';
+import { formatDateTimeText } from '../../utils';
+import { cn } from '../../../../lib/utils';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Textarea } from '../../../../components/ui/textarea';
+import { Badge } from '../../../../components/ui/badge';
+import { buildProviderDraftKey, toPrettyJson } from '../../utils';
 
 export function AgentProvidersCard(input: {
   agent: AgentDetail;
@@ -22,12 +20,6 @@ export function AgentProvidersCard(input: {
   pendingProviderType: string | null;
   error: string | null;
 }) {
-  const editableProviders = input.agent.providers.filter(
-    (provider): provider is AgentDetail['providers'][number] & {
-      providerType: 'discord' | 'email';
-    } => provider.editable && (provider.providerType === 'discord' || provider.providerType === 'email'),
-  );
-
   return (
     <Card className="p-6">
       <div>
