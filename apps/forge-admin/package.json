@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "start": "sh -c 'serve -s dist -l tcp://0.0.0.0:${FORGE_ADMIN_PORT:-3021}'",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -17,8 +17,7 @@
     "@tanstack/react-router-devtools": "^1.166.11",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+
     "serve": "^14.2.6",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.12"
@@ -28,8 +27,8 @@
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/router-plugin": "^1.167.5",
     "@types/node": "^25.5.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^10.1.0",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -39,5 +38,11 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.2",
     "vite": "^8.0.1"
+  },
+  "overrides": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1"
   }
 }
