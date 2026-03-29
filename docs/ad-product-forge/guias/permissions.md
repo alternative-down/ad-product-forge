@@ -75,13 +75,20 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `get_github_git_credentials` | Credenciais Git | DEVELOPER |
 | `list_github_repositories` | Lista repos | DEVELOPER |
 | `get_github_repository` | Busca repo | DEVELOPER |
-| `manage_github_repository` | Gerencia repo | DEVELOPER |
+| `create_github_repository` | Cria repo | DEVELOPER |
+| `update_github_repository` | Atualiza repo | DEVELOPER |
+| `delete_github_repository` | Deleta repo | DEVELOPER |
 | `list_github_pull_requests` | Lista PRs | DEVELOPER |
 | `get_github_pull_request` | Busca PR | DEVELOPER |
-| `manage_github_pull_request` | Gerencia PR | DEVELOPER |
-| `list_github_issues` | Lista issues | DEVELOPER |
+| `create_github_pull_request` | Cria PR | DEVELOPER |
+| `update_github_pull_request` | Atualiza PR | DEVELOPER |
+| `merge_github_pull_request` | Faz merge de PR | DEVELOPER |
+| `delete_github_pull_request` | Deleta PR | DEVELOPER |
+| `list_github_issue_comments` | Lista comentários | DEVELOPER |
 | `get_github_issue` | Busca issue | DEVELOPER |
-| `manage_github_issue` | Gerencia issue | DEVELOPER |
+| `create_github_issue` | Cria issue | DEVELOPER |
+| `update_github_issue` | Atualiza issue | DEVELOPER |
+| `delete_github_issue` | Deleta issue | DEVELOPER |
 | `toggle_github_issue` | Abre/fecha issue | DEVELOPER |
 | `list_github_issue_comments` | Lista comentários | DEVELOPER |
 | `get_github_issue_comment` | Busca comentário | DEVELOPER |
@@ -89,9 +96,14 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `update_github_issue_comment` | Atualiza comentário | DEVELOPER |
 | `delete_github_issue_comment` | Deleta comentário | DEVELOPER |
 | `list_github_labels` | Lista labels | DEVELOPER |
-| `manage_github_label` | Gerencia label | DEVELOPER |
+| `create_github_label` | Cria label | DEVELOPER |
+| `update_github_label` | Atualiza label | DEVELOPER |
+| `delete_github_label` | Deleta label | DEVELOPER |
 | `list_github_milestones` | Lista milestones | DEVELOPER |
-| `manage_github_milestone` | Gerencia milestone | DEVELOPER |
+| `create_github_milestone` | Cria milestone | DEVELOPER |
+| `update_github_milestone` | Atualiza milestone | DEVELOPER |
+| `delete_github_milestone` | Deleta milestone | DEVELOPER |
+| `list_github_issues` | Lista issues | DEVELOPER |
 
 ### Ferramentas Coolify
 
@@ -115,8 +127,18 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
 | `list_agent_schedules` | Lista agendamentos | DEVELOPER |
-| `manage_agent_schedule` | Gerencia agendamento | DEVELOPER |
+| `create_agent_schedule` | Cria agendamento | DEVELOPER |
+| `update_agent_schedule` | Atualiza agendamento | DEVELOPER |
+| `delete_agent_schedule` | Deleta agendamento | DEVELOPER |
 | `toggle_agent_schedule` | Ativa/desativa | DEVELOPER |
+
+### Ferramentas MiniMax
+
+| Tool ID | Descrição | Roles |
+|---------|-----------|-------|
+| `minimax_tts` | Gera áudio via text-to-speech | DEVELOPER |
+| `minimax_image` | Gera imagem via IA | DEVELOPER |
+| `minimax_video` | Gera vídeo via IA | DEVELOPER |
 
 ### Ferramentas de Agentes
 
