@@ -17,7 +17,6 @@
     "@tanstack/react-router-devtools": "^1.166.11",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
-
     "serve": "^14.2.6",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.12"
@@ -38,11 +37,5 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.2",
     "vite": "^8.0.1"
-  },
-  "overrides": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.1"
   }
 }
