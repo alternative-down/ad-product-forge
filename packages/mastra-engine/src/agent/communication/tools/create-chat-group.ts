@@ -17,13 +17,32 @@ export function createChatGroupTool(communication: CommunicationModule) {
     description: 'Create a new internal chat group for multi-participant conversations.',
     inputSchema: createChatGroupInputSchema,
     execute: async (input) => {
-      return communication.createChatGroup({
-        provider: input.provider,
-        providerConversationKey: input.providerConversationKey,
-        name: input.name,
-        creatorId: input.creatorId,
-        creatorName: input.creatorName,
-      });
+      try {
+        return await communication.createChatGroup({
+          provider: input.provider,
+          providerConversationKey: input.providerConversationKey,
+          name: input.name,
+          creatorId: input.creatorId,
+          creatorName: input.creatorName,
+        });
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+            return {
+              error: error.message,
+              hint: 'A group with this providerConversationKey already exists. Use a unique key or use list_chat_groups to find existing groups.',
+            };
+          }
+          return {
+            error: error.message,
+            hint: 'Verify the provider is configured and the providerConversationKey is unique.',
+          };
+        }
+        return {
+          error: 'An unknown error occurred while creating the chat group',
+          hint: 'Verify all required fields are valid and the provider is configured.',
+        };
+      }
     },
   });
 }
