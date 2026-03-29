@@ -168,7 +168,7 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 
 ## Aliases de Permissões Legadas
 
-Para retrocompatibilidade, algumas tools possuem aliases:
+Para retrocompatibilidade, ferramentas legadas redirecionam para ferramentas de responsabilidade única:
 
 ```typescript
 const legacyToolPermissionAliases = {
@@ -184,10 +184,30 @@ const legacyToolPermissionAliases = {
   // Notifications
   list_agent_notifications: ['get_agent_notification'],
   
-  // GitHub
-  manage_github_repository: ['create_github_repository'],
-  manage_github_pull_request: ['create_github_pull_request'],
-  manage_github_issue: ['create_github_issue', 'update_github_issue'],
+  // GitHub - Repositories
+  manage_github_repository: ['create_github_repository', 'update_github_repository', 'delete_github_repository'],
+  
+  // GitHub - Pull Requests
+  manage_github_pull_request: ['create_github_pull_request', 'update_github_pull_request', 'merge_github_pull_request', 'delete_github_pull_request'],
+  
+  // GitHub - Coolify Integration
+  toggle_github_issue: ['toggle_github_issue'],
+  manage_coolify_application: ['create_coolify_application', 'update_coolify_application', 'delete_coolify_application', 'restart_coolify_application'],
+  toggle_coolify_application: ['start_coolify_application', 'stop_coolify_application'],
+  get_coolify_application_envs: ['list_coolify_application_envs'],
+  manage_coolify_application_env: ['set_coolify_application_env', 'delete_coolify_application_env'],
+  
+  // Scheduling
+  create_cron_for_agent: ['create_schedule_for_agent'],
+  edit_cron: ['edit_schedule'],
+  delete_cron: ['delete_schedule'],
+  
+  // Agent Management
+  manage_agent_function: ['create_agent_function', 'update_agent_function'],
+  manage_agent_role: ['create_agent_role', 'update_agent_role'],
+  manage_role_tool_permissions: ['add_role_tool_permission', 'remove_role_tool_permission'],
+  manage_role_workflow_permissions: ['add_role_workflow_permission', 'remove_role_workflow_permission'],
+  list_available_capabilities: ['list_available_custom_tools', 'list_available_workflows'],
 };
 ```
 
