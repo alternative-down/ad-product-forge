@@ -19,12 +19,12 @@ export function HireAgentCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Hire agent</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-foreground">Hire agent</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Creates the agent, mailbox, execution contract, heartbeat, and GitHub app runtime.
           </p>
         </div>
-        <UserPlus className="h-5 w-5 text-slate-500" />
+        <UserPlus className="h-5 w-5 text-muted-foreground" />
       </div>
 
       <form

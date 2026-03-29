@@ -365,12 +365,12 @@ function InvestmentCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Owner investment</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-foreground">Owner investment</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Records a capital injection explicitly as investment instead of mutating cash directly.
           </p>
         </div>
-        <CircleDollarSign className="h-5 w-5 text-slate-500" />
+        <CircleDollarSign className="h-5 w-5 text-muted-foreground" />
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <LabeledField label="Amount (USD)">
@@ -443,12 +443,12 @@ function PayableCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Accounts payable</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-foreground">Accounts payable</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Creates planned cash-out entries for one-off or recurring vendor obligations.
           </p>
         </div>
-        <ReceiptText className="h-5 w-5 text-slate-500" />
+        <ReceiptText className="h-5 w-5 text-muted-foreground" />
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <MiniMetric
@@ -512,7 +512,7 @@ function PayableCard(input: {
             </LabeledField>
             <LabeledField label="Recurrence">
               <select
-                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground"
                 value={recurringDraft.recurrencePeriod}
                 onChange={(event) =>
                   setRecurringDraft((current) => ({
@@ -593,16 +593,16 @@ function RecurringPayablesCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Recurring payables</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-foreground">Recurring payables</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Active recurring plans generate the next planned ledger entry whenever the current one is posted or canceled.
           </p>
         </div>
-        <Repeat className="h-5 w-5 text-slate-500" />
+        <Repeat className="h-5 w-5 text-muted-foreground" />
       </div>
-      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
-        <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+      <div className="mt-5 overflow-hidden rounded-lg border border-border">
+        <table className="min-w-full divide-y divide-border text-left text-sm">
+          <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Amount</th>
@@ -611,12 +611,12 @@ function RecurringPayablesCard(input: {
               <th className="px-4 py-3 font-medium">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+          <tbody className="divide-y divide-border bg-background text-muted-foreground">
             {input.items.map((item) => (
               <tr key={item.payableId}>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-slate-950">{item.name}</div>
-                  <div className="text-xs text-slate-500">{item.description ?? 'No description'}</div>
+                  <div className="font-medium text-foreground">{item.name}</div>
+                  <div className="text-xs text-muted-foreground">{item.description ?? 'No description'}</div>
                 </td>
                 <td className="px-4 py-3">{formatUsd(item.amountUsd)}</td>
                 <td className="px-4 py-3 capitalize">{item.recurrencePeriod}</td>
@@ -624,7 +624,7 @@ function RecurringPayablesCard(input: {
                 <td className="px-4 py-3">
                   <label className="flex items-center gap-2">
                     {input.pending && input.pendingPayableId === item.payableId ? (
-                      <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" />
+                      <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
                     ) : null}
                     <input
                       type="checkbox"
@@ -668,15 +668,15 @@ function LedgerCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Ledger</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-foreground">Ledger</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Planned entries can be posted or canceled directly from the maintenance console.
           </p>
         </div>
       </div>
-      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
-        <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+      <div className="mt-5 overflow-hidden rounded-lg border border-border">
+        <table className="min-w-full divide-y divide-border text-left text-sm">
+          <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">Amount</th>
@@ -685,12 +685,12 @@ function LedgerCard(input: {
               <th className="px-4 py-3 font-medium">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+          <tbody className="divide-y divide-border bg-background text-muted-foreground">
             {input.items.map((item) => (
               <tr key={item.id}>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-slate-950">{item.type}</div>
-                  <div className="text-xs text-slate-500">{item.description ?? 'No description'}</div>
+                  <div className="font-medium text-foreground">{item.type}</div>
+                  <div className="text-xs text-muted-foreground">{item.description ?? 'No description'}</div>
                 </td>
                 <td className="px-4 py-3">{formatUsd(item.amountUsd)}</td>
                 <td className="px-4 py-3 capitalize">{item.status}</td>
@@ -747,8 +747,8 @@ function MiniMetric(input: { label: string; value: string }) {
 
 function LabeledField(input: { label: string; children: ReactNode }) {
   return (
-    <label className="grid gap-2 text-sm text-slate-600">
-      <span className="font-medium text-slate-700">{input.label}</span>
+    <label className="grid gap-2 text-sm text-muted-foreground">
+      <span className="font-medium text-foreground">{input.label}</span>
       {input.children}
     </label>
   );
@@ -763,7 +763,7 @@ function ErrorBanner(input: { message: string }) {
 }
 
 function PanelLoading(input: { label: string }) {
-  return <Card className="p-6 text-sm text-slate-600">{input.label}</Card>;
+  return <Card className="p-6 text-sm text-muted-foreground">{input.label}</Card>;
 }
 
 function PanelError(input: { message: string }) {

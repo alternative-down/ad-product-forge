@@ -35,9 +35,9 @@ function getStateStyles(state: BudgetState) {
   switch (state) {
     case 'empty':
       return {
-        bar: 'bg-slate-200',
-        container: 'border-slate-200',
-        text: 'text-slate-500',
+        bar: 'bg-accent/30',
+        container: 'border-border',
+        text: 'text-muted-foreground',
         badge: null,
       };
     case 'warning':
@@ -63,9 +63,9 @@ function getStateStyles(state: BudgetState) {
       };
     case 'loading':
       return {
-        bar: 'bg-slate-300 animate-pulse',
-        container: 'border-slate-200',
-        text: 'text-slate-400',
+        bar: 'bg-accent/50 animate-pulse',
+        container: 'border-border',
+        text: 'text-muted-foreground',
         badge: null,
       };
     case 'error':
@@ -98,9 +98,9 @@ export function BudgetProgressCard({
     return (
       <div className={cn('rounded-lg border bg-card p-4 shadow-sm', className)}>
         <div className="space-y-3">
-          <div className="h-4 w-24 animate-pulse rounded bg-slate-200" />
-          <div className="h-2 w-full animate-pulse rounded bg-slate-200" />
-          <div className="h-3 w-16 animate-pulse rounded bg-slate-200" />
+          <div className="h-4 w-24 animate-pulse rounded bg-accent/30" />
+          <div className="h-2 w-full animate-pulse rounded bg-accent/30" />
+          <div className="h-3 w-16 animate-pulse rounded bg-accent/30" />
         </div>
       </div>
     );
@@ -145,7 +145,7 @@ export function BudgetProgressCard({
         )}
       </div>
 
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-accent/30">
         <div
           className={cn(
             'h-full rounded-full transition-all duration-300',

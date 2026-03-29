@@ -380,8 +380,8 @@ function CapabilitiesWorkspacePage(input: {
 
             {selectedTab === 'roles' && <Card className="p-6">
               <div className="mb-4 flex items-center gap-2">
-                <Plus className="h-4 w-4 text-slate-500" />
-                <h3 className="text-base font-semibold text-slate-950">Create role</h3>
+                <Plus className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold text-foreground">Create role</h3>
               </div>
               <form
                 className="space-y-4"
@@ -418,8 +418,8 @@ function CapabilitiesWorkspacePage(input: {
             </Card>}
             {selectedTab === 'functions' && <Card className="p-6">
               <div className="mb-4 flex items-center gap-2">
-                <Plus className="h-4 w-4 text-slate-500" />
-                <h3 className="text-base font-semibold text-slate-950">Create function</h3>
+                <Plus className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold text-foreground">Create function</h3>
               </div>
               <form
                 className="space-y-4"
@@ -741,8 +741,8 @@ function CapabilitiesWorkspacePage(input: {
 
 function PermissionGroup(input: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <div className="mb-3 text-sm font-medium capitalize text-slate-900">{input.title}</div>
+    <div className="rounded-lg border border-border bg-muted p-4">
+      <div className="mb-3 text-sm font-medium capitalize text-foreground">{input.title}</div>
       <div className="grid gap-2">{input.children}</div>
     </div>
   );
@@ -755,10 +755,10 @@ function PermissionToggle(input: {
   onChange(): void;
 }) {
   return (
-    <label className="flex items-center gap-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
+    <label className="flex items-center gap-3 rounded-xl bg-background px-3 py-2 text-sm text-foreground">
       <input type="checkbox" checked={input.checked} disabled={input.pending} onChange={input.onChange} />
-      <code className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">{input.label}</code>
-      {input.pending ? <LoaderCircle className="ml-auto h-4 w-4 animate-spin text-slate-500" /> : null}
+      <code className="rounded bg-muted px-2 py-1 text-xs text-foreground">{input.label}</code>
+      {input.pending ? <LoaderCircle className="ml-auto h-4 w-4 animate-spin text-muted-foreground" /> : null}
     </label>
   );
 }
@@ -858,7 +858,7 @@ function getGroup(value: string) {
 function LabeledField(input: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {input.label}
       </div>
       {input.children}
@@ -887,7 +887,7 @@ function InlineError(input: { message: string }) {
 
 function PanelLoading(input: { label: string }) {
   return (
-    <Card className="flex items-center gap-3 p-6 text-sm text-slate-600">
+    <Card className="flex items-center gap-3 p-6 text-sm text-muted-foreground">
       <LoaderCircle className="h-4 w-4 animate-spin" />
       {input.label}
     </Card>
