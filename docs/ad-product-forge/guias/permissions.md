@@ -26,8 +26,10 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 │  ┌─────────┐     ┌─────────────────────────────────────────┐   │
 │  │ DEVELOPER│───► │ tool: get_github_git_credentials       │   │
 │  │         │ ──► │ tool: list_github_repositories          │   │
-│  │         │ ──► │ tool: manage_github_repository           │   │
-│  │         │ ──► │ ... (GitHub tools)                       │   │
+│  │         │ ──► │ tool: create_github_repository          │   │
+│  │         │ ──► │ tool: update_github_repository          │   │
+│  │         │ ──► │ tool: delete_github_repository          │   │
+│  │         │ ──► │ ... (mais GitHub tools)                 │   │
 │  └─────────┘     └─────────────────────────────────────────┘   │
 │                                                                 │
 │  Role ─────────► Workflow                                      │
@@ -184,14 +186,13 @@ const legacyToolPermissionAliases = {
   // Notifications
   list_agent_notifications: ['get_agent_notification'],
   
-  // GitHub - Repositories
-  manage_github_repository: ['create_github_repository', 'update_github_repository', 'delete_github_repository'],
+  // GitHub - Pull Requests (PR comments)
+  list_github_pull_request_comments: ['list_github_pull_request_comments'],
   
-  // GitHub - Pull Requests
-  manage_github_pull_request: ['create_github_pull_request', 'update_github_pull_request', 'merge_github_pull_request', 'delete_github_pull_request'],
+  // GitHub - Issues
+  toggle_github_issue: ['toggle_github_issue'],
   
   // GitHub - Coolify Integration
-  toggle_github_issue: ['toggle_github_issue'],
   manage_coolify_application: ['create_coolify_application', 'update_coolify_application', 'delete_coolify_application', 'restart_coolify_application'],
   toggle_coolify_application: ['start_coolify_application', 'stop_coolify_application'],
   get_coolify_application_envs: ['list_coolify_application_envs'],
