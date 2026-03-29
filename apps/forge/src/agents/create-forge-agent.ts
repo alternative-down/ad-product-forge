@@ -102,6 +102,7 @@ export interface CreateAgentConfig<
   | 'providers'
   | 'workspaceFilesystem'
   | 'workspaceSandbox'
+  | 'workspaceSkills'
 > {
   workspaceBasePath: string;
 }

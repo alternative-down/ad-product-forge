@@ -21,13 +21,11 @@ export const forgeCustomToolIds = [
   'get_github_git_credentials',
   'list_github_repositories',
   'get_github_repository',
-  'manage_github_repository',
   'create_github_repository',
   'update_github_repository',
   'delete_github_repository',
   'list_github_pull_requests',
   'get_github_pull_request',
-  'manage_github_pull_request',
   'create_github_pull_request',
   'update_github_pull_request',
   'merge_github_pull_request',
@@ -69,8 +67,9 @@ export const forgeCustomToolIds = [
   'get_coolify_application_envs',
   'manage_coolify_application_env',
   'list_agent_schedules',
-  'manage_agent_schedule',
-  'toggle_agent_schedule',
+  'create_agent_schedule',
+  'update_agent_schedule',
+  'delete_agent_schedule',
   'create_cron_for_agent',
   'edit_cron',
   'delete_cron',
@@ -125,34 +124,12 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
   list_agent_notifications: [
     'get_agent_notification',
   ],
-  // @deprecated - redirects to manage_github_repository (tool split in progress)
-  manage_github_repository: [
-    'create_github_repository',
-  ],
-  // @deprecated - redirects to manage_github_pull_request (tool split in progress)
-  manage_github_pull_request: [
-    'create_github_pull_request',
-  ],
   list_github_pull_request_comments: [
     'list_github_pull_request_comments',
   ],
-  // @deprecated - redirects to manage_github_issue (tool split in progress)
-  manage_github_issue: [
-    'create_github_issue',
-    'update_github_issue',
-    'add_github_issue_labels',
-    'remove_github_issue_labels',
-  ],
-  // @deprecated - redirects to toggle_github_issue (tool split in progress)
+  // @deprecated - toggle_github_issue is the canonical tool
   toggle_github_issue: [
-    'close_github_issue',
-    'reopen_github_issue',
-  ],
-  // @deprecated - redirects to manage_github_issue_comment (tool split in progress)
-  manage_github_issue_comment: [
-    'list_github_issue_comments',
-    'get_github_issue_comment',
-    'create_github_issue_comment',
+    'toggle_github_issue',
   ],
   manage_coolify_application: [
     'create_coolify_application',
@@ -170,14 +147,6 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
   manage_coolify_application_env: [
     'set_coolify_application_env',
     'delete_coolify_application_env',
-  ],
-  manage_agent_schedule: [
-    'create_agent_schedule',
-    'update_agent_schedule',
-    'delete_agent_schedule',
-  ],
-  toggle_agent_schedule: [
-    'update_agent_schedule',
   ],
   // @deprecated - redirects to split tools (Issue #225)
   create_cron_for_agent: [

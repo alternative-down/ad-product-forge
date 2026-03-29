@@ -4,42 +4,6 @@ import { z } from 'zod';
 import { hasToolPermission } from '../capabilities/catalog';
 import type { createAgentScheduleManager } from './manager';
 
-const manageScheduleInputSchema = z.object({
-  action: z.enum(['create', 'update', 'delete']),
-  scheduleId: z.string().min(1).nullish(),
-  name: z.string().min(1).nullish(),
-  description: z.string().nullish().nullable(),
-  scheduleType: z.enum(['cron', 'date']).nullish(),
-  cronExpression: z.string().min(1).nullish().nullable(),
-  scheduledDate: z.string().min(1).nullish().nullable(),
-  timezone: z.string().min(1).nullish(),
-  content: z.string().min(1).nullish(),
-}).superRefine((input, ctx) => {
-  if (input.action === 'create') {
-    if (!input.name) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'name is required when action is create' });
-    }
-
-    if (!input.scheduleType) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduleType'], message: 'scheduleType is required when action is create' });
-    }
-
-    if (!input.content) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['content'], message: 'content is required when action is create' });
-    }
-  }
-
-  if (input.action === 'update' || input.action === 'delete') {
-    if (!input.scheduleId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduleId'], message: 'scheduleId is required when action is not create' });
-    }
-  }
-
-  if (input.action === 'update' && Object.keys(input).length <= 2) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides action and scheduleId must be provided' });
-  }
-});
-
 const toggleScheduleInputSchema = z.object({
   scheduleId: z.string().min(1),
   isActive: z.boolean(),
@@ -61,38 +25,74 @@ export function createAgentScheduleTools(
     });
   }
 
-  if (hasToolPermission(allowedToolIds, 'manage_agent_schedule')) {
-    tools.manage_agent_schedule = createTool({
-      id: 'manage_agent_schedule',
-      description: 'Create scheduled wakes using cron expressions for recurring tasks or specific dates for one-time triggers. Update or delete existing schedules.',
-      inputSchema: manageScheduleInputSchema,
-      execute: async (input) => {
-        if (input.action === 'create') {
-          return schedules.createSchedule(agentId, {
-            name: input.name!,
-            description: input.description ?? undefined,
-            scheduleType: input.scheduleType!,
-            cronExpression: input.cronExpression ?? undefined,
-            scheduledDate: input.scheduledDate ?? undefined,
-            timezone: input.timezone ?? 'UTC',
-            content: input.content!,
-          });
-        }
+  // --- Split Schedule tools (individual operations) ---
 
-        if (input.action === 'delete') {
-          return schedules.deleteSchedule(agentId, input.scheduleId!);
+  if (hasToolPermission(allowedToolIds, 'create_agent_schedule')) {
+    tools.create_agent_schedule = createTool({
+      id: 'create_agent_schedule',
+      description: 'Create a scheduled wake for this agent using cron expressions for recurring tasks or specific dates for one-time triggers.',
+      inputSchema: z.object({
+        name: z.string().min(1).describe('Name for the schedule.'),
+        description: z.string().nullish().nullable().describe('Optional description.'),
+        scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time.'),
+        cronExpression: z.string().min(1).nullish().describe('Cron expression (required for cron type).'),
+        scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type).'),
+        timezone: z.string().min(1).nullish().default('UTC').describe('Timezone for the schedule.'),
+        content: z.string().min(1).describe('Content/payload to send when the schedule triggers.'),
+      }).superRefine((input, ctx) => {
+        if (input.scheduleType === 'cron' && !input.cronExpression) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cronExpression'], message: 'cronExpression is required when scheduleType is cron' });
         }
+        if (input.scheduleType === 'date' && !input.scheduledDate) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduledDate'], message: 'scheduledDate is required when scheduleType is date' });
+        }
+      }),
+      execute: async (input) => schedules.createSchedule(agentId, {
+        name: input.name,
+        description: input.description ?? undefined,
+        scheduleType: input.scheduleType,
+        cronExpression: input.cronExpression ?? undefined,
+        scheduledDate: input.scheduledDate ?? undefined,
+        timezone: input.timezone ?? 'UTC',
+        content: input.content,
+      }),
+    });
+  }
 
-        return schedules.updateSchedule(agentId, input.scheduleId!, {
-          name: input.name,
-          description: input.description,
-          scheduleType: input.scheduleType,
-          cronExpression: input.cronExpression,
-          scheduledDate: input.scheduledDate,
-          timezone: input.timezone,
-          content: input.content,
-        });
-      },
+  if (hasToolPermission(allowedToolIds, 'update_agent_schedule')) {
+    tools.update_agent_schedule = createTool({
+      id: 'update_agent_schedule',
+      description: 'Update an existing scheduled wake. At least one field besides scheduleId must be provided.',
+      inputSchema: z.object({
+        scheduleId: z.string().min(1).describe('The schedule ID to update.'),
+        name: z.string().min(1).nullish().describe('New name for the schedule.'),
+        description: z.string().nullish().nullable().describe('New description.'),
+        scheduleType: z.enum(['cron', 'date']).nullish().describe('New schedule type.'),
+        cronExpression: z.string().min(1).nullish().describe('New cron expression.'),
+        scheduledDate: z.string().min(1).nullish().describe('New date string.'),
+        timezone: z.string().min(1).nullish().describe('New timezone.'),
+        content: z.string().min(1).nullish().describe('New content/payload.'),
+      }),
+      execute: async (input) => schedules.updateSchedule(agentId, input.scheduleId, {
+        name: input.name,
+        description: input.description,
+        scheduleType: input.scheduleType,
+        cronExpression: input.cronExpression,
+        scheduledDate: input.scheduledDate,
+        timezone: input.timezone,
+        content: input.content,
+      }),
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_agent_schedule')) {
+    tools.delete_agent_schedule = createTool({
+      id: 'delete_agent_schedule',
+      description: 'Delete a scheduled wake permanently.',
+      inputSchema: z.object({
+        scheduleId: z.string().min(1).describe('The schedule ID to delete.'),
+      }),
+      execute: async (input) => schedules.deleteSchedule(agentId, input.scheduleId),
     });
   }
 
