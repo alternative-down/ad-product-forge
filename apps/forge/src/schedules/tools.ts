@@ -4,11 +4,6 @@ import { z } from 'zod';
 import { hasToolPermission } from '../capabilities/catalog';
 import type { createAgentScheduleManager } from './manager';
 
-const toggleScheduleInputSchema = z.object({
-  scheduleId: z.string().min(1),
-  isActive: z.boolean(),
-});
-
 export function createAgentScheduleTools(
   agentId: string,
   schedules: ReturnType<typeof createAgentScheduleManager>,
@@ -72,6 +67,7 @@ export function createAgentScheduleTools(
         scheduledDate: z.string().min(1).nullish().describe('New date string.'),
         timezone: z.string().min(1).nullish().describe('New timezone.'),
         content: z.string().min(1).nullish().describe('New content/payload.'),
+        isActive: z.boolean().nullish().describe('Enable or disable the schedule without deleting it.'),
       }),
       execute: async (input) => schedules.updateSchedule(agentId, input.scheduleId, {
         name: input.name,
@@ -81,6 +77,7 @@ export function createAgentScheduleTools(
         scheduledDate: input.scheduledDate,
         timezone: input.timezone,
         content: input.content,
+        isActive: input.isActive ?? undefined,
       }),
     });
   }
@@ -93,17 +90,6 @@ export function createAgentScheduleTools(
         scheduleId: z.string().min(1).describe('The schedule ID to delete.'),
       }),
       execute: async (input) => schedules.deleteSchedule(agentId, input.scheduleId),
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'toggle_agent_schedule')) {
-    tools.toggle_agent_schedule = createTool({
-      id: 'toggle_agent_schedule',
-      description: 'Enable or disable a scheduled wake without deleting it. Paused schedules will not trigger until reactivated.',
-      inputSchema: toggleScheduleInputSchema,
-      execute: async (input) => schedules.updateSchedule(agentId, input.scheduleId, {
-        isActive: input.isActive,
-      }),
     });
   }
 
