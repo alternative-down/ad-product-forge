@@ -1,14 +1,9 @@
+import type { AgentDetail, AgentSchedule, CreateScheduleInput, UpdateScheduleInput } from '../../lib/api';
 import type {
-  AgentDetail,
-  AgentSchedule,
-  CreateScheduleInput,
-  UpdateScheduleInput,
-} from '../../lib/api';
-import type {
+  AgentCommunicationView,
   AgentConfigDraft,
   AgentDetailTab,
   AgentRuntimeView,
-  ProviderDraft,
   ScheduleDraft,
 } from './types';
 
@@ -129,7 +124,8 @@ export function createProviderTemplate(providerType: 'discord' | 'email') {
 // Formatting Utilities
 // =============================================================================
 
-export function toDateTimeLocalValue(timestamp: number) {
+export function toDateTimeLocalValue(timestamp: string | number | null | undefined) {
+  if (!timestamp) return '';
   const date = new Date(timestamp);
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -173,7 +169,7 @@ export function buildAgentLocation(input: {
   tab?: AgentDetailTab;
   runtimeView?: AgentRuntimeView;
   communicationView?: AgentCommunicationView;
-}) {
+}): string {
   const parts = ['/agents'];
   if (input.agentId) {
     parts.push(input.agentId);
