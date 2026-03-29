@@ -115,7 +115,7 @@ export function loadCommunicationProviders(
     } = {
       id: agentId,
       displayName: displayName ?? agentId,
-      description,
+      description: description ?? undefined,
     };
 
     // Only add getGroupMembers if we have workspace config
@@ -133,11 +133,24 @@ export function loadCommunicationProviders(
 
   if (credentials.discord) {
     const discord = discordCredentialsSchema.parse(credentials.discord);
-    providers.push(createDiscordProvider(discord));
+    providers.push(
+      createDiscordProvider({
+        token: discord.token,
+        allowedChannelIds: discord.allowedChannelIds ?? undefined,
+        respondToMentionsOnly: discord.respondToMentionsOnly ?? undefined,
+      })
+    );
   }
 
   if (credentials.email) {
-    providers.push(createEmailProvider(emailCredentialsSchema.parse(credentials.email)));
+    const email = emailCredentialsSchema.parse(credentials.email);
+    providers.push(
+      createEmailProvider({
+        imap: email.imap,
+        smtp: email.smtp,
+        bcc: email.bcc ?? undefined,
+      })
+    );
   }
 
   return providers;
