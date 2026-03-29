@@ -212,6 +212,13 @@
       "when": 1775509000000,
       "tag": "0029_add_get_github_issue_comment_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1775510000000,
+      "tag": "0030_normalize_legacy_tool_permissions",
+      "breakpoints": true
     }
   ]
 }

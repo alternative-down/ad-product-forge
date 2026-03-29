@@ -102,84 +102,6 @@ export const forgeWorkflowIds = [
 export type ForgeCustomToolId = typeof forgeCustomToolIds[number];
 export type ForgeWorkflowId = typeof forgeWorkflowIds[number];
 
-export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, readonly string[]>> = {
-  // @deprecated - use create_github_repository, update_github_repository, delete_github_repository
-  list_company_cash: [
-    'list_company_cash_movements',
-    'get_company_cash_summary',
-  ],
-  get_company_cash: [
-    'get_company_cash_balance',
-  ],
-  list_internal_agent_contracts: [
-    'list_active_internal_agent_contracts',
-    'get_active_internal_agent_contract',
-  ],
-  manage_internal_agent_contract: [
-    'top_up_internal_agent_contract',
-  ],
-  adjust_agent_contract_budget: [
-    'adjust_internal_agent_contract_budget',
-  ],
-  list_agent_notifications: [
-    'get_agent_notification',
-  ],
-  list_github_pull_request_comments: [
-    'list_github_pull_request_comments',
-  ],
-  // @deprecated - toggle_github_issue is the canonical tool
-  toggle_github_issue: [
-    'toggle_github_issue',
-  ],
-  manage_coolify_application: [
-    'create_coolify_application',
-    'update_coolify_application',
-    'delete_coolify_application',
-    'restart_coolify_application',
-  ],
-  toggle_coolify_application: [
-    'start_coolify_application',
-    'stop_coolify_application',
-  ],
-  get_coolify_application_envs: [
-    'list_coolify_application_envs',
-  ],
-  manage_coolify_application_env: [
-    'set_coolify_application_env',
-    'delete_coolify_application_env',
-  ],
-  // @deprecated - redirects to split tools (Issue #225)
-  create_cron_for_agent: [
-    'create_schedule_for_agent',
-  ],
-  edit_cron: [
-    'edit_schedule',
-  ],
-  delete_cron: [
-    'delete_schedule',
-  ],
-  manage_agent_function: [
-    'create_agent_function',
-    'update_agent_function',
-  ],
-  manage_agent_role: [
-    'create_agent_role',
-    'update_agent_role',
-  ],
-  manage_role_tool_permissions: [
-    'add_role_tool_permission',
-    'remove_role_tool_permission',
-  ],
-  manage_role_workflow_permissions: [
-    'add_role_workflow_permission',
-    'remove_role_workflow_permission',
-  ],
-  list_available_capabilities: [
-    'list_available_custom_tools',
-    'list_available_workflows',
-  ],
-};
-
 export function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolId: ForgeCustomToolId) {
   if (!allowedToolIds) {
     return true;
@@ -189,24 +111,9 @@ export function hasToolPermission(allowedToolIds: Set<string> | null | undefined
     return true;
   }
 
-  const aliases = legacyToolPermissionAliases[toolId] ?? [];
-  return aliases.some((alias) => allowedToolIds.has(alias));
+  return false;
 }
 
 export function normalizeToolPermissionIds(toolIds: readonly string[]) {
-  const normalized = new Set<string>();
-
-  for (const toolId of toolIds) {
-    const canonical = forgeCustomToolIds.find((candidate) => {
-      if (candidate === toolId) {
-        return true;
-      }
-
-      return (legacyToolPermissionAliases[candidate] ?? []).includes(toolId);
-    });
-
-    normalized.add(canonical ?? toolId);
-  }
-
-  return [...normalized].sort((left, right) => left.localeCompare(right));
+  return [...new Set(toolIds)].sort((left, right) => left.localeCompare(right));
 }
