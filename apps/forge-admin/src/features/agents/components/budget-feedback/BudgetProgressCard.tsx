@@ -136,7 +136,7 @@ export function BudgetProgressCard({
       )}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-600">Budget {periodLabel}</span>
+        <span className="text-sm font-medium">Budget {periodLabel}</span>
         {styles.badge && (
           <span className={cn('flex items-center gap-1 text-xs font-medium', styles.badge.className)}>
             <styles.badge.icon className="h-3 w-3" />
@@ -166,7 +166,7 @@ export function BudgetProgressCard({
         <span className={cn('text-lg font-semibold', styles.text)}>
           ${budgetUsed.toFixed(2)}
         </span>
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-muted-foreground">
           de ${budgetLimit.toFixed(2)}
         </span>
       </div>

@@ -67,13 +67,13 @@ export function BudgetAdjustCard({
   return (
     <div className={cn('rounded-lg border bg-card p-4 shadow-sm', className)}>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700">
+        <h3 className="text-sm font-semibold">
           Ajustar Budget
         </h3>
         <button
           type="button"
           onClick={() => setShowPreview(!showPreview)}
-          className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+          className="flex items-center gap-1 text-xs text-primary hover:underline"
         >
           {showPreview ? 'Ocultar' : 'Ver'} preview
           {showPreview ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -81,9 +81,9 @@ export function BudgetAdjustCard({
       </div>
 
       {/* Current Budget Display */}
-      <div className="mb-3 rounded-md bg-slate-50 p-2 text-center">
-        <span className="text-xs text-slate-500">Budget atual</span>
-        <p className="text-lg font-semibold text-slate-700">${currentBudget.toFixed(2)}</p>
+      <div className="mb-3 rounded-md bg-accent/50 p-2 text-center">
+        <span className="text-xs text-muted-foreground">Budget atual</span>
+        <p className="text-lg font-semibold">${currentBudget.toFixed(2)}</p>
       </div>
 
       {/* Quick Adjustment Buttons */}
@@ -116,11 +116,11 @@ export function BudgetAdjustCard({
 
       {/* Custom Budget Input */}
       <div className="mb-4">
-        <Label htmlFor="new-budget" className="text-xs text-slate-500">
+        <Label htmlFor="new-budget" className="text-xs text-muted-foreground">
           Novo budget (USD)
         </Label>
         <div className="relative mt-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
           <Input
             id="new-budget"
             type="number"
@@ -147,15 +147,15 @@ export function BudgetAdjustCard({
 
       {/* Preview Panel */}
       {showPreview && (
-        <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-3">
-          <h4 className="mb-2 text-xs font-medium text-slate-600">Preview da mudança</h4>
+        <div className="mb-4 rounded-md border border-border bg-accent/50 p-3">
+          <h4 className="mb-2 text-xs font-medium">Preview da mudança</h4>
           <div className="space-y-1 text-xs">
             <div className="flex justify-between">
-              <span className="text-slate-500">Budget atual:</span>
+              <span className="text-muted-foreground">Budget atual:</span>
               <span className="font-medium">${currentBudget.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Novo budget:</span>
+              <span className="text-muted-foreground">Novo budget:</span>
               <span className={cn('font-medium', isDecrease ? 'text-red-600' : 'text-green-600')}>
                 ${newBudget.toFixed(2)}
               </span>

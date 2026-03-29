@@ -52,7 +52,7 @@ export function QuickTopUpCard({
 
   return (
     <div className={cn('rounded-lg border bg-card p-4 shadow-sm', className)}>
-      <h3 className="mb-3 text-sm font-semibold text-slate-700">
+      <h3 className="mb-3 text-sm font-semibold">
         Top-up Rápido
       </h3>
 
@@ -70,8 +70,8 @@ export function QuickTopUpCard({
             className={cn(
               'rounded-md border px-3 py-2 text-sm font-medium transition-all',
               selectedAmount === preset.amount
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50',
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:bg-accent/50',
               isSubmitting && 'cursor-not-allowed opacity-50'
             )}
           >
@@ -82,11 +82,11 @@ export function QuickTopUpCard({
 
       {/* Custom Amount */}
       <div className="mb-4">
-        <Label htmlFor="custom-amount" className="text-xs text-slate-500">
+        <Label htmlFor="custom-amount" className="text-xs text-muted-foreground">
           Ou valor personalizado
         </Label>
         <div className="relative mt-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
           <Input
             id="custom-amount"
             type="number"
@@ -144,8 +144,8 @@ export function QuickTopUpCard({
 
       {/* New Balance Preview */}
       {finalAmount > 0 && (
-        <p className="mt-3 text-center text-xs text-slate-500">
-          Novo budget: <span className="font-medium text-slate-700">${(budgetRemaining + finalAmount).toFixed(2)}</span>
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          Novo budget: <span className="font-medium">${(budgetRemaining + finalAmount).toFixed(2)}</span>
         </p>
       )}
     </div>
