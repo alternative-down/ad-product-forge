@@ -56,6 +56,7 @@ export function StepIndicator({ steps, currentStep, completedSteps = [] }: StepI
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const WIZARD_STEPS = [
   { number: 1, label: 'Basic Info' },
   { number: 2, label: 'Config' },

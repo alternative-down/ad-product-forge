@@ -28,6 +28,7 @@ export function BudgetToastProvider({ children }: { children: React.ReactNode })
   return <>{children}</>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function createBudgetToast(
   variant: BudgetToastVariant,
   title: string,
@@ -53,6 +54,7 @@ export function createBudgetToast(
   };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const BUDGET_TOAST_MESSAGES = {
   topUpSuccess: (amount: number) => ({
     title: 'Top-up realizado!',
