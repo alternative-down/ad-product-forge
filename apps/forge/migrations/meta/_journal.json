@@ -154,7 +154,8 @@
       "version": "6",
       "when": 1775501000000,
       "tag": "0021_minimax_supported_model",
-      "breakpoints": true
+      "breakpoints": true,
+      "hash": "50fd67ed64c3d4f9d92c364e8963d3eb00463317c1d13e24ab7cc9c0a94e433f"
     },
     {
       "idx": 22,
