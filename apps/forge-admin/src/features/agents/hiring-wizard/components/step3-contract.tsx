@@ -42,9 +42,9 @@ export function Step3Contract() {
   };
 
   const toggleDay = (day: string) => {
-    const currentDays = contract.scheduleDays || [];
+    const currentDays = (contract.scheduleDays || []) as string[];
     const newDays = currentDays.includes(day)
-      ? currentDays.filter((d) => d !== day)
+      ? currentDays.filter((d: string) => d !== day)
       : [...currentDays, day];
     setContract({ scheduleDays: newDays });
   };

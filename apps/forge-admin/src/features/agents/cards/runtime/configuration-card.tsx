@@ -1,11 +1,11 @@
 import { LoaderCircle } from 'lucide-react';
-import type { AgentConfigDraft } from '../types';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { Select } from '../../../components/ui/select';
-import { Textarea } from '../../../components/ui/textarea';
-import { LabeledField } from '../ui';
+import type { AgentConfigDraft } from '../../types';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Input } from '../../../../components/ui/input';
+import { Select } from '../../../../components/ui/select';
+import { Textarea } from '../../../../components/ui/textarea';
+import { LabeledField } from '../../ui';
 
 export function AgentConfigurationCard(input: {
   draft: AgentConfigDraft;
