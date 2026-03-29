@@ -615,8 +615,8 @@ function SystemSettingsCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Company context</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-foreground">Company context</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Global company information injected into the system prompt of loaded agents.
           </p>
         </div>
@@ -746,8 +746,8 @@ function MigrationStatusCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-950">Application migrations</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <h3 className="text-lg font-semibold text-foreground">Application migrations</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             Journal entries from the repo matched against rows stored in <code>__drizzle_migrations</code>.
           </p>
         </div>
@@ -756,7 +756,7 @@ function MigrationStatusCard(input: {
       <div className="mt-5 overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead>
-            <tr className="text-left text-slate-500">
+            <tr className="text-left text-muted-foreground">
               <th className="py-2 pr-4 font-medium">Idx</th>
               <th className="py-2 pr-4 font-medium">Tag</th>
               <th className="py-2 pr-4 font-medium">Applied</th>
@@ -767,15 +767,15 @@ function MigrationStatusCard(input: {
           <tbody className="divide-y divide-slate-100">
             {input.migrations.entries.map((entry) => (
               <tr key={entry.tag}>
-                <td className="py-2 pr-4 text-slate-600">{entry.idx}</td>
-                <td className="py-2 pr-4 font-mono text-xs text-slate-900">{entry.tag}</td>
+                <td className="py-2 pr-4 text-muted-foreground">{entry.idx}</td>
+                <td className="py-2 pr-4 font-mono text-xs text-foreground">{entry.tag}</td>
                 <td className="py-2 pr-4">
                   <span className={entry.applied ? 'text-emerald-700' : 'text-amber-700'}>
                     {entry.applied ? 'applied' : 'pending'}
                   </span>
                 </td>
-                <td className="py-2 pr-4 text-slate-600">{formatDateTime(entry.createdAt)}</td>
-                <td className="py-2 pr-4 text-slate-600">{entry.rowId ?? '—'}</td>
+                <td className="py-2 pr-4 text-muted-foreground">{formatDateTime(entry.createdAt)}</td>
+                <td className="py-2 pr-4 text-muted-foreground">{entry.rowId ?? '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -807,12 +807,12 @@ function LlmPricingCard(input: {
       <Card className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-slate-950">LLM model prices</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <h3 className="text-lg font-semibold text-foreground">LLM model prices</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Pricing is used by hiring and contract accounting. Add or adjust any model key here.
             </p>
           </div>
-          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
+          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
         </div>
 
         <div className="mt-5 space-y-4">
@@ -909,26 +909,26 @@ function LlmPricingCard(input: {
       </Card>
 
       <Card className="p-6">
-        <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered prices</h4>
+        <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Registered prices</h4>
         <div className="mt-4 space-y-3">
           {input.prices.map((price) => (
-            <div key={price.modelKey} className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="font-medium text-slate-950 break-all">{price.modelKey}</p>
-              <dl className="mt-3 space-y-1 text-sm text-slate-600">
+            <div key={price.modelKey} className="rounded-xl border border-border bg-background p-4">
+              <p className="font-medium text-foreground break-all">{price.modelKey}</p>
+              <dl className="mt-3 space-y-1 text-sm text-muted-foreground">
                 <div>
-                  <dt className="inline font-medium text-slate-800">Input:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Input:</dt>{' '}
                   <dd className="inline">{price.inputPerMillionUsd}</dd>
                 </div>
                 <div>
-                  <dt className="inline font-medium text-slate-800">Cache input:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Cache input:</dt>{' '}
                   <dd className="inline">{price.inputCachePerMillionUsd}</dd>
                 </div>
                 <div>
-                  <dt className="inline font-medium text-slate-800">Output:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Output:</dt>{' '}
                   <dd className="inline">{price.outputPerMillionUsd}</dd>
                 </div>
                 <div>
-                  <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Updated:</dt>{' '}
                   <dd className="inline">{formatDateTime(price.updatedAt)}</dd>
                 </div>
               </dl>
@@ -961,12 +961,12 @@ function LlmDefaultsCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-950">Hiring defaults</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <h3 className="text-lg font-semibold text-foreground">Hiring defaults</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             These defaults are applied when a new agent is hired and when the hiring RH prompt is generated.
           </p>
         </div>
-        {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
+        {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -1050,12 +1050,12 @@ function LlmProfileEditorCard(input: {
       <Card className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-slate-950">LLM profiles</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <h3 className="text-lg font-semibold text-foreground">LLM profiles</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Profiles are reusable model selections. Defaults point to one of these profiles.
             </p>
           </div>
-          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
+          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
         </div>
 
         <div className="mt-5 space-y-4">
@@ -1084,39 +1084,39 @@ function LlmProfileEditorCard(input: {
       </Card>
 
       <Card className="p-6">
-        <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Registered profiles</h4>
+        <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Registered profiles</h4>
         <div className="mt-4 space-y-3">
           {input.profiles.map((profile) => (
-            <div key={profile.profileId} className="rounded-xl border border-slate-200 bg-white p-4">
+            <div key={profile.profileId} className="rounded-xl border border-border bg-background p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium text-slate-950">{profile.name}</p>
-                  <p className="mt-1 text-xs text-slate-500">{profile.profileId}</p>
-                  <p className="mt-1 text-xs text-slate-500 break-all">{profile.modelKey}</p>
+                  <p className="font-medium text-foreground">{profile.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{profile.profileId}</p>
+                  <p className="mt-1 text-xs text-muted-foreground break-all">{profile.modelKey}</p>
                 </div>
-                <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                   {profile.isEnabled ? 'enabled' : 'disabled'}
                 </span>
               </div>
-              <dl className="mt-3 space-y-1 text-sm text-slate-600">
+              <dl className="mt-3 space-y-1 text-sm text-muted-foreground">
                 <div>
-                  <dt className="inline font-medium text-slate-800">Model key:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Model key:</dt>{' '}
                   <dd className="inline break-all">{profile.modelKey}</dd>
                 </div>
                 <div>
-                  <dt className="inline font-medium text-slate-800">Base URL:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Base URL:</dt>{' '}
                   <dd className="inline break-all">{profile.baseUrl ?? '—'}</dd>
                 </div>
                 <div>
-                  <dt className="inline font-medium text-slate-800">Direct token:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Direct token:</dt>{' '}
                   <dd className="inline">configured</dd>
                 </div>
                 <div>
-                  <dt className="inline font-medium text-slate-800">Contract cost modifier:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Contract cost modifier:</dt>{' '}
                   <dd className="inline">{profile.contractCostMultiplier.toFixed(3)}x</dd>
                 </div>
                 <div>
-                  <dt className="inline font-medium text-slate-800">Updated:</dt>{' '}
+                  <dt className="inline font-medium text-foreground">Updated:</dt>{' '}
                   <dd className="inline">{formatDateTime(profile.updatedAt)}</dd>
                 </div>
               </dl>
@@ -1187,7 +1187,7 @@ function LlmProfileForm(input: {
         </LabeledField>
       </div>
 
-      <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+      <label className="mt-4 flex items-center gap-3 text-sm text-foreground">
         <input
           type="checkbox"
           checked={draft.isEnabled}
@@ -1277,7 +1277,7 @@ function MigaduIntegrationCard(input: {
           />
         </LabeledField>
       </div>
-      <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+      <label className="mt-4 flex items-center gap-3 text-sm text-foreground">
         <input
           type="checkbox"
           checked={draft.isEnabled}
@@ -1370,7 +1370,7 @@ function CoolifyIntegrationCard(input: {
           />
         </LabeledField>
       </div>
-      <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+      <label className="mt-4 flex items-center gap-3 text-sm text-foreground">
         <input
           type="checkbox"
           checked={draft.isEnabled}
@@ -1454,7 +1454,7 @@ function GitHubIntegrationCard(input: {
           />
         </LabeledField>
       </div>
-      <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+      <label className="mt-4 flex items-center gap-3 text-sm text-foreground">
         <input
           type="checkbox"
           checked={draft.isEnabled}
@@ -1536,7 +1536,7 @@ function MiniMaxIntegrationCard(input: {
           />
         </LabeledField>
       </div>
-      <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+      <label className="mt-4 flex items-center gap-3 text-sm text-foreground">
         <input
           type="checkbox"
           checked={draft.isEnabled}
@@ -1589,26 +1589,26 @@ function OauthSyncCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-base font-semibold text-slate-950">OAuth sync</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <h3 className="text-base font-semibold text-foreground">OAuth sync</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             Log into Codex or Claude CLI inside the running container, then sync the credentials into Forge persistent
             storage.
           </p>
         </div>
-        <Cable className="h-5 w-5 text-slate-500" />
+        <Cable className="h-5 w-5 text-muted-foreground" />
       </div>
 
-      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-        Persistent store: <span className="font-mono text-slate-900">{input.state.storePath}</span>
+      <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
+        Persistent store: <span className="font-mono text-foreground">{input.state.storePath}</span>
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {input.state.providers.map((provider) => (
-          <div key={provider.providerId} className="rounded-lg border border-slate-200 p-4">
+          <div key={provider.providerId} className="rounded-lg border border-border p-4">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h4 className="text-sm font-semibold text-slate-950">{provider.providerId}</h4>
-                <p className="mt-1 text-xs text-slate-500">{provider.sourcePath}</p>
+                <h4 className="text-sm font-semibold text-foreground">{provider.providerId}</h4>
+                <p className="mt-1 text-xs text-muted-foreground">{provider.sourcePath}</p>
               </div>
               <Button
                 onClick={() => input.onSync(provider.providerId)}
@@ -1618,22 +1618,22 @@ function OauthSyncCard(input: {
               </Button>
             </div>
 
-            <dl className="mt-4 space-y-2 text-sm text-slate-600">
+            <dl className="mt-4 space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center justify-between gap-3">
                 <dt>CLI source present</dt>
-                <dd className="font-medium text-slate-900">{provider.sourcePresent ? 'yes' : 'no'}</dd>
+                <dd className="font-medium text-foreground">{provider.sourcePresent ? 'yes' : 'no'}</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Persisted in Forge</dt>
-                <dd className="font-medium text-slate-900">{provider.synced ? 'yes' : 'no'}</dd>
+                <dd className="font-medium text-foreground">{provider.synced ? 'yes' : 'no'}</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Refresh token</dt>
-                <dd className="font-medium text-slate-900">{provider.hasRefresh ? 'yes' : 'no'}</dd>
+                <dd className="font-medium text-foreground">{provider.hasRefresh ? 'yes' : 'no'}</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Expires at</dt>
-                <dd className="font-medium text-slate-900">
+                <dd className="font-medium text-foreground">
                   {provider.expiresAt ? formatDateTime(provider.expiresAt) : 'n/a'}
                 </dd>
               </div>
@@ -1651,12 +1651,12 @@ function OauthSyncCard(input: {
       {input.error ? <p className="mt-4 text-sm text-rose-600">{input.error}</p> : null}
 
       {input.result ? (
-        <div className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-          <div className="font-medium text-slate-900">Last sync result</div>
+        <div className="mt-4 rounded-lg border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+          <div className="font-medium text-foreground">Last sync result</div>
           <ul className="mt-2 space-y-1">
             {input.result.results.map((result) => (
               <li key={result.providerId}>
-                <span className="font-medium text-slate-900">{result.providerId}</span>: {result.synced ? 'synced' : 'failed'}
+                <span className="font-medium text-foreground">{result.providerId}</span>: {result.synced ? 'synced' : 'failed'}
                 {result.error ? ` - ${result.error}` : ''}
               </li>
             ))}
@@ -1680,13 +1680,13 @@ function IntegrationCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">{input.title}</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-foreground">{input.title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             {input.integration ? `Updated ${formatDateTime(input.integration.updatedAt)}` : 'Not configured yet'}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" /> : null}
+          {input.pending ? <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
           {input.integration ? (
             <Button type="button" variant="secondary" onClick={input.onDelete} disabled={input.deleting}>
               <Trash2 className="h-4 w-4" />
@@ -1703,8 +1703,8 @@ function IntegrationCard(input: {
 
 function LabeledField(input: { label: string; children: ReactNode }) {
   return (
-    <label className="block space-y-2 text-sm text-slate-700">
-      <span className="font-medium text-slate-800">{input.label}</span>
+    <label className="block space-y-2 text-sm text-foreground">
+      <span className="font-medium text-foreground">{input.label}</span>
       {input.children}
     </label>
   );
@@ -1723,7 +1723,7 @@ function ReadOnlyField(input: { label: string; value: string }) {
 
 function PanelLoading(input: { label: string }) {
   return (
-    <Card className="flex items-center gap-3 p-6 text-sm text-slate-500">
+    <Card className="flex items-center gap-3 p-6 text-sm text-muted-foreground">
       <LoaderCircle className="h-4 w-4 animate-spin" />
       {input.label}
     </Card>
