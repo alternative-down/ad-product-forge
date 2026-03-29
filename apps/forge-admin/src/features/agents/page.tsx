@@ -72,10 +72,11 @@ import {
   AgentMaintenanceCard,
   AgentConfigurationCard,
   GitHubProvisioningCard,
-  ContractTopUpCard,
-  ContractBudgetAdjustCard,
   AgentProvidersCard,
 } from './cards';
+
+// Import budget feedback components
+import { BudgetProgressCard, QuickTopUpCard, BudgetAdjustCard } from './components/budget-feedback';
 
 // Re-export types for external use
 export type {
@@ -654,30 +655,34 @@ function AgentsWorkspacePage(input: {
                           </div>
                         </WorkspaceCanvas>
 
-                        <ContractTopUpCard
-                          pending={topUpContractMutation.isPending}
-                          error={topUpContractMutation.error?.message ?? null}
-                          disabled={!agentDetailQuery.data.activeContract}
-                          onSubmit={(amountUsd) =>
-                            topUpContractMutation.mutate({
-                              agentId: agentDetailQuery.data!.agentId,
-                              amountUsd,
-                            })
-                          }
+                        <BudgetProgressCard
+                          budgetUsed={agentDetailQuery.data.activeContract?.spentUsd ?? 0}
+                          budgetLimit={agentDetailQuery.data.activeContract?.weeklyValueUsd ?? 0}
+                          periodLabel="por semana"
                         />
 
-                        <ContractBudgetAdjustCard
-                          pending={adjustBudgetMutation.isPending}
-                          error={adjustBudgetMutation.error?.message ?? null}
-                          disabled={!agentDetailQuery.data.activeContract}
-                          currentBudgetUsd={agentDetailQuery.data.activeContract?.weeklyValueUsd ?? 0}
-                          spentUsd={agentDetailQuery.data.activeContract?.spentUsd ?? 0}
-                          onSubmit={(newBudgetUsd) =>
-                            adjustBudgetMutation.mutate({
+                        <QuickTopUpCard
+                          budgetRemaining={(agentDetailQuery.data.activeContract?.weeklyValueUsd ?? 0) - (agentDetailQuery.data.activeContract?.spentUsd ?? 0)}
+                          isLoading={topUpContractMutation.isPending}
+                          onTopUp={async (amount) => {
+                            await topUpContractMutation.mutateAsync({
                               agentId: agentDetailQuery.data!.agentId,
-                              newBudgetUsd,
-                            })
-                          }
+                              amountUsd: amount,
+                            });
+                          }}
+                        />
+
+                        <BudgetAdjustCard
+                          currentBudget={agentDetailQuery.data.activeContract?.weeklyValueUsd ?? 0}
+                          budgetSpent={agentDetailQuery.data.activeContract?.spentUsd ?? 0}
+                          canDecrease={agentDetailQuery.data?.executionState === 'idle'}
+                          isLoading={adjustBudgetMutation.isPending}
+                          onAdjust={async (newBudget) => {
+                            await adjustBudgetMutation.mutateAsync({
+                              agentId: agentDetailQuery.data!.agentId,
+                              newBudgetUsd: newBudget,
+                            });
+                          }}
                         />
                       </div>
                     ) : null}
