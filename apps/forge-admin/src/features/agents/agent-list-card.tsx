@@ -17,7 +17,7 @@ export function AgentListCard(input: {
 }) {
   if (input.isLoading) {
     return (
-      <Card className="flex items-center gap-3 p-6 text-sm text-slate-600">
+      <Card className="flex items-center gap-3 p-6 text-sm">
         <LoaderCircle className="h-4 w-4 animate-spin" />
         Loading agents...
       </Card>
@@ -35,10 +35,10 @@ export function AgentListCard(input: {
   if (input.agents.length === 0) {
     return (
       <Card className="flex flex-col items-center gap-4 p-12 text-center">
-        <Bot className="h-12 w-12 text-slate-300" />
+        <Bot className="h-12 w-12 text-muted-foreground/50" />
         <div>
-          <div className="text-lg font-semibold text-slate-900">No agents yet</div>
-          <div className="mt-1 text-sm text-slate-500">
+          <div className="text-lg font-semibold">No agents yet</div>
+          <div className="mt-1 text-sm text-muted-foreground">
             Hire your first agent to get started with your team.
           </div>
         </div>
@@ -56,7 +56,7 @@ export function AgentListCard(input: {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-950">
+        <h2 className="text-lg font-semibold">
           {input.agents.length} agent{input.agents.length !== 1 ? 's' : ''}
         </h2>
         <Link
@@ -76,17 +76,17 @@ export function AgentListCard(input: {
             <Link
               key={agent.agentId}
               to={buildAgentLocation({ agentId: agent.agentId, tab: 'runtime', runtimeView: 'assignment' })}
-              className="group rounded-lg border border-slate-200 bg-white p-4 transition hover:border-[color:var(--accent)] hover:shadow-md"
+              className="group rounded-lg border bg-card p-4 transition hover:border-[color:var(--accent)] hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Bot className="h-4 w-4 shrink-0 text-slate-400" />
-                    <span className="truncate font-semibold text-slate-950 group-hover:text-[color:var(--accent)]">
+                    <Bot className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate font-semibold group-hover:text-[color:var(--accent)]">
                       {agent.name}
                     </span>
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     {agent.functionName ?? 'No function'}
                   </div>
                 </div>
@@ -101,7 +101,7 @@ export function AgentListCard(input: {
                 </Badge>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
                 <span>
                   {agent.loaded ? 'Loaded' : 'Not loaded'}
                 </span>
