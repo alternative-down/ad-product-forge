@@ -10,5 +10,7 @@ export type { QuickTopUpCardProps } from './QuickTopUpCard';
 export { BudgetAdjustCard } from './BudgetAdjustCard';
 export type { BudgetAdjustCardProps } from './BudgetAdjustCard';
 
-export { BudgetToast, createBudgetToast, BUDGET_TOAST_MESSAGES } from './BudgetToast';
+export { BudgetToast, BudgetToastProvider } from './BudgetToast';
 export type { BudgetToastProps, BudgetToastVariant } from './BudgetToast';
+
+export { createBudgetToast, BUDGET_TOAST_MESSAGES } from './budget-toast-messages';
