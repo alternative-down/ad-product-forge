@@ -8,3 +8,5 @@ export { Input, Label } from './components/input';
 export { Select } from './components/select';
 export { Textarea } from './components/textarea';
 export { SegmentedTabs } from './components/segmented-tabs';
+export { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from './components/dialog';
+export { Sheet, SheetHeader, SheetTitle, SheetDescription, SheetContent, SheetFooter } from './components/sheet';
