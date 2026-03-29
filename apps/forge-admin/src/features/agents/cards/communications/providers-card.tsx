@@ -69,7 +69,7 @@ export function AgentProvidersCard(input: {
                   />
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
-                      size="sm"
+                      className="h-8 px-3 text-xs"
                       onClick={() => input.onSaveProvider(editableProviderType, draft.credentialsText)}
                       disabled={
                         input.pendingProviderType === editableProviderType ||
@@ -86,7 +86,7 @@ export function AgentProvidersCard(input: {
                       )}
                     </Button>
                     <Button
-                      size="sm"
+                      className="h-8 px-3 text-xs"
                       variant="danger"
                       onClick={() => input.onDeleteProvider(editableProviderType)}
                       disabled={input.pendingProviderType === editableProviderType}
@@ -149,7 +149,7 @@ export function AgentProvidersCard(input: {
                 })
               }
             />
-            <Button size="sm" onClick={input.onCreateProvider}>
+            <Button className="h-8 px-3 text-xs" onClick={input.onCreateProvider}>
               Add provider
             </Button>
           </div>

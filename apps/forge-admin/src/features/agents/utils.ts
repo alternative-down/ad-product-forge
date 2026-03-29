@@ -124,7 +124,8 @@ export function createProviderTemplate(providerType: 'discord' | 'email') {
 // Formatting Utilities
 // =============================================================================
 
-export function toDateTimeLocalValue(timestamp: number) {
+export function toDateTimeLocalValue(timestamp: string | number | null | undefined) {
+  if (!timestamp) return '';
   const date = new Date(timestamp);
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');

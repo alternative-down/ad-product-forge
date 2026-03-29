@@ -8,7 +8,6 @@ export { ContractTopUpCard, ContractBudgetAdjustCard } from './contract/contract
 
 // Communications cards
 export { AgentProvidersCard } from './communications/providers-card';
-export { AgentConversationsCard } from './communications/conversations-card';
 
 // Schedules card
 // NOTE: SchedulesCard has different interface than inline version - keeping inline for now

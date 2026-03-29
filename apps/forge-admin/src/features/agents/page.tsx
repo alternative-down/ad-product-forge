@@ -227,7 +227,7 @@ function AgentsWorkspacePage(input: {
         runtimeView: 'assignment',
       });
 
-      void navigate(nextLocation);
+      void navigate({ to: nextLocation });
     },
   });
   const changeFunctionMutation = useMutation({
@@ -407,8 +407,7 @@ function AgentsWorkspacePage(input: {
                 return (
                   <Link
                     key={agent.agentId}
-                    to={detailLocation.to}
-                    params={detailLocation.params}
+                    to={detailLocation}
                     className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 text-left transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -513,14 +512,14 @@ function AgentsWorkspacePage(input: {
                       return;
                     }
 
-                    void navigate(
-                      buildAgentLocation({
+                    void navigate({
+                      to: buildAgentLocation({
                         agentId: input.agentId,
                         tab,
                         runtimeView: selectedRuntimeView,
                         communicationView: selectedCommunicationView,
                       }),
-                    );
+                    });
                   }}
                 />
 
@@ -536,14 +535,14 @@ function AgentsWorkspacePage(input: {
                       ]}
                       onChange={(runtimeView) =>
                         input.agentId
-                          ? void navigate(
-                              buildAgentLocation({
+                          ? void navigate({
+                              to: buildAgentLocation({
                                 agentId: input.agentId,
                                 tab: 'runtime',
                                 runtimeView,
                                 communicationView: selectedCommunicationView,
                               }),
-                            )
+                            })
                           : undefined
                       }
                     />
@@ -720,14 +719,14 @@ function AgentsWorkspacePage(input: {
                       ]}
                       onChange={(communicationView) =>
                         input.agentId
-                          ? void navigate(
-                              buildAgentLocation({
+                          ? void navigate({
+                              to: buildAgentLocation({
                                 agentId: input.agentId,
                                 tab: 'communications',
                                 runtimeView: selectedRuntimeView,
                                 communicationView,
                               }),
-                            )
+                            })
                           : undefined
                       }
                     />
