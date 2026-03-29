@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Calendar, Clock, LoaderCircle, Plus } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { LabeledField } from '../ui';
-import { toDateTimeLocalValue, formatDateTimeText, createEmptyScheduleDraft } from '../utils';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Input } from '../../../../components/ui/input';
+import { LabeledField } from '../../ui';
+import { toDateTimeLocalValue, formatDateTimeText, createEmptyScheduleDraft } from '../../utils';
 
 export function SchedulesCard(input: {
   schedules: Array<{
@@ -43,7 +43,7 @@ export function SchedulesCard(input: {
           <Calendar className="h-5 w-5 text-slate-400" />
           <h2 className="text-lg font-semibold text-slate-950">Schedules</h2>
         </div>
-        <Button size="sm" onClick={() => setShowForm(!showForm)} disabled={input.pending}>
+        <Button className="h-8 px-3 text-xs" onClick={() => setShowForm(!showForm)} disabled={input.pending}>
           <Plus className="mr-1 h-3 w-3" />
           Add schedule
         </Button>
@@ -70,9 +70,9 @@ export function SchedulesCard(input: {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setDraft({ ...draft, type: 'cron' })}
+                onClick={() => setDraft({ ...draft, scheduleType: 'cron' })}
                 className={`rounded-lg border px-4 py-2 text-sm ${
-                  draft.type === 'cron'
+                  draft.scheduleType === 'cron'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                     : 'border-slate-200 text-slate-600 hover:bg-white'
                 }`}
@@ -81,9 +81,9 @@ export function SchedulesCard(input: {
               </button>
               <button
                 type="button"
-                onClick={() => setDraft({ ...draft, type: 'date', scheduledDate: new Date().toISOString() })}
+                onClick={() => setDraft({ ...draft, scheduleType: 'date', scheduledDate: new Date().toISOString() })}
                 className={`rounded-lg border px-4 py-2 text-sm ${
-                  draft.type === 'date'
+                  draft.scheduleType === 'date'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                     : 'border-slate-200 text-slate-600 hover:bg-white'
                 }`}
@@ -93,7 +93,7 @@ export function SchedulesCard(input: {
             </div>
           </LabeledField>
 
-          {draft.type === 'cron' ? (
+          {draft.scheduleType === 'cron' ? (
             <LabeledField label="Cron expression">
               <Input
                 value={draft.cronExpression ?? ''}
@@ -105,7 +105,7 @@ export function SchedulesCard(input: {
             <LabeledField label="Date & time">
               <Input
                 type="datetime-local"
-                value={draft.scheduledDate ? toDateTimeLocalValue(new Date(draft.scheduledDate)) : ''}
+                value={draft.scheduledDate ? toDateTimeLocalValue(draft.scheduledDate) : ''}
                 onChange={(e) => setDraft({ ...draft, scheduledDate: new Date(e.target.value).toISOString() })}
               />
             </LabeledField>
@@ -120,7 +120,7 @@ export function SchedulesCard(input: {
           </LabeledField>
 
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={input.pending}>
+            <Button type="submit" disabled={input.pending}>
               {input.pending ? (
                 <>
                   <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
@@ -130,7 +130,7 @@ export function SchedulesCard(input: {
                 'Create'
               )}
             </Button>
-            <Button type="button" size="sm" variant="secondary" onClick={() => setShowForm(false)}>
+            <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
               Cancel
             </Button>
           </div>
@@ -170,7 +170,6 @@ export function SchedulesCard(input: {
                   {schedule.isActive ? 'Active' : 'Paused'}
                 </button>
                 <Button
-                  size="sm"
                   variant="ghost"
                   onClick={() => input.onDeleteSchedule(schedule.scheduleId)}
                   disabled={input.pending}
