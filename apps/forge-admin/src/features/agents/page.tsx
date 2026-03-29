@@ -41,44 +41,33 @@ import { PageHeader } from '../../components/layout/page-header';
 import { SectionNav, WorkspaceCanvas } from '../../components/layout/section-nav';
 import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 
-type ScheduleDraft = {
-  mode: 'create' | 'edit';
-  scheduleId?: string;
-  name: string;
-  description: string;
-  scheduleType: 'cron' | 'date';
-  cronExpression: string;
-  scheduledDate: string;
-  timezone: string;
-  content: string;
-  isActive: boolean;
-};
+// Extracted types
+export type { AgentDetailTab, AgentRuntimeView, AgentCommunicationView };
 
-type HireAgentDraft = {
-  hiringRequest: string;
-  additionalContext: string;
-  weeklyBudgetUsd: string;
-};
+// Import extracted utilities and components
+import {
+  buildAgentLocation,
+  createAgentConfigDraft,
+  createEmptyScheduleDraft,
+  createProviderTemplate,
+  buildProviderDraftKey,
+  toPrettyJson,
+  formatDateTimeText,
+  toDateTimeLocalValue,
+} from './utils';
+import { ReadOnlyField, LabeledField, PanelLoading, PanelError, CompactStat } from './ui';
 
-type AgentConfigDraft = {
-  name: string;
-  description: string;
-  instructions: string;
-  workspaceAutoSync: boolean;
-  workspaceBm25: boolean;
-  workspaceEmbedder: string;
-  modelProfileId: string;
-  omModelProfileId: string;
-};
-
-type ProviderDraft = {
-  providerType: 'discord' | 'email';
-  credentialsText: string;
-};
-
-type AgentDetailTab = 'runtime' | 'communications' | 'schedules' | 'history';
-type AgentRuntimeView = 'assignment' | 'configuration' | 'contract' | 'github';
-type AgentCommunicationView = 'inbox' | 'thread' | 'providers';
+// Import extracted cards
+import {
+  HireAgentCard,
+  AgentMaintenanceCard,
+  AgentConfigurationCard,
+  ContractTopUpCard,
+  ContractBudgetAdjustCard,
+  AgentProvidersCard,
+  AgentConversationsCard,
+  SchedulesCard,
+} from './cards';
 
 export function AgentsPage() {
   return <AgentsWorkspacePage mode="directory" />;
@@ -2298,103 +2287,4 @@ function buildProviderDraftKey(agentId: string, providerType: 'discord' | 'email
   return `${agentId}:${providerType}`;
 }
 
-function createProviderTemplate(providerType: 'discord' | 'email') {
-  if (providerType === 'discord') {
-    return '{\n  "token": "",\n  "allowedChannelIds": [],\n  "respondToMentionsOnly": false\n}';
-  }
 
-  return (
-    '{\n' +
-    '  "imap": {\n' +
-    '    "host": "",\n' +
-    '    "port": 993,\n' +
-    '    "secure": true,\n' +
-    '    "user": "",\n' +
-    '    "password": ""\n' +
-    '  },\n' +
-    '  "smtp": {\n' +
-    '    "host": "",\n' +
-    '    "port": 465,\n' +
-    '    "secure": true,\n' +
-    '    "user": "",\n' +
-    '    "password": ""\n' +
-    '  }\n' +
-    '}'
-  );
-}
-
-function toPrettyJson(value: unknown) {
-  return JSON.stringify(value ?? {}, null, 2);
-}
-
-function formatDateTimeText(value?: string | null) {
-  if (!value) {
-    return '—';
-  }
-
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return formatDateTime(parsed.getTime());
-}
-
-function CompactStat(input: { label: string; value: ReactNode }) {
-  return (
-    <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-strong)]">
-        {input.label}
-      </div>
-      <div className="mt-2 text-sm font-semibold text-[color:var(--ink)]">{input.value}</div>
-    </div>
-  );
-}
-
-function buildAgentLocation(input: {
-  agentId: string;
-  tab: AgentDetailTab;
-  runtimeView?: AgentRuntimeView;
-  communicationView?: AgentCommunicationView;
-}):
-  | { to: '/agents/$agentId/runtime/$runtimeView'; params: { agentId: string; runtimeView: AgentRuntimeView } }
-  | { to: '/agents/$agentId/communications/$communicationView'; params: { agentId: string; communicationView: AgentCommunicationView } }
-  | { to: '/agents/$agentId/schedules'; params: { agentId: string } }
-  | { to: '/agents/$agentId/history'; params: { agentId: string } } {
-  if (input.tab === 'runtime') {
-    return {
-      to: '/agents/$agentId/runtime/$runtimeView',
-      params: {
-        agentId: input.agentId,
-        runtimeView: input.runtimeView ?? 'assignment',
-      },
-    };
-  }
-
-  if (input.tab === 'communications') {
-    return {
-      to: '/agents/$agentId/communications/$communicationView',
-        params: {
-          agentId: input.agentId,
-        communicationView: input.communicationView ?? 'inbox',
-        },
-      };
-  }
-
-  if (input.tab === 'schedules') {
-    return {
-      to: '/agents/$agentId/schedules',
-      params: {
-        agentId: input.agentId,
-      },
-    };
-  }
-
-  return {
-    to: '/agents/$agentId/history',
-    params: {
-      agentId: input.agentId,
-    },
-  };
-}
