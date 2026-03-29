@@ -8,15 +8,15 @@ export function GitHubProvisioningCard(input: {
   return (
     <Card className="p-6">
       <div>
-        <h2 className="text-lg font-semibold text-slate-950">GitHub provisioning</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-lg font-semibold">GitHub provisioning</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Hiring starts the GitHub App registration flow. The app only exists in GitHub after the
           registration URL is opened and completed.
         </p>
       </div>
 
       {!input.provisioning ? (
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        <div className="mt-4 rounded-lg border border-border bg-accent/50 px-4 py-3 text-sm text-muted-foreground">
           No GitHub app provisioning exists for this agent.
         </div>
       ) : (
@@ -40,7 +40,7 @@ export function GitHubProvisioningCard(input: {
               href={input.provisioning.registrationUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-100"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent"
             >
               Open registration
             </a>

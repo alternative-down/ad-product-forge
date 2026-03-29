@@ -25,8 +25,8 @@ export function AgentMaintenanceCard(input: {
     <Card className="p-6">
       <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-semibold text-slate-950">Agent maintenance</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold">Agent maintenance</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Human-facing adjustments only. Functions stay read-only here except for reassignment on
             the selected agent.
           </p>

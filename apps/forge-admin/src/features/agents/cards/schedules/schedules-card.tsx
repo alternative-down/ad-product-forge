@@ -40,8 +40,8 @@ export function SchedulesCard(input: {
     <Card className="p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-slate-400" />
-          <h2 className="text-lg font-semibold text-slate-950">Schedules</h2>
+          <Calendar className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold">Schedules</h2>
         </div>
         <Button className="h-8 px-3 text-xs" onClick={() => setShowForm(!showForm)} disabled={input.pending}>
           <Plus className="mr-1 h-3 w-3" />
@@ -51,7 +51,7 @@ export function SchedulesCard(input: {
 
       {showForm && (
         <form
-          className="mt-4 space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4"
+          className="mt-4 space-y-4 rounded-lg border border-border bg-accent/50 p-4"
           onSubmit={(e) => {
             e.preventDefault();
             handleSubmit();
@@ -74,7 +74,7 @@ export function SchedulesCard(input: {
                 className={`rounded-lg border px-4 py-2 text-sm ${
                   draft.scheduleType === 'cron'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-slate-200 text-slate-600 hover:bg-white'
+                    : 'border-border text-muted-foreground hover:bg-accent/50'
                 }`}
               >
                 Cron
@@ -85,7 +85,7 @@ export function SchedulesCard(input: {
                 className={`rounded-lg border px-4 py-2 text-sm ${
                   draft.scheduleType === 'date'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-slate-200 text-slate-600 hover:bg-white'
+                    : 'border-border text-muted-foreground hover:bg-accent/50'
                 }`}
               >
                 One-time
@@ -139,16 +139,16 @@ export function SchedulesCard(input: {
 
       <div className="mt-4 space-y-3">
         {input.schedules.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">No schedules configured.</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">No schedules configured.</div>
         ) : (
           input.schedules.map((schedule) => (
             <div
               key={schedule.scheduleId}
-              className="flex items-center justify-between rounded-lg border border-slate-200 p-4"
+              className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
             >
               <div>
-                <div className="font-medium text-slate-950">{schedule.name}</div>
-                <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-slate-500">
+                <div className="font-medium text-foreground">{schedule.name}</div>
+                <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {schedule.cronExpression ?? (schedule.scheduledDate ? formatDateTimeText(schedule.scheduledDate) : '—')}
@@ -164,7 +164,7 @@ export function SchedulesCard(input: {
                   className={`rounded-full px-3 py-1 text-xs font-medium ${
                     schedule.isActive
                       ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-slate-100 text-slate-600'
+                      : 'bg-accent/50 text-muted-foreground'
                   }`}
                 >
                   {schedule.isActive ? 'Active' : 'Paused'}
