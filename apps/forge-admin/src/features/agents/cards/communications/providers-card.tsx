@@ -23,8 +23,8 @@ export function AgentProvidersCard(input: {
   return (
     <Card className="p-6">
       <div>
-        <h2 className="text-lg font-semibold text-slate-950">Providers</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-lg font-semibold">Providers</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           External provider credentials are editable here. Internal chat remains system-managed.
         </p>
       </div>
@@ -48,11 +48,11 @@ export function AgentProvidersCard(input: {
                 };
 
           return (
-            <div key={provider.providerType} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div key={provider.providerType} className="rounded-lg border border-border bg-accent/50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="font-medium text-slate-950">{provider.providerType}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="font-medium">{provider.providerType}</div>
+                  <div className="text-xs text-muted-foreground">
                     Created at {formatDateTimeText(provider.createdAt)}
                   </div>
                 </div>
@@ -100,8 +100,8 @@ export function AgentProvidersCard(input: {
           );
         })}
 
-        <div className="rounded-lg border border-dashed border-slate-300 p-4">
-          <h3 className="font-medium text-slate-950">Add new provider</h3>
+        <div className="rounded-lg border border-dashed border-border p-4">
+          <h3 className="font-medium">Add new provider</h3>
           <div className="mt-3 grid gap-3">
             <div className="flex gap-2">
               <button
@@ -116,7 +116,7 @@ export function AgentProvidersCard(input: {
                   'rounded-lg border px-4 py-2 text-sm font-medium transition',
                   input.newProviderDraft.providerType === 'discord'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-white',
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:bg-accent/50',
                 )}
               >
                 Discord
@@ -133,7 +133,7 @@ export function AgentProvidersCard(input: {
                   'rounded-lg border px-4 py-2 text-sm font-medium transition',
                   input.newProviderDraft.providerType === 'email'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-white',
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:bg-accent/50',
                 )}
               >
                 Email

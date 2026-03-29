@@ -6,17 +6,17 @@ import { cn } from '../../lib/utils';
 export function ReadOnlyField(input: { label: string; value: string; wrap?: boolean }) {
   return (
     <div>
-      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
         {input.label}
       </div>
-      <div className={cn('mt-1 text-sm text-slate-900', input.wrap && 'break-all')}>{input.value}</div>
+      <div className={cn('mt-1 text-sm', input.wrap && 'break-all')}>{input.value}</div>
     </div>
   );
 }
 
 export function LabeledField(input: { label: string; children: ReactNode; className?: string }) {
   return (
-    <label className={cn('grid gap-2 text-sm text-slate-700', input.className)}>
+    <label className={cn('grid gap-2 text-sm', input.className)}>
       <span className="font-medium">{input.label}</span>
       {input.children}
     </label>
@@ -25,7 +25,7 @@ export function LabeledField(input: { label: string; children: ReactNode; classN
 
 export function PanelLoading(input: { label: string }) {
   return (
-    <Card className="flex items-center gap-3 p-6 text-sm text-slate-600">
+    <Card className="flex items-center gap-3 p-6 text-sm">
       <LoaderCircle className="h-4 w-4 animate-spin" />
       {input.label}
     </Card>
@@ -39,8 +39,8 @@ export function PanelError(input: { message: string }) {
 export function CompactStat(input: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between border-b border-[color:var(--panel-border)] px-3 py-2 last:border-b-0">
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{input.label}</span>
-      <span className="text-sm font-semibold text-slate-900">{input.value}</span>
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{input.label}</span>
+      <span className="text-sm font-semibold">{input.value}</span>
     </div>
   );
 }

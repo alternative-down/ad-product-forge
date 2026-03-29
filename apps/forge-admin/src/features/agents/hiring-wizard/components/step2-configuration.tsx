@@ -59,7 +59,7 @@ export function Step2Configuration() {
           {touched.model && errors.model && <p className="text-xs text-destructive mt-1">{errors.model}</p>}
         </div>
 
-        <Card className="p-4">
+        <Card>
           <h3 className="text-sm font-medium mb-3">Model Comparison</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {MODEL_OPTIONS.map((opt) => (
