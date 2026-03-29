@@ -1,12 +1,11 @@
 import { Bot, UserPlus, Play, Square, LoaderCircle } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
-import type { AgentListItem } from '../../../lib/api';
-import { formatUsd } from '../../../lib/format';
-import { cn } from '../../../lib/utils';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
-import { buildAgentLocation } from '../utils';
+import type { AgentListItem } from '../../lib/api';
+import { cn } from '../../lib/utils';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { buildAgentLocation } from './utils';
 
 export function AgentListCard(input: {
   agents: AgentListItem[];
@@ -88,41 +87,41 @@ export function AgentListCard(input: {
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-slate-500">
-                    {agent.function?.name ?? 'No function'}
+                    {agent.functionName ?? 'No function'}
                   </div>
                 </div>
                 <Badge
                   className={cn(
                     'shrink-0',
-                    agent.status === 'running' && 'bg-emerald-100 text-emerald-800',
-                    agent.status === 'stopped' && 'bg-slate-100 text-slate-600',
-                    agent.status === 'error' && 'bg-red-100 text-red-800',
+                    agent.executionState === 'running' && 'bg-emerald-100 text-emerald-800',
+                    agent.executionState === 'idle' && 'bg-slate-100 text-slate-600',
                   )}
                 >
-                  {agent.status}
+                  {agent.executionState}
                 </Badge>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
                 <span>
-                  Contract:{' '}
-                  <span className="font-medium text-slate-700">
-                    {formatUsd(agent.contract.budgetRemainingUsd)} left
-                  </span>
+                  {agent.loaded ? 'Loaded' : 'Not loaded'}
                 </span>
-                <span>·</span>
-                <span>
-                  {agent.contract.executionCount} executions
-                </span>
+                {agent.runner && (
+                  <>
+                    <span>·</span>
+                    <span>
+                      {agent.runner.stopped ? 'Stopped' : agent.runner.executing ? 'Executing' : agent.runner.scheduled ? 'Scheduled' : 'Idle'}
+                    </span>
+                  </>
+                )}
               </div>
 
               <div
                 className="mt-3 flex gap-2"
                 onClick={(e) => e.preventDefault()}
               >
-                {agent.status === 'stopped' ? (
+                {agent.runner?.stopped ? (
                   <Button
-                    size="sm"
+                    className="h-8 px-3 text-xs"
                     onClick={() => input.onWake(agent.agentId)}
                     disabled={isPending}
                   >
@@ -135,9 +134,9 @@ export function AgentListCard(input: {
                       </>
                     )}
                   </Button>
-                ) : agent.status === 'running' ? (
+                ) : agent.executionState === 'running' ? (
                   <Button
-                    size="sm"
+                    className="h-8 px-3 text-xs"
                     variant="secondary"
                     onClick={() => input.onSleep(agent.agentId)}
                     disabled={isPending}

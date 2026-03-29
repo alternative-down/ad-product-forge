@@ -52,19 +52,40 @@ These ids are the current permission targets stored in role permissions.
 - `get_github_git_credentials`
 - `list_github_repositories`
 - `get_github_repository`
-- `manage_github_repository`
+- `create_github_repository`
+- `update_github_repository`
+- `delete_github_repository`
 - `list_github_pull_requests`
 - `get_github_pull_request`
-- `manage_github_pull_request`
+- `create_github_pull_request`
+- `update_github_pull_request`
+- `merge_github_pull_request`
+- `delete_github_pull_request`
 - `list_github_issues`
 - `get_github_issue`
-- `manage_github_issue`
+- `create_github_issue`
+- `update_github_issue`
+- `delete_github_issue`
 - `toggle_github_issue`
-- `manage_github_issue_comment`
+- `list_github_issue_comments`
+- `get_github_issue_comment`
+- `create_github_issue_comment`
+- `update_github_issue_comment`
+- `delete_github_issue_comment`
 - `list_github_labels`
-- `manage_github_label`
+- `create_github_label`
+- `update_github_label`
+- `delete_github_label`
 - `list_github_milestones`
-- `manage_github_milestone`
+- `create_github_milestone`
+- `update_github_milestone`
+- `delete_github_milestone`
+
+### MiniMax (requer chave API)
+
+- `minimax_tts`
+- `minimax_image`
+- `minimax_video`
 
 ### Coolify
 
@@ -84,15 +105,21 @@ These ids are the current permission targets stored in role permissions.
 ### Schedules
 
 - `list_agent_schedules`
-- `manage_agent_schedule`
+- `create_agent_schedule`
+- `update_agent_schedule`
+- `delete_agent_schedule`
 - `toggle_agent_schedule`
 
 ### Capability management
 
 - `list_agent_functions`
-- `manage_agent_function`
+- `create_agent_function`
+- `update_agent_function`
+- `delete_agent_function`
 - `list_agent_roles`
-- `manage_agent_role`
+- `create_agent_role`
+- `update_agent_role`
+- `delete_agent_role`
 - `assign_role_to_function`
 - `change_agent_function`
 - `change_own_function`
@@ -101,6 +128,12 @@ These ids are the current permission targets stored in role permissions.
 - `list_role_workflow_permissions`
 - `manage_role_workflow_permissions`
 - `list_available_capabilities`
+
+### MCP (Model Context Protocol)
+
+- MCP tools are dynamically loaded per-agente based em `agentMcpConfigs`
+- Cada servidor MCP expose tools namespaced as `{serverName}_{toolName}`
+- Tools disponíveis: qualquer tool exposta pelo servidor MCP configurado
 
 ## Workflow permissions
 
