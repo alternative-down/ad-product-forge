@@ -94,7 +94,7 @@ export function AgentListCard(input: {
                   className={cn(
                     'shrink-0',
                     agent.executionState === 'running' && 'bg-emerald-100 text-emerald-800',
-                    agent.executionState === 'idle' && 'bg-slate-100 text-slate-600',
+                    agent.executionState === 'idle' && 'bg-accent/50 text-muted-foreground',
                   )}
                 >
                   {agent.executionState}

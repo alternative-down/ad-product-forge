@@ -961,26 +961,26 @@ function AgentInboxCard(input: {
       {view === 'notifications' ? (
         <Card className="p-6">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Notifications</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               Latest notifications recorded in the central Forge database.
             </p>
           </div>
           <div className="mt-5 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
             {input.notifications.length === 0 && (
-              <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
                 No notifications for this agent.
               </div>
             )}
             {input.notifications.map((notification) => (
-              <div key={notification.notificationId} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+              <div key={notification.notificationId} className="rounded-lg border border-border bg-accent/50 px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Badge>{notification.read ? 'read' : 'unread'}</Badge>
-                    <span className="text-xs text-slate-500">{formatDateTime(notification.timestamp)}</span>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(notification.timestamp)}</span>
                   </div>
                 </div>
-                <div className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{notification.content}</div>
+                <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">{notification.content}</div>
               </div>
             ))}
           </div>
@@ -988,13 +988,13 @@ function AgentInboxCard(input: {
       ) : (
         <Card className="p-6">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Conversations</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="text-lg font-semibold text-foreground">Conversations</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               Read-only communication preview from the selected agent workspace database.
             </p>
           </div>
           {input.conversations.length === 0 ? (
-            <div className="mt-5 rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+            <div className="mt-5 rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
               No conversations for this agent.
             </div>
           ) : (
@@ -1012,7 +1012,7 @@ function AgentInboxCard(input: {
                         'w-full rounded-lg border px-4 py-4 text-left transition',
                         selectedConversation?.conversationId === conversation.conversationId
                           ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                          : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:bg-white',
+                          : 'border-border bg-muted text-foreground hover:border-[color:var(--muted-strong)] hover:bg-background',
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -1025,7 +1025,7 @@ function AgentInboxCard(input: {
                               'mt-1 text-xs',
                               selectedConversation?.conversationId === conversation.conversationId
                                 ? 'text-[color:var(--accent)]/80'
-                                : 'text-slate-500',
+                                : 'text-muted-foreground',
                             )}
                           >
                             {conversation.provider} · {conversation.type} · {formatDateTimeText(conversation.updatedAt)}
@@ -1039,9 +1039,9 @@ function AgentInboxCard(input: {
               </div>
 
               {selectedConversation ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-lg border border-border bg-muted p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="font-medium text-slate-950">{selectedConversation.conversationKey}</div>
+                    <div className="font-medium text-foreground">{selectedConversation.conversationKey}</div>
                     <Badge>{selectedConversation.provider}</Badge>
                     <Badge>{selectedConversation.type}</Badge>
                   </div>
@@ -1052,20 +1052,20 @@ function AgentInboxCard(input: {
                       ))}
                     </div>
                   ) : null}
-                  <div className="mt-2 space-y-1 text-xs text-slate-500">
+                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                     <div>Updated at {formatDateTimeText(selectedConversation.updatedAt)}</div>
                     <div>{selectedConversation.name ?? selectedConversation.contactDisplayName ?? selectedConversation.contactSlug ?? 'Conversation'}</div>
                   </div>
                   <div className="mt-4 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
                     {selectedConversation.messages.map((message) => (
-                      <div key={message.messageId} className="rounded-xl bg-white px-4 py-3 text-sm text-slate-700">
+                      <div key={message.messageId} className="rounded-xl bg-background px-4 py-3 text-sm text-foreground">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="font-medium text-slate-900">
+                          <div className="font-medium text-foreground">
                             {message.authorDisplayName ?? 'Unknown author'}
                           </div>
                           <div className="flex items-center gap-2">
                             {message.unread && <Badge>unread</Badge>}
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-muted-foreground">
                               {formatDateTimeText(message.createdAt)}
                             </span>
                           </div>
@@ -1090,28 +1090,28 @@ function AgentThreadCard(input: {
   return (
     <Card className="p-6">
       <div>
-        <h2 className="text-lg font-semibold text-slate-950">Recent thread messages</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-lg font-semibold text-foreground">Recent thread messages</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Latest messages persisted in the agent memory thread. Useful to inspect wake prompts,
           assistant replies, and tool-driven flow.
         </p>
       </div>
       <div className="mt-5 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
         {input.messages.length === 0 && (
-          <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
             No thread messages for this agent.
           </div>
         )}
         {input.messages.map((message) => (
-          <div key={message.messageId} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div key={message.messageId} className="rounded-lg border border-border bg-muted p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Badge>{message.role}</Badge>
                 {message.type && <Badge>{message.type}</Badge>}
               </div>
-              <div className="text-xs text-slate-500">{formatDateTime(message.createdAt)}</div>
+              <div className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</div>
             </div>
-            <div className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
+            <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
               {message.content || '—'}
             </div>
           </div>
@@ -1133,8 +1133,8 @@ function SchedulesCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Schedules</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-foreground">Schedules</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Agent schedules are editable here. Heartbeat is visible but read-only.
           </p>
         </div>
@@ -1158,26 +1158,26 @@ function SchedulesCard(input: {
 
       <div className="mt-5 space-y-3">
         {input.schedules.length === 0 && (
-          <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
             No agent schedules.
           </div>
         )}
         {input.schedules.map((schedule) => (
           <div
             key={schedule.scheduleId}
-            className="rounded-lg border border-slate-200 bg-white p-4"
+            className="rounded-lg border border-border bg-background p-4"
           >
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="font-medium text-slate-950">{schedule.name}</div>
+                  <div className="font-medium text-foreground">{schedule.name}</div>
                   <Badge>{schedule.scheduleType}</Badge>
                   <Badge>{schedule.isActive ? 'active' : 'inactive'}</Badge>
                 </div>
-                <div className="mt-2 text-sm text-slate-600">
+                <div className="mt-2 text-sm text-muted-foreground">
                   {schedule.description ?? 'No description'}
                 </div>
-                <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
                   <span>Cron: {schedule.cronExpression ?? '—'}</span>
                   <span>
                     Date: {schedule.scheduledDate ? formatDateTime(schedule.scheduledDate) : '—'}
@@ -1185,7 +1185,7 @@ function SchedulesCard(input: {
                   <span>Next: {formatDateTime(schedule.nextTriggerAt)}</span>
                   <span>Last: {formatDateTime(schedule.lastTriggeredAt)}</span>
                 </div>
-                <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <div className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs text-muted-foreground">
                   {schedule.content}
                 </div>
               </div>
@@ -1221,10 +1221,10 @@ function ScheduleEditorCard(input: {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">
+          <h2 className="text-lg font-semibold text-foreground">
             {input.draft.mode === 'create' ? 'Create schedule' : 'Edit schedule'}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Schedules wake the agent later through `agent_notifications`.
           </p>
         </div>
@@ -1282,7 +1282,7 @@ function ScheduleEditorCard(input: {
           </LabeledField>
 
           {input.draft.mode === 'edit' && (
-            <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <label className="flex items-center gap-3 rounded-lg border border-border bg-muted px-4 py-3 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={input.draft.isActive}
@@ -1388,16 +1388,16 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
       <Card className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Recent execution steps</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="text-lg font-semibold text-foreground">Recent execution steps</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               Last recorded agent and OM steps from the central ledger.
             </p>
           </div>
-          <Bot className="h-5 w-5 text-slate-500" />
+          <Bot className="h-5 w-5 text-muted-foreground" />
         </div>
-        <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <div className="mt-5 overflow-hidden rounded-lg border border-border">
+          <table className="min-w-full divide-y divide-border text-left text-sm">
+            <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 font-medium">Kind</th>
                 <th className="px-4 py-3 font-medium">Model</th>
@@ -1406,20 +1406,20 @@ function ExecutionCard(input: { agent: Awaited<ReturnType<typeof getAgent>> }) {
                 <th className="px-4 py-3 font-medium">At</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+            <tbody className="divide-y divide-border bg-background text-foreground">
               {agent.recentExecutionSteps.map((step) => (
                 <tr key={step.stepId}>
                   <td className="px-4 py-3">{step.kind}</td>
                   <td className="px-4 py-3">{step.modelKey}</td>
                   <td className="px-4 py-3">
                     <div>{formatInteger(step.inputTokens + step.cachedInputTokens + step.outputTokens)}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                       in {formatInteger(step.inputTokens)} / cache {formatInteger(step.cachedInputTokens)} / out {formatInteger(step.outputTokens)}
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div>{formatUsdPrecise(step.costUsd)}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                       in {step.inputPerMillionUsd} / cache {step.inputCachePerMillionUsd} / out {step.outputPerMillionUsd} · {step.contractCostMultiplier.toFixed(3)}x
                     </div>
                   </td>

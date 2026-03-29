@@ -16,8 +16,8 @@ export function ContractTopUpCard(input: {
   return (
     <Card className="p-6">
       <div>
-        <h2 className="text-lg font-semibold text-slate-950">Contract top up</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-lg font-semibold text-foreground">Contract top up</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Increase the active contract budget without rehiring the agent.
         </p>
       </div>
@@ -77,8 +77,8 @@ export function ContractBudgetAdjustCard(input: {
   return (
     <Card className="p-6">
       <div>
-        <h2 className="text-lg font-semibold text-slate-950">Adjust budget</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-lg font-semibold text-foreground">Adjust budget</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Set a new weekly budget for this contract. Decrease only allowed when agent is not running and above spent amount.
         </p>
       </div>

@@ -160,8 +160,8 @@ export function BudgetAdjustCard({
                 ${newBudget.toFixed(2)}
               </span>
             </div>
-            <div className="flex justify-between border-t border-slate-200 pt-1">
-              <span className="text-slate-500">Diferença:</span>
+            <div className="flex justify-between border-t border-border pt-1">
+              <span className="text-muted-foreground">Diferença:</span>
               <span className={cn('font-medium', isDecrease ? 'text-red-600' : 'text-green-600')}>
                 {isDecrease ? '' : '+'}${(newBudget - currentBudget).toFixed(2)}
               </span>
