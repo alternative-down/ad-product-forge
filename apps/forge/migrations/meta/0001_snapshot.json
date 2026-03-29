@@ -1,8 +1,8 @@
 {
+  "id": "1019bd27-1844-47b6-9761-a0e9b9f49ad0",
+  "prevId": "eb739643-480d-418c-9c8d-44f9f94f93e2",
   "version": "6",
   "dialect": "sqlite",
-  "id": "255c3916-3440-4dc6-b06a-ac1f72099c31",
-  "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "agent_execution_contracts": {
       "name": "agent_execution_contracts",
@@ -85,15 +85,15 @@
         "agent_execution_contracts_agent_id_agents_id_fk": {
           "name": "agent_execution_contracts_agent_id_agents_id_fk",
           "tableFrom": "agent_execution_contracts",
-          "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
           ],
+          "tableTo": "agents",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -248,41 +248,41 @@
         "agent_execution_steps_contract_id_agent_execution_contracts_id_fk": {
           "name": "agent_execution_steps_contract_id_agent_execution_contracts_id_fk",
           "tableFrom": "agent_execution_steps",
-          "tableTo": "agent_execution_contracts",
           "columnsFrom": [
             "contract_id"
           ],
+          "tableTo": "agent_execution_contracts",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "agent_execution_steps_agent_id_agents_id_fk": {
           "name": "agent_execution_steps_agent_id_agents_id_fk",
           "tableFrom": "agent_execution_steps",
-          "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
           ],
+          "tableTo": "agents",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "agent_execution_steps_llm_profile_id_llm_profiles_id_fk": {
           "name": "agent_execution_steps_llm_profile_id_llm_profiles_id_fk",
           "tableFrom": "agent_execution_steps",
-          "tableTo": "llm_profiles",
           "columnsFrom": [
             "llm_profile_id"
           ],
+          "tableTo": "llm_profiles",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
@@ -424,28 +424,28 @@
         "agent_mcp_configs_agent_id_agents_id_fk": {
           "name": "agent_mcp_configs_agent_id_agents_id_fk",
           "tableFrom": "agent_mcp_configs",
-          "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
           ],
+          "tableTo": "agents",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "agent_mcp_configs_server_id_mcp_server_configs_id_fk": {
           "name": "agent_mcp_configs_server_id_mcp_server_configs_id_fk",
           "tableFrom": "agent_mcp_configs",
-          "tableTo": "mcp_server_configs",
           "columnsFrom": [
             "server_id"
           ],
+          "tableTo": "mcp_server_configs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -518,15 +518,15 @@
         "agent_notifications_agent_id_agents_id_fk": {
           "name": "agent_notifications_agent_id_agents_id_fk",
           "tableFrom": "agent_notifications",
-          "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
           ],
+          "tableTo": "agents",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -643,15 +643,15 @@
         "agent_prompts_agent_id_agents_id_fk": {
           "name": "agent_prompts_agent_id_agents_id_fk",
           "tableFrom": "agent_prompts",
-          "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
           ],
+          "tableTo": "agents",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -711,15 +711,15 @@
         "agent_providers_agent_id_agents_id_fk": {
           "name": "agent_providers_agent_id_agents_id_fk",
           "tableFrom": "agent_providers",
-          "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
           ],
+          "tableTo": "agents",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -931,15 +931,15 @@
         "agent_schedules_agent_id_agents_id_fk": {
           "name": "agent_schedules_agent_id_agents_id_fk",
           "tableFrom": "agent_schedules",
-          "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
           ],
+          "tableTo": "agents",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1071,41 +1071,41 @@
         "agents_function_id_agent_functions_id_fk": {
           "name": "agents_function_id_agent_functions_id_fk",
           "tableFrom": "agents",
-          "tableTo": "agent_functions",
           "columnsFrom": [
             "function_id"
           ],
+          "tableTo": "agent_functions",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         },
         "agents_model_profile_id_llm_profiles_id_fk": {
           "name": "agents_model_profile_id_llm_profiles_id_fk",
           "tableFrom": "agents",
-          "tableTo": "llm_profiles",
           "columnsFrom": [
             "model_profile_id"
           ],
+          "tableTo": "llm_profiles",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         },
         "agents_om_model_profile_id_llm_profiles_id_fk": {
           "name": "agents_om_model_profile_id_llm_profiles_id_fk",
           "tableFrom": "agents",
-          "tableTo": "llm_profiles",
           "columnsFrom": [
             "om_model_profile_id"
           ],
+          "tableTo": "llm_profiles",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
@@ -1356,28 +1356,28 @@
         "function_roles_function_id_agent_functions_id_fk": {
           "name": "function_roles_function_id_agent_functions_id_fk",
           "tableFrom": "function_roles",
-          "tableTo": "agent_functions",
           "columnsFrom": [
             "function_id"
           ],
+          "tableTo": "agent_functions",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "function_roles_role_id_agent_roles_id_fk": {
           "name": "function_roles_role_id_agent_roles_id_fk",
           "tableFrom": "function_roles",
-          "tableTo": "agent_roles",
           "columnsFrom": [
             "role_id"
           ],
+          "tableTo": "agent_roles",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1765,15 +1765,15 @@
         "role_tool_permissions_role_id_agent_roles_id_fk": {
           "name": "role_tool_permissions_role_id_agent_roles_id_fk",
           "tableFrom": "role_tool_permissions",
-          "tableTo": "agent_roles",
           "columnsFrom": [
             "role_id"
           ],
+          "tableTo": "agent_roles",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1826,15 +1826,15 @@
         "role_workflow_permissions_role_id_agent_roles_id_fk": {
           "name": "role_workflow_permissions_role_id_agent_roles_id_fk",
           "tableFrom": "role_workflow_permissions",
-          "tableTo": "agent_roles",
           "columnsFrom": [
             "role_id"
           ],
+          "tableTo": "agent_roles",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1981,9 +1981,9 @@
   "views": {},
   "enums": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
+    "tables": {}
   },
   "internal": {
     "indexes": {}

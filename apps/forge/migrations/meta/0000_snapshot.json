@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "255c3916-3440-4dc6-b06a-ac1f72099c31",
+  "id": "eb739643-480d-418c-9c8d-44f9f94f93e2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "agent_execution_contracts": {
