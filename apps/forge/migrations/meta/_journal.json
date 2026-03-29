@@ -145,64 +145,71 @@
     {
       "idx": 20,
       "version": "6",
-      "when": 1774223400000,
+      "when": 1775500000000,
       "tag": "0020_function_roles_table_rebuild",
       "breakpoints": true
     },
     {
       "idx": 21,
       "version": "6",
-      "when": 1774225200000,
+      "when": 1775501000000,
       "tag": "0021_minimax_supported_model",
       "breakpoints": true
     },
     {
       "idx": 22,
       "version": "6",
-      "when": 1774226400000,
+      "when": 1775502000000,
       "tag": "0022_function_roles_repair",
       "breakpoints": true
     },
     {
       "idx": 23,
       "version": "6",
-      "when": 1775000000000,
+      "when": 1775503000000,
       "tag": "0023_function_roles_repair_ordered",
       "breakpoints": true
     },
     {
       "idx": 24,
       "version": "6",
-      "when": 1775000000001,
+      "when": 1775504000000,
       "tag": "0024_classy_multiple_man",
       "breakpoints": true
     },
     {
       "idx": 25,
       "version": "6",
-      "when": 1775080000000,
+      "when": 1775505000000,
       "tag": "0025_chat_groups_support",
       "breakpoints": true
     },
     {
       "idx": 26,
       "version": "6",
-      "when": 1775081000000,
+      "when": 1775506000000,
       "tag": "0026_agent_task_scheduling",
       "breakpoints": true
     },
     {
       "idx": 27,
       "version": "6",
-      "when": 1775082000000,
+      "when": 1775507000000,
       "tag": "0027_contact_id_refactor",
       "breakpoints": true
     },
     {
       "idx": 28,
       "version": "6",
-      "when": 1775083000000,
+      "when": 1775508000000,
       "tag": "0028_agent_prompts",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1775509000000,
+      "tag": "0029_add_get_github_issue_comment_permission",
       "breakpoints": true
     }
   ]
