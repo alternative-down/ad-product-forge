@@ -1,10 +1,3 @@
-import type {
-  AgentDetail,
-  AgentSchedule,
-  CreateScheduleInput,
-  UpdateScheduleInput,
-} from '../../lib/api';
-
 // =============================================================================
 // Tab/View Types
 // =============================================================================

@@ -1,14 +1,12 @@
-import { useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
-import type { AgentDetail } from '../../../lib/api';
-import { formatDateTimeText } from '../utils';
-import { cn } from '../../../lib/utils';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Textarea } from '../../../components/ui/textarea';
-import { Badge } from '../../../components/ui/badge';
-import { LabeledField } from '../ui';
-import { buildProviderDraftKey, createProviderTemplate, toPrettyJson } from '../utils';
+import type { AgentDetail } from '../../../../lib/api';
+import { formatDateTimeText } from '../../utils';
+import { cn } from '../../../../lib/utils';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Textarea } from '../../../../components/ui/textarea';
+import { Badge } from '../../../../components/ui/badge';
+import { buildProviderDraftKey, toPrettyJson } from '../../utils';
 
 export function AgentProvidersCard(input: {
   agent: AgentDetail;
@@ -22,12 +20,6 @@ export function AgentProvidersCard(input: {
   pendingProviderType: string | null;
   error: string | null;
 }) {
-  const editableProviders = input.agent.providers.filter(
-    (provider): provider is AgentDetail['providers'][number] & {
-      providerType: 'discord' | 'email';
-    } => provider.editable && (provider.providerType === 'discord' || provider.providerType === 'email'),
-  );
-
   return (
     <Card className="p-6">
       <div>
@@ -77,7 +69,7 @@ export function AgentProvidersCard(input: {
                   />
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
-                      size="sm"
+                      className="h-8 px-3 text-xs"
                       onClick={() => input.onSaveProvider(editableProviderType, draft.credentialsText)}
                       disabled={
                         input.pendingProviderType === editableProviderType ||
@@ -94,7 +86,7 @@ export function AgentProvidersCard(input: {
                       )}
                     </Button>
                     <Button
-                      size="sm"
+                      className="h-8 px-3 text-xs"
                       variant="danger"
                       onClick={() => input.onDeleteProvider(editableProviderType)}
                       disabled={input.pendingProviderType === editableProviderType}
@@ -157,7 +149,7 @@ export function AgentProvidersCard(input: {
                 })
               }
             />
-            <Button size="sm" onClick={input.onCreateProvider}>
+            <Button className="h-8 px-3 text-xs" onClick={input.onCreateProvider}>
               Add provider
             </Button>
           </div>
