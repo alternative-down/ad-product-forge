@@ -1,0 +1,41 @@
+-- Fix corrupted __drizzle_migrations tracking table
+-- DB has ids 10-19 with wrong hashes (off by 1), missing entries 0-9 and 20-30
+
+-- Insert missing entries 0-9
+INSERT OR IGNORE INTO __drizzle_migrations (id, hash, createdAt) VALUES
+  (0, '18a5afa89a9447055d0d906a98dbf96cde7fa0be98975a660a672f31b0fc4134', 1773743423147),
+  (1, '5dfec8f4245f17eb7644f03b785ea7f45faf69f9fc6756422ae2cfb969ed024e', 1773865742114),
+  (2, '48b68d687a5f472a4fc186e89d31739bf4f915dc21bb2160cdaed8b0077a4107', 1773867153552),
+  (3, '02a95b3581169c681ab66c42084ff178c1451782da8ae6f003fcc1b399c22041', 1773887303963),
+  (4, 'a7160297ae7a14680c1256e20c203b3e1bd15a68b0a9d01ed10188529af7d58b', 1773892000000),
+  (5, '489d6498d586cf3afa4983bacc2f46fd9c7146bb8a7d2142d8bb379526cf02f0', 1773966482569),
+  (6, '106bddaf938edab67cd7017bebb3a4e9a550f0af9d9aa0bcf09bc15b3381e96f', 1774042830603),
+  (7, 'bca730ef17358024e5f9b50b5b4fbb602ce195433fae802fe7d7779eb082bfda', 1774048052712),
+  (8, 'f69bdced84ce04919836a1e425850b9c6f2621bb264a8a2cf1e5d3e678185b39', 1774080000000),
+  (9, 'fd492e75bda52c15f975f692d20a69a35cc0d853a6ce9e07504ef3793b5583a1', 1774152000000);
+
+-- Fix corrupted entries 10-19 (currently have wrong hashes - off by 1)
+UPDATE __drizzle_migrations SET hash = '79ac3557729b8ed75a8122cca5c13f4bfa3952249a8bb4e1cfe9eb22f31ee728', createdAt = 1774195452764 WHERE id = 10;
+UPDATE __drizzle_migrations SET hash = '57fad2f0b9069f2fad395e42ee44f529af31a0cac1f42e5bc8460e38359c757c', createdAt = 1774197000000 WHERE id = 11;
+UPDATE __drizzle_migrations SET hash = '128ba4f7cd284ffceb1f60debff857cdb155c0c6d7e587d6329a50bec8ba2afd', createdAt = 1774200000000 WHERE id = 12;
+UPDATE __drizzle_migrations SET hash = 'd37f99193f879b61860fe0ad043e272fafacb1eb47f6105610b347e63501632e', createdAt = 1774205000000 WHERE id = 13;
+UPDATE __drizzle_migrations SET hash = '83866a6e00026e02f5b32513e85d8780e4d0a9f78f8ad0de685aa8db7dd62cfb', createdAt = 1774209892368 WHERE id = 14;
+UPDATE __drizzle_migrations SET hash = '35b342ad801dfa1d0a54f8acb1de3b3cae22bb9b8092ce36f2bb6308423ff36a', createdAt = 1774210000000 WHERE id = 15;
+UPDATE __drizzle_migrations SET hash = 'dd27dfcb399658778df2428425544a7192b31d1f7e589b99b0fc4f404d9dd1e8', createdAt = 1774215625682 WHERE id = 16;
+UPDATE __drizzle_migrations SET hash = 'f054e8ccb1567e6922df32eb96887c6d9805fe1eb53e690201082330850075f1', createdAt = 1774216000000 WHERE id = 17;
+UPDATE __drizzle_migrations SET hash = '8341d380b235e74b7078f2c52db37fc02fc0ec67154ef906a5d420ba41d36b0c', createdAt = 1774223400000 WHERE id = 18;
+UPDATE __drizzle_migrations SET hash = 'dac7128a5a00db99b48f94ffb8ca2c00696759ac9718d359f16791f142b891ba', createdAt = 1774225200000 WHERE id = 19;
+
+-- Insert missing entries 20-30
+INSERT OR IGNORE INTO __drizzle_migrations (id, hash, createdAt) VALUES
+  (20, 'd8c2036a9b91fc526aa60cee3a7f79603566b0476456c503ba556dbf974556cd', 1774300000000),
+  (21, '50fd67ed64c3d4f9d92c364e8963d3eb00463317c1d13e24ab7cc9c0a94e433f', 1774350000000),
+  (22, '6cc6d3a48070f5eb172501e45be7fa45e5c89a0b0faa07960ca2c634fa06aebd', 1774370000000),
+  (23, 'b98d3b37c655e8bc5578d4493882275aa4aaabeb9bddac3157fcd9973503c396', 1774372000000),
+  (24, 'c7070fa637f73b0ee23492183cc80456b3126a0e4753732d3a6f2c53383af1d5', 1774380000000),
+  (25, '71de41f8ad19edc2aa63e147efad759ddfc0cfe69a61bc0e75bd4aedbaedeab3', 1775000000000),
+  (26, '427f09165bc66998f2d2c50a01cc286a6661fdc40bf107b974abd9dec57539e3', 1775002000000),
+  (27, 'b96a009f8400d1c1359d31715100c9d169be8d687ec106b9faec6343dadf648f', 1775004000000),
+  (28, '5bb928ca9fdbee995d98e61be54ee456861f390a7f9a066c8677005e9fb66d01', 1775006000000),
+  (29, 'b64bc0e88f57b8c93b5489cbb36598d43c4a5070d604e7529d010b5bb71f3998', 1775008000000),
+  (30, 'b78855737df130acf7527a116ef11e72b8ec20236ebf94484a38a2195dc7e50a', 1775010000000);
