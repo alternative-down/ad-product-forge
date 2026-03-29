@@ -23,8 +23,11 @@ const _WorkspaceSandboxConfigSchema = z.object({
   workingDirectory: z.string(),
 });
 
+const _WorkspaceSkillsConfigSchema = z.array(z.string());
+
 export type WorkspaceFilesystemConfig = z.infer<typeof _WorkspaceFilesystemConfigSchema>;
 export type WorkspaceSandboxConfig = z.infer<typeof _WorkspaceSandboxConfigSchema>;
+export type WorkspaceSkillsConfig = z.infer<typeof _WorkspaceSkillsConfigSchema>;
 
 /**
  * Tabela: agents
@@ -50,6 +53,7 @@ export const agents = sqliteTable('agents', {
   workspaceEmbedder: text('workspace_embedder').notNull().default('fastembed'),
   workspaceFilesystem: text('workspace_filesystem', { mode: 'json' }).$type<WorkspaceFilesystemConfig>(),
   workspaceSandbox: text('workspace_sandbox', { mode: 'json' }).$type<WorkspaceSandboxConfig>(),
+  workspaceSkills: text('workspace_skills', { mode: 'json' }).$type<WorkspaceSkillsConfig>(),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });

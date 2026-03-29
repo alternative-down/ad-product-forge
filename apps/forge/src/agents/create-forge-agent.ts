@@ -37,7 +37,7 @@ import {
   createObservationalMemory,
   appendWorkingMemoryInstructions,
 } from '@mastra-engine/core';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig, WorkspaceSkillsConfig } from '../database/schema';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -55,6 +55,7 @@ export type CreateForgeAgentConfig<
   providers?: CommunicationProvider[];
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
+  workspaceSkills?: WorkspaceSkillsConfig;
 };
 
 export type CreateAgentOptions = {
@@ -211,6 +212,7 @@ export async function createInternalAgentRuntime<
       isolation: 'none',
       workingDirectory: sandboxWorkingDirectory,
     }),
+    skills: config.workspaceSkills ?? ['**/skills'],
   });
 
   await workspace.init();
