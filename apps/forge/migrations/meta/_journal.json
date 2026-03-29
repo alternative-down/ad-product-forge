@@ -12,14 +12,14 @@
     {
       "idx": 1,
       "version": "6",
-      "when": 1743270000000,
+      "when": 1774809330156,
       "tag": "0001_seed_llm_model_prices",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "6",
-      "when": 1743270000000,
+      "when": 1774809330156,
       "tag": "0002_seed_llm_profiles",
       "breakpoints": true
     }
