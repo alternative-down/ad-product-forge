@@ -34,7 +34,7 @@ interface ReviewCardProps {
 
 function ReviewCard({ title, onEdit, children }: ReviewCardProps) {
   return (
-    <Card className="p-4">
+    <Card>
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-medium">{title}</h3>
         <Button variant="ghost" onClick={onEdit} className="gap-1">
