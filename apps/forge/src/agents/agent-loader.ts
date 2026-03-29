@@ -19,6 +19,7 @@ import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createWebTools } from '../web/tools';
 import { getMCPToolsForAgent } from './mcp/client-manager';
+import { createMiniMaxTools } from '../minimax/tools';
 
 
 export interface AgentLoaderConfig {
@@ -130,6 +131,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
   const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
   const webTools = createWebTools(allowedToolIds);
+  const minimaxTools = createMiniMaxTools(process.env.MINIMAX_API_KEY, allowedToolIds);
   
   // Load MCP tools for this agent
   const mcpTools = await loadMCPToolsForAgent(agentConfig.id);
@@ -142,6 +144,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...scheduleTools,
     ...capabilityTools,
     ...webTools,
+    ...minimaxTools,
     ...mcpTools,
   } as CreateAgentConfig['tools'];
   const filteredWorkflows = filterWorkflows(config.workflows, capabilitySet.workflowIds);
