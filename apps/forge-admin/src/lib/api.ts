@@ -553,6 +553,10 @@ function getConfiguredApiBaseUrl() {
 
   const { protocol, hostname, port } = window.location;
 
+  if (hostname.includes('.forge.')) {
+    return `${protocol}//forge.${hostname.split('.forge.')[1]}`;
+  }
+
   if (hostname.startsWith('forge-admin.')) {
     return `${protocol}//forge.${hostname.slice('forge-admin.'.length)}`;
   }
