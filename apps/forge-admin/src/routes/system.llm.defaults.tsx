@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { SystemDetailPage } from '../features/system/page';
 
 export const Route = createFileRoute('/system/llm/defaults')({
-  component: _SystemLlmDefaultsRoute,
+  component: SystemLlmDefaultsRoute,
 });
 
 function SystemLlmDefaultsRoute() {

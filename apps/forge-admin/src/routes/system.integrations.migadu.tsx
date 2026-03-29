@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { SystemDetailPage } from '../features/system/page';
 
 export const Route = createFileRoute('/system/integrations/migadu')({
-  component: _SystemIntegrationsMigaduRoute,
+  component: SystemIntegrationsMigaduRoute,
 });
 
 function SystemIntegrationsMigaduRoute() {
