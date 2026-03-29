@@ -75,7 +75,6 @@ import {
   ContractTopUpCard,
   ContractBudgetAdjustCard,
   AgentProvidersCard,
-  SchedulesCard,
 } from './cards';
 
 // Re-export types for external use
