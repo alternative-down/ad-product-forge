@@ -111,17 +111,76 @@ export function createAgentWakeQueue(config: {
   };
 }
 
+interface ParsedWakeEvent {
+  type: string;
+  id: string;
+  timestamp: number;
+  content: string;
+  /** Extracted from content after "Type: message:{provider}" */
+  provider?: string;
+  /** Extracted from content after "Conversation key:" */
+  conversationKey?: string;
+}
+
+function extractEventMetadata(event: AgentWakeEvent): ParsedWakeEvent {
+  const typeMatch = event.content.match(/^Type: (message:(\w+))/);
+  const convKeyMatch = event.content.match(/^Conversation key: (.+)$/m);
+
+  return {
+    type: event.type,
+    id: event.id,
+    timestamp: event.timestamp,
+    content: event.content,
+    provider: typeMatch ? typeMatch[2] : undefined,
+    conversationKey: convKeyMatch ? convKeyMatch[1] : undefined,
+  };
+}
+
 function formatWakeEvents(events: AgentWakeEvent[]) {
-  return events
-    .sort((left, right) => left.timestamp - right.timestamp)
-    .map((event) =>
-      [
-        `Type: ${event.type}`,
-        `Id: ${event.id}`,
-        `At: ${new Date(event.timestamp).toISOString()}`,
-        `Content:`,
-        event.content.trim(),
-      ].join('\n'),
-    )
-    .join('\n\n---\n\n');
+  const parsed = events.map(extractEventMetadata).sort((left, right) => left.timestamp - right.timestamp);
+
+  // Group by provider + conversation key
+  const groups = new Map<string, ParsedWakeEvent[]>();
+  for (const event of parsed) {
+    const groupKey = `${event.provider ?? event.type}|${event.conversationKey ?? event.id}`;
+    const existing = groups.get(groupKey);
+    if (existing) {
+      existing.push(event);
+    } else {
+      groups.set(groupKey, [event]);
+    }
+  }
+
+  const formattedGroups: string[] = [];
+  for (const [, groupEvents] of groups) {
+    if (groupEvents.length === 0) continue;
+
+    // Shared metadata from first event
+    const first = groupEvents[0];
+    const headerLines = [
+      `Type: ${first.type}`,
+      `At: ${new Date(first.timestamp).toISOString()}`,
+    ];
+
+    if (first.provider) {
+      headerLines.push(`Provider: ${first.provider}`);
+    }
+    if (first.conversationKey) {
+      headerLines.push(`Conversation: ${first.conversationKey}`);
+    }
+
+    // Messages sorted within group
+    const messageLines = groupEvents.map((e) => {
+      // Remove the standard header from content (everything before "Content:" or "Inbound")
+      const contentMatch = e.content.match(/(?:Content:|Inbound communication received\.)/);
+      if (contentMatch) {
+        return e.content.slice(e.content.indexOf(contentMatch[0]) + contentMatch[0].length).trim();
+      }
+      return e.content.trim();
+    });
+
+    formattedGroups.push([...headerLines, '', 'Messages:', ...messageLines.map((m, i) => `[${i + 1}] ${m}`)].join('\n'));
+  }
+
+  return formattedGroups.join('\n\n---\n\n');
 }
