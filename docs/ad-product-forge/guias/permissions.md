@@ -83,7 +83,11 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `get_github_issue` | Busca issue | DEVELOPER |
 | `manage_github_issue` | Gerencia issue | DEVELOPER |
 | `toggle_github_issue` | Abre/fecha issue | DEVELOPER |
-| `manage_github_issue_comment` | Comenta issue | DEVELOPER |
+| `list_github_issue_comments` | Lista comentários | DEVELOPER |
+| `get_github_issue_comment` | Busca comentário | DEVELOPER |
+| `create_github_issue_comment` | Cria comentário | DEVELOPER |
+| `update_github_issue_comment` | Atualiza comentário | DEVELOPER |
+| `delete_github_issue_comment` | Deleta comentário | DEVELOPER |
 | `list_github_labels` | Lista labels | DEVELOPER |
 | `manage_github_label` | Gerencia label | DEVELOPER |
 | `list_github_milestones` | Lista milestones | DEVELOPER |
