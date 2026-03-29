@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { createMiniMaxClient, type MiniMaxClient } from './manager';
+import type { MiniMaxManager } from './manager';
 
 export const MINIMAX_TOOL_IDS = [
   'minimax_tts',
@@ -13,25 +13,16 @@ export type MiniMaxToolId = (typeof MINIMAX_TOOL_IDS)[number];
 
 /**
  * Create MiniMax creative tools for agents
- * 
+ *
  * These tools allow agents to generate:
  * - TTS (Text-to-Speech) audio
  * - Images from text prompts
  * - Videos from text prompts
  */
 export function createMiniMaxTools(
-  apiKey?: string,
+  minimax: MiniMaxManager,
   allowedToolIds?: Set<string> | null,
 ) {
-  let client: MiniMaxClient | null = null;
-
-  const getClient = () => {
-    if (!client) {
-      client = createMiniMaxClient(apiKey);
-    }
-    return client;
-  };
-
   const tools: Record<string, ReturnType<typeof createTool>> = {};
 
   // TTS Tool
@@ -57,34 +48,39 @@ export function createMiniMaxTools(
           .describe('Output audio format (default mp3).'),
       }),
       execute: async (input) => {
-        const minimax = getClient();
+        try {
+          const result = await minimax.textToSpeech({
+            text: input.text,
+            voiceSetting: input.voice_id
+              ? {
+                  voiceId: input.voice_id,
+                  speed: input.speed ?? 1.0,
+                  volume: input.volume ?? 1.0,
+                  pitch: input.pitch ?? 0,
+                }
+              : undefined,
+            outputFormat: input.output_format ?? 'mp3',
+          });
 
-        const result = await minimax.textToSpeech({
-          text: input.text,
-          voiceSetting: input.voice_id
-            ? {
-                voiceId: input.voice_id,
-                speed: input.speed ?? 1.0,
-                volume: input.volume ?? 1.0,
-                pitch: input.pitch ?? 0,
-              }
-            : undefined,
-          outputFormat: input.output_format ?? 'mp3',
-        });
+          if (!result.success) {
+            return {
+              success: false,
+              error: result.error?.message || 'Failed to generate speech',
+            };
+          }
 
-        if (!result.success) {
+          return {
+            success: true,
+            audio_file: result.data?.audio_file,
+            audio_id: result.data?.audio_id,
+            extra_info: result.data?.extra_info,
+          };
+        } catch (error) {
           return {
             success: false,
-            error: result.error?.message || 'Failed to generate speech',
+            error: error instanceof Error ? error.message : 'Failed to generate speech',
           };
         }
-
-        return {
-          success: true,
-          audio_file: result.data?.audio_file,
-          audio_id: result.data?.audio_id,
-          extra_info: result.data?.extra_info,
-        };
       },
     });
   }
@@ -113,28 +109,33 @@ export function createMiniMaxTools(
           .describe('Number of images to generate (1-4, default 1).'),
       }),
       execute: async (input) => {
-        const minimax = getClient();
+        try {
+          const result = await minimax.generateImage({
+            prompt: input.prompt,
+            style: input.style || '<auto>',
+            width: input.width ?? 1024,
+            height: input.height ?? 1024,
+            imageCount: input.image_count ?? 1,
+          });
 
-        const result = await minimax.generateImage({
-          prompt: input.prompt,
-          style: input.style || '<auto>',
-          width: input.width ?? 1024,
-          height: input.height ?? 1024,
-          imageCount: input.image_count ?? 1,
-        });
+          if (!result.success) {
+            return {
+              success: false,
+              error: result.error?.message || 'Failed to generate image',
+            };
+          }
 
-        if (!result.success) {
+          return {
+            success: true,
+            image_urls: result.data?.image_urls || [],
+            extra_info: result.data?.extra_info,
+          };
+        } catch (error) {
           return {
             success: false,
-            error: result.error?.message || 'Failed to generate image',
+            error: error instanceof Error ? error.message : 'Failed to generate image',
           };
         }
-
-        return {
-          success: true,
-          image_urls: result.data?.image_urls || [],
-          extra_info: result.data?.extra_info,
-        };
       },
     });
   }
@@ -157,29 +158,34 @@ export function createMiniMaxTools(
         quality: z.enum(['standard', 'high']).nullish().describe('Video quality (default high).'),
       }),
       execute: async (input) => {
-        const minimax = getClient();
+        try {
+          const result = await minimax.generateVideo({
+            prompt: input.prompt,
+            duration: input.duration ?? 6,
+            fsp: input.fps ?? 25,
+            petal_scale: input.quality === 'standard' ? 0.8 : 1.0,
+          });
 
-        const result = await minimax.generateVideo({
-          prompt: input.prompt,
-          duration: input.duration ?? 6,
-          fsp: input.fps ?? 25,
-          petal_scale: input.quality === 'standard' ? 0.8 : 1.0,
-        });
+          if (!result.success) {
+            return {
+              success: false,
+              error: result.error?.message || 'Failed to generate video',
+            };
+          }
 
-        if (!result.success) {
+          return {
+            success: true,
+            task_id: result.data?.task_id,
+            status: result.data?.status || 'completed',
+            video_url: result.data?.video_url,
+            extra_info: result.data?.extra_info,
+          };
+        } catch (error) {
           return {
             success: false,
-            error: result.error?.message || 'Failed to generate video',
+            error: error instanceof Error ? error.message : 'Failed to generate video',
           };
         }
-
-        return {
-          success: true,
-          task_id: result.data?.task_id,
-          status: result.data?.status || 'completed',
-          video_url: result.data?.video_url,
-          extra_info: result.data?.extra_info,
-        };
       },
     });
   }

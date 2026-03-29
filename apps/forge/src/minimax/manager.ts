@@ -223,3 +223,49 @@ export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
     groupId: process.env.MINIMAX_GROUP_ID,
   });
 }
+
+/**
+ * Create a MiniMax manager that fetches config from system integrations store
+ */
+export function createMiniMaxManager(config: {
+  integrations: ReturnType<typeof import('../system-integrations/store').createSystemIntegrationStore>;
+}) {
+  async function getConfig() {
+    return config.integrations.getMinimaxConfig();
+  }
+
+  async function textToSpeech(options: Parameters<MiniMaxClient['textToSpeech']>[0]) {
+    const cfg = await getConfig();
+    if (!cfg) {
+      throw new Error('MiniMax integration is not configured');
+    }
+    const client = new MiniMaxClient({ apiKey: cfg.apiKey });
+    return client.textToSpeech(options);
+  }
+
+  async function generateImage(options: Parameters<MiniMaxClient['generateImage']>[0]) {
+    const cfg = await getConfig();
+    if (!cfg) {
+      throw new Error('MiniMax integration is not configured');
+    }
+    const client = new MiniMaxClient({ apiKey: cfg.apiKey });
+    return client.generateImage(options);
+  }
+
+  async function generateVideo(options: Parameters<MiniMaxClient['generateVideo']>[0]) {
+    const cfg = await getConfig();
+    if (!cfg) {
+      throw new Error('MiniMax integration is not configured');
+    }
+    const client = new MiniMaxClient({ apiKey: cfg.apiKey });
+    return client.generateVideo(options);
+  }
+
+  return {
+    textToSpeech,
+    generateImage,
+    generateVideo,
+  };
+}
+
+export type MiniMaxManager = ReturnType<typeof createMiniMaxManager>;

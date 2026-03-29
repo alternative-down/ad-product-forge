@@ -9,6 +9,7 @@ import { createAgentNotificationTools } from '../notifications/tools';
 import { createGitHubTools } from '../github/tools';
 import type { GitHubAppManager } from '../github/manager';
 import type { CoolifyManager } from '../coolify/manager';
+import type { MiniMaxManager } from '../minimax/manager';
 import { createCoolifyTools } from '../coolify/tools';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createAgentScheduleTools } from '../schedules/tools';
@@ -27,6 +28,7 @@ export interface AgentLoaderConfig {
   workflows?: CreateAgentConfig['workflows'];
   githubApps: GitHubAppManager;
   coolify: CoolifyManager | null;
+  minimax: MiniMaxManager;
   schedules: ReturnType<typeof createAgentScheduleManager>;
   /**
    * Optional function to propagate messages to remote Mastra instances.
@@ -131,7 +133,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
   const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
   const webTools = createWebTools(allowedToolIds);
-  const minimaxTools = createMiniMaxTools(process.env.MINIMAX_API_KEY, allowedToolIds);
+  const minimaxTools = createMiniMaxTools(config.minimax, allowedToolIds);
   
   // Load MCP tools for this agent
   const mcpTools = await loadMCPToolsForAgent(agentConfig.id);
