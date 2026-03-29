@@ -42,57 +42,6 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
     });
   }
 
-  if (hasToolPermission(allowedToolIds, 'manage_github_repository')) {
-    tools.manage_github_repository = createTool({
-      id: 'manage_github_repository',
-      description: 'Create, update, or delete one repository in the company GitHub organization. ⚠️ DEPRECATED: Use create_github_repository, update_github_repository, or delete_github_repository instead.',
-      inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete']),
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).nullish().describe('Current repository name (used for update/delete).'),
-        name: z.string().min(1).nullish().describe('New repository name (required for create).'),
-        description: z.string().nullish().describe('Repository description.'),
-        private: z.boolean().nullish().describe('Whether the repository is private.'),
-        autoInit: z.boolean().nullish().describe('Automatically initialize with a README.'),
-        defaultBranch: z.string().nullish().describe('Default branch name (e.g., main, develop).'),
-      }).superRefine((input, ctx) => {
-        if (input.action === 'create' && !input.name) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'name is required when action is create' });
-        }
-
-        if ((input.action === 'update' || input.action === 'delete') && !input.repositoryName) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['repositoryName'], message: 'repositoryName is required when action is not create' });
-        }
-      }),
-      execute: async (input) => {
-        if (input.action === 'create') {
-          return githubApps.createRepository(agentId, {
-            name: input.name!,
-            description: input.description,
-            private: input.private,
-            autoInit: input.autoInit,
-          });
-        }
-
-        if (input.action === 'delete') {
-          return githubApps.deleteRepository(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName!,
-          });
-        }
-
-        return githubApps.updateRepository(agentId, {
-          owner: input.owner,
-          repositoryName: input.repositoryName!,
-          name: input.name,
-          description: input.description,
-          private: input.private,
-          defaultBranch: input.defaultBranch,
-        });
-      },
-    });
-  }
-
   // --- Split tools (individual operations) ---
 
   if (hasToolPermission(allowedToolIds, 'create_github_repository')) {
@@ -193,77 +142,6 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         limit: z.number().int().positive().max(100).default(100).describe('Maximum number of comments to return.'),
       }),
       execute: async (input) => githubApps.listPullRequestComments(agentId, input),
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'manage_github_pull_request')) {
-    tools.manage_github_pull_request = createTool({
-      id: 'manage_github_pull_request',
-      description: 'Create new pull requests, update existing PRs (title, body, base branch, state), merge completed PRs, or delete/close PRs.',
-      inputSchema: z.object({
-        action: z.enum(['create', 'update', 'merge', 'delete']),
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        pullRequestNumber: z.number().int().positive().nullish().describe('PR number (required for update/merge/delete).'),
-        title: z.string().min(1).nullish().describe('PR title (required for create).'),
-        head: z.string().min(1).nullish().describe('Source branch (required for create).'),
-        base: z.string().min(1).nullish().describe('Target branch (required for create).'),
-        body: z.string().nullish().describe('PR description.'),
-        state: z.enum(['open', 'closed']).nullish().describe('Open or close the PR.'),
-        mergeMethod: z.enum(['merge', 'squash', 'rebase']).nullish().describe('Merge strategy when merging.'),
-      }).superRefine((input, ctx) => {
-        if (input.action === 'create') {
-          for (const field of ['title', 'head', 'base'] as const) {
-            if (input[field] === undefined) {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `${field} is required when action is create` });
-            }
-          }
-        }
-
-        if ((input.action === 'update' || input.action === 'delete' || input.action === 'merge') && !input.pullRequestNumber) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pullRequestNumber'], message: 'pullRequestNumber is required when action is not create' });
-        }
-      }),
-      execute: async (input) => {
-        if (input.action === 'create') {
-          return githubApps.createPullRequest(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            title: input.title!,
-            head: input.head!,
-            base: input.base!,
-            body: input.body,
-          });
-        }
-
-        if (input.action === 'delete') {
-          return githubApps.updatePullRequest(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            pullRequestNumber: input.pullRequestNumber!,
-            state: 'closed',
-          });
-        }
-
-        if (input.action === 'merge') {
-          return githubApps.mergePullRequest(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            pullRequestNumber: input.pullRequestNumber!,
-            mergeMethod: input.mergeMethod,
-          });
-        }
-
-        return githubApps.updatePullRequest(agentId, {
-          owner: input.owner,
-          repositoryName: input.repositoryName,
-          pullRequestNumber: input.pullRequestNumber!,
-          title: input.title,
-          body: input.body,
-          base: input.base,
-          state: input.state,
-        });
-      },
     });
   }
 
