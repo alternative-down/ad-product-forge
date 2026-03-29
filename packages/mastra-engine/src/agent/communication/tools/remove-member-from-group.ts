@@ -14,10 +14,29 @@ export function createRemoveMemberTool(communication: CommunicationModule) {
     description: 'Remove a member from an internal chat group.',
     inputSchema: removeMemberInputSchema,
     execute: async (input) => {
-      return communication.removeMemberFromGroup({
-        groupId: input.groupId,
-        participantId: input.participantId,
-      });
+      try {
+        return await communication.removeMemberFromGroup({
+          groupId: input.groupId,
+          participantId: input.participantId,
+        });
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('not found') || error.message.includes('does not exist')) {
+            return {
+              error: error.message,
+              hint: 'The group or member may not exist. Use list_chat_groups and list_group_members to verify.',
+            };
+          }
+          return {
+            error: error.message,
+            hint: 'Verify the groupId and participantId are valid.',
+          };
+        }
+        return {
+          error: 'An unknown error occurred while removing the member',
+          hint: 'Verify the groupId and participantId are valid.',
+        };
+      }
     },
   });
 }

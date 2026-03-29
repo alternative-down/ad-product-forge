@@ -16,12 +16,37 @@ export function createAddMemberTool(communication: CommunicationModule) {
     description: 'Add a member to an existing internal chat group.',
     inputSchema: addMemberInputSchema,
     execute: async (input) => {
-      return communication.addMemberToGroup({
-        groupId: input.groupId,
-        participantId: input.participantId,
-        participantName: input.participantName,
-        role: input.role,
-      });
+      try {
+        return await communication.addMemberToGroup({
+          groupId: input.groupId,
+          participantId: input.participantId,
+          participantName: input.participantName,
+          role: input.role,
+        });
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('not found') || error.message.includes('does not exist')) {
+            return {
+              error: error.message,
+              hint: 'The group may not exist. Use list_chat_groups to find valid group IDs.',
+            };
+          }
+          if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+            return {
+              error: error.message,
+              hint: 'The member is already in the group.',
+            };
+          }
+          return {
+            error: error.message,
+            hint: 'Verify the groupId and participantId are valid.',
+          };
+        }
+        return {
+          error: 'An unknown error occurred while adding the member',
+          hint: 'Verify the groupId and participantId are valid.',
+        };
+      }
     },
   });
 }
