@@ -136,23 +136,23 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
   list_github_pull_request_comments: [
     'list_github_pull_request_comments',
   ],
-  // @deprecated - redirects to manage_github_issue (tool split in progress)
+  // @deprecated - redirects to split issue tools
   manage_github_issue: [
     'create_github_issue',
     'update_github_issue',
-    'add_github_issue_labels',
-    'remove_github_issue_labels',
+    'delete_github_issue',
   ],
-  // @deprecated - redirects to toggle_github_issue (tool split in progress)
+  // @deprecated - toggle_github_issue is the canonical tool
   toggle_github_issue: [
-    'close_github_issue',
-    'reopen_github_issue',
+    'toggle_github_issue',
   ],
-  // @deprecated - redirects to manage_github_issue_comment (tool split in progress)
+  // @deprecated - redirects to split issue comment tools
   manage_github_issue_comment: [
     'list_github_issue_comments',
     'get_github_issue_comment',
     'create_github_issue_comment',
+    'update_github_issue_comment',
+    'delete_github_issue_comment',
   ],
   manage_coolify_application: [
     'create_coolify_application',
@@ -171,6 +171,7 @@ export const legacyToolPermissionAliases: Partial<Record<ForgeCustomToolId, read
     'set_coolify_application_env',
     'delete_coolify_application_env',
   ],
+  // @deprecated - redirects to split schedule tools
   manage_agent_schedule: [
     'create_agent_schedule',
     'update_agent_schedule',

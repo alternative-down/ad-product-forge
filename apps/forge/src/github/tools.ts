@@ -386,65 +386,6 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
     });
   }
 
-  if (hasToolPermission(allowedToolIds, 'manage_github_issue')) {
-    tools.manage_github_issue = createTool({
-      id: 'manage_github_issue',
-      description: 'Create new issues with title, body, labels, and assignees. Update existing issues or delete/close them.',
-      inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete']),
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        issueNumber: z.number().int().positive().nullish().describe('Issue number (required for update/delete).'),
-        title: z.string().min(1).nullish().describe('Issue title (required for create).'),
-        body: z.string().nullish().describe('Issue body/description.'),
-        labels: z.array(z.string().min(1)).nullish().describe('Label names to apply.'),
-        assignees: z.array(z.string().min(1)).nullish().describe('GitHub usernames to assign.'),
-        milestone: z.number().int().positive().nullable().nullish().describe('Milestone number to assign.'),
-      }).superRefine((input, ctx) => {
-        if (input.action === 'create' && !input.title) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['title'], message: 'title is required when action is create' });
-        }
-
-        if ((input.action === 'update' || input.action === 'delete') && !input.issueNumber) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['issueNumber'], message: 'issueNumber is required when action is not create' });
-        }
-      }),
-      execute: async (input) => {
-        if (input.action === 'create') {
-          return githubApps.createIssue(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            title: input.title!,
-            body: input.body,
-            labels: input.labels,
-            assignees: input.assignees,
-            milestone: input.milestone ?? undefined,
-          });
-        }
-
-        if (input.action === 'delete') {
-          return githubApps.updateIssue(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            issueNumber: input.issueNumber!,
-            state: 'closed',
-          });
-        }
-
-        return githubApps.updateIssue(agentId, {
-          owner: input.owner,
-          repositoryName: input.repositoryName,
-          issueNumber: input.issueNumber!,
-          title: input.title,
-          body: input.body,
-          labels: input.labels,
-          assignees: input.assignees,
-          milestone: input.milestone,
-        });
-      },
-    });
-  }
-
   // --- Split Issue tools (individual operations) ---
 
   if (hasToolPermission(allowedToolIds, 'create_github_issue')) {
@@ -530,64 +471,6 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
       execute: async (input) => input.state === 'open'
         ? githubApps.reopenIssue(agentId, input)
         : githubApps.closeIssue(agentId, input),
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'manage_github_issue_comment')) {
-    tools.manage_github_issue_comment = createTool({
-      id: 'manage_github_issue_comment',
-      description: 'List all comments on an issue. Get comment details by ID. Create new comments, update existing ones, or delete comments.',
-      inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete', 'list', 'get']),
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        issueNumber: z.number().int().positive().nullish().describe('Issue number (required for create/list).'),
-        commentId: z.number().int().positive().nullish().describe('Comment ID (required for update/delete/get).'),
-        body: z.string().min(1).nullish().describe('Comment body (required for create/update).'),
-      }).superRefine((input, ctx) => {
-        if (input.action === 'create') {
-          if (!input.issueNumber) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['issueNumber'], message: 'issueNumber is required when action is create' });
-          }
-
-          if (!input.body) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['body'], message: 'body is required when action is create' });
-          }
-        }
-
-        if ((input.action === 'update' || input.action === 'delete') && !input.commentId) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['commentId'], message: 'commentId is required when action is not create' });
-        }
-
-        if (input.action === 'update' && !input.body) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['body'], message: 'body is required when action is update' });
-        }
-      }),
-      execute: async (input) => {
-        if (input.action === 'create') {
-          return githubApps.createIssueComment(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            issueNumber: input.issueNumber!,
-            body: input.body!,
-          });
-        }
-
-        if (input.action === 'delete') {
-          return githubApps.deleteIssueComment(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            commentId: input.commentId!,
-          });
-        }
-
-        return githubApps.updateIssueComment(agentId, {
-          owner: input.owner,
-          repositoryName: input.repositoryName,
-          commentId: input.commentId!,
-          body: input.body!,
-        });
-      },
     });
   }
 
@@ -697,54 +580,6 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
     });
   }
 
-  if (hasToolPermission(allowedToolIds, 'manage_github_label')) {
-    tools.manage_github_label = createTool({
-      id: 'manage_github_label',
-      description: 'Create, update, or delete one label.',
-      inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete']),
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        labelName: z.string().min(1).describe('The label name to create, update, or delete.'),
-        newLabelName: z.string().min(1).nullish().describe('New name for the label (for rename).'),
-        color: z.string().nullish().describe('Hex color code (e.g., "ff0000"). Required for create.'),
-        description: z.string().nullish().describe('Label description.'),
-      }).superRefine((input, ctx) => {
-        if (input.action === 'create' && !input.color) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['color'], message: 'color is required when action is create' });
-        }
-      }),
-      execute: async (input) => {
-        if (input.action === 'create') {
-          return githubApps.createLabel(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            labelName: input.labelName,
-            color: input.color!,
-            description: input.description,
-          });
-        }
-
-        if (input.action === 'delete') {
-          return githubApps.deleteLabel(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            labelName: input.labelName,
-          });
-        }
-
-        return githubApps.updateLabel(agentId, {
-          owner: input.owner,
-          repositoryName: input.repositoryName,
-          labelName: input.labelName,
-          newLabelName: input.newLabelName,
-          color: input.color,
-          description: input.description,
-        });
-      },
-    });
-  }
-
   // --- Split Label tools (individual operations) ---
 
   if (hasToolPermission(allowedToolIds, 'create_github_label')) {
@@ -819,61 +654,6 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         limit: z.number().int().positive().max(100).default(100).describe('Maximum number of milestones to return.'),
       }),
       execute: async (input) => githubApps.listMilestones(agentId, input),
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'manage_github_milestone')) {
-    tools.manage_github_milestone = createTool({
-      id: 'manage_github_milestone',
-      description: 'Create, update, or delete one milestone.',
-      inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete']),
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        milestoneNumber: z.number().int().positive().nullish().describe('Milestone number (required for update/delete).'),
-        title: z.string().min(1).nullish().describe('Milestone title (required for create).'),
-        description: z.string().nullish().describe('Milestone description.'),
-        state: z.enum(['open', 'closed']).nullish().describe('Open or close the milestone.'),
-        dueOn: z.string().nullish().nullable().describe('Due date in ISO 8601 format.'),
-      }).superRefine((input, ctx) => {
-        if (input.action === 'create' && !input.title) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['title'], message: 'title is required when action is create' });
-        }
-
-        if ((input.action === 'update' || input.action === 'delete') && !input.milestoneNumber) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['milestoneNumber'], message: 'milestoneNumber is required when action is not create' });
-        }
-      }),
-      execute: async (input) => {
-        if (input.action === 'create') {
-          return githubApps.createMilestone(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            title: input.title!,
-            description: input.description,
-            state: input.state,
-            dueOn: input.dueOn ?? undefined,
-          });
-        }
-
-        if (input.action === 'delete') {
-          return githubApps.deleteMilestone(agentId, {
-            owner: input.owner,
-            repositoryName: input.repositoryName,
-            milestoneNumber: input.milestoneNumber!,
-          });
-        }
-
-        return githubApps.updateMilestone(agentId, {
-          owner: input.owner,
-          repositoryName: input.repositoryName,
-          milestoneNumber: input.milestoneNumber!,
-          title: input.title,
-          description: input.description,
-          state: input.state,
-          dueOn: input.dueOn,
-        });
-      },
     });
   }
 
