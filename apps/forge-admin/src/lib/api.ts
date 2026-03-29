@@ -547,24 +547,6 @@ function getConfiguredApiBaseUrl() {
     return stripTrailingSlash(configuredBaseUrl);
   }
 
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  const { protocol, hostname, port } = window.location;
-
-  if (hostname.includes('.forge.')) {
-    return `${protocol}//forge.${hostname.split('.forge.')[1]}`;
-  }
-
-  if (hostname.startsWith('forge-admin.')) {
-    return `${protocol}//forge.${hostname.slice('forge-admin.'.length)}`;
-  }
-
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${protocol}//${hostname}:${port || '3011'}`;
-  }
-
   return '';
 }
 
