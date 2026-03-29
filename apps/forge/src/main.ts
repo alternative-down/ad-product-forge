@@ -5,7 +5,7 @@ import { ConsoleLogger } from '@mastra/core/logger';
 import { createOAuthGateway } from '@mastra-engine/core';
 import { z } from 'zod';
 
-import { getDatabase, runMigrations, seedModelPrices } from './database/index';
+import { getDatabase, runMigrations, seedModelPrices, seedLlmProfiles } from './database/index';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry';
 import { createInternalAgentWorkflows } from './workflows/internal-agents';
 import { createForgeHttpServer } from './http/server';
@@ -37,6 +37,7 @@ export async function main() {
   const db = getDatabase();
   await runMigrations(db);
   await seedModelPrices(db);
+  await seedLlmProfiles(db);
   const registry = getInternalAgentRegistry();
   const httpServer = createForgeHttpServer({
     port: env.FORGE_HTTP_PORT,
