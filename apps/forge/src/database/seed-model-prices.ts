@@ -1,5 +1,3 @@
-import { eq } from 'drizzle-orm';
-
 import type { Database } from './index';
 import { llmModelPrices } from './schema';
 
@@ -58,24 +56,7 @@ export async function seedModelPrices(db: Database) {
   const now = Date.now();
 
   for (const modelPrice of MODEL_PRICES) {
-    const existingModelPrice = await db.query.llmModelPrices.findFirst({
-      where: eq(llmModelPrices.modelKey, modelPrice.modelKey),
-    });
-
-    if (existingModelPrice) {
-      await db
-        .update(llmModelPrices)
-        .set({
-          inputPerMillionUsd: modelPrice.inputPerMillionUsd,
-          inputCachePerMillionUsd: modelPrice.inputCachePerMillionUsd,
-          outputPerMillionUsd: modelPrice.outputPerMillionUsd,
-          updatedAt: now,
-        })
-        .where(eq(llmModelPrices.modelKey, modelPrice.modelKey));
-
-      continue;
-    }
-
+    // Use INSERT OR REPLACE for idempotent upsert - handles duplicates gracefully
     await db.insert(llmModelPrices).values({
       modelKey: modelPrice.modelKey,
       inputPerMillionUsd: modelPrice.inputPerMillionUsd,
@@ -83,6 +64,14 @@ export async function seedModelPrices(db: Database) {
       outputPerMillionUsd: modelPrice.outputPerMillionUsd,
       createdAt: now,
       updatedAt: now,
+    }).onConflictDoUpdate({
+      target: llmModelPrices.modelKey,
+      set: {
+        inputPerMillionUsd: modelPrice.inputPerMillionUsd,
+        inputCachePerMillionUsd: modelPrice.inputCachePerMillionUsd,
+        outputPerMillionUsd: modelPrice.outputPerMillionUsd,
+        updatedAt: now,
+      },
     });
   }
 }
