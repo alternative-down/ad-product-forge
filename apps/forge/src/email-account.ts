@@ -12,6 +12,9 @@ type EmailProviderConfig = {
 };
 
 export function createEmailProvider(config: EmailProviderConfig): CommunicationProvider {
+  // Connection timeout in milliseconds (30 seconds)
+  const CONNECTION_TIMEOUT_MS = 30_000;
+
   let client: ImapFlow | null = null;
   let reconnectDelayMs = 1000;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
@@ -48,6 +51,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         pass: config.imap.password,
       },
       logger: false,
+      connectionTimeout: CONNECTION_TIMEOUT_MS,
     });
 
     await nextClient.connect();
@@ -213,6 +217,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           user: config.smtp.user,
           pass: config.smtp.password,
         },
+        connectionTimeout: CONNECTION_TIMEOUT_MS,
       });
 
       try {
