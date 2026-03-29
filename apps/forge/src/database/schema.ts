@@ -306,13 +306,19 @@ const _GitHubSystemIntegrationConfigSchema = z.object({
   appHomeUrl: z.string().url(),
 });
 
+const _MinimaxSystemIntegrationConfigSchema = z.object({
+  apiKey: z.string().min(1),
+});
+
 export type MigaduSystemIntegrationConfig = z.infer<typeof _MigaduSystemIntegrationConfigSchema>;
 export type CoolifySystemIntegrationConfig = z.infer<typeof _CoolifySystemIntegrationConfigSchema>;
 export type GitHubSystemIntegrationConfig = z.infer<typeof _GitHubSystemIntegrationConfigSchema>;
+export type MinimaxSystemIntegrationConfig = z.infer<typeof _MinimaxSystemIntegrationConfigSchema>;
 export type SystemIntegrationConfigMap = {
   migadu: MigaduSystemIntegrationConfig;
   coolify: CoolifySystemIntegrationConfig;
   github: GitHubSystemIntegrationConfig;
+  minimax: MinimaxSystemIntegrationConfig;
 };
 
 export const systemIntegrations = sqliteTable('system_integrations', {

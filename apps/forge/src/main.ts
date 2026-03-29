@@ -12,6 +12,7 @@ import { createForgeHttpServer } from './http/server';
 import { createGitHubAppManager } from './github/manager';
 import { createAgentEmailManager } from './email/migadu-manager';
 import { createCoolifyManager } from './coolify/manager';
+import { createMiniMaxManager } from './minimax/manager';
 import { createAgentScheduleManager } from './schedules/manager';
 import { createAgentPendingSummaryReader } from './agents/pending-summary';
 import { registerAdminRoutes } from './admin/routes';
@@ -97,6 +98,9 @@ export async function main() {
   const coolify = createCoolifyManager({
     integrations,
   });
+  const minimax = createMiniMaxManager({
+    integrations,
+  });
   const workflows = createInternalAgentWorkflows({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
@@ -110,6 +114,7 @@ export async function main() {
     workflows,
     githubApps,
     coolify,
+    minimax,
     schedules,
     propagateMessage: createPropagateMessageFn(db, env.FORGE_INSTANCE_ID) as (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>,
   };

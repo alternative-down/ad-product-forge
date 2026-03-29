@@ -310,6 +310,16 @@ export type SystemIntegration =
       } | null;
       createdAt: number;
       updatedAt: number;
+    }
+  | {
+      providerType: 'minimax';
+      isEnabled: boolean;
+      config: {
+        apiKey: string;
+        groupId?: string;
+      } | null;
+      createdAt: number;
+      updatedAt: number;
     };
 
 export type LlmProfile = {
@@ -437,6 +447,14 @@ export type UpsertSystemIntegrationInput =
       config: {
         organization: string;
         appHomeUrl: string;
+      };
+    }
+  | {
+      providerType: 'minimax';
+      isEnabled: boolean;
+      config: {
+        apiKey: string;
+        groupId?: string;
       };
     };
 
@@ -882,8 +900,8 @@ export function upsertSystemIntegration(input: UpsertSystemIntegrationInput) {
   });
 }
 
-export function deleteSystemIntegration(providerType: 'migadu' | 'coolify' | 'github') {
-  return request<{ success: true; providerType: 'migadu' | 'coolify' | 'github' }>(
+export function deleteSystemIntegration(providerType: 'migadu' | 'coolify' | 'github' | 'minimax') {
+  return request<{ success: true; providerType: 'migadu' | 'coolify' | 'github' | 'minimax' }>(
     '/admin/system/integration/delete',
     {
       method: 'POST',

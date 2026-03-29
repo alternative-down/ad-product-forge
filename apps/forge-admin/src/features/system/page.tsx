@@ -57,6 +57,12 @@ type GitHubDraft = {
   appHomeUrl: string;
 };
 
+type MinimaxDraft = {
+  isEnabled: boolean;
+  apiKey: string;
+  groupId: string;
+};
+
 type LlmProfileDraft = {
   profileId?: string;
   name: string;
@@ -76,7 +82,7 @@ export function SystemPage() {
 export function SystemDetailPage(input: {
   section: 'company' | 'llm' | 'auth' | 'integrations' | 'migrations';
   llmView?: 'defaults' | 'profiles' | 'prices';
-  integrationView?: 'migadu' | 'coolify' | 'github';
+  integrationView?: 'migadu' | 'coolify' | 'github' | 'minimax';
 }) {
   return <SystemWorkspacePage mode="detail" {...input} />;
 }
@@ -85,7 +91,7 @@ function SystemWorkspacePage(input: {
   mode: 'directory' | 'detail';
   section?: 'company' | 'llm' | 'auth' | 'integrations' | 'migrations';
   llmView?: 'defaults' | 'profiles' | 'prices';
-  integrationView?: 'migadu' | 'coolify' | 'github';
+  integrationView?: 'migadu' | 'coolify' | 'github' | 'minimax';
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -186,6 +192,7 @@ function SystemWorkspacePage(input: {
   const migaduIntegration = integrations.find((integration) => integration.providerType === 'migadu') ?? null;
   const coolifyIntegration = integrations.find((integration) => integration.providerType === 'coolify') ?? null;
   const githubIntegration = integrations.find((integration) => integration.providerType === 'github') ?? null;
+  const minimaxIntegration = integrations.find((integration) => integration.providerType === 'minimax') ?? null;
   const systemLlm = llmQuery.data!;
   const systemSettings = settingsQuery.data!;
   const oauthState = oauthQuery.data!;
@@ -202,7 +209,9 @@ function SystemWorkspacePage(input: {
       ? coolifyIntegration
       : selectedIntegrationView === 'github'
         ? githubIntegration
-        : migaduIntegration;
+        : selectedIntegrationView === 'minimax'
+          ? minimaxIntegration
+          : migaduIntegration;
 
   return (
     <div className="space-y-6">
@@ -480,6 +489,7 @@ function SystemWorkspacePage(input: {
                   { value: 'migadu', label: 'Migadu', description: 'mailbox provisioning' },
                   { value: 'coolify', label: 'Coolify', description: 'deployment automation' },
                   { value: 'github', label: 'GitHub', description: 'app provisioning' },
+                  { value: 'minimax', label: 'MiniMax', description: 'creative tools' },
                 ]}
                 onChange={(integrationView) =>
                   void navigate(buildSystemLocation({
@@ -548,6 +558,27 @@ function SystemWorkspacePage(input: {
                         deleteIntegrationMutation.variables,
                       )}
                       onDelete={() => deleteIntegrationMutation.mutate('github')}
+                      onSave={(input) => upsertIntegrationMutation.mutate(input)}
+                    />
+                  </div>
+                </WorkspaceCanvas>
+              ) : null}
+              {selectedIntegrationView === 'minimax' ? (
+                <WorkspaceCanvas title="MiniMax integration" description="Enables creative tools for agents: text-to-speech, image generation, and video creation.">
+                  <div className="max-w-5xl">
+                    <MiniMaxIntegrationCard
+                      key={`minimax-${minimaxIntegration?.updatedAt ?? 'new'}`}
+                      integration={minimaxIntegration}
+                      pending={upsertIntegrationMutation.isPending && upsertIntegrationMutation.variables?.providerType === 'minimax'}
+                      deleting={deleteIntegrationMutation.isPending && deleteIntegrationMutation.variables === 'minimax'}
+                      error={getIntegrationError(
+                        'minimax',
+                        upsertIntegrationMutation.error?.message,
+                        deleteIntegrationMutation.error?.message,
+                        upsertIntegrationMutation.variables,
+                        deleteIntegrationMutation.variables,
+                      )}
+                      onDelete={() => deleteIntegrationMutation.mutate('minimax')}
                       onSave={(input) => upsertIntegrationMutation.mutate(input)}
                     />
                   </div>
@@ -662,7 +693,7 @@ function SystemEntryLink(input: {
 function buildSystemLocation(input: {
   section: 'company' | 'llm' | 'auth' | 'integrations' | 'migrations';
   llmView?: 'defaults' | 'profiles' | 'prices';
-  integrationView?: 'migadu' | 'coolify' | 'github';
+  integrationView?: 'migadu' | 'coolify' | 'github' | 'minimax';
 }):
   | { to: '/system/company' }
   | { to: '/system/llm/defaults' }
@@ -1458,6 +1489,88 @@ function GitHubIntegrationCard(input: {
   );
 }
 
+function MiniMaxIntegrationCard(input: {
+  integration: SystemIntegration | null;
+  pending: boolean;
+  deleting: boolean;
+  error: string | null;
+  onDelete(): void;
+  onSave(input: Extract<UpsertSystemIntegrationInput, { providerType: 'minimax' }>): void;
+}) {
+  const initialDraft = getMinimaxDraft(input.integration);
+  const [draft, setDraft] = useState(initialDraft);
+
+  return (
+    <IntegrationCard
+      title="MiniMax"
+      integration={input.integration}
+      pending={input.pending}
+      deleting={input.deleting}
+      error={input.error}
+      onDelete={input.onDelete}
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <LabeledField label="API Key">
+          <Input
+            type="password"
+            value={draft.apiKey}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                apiKey: event.target.value,
+              }))
+            }
+            placeholder="Enter your MiniMax API key"
+          />
+        </LabeledField>
+        <LabeledField label="Group ID (optional)">
+          <Input
+            value={draft.groupId}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                groupId: event.target.value,
+              }))
+            }
+            placeholder="Optional group identifier"
+          />
+        </LabeledField>
+      </div>
+      <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={draft.isEnabled}
+          onChange={(event) =>
+            setDraft((current) => ({
+              ...current,
+              isEnabled: event.target.checked,
+            }))
+          }
+        />
+        Enable MiniMax creative tools
+      </label>
+      <div className="mt-5 flex gap-3">
+        <Button
+          type="button"
+          disabled={input.pending}
+          onClick={() =>
+            input.onSave({
+              providerType: 'minimax',
+              isEnabled: draft.isEnabled,
+              config: {
+                apiKey: draft.apiKey,
+                ...(draft.groupId ? { groupId: draft.groupId } : {}),
+              },
+            })
+          }
+        >
+          Save MiniMax
+        </Button>
+      </div>
+    </IntegrationCard>
+  );
+}
+
 function OauthSyncCard(input: {
   state: SystemOauthState;
   pendingProviderId: 'openai-codex' | 'anthropic' | 'all' | null;
@@ -1630,7 +1743,7 @@ function getIntegrationError(
   upsertErrorMessage: string | undefined,
   deleteErrorMessage: string | undefined,
   upsertVariables: UpsertSystemIntegrationInput | undefined,
-  deleteVariables: 'migadu' | 'coolify' | 'github' | undefined,
+  deleteVariables: 'migadu' | 'coolify' | 'github' | 'minimax' | undefined,
 ) {
   if (upsertVariables?.providerType === providerType && upsertErrorMessage) {
     return upsertErrorMessage;
@@ -1690,6 +1803,22 @@ function getGitHubDraft(integration: SystemIntegration | null): GitHubDraft {
     isEnabled: integration.isEnabled,
     organization: integration.config?.organization ?? '',
     appHomeUrl: integration.config?.appHomeUrl ?? '',
+  };
+}
+
+function getMinimaxDraft(integration: SystemIntegration | null): MinimaxDraft {
+  if (!integration || integration.providerType !== 'minimax') {
+    return {
+      isEnabled: true,
+      apiKey: '',
+      groupId: '',
+    };
+  }
+
+  return {
+    isEnabled: integration.isEnabled,
+    apiKey: integration.config?.apiKey ?? '',
+    groupId: integration.config?.groupId ?? '',
   };
 }
 
