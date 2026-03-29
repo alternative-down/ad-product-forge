@@ -6,6 +6,6 @@ export const Route = createFileRoute('/system/migrations')({
   component: _SystemMigrationsRoute,
 });
 
-function _SystemMigrationsRoute() {
+function SystemMigrationsRoute() {
   return <SystemDetailPage section="migrations" />;
 }

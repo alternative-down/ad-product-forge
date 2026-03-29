@@ -6,6 +6,6 @@ export const Route = createFileRoute('/finance/ledger')({
   component: _FinanceLedgerRoute,
 });
 
-function _FinanceLedgerRoute() {
+function FinanceLedgerRoute() {
   return <FinanceDetailPage section="ledger" />;
 }

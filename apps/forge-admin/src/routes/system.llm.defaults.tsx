@@ -6,6 +6,6 @@ export const Route = createFileRoute('/system/llm/defaults')({
   component: _SystemLlmDefaultsRoute,
 });
 
-function _SystemLlmDefaultsRoute() {
+function SystemLlmDefaultsRoute() {
   return <SystemDetailPage section="llm" llmView="defaults" />;
 }

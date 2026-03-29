@@ -6,6 +6,6 @@ export const Route = createFileRoute('/system/company')({
   component: _SystemCompanyRoute,
 });
 
-function _SystemCompanyRoute() {
+function SystemCompanyRoute() {
   return <SystemDetailPage section="company" />;
 }

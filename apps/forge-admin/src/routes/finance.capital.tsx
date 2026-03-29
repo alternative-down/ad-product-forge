@@ -6,6 +6,6 @@ export const Route = createFileRoute('/finance/capital')({
   component: _FinanceCapitalRoute,
 });
 
-function _FinanceCapitalRoute() {
+function FinanceCapitalRoute() {
   return <FinanceDetailPage section="capital" />;
 }

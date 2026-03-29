@@ -6,6 +6,6 @@ export const Route = createFileRoute('/finance/payables')({
   component: _FinancePayablesRoute,
 });
 
-function _FinancePayablesRoute() {
+function FinancePayablesRoute() {
   return <FinanceDetailPage section="payables" />;
 }

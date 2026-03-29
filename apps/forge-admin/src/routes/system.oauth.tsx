@@ -6,6 +6,6 @@ export const Route = createFileRoute('/system/oauth')({
   component: _SystemOauthRoute,
 });
 
-function _SystemOauthRoute() {
+function SystemOauthRoute() {
   return <SystemDetailPage section="auth" />;
 }

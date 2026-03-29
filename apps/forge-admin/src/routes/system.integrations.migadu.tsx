@@ -6,6 +6,6 @@ export const Route = createFileRoute('/system/integrations/migadu')({
   component: _SystemIntegrationsMigaduRoute,
 });
 
-function _SystemIntegrationsMigaduRoute() {
+function SystemIntegrationsMigaduRoute() {
   return <SystemDetailPage section="integrations" integrationView="migadu" />;
 }

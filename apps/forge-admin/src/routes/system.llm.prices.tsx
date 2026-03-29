@@ -6,6 +6,6 @@ export const Route = createFileRoute('/system/llm/prices')({
   component: _SystemLlmPricesRoute,
 });
 
-function _SystemLlmPricesRoute() {
+function SystemLlmPricesRoute() {
   return <SystemDetailPage section="llm" llmView="prices" />;
 }

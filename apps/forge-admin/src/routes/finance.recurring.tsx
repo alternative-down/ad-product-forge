@@ -6,6 +6,6 @@ export const Route = createFileRoute('/finance/recurring')({
   component: _FinanceRecurringRoute,
 });
 
-function _FinanceRecurringRoute() {
+function FinanceRecurringRoute() {
   return <FinanceDetailPage section="recurring" />;
 }

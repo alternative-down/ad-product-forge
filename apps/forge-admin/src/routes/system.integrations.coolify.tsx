@@ -6,6 +6,6 @@ export const Route = createFileRoute('/system/integrations/coolify')({
   component: _SystemIntegrationsCoolifyRoute,
 });
 
-function _SystemIntegrationsCoolifyRoute() {
+function SystemIntegrationsCoolifyRoute() {
   return <SystemDetailPage section="integrations" integrationView="coolify" />;
 }

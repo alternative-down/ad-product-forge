@@ -6,6 +6,6 @@ export const Route = createFileRoute('/system/integrations/github')({
   component: _SystemIntegrationsGithubRoute,
 });
 
-function _SystemIntegrationsGithubRoute() {
+function SystemIntegrationsGithubRoute() {
   return <SystemDetailPage section="integrations" integrationView="github" />;
 }
