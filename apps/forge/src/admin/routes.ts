@@ -183,7 +183,7 @@ const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
-const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github']);
+const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
 
 const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({
@@ -209,6 +209,13 @@ const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
     config: z.object({
       organization: z.string().min(1),
       appHomeUrl: z.string().url(),
+    }),
+  }),
+  z.object({
+    providerType: z.literal('minimax'),
+    isEnabled: z.boolean().default(true),
+    config: z.object({
+      apiKey: z.string().min(1),
     }),
   }),
 ]);

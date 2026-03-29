@@ -6,6 +6,7 @@ import type {
   CoolifySystemIntegrationConfig,
   GitHubSystemIntegrationConfig,
   MigaduSystemIntegrationConfig,
+  MinimaxSystemIntegrationConfig,
 } from '../database/schema';
 import { systemIntegrations } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
@@ -26,7 +27,11 @@ const githubConfigSchema = z.object({
   appHomeUrl: z.string().url(),
 });
 
-export type SystemIntegrationProviderType = 'migadu' | 'coolify' | 'github';
+const minimaxConfigSchema = z.object({
+  apiKey: z.string().min(1),
+});
+
+export type SystemIntegrationProviderType = 'migadu' | 'coolify' | 'github' | 'minimax';
 
 export function createSystemIntegrationStore(db: Database) {
   async function listIntegrations() {
@@ -36,7 +41,7 @@ export function createSystemIntegrationStore(db: Database) {
 
     return rows
       .filter((row): row is typeof row & { providerType: SystemIntegrationProviderType } =>
-        row.providerType === 'migadu' || row.providerType === 'coolify' || row.providerType === 'github',
+        row.providerType === 'migadu' || row.providerType === 'coolify' || row.providerType === 'github' || row.providerType === 'minimax',
       )
       .map((row) => {
         const { encryptedConfig, ...rest } = row;
@@ -64,6 +69,11 @@ export function createSystemIntegrationStore(db: Database) {
     return row ? parseGitHubConfig(row.encryptedConfig) : null;
   }
 
+  async function getMinimaxConfig(): Promise<MinimaxSystemIntegrationConfig | null> {
+    const row = await getEnabledIntegration('minimax');
+    return row ? parseMinimaxConfig(row.encryptedConfig) : null;
+  }
+
   async function upsertIntegration(
     input:
       | {
@@ -79,6 +89,11 @@ export function createSystemIntegrationStore(db: Database) {
       | {
           providerType: 'github';
           config: GitHubSystemIntegrationConfig;
+          isEnabled?: boolean;
+        }
+      | {
+          providerType: 'minimax';
+          config: MinimaxSystemIntegrationConfig;
           isEnabled?: boolean;
         },
   ) {
@@ -142,6 +157,10 @@ export function createSystemIntegrationStore(db: Database) {
     return githubConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
   }
 
+  function parseMinimaxConfig(encryptedConfig: string): MinimaxSystemIntegrationConfig {
+    return minimaxConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
+  }
+
   function parseIntegrationConfig(
     providerType: SystemIntegrationProviderType,
     encryptedConfig: string,
@@ -156,6 +175,10 @@ export function createSystemIntegrationStore(db: Database) {
 
     if (providerType === 'github') {
       return parseGitHubConfig(encryptedConfig);
+    }
+
+    if (providerType === 'minimax') {
+      return parseMinimaxConfig(encryptedConfig);
     }
   }
 
@@ -175,7 +198,8 @@ export function createSystemIntegrationStore(db: Database) {
     config:
       | MigaduSystemIntegrationConfig
       | CoolifySystemIntegrationConfig
-      | GitHubSystemIntegrationConfig,
+      | GitHubSystemIntegrationConfig
+      | MinimaxSystemIntegrationConfig,
   ) {
     if (providerType === 'migadu') {
       return migaduConfigSchema.parse(config);
@@ -188,6 +212,10 @@ export function createSystemIntegrationStore(db: Database) {
     if (providerType === 'github') {
       return githubConfigSchema.parse(config);
     }
+
+    if (providerType === 'minimax') {
+      return minimaxConfigSchema.parse(config);
+    }
   }
 
   return {
@@ -195,6 +223,7 @@ export function createSystemIntegrationStore(db: Database) {
     getMigaduConfig,
     getCoolifyConfig,
     getGitHubConfig,
+    getMinimaxConfig,
     upsertIntegration,
     deleteIntegration,
   };
