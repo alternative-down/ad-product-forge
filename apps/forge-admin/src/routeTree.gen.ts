@@ -29,6 +29,7 @@ import { Route as AgentsHireRouteImport } from './routes/agents.hire'
 import { Route as SystemLlmProfilesRouteImport } from './routes/system.llm.profiles'
 import { Route as SystemLlmPricesRouteImport } from './routes/system.llm.prices'
 import { Route as SystemLlmDefaultsRouteImport } from './routes/system.llm.defaults'
+import { Route as SystemIntegrationsMinimaxRouteImport } from './routes/system.integrations.minimax'
 import { Route as SystemIntegrationsMigaduRouteImport } from './routes/system.integrations.migadu'
 import { Route as SystemIntegrationsGithubRouteImport } from './routes/system.integrations.github'
 import { Route as SystemIntegrationsCoolifyRouteImport } from './routes/system.integrations.coolify'
@@ -139,6 +140,12 @@ const SystemLlmDefaultsRoute = SystemLlmDefaultsRouteImport.update({
   path: '/llm/defaults',
   getParentRoute: () => SystemRoute,
 } as any)
+const SystemIntegrationsMinimaxRoute =
+  SystemIntegrationsMinimaxRouteImport.update({
+    id: '/integrations/minimax',
+    path: '/integrations/minimax',
+    getParentRoute: () => SystemRoute,
+  } as any)
 const SystemIntegrationsMigaduRoute =
   SystemIntegrationsMigaduRouteImport.update({
     id: '/integrations/migadu',
@@ -216,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
   '/system/integrations/github': typeof SystemIntegrationsGithubRoute
   '/system/integrations/migadu': typeof SystemIntegrationsMigaduRoute
+  '/system/integrations/minimax': typeof SystemIntegrationsMinimaxRoute
   '/system/llm/defaults': typeof SystemLlmDefaultsRoute
   '/system/llm/prices': typeof SystemLlmPricesRoute
   '/system/llm/profiles': typeof SystemLlmProfilesRoute
@@ -243,6 +251,7 @@ export interface FileRoutesByTo {
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
   '/system/integrations/github': typeof SystemIntegrationsGithubRoute
   '/system/integrations/migadu': typeof SystemIntegrationsMigaduRoute
+  '/system/integrations/minimax': typeof SystemIntegrationsMinimaxRoute
   '/system/llm/defaults': typeof SystemLlmDefaultsRoute
   '/system/llm/prices': typeof SystemLlmPricesRoute
   '/system/llm/profiles': typeof SystemLlmProfilesRoute
@@ -275,6 +284,7 @@ export interface FileRoutesById {
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
   '/system/integrations/github': typeof SystemIntegrationsGithubRoute
   '/system/integrations/migadu': typeof SystemIntegrationsMigaduRoute
+  '/system/integrations/minimax': typeof SystemIntegrationsMinimaxRoute
   '/system/llm/defaults': typeof SystemLlmDefaultsRoute
   '/system/llm/prices': typeof SystemLlmPricesRoute
   '/system/llm/profiles': typeof SystemLlmProfilesRoute
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/system/integrations/coolify'
     | '/system/integrations/github'
     | '/system/integrations/migadu'
+    | '/system/integrations/minimax'
     | '/system/llm/defaults'
     | '/system/llm/prices'
     | '/system/llm/profiles'
@@ -335,6 +346,7 @@ export interface FileRouteTypes {
     | '/system/integrations/coolify'
     | '/system/integrations/github'
     | '/system/integrations/migadu'
+    | '/system/integrations/minimax'
     | '/system/llm/defaults'
     | '/system/llm/prices'
     | '/system/llm/profiles'
@@ -366,6 +378,7 @@ export interface FileRouteTypes {
     | '/system/integrations/coolify'
     | '/system/integrations/github'
     | '/system/integrations/migadu'
+    | '/system/integrations/minimax'
     | '/system/llm/defaults'
     | '/system/llm/prices'
     | '/system/llm/profiles'
@@ -523,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SystemLlmDefaultsRouteImport
       parentRoute: typeof SystemRoute
     }
+    '/system/integrations/minimax': {
+      id: '/system/integrations/minimax'
+      path: '/integrations/minimax'
+      fullPath: '/system/integrations/minimax'
+      preLoaderRoute: typeof SystemIntegrationsMinimaxRouteImport
+      parentRoute: typeof SystemRoute
+    }
     '/system/integrations/migadu': {
       id: '/system/integrations/migadu'
       path: '/integrations/migadu'
@@ -652,6 +672,7 @@ interface SystemRouteChildren {
   SystemIntegrationsCoolifyRoute: typeof SystemIntegrationsCoolifyRoute
   SystemIntegrationsGithubRoute: typeof SystemIntegrationsGithubRoute
   SystemIntegrationsMigaduRoute: typeof SystemIntegrationsMigaduRoute
+  SystemIntegrationsMinimaxRoute: typeof SystemIntegrationsMinimaxRoute
   SystemLlmDefaultsRoute: typeof SystemLlmDefaultsRoute
   SystemLlmPricesRoute: typeof SystemLlmPricesRoute
   SystemLlmProfilesRoute: typeof SystemLlmProfilesRoute
@@ -665,6 +686,7 @@ const SystemRouteChildren: SystemRouteChildren = {
   SystemIntegrationsCoolifyRoute: SystemIntegrationsCoolifyRoute,
   SystemIntegrationsGithubRoute: SystemIntegrationsGithubRoute,
   SystemIntegrationsMigaduRoute: SystemIntegrationsMigaduRoute,
+  SystemIntegrationsMinimaxRoute: SystemIntegrationsMinimaxRoute,
   SystemLlmDefaultsRoute: SystemLlmDefaultsRoute,
   SystemLlmPricesRoute: SystemLlmPricesRoute,
   SystemLlmProfilesRoute: SystemLlmProfilesRoute,

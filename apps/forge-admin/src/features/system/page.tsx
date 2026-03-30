@@ -733,6 +733,10 @@ function buildSystemLocation(input: {
       return { to: '/system/integrations/github' };
     }
 
+    if (input.integrationView === 'minimax') {
+      return { to: '/system/integrations/minimax' };
+    }
+
     return { to: '/system/integrations/migadu' };
   }
 
