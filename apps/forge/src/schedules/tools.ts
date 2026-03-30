@@ -34,23 +34,24 @@ export function createAgentScheduleTools(
         scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type).'),
         timezone: z.string().min(1).nullish().default('UTC').describe('Timezone for the schedule.'),
         content: z.string().min(1).describe('Content/payload to send when the schedule triggers.'),
-      }).superRefine((input, ctx) => {
+      }),
+      execute: async (input) => {
         if (input.scheduleType === 'cron' && !input.cronExpression) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cronExpression'], message: 'cronExpression is required when scheduleType is cron' });
+          return { valid: false, error: 'cronExpression is required when scheduleType is cron' };
         }
         if (input.scheduleType === 'date' && !input.scheduledDate) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduledDate'], message: 'scheduledDate is required when scheduleType is date' });
+          return { valid: false, error: 'scheduledDate is required when scheduleType is date' };
         }
-      }),
-      execute: async (input) => schedules.createSchedule(agentId, {
-        name: input.name,
-        description: input.description ?? undefined,
-        scheduleType: input.scheduleType,
-        cronExpression: input.cronExpression ?? undefined,
-        scheduledDate: input.scheduledDate ?? undefined,
-        timezone: input.timezone ?? 'UTC',
-        content: input.content,
-      }),
+        return schedules.createSchedule(agentId, {
+          name: input.name,
+          description: input.description ?? undefined,
+          scheduleType: input.scheduleType,
+          cronExpression: input.cronExpression ?? undefined,
+          scheduledDate: input.scheduledDate ?? undefined,
+          timezone: input.timezone ?? 'UTC',
+          content: input.content,
+        });
+      },
     });
   }
 
@@ -95,72 +96,71 @@ export function createAgentScheduleTools(
 
   // Cross-agent tools (spec v4)
   if (hasToolPermission(allowedToolIds, 'create_cron_for_agent')) {
-    const createCronInputSchema = z.object({
-      targetAgentId: z.string().min(1).describe('The agent ID to create the cron for'),
-      name: z.string().min(1).describe('Name of the cron/schedule'),
-      description: z.string().nullish().describe('Optional description'),
-      scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time'),
-      cronExpression: z.string().min(1).nullish().describe('Cron expression (required for cron type)'),
-      scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type)'),
-      timezone: z.string().min(1).default('UTC').describe('Timezone for the schedule'),
-      content: z.string().min(1).describe('Content/payload to execute when the cron triggers'),
-    }).superRefine((input, ctx) => {
-      if (input.scheduleType === 'cron' && !input.cronExpression) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cronExpression'], message: 'cronExpression is required when scheduleType is cron' });
-      }
-      if (input.scheduleType === 'date' && !input.scheduledDate) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduledDate'], message: 'scheduledDate is required when scheduleType is date' });
-      }
-    });
-
     tools.create_cron_for_agent = createTool({
       id: 'create_cron_for_agent',
       description: 'Create a cron/schedule for another agent. The target agent will receive the cron content when it triggers. Only the creator can edit or delete.',
-      inputSchema: createCronInputSchema,
-      execute: async (input) => schedules.createScheduleForAgent(agentId, {
-        targetAgentId: input.targetAgentId,
-        name: input.name,
-        description: input.description,
-        scheduleType: input.scheduleType,
-        cronExpression: input.cronExpression,
-        scheduledDate: input.scheduledDate,
-        timezone: input.timezone,
-        content: input.content,
+      inputSchema: z.object({
+        targetAgentId: z.string().min(1).describe('The agent ID to create the cron for'),
+        name: z.string().min(1).describe('Name of the cron/schedule'),
+        description: z.string().nullish().describe('Optional description'),
+        scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time'),
+        cronExpression: z.string().min(1).nullish().describe('Cron expression (required for cron type)'),
+        scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type)'),
+        timezone: z.string().min(1).default('UTC').describe('Timezone for the schedule'),
+        content: z.string().min(1).describe('Content/payload to execute when the cron triggers'),
       }),
+      execute: async (input) => {
+        if (input.scheduleType === 'cron' && !input.cronExpression) {
+          return { valid: false, error: 'cronExpression is required when scheduleType is cron' };
+        }
+        if (input.scheduleType === 'date' && !input.scheduledDate) {
+          return { valid: false, error: 'scheduledDate is required when scheduleType is date' };
+        }
+        return schedules.createScheduleForAgent(agentId, {
+          targetAgentId: input.targetAgentId,
+          name: input.name,
+          description: input.description,
+          scheduleType: input.scheduleType,
+          cronExpression: input.cronExpression,
+          scheduledDate: input.scheduledDate,
+          timezone: input.timezone,
+          content: input.content,
+        });
+      },
     });
   }
 
   if (hasToolPermission(allowedToolIds, 'edit_cron')) {
-    const editCronInputSchema = z.object({
-      scheduleId: z.string().min(1).describe('ID of the schedule to edit'),
-      name: z.string().min(1).nullish().describe('New name'),
-      description: z.string().nullish().nullable().describe('New description'),
-      scheduleType: z.enum(['cron', 'date']).nullish().describe('New schedule type'),
-      cronExpression: z.string().min(1).nullish().nullable().describe('New cron expression'),
-      scheduledDate: z.string().min(1).nullish().nullable().describe('New scheduled date (ISO string)'),
-      timezone: z.string().min(1).nullish().describe('New timezone'),
-      content: z.string().min(1).nullish().describe('New content'),
-      isActive: z.boolean().nullish().describe('Activate or pause the schedule'),
-    }).superRefine((input, ctx) => {
-      if (Object.keys(input).length <= 1) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field besides scheduleId must be provided' });
-      }
-    });
-
     tools.edit_cron = createTool({
       id: 'edit_cron',
       description: 'Edit an existing cron/schedule. Only the creator (or owner for self-created crons) can edit.',
-      inputSchema: editCronInputSchema,
-      execute: async (input) => schedules.editCron(agentId, input.scheduleId, {
-        name: input.name,
-        description: input.description,
-        scheduleType: input.scheduleType,
-        cronExpression: input.cronExpression,
-        scheduledDate: input.scheduledDate,
-        timezone: input.timezone,
-        content: input.content,
-        isActive: input.isActive,
+      inputSchema: z.object({
+        scheduleId: z.string().min(1).describe('ID of the schedule to edit'),
+        name: z.string().min(1).nullish().describe('New name'),
+        description: z.string().nullish().nullable().describe('New description'),
+        scheduleType: z.enum(['cron', 'date']).nullish().describe('New schedule type'),
+        cronExpression: z.string().min(1).nullish().nullable().describe('New cron expression'),
+        scheduledDate: z.string().min(1).nullish().nullable().describe('New scheduled date (ISO string)'),
+        timezone: z.string().min(1).nullish().describe('New timezone'),
+        content: z.string().min(1).nullish().describe('New content'),
+        isActive: z.boolean().nullish().describe('Activate or pause the schedule'),
       }),
+      execute: async (input) => {
+        const providedFields = [input.name, input.description, input.scheduleType, input.cronExpression, input.scheduledDate, input.timezone, input.content, input.isActive].filter(f => f !== undefined && f !== null);
+        if (providedFields.length === 0) {
+          return { valid: false, error: 'At least one field besides scheduleId must be provided' };
+        }
+        return schedules.editCron(agentId, input.scheduleId, {
+          name: input.name,
+          description: input.description,
+          scheduleType: input.scheduleType,
+          cronExpression: input.cronExpression,
+          scheduledDate: input.scheduledDate,
+          timezone: input.timezone,
+          content: input.content,
+          isActive: input.isActive,
+        });
+      },
     });
   }
 

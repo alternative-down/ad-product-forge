@@ -81,20 +81,21 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         startCommand: z.string().nullish().describe('Start command.'),
         installCommand: z.string().nullish().describe('Install command.'),
         description: z.string().nullish().describe('Application description.'),
-      }).superRefine((input, ctx) => {
+      }),
+      execute: async (input) => {
         if (input.action === 'create') {
-          for (const field of ['githubAppUuid', 'repositoryOwner', 'repositoryName', 'branch', 'name', 'slug', 'port'] as const) {
+          const requiredFields = ['githubAppUuid', 'repositoryOwner', 'repositoryName', 'branch', 'name', 'slug', 'port'] as const;
+          for (const field of requiredFields) {
             if (input[field] === undefined) {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `${field} is required when action is create` });
+              return { valid: false, error: `${field} is required when action is create` };
             }
           }
         }
 
         if (input.action !== 'create' && !input.applicationUuid) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['applicationUuid'], message: 'applicationUuid is required when action is not create' });
+          return { valid: false, error: 'applicationUuid is required when action is not create' };
         }
-      }),
-      execute: async (input) => {
+
         if (input.action === 'create') {
           return coolify.createApplication({
             githubAppUuid: input.githubAppUuid!,
@@ -208,12 +209,12 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         isLiteral: z.boolean().nullish().describe('Treat value as literal (not a secret reference).'),
         isMultiline: z.boolean().nullish().describe('Allow multiline values.'),
         isShownOnce: z.boolean().nullish().describe('Show value only once after creation.'),
-      }).superRefine((input, ctx) => {
-        if (input.action !== 'delete' && input.value === undefined) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['value'], message: 'value is required when action is not delete' });
-        }
       }),
       execute: async (input) => {
+        if (input.action !== 'delete' && input.value === undefined) {
+          return { valid: false, error: 'value is required when action is not delete' };
+        }
+
         if (input.action === 'delete') {
           return coolify.deleteApplicationEnv({
             applicationUuid: input.applicationUuid,

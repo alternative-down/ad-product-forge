@@ -18,22 +18,6 @@ const createScheduleSchema = z.object({
 // Schema for creating schedule for another agent (cross-agent)
 const createScheduleForAgentSchema = createScheduleSchema.extend({
   targetAgentId: z.string().min(1),
-}).superRefine((input, ctx) => {
-  if (input.scheduleType === 'cron' && !input.cronExpression) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['cronExpression'],
-      message: 'cronExpression is required when scheduleType is cron',
-    });
-  }
-
-  if (input.scheduleType === 'date' && !input.scheduledDate) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['scheduledDate'],
-      message: 'scheduledDate is required when scheduleType is date',
-    });
-  }
 });
 
 const HEARTBEAT_NAME = 'System heartbeat';
@@ -49,13 +33,6 @@ const updateScheduleSchema = z.object({
   timezone: z.string().min(1).optional(),
   content: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
-}).superRefine((input, ctx) => {
-  if (Object.keys(input).length === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'At least one field must be provided',
-    });
-  }
 });
 
 export function createAgentScheduleManager(input: {
