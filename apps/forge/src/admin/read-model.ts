@@ -34,6 +34,19 @@ const RECENT_NOTIFICATION_LIMIT = 10;
 const RECENT_CONVERSATION_LIMIT = 10;
 const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
 
+interface MastraMemoryStore {
+  createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
+}
+
+function hasCreateThread(store: unknown): store is MastraMemoryStore {
+  return (
+    typeof store === 'object' &&
+    store !== null &&
+    'createThread' in store &&
+    typeof (store as MastraMemoryStore).createThread === 'function'
+  );
+}
+
 export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
@@ -533,12 +546,18 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
     const storage = new LibSQLStore({
       id: `${mastraAgentId}_storage`,
       client,
-      disableInit: true,
     });
-    const memory = await storage.getStore('memory');
+    const memory = storage.stores.memory;
 
     if (!memory) {
       return [];
+    }
+
+    if (hasCreateThread(memory)) {
+      await memory.createThread({
+        resourceId: mastraAgentId,
+        threadId: mastraAgentId,
+      });
     }
 
     const result = await memory.listMessages({
