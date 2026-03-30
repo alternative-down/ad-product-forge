@@ -107,6 +107,8 @@ export async function generateHiredAgentInstructions(
     agent: hiringRhResultSchema,
   });
 
+  // NOTE: inputSchema kept for reference but we now use toolResults instead of args
+
   const agent = new Agent({
     id: HIRING_RH_AGENT_ID,
     name: 'Internal Hiring RH',
@@ -222,20 +224,30 @@ export async function generateHiredAgentInstructions(
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
   const toolCall = result.toolCalls.find((call) => call.payload.toolName === 'hireAgent');
-  if (!toolCall) {
+  const toolResult = result.toolResults.find((r) => r.toolName === 'hireAgent');
+
+  if (!toolCall || !toolResult) {
     return {
       error: 'Hiring process did not return agent data. Please try again with list_agent_functions to find a valid functionId.',
       valid: false,
     };
   }
 
-  const { agent: agentHired } = toolCall.payload.args as z.infer<typeof inputSchema>;
-  const agentFunction = await capabilities.getFunction(agentHired.functionId);
+  const agentHired = toolResult.result as HiringRhResult;
+  if (!agentHired.valid) {
+    return {
+      error: agentHired.error || 'Hiring failed during agent validation.',
+      valid: false,
+    };
+  }
 
   return {
-    ...agentHired,
-    functionName: agentFunction.name,
-    functionDescription: agentFunction.description,
+    agentName: agentHired.agentName,
+    agentDescription: agentHired.agentDescription,
+    functionId: agentHired.functionId,
+    functionName: agentHired.functionName!,
+    functionDescription: agentHired.functionDescription,
+    instructions: agentHired.instructions,
     costUsd,
     modelKey: hiringRhModelKey,
     valid: true,
