@@ -67,6 +67,9 @@ const HIRING_RH_TOOL_IDS = new Set([
   'list_available_capabilities',
 ] as const);
 const REQUIRED_HIRING_TOOL_IDS = [
+  'list_contacts',
+  'get_contact',
+  'upsert_contact',
   'list_conversations',
   'get_messages',
   'send_message',
