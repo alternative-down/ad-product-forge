@@ -25,8 +25,7 @@ class HireAgentDisablerProcessor implements Processor {
 
   async processInputStep({
     stepNumber,
-    toolChoice,
-    messageList,
+    steps,
   }: ProcessInputStepArgs): Promise<ProcessInputStepResult> {
     // On first step, allow tools
     if (stepNumber === 0) {
@@ -34,11 +33,9 @@ class HireAgentDisablerProcessor implements Processor {
       return {};
     }
 
-    // Check if hireAgent was called in previous messages
-    const hasHireAgentCall = messageList.some((msg) => {
-      // Check for tool calls in the message
-      const toolCalls = (msg as { toolCalls?: Array<{ name?: string }> }).toolCalls;
-      return toolCalls?.some((call) => call.name === 'hireAgent');
+    // Check if hireAgent was called in previous steps using steps parameter
+    const hasHireAgentCall = steps.some((step) => {
+      return step.toolCalls?.some((call) => call.name === 'hireAgent');
     });
 
     if (hasHireAgentCall) {
