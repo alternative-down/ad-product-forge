@@ -8,7 +8,7 @@ const sendMessageInputSchema = z
     conversationKey: z
       .string()
       .describe(
-        'Destination for the message. Use the exact conversationKey returned by list_conversations in the format <provider>:<value>, or use a contact slug returned by list_contacts/get_contact to start a direct message.',
+        'Destination for the message in the format <provider>:<value>. Use the exact conversationKey returned by list_conversations, or use <provider>:<contactSlug> to start a direct message with a known contact.',
       ),
     content: z.string().min(1),
     replyToMessageId: z
@@ -50,7 +50,13 @@ export function createSendMessageTool(communication: CommunicationModule) {
           if (error.message.includes('Conversation not found')) {
             return {
               error: error.message,
-              hint: 'Use the exact conversationKey returned by list_conversations in the format <provider>:<value>, or use a valid contact slug.',
+              hint: 'Use the exact conversationKey returned by list_conversations in the format <provider>:<value>, or use <provider>:<contactSlug> for a known contact.',
+            };
+          }
+          if (error.message.includes('Contact not found')) {
+            return {
+              error: error.message,
+              hint: 'Use a known contact slug from list_contacts, prefixed as <provider>:<contactSlug>.',
             };
           }
           if (error.message.includes('no reachable recipients')) {
@@ -62,7 +68,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
           if (error.message.includes('No destination provided')) {
             return {
               error: error.message,
-              hint: 'Provide conversationKey using either a conversationKey from list_conversations or a contact slug from list_contacts/get_contact.',
+              hint: 'Provide conversationKey in the format <provider>:<value>.',
             };
           }
           if (error.message.includes('Failed to create conversation')) {
@@ -80,7 +86,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
         // Unknown error type
         return {
           error: 'An unknown error occurred while sending the message',
-          hint: 'Verify the destination conversation is valid and the provider is available.',
+          hint: 'Verify the destination conversationKey is valid and uses the format <provider>:<value>.',
         };
       }
     },

@@ -387,22 +387,12 @@ export async function createCommunicationModule(config: {
       ? providers.get(parsedConversation.providerId)
       : undefined;
 
-    if (!resolvedProvider) {
-      // Try to find provider from contact's accounts
-      if (input.conversationKey) {
-        const contact = await store.getContact(input.conversationKey);
-        if (contact) {
-          const matchingAccount = contact.accounts.find((account) => providers.has(account.provider));
-          if (matchingAccount) {
-            resolvedProvider = providers.get(matchingAccount.provider);
-          }
-        }
-      }
+    if (input.conversationKey && !parsedConversation) {
+      throw new Error(`Conversation not found: ${input.conversationKey}`);
+    }
 
-      // Fallback to first available provider
-      if (!resolvedProvider && providers.size > 0) {
-        resolvedProvider = Array.from(providers.values())[0];
-      }
+    if (!resolvedProvider) {
+      throw new Error(`Provider not available: ${input.conversationKey}`);
     }
 
     if (!resolvedProvider) {
@@ -497,6 +487,30 @@ export async function createCommunicationModule(config: {
       });
     }
 
+    if (parsedConversation && await store.getContact(parsedConversation.providerConversationKey)) {
+      let contactExternalId = await getContactExternalId(provider.id, parsedConversation.providerConversationKey);
+
+      if (!contactExternalId) {
+        throw new Error(`Contact not found: ${input.conversationKey}`);
+      }
+
+      const sent = await provider.sendMessage({
+        contactExternalId,
+        conversationType: 'dm',
+        content: input.content,
+        replyToProviderMessageId: replyMessage?.providerMessageId,
+      });
+
+      return saveSentMessage({
+        provider: provider.id,
+        providerConversationKey: sent.providerConversationKey,
+        providerMessageId: sent.providerMessageId,
+        conversationName: sent.conversationName,
+        contactId: parsedConversation.providerConversationKey,
+        content: input.content,
+      });
+    }
+
     if (parsedConversation) {
       const newConversation = await store.upsertConversation({
         provider: provider.id,
@@ -526,40 +540,7 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    if (!input.conversationKey) {
-      throw new Error(`No destination provided for provider: ${provider.id}`);
-    }
-
-    let contactExternalId = await getContactExternalId(provider.id, input.conversationKey);
-
-    if (!contactExternalId) {
-      // No registered identity found — treat the slug as the external ID directly
-      // (natural for email where slug = address, or any provider where the agent
-      // uses the external ID as the slug). Auto-register so future lookups work.
-      contactExternalId = input.conversationKey;
-      await store.upsertContact({
-        slug: input.conversationKey,
-        displayName: input.conversationKey,
-        provider: provider.id,
-        externalUserId: input.conversationKey,
-      });
-    }
-
-    const sent = await provider.sendMessage({
-      contactExternalId,
-      conversationType: 'dm',
-      content: input.content,
-      replyToProviderMessageId: replyMessage?.providerMessageId,
-    });
-
-    return saveSentMessage({
-      provider: provider.id,
-      providerConversationKey: sent.providerConversationKey,
-      providerMessageId: sent.providerMessageId,
-      conversationName: sent.conversationName,
-      contactId: input.conversationKey,
-      content: input.content,
-    });
+    throw new Error(`No destination provided for provider: ${provider.id}`);
   }
 
   async function createChatGroup(input: {

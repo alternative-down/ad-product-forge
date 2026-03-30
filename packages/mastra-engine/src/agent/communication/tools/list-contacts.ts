@@ -14,7 +14,7 @@ export function createListContactsTool(communication: CommunicationModule) {
       'List your contacts organized by category. ' +
       "'self': Returns your accounts on each provider. " +
       "'others': Returns external contacts. " +
-      "Use the contact's slug to send messages via send_message. " +
+      "Use <provider>:<contactSlug> to send messages via send_message. " +
       "Defaults to 'others'.",
     inputSchema: listContactsInputSchema,
     execute: async (input) => {
