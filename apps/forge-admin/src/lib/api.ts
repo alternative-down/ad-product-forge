@@ -138,7 +138,6 @@ export type AgentDetail = {
     filesystem: unknown;
     sandbox: unknown;
   };
-  lastMessages: number;
   providers: Array<{
     providerType: string;
     createdAt: number;
@@ -223,7 +222,6 @@ export type UpdateAgentConfigInput = {
   workspaceBm25: boolean;
   modelProfileId: string;
   omModelProfileId: string;
-  lastMessages: number;
 };
 
 export type UpsertAgentProviderInput = {
@@ -547,6 +545,20 @@ function getConfiguredApiBaseUrl() {
 
   if (configuredBaseUrl) {
     return stripTrailingSlash(configuredBaseUrl);
+  }
+
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const { protocol, hostname, port } = window.location;
+
+  if (hostname.startsWith('forge-admin.')) {
+    return `${protocol}//forge.${hostname.slice('forge-admin.'.length)}`;
+  }
+
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:${port || '3011'}`;
   }
 
   return '';

@@ -170,7 +170,6 @@ const updateAgentConfigSchema = z.object({
   workspaceBm25: z.boolean(),
   modelProfileId: z.string().min(1),
   omModelProfileId: z.string().min(1),
-  lastMessages: z.number().int().min(1).max(100),
 });
 
 const upsertAgentProviderSchema = z.object({
@@ -588,7 +587,6 @@ export function registerAdminRoutes(input: {
           workspaceBm25: body.workspaceBm25 ? 1 : 0,
           modelProfileId: body.modelProfileId,
           omModelProfileId: body.omModelProfileId,
-          lastMessages: body.lastMessages,
           updatedAt: Date.now(),
         })
         .where(eq(agents.id, body.agentId));

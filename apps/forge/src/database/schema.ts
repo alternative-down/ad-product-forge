@@ -54,8 +54,6 @@ export const agents = sqliteTable('agents', {
   workspaceFilesystem: text('workspace_filesystem', { mode: 'json' }).$type<WorkspaceFilesystemConfig>(),
   workspaceSandbox: text('workspace_sandbox', { mode: 'json' }).$type<WorkspaceSandboxConfig>(),
   workspaceSkills: text('workspace_skills', { mode: 'json' }).$type<WorkspaceSkillsConfig>(),
-  // Memory configuration
-  lastMessages: integer('last_messages').notNull().default(20),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });

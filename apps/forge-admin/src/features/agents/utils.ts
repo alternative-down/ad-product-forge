@@ -84,7 +84,6 @@ export function createAgentConfigDraft(agent: AgentDetail): AgentConfigDraft {
     workspaceEmbedder: agent.workspace.embedder,
     modelProfileId: agent.modelProfile?.profileId ?? '',
     omModelProfileId: agent.omModelProfile?.profileId ?? '',
-    lastMessages: agent.lastMessages ?? 20,
   };
 }
 
@@ -125,8 +124,7 @@ export function createProviderTemplate(providerType: 'discord' | 'email') {
 // Formatting Utilities
 // =============================================================================
 
-export function toDateTimeLocalValue(timestamp: string | number | null | undefined) {
-  if (!timestamp) return '';
+export function toDateTimeLocalValue(timestamp: number) {
   const date = new Date(timestamp);
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');

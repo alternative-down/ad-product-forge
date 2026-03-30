@@ -7,14 +7,13 @@ import { WORKING_MEMORY_TEMPLATE } from './working-memory';
 export function createAgentMemory(config: {
   storage: LibSQLStore;
   vector: LibSQLVector;
-  lastMessages?: number;
 }) {
   return new Memory({
     embedder: fastembed,
     storage: config.storage,
     vector: config.vector,
     options: {
-      lastMessages: config.lastMessages ?? 20,
+      lastMessages: 20,
       semanticRecall: false,
       observationalMemory: false,
       workingMemory: {

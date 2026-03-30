@@ -18,8 +18,8 @@ export function AgentConfigurationCard(input: {
   return (
     <Card className="p-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Agent runtime config</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h2 className="text-lg font-semibold text-slate-950">Agent runtime config</h2>
+        <p className="mt-1 text-sm text-slate-500">
           Updates the stored agent record and reloads the runtime if the agent is loaded.
         </p>
       </div>
@@ -40,7 +40,7 @@ export function AgentConfigurationCard(input: {
             />
           </LabeledField>
           <LabeledField label="Workspace embedder">
-            <div className="rounded-lg border border-border bg-accent/50 px-4 py-3 text-sm text-foreground">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               {input.draft.workspaceEmbedder}
             </div>
           </LabeledField>
@@ -99,24 +99,8 @@ export function AgentConfigurationCard(input: {
           />
         </LabeledField>
 
-        <LabeledField label="Memory context (lastMessages)">
-          <Input
-            type="number"
-            min={1}
-            max={100}
-            value={input.draft.lastMessages}
-            onChange={(event) =>
-              input.onChange({ ...input.draft, lastMessages: parseInt(event.target.value) || 20 })
-            }
-            required
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Number of recent messages to include in agent context. Default: 20
-          </p>
-        </LabeledField>
-
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="flex items-center gap-3 rounded-lg border border-border bg-accent/50 px-4 py-3 text-sm text-foreground">
+          <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={input.draft.workspaceAutoSync}
@@ -126,7 +110,7 @@ export function AgentConfigurationCard(input: {
             />
             Workspace auto sync
           </label>
-          <label className="flex items-center gap-3 rounded-lg border border-border bg-accent/50 px-4 py-3 text-sm text-foreground">
+          <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={input.draft.workspaceBm25}

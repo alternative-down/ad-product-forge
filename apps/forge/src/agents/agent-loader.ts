@@ -1,6 +1,4 @@
 import { eq } from 'drizzle-orm';
-import type { ToolsInput } from '@mastra/core/agent';
-import type { Tool } from '@mastra/core/tools';
 import type { Database } from '../database/index';
 import { agents, agentProviders } from '../database/schema';
 import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentRuntime } from './create-forge-agent';
@@ -47,9 +45,7 @@ export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
  * Load MCP tools for an agent
  * Connects to all configured MCP servers and returns the available tools
  */
-async function loadMCPToolsForAgent(
-  agentId: string,
-): Promise<Record<string, Tool<unknown, unknown>>> {
+async function loadMCPToolsForAgent(agentId: string): Promise<Record<string, unknown>> {
   try {
     const mcpTools = await getMCPToolsForAgent(agentId);
     
@@ -98,9 +94,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     resolveProfileRuntimeModel(primaryProfile),
     resolveProfileRuntimeModel(omProfile),
   ]);
-  const capabilities = createCapabilityStore(db);
-  const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
-  const allowedToolIds = new Set(capabilitySet.toolIds);
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
   console.log(`[AgentLoader] Allowed tool IDs for ${agentConfig.id}:`, {
@@ -134,6 +127,9 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     workspaceBasePath: config.workspaceBasePath,
     propagateMessage: config.propagateMessage,
   });
+  const capabilities = createCapabilityStore(db);
+  const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
+  const allowedToolIds = new Set(capabilitySet.toolIds);
   const tools = createMicroErpTools(db, allowedToolIds);
   const notificationTools = createAgentNotificationTools(db, agentConfig.id, allowedToolIds);
   const githubTools = createGitHubTools(agentConfig.id, config.githubApps, allowedToolIds);
@@ -146,7 +142,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   // Load MCP tools for this agent
   const mcpTools = await loadMCPToolsForAgent(agentConfig.id);
 
-  const customTools: ToolsInput = {
+  const customTools = {
     ...tools,
     ...notificationTools,
     ...githubTools,
@@ -156,7 +152,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...webTools,
     ...minimaxTools,
     ...mcpTools,
-  };
+  } as CreateAgentConfig['tools'];
 
   console.log(`[AgentLoader] Tools loaded for ${agentConfig.id}:`, {
     microErp: Object.keys(tools).length,
@@ -194,7 +190,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
       workspaceSandbox: agentConfig.workspaceSandbox ?? undefined,
       workspaceSkills: agentConfig.workspaceSkills ?? undefined,
-      lastMessages: agentConfig.lastMessages ?? 20,
     },
     { longTermMemory: true }
   );
