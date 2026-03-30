@@ -207,22 +207,28 @@ export async function generateHiredAgentInstructions(
         description: 'Realiza contratação do agente e finaliza o processo',
         inputSchema,
         execute: async ({ agent }) => {
+          console.log(`[HiringRH] hireAgent called with:`, JSON.stringify(agent, null, 2));
+          
           const agentFunction = await capabilities.getFunction(agent.functionId);
+          console.log(`[HiringRH] getFunction(${agent.functionId}) result:`, JSON.stringify(agentFunction, null, 2));
 
           if (!agentFunction) {
+            console.log(`[HiringRH] hireAgent ERROR: Function not found`);
             return {
               error: `Function ID "${agent.functionId}" does not exist. Please use list_agent_functions to see available functions, then use create_agent_function to create a new function, or provide a valid existing functionId.`,
               valid: false,
             };
           }
 
-          return {
+          const result = {
             ...agent,
             functionId: agentFunction.functionId,
             functionName: agentFunction.name,
             functionDescription: agentFunction.description,
             valid: true,
           };
+          console.log(`[HiringRH] hireAgent SUCCESS, returning:`, JSON.stringify(result, null, 2));
+          return result;
         },
       }),
       ...tools,
@@ -249,23 +255,36 @@ export async function generateHiredAgentInstructions(
     (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
+  console.log(`[HiringRH] generate() completed`);
+  console.log(`[HiringRH] result.toolCalls:`, JSON.stringify(result.toolCalls.map(c => ({ toolName: c.payload.toolName })), null, 2));
+  console.log(`[HiringRH] result.toolResults:`, JSON.stringify(result.toolResults.map(r => ({ toolName: r.toolName, hasResult: !!r.result })), null, 2));
+
   const toolCall = result.toolCalls.find((call) => call.payload.toolName === 'hireAgent');
   const toolResult = result.toolResults.find((r) => r.toolName === 'hireAgent');
 
+  console.log(`[HiringRH] toolCall found:`, !!toolCall);
+  console.log(`[HiringRH] toolResult found:`, !!toolResult);
+
   if (!toolCall || !toolResult) {
+    console.log(`[HiringRH] ERROR: Missing toolCall or toolResult`);
     return {
       error: 'Hiring process did not return agent data. Please try again with list_agent_functions to find a valid functionId.',
       valid: false,
     };
   }
 
+  console.log(`[HiringRH] toolResult.result:`, JSON.stringify(toolResult.result, null, 2));
+
   const agentHired = toolResult.result as HiringRhResult;
   if (!agentHired.valid) {
+    console.log(`[HiringRH] ERROR: agentHired.valid is false`);
     return {
       error: agentHired.error || 'Hiring failed during agent validation.',
       valid: false,
     };
   }
+
+  console.log(`[HiringRH] SUCCESS - agentHired:`, JSON.stringify(agentHired, null, 2));
 
   return {
     agentName: agentHired.agentName,
