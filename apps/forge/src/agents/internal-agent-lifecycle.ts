@@ -58,10 +58,14 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     schedules: input.schedules,
   });
   try {
-    const githubApp = await input.githubApps.createAgentApp({
-      agentId: hired.agentId,
-      agentName: profile.name,
-    });
+    const githubApp = await (
+      await input.githubApps.isConfigured()
+        ? input.githubApps.createAgentApp({
+            agentId: hired.agentId,
+            agentName: profile.name,
+          })
+        : null
+    );
     await companyCashOperations.recordCashOut({
       type: 'agent-hiring-process',
       amountUsd: hiringRh.costUsd,
@@ -73,7 +77,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     return {
       agentId: hired.agentId,
       emailAddress: hired.emailAddress,
-      githubAppRegistrationUrl: githubApp.registrationUrl,
+      githubAppRegistrationUrl: githubApp?.registrationUrl ?? null,
     };
   } catch (error) {
     await terminateInternalAgent(db, {

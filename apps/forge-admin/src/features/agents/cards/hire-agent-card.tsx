@@ -79,14 +79,16 @@ export function HireAgentCard(input: {
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             <div>Agent created: {input.result.agentId}</div>
             {input.result.emailAddress ? <div>Email: {input.result.emailAddress}</div> : null}
-            <a
-              href={input.result.githubAppRegistrationUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 inline-block underline"
-            >
-              Open GitHub App registration
-            </a>
+            {input.result.githubAppRegistrationUrl ? (
+              <a
+                href={input.result.githubAppRegistrationUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-block underline"
+              >
+                Open GitHub App registration
+              </a>
+            ) : null}
           </div>
         )}
 

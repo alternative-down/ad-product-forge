@@ -261,7 +261,7 @@ export type Workspace = {
 export type HireAgentResult = {
   agentId: string;
   emailAddress: string | null;
-  githubAppRegistrationUrl: string;
+  githubAppRegistrationUrl: string | null;
 };
 
 export type RoleListResponse = {

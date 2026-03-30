@@ -88,6 +88,10 @@ export function createGitHubAppManager(config: {
     return githubConfig;
   }
 
+  async function isConfigured() {
+    return Boolean(await config.integrations.getGitHubConfig());
+  }
+
   async function getDefaultOwner(owner?: string) {
     if (owner) {
       return owner;
@@ -971,6 +975,7 @@ export function createGitHubAppManager(config: {
   }
 
   return {
+    isConfigured,
     getAgentProvisioning,
     createAgentApp,
     loadAllAgents,
