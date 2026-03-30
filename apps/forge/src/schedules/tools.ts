@@ -136,47 +136,6 @@ export function createAgentScheduleTools(
     });
   }
 
-  // Cross-agent tools (spec v4)
-  if (hasToolPermission(allowedToolIds, 'create_cron_for_agent')) {
-    tools.create_cron_for_agent = createTool({
-      id: 'create_cron_for_agent',
-      description: 'Create a cron/schedule for another agent. The target agent will receive the cron content when it triggers. Only the creator can edit or delete.',
-      inputSchema: z.object({
-        targetAgentId: z.string().min(1).describe('The agent ID to create the cron for'),
-        name: z.string().min(1).describe('Name of the cron/schedule'),
-        description: z.string().nullish().describe('Optional description'),
-        scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time'),
-        cronExpression: z.string().min(1).nullish().describe('Cron expression (required for cron type)'),
-        scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type)'),
-        timezone: z.string().min(1).default('UTC').describe('Timezone for the schedule'),
-        content: z.string().min(1).describe('Content/payload to execute when the cron triggers'),
-      }),
-      execute: async (input) => {
-        forgeDebug('tools:schedules', 'create_cron_for_agent called', { agentId, targetAgentId: input.targetAgentId });
-        if (input.scheduleType === 'cron' && !input.cronExpression) {
-          forgeDebug('tools:schedules', 'create_cron_for_agent validation failed', { reason: 'cronExpression required for cron type' });
-          return { valid: false, error: 'cronExpression is required when scheduleType is cron' };
-        }
-        if (input.scheduleType === 'date' && !input.scheduledDate) {
-          forgeDebug('tools:schedules', 'create_cron_for_agent validation failed', { reason: 'scheduledDate required for date type' });
-          return { valid: false, error: 'scheduledDate is required when scheduleType is date' };
-        }
-        const result = await schedules.createScheduleForAgent(agentId, {
-          targetAgentId: input.targetAgentId,
-          name: input.name,
-          description: input.description,
-          scheduleType: input.scheduleType,
-          cronExpression: input.cronExpression,
-          scheduledDate: input.scheduledDate,
-          timezone: input.timezone,
-          content: input.content,
-        });
-        forgeDebug('tools:schedules', 'create_cron_for_agent result', { result });
-        return result;
-      },
-    });
-  }
-
   if (hasToolPermission(allowedToolIds, 'create_task_for_agent')) {
     tools.create_task_for_agent = createTool({
       id: 'create_task_for_agent',
@@ -270,62 +229,6 @@ export function createAgentScheduleTools(
           ...result,
           taskId: input.taskId,
         };
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'edit_cron')) {
-    tools.edit_cron = createTool({
-      id: 'edit_cron',
-      description: 'Edit an existing cron/schedule. Only the creator (or owner for self-created crons) can edit.',
-      inputSchema: z.object({
-        scheduleId: z.string().min(1).describe('ID of the schedule to edit'),
-        name: z.string().min(1).nullish().describe('New name'),
-        description: z.string().nullish().nullable().describe('New description'),
-        scheduleType: z.enum(['cron', 'date']).nullish().describe('New schedule type'),
-        cronExpression: z.string().min(1).nullish().nullable().describe('New cron expression'),
-        scheduledDate: z.string().min(1).nullish().nullable().describe('New scheduled date (ISO string)'),
-        timezone: z.string().min(1).nullish().describe('New timezone'),
-        content: z.string().min(1).nullish().describe('New content'),
-        isActive: z.boolean().nullish().describe('Activate or pause the schedule'),
-      }),
-      execute: async (input) => {
-        forgeDebug('tools:schedules', 'edit_cron called', { agentId, scheduleId: input.scheduleId });
-        const providedFields = [input.name, input.description, input.scheduleType, input.cronExpression, input.scheduledDate, input.timezone, input.content, input.isActive].filter(f => f !== undefined && f !== null);
-        if (providedFields.length === 0) {
-          forgeDebug('tools:schedules', 'edit_cron validation failed', { reason: 'no fields provided' });
-          return { valid: false, error: 'At least one field besides scheduleId must be provided' };
-        }
-        const result = await schedules.editCron(agentId, input.scheduleId, {
-          name: input.name,
-          description: input.description,
-          scheduleType: input.scheduleType,
-          cronExpression: input.cronExpression,
-          scheduledDate: input.scheduledDate,
-          timezone: input.timezone,
-          content: input.content,
-          isActive: input.isActive,
-        });
-        forgeDebug('tools:schedules', 'edit_cron result', { result });
-        return result;
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'delete_cron')) {
-    const deleteCronInputSchema = z.object({
-      scheduleId: z.string().min(1).describe('ID of the schedule to delete'),
-    });
-
-    tools.delete_cron = createTool({
-      id: 'delete_cron',
-      description: 'Delete a cron/schedule. Only the creator (or owner for self-created crons) can delete.',
-      inputSchema: deleteCronInputSchema,
-      execute: async (input) => {
-        forgeDebug('tools:schedules', 'delete_cron called', { agentId, scheduleId: input.scheduleId });
-        const result = await schedules.deleteCron(agentId, input.scheduleId);
-        forgeDebug('tools:schedules', 'delete_cron result', { result });
-        return result;
       },
     });
   }
