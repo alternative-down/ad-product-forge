@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { Agent } from '@mastra/core/agent';
 import type { AgentConfig } from '@mastra/core/agent';
-import type { MastraDBMessage, MessageList } from '@mastra/core/agent';
+import type { MastraDBMessage, MastraMessagePart, MessageList } from '@mastra/core/agent';
 import type {
   ProcessInputArgs,
   ProcessInputStepArgs,
@@ -115,7 +115,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       return args.messageList;
     }
 
-    const queryText = this.buildRecallQuery(args.messages);
+    const queryText = this.buildRecallQuery(args);
 
     if (!queryText) {
       return args.messageList;
@@ -299,61 +299,77 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     }
   }
 
-  private extractTextFromArgs(args: Record<string, unknown>): string {
-    const textParts: string[] = [];
-    for (const value of Object.values(args)) {
-      if (typeof value === 'string') {
-        textParts.push(value);
-      } else if (Array.isArray(value)) {
-        for (const item of value) {
-          if (typeof item === 'string') {
-            textParts.push(item);
-          } else if (typeof item === 'object' && item !== null) {
-            textParts.push(this.extractTextFromArgs(item as Record<string, unknown>));
-          }
-        }
-      } else if (typeof value === 'object' && value !== null) {
-        textParts.push(this.extractTextFromArgs(value as Record<string, unknown>));
-      }
+  private extractValueText(value: unknown): string {
+    if (typeof value === 'string') {
+      return value;
     }
-    return textParts.filter(Boolean).join(' ');
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => this.extractValueText(item))
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    if (!value || typeof value !== 'object') {
+      return '';
+    }
+
+    return Object.values(value)
+      .map((item) => this.extractValueText(item))
+      .filter(Boolean)
+      .join(' ');
   }
 
-  private buildRecallQuery(messages: MastraDBMessage[]) {
-    return messages
-      .filter((message) => !['system'].includes(message.role))
+  private buildRecallQuery(args: ProcessInputStepArgs<unknown>) {
+    const recentMessages = args.messages
+      .filter((message) => message.role !== 'system')
       .slice(-this.maxRecentRecallMessages)
-      .map(message => {
-        const messageText = this.extractMessageText(message);
-        const toolText = message.content.toolInvocations?.flatMap(
-          tool => this.extractTextFromArgs(tool.args),
-        ).filter(Boolean).join(' ') || '';
-        return `
-        ${messageText}
-        ${typeof message.content.reasoning === 'string' ? message.content.reasoning : ''}
-        ${toolText}
-        `.trim();
-      }).filter(Boolean).join('\n');
+      .map((message) =>
+        [
+          this.extractMessageContentText(message),
+          typeof message.content.reasoning === 'string' ? message.content.reasoning : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
+
+    const recentSteps = args.steps.slice(-this.maxRecentRecallMessages).map((step) =>
+      [
+        step.text,
+        step.reasoningText ?? '',
+        step.toolCalls.map((toolCall) => this.extractValueText(toolCall.input)).filter(Boolean).join(' '),
+        step.toolResults.map((toolResult) => this.extractValueText(toolResult.output)).filter(Boolean).join(' '),
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+
+    return [...recentMessages, ...recentSteps].filter(Boolean).join('\n');
   }
 
-  private extractMessageText(message: MastraDBMessage) {
+  private extractMessageContentText(message: MastraDBMessage) {
     if (typeof message.content.content === 'string' && message.content.content.trim()) {
       return message.content.content;
     }
 
-    const parts = (message.content.parts ?? []).flatMap((part) => {
-      if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'text') {
-        return [];
+    const parts = message.content.parts.flatMap((part) => {
+      if (this.isTextMessagePart(part)) {
+        return [part.text];
       }
 
-      if (!('text' in part) || typeof part.text !== 'string') {
-        return [];
-      }
-
-      return [part.text];
+      return [];
     });
 
     return parts.join('\n').trim();
+  }
+
+  private isTextMessagePart(part: MastraMessagePart): part is MastraMessagePart & { type: 'text'; text: string } {
+    return part.type === 'text' && typeof part.text === 'string';
   }
 
   private getThreadContext(
