@@ -13,8 +13,43 @@ import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
 import { createSystemSettingsStore } from '../system-settings/store';
-import { hasToolCall } from 'ai';
 import { createTool } from '@mastra/core/tools';
+import type { Processor, ProcessInputStepArgs, ProcessInputStepResult } from '@mastra/core/processors';
+
+/**
+ * Processor that disables tools after hireAgent tool is called.
+ * This forces the agent to return text output instead of continuing tool calls.
+ */
+class HireAgentDisablerProcessor implements Processor {
+  id = 'hire-agent-disabler';
+
+  async processInputStep({
+    stepNumber,
+    toolChoice,
+    messageList,
+  }: ProcessInputStepArgs): Promise<ProcessInputStepResult> {
+    // On first step, allow tools
+    if (stepNumber === 0) {
+      console.log(`[HireAgentDisabler] Step ${stepNumber}: allowing tools`);
+      return {};
+    }
+
+    // Check if hireAgent was called in previous messages
+    const hasHireAgentCall = messageList.some((msg) => {
+      // Check for tool calls in the message
+      const toolCalls = (msg as { toolCalls?: Array<{ name?: string }> }).toolCalls;
+      return toolCalls?.some((call) => call.name === 'hireAgent');
+    });
+
+    if (hasHireAgentCall) {
+      console.log(`[HireAgentDisabler] Step ${stepNumber}: hireAgent detected, disabling tools`);
+      return { toolChoice: 'none' };
+    }
+
+    console.log(`[HireAgentDisabler] Step ${stepNumber}: allowing tools`);
+    return {};
+  }
+}
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
@@ -242,11 +277,11 @@ export async function generateHiredAgentInstructions(
     gateways: {
       oauth: createOAuthGateway(),
     },
+    processors: [new HireAgentDisablerProcessor()],
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
     maxSteps: 20,
     toolChoice: 'required',
-    stopWhen: [hasToolCall('hireAgent')],
   });
 
   const inputTokens = result.usage.inputTokens ?? 0;
@@ -256,46 +291,114 @@ export async function generateHiredAgentInstructions(
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
   console.log(`[HiringRH] generate() completed`);
+  console.log(`[HiringRH] result.text:`, result.text);
   console.log(`[HiringRH] result.toolCalls:`, JSON.stringify(result.toolCalls.map(c => ({ toolName: c.payload.toolName })), null, 2));
   console.log(`[HiringRH] result.toolResults:`, JSON.stringify(result.toolResults.map(r => ({ toolName: r.toolName, hasResult: !!r.result })), null, 2));
 
+  // After hireAgent is called, the next step disables tools and returns text
+  // Parse the text to extract the structured result
   const toolCall = result.toolCalls.find((call) => call.payload.toolName === 'hireAgent');
   const toolResult = result.toolResults.find((r) => r.toolName === 'hireAgent');
 
   console.log(`[HiringRH] toolCall found:`, !!toolCall);
   console.log(`[HiringRH] toolResult found:`, !!toolResult);
 
-  if (!toolCall || !toolResult) {
-    console.log(`[HiringRH] ERROR: Missing toolCall or toolResult`);
+  // If we have toolResult from hireAgent, use it
+  if (toolResult?.result) {
+    console.log(`[HiringRH] toolResult.result:`, JSON.stringify(toolResult.result, null, 2));
+    const agentHired = toolResult.result as HiringRhResult;
+    if (agentHired.valid) {
+      console.log(`[HiringRH] SUCCESS - agentHired from toolResult:`, JSON.stringify(agentHired, null, 2));
+      return {
+        agentName: agentHired.agentName,
+        agentDescription: agentHired.agentDescription,
+        functionId: agentHired.functionId,
+        functionName: agentHired.functionName!,
+        functionDescription: agentHired.functionDescription,
+        instructions: agentHired.instructions,
+        costUsd,
+        modelKey: hiringRhModelKey,
+        valid: true,
+      };
+    }
+  }
+
+  // Fallback: parse text output to extract structured data
+  console.log(`[HiringRH] Parsing text output for structured data...`);
+
+  // Try to parse JSON from text
+  const text = result.text;
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log(`[HiringRH] Parsed JSON from text:`, JSON.stringify(parsed, null, 2));
+
+      // Validate the parsed data
+      const validated = hiringRhResultSchema.safeParse(parsed);
+      if (validated.success) {
+        const agentData = validated.data;
+        console.log(`[HiringRH] SUCCESS - agentData from text:`, JSON.stringify(agentData, null, 2));
+
+        // Get function details
+        const func = await capabilities.getFunction(agentData.functionId);
+        if (!func) {
+          return {
+            error: `Function ${agentData.functionId} not found. Please try again with list_agent_functions.`,
+            valid: false,
+          };
+        }
+
+        return {
+          agentName: agentData.agentName,
+          agentDescription: agentData.agentDescription,
+          functionId: agentData.functionId,
+          functionName: func.name,
+          functionDescription: func.description,
+          instructions: agentData.instructions,
+          costUsd,
+          modelKey: hiringRhModelKey,
+          valid: true,
+        };
+      }
+    } catch (e) {
+      console.log(`[HiringRH] Failed to parse JSON from text:`, e);
+    }
+  }
+
+  // If we got here without toolResult, check if hireAgent was called at all
+  if (!toolCall) {
     return {
-      error: 'Hiring process did not return agent data. Please try again with list_agent_functions to find a valid functionId.',
+      error: 'Hiring process did not call hireAgent tool. Please try again.',
       valid: false,
     };
   }
 
-  console.log(`[HiringRH] toolResult.result:`, JSON.stringify(toolResult.result, null, 2));
-
-  const agentHired = toolResult.result as HiringRhResult;
-  if (!agentHired.valid) {
-    console.log(`[HiringRH] ERROR: agentHired.valid is false`);
-    return {
-      error: agentHired.error || 'Hiring failed during agent validation.',
-      valid: false,
-    };
+  // Try to extract data from tool call args
+  try {
+    const hireArgs = toolCall.payload.args as { agentName?: string; agentDescription?: string; functionId?: string; instructions?: string };
+    if (hireArgs.agentName && hireArgs.functionId && hireArgs.instructions) {
+      const func = await capabilities.getFunction(hireArgs.functionId);
+      return {
+        agentName: hireArgs.agentName,
+        agentDescription: hireArgs.agentDescription || 'No description provided',
+        functionId: hireArgs.functionId,
+        functionName: func?.name || 'Unknown function',
+        functionDescription: func?.description,
+        instructions: hireArgs.instructions,
+        costUsd,
+        modelKey: hiringRhModelKey,
+        valid: true,
+      };
+    }
+  } catch (e) {
+    console.log(`[HiringRH] Failed to extract from tool args:`, e);
   }
 
-  console.log(`[HiringRH] SUCCESS - agentHired:`, JSON.stringify(agentHired, null, 2));
-
+  console.log(`[HiringRH] ERROR: Could not extract hiring data from response`);
   return {
-    agentName: agentHired.agentName,
-    agentDescription: agentHired.agentDescription,
-    functionId: agentHired.functionId,
-    functionName: agentHired.functionName!,
-    functionDescription: agentHired.functionDescription,
-    instructions: agentHired.instructions,
-    costUsd,
-    modelKey: hiringRhModelKey,
-    valid: true,
+    error: 'Hiring process did not return valid agent data. Please try again.',
+    valid: false,
   };
 }
 
