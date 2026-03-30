@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1773743431354,
-      "tag": "0000_easy_zuras",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1774374966908,
-      "tag": "0001_tearful_shaman",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1743072000000,
-      "tag": "0002_fan_out_instance_tracking",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1743072000001,
-      "tag": "0003_issue225_reuse_agent_schedules",
+      "when": 1774881649368,
+      "tag": "0000_ancient_layla_miller",
       "breakpoints": true
     }
   ]
