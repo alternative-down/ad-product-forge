@@ -374,12 +374,12 @@ export async function createCommunicationModule(config: {
   // This requires extending the sendMessage input contract in provider-types.ts
   // and updating the agent-facing communication tools accordingly.
   async function sendMessage(input: {
-    conversation?: string;
+    conversationKey?: string;
     content: string;
     replyToMessageId?: string;
   }) {
-    const parsedConversation = input.conversation
-      ? parseConversationReference(input.conversation)
+    const parsedConversation = input.conversationKey
+      ? parseConversationReference(input.conversationKey)
       : null;
 
     // Fallback logic: resolve provider if not provided
@@ -389,8 +389,8 @@ export async function createCommunicationModule(config: {
 
     if (!resolvedProvider) {
       // Try to find provider from contact's accounts
-      if (input.conversation) {
-        const contact = await store.getContact(input.conversation);
+      if (input.conversationKey) {
+        const contact = await store.getContact(input.conversationKey);
         if (contact) {
           const matchingAccount = contact.accounts.find((account) => providers.has(account.provider));
           if (matchingAccount) {
@@ -432,7 +432,7 @@ export async function createCommunicationModule(config: {
 
     if (conversation) {
       if (conversation.provider !== provider.id) {
-        throw new Error(`Conversation ${input.conversation} does not belong to provider ${provider.id}`);
+        throw new Error(`Conversation ${input.conversationKey} does not belong to provider ${provider.id}`);
       }
 
       if (conversation.type === 'group') {
@@ -505,7 +505,7 @@ export async function createCommunicationModule(config: {
       });
 
       if (!newConversation) {
-        throw new Error(`Failed to create conversation for provider ${provider.id}: ${input.conversation}`);
+        throw new Error(`Failed to create conversation for provider ${provider.id}: ${input.conversationKey}`);
       }
 
       const sent = await provider.sendMessage({
@@ -526,22 +526,22 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    if (!input.conversation) {
+    if (!input.conversationKey) {
       throw new Error(`No destination provided for provider: ${provider.id}`);
     }
 
-    let contactExternalId = await getContactExternalId(provider.id, input.conversation);
+    let contactExternalId = await getContactExternalId(provider.id, input.conversationKey);
 
     if (!contactExternalId) {
       // No registered identity found — treat the slug as the external ID directly
       // (natural for email where slug = address, or any provider where the agent
       // uses the external ID as the slug). Auto-register so future lookups work.
-      contactExternalId = input.conversation;
+      contactExternalId = input.conversationKey;
       await store.upsertContact({
-        slug: input.conversation,
-        displayName: input.conversation,
+        slug: input.conversationKey,
+        displayName: input.conversationKey,
         provider: provider.id,
-        externalUserId: input.conversation,
+        externalUserId: input.conversationKey,
       });
     }
 
@@ -557,7 +557,7 @@ export async function createCommunicationModule(config: {
       providerConversationKey: sent.providerConversationKey,
       providerMessageId: sent.providerMessageId,
       conversationName: sent.conversationName,
-      contactId: input.conversation,
+      contactId: input.conversationKey,
       content: input.content,
     });
   }

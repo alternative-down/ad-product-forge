@@ -5,7 +5,7 @@ import type { CommunicationModule } from '../module';
 
 const sendMessageInputSchema = z
   .object({
-    conversation: z
+    conversationKey: z
       .string()
       .describe(
         'Destination for the message. Use the exact conversationKey returned by list_conversations in the format <provider>:<value>, or use a contact slug returned by list_contacts/get_contact to start a direct message.',
@@ -28,7 +28,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
     execute: async (input) => {
       try {
         return await communication.sendMessage({
-          conversation: input.conversation,
+          conversationKey: input.conversationKey,
           content: input.content,
           replyToMessageId: input.replyToMessageId ?? undefined,
         });
@@ -62,7 +62,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
           if (error.message.includes('No destination provided')) {
             return {
               error: error.message,
-              hint: 'Provide conversation using either a conversationKey from list_conversations or a contact slug from list_contacts/get_contact.',
+              hint: 'Provide conversationKey using either a conversationKey from list_conversations or a contact slug from list_contacts/get_contact.',
             };
           }
           if (error.message.includes('Failed to create conversation')) {
