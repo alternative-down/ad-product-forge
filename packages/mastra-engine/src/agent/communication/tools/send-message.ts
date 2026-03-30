@@ -38,13 +38,13 @@ export function createSendMessageTool(communication: CommunicationModule) {
           if (error.message.includes('Provider not available')) {
             return {
               error: error.message,
-              hint: 'Call list_contacts with filter="self" to see available providers, then specify provider in the request.',
+              hint: 'Call list_contacts with filter="self" to see available providers, then use conversationKey with a valid <provider>:<value> prefix.',
             };
           }
           if (error.message.includes('does not belong to provider')) {
             return {
               error: error.message,
-              hint: 'The conversation or message belongs to a different provider. Use the correct provider or omit it to let the system auto-select.',
+              hint: 'The conversationKey or replyToMessageId points to a different provider. Use a matching <provider>:<value> prefix and messageId from the same conversation.',
             };
           }
           if (error.message.includes('Conversation not found')) {
