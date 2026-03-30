@@ -56,6 +56,7 @@ export type CreateForgeAgentConfig<
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
   workspaceSkills?: WorkspaceSkillsConfig;
+  lastMessages?: number;
 };
 
 export type CreateAgentOptions = {
@@ -103,6 +104,7 @@ export interface CreateAgentConfig<
   | 'workspaceFilesystem'
   | 'workspaceSandbox'
   | 'workspaceSkills'
+  | 'lastMessages'
 > {
   workspaceBasePath: string;
 }
@@ -231,7 +233,7 @@ export async function createInternalAgentRuntime<
     ...createExternalAccountTools(communication),
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
-  const memory = createAgentMemory({ storage, vector });
+  const memory = createAgentMemory({ storage, vector, lastMessages: config.lastMessages });
   const omModelKey = config.omModel ?? config.model;
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
 

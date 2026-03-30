@@ -190,6 +190,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
       workspaceSandbox: agentConfig.workspaceSandbox ?? undefined,
       workspaceSkills: agentConfig.workspaceSkills ?? undefined,
+      lastMessages: agentConfig.lastMessages ?? 20,
     },
     { longTermMemory: true }
   );
