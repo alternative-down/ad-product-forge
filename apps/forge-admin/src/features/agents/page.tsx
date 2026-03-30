@@ -1136,7 +1136,7 @@ function SchedulesCard(input: {
         <div>
           <h2 className="text-lg font-semibold text-foreground">Schedules</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Agent schedules are editable here. Heartbeat is visible but read-only.
+            Agent schedules are editable here. Heartbeat can be edited, but it cannot be deleted.
           </p>
         </div>
         <Button variant="secondary" onClick={input.onCreateSchedule}>
@@ -1146,13 +1146,23 @@ function SchedulesCard(input: {
 
       {input.heartbeat && (
         <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <div className="flex items-center gap-2 font-medium">
-            <Clock3 className="h-4 w-4" />
-            Heartbeat
-          </div>
-          <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
-            <span>Cron: {input.heartbeat.cronExpression}</span>
-            <span>Next: {formatDateTime(input.heartbeat.nextTriggerAt)}</span>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 font-medium">
+                <Clock3 className="h-4 w-4" />
+                Heartbeat
+              </div>
+              <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+                <span>Cron: {input.heartbeat.cronExpression}</span>
+                <span>Next: {formatDateTime(input.heartbeat.nextTriggerAt)}</span>
+              </div>
+              <div className="mt-3 rounded-xl bg-white/60 px-3 py-2 text-xs text-amber-950/80">
+                {input.heartbeat.content || 'No heartbeat message configured.'}
+              </div>
+            </div>
+            <Button variant="secondary" onClick={() => input.onEditSchedule(input.heartbeat!)}>
+              Edit heartbeat
+            </Button>
           </div>
         </div>
       )}

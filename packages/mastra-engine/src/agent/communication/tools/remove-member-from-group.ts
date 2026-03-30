@@ -5,19 +5,19 @@ import type { CommunicationModule } from '../module';
 
 const removeMemberInputSchema = z.object({
   groupId: z.string().min(1),
-  participantId: z.string().min(1),
+  participantSlug: z.string().min(1),
 });
 
 export function createRemoveMemberTool(communication: CommunicationModule) {
   return createTool({
     id: 'remove_member_from_group',
-    description: 'Remove a member from an internal chat group.',
+    description: 'Remove a member from an internal chat group using the participant slug returned by list_group_members.',
     inputSchema: removeMemberInputSchema,
     execute: async (input) => {
       try {
         return await communication.removeMemberFromGroup({
           groupId: input.groupId,
-          participantId: input.participantId,
+          participantSlug: input.participantSlug,
         });
       } catch (error) {
         if (error instanceof Error) {
@@ -29,12 +29,12 @@ export function createRemoveMemberTool(communication: CommunicationModule) {
           }
           return {
             error: error.message,
-            hint: 'Verify the groupId and participantId are valid.',
+            hint: 'Verify the groupId and participantSlug are valid.',
           };
         }
         return {
           error: 'An unknown error occurred while removing the member',
-          hint: 'Verify the groupId and participantId are valid.',
+          hint: 'Verify the groupId and participantSlug are valid.',
         };
       }
     },

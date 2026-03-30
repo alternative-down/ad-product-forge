@@ -505,15 +505,74 @@ export async function createCommunicationModule(config: {
 
   async function addMemberToGroup(input: {
     groupId: string;
-    participantId: string;
-    participantName: string;
+    participantSlug: string;
     role?: string;
   }) {
-    return store.addMemberToGroup(input);
+    const group = await store.getConversation(input.groupId);
+
+    if (!group || group.type !== 'group') {
+      throw new Error('Chat group not found');
+    }
+
+    const contact = await store.getContact(input.participantSlug);
+
+    if (!contact) {
+      throw new Error(`Contact not found: ${input.participantSlug}`);
+    }
+
+    const identity = contact.accounts.find((account) => account.provider === group.provider);
+    const participantId = identity?.externalUserId || identity?.username;
+
+    if (!participantId) {
+      throw new Error(`Contact ${input.participantSlug} is not reachable on provider ${group.provider}`);
+    }
+
+    const member = await store.addMemberToGroup({
+      groupId: input.groupId,
+      participantId,
+      participantName: contact.displayName,
+      role: input.role,
+    });
+
+    return {
+      groupId: member.groupId,
+      participantSlug: contact.slug,
+      participantName: member.participantName,
+      role: member.role,
+      createdAt: member.createdAt,
+    };
   }
 
-  async function removeMemberFromGroup(input: { groupId: string; participantId: string }) {
-    return store.removeMemberFromGroup(input);
+  async function removeMemberFromGroup(input: { groupId: string; participantSlug: string }) {
+    const group = await store.getConversation(input.groupId);
+
+    if (!group || group.type !== 'group') {
+      throw new Error('Chat group not found');
+    }
+
+    const contact = await store.getContact(input.participantSlug);
+
+    if (!contact) {
+      throw new Error(`Contact not found: ${input.participantSlug}`);
+    }
+
+    const identity = contact.accounts.find((account) => account.provider === group.provider);
+    const participantId = identity?.externalUserId || identity?.username;
+
+    if (!participantId) {
+      throw new Error(`Contact ${input.participantSlug} is not reachable on provider ${group.provider}`);
+    }
+
+    await store.removeMemberFromGroup({
+      groupId: input.groupId,
+      participantId,
+    });
+
+    return {
+      success: true,
+      groupId: input.groupId,
+      participantSlug: contact.slug,
+    };
   }
 
   async function listChatGroups(input: { provider?: string; limit?: number }) {
@@ -530,7 +589,31 @@ export async function createCommunicationModule(config: {
   }
 
   async function listGroupMembers(groupId: string) {
-    return store.listGroupMembers(groupId);
+    const group = await store.getConversation(groupId);
+
+    if (!group || group.type !== 'group') {
+      throw new Error('Chat group not found');
+    }
+
+    const members = await store.listGroupMembers(groupId);
+
+    return Promise.all(
+      members.map(async (member) => {
+        const contact = await store.findContactByIdentity(
+          group.provider,
+          member.participantId,
+          member.participantId,
+        );
+
+        return {
+          groupId: member.groupId,
+          participantSlug: contact?.slug ?? member.participantId,
+          participantName: contact?.displayName ?? member.participantName,
+          role: member.role,
+          createdAt: member.createdAt,
+        };
+      }),
+    );
   }
 
   return {
