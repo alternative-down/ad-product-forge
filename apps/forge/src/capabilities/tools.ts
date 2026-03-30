@@ -48,7 +48,7 @@ export function createCapabilityTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'create_agent_function called', { input });
-        const result = capabilities.createFunction({
+        const result = await capabilities.createFunction({
           name: input.name,
           description: input.description ?? undefined,
         });
@@ -142,7 +142,7 @@ export function createCapabilityTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'create_agent_role called', { input });
-        const result = capabilities.createRole({
+        const result = await capabilities.createRole({
           name: input.name,
           description: input.description ?? undefined,
         });
