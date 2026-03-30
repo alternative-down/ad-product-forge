@@ -103,21 +103,44 @@ export class MiniMaxClient {
         },
       });
 
-      const data = await response.json();
+      const rawBody = await response.text();
+      const parsedBody = rawBody.trim()
+        ? (() => {
+            try {
+              return JSON.parse(rawBody) as Record<string, unknown>;
+            } catch {
+              return null;
+            }
+          })()
+        : null;
 
       if (!response.ok) {
         return {
           success: false,
           error: {
             code: String(response.status),
-            message: data.message || data.error || 'Unknown error',
+            message:
+              (typeof parsedBody?.message === 'string' && parsedBody.message) ||
+              (typeof parsedBody?.error === 'string' && parsedBody.error) ||
+              rawBody.trim() ||
+              'Unknown error',
+          },
+        };
+      }
+
+      if (!parsedBody) {
+        return {
+          success: false,
+          error: {
+            code: 'INVALID_RESPONSE',
+            message: `MiniMax returned a non-JSON response for ${endpoint}`,
           },
         };
       }
 
       return {
         success: true,
-        data: data as T,
+        data: parsedBody as T,
       };
     } catch (error) {
       return {
@@ -167,13 +190,17 @@ export class MiniMaxClient {
     const payload = {
       model,
       prompt: options.prompt,
-      num_images: options.imageCount || 1,
-      width: options.width || 1024,
-      height: options.height || 1024,
-      style: options.style || '<auto>',
+      response_format: 'url',
+      n: options.imageCount || 1,
+      ...(options.width && options.height
+        ? {
+            width: options.width,
+            height: options.height,
+          }
+        : {}),
     };
 
-    return this.request<ImageResponse>('/image', {
+    return this.request<ImageResponse>('/image_generation', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
