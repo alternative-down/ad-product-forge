@@ -93,6 +93,12 @@ export async function generateHiredAgentInstructions(
     HIRING_RH_TOOL_IDS,
   );
 
+  console.log(`[HiringRH] Tools loaded for agent ${HIRING_RH_AGENT_ID}:`, {
+    count: Object.keys(tools).length,
+    toolIds: Object.keys(tools),
+    allowedToolIds: Array.from(HIRING_RH_TOOL_IDS),
+  });
+
   if (currentBalanceUsd < estimatedCostUsd) {
     throw new Error('Insufficient company cash for hiring workflow');
   }

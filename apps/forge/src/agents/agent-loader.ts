@@ -96,6 +96,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   ]);
 
   console.log(`[AgentLoader] Loading agent: ${agentConfig.id} (${agentConfig.name})`);
+  console.log(`[AgentLoader] Allowed tool IDs for ${agentConfig.id}:`, {
+    count: allowedToolIds.size,
+    toolIds: Array.from(allowedToolIds),
+  });
 
   // Load providers from agent_providers table
   const providerConfigs = await db.query.agentProviders.findMany({
@@ -137,7 +141,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   
   // Load MCP tools for this agent
   const mcpTools = await loadMCPToolsForAgent(agentConfig.id);
-  
+
   const customTools = {
     ...tools,
     ...notificationTools,
@@ -149,6 +153,20 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...minimaxTools,
     ...mcpTools,
   } as CreateAgentConfig['tools'];
+
+  console.log(`[AgentLoader] Tools loaded for ${agentConfig.id}:`, {
+    microErp: Object.keys(tools).length,
+    notifications: Object.keys(notificationTools).length,
+    github: Object.keys(githubTools).length,
+    coolify: Object.keys(coolifyTools).length,
+    schedules: Object.keys(scheduleTools).length,
+    capabilities: Object.keys(capabilityTools).length,
+    web: Object.keys(webTools).length,
+    minimax: Object.keys(minimaxTools).length,
+    mcp: Object.keys(mcpTools).length,
+    total: Object.keys(customTools).length,
+  });
+
   const filteredWorkflows = filterWorkflows(config.workflows, capabilitySet.workflowIds);
 
   const runtime = await createInternalAgentRuntime(
