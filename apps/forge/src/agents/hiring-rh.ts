@@ -35,7 +35,7 @@ class HireAgentDisablerProcessor implements Processor {
 
     // Check if hireAgent was called in previous steps using steps parameter
     const hasHireAgentCall = steps.some((step) => {
-      return step.toolCalls?.some((call) => call.name === 'hireAgent');
+      return step.toolCalls?.some((call) => call.toolName === 'hireAgent');
     });
 
     if (hasHireAgentCall) {
@@ -294,7 +294,7 @@ export async function generateHiredAgentInstructions(
 
   // After hireAgent is called, the next step disables tools and returns text
   // Parse the text to extract the structured result
-  const toolCall = result.toolCalls.find((call) => call.payload.toolName === 'hireAgent');
+  const toolCall = result.toolCalls.find((call) => call.toolName === 'hireAgent');
   const toolResult = result.toolResults.find((r) => r.toolName === 'hireAgent');
 
   console.log(`[HiringRH] toolCall found:`, !!toolCall);
