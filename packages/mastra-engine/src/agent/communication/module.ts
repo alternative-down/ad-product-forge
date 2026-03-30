@@ -267,6 +267,10 @@ export async function createCommunicationModule(config: {
       slug: contact.slug,
       displayName: contact.displayName,
       description: contact.description,
+      accounts: contact.accounts.map((account) => ({
+        provider: account.provider,
+        username: account.username,
+      })),
     };
   }
 
