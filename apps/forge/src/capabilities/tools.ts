@@ -374,10 +374,15 @@ export function createCapabilityTools(
       id: 'list_available_capabilities',
       description: 'Get a complete list of all available custom tool IDs and workflow IDs that can be assigned to roles for permission management.',
       inputSchema: z.object({}),
-      execute: async () => ({
-        toolIds: forgeCustomToolIds,
-        workflowIds: forgeWorkflowIds,
-      }),
+      execute: async () => {
+        forgeDebug('tools:capabilities', 'list_available_capabilities called');
+        const result = {
+          toolIds: forgeCustomToolIds,
+          workflowIds: forgeWorkflowIds,
+        };
+        forgeDebug('tools:capabilities', 'list_available_capabilities result', { toolCount: result.toolIds.length, workflowCount: result.workflowIds.length });
+        return result;
+      },
     });
   }
 
