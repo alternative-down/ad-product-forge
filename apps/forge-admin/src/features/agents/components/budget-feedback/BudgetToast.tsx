@@ -1,6 +1,5 @@
 // Budget Toast Component
-// DEPRECATED: Toast components from @forge/ui not available
-// This is a placeholder to maintain backwards compatibility
+// Placeholder kept while toast behavior remains unimplemented in the admin app.
 
 export type BudgetToastVariant = 'success' | 'warning' | 'error' | 'info';
 
