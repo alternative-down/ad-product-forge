@@ -156,6 +156,7 @@ export async function createCommunicationModule(config: {
                   : message.authorUsername
                     ? { Author: message.authorUsername }
                     : {}),
+                ...(contact?.slug ? { Slug: contact.slug } : {}),
               },
               text: message.content.trim(),
               timestamp: Date.parse(message.createdAt) || Date.now(),

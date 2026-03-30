@@ -505,8 +505,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
 function formatPendingRunEvents(events: AgentWakeEvent[]) {
   const groups = new Map<string, AgentWakeEvent[]>();
+  const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
 
-  for (const event of events) {
+  for (const event of orderedEvents) {
     const existingGroup = groups.get(event.groupKey);
 
     if (existingGroup) {
@@ -525,40 +526,75 @@ function formatPendingRunEvents(events: AgentWakeEvent[]) {
 function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
   const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
   const firstEvent = orderedEvents[0];
-  const headerLines = [describeWakeGroup(firstEvent), ...formatWakeGroupMetadata(firstEvent.groupMetadata)];
+  const header = describeWakeGroup(firstEvent);
+  const itemLines = orderedEvents.map((event) => formatPendingRunEventItem(event, firstEvent.groupMetadata));
 
-  const itemLines = orderedEvents.map((event) => formatPendingRunEventItem(event));
-
-  return [...headerLines, '', ...itemLines].join('\n');
+  return [header, '', ...itemLines].join('\n');
 }
 
-function formatPendingRunEventItem(event: AgentWakeEvent) {
-  const labels = [new Date(event.timestamp).toISOString()];
+function formatPendingRunEventItem(
+  event: AgentWakeEvent,
+  groupMetadata?: Record<string, string>,
+) {
+  const timeLabel = formatWakeTime(event.timestamp);
+  const messageId = event.itemMetadata?.MessageId;
+  const actor = event.itemMetadata?.Author ?? describeWakeActor(event);
+  const slug = event.itemMetadata?.Slug ?? groupMetadata?.ContactSlug;
+  const text = event.text.trim().replace(/\s*\n+\s*/g, ' ');
 
-  if (event.itemMetadata?.MessageId) {
-    labels.push(`msg ${event.itemMetadata.MessageId}`);
-  }
+  const label = [
+    `[${timeLabel}]`,
+    messageId ? `[msg: ${messageId}]` : '',
+    actor
+      ? slug
+        ? `${actor} (slug: ${slug})`
+        : actor
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
 
-  if (event.itemMetadata?.Author) {
-    labels.push(event.itemMetadata.Author);
-  }
-
-  const text = event.text
-    .trim()
-    .split('\n')
-    .map((line, index) => (index === 0 ? line : `  ${line}`))
-    .join('\n');
-
-  return [`- ${labels.join(' | ')}`, `  ${text}`].join('\n');
+  return actor ? `${label}: ${text}` : `${[label, text].filter(Boolean).join(' ')}`.trim();
 }
 
 function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
     const provider = event.type.split(':')[1] ?? 'message';
-    return `${provider} conversation`;
+    const conversationKind =
+      event.groupMetadata?.ConversationName === 'direct-message' || event.groupMetadata?.ContactSlug
+        ? 'DM'
+        : 'Group';
+    const reference =
+      event.groupMetadata?.ConversationKey ??
+      event.groupMetadata?.ContactSlug ??
+      event.groupMetadata?.ConversationName ??
+      event.groupKey;
+    return `${formatWakeProvider(provider)} (${conversationKind}): ${reference}`;
   }
 
-  return formatWakeLabel(event.type);
+  if (event.type === 'schedule') {
+    return `Schedule: ${event.groupMetadata?.ScheduleId ?? event.groupKey}`;
+  }
+
+  if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
+    return `GitHub: ${event.groupMetadata?.EventType ?? event.groupKey}`;
+  }
+
+  if (event.type === 'function-change') {
+    return `Function change: ${event.groupMetadata?.TargetAgentId ?? event.groupKey}`;
+  }
+
+  if (event.type === 'runner-reminder') {
+    return 'System: runner-reminder';
+  }
+
+  return `${formatWakeLabel(event.type)}: ${event.groupKey}`;
+}
+
+function formatWakeProvider(value: string) {
+  return value
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatWakeLabel(value: string) {
@@ -568,31 +604,31 @@ function formatWakeLabel(value: string) {
     .toLowerCase();
 }
 
-function formatWakeGroupMetadata(groupMetadata?: Record<string, string>) {
-  if (!groupMetadata) {
-    return [];
+function describeWakeActor(event: AgentWakeEvent) {
+  if (event.type === 'schedule') {
+    return 'Scheduler';
   }
 
-  const preferredOrder = ['ConversationKey', 'ConversationName', 'ContactSlug'];
-  const lines: string[] = [];
-
-  for (const key of preferredOrder) {
-    const value = groupMetadata[key];
-
-    if (value) {
-      lines.push(`${formatWakeLabel(key)}: ${value}`);
-    }
+  if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
+    return 'GitHub';
   }
 
-  for (const [key, value] of Object.entries(groupMetadata)) {
-    if (preferredOrder.includes(key)) {
-      continue;
-    }
-
-    lines.push(`${formatWakeLabel(key)}: ${value}`);
+  if (event.type === 'function-change') {
+    return 'System';
   }
 
-  return lines;
+  if (event.type === 'runner-reminder') {
+    return 'System';
+  }
+
+  return '';
+}
+
+function formatWakeTime(timestamp: number) {
+  const date = new Date(timestamp);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

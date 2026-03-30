@@ -209,6 +209,7 @@ export async function main() {
                 : `fanout:${participantId}:${timestamp}`,
             itemMetadata: {
               ...(propagatedMessage?.senderName ? { Author: propagatedMessage.senderName } : {}),
+              ...(propagatedMessage?.senderId ? { Slug: propagatedMessage.senderId } : {}),
             },
             text:
               typeof propagatedMessage?.content === 'string'
