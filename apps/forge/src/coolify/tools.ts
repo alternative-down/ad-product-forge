@@ -18,10 +18,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
       description: 'List all GitHub Apps that have been registered and connected to Coolify for deployment automation.',
       inputSchema: z.object({}),
       execute: async () => {
-        forgeDebug('tools:coolify', 'list_coolify_github_apps called');
-        const result = await coolify.listGitHubApps();
-        forgeDebug('tools:coolify', 'list_coolify_github_apps result', { count: result.length });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'list_coolify_github_apps called');
+          const result = await coolify.listGitHubApps();
+          forgeDebug('tools:coolify', 'list_coolify_github_apps result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'list_coolify_github_apps error', { error: message });
+          return { valid: false, error: message, hint: 'Verify Coolify integration is properly configured.' };
+        }
       },
     });
   }
@@ -34,10 +40,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         githubAppId: z.union([z.string().min(1), z.number().int()]).describe('The GitHub App ID or UUID.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:coolify', 'list_coolify_github_app_repositories called', { githubAppId: input.githubAppId });
-        const result = await coolify.listGitHubAppRepositories(input);
-        forgeDebug('tools:coolify', 'list_coolify_github_app_repositories result', { count: result.length });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'list_coolify_github_app_repositories called', { githubAppId: input.githubAppId });
+          const result = await coolify.listGitHubAppRepositories(input);
+          forgeDebug('tools:coolify', 'list_coolify_github_app_repositories result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'list_coolify_github_app_repositories error', { error: message });
+          return { valid: false, error: message, hint: 'Use list_coolify_github_apps to verify the GitHub App ID is valid.' };
+        }
       },
     });
   }
@@ -51,10 +63,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         repositoryName: z.string().min(1).describe('The repository name.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:coolify', 'list_coolify_github_app_repository_branches called', { githubAppId: input.githubAppId, repositoryName: input.repositoryName });
-        const result = await coolify.listGitHubAppRepositoryBranches(input);
-        forgeDebug('tools:coolify', 'list_coolify_github_app_repository_branches result', { count: result.length });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'list_coolify_github_app_repository_branches called', { githubAppId: input.githubAppId, repositoryName: input.repositoryName });
+          const result = await coolify.listGitHubAppRepositoryBranches(input);
+          forgeDebug('tools:coolify', 'list_coolify_github_app_repository_branches result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'list_coolify_github_app_repository_branches error', { error: message });
+          return { valid: false, error: message, hint: 'Verify the GitHub App ID and repository name are correct.' };
+        }
       },
     });
   }
@@ -65,10 +83,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
       description: 'Get an overview of all applications deployed and managed through Coolify, including their current status and deployment state.',
       inputSchema: z.object({}),
       execute: async () => {
-        forgeDebug('tools:coolify', 'list_coolify_applications called');
-        const result = await coolify.listApplications();
-        forgeDebug('tools:coolify', 'list_coolify_applications result', { count: result.length });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'list_coolify_applications called');
+          const result = await coolify.listApplications();
+          forgeDebug('tools:coolify', 'list_coolify_applications result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'list_coolify_applications error', { error: message });
+          return { valid: false, error: message, hint: 'Verify Coolify has applications deployed and is accessible.' };
+        }
       },
     });
   }
@@ -81,10 +105,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         applicationUuid: z.string().min(1),
       }),
       execute: async (input) => {
-        forgeDebug('tools:coolify', 'get_coolify_application called', { applicationUuid: input.applicationUuid });
-        const result = await coolify.getApplication(input.applicationUuid);
-        forgeDebug('tools:coolify', 'get_coolify_application result', { found: !!result });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'get_coolify_application called', { applicationUuid: input.applicationUuid });
+          const result = await coolify.getApplication(input.applicationUuid);
+          forgeDebug('tools:coolify', 'get_coolify_application result', { found: !!result });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'get_coolify_application error', { error: message });
+          return { valid: false, error: message, hint: 'Use list_coolify_applications to find valid application UUIDs.' };
+        }
       },
     });
   }
@@ -126,38 +156,44 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         }
 
         let result;
-        if (input.action === 'create') {
-          result = await coolify.createApplication({
-            githubAppUuid: input.githubAppUuid!,
-            repositoryOwner: input.repositoryOwner!,
-            repositoryName: input.repositoryName!,
-            branch: input.branch!,
-            name: input.name!,
-            slug: input.slug!,
-            port: input.port!,
-            buildCommand: input.buildCommand,
-            startCommand: input.startCommand,
-            installCommand: input.installCommand,
-          });
-        } else if (input.action === 'delete') {
-          result = await coolify.deleteApplication(input.applicationUuid!);
-        } else if (input.action === 'restart') {
-          result = await coolify.restartApplication(input.applicationUuid!);
-        } else {
-          result = await coolify.updateApplication({
-            applicationUuid: input.applicationUuid!,
-            name: input.name,
-            description: input.description,
-            port: input.port,
-            buildCommand: input.buildCommand,
-            startCommand: input.startCommand,
-            installCommand: input.installCommand,
-            branch: input.branch,
-            slug: input.slug,
-          });
+        try {
+          if (input.action === 'create') {
+            result = await coolify.createApplication({
+              githubAppUuid: input.githubAppUuid!,
+              repositoryOwner: input.repositoryOwner!,
+              repositoryName: input.repositoryName!,
+              branch: input.branch!,
+              name: input.name!,
+              slug: input.slug!,
+              port: input.port!,
+              buildCommand: input.buildCommand,
+              startCommand: input.startCommand,
+              installCommand: input.installCommand,
+            });
+          } else if (input.action === 'delete') {
+            result = await coolify.deleteApplication(input.applicationUuid!);
+          } else if (input.action === 'restart') {
+            result = await coolify.restartApplication(input.applicationUuid!);
+          } else {
+            result = await coolify.updateApplication({
+              applicationUuid: input.applicationUuid!,
+              name: input.name,
+              description: input.description,
+              port: input.port,
+              buildCommand: input.buildCommand,
+              startCommand: input.startCommand,
+              installCommand: input.installCommand,
+              branch: input.branch,
+              slug: input.slug,
+            });
+          }
+          forgeDebug('tools:coolify', 'manage_coolify_application result', { action: input.action, result });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'manage_coolify_application error', { error: message });
+          return { valid: false, error: message, hint: 'Verify Coolify integration is configured and application UUID is valid.' };
         }
-        forgeDebug('tools:coolify', 'manage_coolify_application result', { action: input.action, result });
-        return result;
       },
     });
   }
@@ -171,12 +207,18 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         state: z.enum(['running', 'stopped']).describe('Target state: running to start, stopped to stop.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:coolify', 'toggle_coolify_application called', { applicationUuid: input.applicationUuid, state: input.state });
-        const result = input.state === 'running'
-          ? await coolify.startApplication(input.applicationUuid)
-          : await coolify.stopApplication(input.applicationUuid);
-        forgeDebug('tools:coolify', 'toggle_coolify_application result', { state: input.state, result });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'toggle_coolify_application called', { applicationUuid: input.applicationUuid, state: input.state });
+          const result = input.state === 'running'
+            ? await coolify.startApplication(input.applicationUuid)
+            : await coolify.stopApplication(input.applicationUuid);
+          forgeDebug('tools:coolify', 'toggle_coolify_application result', { state: input.state, result });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'toggle_coolify_application error', { error: message });
+          return { valid: false, error: message, hint: 'Use list_coolify_applications to verify the application exists.' };
+        }
       },
     });
   }
@@ -190,10 +232,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         limit: z.number().int().positive().max(100).default(20).describe('Maximum number of deployments to return.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:coolify', 'list_coolify_application_deployments called', { applicationUuid: input.applicationUuid, limit: input.limit });
-        const result = await coolify.listApplicationDeployments(input);
-        forgeDebug('tools:coolify', 'list_coolify_application_deployments result', { count: result.length });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'list_coolify_application_deployments called', { applicationUuid: input.applicationUuid, limit: input.limit });
+          const result = await coolify.listApplicationDeployments(input);
+          forgeDebug('tools:coolify', 'list_coolify_application_deployments result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'list_coolify_application_deployments error', { error: message });
+          return { valid: false, error: message, hint: 'Use list_coolify_applications to verify the application UUID is valid.' };
+        }
       },
     });
   }
@@ -207,10 +255,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         deploymentUuid: z.string().nullish().describe('Specific deployment UUID (optional, returns latest if omitted).'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:coolify', 'get_coolify_deployment_logs called', { applicationUuid: input.applicationUuid, deploymentUuid: input.deploymentUuid });
-        const result = await coolify.getDeploymentLogs(input);
-        forgeDebug('tools:coolify', 'get_coolify_deployment_logs result', { deploymentUuid: result.deploymentUuid, status: result.status });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'get_coolify_deployment_logs called', { applicationUuid: input.applicationUuid, deploymentUuid: input.deploymentUuid });
+          const result = await coolify.getDeploymentLogs(input);
+          forgeDebug('tools:coolify', 'get_coolify_deployment_logs result', { deploymentUuid: result.deploymentUuid, status: result.status });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'get_coolify_deployment_logs error', { error: message });
+          return { valid: false, error: message, hint: 'Verify the application UUID and deployment UUID are valid.' };
+        }
       },
     });
   }
@@ -225,10 +279,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         since: z.number().int().positive().nullish().describe('Start from Unix timestamp.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:coolify', 'get_coolify_application_logs called', { applicationUuid: input.applicationUuid, lines: input.lines, since: input.since });
-        const result = await coolify.getApplicationLogs(input);
-        forgeDebug('tools:coolify', 'get_coolify_application_logs result', { applicationUuid: result.applicationUuid });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'get_coolify_application_logs called', { applicationUuid: input.applicationUuid, lines: input.lines, since: input.since });
+          const result = await coolify.getApplicationLogs(input);
+          forgeDebug('tools:coolify', 'get_coolify_application_logs result', { applicationUuid: result.applicationUuid });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'get_coolify_application_logs error', { error: message });
+          return { valid: false, error: message, hint: 'Use list_coolify_applications to verify the application UUID is valid.' };
+        }
       },
     });
   }
@@ -241,10 +301,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         applicationUuid: z.string().min(1),
       }),
       execute: async (input) => {
-        forgeDebug('tools:coolify', 'get_coolify_application_envs called', { applicationUuid: input.applicationUuid });
-        const result = await coolify.listApplicationEnvs(input.applicationUuid);
-        forgeDebug('tools:coolify', 'get_coolify_application_envs result', { count: result.length });
-        return result;
+        try {
+          forgeDebug('tools:coolify', 'get_coolify_application_envs called', { applicationUuid: input.applicationUuid });
+          const result = await coolify.listApplicationEnvs(input.applicationUuid);
+          forgeDebug('tools:coolify', 'get_coolify_application_envs result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'get_coolify_application_envs error', { error: message });
+          return { valid: false, error: message, hint: 'Use list_coolify_applications to verify the application UUID is valid.' };
+        }
       },
     });
   }
@@ -271,24 +337,30 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         }
 
         let result;
-        if (input.action === 'delete') {
-          result = await coolify.deleteApplicationEnv({
-            applicationUuid: input.applicationUuid,
-            key: input.key,
-          });
-        } else {
-          result = await coolify.setApplicationEnv({
-            applicationUuid: input.applicationUuid,
-            key: input.key,
-            value: input.value!,
-            isPreview: input.isPreview,
-            isLiteral: input.isLiteral,
-            isMultiline: input.isMultiline,
-            isShownOnce: input.isShownOnce,
-          });
+        try {
+          if (input.action === 'delete') {
+            result = await coolify.deleteApplicationEnv({
+              applicationUuid: input.applicationUuid,
+              key: input.key,
+            });
+          } else {
+            result = await coolify.setApplicationEnv({
+              applicationUuid: input.applicationUuid,
+              key: input.key,
+              value: input.value!,
+              isPreview: input.isPreview,
+              isLiteral: input.isLiteral,
+              isMultiline: input.isMultiline,
+              isShownOnce: input.isShownOnce,
+            });
+          }
+          forgeDebug('tools:coolify', 'manage_coolify_application_env result', { action: input.action, key: input.key });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:coolify', 'manage_coolify_application_env error', { error: message });
+          return { valid: false, error: message, hint: 'Verify the application UUID and key are valid.' };
         }
-        forgeDebug('tools:coolify', 'manage_coolify_application_env result', { action: input.action, key: input.key });
-        return result;
       },
     });
   }

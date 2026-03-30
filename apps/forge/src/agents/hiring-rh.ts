@@ -226,13 +226,6 @@ export async function generateHiredAgentInstructions(
   const { agent: agentHired } = toolCall.payload.args as z.infer<typeof inputSchema>;
   const agentFunction = await capabilities.getFunction(agentHired.functionId);
 
-  if (!agentFunction) {
-    return {
-      error: `Function ID "${agentHired.functionId}" does not exist. Please use list_agent_functions to see available functions, then use create_agent_function to create a new function, or provide a valid existing functionId.`,
-      valid: false,
-    };
-  }
-
   return {
     ...agentHired,
     functionName: agentFunction.name,
