@@ -33,13 +33,14 @@ class HireAgentDisablerProcessor implements Processor {
       return {};
     }
 
-    // Check if hireAgent was called in previous steps using steps parameter
-    const hasHireAgentCall = steps.some((step) => {
-      return step.toolCalls?.some((call) => call.toolName === 'hireAgent');
-    });
+    const hasSuccessfulHireAgentResult = steps.some((step) =>
+      step.toolResults?.some((toolResult) => hasSuccessfulHireAgentToolResult(toolResult)),
+    );
 
-    if (hasHireAgentCall) {
-      console.log(`[HireAgentDisabler] Step ${stepNumber}: hireAgent detected, disabling tools`);
+    if (hasSuccessfulHireAgentResult) {
+      console.log(
+        `[HireAgentDisabler] Step ${stepNumber}: valid hireAgent result detected, disabling tools`,
+      );
       return { tools: {}, toolChoice: 'none' };
     }
 
@@ -65,6 +66,15 @@ const HIRING_RH_TOOL_IDS = new Set([
   'manage_role_workflow_permissions',
   'list_available_capabilities',
 ] as const);
+const REQUIRED_HIRING_TOOL_IDS = [
+  'list_conversations',
+  'get_messages',
+  'send_message',
+  'list_agent_schedules',
+  'create_agent_schedule',
+  'update_agent_schedule',
+  'delete_agent_schedule',
+] as const;
 const hiringRhResultSchema = z.object({
   agentName: z.string().min(1),
   agentDescription: z.string().min(1),
@@ -79,11 +89,12 @@ const hireAgentSuccessSchema = hiringRhResultSchema.extend({
 const hireAgentFailureSchema = z.object({
   valid: z.literal(false),
   error: z.string().min(1),
+  hint: z.string().min(1).optional(),
 });
 const hireAgentToolResultSchema = z.union([hireAgentSuccessSchema, hireAgentFailureSchema]);
 
 type HiringRhResult =
-  | { valid: false; error: string }
+  | { valid: false; error: string; hint?: string }
   | {
       valid: true;
       agentName: string;
@@ -95,6 +106,98 @@ type HiringRhResult =
       costUsd: number;
       modelKey: string;
     };
+
+function isSuccessfulHireAgentResult(result: unknown) {
+  const parsed = hireAgentSuccessSchema.safeParse(result);
+  return parsed.success && parsed.data.valid;
+}
+
+function hasSuccessfulHireAgentToolResult(toolResult: unknown) {
+  if (typeof toolResult !== 'object' || toolResult === null) {
+    return false;
+  }
+
+  if (
+    'toolName' in toolResult &&
+    toolResult.toolName === 'hireAgent' &&
+    'result' in toolResult
+  ) {
+    return isSuccessfulHireAgentResult(toolResult.result);
+  }
+
+  if (
+    'payload' in toolResult &&
+    typeof toolResult.payload === 'object' &&
+    toolResult.payload !== null &&
+    'toolName' in toolResult.payload &&
+    toolResult.payload.toolName === 'hireAgent' &&
+    'result' in toolResult.payload
+  ) {
+    return isSuccessfulHireAgentResult(toolResult.payload.result);
+  }
+
+  return false;
+}
+
+async function validateHireAgentInput(
+  capabilities: ReturnType<typeof createCapabilityStore>,
+  functionId: string,
+) {
+  if (!functionId.trim()) {
+    return {
+      valid: false as const,
+      error: 'The new agent must have a functionId.',
+      hint: 'Pick an existing function with list_agent_functions or create one with create_agent_function before calling hireAgent.',
+    };
+  }
+
+  const agentFunction = await capabilities.getFunction(functionId);
+
+  if (!agentFunction) {
+    return {
+      valid: false as const,
+      error: `Function ID "${functionId}" does not exist.`,
+      hint: 'Use list_agent_functions to find a valid functionId, or create a new function and then call hireAgent again.',
+    };
+  }
+
+  if (agentFunction.roles.length === 0) {
+    return {
+      valid: false as const,
+      error: `Function "${agentFunction.name}" does not have any linked roles.`,
+      hint: 'Use list_agent_roles to find or create a role, then use assign_role_to_function to link at least one role to this function before calling hireAgent again.',
+    };
+  }
+
+  const roleToolPermissions = await Promise.all(
+    agentFunction.roles.map(async (role) => ({
+      roleId: role.roleId,
+      roleName: role.name,
+      toolIds: await capabilities.listRoleToolPermissions(role.roleId),
+    })),
+  );
+  const grantedToolIds = new Set(roleToolPermissions.flatMap((role) => role.toolIds));
+  const missingToolIds = REQUIRED_HIRING_TOOL_IDS.filter((toolId) => !grantedToolIds.has(toolId));
+
+  if (missingToolIds.length > 0) {
+    const roleSummary = roleToolPermissions
+      .map((role) => `${role.roleName} (${role.roleId})`)
+      .join(', ');
+
+    return {
+      valid: false as const,
+      error: `Function "${agentFunction.name}" is missing the minimum base tools required for a hired agent.`,
+      hint: `Add these tool permissions to at least one linked role with manage_role_tool_permissions: ${missingToolIds.join(', ')}. Current linked roles: ${roleSummary}.`,
+    };
+  }
+
+  return {
+    valid: true as const,
+    functionDescription: agentFunction.description,
+    functionId: agentFunction.functionId,
+    functionName: agentFunction.name,
+  };
+}
 
 export async function generateHiredAgentInstructions(
   db: Database,
@@ -180,11 +283,24 @@ export async function generateHiredAgentInstructions(
       '',
       '3. **Function Selection**: Reuse an existing function when it matches the hiring request. Create or update a new function only when no existing one fits.',
       '',
-      '4. **Report Progress**: After each major step, call reportHiringState to describe what you found and what you plan to do next.',
+      '4. **Role Validation**: Before finalizing, confirm the chosen function has at least one linked role.',
       '',
-      '5. **Finalize Hiring**: When ready, call hireAgent with the complete agent profile.',
+      '5. **Minimum Permissions**: Before finalizing, confirm the linked roles grant these minimum tools:',
+      '   - list_conversations',
+      '   - get_messages',
+      '   - send_message',
+      '   - list_agent_schedules',
+      '   - create_agent_schedule',
+      '   - update_agent_schedule',
+      '   - delete_agent_schedule',
       '',
-      '6. **Report Final Result**: Call reportHiringState to confirm the hiring was successful or describe any errors.',
+      'Use assign_role_to_function and manage_role_tool_permissions when those requirements are missing.',
+      '',
+      '6. **Report Progress**: After each major step, call reportHiringState to describe what you found and what you plan to do next.',
+      '',
+      '7. **Finalize Hiring**: Call hireAgent only after the function, roles, and minimum tool permissions are already valid.',
+      '',
+      '8. **Report Final Result**: Call reportHiringState to confirm the hiring was successful or describe any errors.',
       '',
       '## Agent Design Framework (CrewAI Best Practices)',
       '',
@@ -217,6 +333,8 @@ export async function generateHiredAgentInstructions(
       '',
       '- Use "function" terminology consistently. Do NOT use "role".',
       '- The functionId must be a real internal function id from the capability store.',
+      '- The selected function must already have at least one linked role before hireAgent is called.',
+      '- The selected function must already grant the minimum base tools through its linked roles before hireAgent is called.',
       '- Generated agent prompts should feel professionally written, not templated.',
       '- Each agent should be able to COMPLETE TASKS AUTONOMOUSLY with clear object and completion criteria.',
       '',
@@ -250,23 +368,18 @@ export async function generateHiredAgentInstructions(
         inputSchema,
         execute: async ({ agent }) => {
           console.log(`[HiringRH] hireAgent called with:`, JSON.stringify(agent, null, 2));
-          
-          const agentFunction = await capabilities.getFunction(agent.functionId);
-          console.log(`[HiringRH] getFunction(${agent.functionId}) result:`, JSON.stringify(agentFunction, null, 2));
+          const validation = await validateHireAgentInput(capabilities, agent.functionId);
 
-          if (!agentFunction) {
-            console.log(`[HiringRH] hireAgent ERROR: Function not found`);
-            return {
-              error: `Function ID "${agent.functionId}" does not exist. Please use list_agent_functions to see available functions, then use create_agent_function to create a new function, or provide a valid existing functionId.`,
-              valid: false,
-            };
+          if (!validation.valid) {
+            console.log(`[HiringRH] hireAgent ERROR:`, validation.error);
+            return validation;
           }
 
           const result = {
             ...agent,
-            functionId: agentFunction.functionId,
-            functionName: agentFunction.name,
-            functionDescription: agentFunction.description,
+            functionId: validation.functionId,
+            functionName: validation.functionName,
+            functionDescription: validation.functionDescription,
             valid: true,
           };
           console.log(`[HiringRH] hireAgent SUCCESS, returning:`, JSON.stringify(result, null, 2));
@@ -355,6 +468,14 @@ export async function generateHiredAgentInstructions(
         valid: true,
       };
     }
+
+    if (parsedToolResult.success && !parsedToolResult.data.valid) {
+      console.log(
+        `[HiringRH] INVALID - hireAgent returned validation failure:`,
+        JSON.stringify(parsedToolResult.data, null, 2),
+      );
+      return parsedToolResult.data;
+    }
   }
 
   console.log(`[HiringRH] ERROR: Could not extract hiring data from response`);
@@ -374,7 +495,11 @@ function buildHiringPrompt(input: {
     'Design one newly hired permanent internal collaborator from the hiring request.',
     `Hiring request:\n${input.hiringRequest.trim()}`,
     'Inspect the current capability structure with tools before deciding whether to reuse or change functions and roles.',
+    'Before calling hireAgent, make sure the chosen function exists, has at least one linked role, and that the linked roles grant the minimum base tools listed below.',
+    `Minimum base tools: ${REQUIRED_HIRING_TOOL_IDS.join(', ')}.`,
+    'If the function is missing roles or permissions, fix that first with assign_role_to_function and manage_role_tool_permissions.',
     'After designing the agent profile, you MUST call the tool "hireAgent" with the structured data to finalize the hiring.',
+    'If hireAgent returns valid false, read the hint, fix the capability setup, and call hireAgent again only after the setup is valid.',
     'The hireAgent tool requires an object with: agentName, agentDescription, functionId, instructions.',
     'IMPORTANT: Create a CARICATURE persona, NOT a real person. Use names inspired by video game characters, AI assistants, robots, fictional helpers, NPCs, mascots, legendary figures, or whimsical archetypes. Good name examples: "Unitron-3000", "Mira the Analyst", "Captain Productivity", "Sage of the Spreadsheets", "Glitch the Fixer", "Protocol Pete", "Nova the Navigator", "Bureaucracy Bot", "Quest Master Quill". AVOID common human names like John, Maria, Carlos, Ana. If using a human name, add a title, nickname, or surname that makes it feel like a character.',
     'Write the prompt with exactly these sections and no others: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
