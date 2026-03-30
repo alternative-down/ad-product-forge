@@ -17,12 +17,14 @@ import type { MastraToolInvocationOptions } from '@mastra/core/tools';
 import { ObservationalMemory } from '@mastra/memory/processors';
 
 import { forgeDebug } from '../../debug';
+import { toMastraSafeIdentifier } from '../../mastra-id';
 import { embedTextWithFastembed } from './embedder';
 
 
 export type LongTermMemoryConfig = {
   om: ObservationalMemory;
   agentId: string;
+  mastraId?: string;
   omModel: AgentConfig['model'];
   memoryBasePath: string;
 };
@@ -50,15 +52,17 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     this.omModel = config.omModel;
 
     const memoryPath = config.memoryBasePath;
-    
+    const mastraAgentId = config.mastraId
+      ? toMastraSafeIdentifier(config.mastraId)
+      : toMastraSafeIdentifier(config.agentId);
 
     const vectorStorePath = `${path.dirname(memoryPath)}/${config.agentId}-memory.db`;
     this.vectorStore = new LibSQLVector({
-      id: `${config.agentId}-memory-vector`,
+      id: `${mastraAgentId}_memory_vector`,
       url: `file:${vectorStorePath}`,
     });
 
-    this.searchIndexName = config.agentId + '_memory_search';
+    this.searchIndexName = `${mastraAgentId}_memory_search`;
 
     this.workspace = new WorkspaceRuntime({
       autoSync: true,
@@ -66,13 +70,13 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       autoIndexPaths: ['/observations', '/memory'],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({ basePath: memoryPath }),
-vectorStore: this.vectorStore,
+      vectorStore: this.vectorStore,
       searchIndexName: this.searchIndexName,
     });
 
     // Create memory consolidation agent
     this.memoryAgent = new Agent({
-      id: this.id + '-agent',
+      id: toMastraSafeIdentifier(`${this.id}_agent`),
       name: 'Memory Consolidation Agent',
       instructions:
         'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to list the contents of /observations first using list_files, then read only the FILES (not directories), extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed files to /archived. IMPORTANT: Always check with list_files to see what exists before reading, and never attempt to read_file on a directory path (IsDirectoryError), and check if a file exists before writing with overwrite:false (FileExistsError). Use overwrite:true when updating existing files.',
@@ -80,7 +84,6 @@ vectorStore: this.vectorStore,
       workspace: this.workspace,
     });
   }
-
 
   private async doInitialize() {
     await this.workspace.init();

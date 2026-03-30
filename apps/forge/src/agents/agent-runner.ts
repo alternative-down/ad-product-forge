@@ -225,8 +225,8 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         maxSteps: 1,
         // toolChoice: 'required', removio para não requerer tool call obrigatoriamente
         memory: {
-          thread: runtime.id,
-          resource: runtime.id,
+          thread: runtime.mastraId,
+          resource: runtime.mastraId,
         },
         providerOptions: {
           anthropic: {

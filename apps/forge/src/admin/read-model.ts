@@ -10,6 +10,7 @@ import {
   communicationConversations,
   communicationMessages,
   communicationSchema,
+  toMastraSafeIdentifier,
 } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
@@ -524,12 +525,13 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
 
 async function listRecentThreadMessages(workspaceBasePath: string, agentId: string) {
   try {
+    const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
     const client = createClient({
       url: `file:${agentDatabasePath}`,
     });
     const storage = new LibSQLStore({
-      id: `${agentId}-storage`,
+      id: `${mastraAgentId}_storage`,
       client,
       disableInit: true,
     });
@@ -540,8 +542,8 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
     }
 
     const result = await memory.listMessages({
-      threadId: agentId,
-      resourceId: agentId,
+      threadId: mastraAgentId,
+      resourceId: mastraAgentId,
       page: 0,
       perPage: 20,
       orderBy: {

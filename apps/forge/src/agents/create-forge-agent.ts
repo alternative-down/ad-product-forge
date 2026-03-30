@@ -36,6 +36,7 @@ import {
   createAgentMemory,
   createObservationalMemory,
   appendWorkingMemoryInstructions,
+  toMastraSafeIdentifier,
 } from '@mastra-engine/core';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig, WorkspaceSkillsConfig } from '../database/schema';
 
@@ -69,6 +70,7 @@ export type InternalAgentRuntime<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = {
   id: TAgentId;
+  mastraId: string;
   pricingModelKey: string;
   modelProfileId?: string;
   omPricingModelKey: string;
@@ -185,6 +187,7 @@ export async function createInternalAgentRuntime<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<InternalAgentRuntime<TAgentId, TTools, TOutput, TRequestContext>> {
+  const mastraId = toMastraSafeIdentifier(config.id);
   const agentWorkspacePath = path.resolve(config.workspaceBasePath, config.id);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
   const agentWorkspaceDir = config.workspaceFilesystem?.basePath
@@ -201,8 +204,8 @@ export async function createInternalAgentRuntime<
 
   const dbUrl = `file:${agentDatabasePath}`;
   const client = createClient({ url: dbUrl });
-  const storage = new LibSQLStore({ id: `${config.id}-storage`, client });
-  const vector = new LibSQLVector({ id: `${config.id}-vector`, url: dbUrl });
+  const storage = new LibSQLStore({ id: `${mastraId}_storage`, client });
+  const vector = new LibSQLVector({ id: `${mastraId}_vector`, url: dbUrl });
   const workspace = new WorkspaceRuntime({
     autoSync: true,
     bm25: true,
@@ -220,7 +223,10 @@ export async function createInternalAgentRuntime<
   // Initialize memory store by creating a thread (Issue #212)
   // This ensures mastra_messages and mastra_threads tables exist
   if (hasCreateThread(storage.stores.memory)) {
-    await storage.stores.memory.createThread({ threadId: config.id });
+    await storage.stores.memory.createThread({
+      resourceId: mastraId,
+      threadId: mastraId,
+    });
   }
 
   const communication = await createCommunicationModule({
@@ -247,6 +253,7 @@ export async function createInternalAgentRuntime<
     const longTermMemory = new LongTermMemory({
       om,
       agentId: config.id,
+      mastraId,
       memoryBasePath: agentMemoryPath,
       omModel: omModelKey,
     });
@@ -273,6 +280,7 @@ export async function createInternalAgentRuntime<
 
   return {
     id: config.id,
+    mastraId,
     pricingModelKey: config.pricingModelKey,
     modelProfileId: config.modelProfileId,
     omPricingModelKey,
