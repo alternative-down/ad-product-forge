@@ -965,7 +965,10 @@ function AgentInboxCard(input: {
               </div>
             )}
             {input.notifications.map((notification) => (
-              <div key={notification.notificationId} className="rounded-lg border border-border bg-accent/50 px-4 py-4">
+              <div
+                key={notification.notificationId}
+                className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-4"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Badge>{notification.read ? 'read' : 'unread'}</Badge>
@@ -1004,7 +1007,7 @@ function AgentInboxCard(input: {
                         'w-full rounded-lg border px-4 py-4 text-left transition',
                         selectedConversation?.conversationId === conversation.conversationId
                           ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                          : 'border-border bg-muted text-foreground hover:border-[color:var(--muted-strong)] hover:bg-background',
+                          : 'border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] text-foreground hover:border-[color:var(--muted-strong)] hover:bg-[color:var(--panel)]',
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -1031,7 +1034,7 @@ function AgentInboxCard(input: {
               </div>
 
               {selectedConversation ? (
-                <div className="rounded-lg border border-border bg-muted p-4">
+                <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="font-medium text-foreground">{selectedConversation.conversationKey}</div>
                     <Badge>{selectedConversation.provider}</Badge>
@@ -1050,7 +1053,10 @@ function AgentInboxCard(input: {
                   </div>
                   <div className="mt-4 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
                     {selectedConversation.messages.map((message) => (
-                      <div key={message.messageId} className="rounded-xl bg-background px-4 py-3 text-sm text-foreground">
+                      <div
+                        key={message.messageId}
+                        className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-4 py-3 text-sm text-foreground"
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <div className="font-medium text-foreground">
                             {message.authorDisplayName ?? 'Unknown author'}
@@ -1095,7 +1101,10 @@ function AgentThreadCard(input: {
           </div>
         )}
         {input.messages.map((message) => (
-          <div key={message.messageId} className="rounded-lg border border-border bg-muted p-4">
+          <div
+            key={message.messageId}
+            className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4"
+          >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Badge>{message.role}</Badge>
