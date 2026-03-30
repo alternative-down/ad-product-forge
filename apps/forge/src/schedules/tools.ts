@@ -11,6 +11,27 @@ export function createAgentScheduleTools(
   allowedToolIds?: Set<string> | null,
 ) {
   const tools: Record<string, unknown> = {};
+  const taskTargetInputSchema = z.object({
+    targetAgentId: z.string().min(1).describe('The target agent that should receive this scheduled task.'),
+    name: z.string().min(1).describe('Name of the task.'),
+    description: z.string().nullish().describe('Optional description.'),
+    scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time.'),
+    cronExpression: z.string().min(1).nullish().describe('Cron expression (required for cron type).'),
+    scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type).'),
+    timezone: z.string().min(1).default('UTC').describe('Timezone for the schedule.'),
+    content: z.string().min(1).describe('Content/payload to execute when the task triggers.'),
+  });
+  const taskUpdateInputSchema = z.object({
+    taskId: z.string().min(1).describe('ID of the scheduled task to update.'),
+    name: z.string().min(1).nullish().describe('New name.'),
+    description: z.string().nullish().nullable().describe('New description.'),
+    scheduleType: z.enum(['cron', 'date']).nullish().describe('New schedule type.'),
+    cronExpression: z.string().min(1).nullish().nullable().describe('New cron expression.'),
+    scheduledDate: z.string().min(1).nullish().nullable().describe('New scheduled date (ISO string).'),
+    timezone: z.string().min(1).nullish().describe('New timezone.'),
+    content: z.string().min(1).nullish().describe('New content.'),
+    isActive: z.boolean().nullish().describe('Activate or pause the task.'),
+  });
 
   if (hasToolPermission(allowedToolIds, 'list_agent_schedules')) {
     tools.list_agent_schedules = createTool({
@@ -152,6 +173,103 @@ export function createAgentScheduleTools(
         });
         forgeDebug('tools:schedules', 'create_cron_for_agent result', { result });
         return result;
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'create_task_for_agent')) {
+    tools.create_task_for_agent = createTool({
+      id: 'create_task_for_agent',
+      description: 'Create a scheduled task for another agent. This is the cross-agent scheduling surface intended for coordinator-style delegation.',
+      inputSchema: taskTargetInputSchema,
+      execute: async (input) => {
+        forgeDebug('tools:schedules', 'create_task_for_agent called', { agentId, targetAgentId: input.targetAgentId });
+        if (input.scheduleType === 'cron' && !input.cronExpression) {
+          forgeDebug('tools:schedules', 'create_task_for_agent validation failed', { reason: 'cronExpression required for cron type' });
+          return { valid: false, error: 'cronExpression is required when scheduleType is cron' };
+        }
+        if (input.scheduleType === 'date' && !input.scheduledDate) {
+          forgeDebug('tools:schedules', 'create_task_for_agent validation failed', { reason: 'scheduledDate required for date type' });
+          return { valid: false, error: 'scheduledDate is required when scheduleType is date' };
+        }
+
+        const result = await schedules.createScheduleForAgent(agentId, {
+          targetAgentId: input.targetAgentId,
+          name: input.name,
+          description: input.description,
+          scheduleType: input.scheduleType,
+          cronExpression: input.cronExpression,
+          scheduledDate: input.scheduledDate,
+          timezone: input.timezone,
+          content: input.content,
+        });
+
+        forgeDebug('tools:schedules', 'create_task_for_agent result', { result });
+        return {
+          ...result,
+          taskId: result.scheduleId,
+        };
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'list_agent_tasks')) {
+    tools.list_agent_tasks = createTool({
+      id: 'list_agent_tasks',
+      description: 'List scheduled tasks that you created for other agents. Optional targetAgentId filters the delegated tasks to one specific agent.',
+      inputSchema: z.object({
+        targetAgentId: z.string().min(1).nullish().describe('Optional target agent filter.'),
+      }),
+      execute: async (input) => {
+        forgeDebug('tools:schedules', 'list_agent_tasks called', { agentId, targetAgentId: input.targetAgentId });
+        const result = await schedules.listTasks(agentId, input.targetAgentId ?? undefined);
+        forgeDebug('tools:schedules', 'list_agent_tasks result', { count: result.length });
+        return result;
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'update_agent_task')) {
+    tools.update_agent_task = createTool({
+      id: 'update_agent_task',
+      description: 'Update a scheduled task that you created for another agent. Authorization is checked through creatorId.',
+      inputSchema: taskUpdateInputSchema,
+      execute: async (input) => {
+        forgeDebug('tools:schedules', 'update_agent_task called', { agentId, taskId: input.taskId });
+        const result = await schedules.editCron(agentId, input.taskId, {
+          name: input.name,
+          description: input.description,
+          scheduleType: input.scheduleType,
+          cronExpression: input.cronExpression,
+          scheduledDate: input.scheduledDate,
+          timezone: input.timezone,
+          content: input.content,
+          isActive: input.isActive,
+        });
+        forgeDebug('tools:schedules', 'update_agent_task result', { result });
+        return {
+          ...result,
+          taskId: result.scheduleId,
+        };
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'cancel_agent_task')) {
+    tools.cancel_agent_task = createTool({
+      id: 'cancel_agent_task',
+      description: 'Cancel a scheduled task that you created for another agent. Authorization is checked through creatorId.',
+      inputSchema: z.object({
+        taskId: z.string().min(1).describe('ID of the scheduled task to cancel.'),
+      }),
+      execute: async (input) => {
+        forgeDebug('tools:schedules', 'cancel_agent_task called', { agentId, taskId: input.taskId });
+        const result = await schedules.deleteCron(agentId, input.taskId);
+        forgeDebug('tools:schedules', 'cancel_agent_task result', { result });
+        return {
+          ...result,
+          taskId: input.taskId,
+        };
       },
     });
   }

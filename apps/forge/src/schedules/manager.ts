@@ -123,6 +123,16 @@ export function createAgentScheduleManager(input: {
     return schedules.map(toToolOutput);
   }
 
+  async function listTasks(creatorAgentId: string, targetAgentId?: string) {
+    const schedules = await store.listCreatedAgentSchedules(creatorAgentId, targetAgentId);
+    return schedules.map((schedule) => ({
+      ...toToolOutput(schedule),
+      createdBy: creatorAgentId,
+      targetAgentId: schedule.agentId,
+      taskId: schedule.scheduleId,
+    }));
+  }
+
   async function updateSchedule(agentId: string, scheduleId: string, rawInput: z.input<typeof updateScheduleSchema>) {
     const parsed = updateScheduleSchema.parse(rawInput);
     const existing = await store.getAgentSchedule(agentId, scheduleId);
@@ -467,6 +477,7 @@ export function createAgentScheduleManager(input: {
     createHeartbeatSchedule,
     createSchedule,
     listSchedules,
+    listTasks,
     updateSchedule,
     deleteSchedule,
     removeAgent,
