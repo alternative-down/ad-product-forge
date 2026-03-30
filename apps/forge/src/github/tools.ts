@@ -1,5 +1,6 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
+import { forgeDebug } from '@mastra-engine/core';
 
 import { hasToolPermission } from '../capabilities/catalog';
 import type { GitHubAppManager } from './manager';
@@ -14,10 +15,20 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
       inputSchema: z.object({
         repositoryName: z.string().nullish(),
       }),
-      execute: async (input) => githubApps.getGitCredentials({
-        agentId,
-        repositoryName: input.repositoryName,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'get_github_git_credentials called', { repositoryName: input.repositoryName });
+        try {
+          const result = await githubApps.getGitCredentials({
+            agentId,
+            repositoryName: input.repositoryName,
+          });
+          forgeDebug('tools:github', 'get_github_git_credentials result', { hasCredentials: !!result });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'get_github_git_credentials error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify GitHub App is installed and has repository access.' };
+        }
+      },
     });
   }
 
@@ -26,7 +37,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
       id: 'list_github_repositories',
       description: 'Returns a list of all repositories your GitHub App has access to, including their names, visibility, and default branch.',
       inputSchema: z.object({}),
-      execute: async () => githubApps.listRepositories(agentId),
+      execute: async () => {
+        forgeDebug('tools:github', 'list_github_repositories called', {});
+        try {
+          const result = await githubApps.listRepositories(agentId);
+          forgeDebug('tools:github', 'list_github_repositories result', { count: result.length });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'list_github_repositories error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check GitHub App permissions and repository access.' };
+        }
+      },
     });
   }
 
@@ -38,7 +59,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name (slug, not full URL).'),
       }),
-      execute: async (input) => githubApps.getRepository(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'get_github_repository called', { owner: input.owner, repositoryName: input.repositoryName });
+        try {
+          const result = await githubApps.getRepository(agentId, input);
+          forgeDebug('tools:github', 'get_github_repository result', { repositoryName: input.repositoryName });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'get_github_repository error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify repository exists and GitHub App has access.' };
+        }
+      },
     });
   }
 
@@ -56,13 +87,23 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         autoInit: z.boolean().nullish().describe('Automatically initialize with a README.'),
         defaultBranch: z.string().nullish().describe('Default branch name (e.g., main, develop).'),
       }),
-      execute: async (input) => githubApps.createRepository(agentId, {
-        name: input.name,
-        description: input.description,
-        private: input.private,
-        autoInit: input.autoInit,
-        defaultBranch: input.defaultBranch,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'create_github_repository called', { name: input.name });
+        try {
+          const result = await githubApps.createRepository(agentId, {
+            name: input.name,
+            description: input.description,
+            private: input.private,
+            autoInit: input.autoInit,
+            defaultBranch: input.defaultBranch,
+          });
+          forgeDebug('tools:github', 'create_github_repository result', { id: result.id, name: result.name });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'create_github_repository error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check if repository name already exists or GitHub App has create permissions.' };
+        }
+      },
     });
   }
 
@@ -78,14 +119,24 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         private: z.boolean().nullish().describe('Change privacy setting.'),
         defaultBranch: z.string().nullish().describe('New default branch name.'),
       }),
-      execute: async (input) => githubApps.updateRepository(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        name: input.name,
-        description: input.description,
-        private: input.private,
-        defaultBranch: input.defaultBranch,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'update_github_repository called', { repositoryName: input.repositoryName });
+        try {
+          const result = await githubApps.updateRepository(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            name: input.name,
+            description: input.description,
+            private: input.private,
+            defaultBranch: input.defaultBranch,
+          });
+          forgeDebug('tools:github', 'update_github_repository result', { repositoryName: input.repositoryName });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'update_github_repository error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify repository exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -97,10 +148,20 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name to delete.'),
       }),
-      execute: async (input) => githubApps.deleteRepository(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'delete_github_repository called', { repositoryName: input.repositoryName });
+        try {
+          const result = await githubApps.deleteRepository(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+          });
+          forgeDebug('tools:github', 'delete_github_repository result', { success: true });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'delete_github_repository error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify repository exists and GitHub App has admin permissions.' };
+        }
+      },
     });
   }
 
@@ -113,7 +174,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1).describe('The repository name.'),
         state: z.enum(['open', 'closed', 'all']).default('open').describe('Filter by PR state.'),
       }),
-      execute: async (input) => githubApps.listPullRequests(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'list_github_pull_requests called', { repositoryName: input.repositoryName, state: input.state });
+        try {
+          const result = await githubApps.listPullRequests(agentId, input);
+          forgeDebug('tools:github', 'list_github_pull_requests result', { count: result.length });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'list_github_pull_requests error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check GitHub App permissions for pull requests.' };
+        }
+      },
     });
   }
 
@@ -126,7 +197,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1),
         pullRequestNumber: z.number().int().positive(),
       }),
-      execute: async (input) => githubApps.getPullRequest(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'get_github_pull_request called', { repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber });
+        try {
+          const result = await githubApps.getPullRequest(agentId, input);
+          forgeDebug('tools:github', 'get_github_pull_request result', { pullRequestNumber: input.pullRequestNumber });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'get_github_pull_request error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify PR number is correct and GitHub App has read permissions.' };
+        }
+      },
     });
   }
 
@@ -141,7 +222,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         direction: z.enum(['asc', 'desc']).default('asc').describe('Sort direction for comments.'),
         limit: z.number().int().positive().max(100).default(100).describe('Maximum number of comments to return.'),
       }),
-      execute: async (input) => githubApps.listPullRequestComments(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'list_github_pull_request_comments called', { repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber });
+        try {
+          const result = await githubApps.listPullRequestComments(agentId, input);
+          forgeDebug('tools:github', 'list_github_pull_request_comments result', { count: result.length });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'list_github_pull_request_comments error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check GitHub App permissions for PR comments.' };
+        }
+      },
     });
   }
 
@@ -159,14 +250,24 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         base: z.string().min(1).describe('The branch to merge into (e.g., main, develop).'),
         body: z.string().nullish().describe('Description of the changes.'),
       }),
-      execute: async (input) => githubApps.createPullRequest(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        title: input.title,
-        head: input.head,
-        base: input.base,
-        body: input.body,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'create_github_pull_request called', { repositoryName: input.repositoryName, title: input.title });
+        try {
+          const result = await githubApps.createPullRequest(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            title: input.title,
+            head: input.head,
+            base: input.base,
+            body: input.body,
+          });
+          forgeDebug('tools:github', 'create_github_pull_request result', { pullRequestNumber: result.number });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'create_github_pull_request error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check branch exists, base branch is valid, and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -183,15 +284,25 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         base: z.string().min(1).nullish().describe('New target branch.'),
         state: z.enum(['open', 'closed']).nullish().describe('Open or close the PR.'),
       }),
-      execute: async (input) => githubApps.updatePullRequest(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        pullRequestNumber: input.pullRequestNumber,
-        title: input.title,
-        body: input.body,
-        base: input.base,
-        state: input.state,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'update_github_pull_request called', { repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber });
+        try {
+          const result = await githubApps.updatePullRequest(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            pullRequestNumber: input.pullRequestNumber,
+            title: input.title,
+            body: input.body,
+            base: input.base,
+            state: input.state,
+          });
+          forgeDebug('tools:github', 'update_github_pull_request result', { pullRequestNumber: input.pullRequestNumber });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'update_github_pull_request error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify PR number exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -205,12 +316,22 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         pullRequestNumber: z.number().int().positive().describe('The pull request number to merge.'),
         mergeMethod: z.enum(['merge', 'squash', 'rebase']).nullish().describe('Merge strategy: merge (default), squash, or rebase.'),
       }),
-      execute: async (input) => githubApps.mergePullRequest(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        pullRequestNumber: input.pullRequestNumber,
-        mergeMethod: input.mergeMethod,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'merge_github_pull_request called', { repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber });
+        try {
+          const result = await githubApps.mergePullRequest(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            pullRequestNumber: input.pullRequestNumber,
+            mergeMethod: input.mergeMethod,
+          });
+          forgeDebug('tools:github', 'merge_github_pull_request result', { merged: result.merged });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'merge_github_pull_request error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify PR is mergeable and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -223,12 +344,22 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1),
         pullRequestNumber: z.number().int().positive(),
       }),
-      execute: async (input) => githubApps.updatePullRequest(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        pullRequestNumber: input.pullRequestNumber,
-        state: 'closed',
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'delete_github_pull_request called', { repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber });
+        try {
+          const result = await githubApps.updatePullRequest(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            pullRequestNumber: input.pullRequestNumber,
+            state: 'closed',
+          });
+          forgeDebug('tools:github', 'delete_github_pull_request result', { closed: true });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'delete_github_pull_request error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify PR number exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -247,7 +378,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         direction: z.enum(['asc', 'desc']).nullish().describe('Sort direction: asc or desc.'),
         limit: z.number().int().positive().max(100).default(50).describe('Maximum number of issues to return.'),
       }),
-      execute: async (input) => githubApps.listIssues(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'list_github_issues called', { repositoryName: input.repositoryName, state: input.state });
+        try {
+          const result = await githubApps.listIssues(agentId, input);
+          forgeDebug('tools:github', 'list_github_issues result', { count: result.length });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'list_github_issues error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check GitHub App permissions for repository issues.' };
+        }
+      },
     });
   }
 
@@ -260,7 +401,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1),
         issueNumber: z.number().int().positive(),
       }),
-      execute: async (input) => githubApps.getIssue(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'get_github_issue called', { repositoryName: input.repositoryName, issueNumber: input.issueNumber });
+        try {
+          const result = await githubApps.getIssue(agentId, input);
+          forgeDebug('tools:github', 'get_github_issue result', { issueNumber: input.issueNumber });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'get_github_issue error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has read permissions.' };
+        }
+      },
     });
   }
 
@@ -279,15 +430,25 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         assignees: z.array(z.string().min(1)).nullish().describe('GitHub usernames to assign.'),
         milestone: z.number().int().positive().nullable().nullish().describe('Milestone number to assign.'),
       }),
-      execute: async (input) => githubApps.createIssue(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        title: input.title,
-        body: input.body,
-        labels: input.labels,
-        assignees: input.assignees,
-        milestone: input.milestone ?? undefined,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'create_github_issue called', { repositoryName: input.repositoryName, title: input.title });
+        try {
+          const result = await githubApps.createIssue(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            title: input.title,
+            body: input.body,
+            labels: input.labels,
+            assignees: input.assignees,
+            milestone: input.milestone ?? undefined,
+          });
+          forgeDebug('tools:github', 'create_github_issue result', { issueNumber: result.number });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'create_github_issue error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check GitHub App has issues write permissions and labels/assignees exist.' };
+        }
+      },
     });
   }
 
@@ -305,16 +466,26 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         assignees: z.array(z.string().min(1)).nullish().describe('GitHub usernames to assign.'),
         milestone: z.number().int().positive().nullable().nullish().describe('Milestone number to set.'),
       }),
-      execute: async (input) => githubApps.updateIssue(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        issueNumber: input.issueNumber,
-        title: input.title,
-        body: input.body,
-        labels: input.labels,
-        assignees: input.assignees,
-        milestone: input.milestone,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'update_github_issue called', { repositoryName: input.repositoryName, issueNumber: input.issueNumber });
+        try {
+          const result = await githubApps.updateIssue(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            issueNumber: input.issueNumber,
+            title: input.title,
+            body: input.body,
+            labels: input.labels,
+            assignees: input.assignees,
+            milestone: input.milestone,
+          });
+          forgeDebug('tools:github', 'update_github_issue result', { issueNumber: input.issueNumber });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'update_github_issue error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -327,12 +498,22 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1),
         issueNumber: z.number().int().positive(),
       }),
-      execute: async (input) => githubApps.updateIssue(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        issueNumber: input.issueNumber,
-        state: 'closed',
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'delete_github_issue called', { repositoryName: input.repositoryName, issueNumber: input.issueNumber });
+        try {
+          const result = await githubApps.updateIssue(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            issueNumber: input.issueNumber,
+            state: 'closed',
+          });
+          forgeDebug('tools:github', 'delete_github_issue result', { closed: true });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'delete_github_issue error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -346,9 +527,19 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         issueNumber: z.number().int().positive().describe('The issue number.'),
         state: z.enum(['open', 'closed']).describe('The desired state: open or closed.'),
       }),
-      execute: async (input) => input.state === 'open'
-        ? githubApps.reopenIssue(agentId, input)
-        : githubApps.closeIssue(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'toggle_github_issue called', { repositoryName: input.repositoryName, issueNumber: input.issueNumber, state: input.state });
+        try {
+          const result = input.state === 'open'
+            ? await githubApps.reopenIssue(agentId, input)
+            : await githubApps.closeIssue(agentId, input);
+          forgeDebug('tools:github', 'toggle_github_issue result', { issueNumber: input.issueNumber, state: input.state });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'toggle_github_issue error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -364,12 +555,22 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         issueNumber: z.number().int().positive().describe('The issue number.'),
         limit: z.number().int().positive().max(100).default(100).describe('Maximum number of comments to return.'),
       }),
-      execute: async (input) => githubApps.listIssueComments(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        issueNumber: input.issueNumber,
-        limit: input.limit,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'list_github_issue_comments called', { repositoryName: input.repositoryName, issueNumber: input.issueNumber });
+        try {
+          const result = await githubApps.listIssueComments(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            issueNumber: input.issueNumber,
+            limit: input.limit,
+          });
+          forgeDebug('tools:github', 'list_github_issue_comments result', { count: result.length });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'list_github_issue_comments error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has read permissions.' };
+        }
+      },
     });
   }
 
@@ -382,11 +583,21 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1),
         commentId: z.number().int().positive(),
       }),
-      execute: async (input) => githubApps.getIssueComment(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        commentId: input.commentId,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'get_github_issue_comment called', { repositoryName: input.repositoryName, commentId: input.commentId });
+        try {
+          const result = await githubApps.getIssueComment(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            commentId: input.commentId,
+          });
+          forgeDebug('tools:github', 'get_github_issue_comment result', { commentId: input.commentId });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'get_github_issue_comment error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify comment ID is valid and GitHub App has read permissions.' };
+        }
+      },
     });
   }
 
@@ -400,12 +611,22 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         issueNumber: z.number().int().positive().describe('The issue number.'),
         body: z.string().min(1).describe('The comment body.'),
       }),
-      execute: async (input) => githubApps.createIssueComment(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        issueNumber: input.issueNumber,
-        body: input.body,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'create_github_issue_comment called', { repositoryName: input.repositoryName, issueNumber: input.issueNumber });
+        try {
+          const result = await githubApps.createIssueComment(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            issueNumber: input.issueNumber,
+            body: input.body,
+          });
+          forgeDebug('tools:github', 'create_github_issue_comment result', { commentId: result.id });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'create_github_issue_comment error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -419,12 +640,22 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         commentId: z.number().int().positive().describe('The comment ID to update.'),
         body: z.string().min(1).describe('The new comment body.'),
       }),
-      execute: async (input) => githubApps.updateIssueComment(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        commentId: input.commentId,
-        body: input.body,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'update_github_issue_comment called', { repositoryName: input.repositoryName, commentId: input.commentId });
+        try {
+          const result = await githubApps.updateIssueComment(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            commentId: input.commentId,
+            body: input.body,
+          });
+          forgeDebug('tools:github', 'update_github_issue_comment result', { commentId: input.commentId });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'update_github_issue_comment error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify comment ID exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -437,11 +668,21 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1),
         commentId: z.number().int().positive(),
       }),
-      execute: async (input) => githubApps.deleteIssueComment(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        commentId: input.commentId,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'delete_github_issue_comment called', { repositoryName: input.repositoryName, commentId: input.commentId });
+        try {
+          const result = await githubApps.deleteIssueComment(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            commentId: input.commentId,
+          });
+          forgeDebug('tools:github', 'delete_github_issue_comment result', { deleted: true });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'delete_github_issue_comment error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify comment ID exists and GitHub App has admin permissions.' };
+        }
+      },
     });
   }
 
@@ -454,7 +695,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1).describe('The repository name.'),
         limit: z.number().int().positive().max(100).default(100).describe('Maximum number of labels to return.'),
       }),
-      execute: async (input) => githubApps.listLabels(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'list_github_labels called', { repositoryName: input.repositoryName });
+        try {
+          const result = await githubApps.listLabels(agentId, input);
+          forgeDebug('tools:github', 'list_github_labels result', { count: result.length });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'list_github_labels error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check GitHub App permissions for repository labels.' };
+        }
+      },
     });
   }
 
@@ -471,13 +722,23 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         color: z.string().describe('Hex color code (e.g., "ff0000").'),
         description: z.string().nullish().describe('Label description.'),
       }),
-      execute: async (input) => githubApps.createLabel(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        labelName: input.labelName,
-        color: input.color,
-        description: input.description,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'create_github_label called', { repositoryName: input.repositoryName, labelName: input.labelName });
+        try {
+          const result = await githubApps.createLabel(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            labelName: input.labelName,
+            color: input.color,
+            description: input.description,
+          });
+          forgeDebug('tools:github', 'create_github_label result', { name: result.name });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'create_github_label error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check label name is unique and GitHub App has admin permissions.' };
+        }
+      },
     });
   }
 
@@ -493,14 +754,24 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         color: z.string().nullish().describe('New hex color code.'),
         description: z.string().nullish().describe('New label description.'),
       }),
-      execute: async (input) => githubApps.updateLabel(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        labelName: input.labelName,
-        newLabelName: input.newLabelName,
-        color: input.color,
-        description: input.description,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'update_github_label called', { repositoryName: input.repositoryName, labelName: input.labelName });
+        try {
+          const result = await githubApps.updateLabel(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            labelName: input.labelName,
+            newLabelName: input.newLabelName,
+            color: input.color,
+            description: input.description,
+          });
+          forgeDebug('tools:github', 'update_github_label result', { name: result.name });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'update_github_label error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify label exists and GitHub App has admin permissions.' };
+        }
+      },
     });
   }
 
@@ -513,11 +784,21 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1).describe('The repository name.'),
         labelName: z.string().min(1).describe('The label name to delete.'),
       }),
-      execute: async (input) => githubApps.deleteLabel(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        labelName: input.labelName,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'delete_github_label called', { repositoryName: input.repositoryName, labelName: input.labelName });
+        try {
+          const result = await githubApps.deleteLabel(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            labelName: input.labelName,
+          });
+          forgeDebug('tools:github', 'delete_github_label result', { deleted: true });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'delete_github_label error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify label exists and GitHub App has admin permissions.' };
+        }
+      },
     });
   }
 
@@ -531,7 +812,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         state: z.enum(['open', 'closed', 'all']).default('open').describe('Filter by milestone state.'),
         limit: z.number().int().positive().max(100).default(100).describe('Maximum number of milestones to return.'),
       }),
-      execute: async (input) => githubApps.listMilestones(agentId, input),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'list_github_milestones called', { repositoryName: input.repositoryName, state: input.state });
+        try {
+          const result = await githubApps.listMilestones(agentId, input);
+          forgeDebug('tools:github', 'list_github_milestones result', { count: result.length });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'list_github_milestones error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check GitHub App permissions for repository milestones.' };
+        }
+      },
     });
   }
 
@@ -549,14 +840,24 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         state: z.enum(['open', 'closed']).nullish().describe('Open or close the milestone.'),
         dueOn: z.string().nullish().nullable().describe('Due date in ISO 8601 format.'),
       }),
-      execute: async (input) => githubApps.createMilestone(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        title: input.title,
-        description: input.description,
-        state: input.state,
-        dueOn: input.dueOn ?? undefined,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'create_github_milestone called', { repositoryName: input.repositoryName, title: input.title });
+        try {
+          const result = await githubApps.createMilestone(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            title: input.title,
+            description: input.description,
+            state: input.state,
+            dueOn: input.dueOn ?? undefined,
+          });
+          forgeDebug('tools:github', 'create_github_milestone result', { number: result.number, title: result.title });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'create_github_milestone error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Check milestone title is valid and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -573,15 +874,25 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         state: z.enum(['open', 'closed']).nullish().describe('New milestone state.'),
         dueOn: z.string().nullish().nullable().describe('New due date in ISO 8601 format.'),
       }),
-      execute: async (input) => githubApps.updateMilestone(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        milestoneNumber: input.milestoneNumber,
-        title: input.title,
-        description: input.description,
-        state: input.state,
-        dueOn: input.dueOn,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'update_github_milestone called', { repositoryName: input.repositoryName, milestoneNumber: input.milestoneNumber });
+        try {
+          const result = await githubApps.updateMilestone(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            milestoneNumber: input.milestoneNumber,
+            title: input.title,
+            description: input.description,
+            state: input.state,
+            dueOn: input.dueOn,
+          });
+          forgeDebug('tools:github', 'update_github_milestone result', { number: input.milestoneNumber });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'update_github_milestone error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify milestone number exists and GitHub App has write permissions.' };
+        }
+      },
     });
   }
 
@@ -594,11 +905,21 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z.string().min(1).describe('The repository name.'),
         milestoneNumber: z.number().int().positive().describe('The milestone number to delete.'),
       }),
-      execute: async (input) => githubApps.deleteMilestone(agentId, {
-        owner: input.owner,
-        repositoryName: input.repositoryName,
-        milestoneNumber: input.milestoneNumber,
-      }),
+      execute: async (input) => {
+        forgeDebug('tools:github', 'delete_github_milestone called', { repositoryName: input.repositoryName, milestoneNumber: input.milestoneNumber });
+        try {
+          const result = await githubApps.deleteMilestone(agentId, {
+            owner: input.owner,
+            repositoryName: input.repositoryName,
+            milestoneNumber: input.milestoneNumber,
+          });
+          forgeDebug('tools:github', 'delete_github_milestone result', { deleted: true });
+          return result;
+        } catch (error) {
+          forgeDebug('tools:github', 'delete_github_milestone error', { error: String(error) });
+          return { valid: false, error: String(error), hint: 'Verify milestone number exists and GitHub App has admin permissions.' };
+        }
+      },
     });
   }
 

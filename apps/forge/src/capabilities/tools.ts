@@ -28,7 +28,10 @@ export function createCapabilityTools(
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_agent_functions called');
         const result = await capabilities.listFunctions();
-        forgeDebug('tools:capabilities', 'list_agent_functions result', { count: result.length });
+        forgeDebug('tools:capabilities', 'list_agent_functions result', { 
+          count: result.length, 
+          functions: result.map(f => ({ functionId: f.functionId, name: f.name, description: f.description, roleIds: f.roleIds })) 
+        });
         return result;
       },
     });
@@ -119,7 +122,10 @@ export function createCapabilityTools(
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_agent_roles called');
         const result = await capabilities.listRoles();
-        forgeDebug('tools:capabilities', 'list_agent_roles result', { count: result.length });
+        forgeDebug('tools:capabilities', 'list_agent_roles result', { 
+          count: result.length, 
+          roles: result.map(r => ({ roleId: r.roleId, name: r.name, description: r.description })) 
+        });
         return result;
       },
     });
@@ -293,7 +299,11 @@ export function createCapabilityTools(
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'list_role_tool_permissions called', { roleId: input.roleId });
         const result = await capabilities.listRoleToolPermissions(input.roleId);
-        forgeDebug('tools:capabilities', 'list_role_tool_permissions result', { count: result.length });
+        forgeDebug('tools:capabilities', 'list_role_tool_permissions result', { 
+          roleId: input.roleId,
+          count: result.length, 
+          permissions: result 
+        });
         return result;
       },
     });
