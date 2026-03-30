@@ -40,6 +40,20 @@ const hiringRhResultSchema = z.object({
   instructions: z.string().min(1),
 });
 
+type HiringRhResult =
+  | { valid: false; error: string }
+  | {
+      valid: true;
+      agentName: string;
+      agentDescription: string;
+      functionId: string;
+      instructions: string;
+      functionName: string;
+      functionDescription: string | undefined;
+      costUsd: number;
+      modelKey: string;
+    };
+
 export async function generateHiredAgentInstructions(
   db: Database,
   input: {
@@ -47,7 +61,7 @@ export async function generateHiredAgentInstructions(
     additionalContext?: string;
     loaderConfig: AgentLoaderConfig;
   },
-) {
+): Promise<HiringRhResult> {
   const llmSettings = createLlmSettingsStore(db);
   const capabilities = createCapabilityStore(db);
   const systemSettings = createSystemSettingsStore(db);

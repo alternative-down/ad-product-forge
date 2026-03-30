@@ -57,15 +57,20 @@ export function createCapabilityTools(
       }),
       execute: async (input) => {
         if (!input.name && input.description === undefined) {
-          throw new Error('At least one field besides functionId must be provided');
+          return { valid: false, error: 'At least one field besides functionId must be provided' };
         }
-        const result = await capabilities.updateFunction({
-          functionId: input.functionId,
-          name: input.name,
-          description: input.description,
-        });
-        await reloadAgentsForFunction(db, loaderConfig, input.functionId);
-        return result;
+        try {
+          const result = await capabilities.updateFunction({
+            functionId: input.functionId,
+            name: input.name,
+            description: input.description,
+          });
+          await reloadAgentsForFunction(db, loaderConfig, input.functionId);
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
       },
     });
   }
@@ -78,9 +83,14 @@ export function createCapabilityTools(
         functionId: z.string().describe('Function ID to delete.'),
       }),
       execute: async (input) => {
-        const result = await capabilities.deleteFunction(input.functionId);
-        await reloadAgentsForFunction(db, loaderConfig, input.functionId);
-        return result;
+        try {
+          const result = await capabilities.deleteFunction(input.functionId);
+          await reloadAgentsForFunction(db, loaderConfig, input.functionId);
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
       },
     });
   }
@@ -123,15 +133,20 @@ export function createCapabilityTools(
       }),
       execute: async (input) => {
         if (!input.name && input.description === undefined) {
-          throw new Error('At least one field besides roleId must be provided');
+          return { valid: false, error: 'At least one field besides roleId must be provided' };
         }
-        const result = await capabilities.updateRole({
-          roleId: input.roleId,
-          name: input.name,
-          description: input.description,
-        });
-        await reloadAgentsForRole(db, loaderConfig, input.roleId);
-        return result;
+        try {
+          const result = await capabilities.updateRole({
+            roleId: input.roleId,
+            name: input.name,
+            description: input.description,
+          });
+          await reloadAgentsForRole(db, loaderConfig, input.roleId);
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
       },
     });
   }
@@ -144,9 +159,14 @@ export function createCapabilityTools(
         roleId: z.string().describe('Role ID to delete.'),
       }),
       execute: async (input) => {
-        const result = await capabilities.deleteRole(input.roleId);
-        await reloadAgentsForRole(db, loaderConfig, input.roleId);
-        return result;
+        try {
+          const result = await capabilities.deleteRole(input.roleId);
+          await reloadAgentsForRole(db, loaderConfig, input.roleId);
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
       },
     });
   }
@@ -160,9 +180,14 @@ export function createCapabilityTools(
         roleId: z.string().min(1).describe('Role ID to assign.'),
       }),
       execute: async (input) => {
-        const result = await capabilities.addRoleToFunction(input);
-        await reloadAgentsForFunction(db, loaderConfig, input.functionId);
-        return result;
+        try {
+          const result = await capabilities.addRoleToFunction(input);
+          await reloadAgentsForFunction(db, loaderConfig, input.functionId);
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
       },
     });
   }
@@ -175,13 +200,21 @@ export function createCapabilityTools(
         agentId: z.string().min(1).describe('Target agent ID to change function.'),
         functionId: z.string().min(1).describe('New function ID to assign.'),
       }),
-      execute: async (input) => changeAgentFunction({
-        db,
-        loaderConfig,
-        actorAgentId: currentAgentId,
-        targetAgentId: input.agentId,
-        functionId: input.functionId,
-      }),
+      execute: async (input) => {
+        try {
+          const result = await changeAgentFunction({
+            db,
+            loaderConfig,
+            actorAgentId: currentAgentId,
+            targetAgentId: input.agentId,
+            functionId: input.functionId,
+          });
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
+      },
     });
   }
 
@@ -192,13 +225,21 @@ export function createCapabilityTools(
       inputSchema: z.object({
         functionId: z.string().min(1).describe('Function ID to switch to.'),
       }),
-      execute: async (input) => changeAgentFunction({
-        db,
-        loaderConfig,
-        actorAgentId: currentAgentId,
-        targetAgentId: currentAgentId,
-        functionId: input.functionId,
-      }),
+      execute: async (input) => {
+        try {
+          const result = await changeAgentFunction({
+            db,
+            loaderConfig,
+            actorAgentId: currentAgentId,
+            targetAgentId: currentAgentId,
+            functionId: input.functionId,
+          });
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
+      },
     });
   }
 
@@ -223,11 +264,16 @@ export function createCapabilityTools(
         toolId: toolIdSchema.describe('Tool ID to add or remove.'),
       }),
       execute: async (input) => {
-        const result = input.action === 'add'
-          ? await capabilities.addRoleToolPermission({ roleId: input.roleId, toolId: input.toolId })
-          : await capabilities.removeRoleToolPermission({ roleId: input.roleId, toolId: input.toolId });
-        await reloadAgentsForRole(db, loaderConfig, input.roleId);
-        return result;
+        try {
+          const result = input.action === 'add'
+            ? await capabilities.addRoleToolPermission({ roleId: input.roleId, toolId: input.toolId })
+            : await capabilities.removeRoleToolPermission({ roleId: input.roleId, toolId: input.toolId });
+          await reloadAgentsForRole(db, loaderConfig, input.roleId);
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
       },
     });
   }
@@ -253,11 +299,16 @@ export function createCapabilityTools(
         workflowId: workflowIdSchema.describe('Workflow ID to add or remove.'),
       }),
       execute: async (input) => {
-        const result = input.action === 'add'
-          ? await capabilities.addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId })
-          : await capabilities.removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId });
-        await reloadAgentsForRole(db, loaderConfig, input.roleId);
-        return result;
+        try {
+          const result = input.action === 'add'
+            ? await capabilities.addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId })
+            : await capabilities.removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId });
+          await reloadAgentsForRole(db, loaderConfig, input.roleId);
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { valid: false, error: message };
+        }
       },
     });
   }

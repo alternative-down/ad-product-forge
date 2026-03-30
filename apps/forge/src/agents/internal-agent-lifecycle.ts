@@ -34,6 +34,11 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       schedules: input.schedules,
     },
   });
+
+  if (!hiringRh.valid) {
+    throw new Error(hiringRh.error || 'Hiring process failed');
+  }
+
   const profile = await buildHiredAgentProfile(db, {
     agentName: hiringRh.agentName,
     agentDescription: hiringRh.agentDescription,
