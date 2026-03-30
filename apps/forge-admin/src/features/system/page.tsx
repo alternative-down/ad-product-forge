@@ -60,7 +60,6 @@ type GitHubDraft = {
 type MinimaxDraft = {
   isEnabled: boolean;
   apiKey: string;
-  groupId: string;
 };
 
 type LlmProfileDraft = {
@@ -1146,7 +1145,7 @@ function LlmProfileForm(input: {
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4">
         <LabeledField label="Profile name">
           <Input
             value={draft.name}
@@ -1527,18 +1526,6 @@ function MiniMaxIntegrationCard(input: {
             placeholder="Enter your MiniMax API key"
           />
         </LabeledField>
-        <LabeledField label="Group ID (optional)">
-          <Input
-            value={draft.groupId}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                groupId: event.target.value,
-              }))
-            }
-            placeholder="Optional group identifier"
-          />
-        </LabeledField>
       </div>
       <label className="mt-4 flex items-center gap-3 text-sm text-foreground">
         <input
@@ -1563,7 +1550,6 @@ function MiniMaxIntegrationCard(input: {
               isEnabled: draft.isEnabled,
               config: {
                 apiKey: draft.apiKey,
-                ...(draft.groupId ? { groupId: draft.groupId } : {}),
               },
             })
           }
@@ -1815,14 +1801,12 @@ function getMinimaxDraft(integration: SystemIntegration | null): MinimaxDraft {
     return {
       isEnabled: true,
       apiKey: '',
-      groupId: '',
     };
   }
 
   return {
     isEnabled: integration.isEnabled,
     apiKey: integration.config?.apiKey ?? '',
-    groupId: integration.config?.groupId ?? '',
   };
 }
 

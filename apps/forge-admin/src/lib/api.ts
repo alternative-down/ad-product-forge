@@ -316,7 +316,6 @@ export type SystemIntegration =
       isEnabled: boolean;
       config: {
         apiKey: string;
-        groupId?: string;
       } | null;
       createdAt: number;
       updatedAt: number;
@@ -454,7 +453,6 @@ export type UpsertSystemIntegrationInput =
       isEnabled: boolean;
       config: {
         apiKey: string;
-        groupId?: string;
       };
     };
 

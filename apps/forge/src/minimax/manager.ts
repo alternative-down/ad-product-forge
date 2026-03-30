@@ -8,7 +8,6 @@ const MINIMAX_API_VERSION = 'v1';
 
 export interface MiniMaxConfig {
   apiKey: string;
-  groupId?: string;
 }
 
 export interface TTSOptions {
@@ -79,11 +78,9 @@ export interface VideoResponse {
 
 export class MiniMaxClient {
   private apiKey: string;
-  private groupId: string;
 
   constructor(config: MiniMaxConfig) {
     this.apiKey = config.apiKey;
-    this.groupId = config.groupId || '';
   }
 
   private async request<T>(
@@ -96,10 +93,6 @@ export class MiniMaxClient {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${this.apiKey}`,
     };
-
-    if (this.groupId) {
-      headers['GroupId'] = this.groupId;
-    }
 
     try {
       const response = await fetch(url, {
@@ -220,7 +213,6 @@ export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
 
   return new MiniMaxClient({
     apiKey: key,
-    groupId: process.env.MINIMAX_GROUP_ID,
   });
 }
 
