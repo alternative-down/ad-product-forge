@@ -16,7 +16,6 @@ import {
   listFunctions,
   reloadAgent,
   terminateAgent,
-  topUpAgentContract,
   updateAgentConfig,
   updateSchedule,
   upsertAgentProvider,
@@ -74,7 +73,6 @@ import {
   AgentConfigurationCard,
   GitHubProvisioningCard,
   AgentProvidersCard,
-  ContractTopUpCard,
   ContractBudgetAdjustCard,
 } from './cards';
 
@@ -183,16 +181,6 @@ function AgentsWorkspacePage(input: {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] }),
-      ]);
-    },
-  });
-  const topUpContractMutation = useMutation({
-    mutationFn: topUpAgentContract,
-    onSuccess: async (_, input) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
       ]);
     },
   });
@@ -667,19 +655,7 @@ function AgentsWorkspacePage(input: {
                         </WorkspaceCanvas>
 
                         {agentDetailQuery.data.activeContract ? (
-                          <div className="grid gap-6 xl:grid-cols-2">
-                            <ContractTopUpCard
-                              pending={topUpContractMutation.isPending}
-                              error={topUpContractMutation.error?.message ?? null}
-                              disabled={!agentDetailQuery.data.activeContract}
-                              onSubmit={(amountUsd) =>
-                                topUpContractMutation.mutate({
-                                  agentId: agentDetailQuery.data!.agentId,
-                                  amountUsd,
-                                })
-                              }
-                            />
-
+                          <div className="max-w-xl">
                             <ContractBudgetAdjustCard
                               pending={adjustBudgetMutation.isPending}
                               error={adjustBudgetMutation.error?.message ?? null}

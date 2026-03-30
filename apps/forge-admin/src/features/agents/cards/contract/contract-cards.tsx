@@ -77,9 +77,9 @@ export function ContractBudgetAdjustCard(input: {
   return (
     <Card className="p-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Adjust budget</h2>
+        <h2 className="text-lg font-semibold text-foreground">Set contract value</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Set a new weekly budget for this contract. Decrease only allowed when agent is not running and above spent amount.
+          Enter the desired weekly contract value. The system applies the increase or decrease using the existing contract rules.
         </p>
       </div>
 
@@ -90,7 +90,7 @@ export function ContractBudgetAdjustCard(input: {
           input.onSubmit(Number(newBudgetUsd));
         }}
       >
-        <LabeledField label="New budget (USD)" className="min-w-[220px]">
+        <LabeledField label="Desired value (USD)" className="min-w-[220px]">
           <Input
             type="number"
             min="0"
@@ -114,10 +114,10 @@ export function ContractBudgetAdjustCard(input: {
           {input.pending ? (
             <>
               <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-              Adjusting...
+              Applying...
             </>
           ) : (
-            'Apply budget'
+            'Apply value'
           )}
         </Button>
       </form>
