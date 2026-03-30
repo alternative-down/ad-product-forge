@@ -14,7 +14,12 @@ import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createTool } from '@mastra/core/tools';
-import type { Processor, ProcessInputStepArgs, ProcessInputStepResult } from '@mastra/core/processors';
+import {
+  ToolSearchProcessor,
+  type Processor,
+  type ProcessInputStepArgs,
+  type ProcessInputStepResult,
+} from '@mastra/core/processors';
 
 /**
  * Processor that disables tools after hireAgent tool is called.
@@ -78,6 +83,7 @@ const REQUIRED_HIRING_TOOL_IDS = [
   'update_agent_schedule',
   'delete_agent_schedule',
 ] as const;
+const REQUIRED_HIRING_TOOL_ID_SET = new Set<string>(REQUIRED_HIRING_TOOL_IDS);
 const hiringRhResultSchema = z.object({
   agentName: z.string().min(1),
   agentDescription: z.string().min(1),
@@ -240,11 +246,22 @@ export async function generateHiredAgentInstructions(
     HIRING_RH_AGENT_ID,
     HIRING_RH_TOOL_IDS,
   );
+  const alwaysAvailableCapabilityTools = Object.fromEntries(
+    Object.entries(tools).filter(([toolId]) => REQUIRED_HIRING_TOOL_ID_SET.has(toolId)),
+  );
+  const searchableCapabilityTools = Object.fromEntries(
+    Object.entries(tools).filter(([toolId]) => !REQUIRED_HIRING_TOOL_ID_SET.has(toolId)),
+  );
+  const toolSearchProcessor = new ToolSearchProcessor({
+    tools: searchableCapabilityTools,
+  });
 
   console.log(`[HiringRH] Tools loaded for agent ${HIRING_RH_AGENT_ID}:`, {
     count: Object.keys(tools).length,
     toolIds: Object.keys(tools),
     allowedToolIds: Array.from(HIRING_RH_TOOL_IDS),
+    alwaysAvailableToolIds: Object.keys(alwaysAvailableCapabilityTools),
+    searchableToolIds: Object.keys(searchableCapabilityTools),
   });
 
   if (currentBalanceUsd < estimatedCostUsd) {
@@ -282,7 +299,7 @@ export async function generateHiredAgentInstructions(
       '',
       '1. **Report Initial State**: Call reportHiringState to describe what you see available.',
       '',
-      '2. **Inspect First**: Use capability management tools to explore existing functions, tool permissions, workflow permissions, and available capabilities.',
+      '2. **Inspect First**: Use search_tools to find the relevant capability management tools, then use load_tool before calling them. Explore existing functions, tool permissions, workflow permissions, and available capabilities.',
       '',
       '3. **Function Selection**: Reuse an existing function when it matches the hiring request. Create or update a new function only when no existing one fits.',
       '',
@@ -394,20 +411,17 @@ export async function generateHiredAgentInstructions(
           return result;
         },
       }),
-      ...tools,
+      ...alwaysAvailableCapabilityTools,
     },
+    inputProcessors: [toolSearchProcessor, new HireAgentDisablerProcessor()],
   });
 
-  const hireAgentDisablerProcessor = new HireAgentDisablerProcessor();
   const mastra = new Mastra({
     agents: {
       [HIRING_RH_AGENT_ID]: agent,
     },
     gateways: {
       oauth: createOAuthGateway(),
-    },
-    processors: {
-      [hireAgentDisablerProcessor.id]: hireAgentDisablerProcessor,
     },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
@@ -503,6 +517,7 @@ function buildHiringPrompt(input: {
     'Design one newly hired permanent internal collaborator from the hiring request.',
     `Hiring request:\n${input.hiringRequest.trim()}`,
     'Inspect the current capability structure with tools before deciding whether to reuse or change functions and roles.',
+    'Use search_tools to find the capability management tools you need, then use load_tool before calling those tools.',
     'Before calling hireAgent, make sure the chosen function exists, has at least one linked role, and that the linked roles grant the minimum base tools listed below.',
     `Minimum base tools: ${REQUIRED_HIRING_TOOL_IDS.join(', ')}.`,
     'If the function is missing roles or permissions, fix that first with assign_role_to_function and manage_role_tool_permissions.',
