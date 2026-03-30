@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Calendar, Clock, LoaderCircle, Plus } from 'lucide-react';
+import { cn } from '../../../../lib/utils';
 import { Button } from '../../../../components/ui/button';
 import { Card } from '../../../../components/ui/card';
 import { Input } from '../../../../components/ui/input';
@@ -51,7 +52,7 @@ export function SchedulesCard(input: {
 
       {showForm && (
         <form
-          className="mt-4 space-y-4 rounded-lg border border-border bg-accent/50 p-4"
+          className="mt-4 space-y-4 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] p-4"
           onSubmit={(e) => {
             e.preventDefault();
             handleSubmit();
@@ -71,22 +72,24 @@ export function SchedulesCard(input: {
               <button
                 type="button"
                 onClick={() => setDraft({ ...draft, scheduleType: 'cron' })}
-                className={`rounded-lg border px-4 py-2 text-sm ${
+                className={cn(
+                  'rounded-lg border px-4 py-2 text-sm transition',
                   draft.scheduleType === 'cron'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-border text-muted-foreground hover:bg-accent/50'
-                }`}
+                    : 'border-[color:var(--panel-border-strong)] bg-[color:var(--panel)] text-[color:var(--muted)] hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]',
+                )}
               >
                 Cron
               </button>
               <button
                 type="button"
                 onClick={() => setDraft({ ...draft, scheduleType: 'date', scheduledDate: new Date().toISOString() })}
-                className={`rounded-lg border px-4 py-2 text-sm ${
+                className={cn(
+                  'rounded-lg border px-4 py-2 text-sm transition',
                   draft.scheduleType === 'date'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-border text-muted-foreground hover:bg-accent/50'
-                }`}
+                    : 'border-[color:var(--panel-border-strong)] bg-[color:var(--panel)] text-[color:var(--muted)] hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]',
+                )}
               >
                 One-time
               </button>
@@ -144,11 +147,11 @@ export function SchedulesCard(input: {
           input.schedules.map((schedule) => (
             <div
               key={schedule.scheduleId}
-              className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
+              className="flex items-center justify-between rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] p-4"
             >
               <div>
-                <div className="font-medium text-foreground">{schedule.name}</div>
-                <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-muted-foreground">
+                <div className="font-medium text-[color:var(--ink)]">{schedule.name}</div>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[color:var(--muted)]">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {schedule.cronExpression ?? (schedule.scheduledDate ? formatDateTimeText(schedule.scheduledDate) : '—')}
@@ -161,11 +164,12 @@ export function SchedulesCard(input: {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => input.onToggleSchedule(schedule.scheduleId, !schedule.isActive)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-xs font-medium transition',
                     schedule.isActive
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-accent/50 text-muted-foreground'
-                  }`}
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-[color:var(--panel-border-strong)] bg-[color:var(--panel)] text-[color:var(--muted)]',
+                  )}
                 >
                   {schedule.isActive ? 'Active' : 'Paused'}
                 </button>

@@ -56,9 +56,17 @@ export function AgentListCard(input: {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
+        <div>
+          <h2 className="text-lg font-semibold text-[color:var(--ink)]">
+            Team directory
+          </h2>
+          <p className="text-sm text-[color:var(--muted)]">
+            {input.agents.length} agent{input.agents.length !== 1 ? 's' : ''} available in this workspace.
+          </p>
+        </div>
+        <span className="hidden rounded-full border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-3 py-1 text-xs font-medium text-[color:var(--muted)] sm:inline-flex">
           {input.agents.length} agent{input.agents.length !== 1 ? 's' : ''}
-        </h2>
+        </span>
         <Link
           to="/agents/hire"
           className="inline-flex h-10 items-center justify-center rounded-lg border border-[color:var(--accent)] bg-[color:var(--accent)] px-5 text-sm font-medium text-white transition hover:opacity-90"
@@ -73,50 +81,59 @@ export function AgentListCard(input: {
           const isPending = input.wakePending === agent.agentId;
 
           return (
-            <Link
+            <Card
               key={agent.agentId}
-              to={buildAgentLocation({ agentId: agent.agentId, tab: 'runtime', runtimeView: 'assignment' })}
-              className="group rounded-lg border bg-card p-4 transition hover:border-[color:var(--accent)] hover:shadow-md"
+              className="group overflow-hidden border-[color:var(--panel-border)] bg-[color:var(--panel)] p-0 transition hover:border-[color:var(--accent)] hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)]"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Bot className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate font-semibold group-hover:text-[color:var(--accent)]">
-                      {agent.name}
-                    </span>
+              <Link
+                to={buildAgentLocation({ agentId: agent.agentId, tab: 'runtime', runtimeView: 'assignment' })}
+                className="block p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4 shrink-0 text-[color:var(--muted)]" />
+                      <span className="truncate font-semibold text-[color:var(--ink)] group-hover:text-[color:var(--accent)]">
+                        {agent.name}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-[color:var(--muted)]">
+                      {agent.functionName ?? 'No function assigned'}
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {agent.functionName ?? 'No function'}
-                  </div>
+                  <Badge
+                    className={cn(
+                      'shrink-0 border',
+                      agent.executionState === 'running' &&
+                        'border-emerald-200 bg-emerald-50 text-emerald-700',
+                      agent.executionState === 'idle' &&
+                        'border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] text-[color:var(--muted)]',
+                    )}
+                  >
+                    {agent.executionState}
+                  </Badge>
                 </div>
-                <Badge
-                  className={cn(
-                    'shrink-0',
-                    agent.executionState === 'running' && 'bg-emerald-100 text-emerald-800',
-                    agent.executionState === 'idle' && 'bg-accent/50 text-muted-foreground',
-                  )}
-                >
-                  {agent.executionState}
-                </Badge>
-              </div>
 
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
-                <span>
-                  {agent.loaded ? 'Loaded' : 'Not loaded'}
-                </span>
-                {agent.runner && (
-                  <>
-                    <span>·</span>
-                    <span>
-                      {agent.runner.stopped ? 'Stopped' : agent.runner.executing ? 'Executing' : agent.runner.scheduled ? 'Scheduled' : 'Idle'}
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-[color:var(--panel-border)] pt-3 text-xs text-[color:var(--muted)]">
+                  <span className="rounded-full bg-[color:var(--panel-strong)] px-2.5 py-1">
+                    {agent.loaded ? 'Loaded' : 'Not loaded'}
+                  </span>
+                  {agent.runner ? (
+                    <span className="rounded-full bg-[color:var(--panel-strong)] px-2.5 py-1">
+                      {agent.runner.stopped
+                        ? 'Stopped'
+                        : agent.runner.executing
+                          ? 'Executing'
+                          : agent.runner.scheduled
+                            ? 'Scheduled'
+                            : 'Idle'}
                     </span>
-                  </>
-                )}
-              </div>
+                  ) : null}
+                </div>
+              </Link>
 
               <div
-                className="mt-3 flex gap-2"
+                className="flex gap-2 border-t border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-4 py-3"
                 onClick={(e) => e.preventDefault()}
               >
                 {agent.runner?.stopped ? (
@@ -152,7 +169,7 @@ export function AgentListCard(input: {
                   </Button>
                 ) : null}
               </div>
-            </Link>
+            </Card>
           );
         })}
       </div>

@@ -102,11 +102,11 @@ export function ContractBudgetAdjustCard(input: {
           />
         </LabeledField>
         {newBudgetUsd && difference !== 0 ? (
-          <div className="text-sm">
+          <div className="rounded-full border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-3 py-2 text-sm">
             {isIncrease ? (
               <span className="text-green-600">+${difference.toFixed(2)}/week</span>
             ) : (
-              <span className="text-orange-600">${difference.toFixed(2)}/week</span>
+              <span className="text-orange-600">-${Math.abs(difference).toFixed(2)}/week</span>
             )}
           </div>
         ) : null}
