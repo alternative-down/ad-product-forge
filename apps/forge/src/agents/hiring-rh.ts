@@ -263,17 +263,16 @@ function buildHiringPrompt(input: {
   const sections = [
     'Design one newly hired permanent internal collaborator from the hiring request.',
     `Hiring request:\n${input.hiringRequest.trim()}`,
-    'The collaborator works inside the company and primarily communicates through internal-chat.',
     'Inspect the current capability structure with tools before deciding whether to reuse or change functions and roles.',
-    'Return a structured object with exactly these keys: agentName, agentDescription, functionId, instructions.',
-    'The functionId must be a real internal function id created or selected through tools.',
-    'The instructions field must be the full system prompt for the hired agent.',
+    'After designing the agent profile, you MUST call the tool "hireAgent" with the structured data to finalize the hiring.',
+    'The hireAgent tool requires an object with: agentName, agentDescription, functionId, instructions.',
     'IMPORTANT: Create a CARICATURE persona, NOT a real person. Use names inspired by video game characters, AI assistants, robots, fictional helpers, NPCs, mascots, legendary figures, or whimsical archetypes. Good name examples: "Unitron-3000", "Mira the Analyst", "Captain Productivity", "Sage of the Spreadsheets", "Glitch the Fixer", "Protocol Pete", "Nova the Navigator", "Bureaucracy Bot", "Quest Master Quill". AVOID common human names like John, Maria, Carlos, Ana. If using a human name, add a title, nickname, or surname that makes it feel like a character.',
     'Write the prompt with exactly these sections and no others: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
     'Keep the structure simple and direct, in a CrewAI-like style.',
     'Do not add sections about tools, safety rules, constraints, communication style, execution control, or environment disclaimers.',
     'Give the Backstory a memorable, exaggerated, or quirky flavor that matches the caricature persona style.',
     'Put the practical operating guidance into Instructions.',
+    'The collaborator works inside the company and primarily communicates through internal-chat.',
   ];
 
   if (input.companyName?.trim() || input.companyContext?.trim()) {
