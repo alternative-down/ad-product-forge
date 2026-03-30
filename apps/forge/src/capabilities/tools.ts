@@ -29,44 +29,27 @@ export function createCapabilityTools(
   }
 
   if (hasToolPermission(allowedToolIds, 'manage_agent_function')) {
-    // Keep branch-specific validation outside the discriminated union.
-    // In Zod v3, adding `.refine()` to one branch wraps it in ZodEffects and
-    // breaks `z.discriminatedUnion('action', ...)` at schema creation time.
-    const manageAgentFunctionSchema = z
-      .discriminatedUnion('action', [
-        z.object({
-          action: z.literal('create'),
-          functionId: z.string().min(1).nullish().describe('Function ID (optional, auto-generated if omitted).'),
-          name: z.string().min(1).describe('Function name.'),
-          description: z.string().nullish().nullable().describe('Function description.'),
-        }),
-        z.object({
-          action: z.literal('update'),
-          functionId: z.string().min(1).describe('Function ID to update.'),
-          name: z.string().min(1).nullish().describe('New function name.'),
-          description: z.string().nullish().nullable().describe('New function description.'),
-        }),
-        z.object({
-          action: z.literal('delete'),
-          functionId: z.string().min(1).describe('Function ID to delete.'),
-          name: z.string().min(1).nullish().describe('Name (ignored for delete).'),
-          description: z.string().nullish().nullable().describe('Description (ignored for delete).'),
-        }),
-      ])
-      .superRefine((data, context) => {
-        if (data.action !== 'update') {
-          return;
-        }
-
-        if (data.name !== undefined || data.description !== undefined) {
-          return;
-        }
-
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'At least one field besides action and functionId must be provided',
-        });
-      });
+    // Schema for manage_agent_function tool
+    const manageAgentFunctionSchema = z.discriminatedUnion('action', [
+      z.object({
+        action: z.literal('create'),
+        functionId: z.string().min(1).nullish().describe('Function ID (optional, auto-generated if omitted).'),
+        name: z.string().min(1).describe('Function name.'),
+        description: z.string().nullish().nullable().describe('Function description.'),
+      }),
+      z.object({
+        action: z.literal('update'),
+        functionId: z.string().min(1).describe('Function ID to update.'),
+        name: z.string().min(1).nullish().describe('New function name.'),
+        description: z.string().nullish().nullable().describe('New function description.'),
+      }),
+      z.object({
+        action: z.literal('delete'),
+        functionId: z.string().min(1).describe('Function ID to delete.'),
+        name: z.string().min(1).nullish().describe('Name (ignored for delete).'),
+        description: z.string().nullish().nullable().describe('Description (ignored for delete).'),
+      }),
+    ]);
 
     tools.manage_agent_function = createTool({
       id: 'manage_agent_function',
@@ -84,6 +67,11 @@ export function createCapabilityTools(
           const result = await capabilities.deleteFunction(input.functionId);
           await reloadAgentsForFunction(db, loaderConfig, input.functionId);
           return result;
+        }
+
+        // validate: at least one field besides action and functionId must be provided
+        if (input.name === undefined && input.description === undefined) {
+          throw new Error('At least one field besides action and functionId must be provided');
         }
 
         const result = await capabilities.updateFunction({
@@ -107,44 +95,27 @@ export function createCapabilityTools(
   }
 
   if (hasToolPermission(allowedToolIds, 'manage_agent_role')) {
-    // Keep branch-specific validation outside the discriminated union.
-    // In Zod v3, adding `.refine()` to one branch wraps it in ZodEffects and
-    // breaks `z.discriminatedUnion('action', ...)` at schema creation time.
-    const manageAgentRoleSchema = z
-      .discriminatedUnion('action', [
-        z.object({
-          action: z.literal('create'),
-          roleId: z.string().min(1).nullish().describe('Role ID (optional, auto-generated if omitted).'),
-          name: z.string().min(1).describe('Role name.'),
-          description: z.string().nullish().nullable().describe('Role description.'),
-        }),
-        z.object({
-          action: z.literal('update'),
-          roleId: z.string().min(1).describe('Role ID to update.'),
-          name: z.string().min(1).nullish().describe('New role name.'),
-          description: z.string().nullish().nullable().describe('New role description.'),
-        }),
-        z.object({
-          action: z.literal('delete'),
-          roleId: z.string().min(1).describe('Role ID to delete.'),
-          name: z.string().min(1).nullish().describe('Name (ignored for delete).'),
-          description: z.string().nullish().nullable().describe('Description (ignored for delete).'),
-        }),
-      ])
-      .superRefine((data, context) => {
-        if (data.action !== 'update') {
-          return;
-        }
-
-        if (data.name !== undefined || data.description !== undefined) {
-          return;
-        }
-
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'At least one field besides action and roleId must be provided',
-        });
-      });
+    // Schema for manage_agent_role tool
+    const manageAgentRoleSchema = z.discriminatedUnion('action', [
+      z.object({
+        action: z.literal('create'),
+        roleId: z.string().min(1).nullish().describe('Role ID (optional, auto-generated if omitted).'),
+        name: z.string().min(1).describe('Role name.'),
+        description: z.string().nullish().nullable().describe('Role description.'),
+      }),
+      z.object({
+        action: z.literal('update'),
+        roleId: z.string().min(1).describe('Role ID to update.'),
+        name: z.string().min(1).nullish().describe('New role name.'),
+        description: z.string().nullish().nullable().describe('New role description.'),
+      }),
+      z.object({
+        action: z.literal('delete'),
+        roleId: z.string().min(1).describe('Role ID to delete.'),
+        name: z.string().min(1).nullish().describe('Name (ignored for delete).'),
+        description: z.string().nullish().nullable().describe('Description (ignored for delete).'),
+      }),
+    ]);
 
     tools.manage_agent_role = createTool({
       id: 'manage_agent_role',
@@ -162,6 +133,11 @@ export function createCapabilityTools(
           const result = await capabilities.deleteRole(input.roleId);
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
           return result;
+        }
+
+        // validate: at least one field besides action and roleId must be provided
+        if (input.name === undefined && input.description === undefined) {
+          throw new Error('At least one field besides action and roleId must be provided');
         }
 
         const result = await capabilities.updateRole({
