@@ -28,57 +28,57 @@ export function createCapabilityTools(
     });
   }
 
-  if (hasToolPermission(allowedToolIds, 'manage_agent_function')) {
-    // Schema for manage_agent_function tool
-    const manageAgentFunctionSchema = z.discriminatedUnion('action', [
-      z.object({
-        action: z.literal('create'),
-        functionId: z.string().min(1).nullish().describe('Function ID (optional, auto-generated if omitted).'),
+  if (hasToolPermission(allowedToolIds, 'create_agent_function')) {
+    tools.create_agent_function = createTool({
+      id: 'create_agent_function',
+      description: 'Create a new internal agent function with a custom name and description.',
+      inputSchema: z.object({
+        functionId: z.string().optional().describe('Function ID (optional, auto-generated if omitted).'),
         name: z.string().min(1).describe('Function name.'),
-        description: z.string().nullish().nullable().describe('Function description.'),
+        description: z.string().nullish().describe('Function description.'),
       }),
-      z.object({
-        action: z.literal('update'),
-        functionId: z.string().min(1).describe('Function ID to update.'),
-        name: z.string().min(1).nullish().describe('New function name.'),
-        description: z.string().nullish().nullable().describe('New function description.'),
-      }),
-      z.object({
-        action: z.literal('delete'),
-        functionId: z.string().min(1).describe('Function ID to delete.'),
-        name: z.string().min(1).nullish().describe('Name (ignored for delete).'),
-        description: z.string().nullish().nullable().describe('Description (ignored for delete).'),
-      }),
-    ]);
-
-    tools.manage_agent_function = createTool({
-      id: 'manage_agent_function',
-      description: 'Create new agent functions with custom prompts and descriptions, update existing functions, or delete unused functions.',
-      inputSchema: manageAgentFunctionSchema,
       execute: async (input) => {
-        if (input.action === 'create') {
-          return capabilities.createFunction({
-            name: input.name,
-            description: input.description ?? undefined,
-          });
-        }
+        return capabilities.createFunction({
+          name: input.name,
+          description: input.description ?? undefined,
+        });
+      },
+    });
+  }
 
-        if (input.action === 'delete') {
-          const result = await capabilities.deleteFunction(input.functionId);
-          await reloadAgentsForFunction(db, loaderConfig, input.functionId);
-          return result;
+  if (hasToolPermission(allowedToolIds, 'update_agent_function')) {
+    tools.update_agent_function = createTool({
+      id: 'update_agent_function',
+      description: 'Update an existing agent function\'s name or description.',
+      inputSchema: z.object({
+        functionId: z.string().describe('Function ID to update.'),
+        name: z.string().optional().describe('New function name.'),
+        description: z.string().nullish().describe('New function description.'),
+      }),
+      execute: async (input) => {
+        if (!input.name && input.description === undefined) {
+          throw new Error('At least one field besides functionId must be provided');
         }
-
-        // validate: at least one field besides action and functionId must be provided
-        if (input.name === undefined && input.description === undefined) {
-          throw new Error('At least one field besides action and functionId must be provided');
-        }
-
         const result = await capabilities.updateFunction({
           functionId: input.functionId,
           name: input.name,
           description: input.description,
         });
+        await reloadAgentsForFunction(db, loaderConfig, input.functionId);
+        return result;
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_agent_function')) {
+    tools.delete_agent_function = createTool({
+      id: 'delete_agent_function',
+      description: 'Delete an unused agent function.',
+      inputSchema: z.object({
+        functionId: z.string().describe('Function ID to delete.'),
+      }),
+      execute: async (input) => {
+        const result = await capabilities.deleteFunction(input.functionId);
         await reloadAgentsForFunction(db, loaderConfig, input.functionId);
         return result;
       },
@@ -94,57 +94,57 @@ export function createCapabilityTools(
     });
   }
 
-  if (hasToolPermission(allowedToolIds, 'manage_agent_role')) {
-    // Schema for manage_agent_role tool
-    const manageAgentRoleSchema = z.discriminatedUnion('action', [
-      z.object({
-        action: z.literal('create'),
-        roleId: z.string().min(1).nullish().describe('Role ID (optional, auto-generated if omitted).'),
+  if (hasToolPermission(allowedToolIds, 'create_agent_role')) {
+    tools.create_agent_role = createTool({
+      id: 'create_agent_role',
+      description: 'Create a new role with a custom name and description.',
+      inputSchema: z.object({
+        roleId: z.string().optional().describe('Role ID (optional, auto-generated if omitted).'),
         name: z.string().min(1).describe('Role name.'),
-        description: z.string().nullish().nullable().describe('Role description.'),
+        description: z.string().nullish().describe('Role description.'),
       }),
-      z.object({
-        action: z.literal('update'),
-        roleId: z.string().min(1).describe('Role ID to update.'),
-        name: z.string().min(1).nullish().describe('New role name.'),
-        description: z.string().nullish().nullable().describe('New role description.'),
-      }),
-      z.object({
-        action: z.literal('delete'),
-        roleId: z.string().min(1).describe('Role ID to delete.'),
-        name: z.string().min(1).nullish().describe('Name (ignored for delete).'),
-        description: z.string().nullish().nullable().describe('Description (ignored for delete).'),
-      }),
-    ]);
-
-    tools.manage_agent_role = createTool({
-      id: 'manage_agent_role',
-      description: 'Create new roles with tool and workflow permissions, update existing role configurations, or delete roles no longer needed.',
-      inputSchema: manageAgentRoleSchema,
       execute: async (input) => {
-        if (input.action === 'create') {
-          return capabilities.createRole({
-            name: input.name,
-            description: input.description ?? undefined,
-          });
-        }
+        return capabilities.createRole({
+          name: input.name,
+          description: input.description ?? undefined,
+        });
+      },
+    });
+  }
 
-        if (input.action === 'delete') {
-          const result = await capabilities.deleteRole(input.roleId);
-          await reloadAgentsForRole(db, loaderConfig, input.roleId);
-          return result;
+  if (hasToolPermission(allowedToolIds, 'update_agent_role')) {
+    tools.update_agent_role = createTool({
+      id: 'update_agent_role',
+      description: 'Update an existing role\'s name or description.',
+      inputSchema: z.object({
+        roleId: z.string().describe('Role ID to update.'),
+        name: z.string().optional().describe('New role name.'),
+        description: z.string().nullish().describe('New role description.'),
+      }),
+      execute: async (input) => {
+        if (!input.name && input.description === undefined) {
+          throw new Error('At least one field besides roleId must be provided');
         }
-
-        // validate: at least one field besides action and roleId must be provided
-        if (input.name === undefined && input.description === undefined) {
-          throw new Error('At least one field besides action and roleId must be provided');
-        }
-
         const result = await capabilities.updateRole({
           roleId: input.roleId,
           name: input.name,
           description: input.description,
         });
+        await reloadAgentsForRole(db, loaderConfig, input.roleId);
+        return result;
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'delete_agent_role')) {
+    tools.delete_agent_role = createTool({
+      id: 'delete_agent_role',
+      description: 'Delete an unused role.',
+      inputSchema: z.object({
+        roleId: z.string().describe('Role ID to delete.'),
+      }),
+      execute: async (input) => {
+        const result = await capabilities.deleteRole(input.roleId);
         await reloadAgentsForRole(db, loaderConfig, input.roleId);
         return result;
       },
