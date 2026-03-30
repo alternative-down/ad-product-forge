@@ -125,9 +125,30 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       return null;
     }
 
+    const messageCount = pendingRunMessages.length;
     const content = pendingRunMessages.join('\n\n---\n\n').trim();
     pendingRunMessages = [];
-    return content || null;
+
+    if (!content) {
+      return null;
+    }
+
+    const contextHeader = [
+      '=== NEW MESSAGES TO PROCESS ===',
+      `You have ${messageCount} new message${messageCount > 1 ? 's' : ''} to process.`,
+      '',
+      'IMPORTANT INSTRUCTIONS:',
+      '1. Read your conversation history (memory) before responding.',
+      '2. These messages are additional context for the current conversation.',
+      '3. Consider existing messages and conversation flow when formulating your response.',
+      '4. If these messages relate to previous context, maintain coherence.',
+      '',
+      '--- NEW MESSAGES START ---',
+      content,
+      '--- NEW MESSAGES END ---',
+    ].join('\n');
+
+    return contextHeader;
   }
 
   function stop() {
