@@ -8,7 +8,7 @@ const sendMessageInputSchema = z
     conversationKey: z
       .string()
       .describe(
-        'Destination for the message in the format <provider>:<value>. Use the exact conversationKey returned by list_conversations, or use <provider>:<contactSlug> to start a direct message with a known contact.',
+        'Destination for the message. Use the exact conversationKey returned by list_conversations for an existing conversation, or use <provider>:<contactSlug> to start a direct message with a known contact.',
       ),
     content: z.string().min(1),
     replyToMessageId: z
@@ -38,19 +38,19 @@ export function createSendMessageTool(communication: CommunicationModule) {
           if (error.message.includes('Provider not available')) {
             return {
               error: error.message,
-              hint: 'Call list_contacts with filter="self" to see available providers, then use conversationKey with a valid <provider>:<value> prefix.',
+              hint: 'Call list_contacts with filter="self" to see available providers, then use <provider>:<contactSlug> with one of those providers.',
             };
           }
           if (error.message.includes('does not belong to provider')) {
             return {
               error: error.message,
-              hint: 'The conversationKey or replyToMessageId points to a different provider. Use a matching <provider>:<value> prefix and messageId from the same conversation.',
+              hint: 'The conversationKey or replyToMessageId points to a different provider. Use the conversationKey returned by list_conversations and a messageId from that same conversation.',
             };
           }
           if (error.message.includes('Conversation not found')) {
             return {
               error: error.message,
-              hint: 'Use the exact conversationKey returned by list_conversations in the format <provider>:<value>, or use <provider>:<contactSlug> for a known contact.',
+              hint: 'Use the exact conversationKey returned by list_conversations, or use <provider>:<contactSlug> for a known contact.',
             };
           }
           if (error.message.includes('Contact not found')) {
@@ -68,7 +68,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
           if (error.message.includes('No destination provided')) {
             return {
               error: error.message,
-              hint: 'Provide conversationKey in the format <provider>:<value>.',
+              hint: 'Provide a conversationKey from list_conversations, or use <provider>:<contactSlug>.',
             };
           }
           if (error.message.includes('Failed to create conversation')) {
@@ -86,7 +86,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
         // Unknown error type
         return {
           error: 'An unknown error occurred while sending the message',
-          hint: 'Verify the destination conversationKey is valid and uses the format <provider>:<value>.',
+          hint: 'Verify the destination conversationKey is valid, or use <provider>:<contactSlug> for a known contact.',
         };
       }
     },

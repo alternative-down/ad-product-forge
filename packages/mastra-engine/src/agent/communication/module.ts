@@ -23,10 +23,6 @@ export async function createCommunicationModule(config: {
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: ((event: AgentWakeEvent) => void) | null = null;
 
-  function formatConversationKey(providerId: string, providerConversationKey: string) {
-    return `${providerId}:${providerConversationKey}`;
-  }
-
   function parseConversationReference(conversation: string) {
     const separatorIndex = conversation.indexOf(':');
 
@@ -35,15 +31,15 @@ export async function createCommunicationModule(config: {
     }
 
     const providerId = conversation.slice(0, separatorIndex);
-    const providerConversationKey = conversation.slice(separatorIndex + 1);
+    const contactSlug = conversation.slice(separatorIndex + 1);
 
-    if (!providerConversationKey || !providers.has(providerId)) {
+    if (!contactSlug || !providers.has(providerId)) {
       return null;
     }
 
     return {
       providerId,
-      providerConversationKey,
+      contactSlug,
     };
   }
 
@@ -148,10 +144,7 @@ export async function createCommunicationModule(config: {
               type: `message:${provider.id}`,
               groupKey: `message:${provider.id}:${message.providerConversationKey}`,
               groupMetadata: {
-                ConversationKey: formatConversationKey(
-                  provider.id,
-                  savedConversation?.providerConversationKey ?? message.providerConversationKey,
-                ),
+                ...(savedConversation?.conversationId ? { ConversationKey: savedConversation.conversationId } : {}),
                 ...(savedConversation?.name ? { ConversationName: savedConversation.name } : {}),
                 ...(contact?.slug ? { ContactSlug: contact.slug } : {}),
               },
@@ -197,10 +190,7 @@ export async function createCommunicationModule(config: {
     return {
       success: true,
       messageId: message.messageId,
-      conversationKey: formatConversationKey(
-        input.provider,
-        conversation?.providerConversationKey ?? input.providerConversationKey,
-      ),
+      conversationKey: conversation?.conversationId ?? message.conversationId,
     };
   }
 
@@ -307,10 +297,7 @@ export async function createCommunicationModule(config: {
       const contactDisplayName = conversation.contactId ? contactMap.get(conversation.contactId)?.displayName : undefined;
 
       return {
-        conversationKey: formatConversationKey(
-          conversation.provider,
-          conversation.providerConversationKey,
-        ),
+        conversationKey: conversation.conversationId,
         provider: conversation.provider,
         latestMessageAt: conversation.latestMessageAt,
         unreadCount: conversation.unreadCount,
@@ -337,26 +324,11 @@ export async function createCommunicationModule(config: {
     conversationKey: string;
     limit: number;
   }): Promise<CommunicationMessageView[]> {
-    const parsedConversation = parseConversationReference(input.conversationKey);
+    const conversation = await store.getConversation(input.conversationKey);
 
-    if (!parsedConversation) {
+    if (!conversation) {
       throw new Error(`Conversation not found: ${input.conversationKey}`);
     }
-
-    const matches = await store.findConversationsByConversationKey(
-      parsedConversation.providerConversationKey,
-      parsedConversation.providerId,
-    );
-
-    if (matches.length === 0) {
-      throw new Error(`Conversation not found: ${input.conversationKey}`);
-    }
-
-    if (matches.length > 1) {
-      throw new Error(`Conversation key is ambiguous across providers: ${input.conversationKey}`);
-    }
-
-    const conversation = matches[0]!;
     const messages = await store.getMessages(conversation.conversationId, input.limit);
     const contact = conversation?.contactId ? await store.getContact(conversation.contactId) : null;
 
@@ -381,33 +353,27 @@ export async function createCommunicationModule(config: {
     content: string;
     replyToMessageId?: string;
   }) {
-    const parsedConversation = input.conversationKey
-      ? parseConversationReference(input.conversationKey)
-      : null;
+    if (!input.conversationKey) {
+      throw new Error('No destination provided');
+    }
 
-    // Fallback logic: resolve provider if not provided
-    let resolvedProvider: CommunicationProvider | undefined = parsedConversation
-      ? providers.get(parsedConversation.providerId)
-      : undefined;
+    const existingConversation = await store.getConversation(input.conversationKey);
+    const parsedConversation = existingConversation
+      ? null
+      : parseConversationReference(input.conversationKey);
+    const provider = existingConversation
+      ? providers.get(existingConversation.provider)
+      : parsedConversation
+        ? providers.get(parsedConversation.providerId)
+        : null;
 
-    if (input.conversationKey && !parsedConversation) {
+    if (!provider) {
+      if (parsedConversation) {
+        throw new Error(`Provider not available: ${input.conversationKey}`);
+      }
+
       throw new Error(`Conversation not found: ${input.conversationKey}`);
     }
-
-    if (!resolvedProvider) {
-      throw new Error(`Provider not available: ${input.conversationKey}`);
-    }
-
-    if (!resolvedProvider) {
-      const availableProviders = Array.from(providers.keys());
-      throw new Error(
-        `Provider not available. ` +
-        `Available providers: ${availableProviders.join(', ') || 'none'}. ` +
-        `Tip: Call list_contacts with filter='self' to see your available providers.`,
-      );
-    }
-
-    const provider = resolvedProvider;
 
     const replyMessage = input.replyToMessageId ? await store.getMessage(input.replyToMessageId) : null;
 
@@ -415,13 +381,7 @@ export async function createCommunicationModule(config: {
       throw new Error(`Message ${input.replyToMessageId} does not belong to provider ${provider.id}`);
     }
 
-    const conversationMatches = parsedConversation
-      ? await store.findConversationsByConversationKey(
-          parsedConversation.providerConversationKey,
-          parsedConversation.providerId,
-        )
-      : [];
-    const conversation = conversationMatches[0] ?? null;
+    const conversation = existingConversation;
 
     if (conversation) {
       if (conversation.provider !== provider.id) {
@@ -490,8 +450,8 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    if (parsedConversation && await store.getContact(parsedConversation.providerConversationKey)) {
-      let contactExternalId = await getContactExternalId(provider.id, parsedConversation.providerConversationKey);
+    if (parsedConversation && await store.getContact(parsedConversation.contactSlug)) {
+      const contactExternalId = await getContactExternalId(provider.id, parsedConversation.contactSlug);
 
       if (!contactExternalId) {
         throw new Error(`Contact not found: ${input.conversationKey}`);
@@ -509,41 +469,12 @@ export async function createCommunicationModule(config: {
         providerConversationKey: sent.providerConversationKey,
         providerMessageId: sent.providerMessageId,
         conversationName: sent.conversationName,
-        contactId: parsedConversation.providerConversationKey,
+        contactId: parsedConversation.contactSlug,
         content: input.content,
       });
     }
 
-    if (parsedConversation) {
-      const newConversation = await store.upsertConversation({
-        provider: provider.id,
-        providerConversationKey: parsedConversation.providerConversationKey,
-        type: 'dm',
-      });
-
-      if (!newConversation) {
-        throw new Error(`Failed to create conversation for provider ${provider.id}: ${input.conversationKey}`);
-      }
-
-      const sent = await provider.sendMessage({
-        providerConversationKey: newConversation.providerConversationKey,
-        conversationName: newConversation.name,
-        conversationType: newConversation.type,
-        content: input.content,
-        replyToProviderMessageId: replyMessage?.providerMessageId,
-      });
-
-      return saveSentMessage({
-        provider: provider.id,
-        providerConversationKey: sent.providerConversationKey,
-        providerMessageId: sent.providerMessageId,
-        conversationName: sent.conversationName,
-        contactId: newConversation.contactId,
-        content: input.content,
-      });
-    }
-
-    throw new Error(`No destination provided for provider: ${provider.id}`);
+    throw new Error(`Contact not found: ${input.conversationKey}`);
   }
 
   async function createChatGroup(input: {
@@ -565,7 +496,7 @@ export async function createCommunicationModule(config: {
       groupId: group.groupId,
       name: group.name,
       provider: group.provider,
-      conversationKey: formatConversationKey(group.provider, group.providerConversationKey),
+      conversationKey: group.groupId,
       creatorMember: group.creatorMember,
       createdAt: group.createdAt,
     };
@@ -591,7 +522,7 @@ export async function createCommunicationModule(config: {
       groupId: group.groupId,
       name: group.name,
       provider: group.provider,
-      conversationKey: formatConversationKey(group.provider, group.providerConversationKey),
+      conversationKey: group.groupId,
       createdAt: group.createdAt,
       updatedAt: group.updatedAt,
     }));
