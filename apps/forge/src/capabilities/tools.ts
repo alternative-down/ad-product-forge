@@ -68,7 +68,7 @@ export function createCapabilityTools(
         forgeDebug('tools:capabilities', 'update_agent_function called', { input });
         if (!input.name && input.description === undefined) {
           forgeDebug('tools:capabilities', 'update_agent_function validation failed', { reason: 'no fields provided' });
-          return { valid: false, error: 'At least one field besides functionId must be provided' };
+          return { valid: false, error: 'At least one field besides functionId must be provided', hint: 'Provide at least one of: name or description.' };
         }
         try {
           const result = await capabilities.updateFunction({
@@ -82,7 +82,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'update_agent_function error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agent_functions to find valid function IDs.' };
         }
       },
     });
@@ -105,7 +105,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'delete_agent_function error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agent_functions to find valid function IDs. Ensure no agents are using this function before deleting.' };
         }
       },
     });
@@ -159,7 +159,7 @@ export function createCapabilityTools(
         forgeDebug('tools:capabilities', 'update_agent_role called', { input });
         if (!input.name && input.description === undefined) {
           forgeDebug('tools:capabilities', 'update_agent_role validation failed', { reason: 'no fields provided' });
-          return { valid: false, error: 'At least one field besides roleId must be provided' };
+          return { valid: false, error: 'At least one field besides roleId must be provided', hint: 'Provide at least one of: name or description.' };
         }
         try {
           const result = await capabilities.updateRole({
@@ -173,7 +173,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'update_agent_role error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agent_roles to find valid role IDs.' };
         }
       },
     });
@@ -196,7 +196,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'delete_agent_role error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agent_roles to find valid role IDs. Ensure no functions are using this role before deleting.' };
         }
       },
     });
@@ -220,7 +220,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'assign_role_to_function error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agent_functions and list_agent_roles to verify both IDs exist.' };
         }
       },
     });
@@ -249,7 +249,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'change_agent_function error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agents and list_agent_functions to verify both IDs exist.' };
         }
       },
     });
@@ -277,7 +277,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'change_own_function error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agent_functions to find valid function IDs.' };
         }
       },
     });
@@ -320,7 +320,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'manage_role_tool_permissions error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agent_roles and list_available_capabilities to verify role ID and tool ID exist.' };
         }
       },
     });
@@ -363,7 +363,7 @@ export function createCapabilityTools(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           forgeDebug('tools:capabilities', 'manage_role_workflow_permissions error', { error: message });
-          return { valid: false, error: message };
+          return { valid: false, error: message, hint: 'Use list_agent_roles and list_available_capabilities to verify role ID and workflow ID exist.' };
         }
       },
     });

@@ -115,14 +115,14 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           for (const field of requiredFields) {
             if (input[field] === undefined) {
               forgeDebug('tools:coolify', 'manage_coolify_application validation failed', { reason: `${field} required for create`, action: input.action });
-              return { valid: false, error: `${field} is required when action is create` };
+              return { valid: false, error: `${field} is required when action is create`, hint: `Provide all required fields: githubAppUuid, repositoryOwner, repositoryName, branch, name, slug, port.` };
             }
           }
         }
 
         if (input.action !== 'create' && !input.applicationUuid) {
           forgeDebug('tools:coolify', 'manage_coolify_application validation failed', { reason: 'applicationUuid required for non-create', action: input.action });
-          return { valid: false, error: 'applicationUuid is required when action is not create' };
+          return { valid: false, error: 'applicationUuid is required when action is not create', hint: 'Use list_coolify_applications to find valid application UUIDs.' };
         }
 
         let result;
@@ -267,7 +267,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
         forgeDebug('tools:coolify', 'manage_coolify_application_env called', { action: input.action, applicationUuid: input.applicationUuid, key: input.key });
         if (input.action !== 'delete' && input.value === undefined) {
           forgeDebug('tools:coolify', 'manage_coolify_application_env validation failed', { reason: 'value required for non-delete' });
-          return { valid: false, error: 'value is required when action is not delete' };
+          return { valid: false, error: 'value is required when action is not delete', hint: 'Provide the value parameter for create or update actions.' };
         }
 
         let result;
