@@ -35,17 +35,56 @@ class HireAgentDisablerProcessor implements Processor {
 
     // Check if hireAgent was called in previous steps using steps parameter
     const hasHireAgentCall = steps.some((step) => {
-      return step.toolCalls?.some((call) => call.toolName === 'hireAgent');
+      return step.toolCalls?.some((call) => getToolCallName(call) === 'hireAgent');
     });
 
     if (hasHireAgentCall) {
       console.log(`[HireAgentDisabler] Step ${stepNumber}: hireAgent detected, disabling tools`);
-      return { toolChoice: 'none' };
+      return { tools: {}, toolChoice: 'none' };
     }
 
     console.log(`[HireAgentDisabler] Step ${stepNumber}: allowing tools`);
     return {};
   }
+}
+
+function getToolCallName(call: unknown) {
+  if (typeof call !== 'object' || call === null) {
+    return undefined;
+  }
+
+  if ('toolName' in call && typeof call.toolName === 'string') {
+    return call.toolName;
+  }
+
+  if (
+    'payload' in call &&
+    typeof call.payload === 'object' &&
+    call.payload !== null &&
+    'toolName' in call.payload &&
+    typeof call.payload.toolName === 'string'
+  ) {
+    return call.payload.toolName;
+  }
+
+  return undefined;
+}
+
+function getToolResultPayload(chunk: unknown) {
+  if (typeof chunk !== 'object' || chunk === null) {
+    return undefined;
+  }
+
+  if (
+    'payload' in chunk &&
+    typeof chunk.payload === 'object' &&
+    chunk.payload !== null &&
+    'toolName' in chunk.payload
+  ) {
+    return chunk.payload as { toolName: string; result: unknown };
+  }
+
+  return undefined;
 }
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
@@ -267,6 +306,7 @@ export async function generateHiredAgentInstructions(
     },
   });
 
+  const hireAgentDisablerProcessor = new HireAgentDisablerProcessor();
   const mastra = new Mastra({
     agents: {
       [HIRING_RH_AGENT_ID]: agent,
@@ -274,11 +314,13 @@ export async function generateHiredAgentInstructions(
     gateways: {
       oauth: createOAuthGateway(),
     },
-    processors: [new HireAgentDisablerProcessor()],
+    processors: {
+      [hireAgentDisablerProcessor.id]: hireAgentDisablerProcessor,
+    },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
     maxSteps: 20,
-    toolChoice: 'required',
+    toolChoice: 'auto',
   });
 
   const inputTokens = result.usage.inputTokens ?? 0;
@@ -289,21 +331,42 @@ export async function generateHiredAgentInstructions(
 
   console.log(`[HiringRH] generate() completed`);
   console.log(`[HiringRH] result.text:`, result.text);
-  console.log(`[HiringRH] result.toolCalls:`, JSON.stringify(result.toolCalls.map(c => ({ toolName: c.payload.toolName })), null, 2));
-  console.log(`[HiringRH] result.toolResults:`, JSON.stringify(result.toolResults.map(r => ({ toolName: r.toolName, hasResult: !!r.result })), null, 2));
+  console.log(
+    `[HiringRH] result.toolCalls:`,
+    JSON.stringify(result.toolCalls.map((call) => ({ toolName: getToolCallName(call) })), null, 2),
+  );
+  console.log(
+    `[HiringRH] result.toolResults:`,
+    JSON.stringify(
+      result.toolResults.map((chunk) => {
+        const payload = getToolResultPayload(chunk);
+        return {
+          toolName: payload?.toolName,
+          hasResult: payload !== undefined,
+        };
+      }),
+      null,
+      2,
+    ),
+  );
 
   // After hireAgent is called, the next step disables tools and returns text
   // Parse the text to extract the structured result
-  const toolCall = result.toolCalls.find((call) => call.toolName === 'hireAgent');
-  const toolResult = result.toolResults.find((r) => r.toolName === 'hireAgent');
+  const toolCall = result.toolCalls.find((call) => getToolCallName(call) === 'hireAgent');
+  const toolResultPayload = result.toolResults
+    .map((chunk) => getToolResultPayload(chunk))
+    .find((payload) => payload?.toolName === 'hireAgent');
 
   console.log(`[HiringRH] toolCall found:`, !!toolCall);
-  console.log(`[HiringRH] toolResult found:`, !!toolResult);
+  console.log(`[HiringRH] toolResult found:`, !!toolResultPayload);
 
   // If we have toolResult from hireAgent, use it
-  if (toolResult?.result) {
-    console.log(`[HiringRH] toolResult.result:`, JSON.stringify(toolResult.result, null, 2));
-    const agentHired = toolResult.result as HiringRhResult;
+  if (toolResultPayload?.result) {
+    console.log(
+      `[HiringRH] toolResult.result:`,
+      JSON.stringify(toolResultPayload.result, null, 2),
+    );
+    const agentHired = toolResultPayload.result as HiringRhResult;
     if (agentHired.valid) {
       console.log(`[HiringRH] SUCCESS - agentHired from toolResult:`, JSON.stringify(agentHired, null, 2));
       return {
