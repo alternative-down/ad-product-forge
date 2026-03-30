@@ -811,7 +811,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       participantName: member.participantName,
       role: member.role,
       createdAt: member.createdAt,
-      instanceId: member.instanceId,
+      instanceId: member.instanceId ?? undefined,
     }));
   }
 

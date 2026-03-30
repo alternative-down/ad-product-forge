@@ -2,6 +2,16 @@ import { ChannelType, Client, Events, GatewayIntentBits, Message, Partials } fro
 
 import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
+type DiscordSendableChannel = {
+  id: string;
+  name?: string | null;
+  sendTyping(): Promise<unknown>;
+  send(content: string): Promise<Message>;
+  messages: {
+    fetch(messageId: string): Promise<Message>;
+  };
+};
+
 export function createDiscordProvider(config: {
   token: string;
   allowedChannelIds?: string[];
@@ -49,6 +59,77 @@ export function createDiscordProvider(config: {
     const messages = recentOutboundMessages.get(conversationKey) ?? [];
 
     return messages.some((message) => message.content === content);
+  }
+
+  function splitDiscordMessageContent(content: string) {
+    const chunks: string[] = [];
+    const normalizedContent = content.trim();
+
+    if (!normalizedContent) {
+      return [''];
+    }
+
+    for (const paragraph of normalizedContent.split('\n\n')) {
+      if (paragraph.length <= 2_000) {
+        const nextChunk = chunks[chunks.length - 1];
+
+        if (!nextChunk) {
+          chunks.push(paragraph);
+          continue;
+        }
+
+        const separator = nextChunk.length === 0 ? '' : '\n\n';
+        if (nextChunk.length + separator.length + paragraph.length <= 2_000) {
+          chunks[chunks.length - 1] = `${nextChunk}${separator}${paragraph}`;
+          continue;
+        }
+
+        chunks.push(paragraph);
+        continue;
+      }
+
+      let remainingParagraph = paragraph;
+
+      while (remainingParagraph.length > 2_000) {
+        const slice = remainingParagraph.slice(0, 2_000);
+        const breakIndex = Math.max(slice.lastIndexOf('\n'), slice.lastIndexOf(' '));
+        const chunkEnd = breakIndex >= 1_500 ? breakIndex : 2_000;
+        chunks.push(remainingParagraph.slice(0, chunkEnd).trim());
+        remainingParagraph = remainingParagraph.slice(chunkEnd).trim();
+      }
+
+      if (remainingParagraph.length > 0) {
+        chunks.push(remainingParagraph);
+      }
+    }
+
+    return chunks;
+  }
+
+  async function sendDiscordChunks(input: {
+    channel: DiscordSendableChannel;
+    content: string;
+    replyToProviderMessageId?: string;
+  }) {
+    const messageChunks = splitDiscordMessageContent(input.content);
+    let lastSentMessage: Message | null = null;
+
+    for (const [index, chunk] of messageChunks.entries()) {
+      if (index === 0 && input.replyToProviderMessageId) {
+        const replyTarget = await input.channel.messages.fetch(input.replyToProviderMessageId);
+        lastSentMessage = await replyTarget.reply(chunk);
+      } else {
+        lastSentMessage = await input.channel.send(chunk);
+      }
+
+      rememberOutboundMessage(lastSentMessage.channelId, chunk);
+    }
+
+    if (!lastSentMessage) {
+      throw new Error('Discord message content produced no chunks to send');
+    }
+
+    return lastSentMessage;
   }
 
   async function withTyping<T extends { sendTyping(): Promise<unknown> }>(
@@ -232,8 +313,10 @@ export function createDiscordProvider(config: {
         const channel = await targetUser.createDM();
 
         return withTyping(channel, async () => {
-          const sent = await channel.send(input.content);
-          rememberOutboundMessage(channel.id, input.content);
+          const sent = await sendDiscordChunks({
+            channel: channel as DiscordSendableChannel,
+            content: input.content,
+          });
 
           return {
             providerConversationKey: channel.id,
@@ -254,20 +337,11 @@ export function createDiscordProvider(config: {
       }
 
       return withTyping(channel, async () => {
-        if (input.replyToProviderMessageId) {
-          const replyTarget = await channel.messages.fetch(input.replyToProviderMessageId);
-          const sent = await replyTarget.reply(input.content);
-          rememberOutboundMessage(sent.channelId, input.content);
-
-          return {
-            providerConversationKey: sent.channelId,
-            providerMessageId: sent.id,
-            conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
-          };
-        }
-
-        const sent = await channel.send(input.content);
-        rememberOutboundMessage(sent.channelId, input.content);
+        const sent = await sendDiscordChunks({
+          channel: channel as DiscordSendableChannel,
+          content: input.content,
+          replyToProviderMessageId: input.replyToProviderMessageId,
+        });
 
         return {
           providerConversationKey: sent.channelId,

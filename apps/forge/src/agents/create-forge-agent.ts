@@ -212,6 +212,7 @@ export async function createInternalAgentRuntime<
     filesystem: new LocalFilesystem({
       basePath: agentWorkspaceDir,
     }),
+    lsp: false,
     sandbox: new LocalSandbox({
       isolation: 'none',
       workingDirectory: sandboxWorkingDirectory,
