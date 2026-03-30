@@ -84,6 +84,7 @@ export function createAgentConfigDraft(agent: AgentDetail): AgentConfigDraft {
     workspaceEmbedder: agent.workspace.embedder,
     modelProfileId: agent.modelProfile?.profileId ?? '',
     omModelProfileId: agent.omModelProfile?.profileId ?? '',
+    lastMessages: agent.lastMessages ?? 20,
   };
 }
 

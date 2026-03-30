@@ -38,6 +38,7 @@ export type AgentConfigDraft = {
   workspaceEmbedder: string;
   modelProfileId: string;
   omModelProfileId: string;
+  lastMessages: number;
 };
 
 export type ProviderDraft = {

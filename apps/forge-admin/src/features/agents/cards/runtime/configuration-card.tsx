@@ -99,6 +99,22 @@ export function AgentConfigurationCard(input: {
           />
         </LabeledField>
 
+        <LabeledField label="Memory context (lastMessages)">
+          <Input
+            type="number"
+            min={1}
+            max={100}
+            value={input.draft.lastMessages}
+            onChange={(event) =>
+              input.onChange({ ...input.draft, lastMessages: parseInt(event.target.value) || 20 })
+            }
+            required
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Number of recent messages to include in agent context. Default: 20
+          </p>
+        </LabeledField>
+
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex items-center gap-3 rounded-lg border border-border bg-accent/50 px-4 py-3 text-sm text-foreground">
             <input

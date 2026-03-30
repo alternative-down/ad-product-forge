@@ -138,6 +138,7 @@ export type AgentDetail = {
     filesystem: unknown;
     sandbox: unknown;
   };
+  lastMessages: number;
   providers: Array<{
     providerType: string;
     createdAt: number;
@@ -222,6 +223,7 @@ export type UpdateAgentConfigInput = {
   workspaceBm25: boolean;
   modelProfileId: string;
   omModelProfileId: string;
+  lastMessages: number;
 };
 
 export type UpsertAgentProviderInput = {
