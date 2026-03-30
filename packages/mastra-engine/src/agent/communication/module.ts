@@ -118,7 +118,6 @@ export async function createCommunicationModule(config: {
               type: `message:${provider.id}`,
               groupKey: `message:${provider.id}:${message.providerConversationKey}`,
               groupMetadata: {
-                Provider: provider.id,
                 ConversationKey: message.providerConversationKey,
                 ...(message.conversationName ? { ConversationName: message.conversationName } : {}),
                 ...(contact?.slug ? { ContactSlug: contact.slug } : {}),
@@ -126,9 +125,11 @@ export async function createCommunicationModule(config: {
               idempotencyKey: `${provider.id}:${message.providerMessageId}`,
               itemMetadata: {
                 MessageId: message.providerMessageId,
-                ...(message.authorDisplayName ? { Author: message.authorDisplayName } : {}),
-                ...(message.authorUsername ? { AuthorUsername: message.authorUsername } : {}),
-                ...(message.authorExternalId ? { AuthorExternalId: message.authorExternalId } : {}),
+                ...(message.authorDisplayName
+                  ? { Author: message.authorDisplayName }
+                  : message.authorUsername
+                    ? { Author: message.authorUsername }
+                    : {}),
               },
               text: message.content.trim(),
               timestamp: Date.parse(message.createdAt) || Date.now(),

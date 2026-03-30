@@ -525,14 +525,11 @@ function formatPendingRunEvents(events: AgentWakeEvent[]) {
 function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
   const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
   const firstEvent = orderedEvents[0];
-  const headerLines = [
-    `Group: ${firstEvent.groupKey}`,
-    `Type: ${firstEvent.type}`,
-  ];
+  const headerLines = [describeWakeGroup(firstEvent)];
 
   if (firstEvent.groupMetadata) {
     for (const [key, value] of Object.entries(firstEvent.groupMetadata)) {
-      headerLines.push(`${key}: ${value}`);
+      headerLines.push(`${formatWakeLabel(key)}: ${value}`);
     }
   }
 
@@ -542,14 +539,24 @@ function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
 }
 
 function formatPendingRunEventItem(event: AgentWakeEvent) {
-  const labels = [
-    new Date(event.timestamp).toISOString(),
-    event.idempotencyKey,
-  ];
+  const labels = [new Date(event.timestamp).toISOString()];
+  const extraMetadata: Array<[string, string]> = [];
+
+  if (event.itemMetadata?.MessageId) {
+    labels.push(`msg ${event.itemMetadata.MessageId}`);
+  }
+
+  if (event.itemMetadata?.Author) {
+    labels.push(event.itemMetadata.Author);
+  }
 
   if (event.itemMetadata) {
     for (const [key, value] of Object.entries(event.itemMetadata)) {
-      labels.push(`${key}=${value}`);
+      if (key === 'MessageId' || key === 'Author' || key === 'AuthorExternalId') {
+        continue;
+      }
+
+      extraMetadata.push([key, value]);
     }
   }
 
@@ -559,7 +566,33 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
     .map((line, index) => (index === 0 ? line : `  ${line}`))
     .join('\n');
 
-  return `[${labels.join(' | ')}] ${text}`;
+  const lines = [`- ${labels.join(' | ')}`, `  ${text}`];
+
+  if (extraMetadata.length > 0) {
+    lines.push(
+      ...extraMetadata.map(
+        ([key, value]) => `  ${formatWakeLabel(key)}: ${value}`,
+      ),
+    );
+  }
+
+  return lines.join('\n');
+}
+
+function describeWakeGroup(event: AgentWakeEvent) {
+  if (event.type.startsWith('message:')) {
+    const provider = event.type.split(':')[1] ?? 'message';
+    return `${provider} conversation`;
+  }
+
+  return formatWakeLabel(event.type);
+}
+
+function formatWakeLabel(value: string) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[-_:]+/g, ' ')
+    .toLowerCase();
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
