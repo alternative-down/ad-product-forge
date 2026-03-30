@@ -1,4 +1,5 @@
 import { createAgentWakeQueue } from '@mastra-engine/core';
+import type { AgentWakeEvent } from '@mastra-engine/core';
 
 import type { InternalAgentRuntime } from './create-forge-agent';
 import { createAgentContractStore } from './agent-contract-store';
@@ -47,7 +48,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let backoffMs = ONE_MINUTE_MS;
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
-  let pendingRunMessages: string[] = [];
+  const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
@@ -89,15 +90,14 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await queueNextStep();
   }
 
-  async function execute(content: string) {
+  async function execute(events: AgentWakeEvent[]) {
     if (stopped) {
       return;
     }
 
-    const nextContent = content.trim();
     const executionState = await store.getExecutionState(runtime.id);
 
-    appendPendingRunMessage(nextContent);
+    appendPendingRunMessages(events);
 
     if (executionState === 'running') {
       return;
@@ -110,45 +110,31 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await queueNextStep();
   }
 
-  function appendPendingRunMessage(content: string) {
-    const nextContent = content.trim();
+  function appendPendingRunMessages(events: AgentWakeEvent[]) {
+    for (const event of events) {
+      if (!event.text.trim()) {
+        continue;
+      }
 
-    if (!nextContent) {
-      return;
+      pendingRunMessages.set(event.idempotencyKey, event);
     }
-
-    pendingRunMessages.push(nextContent);
   }
 
   function flushPendingRunMessages() {
-    if (pendingRunMessages.length === 0) {
+    if (pendingRunMessages.size === 0) {
       return null;
     }
 
-    const messageCount = pendingRunMessages.length;
-    const content = pendingRunMessages.join('\n\n---\n\n').trim();
-    pendingRunMessages = [];
+    const events = Array.from(pendingRunMessages.values()).sort(
+      (left, right) => left.timestamp - right.timestamp,
+    );
+    pendingRunMessages.clear();
 
-    if (!content) {
+    if (events.length === 0) {
       return null;
     }
 
-    const contextHeader = [
-      '=== NEW MESSAGES TO PROCESS ===',
-      `You have ${messageCount} new message${messageCount > 1 ? 's' : ''} to process.`,
-      '',
-      'IMPORTANT INSTRUCTIONS:',
-      '1. Read your conversation history (memory) before responding.',
-      '2. These messages are additional context for the current conversation.',
-      '3. Consider existing messages and conversation flow when formulating your response.',
-      '4. If these messages relate to previous context, maintain coherence.',
-      '',
-      '--- NEW MESSAGES START ---',
-      content,
-      '--- NEW MESSAGES END ---',
-    ].join('\n');
-
-    return contextHeader;
+    return formatPendingRunEvents(events);
   }
 
   function stop() {
@@ -266,7 +252,21 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       }
 
       if (result.toolCalls.length === 0) {
-        appendPendingRunMessage(RUN_STOP_REMINDER);
+        appendPendingRunMessages([
+          {
+            type: 'runner-reminder',
+            groupKey: `runner-reminder:${runtime.id}`,
+            groupMetadata: {
+              Source: 'runner',
+            },
+            idempotencyKey: `runner-reminder:${runtime.id}:${Date.now()}`,
+            itemMetadata: {
+              Kind: 'run-stop-reminder',
+            },
+            text: RUN_STOP_REMINDER,
+            timestamp: Date.now(),
+          },
+        ]);
       }
 
       backoffMs = ONE_MINUTE_MS;
@@ -501,6 +501,65 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     getSnapshot,
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
+}
+
+function formatPendingRunEvents(events: AgentWakeEvent[]) {
+  const groups = new Map<string, AgentWakeEvent[]>();
+
+  for (const event of events) {
+    const existingGroup = groups.get(event.groupKey);
+
+    if (existingGroup) {
+      existingGroup.push(event);
+      continue;
+    }
+
+    groups.set(event.groupKey, [event]);
+  }
+
+  return Array.from(groups.values())
+    .map((groupEvents) => formatPendingRunEventGroup(groupEvents))
+    .join('\n\n');
+}
+
+function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
+  const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
+  const firstEvent = orderedEvents[0];
+  const headerLines = [
+    `Group: ${firstEvent.groupKey}`,
+    `Type: ${firstEvent.type}`,
+  ];
+
+  if (firstEvent.groupMetadata) {
+    for (const [key, value] of Object.entries(firstEvent.groupMetadata)) {
+      headerLines.push(`${key}: ${value}`);
+    }
+  }
+
+  const itemLines = orderedEvents.map((event) => formatPendingRunEventItem(event));
+
+  return [...headerLines, '', ...itemLines].join('\n');
+}
+
+function formatPendingRunEventItem(event: AgentWakeEvent) {
+  const labels = [
+    new Date(event.timestamp).toISOString(),
+    event.idempotencyKey,
+  ];
+
+  if (event.itemMetadata) {
+    for (const [key, value] of Object.entries(event.itemMetadata)) {
+      labels.push(`${key}=${value}`);
+    }
+  }
+
+  const text = event.text
+    .trim()
+    .split('\n')
+    .map((line, index) => (index === 0 ? line : `  ${line}`))
+    .join('\n');
+
+  return `[${labels.join(' | ')}] ${text}`;
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

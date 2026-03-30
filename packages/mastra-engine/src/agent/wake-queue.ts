@@ -1,11 +1,14 @@
-const WAKE_DEBOUNCE_MS = 5000;
+const WAKE_DEBOUNCE_MS = 10000;
 const WAKE_MAX_ACCUMULATION_MS = 30000;
 
 export type AgentWakeEvent = {
   type: string;
-  id: string;
-  content: string;
+  groupKey: string;
+  idempotencyKey: string;
   timestamp: number;
+  text: string;
+  groupMetadata?: Record<string, string>;
+  itemMetadata?: Record<string, string>;
 };
 
 export type AgentWakeQueue = {
@@ -23,7 +26,7 @@ export type AgentWakeQueue = {
 
 export function createAgentWakeQueue(config: {
   label?: string;
-  execute(content: string): Promise<void>;
+  execute(events: AgentWakeEvent[]): Promise<void>;
 }): AgentWakeQueue {
   let timer: NodeJS.Timeout | null = null;
   let pending = false;
@@ -56,14 +59,14 @@ export function createAgentWakeQueue(config: {
       return;
     }
 
-    const content = formatWakeEvents(Array.from(events.values()));
+    const queuedEvents = Array.from(events.values()).sort((left, right) => left.timestamp - right.timestamp);
 
     pending = false;
     firstPendingAt = null;
     events.clear();
 
     try {
-      await config.execute(content);
+      await config.execute(queuedEvents);
     } catch (error) {
       console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to execute:`, error);
     }
@@ -73,13 +76,13 @@ export function createAgentWakeQueue(config: {
     notifyExternalEvent(event: AgentWakeEvent) {
       const now = Date.now();
 
-      if (events.has(event.id)) {
+      if (events.has(event.idempotencyKey)) {
         return;
       }
 
       pending = true;
       firstPendingAt ??= now;
-      events.set(event.id, event);
+      events.set(event.idempotencyKey, event);
 
       const accumulatedMs = now - firstPendingAt;
       if (accumulatedMs >= WAKE_MAX_ACCUMULATION_MS) {
@@ -109,78 +112,4 @@ export function createAgentWakeQueue(config: {
       };
     },
   };
-}
-
-interface ParsedWakeEvent {
-  type: string;
-  id: string;
-  timestamp: number;
-  content: string;
-  /** Extracted from content after "Type: message:{provider}" */
-  provider?: string;
-  /** Extracted from content after "Conversation key:" */
-  conversationKey?: string;
-}
-
-function extractEventMetadata(event: AgentWakeEvent): ParsedWakeEvent {
-  const typeMatch = event.content.match(/^Type: (message:(\w+))/);
-  const convKeyMatch = event.content.match(/^Conversation key: (.+)$/m);
-
-  return {
-    type: event.type,
-    id: event.id,
-    timestamp: event.timestamp,
-    content: event.content,
-    provider: typeMatch ? typeMatch[2] : undefined,
-    conversationKey: convKeyMatch ? convKeyMatch[1] : undefined,
-  };
-}
-
-function formatWakeEvents(events: AgentWakeEvent[]) {
-  const parsed = events.map(extractEventMetadata).sort((left, right) => left.timestamp - right.timestamp);
-
-  // Group by provider + conversation key
-  const groups = new Map<string, ParsedWakeEvent[]>();
-  for (const event of parsed) {
-    const groupKey = `${event.provider ?? event.type}|${event.conversationKey ?? event.id}`;
-    const existing = groups.get(groupKey);
-    if (existing) {
-      existing.push(event);
-    } else {
-      groups.set(groupKey, [event]);
-    }
-  }
-
-  const formattedGroups: string[] = [];
-  for (const [, groupEvents] of groups) {
-    if (groupEvents.length === 0) continue;
-
-    // Shared metadata from first event
-    const first = groupEvents[0];
-    const headerLines = [
-      `Type: ${first.type}`,
-      `At: ${new Date(first.timestamp).toISOString()}`,
-    ];
-
-    if (first.provider) {
-      headerLines.push(`Provider: ${first.provider}`);
-    }
-    if (first.conversationKey) {
-      headerLines.push(`Conversation: ${first.conversationKey}`);
-    }
-
-    // Messages sorted within group
-    const messageLines = groupEvents.map((e) => {
-      // Remove the standard header from content (everything before "Content:" or "Inbound")
-      const contentMatch = e.content.match(/(?:Content:|Inbound communication received\.)/);
-      if (contentMatch) {
-        return e.content.slice(e.content.indexOf(contentMatch[0]) + contentMatch[0].length).trim();
-      }
-      return e.content.trim();
-    });
-
-    formattedGroups.push([...headerLines, '', 'Messages:', ...messageLines.map((m, i) => `[${i + 1}] ${m}`)].join('\n'));
-  }
-
-  return formattedGroups.join('\n\n---\n\n');
 }

@@ -116,19 +116,21 @@ export async function createCommunicationModule(config: {
           try {
             receiveMessageHandler({
               type: `message:${provider.id}`,
-              id: `${provider.id}:${message.providerMessageId}`,
-              content: formatInboundWakeMessage({
-                providerId: provider.id,
-                contactId: contact?.slug,
-                providerConversationKey: message.providerConversationKey,
-                providerMessageId: message.providerMessageId,
-                conversationName: message.conversationName,
-                authorExternalId: message.authorExternalId,
-                authorDisplayName: message.authorDisplayName,
-                authorUsername: message.authorUsername,
-                createdAt: message.createdAt,
-                content: message.content,
-              }),
+              groupKey: `message:${provider.id}:${message.providerConversationKey}`,
+              groupMetadata: {
+                Provider: provider.id,
+                ConversationKey: message.providerConversationKey,
+                ...(message.conversationName ? { ConversationName: message.conversationName } : {}),
+                ...(contact?.slug ? { ContactSlug: contact.slug } : {}),
+              },
+              idempotencyKey: `${provider.id}:${message.providerMessageId}`,
+              itemMetadata: {
+                MessageId: message.providerMessageId,
+                ...(message.authorDisplayName ? { Author: message.authorDisplayName } : {}),
+                ...(message.authorUsername ? { AuthorUsername: message.authorUsername } : {}),
+                ...(message.authorExternalId ? { AuthorExternalId: message.authorExternalId } : {}),
+              },
+              text: message.content.trim(),
               timestamp: Date.parse(message.createdAt) || Date.now(),
             });
           } catch (error) {
@@ -549,51 +551,6 @@ export async function createCommunicationModule(config: {
     listChatGroups,
     listGroupMembers,
   };
-}
-
-function formatInboundWakeMessage(input: {
-  providerId: string;
-  contactId?: string;
-  providerConversationKey: string;
-  providerMessageId: string;
-  conversationName?: string;
-  authorExternalId?: string;
-  authorDisplayName?: string;
-  authorUsername?: string;
-  createdAt: string;
-  content: string;
-}) {
-  const lines = [
-    'Inbound communication received.',
-    `Provider: ${input.providerId}`,
-    `Conversation key: ${input.providerConversationKey}`,
-    `Message id: ${input.providerMessageId}`,
-    `Timestamp: ${input.createdAt}`,
-  ];
-
-  if (input.conversationName) {
-    lines.push(`Conversation name: ${input.conversationName}`);
-  }
-
-  if (input.contactId) {
-    lines.push(`Contact slug: ${input.contactId}`);
-  }
-
-  if (input.authorDisplayName) {
-    lines.push(`Author display name: ${input.authorDisplayName}`);
-  }
-
-  if (input.authorUsername) {
-    lines.push(`Author username: ${input.authorUsername}`);
-  }
-
-  if (input.authorExternalId) {
-    lines.push(`Author external id: ${input.authorExternalId}`);
-  }
-
-  lines.push('', 'Message content:', input.content.trim());
-
-  return lines.join('\n');
 }
 
 export type CommunicationModule = Awaited<ReturnType<typeof createCommunicationModule>>;

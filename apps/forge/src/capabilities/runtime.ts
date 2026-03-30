@@ -127,8 +127,13 @@ export async function changeAgentFunction(input: {
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
   targetEntry?.runner.notifyExternalEvent({
     type: 'function-change',
-    id: `function-change:${input.targetAgentId}:${changeTimestamp}`,
-    content: eventContent,
+    groupKey: `function-change:${input.targetAgentId}`,
+    groupMetadata: {
+      Source: 'capabilities',
+      TargetAgentId: input.targetAgentId,
+    },
+    idempotencyKey: `function-change:${input.targetAgentId}:${changeTimestamp}`,
+    text: eventContent,
     timestamp: changeTimestamp,
   });
 
@@ -196,8 +201,13 @@ export async function changeAgentFunctionFromAdmin(input: {
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
   targetEntry?.runner.notifyExternalEvent({
     type: 'function-change',
-    id: `function-change:${input.targetAgentId}:${changeTimestamp}`,
-    content: eventContent,
+    groupKey: `function-change:${input.targetAgentId}`,
+    groupMetadata: {
+      Source: 'admin-console',
+      TargetAgentId: input.targetAgentId,
+    },
+    idempotencyKey: `function-change:${input.targetAgentId}:${changeTimestamp}`,
+    text: eventContent,
     timestamp: changeTimestamp,
   });
 

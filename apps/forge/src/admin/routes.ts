@@ -463,13 +463,13 @@ export function registerAdminRoutes(input: {
 
       entry.runner.notifyExternalEvent({
         type: 'manual-wake',
-        id: `manual-wake:${agentId}:${timestamp}`,
-        content: [
-          'Manual wake requested from admin console.',
-          `Agent id: ${agentId}`,
-          `Source: admin-console`,
-          `Timestamp: ${new Date(timestamp).toISOString()}`,
-        ].join('\n'),
+        groupKey: `manual-wake:${agentId}`,
+        groupMetadata: {
+          Source: 'admin-console',
+          AgentId: agentId,
+        },
+        idempotencyKey: `manual-wake:${agentId}:${timestamp}`,
+        text: 'Manual wake requested from admin console.',
         timestamp,
       });
       return jsonResponse({ success: true });

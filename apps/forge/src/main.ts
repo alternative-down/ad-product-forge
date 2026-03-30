@@ -66,8 +66,13 @@ export async function main() {
       console.log(`[Forge] Schedule wake requested for agent ${input.agentId}`);
       entry.runner.notifyExternalEvent({
         type: 'schedule',
-        id: `schedule:${input.scheduleId}:${input.timestamp}`,
-        content: input.content,
+        groupKey: `schedule:${input.scheduleId}`,
+        groupMetadata: {
+          Source: 'scheduler',
+          ScheduleId: input.scheduleId,
+        },
+        idempotencyKey: `schedule:${input.scheduleId}:${input.timestamp}`,
+        text: input.content,
         timestamp: input.timestamp,
       });
     },
@@ -88,8 +93,13 @@ export async function main() {
       console.log(`[Forge] GitHub wake requested for agent ${input.agentId}`);
       entry.runner.notifyExternalEvent({
         type: input.type,
-        id: input.id,
-        content: input.content,
+        groupKey: `github:${input.type}`,
+        groupMetadata: {
+          Source: 'github',
+          EventType: input.type,
+        },
+        idempotencyKey: input.id,
+        text: input.content,
         timestamp: input.timestamp,
       });
     },
@@ -168,11 +178,46 @@ export async function main() {
         }
 
         try {
+          const propagatedMessage =
+            typeof message === 'object' && message !== null
+              ? message as {
+                  conversationId?: string;
+                  content?: string;
+                  senderId?: string;
+                  senderName?: string;
+                  timestamp?: string;
+                  metadata?: Record<string, unknown>;
+                }
+              : null;
+          const timestamp = propagatedMessage?.timestamp
+            ? Date.parse(propagatedMessage.timestamp) || Date.now()
+            : Date.now();
+
           entry.runner.notifyExternalEvent({
-            type: 'message',
-            id: `fanout:${Date.now()}`,
-            content: typeof message === 'string' ? message : JSON.stringify(message),
-            timestamp: Date.now(),
+            type: 'message:internal-chat',
+            groupKey: propagatedMessage?.conversationId
+              ? `message:internal-chat:${propagatedMessage.conversationId}`
+              : `fanout:${participantId}`,
+            groupMetadata: {
+              Provider: 'internal-chat',
+              ...(propagatedMessage?.conversationId ? { ConversationKey: propagatedMessage.conversationId } : {}),
+              ...(instanceId ? { SourceInstanceId: instanceId } : {}),
+            },
+            idempotencyKey:
+              typeof propagatedMessage?.metadata?.providerMessageId === 'string'
+                ? propagatedMessage.metadata.providerMessageId
+                : `fanout:${participantId}:${timestamp}`,
+            itemMetadata: {
+              ...(propagatedMessage?.senderName ? { Author: propagatedMessage.senderName } : {}),
+              ...(propagatedMessage?.senderId ? { AuthorExternalId: propagatedMessage.senderId } : {}),
+            },
+            text:
+              typeof propagatedMessage?.content === 'string'
+                ? propagatedMessage.content
+                : typeof message === 'string'
+                  ? message
+                  : JSON.stringify(message),
+            timestamp,
           });
           return { success: true };
         } catch (error) {
