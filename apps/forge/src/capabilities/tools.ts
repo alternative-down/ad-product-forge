@@ -6,6 +6,7 @@ import { forgeCustomToolIds, forgeWorkflowIds, hasToolPermission } from './catal
 import { createCapabilityStore } from './store';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 import { changeAgentFunction, reloadAgentsForFunction, reloadAgentsForRole } from './runtime';
+import { forgeDebug } from '@mastra-engine/core';
 
 const toolIdSchema = z.enum(forgeCustomToolIds);
 const workflowIdSchema = z.enum(forgeWorkflowIds);
@@ -24,7 +25,12 @@ export function createCapabilityTools(
       id: 'list_agent_functions',
       description: 'View all internal agent functions available in the system. Functions define what an agent can do and are assigned to agents through roles.',
       inputSchema: z.object({}),
-      execute: async () => capabilities.listFunctions(),
+      execute: async () => {
+        forgeDebug('tools:capabilities', 'list_agent_functions called');
+        const result = await capabilities.listFunctions();
+        forgeDebug('tools:capabilities', 'list_agent_functions result', { count: result.length });
+        return result;
+      },
     });
   }
 
@@ -38,10 +44,13 @@ export function createCapabilityTools(
         description: z.string().nullish().describe('Function description.'),
       }),
       execute: async (input) => {
-        return capabilities.createFunction({
+        forgeDebug('tools:capabilities', 'create_agent_function called', { input });
+        const result = capabilities.createFunction({
           name: input.name,
           description: input.description ?? undefined,
         });
+        forgeDebug('tools:capabilities', 'create_agent_function result', { result });
+        return result;
       },
     });
   }
@@ -56,7 +65,9 @@ export function createCapabilityTools(
         description: z.string().nullish().describe('New function description.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'update_agent_function called', { input });
         if (!input.name && input.description === undefined) {
+          forgeDebug('tools:capabilities', 'update_agent_function validation failed', { reason: 'no fields provided' });
           return { valid: false, error: 'At least one field besides functionId must be provided' };
         }
         try {
@@ -66,9 +77,11 @@ export function createCapabilityTools(
             description: input.description,
           });
           await reloadAgentsForFunction(db, loaderConfig, input.functionId);
+          forgeDebug('tools:capabilities', 'update_agent_function success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'update_agent_function error', { error: message });
           return { valid: false, error: message };
         }
       },
@@ -83,12 +96,15 @@ export function createCapabilityTools(
         functionId: z.string().describe('Function ID to delete.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'delete_agent_function called', { functionId: input.functionId });
         try {
           const result = await capabilities.deleteFunction(input.functionId);
           await reloadAgentsForFunction(db, loaderConfig, input.functionId);
+          forgeDebug('tools:capabilities', 'delete_agent_function success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'delete_agent_function error', { error: message });
           return { valid: false, error: message };
         }
       },
@@ -100,7 +116,12 @@ export function createCapabilityTools(
       id: 'list_agent_roles',
       description: 'View all roles configured in the system. Roles bundle functions and tool permissions to define an agent\'s capabilities.',
       inputSchema: z.object({}),
-      execute: async () => capabilities.listRoles(),
+      execute: async () => {
+        forgeDebug('tools:capabilities', 'list_agent_roles called');
+        const result = await capabilities.listRoles();
+        forgeDebug('tools:capabilities', 'list_agent_roles result', { count: result.length });
+        return result;
+      },
     });
   }
 
@@ -114,10 +135,13 @@ export function createCapabilityTools(
         description: z.string().nullish().describe('Role description.'),
       }),
       execute: async (input) => {
-        return capabilities.createRole({
+        forgeDebug('tools:capabilities', 'create_agent_role called', { input });
+        const result = capabilities.createRole({
           name: input.name,
           description: input.description ?? undefined,
         });
+        forgeDebug('tools:capabilities', 'create_agent_role result', { result });
+        return result;
       },
     });
   }
@@ -132,7 +156,9 @@ export function createCapabilityTools(
         description: z.string().nullish().describe('New role description.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'update_agent_role called', { input });
         if (!input.name && input.description === undefined) {
+          forgeDebug('tools:capabilities', 'update_agent_role validation failed', { reason: 'no fields provided' });
           return { valid: false, error: 'At least one field besides roleId must be provided' };
         }
         try {
@@ -142,9 +168,11 @@ export function createCapabilityTools(
             description: input.description,
           });
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
+          forgeDebug('tools:capabilities', 'update_agent_role success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'update_agent_role error', { error: message });
           return { valid: false, error: message };
         }
       },
@@ -159,12 +187,15 @@ export function createCapabilityTools(
         roleId: z.string().describe('Role ID to delete.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'delete_agent_role called', { roleId: input.roleId });
         try {
           const result = await capabilities.deleteRole(input.roleId);
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
+          forgeDebug('tools:capabilities', 'delete_agent_role success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'delete_agent_role error', { error: message });
           return { valid: false, error: message };
         }
       },
@@ -180,12 +211,15 @@ export function createCapabilityTools(
         roleId: z.string().min(1).describe('Role ID to assign.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'assign_role_to_function called', { input });
         try {
           const result = await capabilities.addRoleToFunction(input);
           await reloadAgentsForFunction(db, loaderConfig, input.functionId);
+          forgeDebug('tools:capabilities', 'assign_role_to_function success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'assign_role_to_function error', { error: message });
           return { valid: false, error: message };
         }
       },
@@ -201,6 +235,7 @@ export function createCapabilityTools(
         functionId: z.string().min(1).describe('New function ID to assign.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'change_agent_function called', { input });
         try {
           const result = await changeAgentFunction({
             db,
@@ -209,9 +244,11 @@ export function createCapabilityTools(
             targetAgentId: input.agentId,
             functionId: input.functionId,
           });
+          forgeDebug('tools:capabilities', 'change_agent_function success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'change_agent_function error', { error: message });
           return { valid: false, error: message };
         }
       },
@@ -226,6 +263,7 @@ export function createCapabilityTools(
         functionId: z.string().min(1).describe('Function ID to switch to.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'change_own_function called', { functionId: input.functionId });
         try {
           const result = await changeAgentFunction({
             db,
@@ -234,9 +272,11 @@ export function createCapabilityTools(
             targetAgentId: currentAgentId,
             functionId: input.functionId,
           });
+          forgeDebug('tools:capabilities', 'change_own_function success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'change_own_function error', { error: message });
           return { valid: false, error: message };
         }
       },
@@ -250,7 +290,12 @@ export function createCapabilityTools(
       inputSchema: z.object({
         roleId: z.string().min(1),
       }),
-      execute: async (input) => capabilities.listRoleToolPermissions(input.roleId),
+      execute: async (input) => {
+        forgeDebug('tools:capabilities', 'list_role_tool_permissions called', { roleId: input.roleId });
+        const result = await capabilities.listRoleToolPermissions(input.roleId);
+        forgeDebug('tools:capabilities', 'list_role_tool_permissions result', { count: result.length });
+        return result;
+      },
     });
   }
 
@@ -264,14 +309,17 @@ export function createCapabilityTools(
         toolId: toolIdSchema.describe('Tool ID to add or remove.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'manage_role_tool_permissions called', { input });
         try {
           const result = input.action === 'add'
             ? await capabilities.addRoleToolPermission({ roleId: input.roleId, toolId: input.toolId })
             : await capabilities.removeRoleToolPermission({ roleId: input.roleId, toolId: input.toolId });
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
+          forgeDebug('tools:capabilities', 'manage_role_tool_permissions success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'manage_role_tool_permissions error', { error: message });
           return { valid: false, error: message };
         }
       },
@@ -285,7 +333,12 @@ export function createCapabilityTools(
       inputSchema: z.object({
         roleId: z.string().min(1),
       }),
-      execute: async (input) => capabilities.listRoleWorkflowPermissions(input.roleId),
+      execute: async (input) => {
+        forgeDebug('tools:capabilities', 'list_role_workflow_permissions called', { roleId: input.roleId });
+        const result = await capabilities.listRoleWorkflowPermissions(input.roleId);
+        forgeDebug('tools:capabilities', 'list_role_workflow_permissions result', { count: result.length });
+        return result;
+      },
     });
   }
 
@@ -299,14 +352,17 @@ export function createCapabilityTools(
         workflowId: workflowIdSchema.describe('Workflow ID to add or remove.'),
       }),
       execute: async (input) => {
+        forgeDebug('tools:capabilities', 'manage_role_workflow_permissions called', { input });
         try {
           const result = input.action === 'add'
             ? await capabilities.addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId })
             : await capabilities.removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId });
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
+          forgeDebug('tools:capabilities', 'manage_role_workflow_permissions success', { result });
           return { valid: true, ...result };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'manage_role_workflow_permissions error', { error: message });
           return { valid: false, error: message };
         }
       },

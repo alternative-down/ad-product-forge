@@ -17,3 +17,4 @@ export { embedTextWithFastembed } from './agent/memory/embedder';
 export { createAgentMemory } from './agent/memory/memory';
 export { createObservationalMemory } from './agent/memory/observational-memory';
 export { appendWorkingMemoryInstructions } from './agent/memory/working-memory';
+export { forgeDebug, isForgeDebugEnabled } from './debug';
