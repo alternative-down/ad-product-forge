@@ -5,7 +5,7 @@ import type { CommunicationModule } from '../module';
 
 const createChatGroupInputSchema = z.object({
   provider: z.string().min(1),
-  providerConversationKey: z.string().min(1),
+  conversationKey: z.string().min(1),
   name: z.string().min(1),
   creatorId: z.string().min(1),
   creatorName: z.string().min(1),
@@ -20,7 +20,7 @@ export function createChatGroupTool(communication: CommunicationModule) {
       try {
         return await communication.createChatGroup({
           provider: input.provider,
-          providerConversationKey: input.providerConversationKey,
+          conversationKey: input.conversationKey,
           name: input.name,
           creatorId: input.creatorId,
           creatorName: input.creatorName,
@@ -30,12 +30,12 @@ export function createChatGroupTool(communication: CommunicationModule) {
           if (error.message.includes('already exists') || error.message.includes('duplicate')) {
             return {
               error: error.message,
-              hint: 'A group with this providerConversationKey already exists. Use a unique key or use list_chat_groups to find existing groups.',
+              hint: 'A group with this conversationKey already exists. Use a unique key or use list_chat_groups to find existing groups.',
             };
           }
           return {
             error: error.message,
-            hint: 'Verify the provider is configured and the providerConversationKey is unique.',
+            hint: 'Verify the provider is configured and the conversationKey is unique.',
           };
         }
         return {

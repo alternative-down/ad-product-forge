@@ -441,6 +441,30 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     });
   }
 
+  async function findConversationsByConversationKey(providerConversationKey: string, provider?: string) {
+    const conversations = await db.query.communicationConversations.findMany({
+      where: provider
+        ? and(
+            eq(schema.communicationConversations.providerConversationKey, providerConversationKey),
+            eq(schema.communicationConversations.provider, provider),
+          )
+        : eq(schema.communicationConversations.providerConversationKey, providerConversationKey),
+    });
+
+    return conversations.map((conversation) =>
+      conversationSchema.parse({
+        conversationId: conversation.conversationId,
+        provider: conversation.provider,
+        providerConversationKey: conversation.providerConversationKey,
+        name: conversation.name ?? undefined,
+        type: conversation.type,
+        contactId: conversation.contactId ?? undefined,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+      }),
+    );
+  }
+
   async function saveInboundMessage(input: {
     provider: string;
     providerConversationKey: string;
@@ -899,6 +923,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     upsertConversation,
     getConversation,
     getConversationByProviderConversationKey,
+    findConversationsByConversationKey,
     saveInboundMessage,
     saveOutboundMessage,
     getMessage,

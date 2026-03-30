@@ -97,7 +97,7 @@ export async function createCommunicationModule(config: {
           authorUsername: message.authorUsername,
         });
 
-        await store.saveInboundMessage({
+        const savedMessage = await store.saveInboundMessage({
           provider: provider.id,
           providerConversationKey: message.providerConversationKey,
           providerMessageId: message.providerMessageId,
@@ -112,19 +112,25 @@ export async function createCommunicationModule(config: {
           metadata: message.metadata,
         });
 
+        if (!savedMessage) {
+          throw new Error('Failed to persist inbound message');
+        }
+
+        const savedConversation = await store.getConversation(savedMessage.conversationId);
+
         if (receiveMessageHandler) {
           try {
             receiveMessageHandler({
               type: `message:${provider.id}`,
               groupKey: `message:${provider.id}:${message.providerConversationKey}`,
               groupMetadata: {
-                ConversationKey: message.providerConversationKey,
-                ...(message.conversationName ? { ConversationName: message.conversationName } : {}),
+                ConversationKey: savedConversation?.providerConversationKey ?? message.providerConversationKey,
+                ...(savedConversation?.name ? { ConversationName: savedConversation.name } : {}),
                 ...(contact?.slug ? { ContactSlug: contact.slug } : {}),
               },
               idempotencyKey: `${provider.id}:${message.providerMessageId}`,
               itemMetadata: {
-                MessageId: message.providerMessageId,
+                MessageId: savedMessage.messageId,
                 ...(message.authorDisplayName
                   ? { Author: message.authorDisplayName }
                   : message.authorUsername
@@ -159,15 +165,17 @@ export async function createCommunicationModule(config: {
       throw new Error('Failed to persist outbound message');
     }
 
+    const conversation = await store.getConversation(message.conversationId);
+
     return {
       success: true,
       messageId: message.messageId,
-      conversationId: message.conversationId,
+      conversationKey: conversation?.providerConversationKey ?? input.providerConversationKey,
     };
   }
 
-  async function getContactExternalId(providerId: string, contactId: string) {
-    const contact = await store.getContact(contactId);
+  async function getContactExternalId(providerId: string, contactSlug: string) {
+    const contact = await store.getContact(contactSlug);
     const identity = contact?.accounts.find((account) => account.provider === providerId);
 
     if (identity) {
@@ -178,7 +186,7 @@ export async function createCommunicationModule(config: {
     if (provider) {
       await syncProviderContacts(provider);
 
-      const syncedContact = await store.getContact(contactId);
+      const syncedContact = await store.getContact(contactSlug);
       const syncedIdentity = syncedContact?.accounts.find((account) => account.provider === providerId);
 
       return syncedIdentity?.externalUserId || syncedIdentity?.username || null;
@@ -248,11 +256,16 @@ export async function createCommunicationModule(config: {
 
   async function listConversations(input: {
     provider?: string;
-    contactId?: string;
+    contactSlug?: string;
     unread?: boolean;
     limit: number;
   }): Promise<CommunicationConversationView[]> {
-    const conversations = await store.listConversations(input);
+    const conversations = await store.listConversations({
+      provider: input.provider,
+      contactId: input.contactSlug,
+      unread: input.unread,
+      limit: input.limit,
+    });
     const contacts = await store.listContacts();
 
     const contactMap = new Map(contacts.map((contact) => [contact.slug, contact]));
@@ -261,25 +274,23 @@ export async function createCommunicationModule(config: {
       const contactDisplayName = conversation.contactId ? contactMap.get(conversation.contactId)?.displayName : undefined;
 
       return {
-        conversationId: conversation.conversationId,
+        conversationKey: conversation.providerConversationKey,
         provider: conversation.provider,
-        providerConversationKey: conversation.providerConversationKey,
         latestMessageAt: conversation.latestMessageAt,
         unreadCount: conversation.unreadCount,
         name: conversation.name,
         type: conversation.type,
-        contactId: conversation.contactId,
+        contactSlug: conversation.contactId,
         contactDisplayName,
         messages: conversation.messages.map((message) => ({
           messageId: message.messageId,
-          conversationId: message.conversationId,
           provider: message.provider,
           content: message.content,
           attachments: message.attachments,
           unread: message.unread,
           createdAt: message.createdAt,
           authorDisplayName: message.authorDisplayName,
-          contactId: conversation.contactId,
+          contactSlug: conversation.contactId,
           contactDisplayName,
         })),
       };
@@ -287,23 +298,33 @@ export async function createCommunicationModule(config: {
   }
 
   async function getMessages(input: {
-    conversationId: string;
+    conversationKey: string;
+    provider?: string;
     limit: number;
   }): Promise<CommunicationMessageView[]> {
-    const conversation = await store.getConversation(input.conversationId);
-    const messages = await store.getMessages(input.conversationId, input.limit);
+    const matches = await store.findConversationsByConversationKey(input.conversationKey, input.provider);
+
+    if (matches.length === 0) {
+      throw new Error(`Conversation not found: ${input.conversationKey}`);
+    }
+
+    if (matches.length > 1) {
+      throw new Error(`Conversation key is ambiguous across providers: ${input.conversationKey}`);
+    }
+
+    const conversation = matches[0]!;
+    const messages = await store.getMessages(conversation.conversationId, input.limit);
     const contact = conversation?.contactId ? await store.getContact(conversation.contactId) : null;
 
     return messages.map((message) => ({
       messageId: message.messageId,
-      conversationId: message.conversationId,
       provider: message.provider,
       content: message.content,
       attachments: message.attachments,
       unread: message.unread,
       createdAt: message.createdAt,
       authorDisplayName: message.authorDisplayName,
-      contactId: conversation?.contactId,
+      contactSlug: conversation?.contactId,
       contactDisplayName: contact?.displayName,
     }));
   }
@@ -313,9 +334,8 @@ export async function createCommunicationModule(config: {
   // and updating the agent-facing communication tools accordingly.
   async function sendMessage(input: {
     provider?: string;
-    conversationId?: string;
-    providerConversationKey?: string;
-    contactId?: string;
+    conversationKey?: string;
+    contactSlug?: string;
     content: string;
     replyToMessageId?: string;
   }) {
@@ -326,8 +346,8 @@ export async function createCommunicationModule(config: {
 
     if (!resolvedProvider) {
       // Try to find provider from contact's accounts
-      if (input.contactId) {
-        const contact = await store.getContact(input.contactId);
+      if (input.contactSlug) {
+        const contact = await store.getContact(input.contactSlug);
         if (contact) {
           const matchingAccount = contact.accounts.find((account) => providers.has(account.provider));
           if (matchingAccount) {
@@ -359,16 +379,14 @@ export async function createCommunicationModule(config: {
       throw new Error(`Message ${input.replyToMessageId} does not belong to provider ${provider.id}`);
     }
 
-    const conversation =
-      input.conversationId
-        ? await store.getConversation(input.conversationId)
-        : input.providerConversationKey
-          ? await store.getConversationByProviderConversationKey(provider.id, input.providerConversationKey)
-          : null;
+    const conversationMatches = input.conversationKey
+      ? await store.findConversationsByConversationKey(input.conversationKey, provider.id)
+      : [];
+    const conversation = conversationMatches[0] ?? null;
 
     if (conversation) {
       if (conversation.provider !== provider.id) {
-        throw new Error(`Conversation ${input.conversationId} does not belong to provider ${provider.id}`);
+        throw new Error(`Conversation ${input.conversationKey} does not belong to provider ${provider.id}`);
       }
 
       if (conversation.type === 'group') {
@@ -433,26 +451,17 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    // If conversationId is provided but not found, fall through to on-the-fly creation
-    // (same pattern as Issue #214 for providerConversationKey)
-    // Only throw if we have no fallback option (providerConversationKey or contactId)
-    if (input.conversationId && !input.providerConversationKey && !input.contactId) {
-      throw new Error(`Conversation not found: ${input.conversationId}`);
-    }
-
-    // If providerConversationKey is provided but conversation doesn't exist,
-    // create it on-the-fly (Issue #214 - conversation may not exist if inbound message wasn't received)
-    if (input.providerConversationKey) {
+    if (input.conversationKey && !input.contactSlug) {
       const newConversation = await store.upsertConversation({
         provider: provider.id,
-        providerConversationKey: input.providerConversationKey,
+        providerConversationKey: input.conversationKey,
         type: 'dm',
       });
 
       if (!newConversation) {
-        throw new Error(`Failed to create conversation for provider ${provider.id}: ${input.providerConversationKey}`);
+        throw new Error(`Failed to create conversation for provider ${provider.id}: ${input.conversationKey}`);
       }
-      // Continue with the sending logic using the newly created conversation
+
       const sent = await provider.sendMessage({
         providerConversationKey: newConversation.providerConversationKey,
         conversationName: newConversation.name,
@@ -471,22 +480,22 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    if (!input.contactId) {
+    if (!input.contactSlug) {
       throw new Error(`No destination provided for provider: ${provider.id}`);
     }
 
-    let contactExternalId = await getContactExternalId(provider.id, input.contactId);
+    let contactExternalId = await getContactExternalId(provider.id, input.contactSlug);
 
     if (!contactExternalId) {
       // No registered identity found — treat the slug as the external ID directly
       // (natural for email where slug = address, or any provider where the agent
       // uses the external ID as the slug). Auto-register so future lookups work.
-      contactExternalId = input.contactId;
+      contactExternalId = input.contactSlug;
       await store.upsertContact({
-        slug: input.contactId,
-        displayName: input.contactId,
+        slug: input.contactSlug,
+        displayName: input.contactSlug,
         provider: provider.id,
-        externalUserId: input.contactId,
+        externalUserId: input.contactSlug,
       });
     }
 
@@ -502,19 +511,34 @@ export async function createCommunicationModule(config: {
       providerConversationKey: sent.providerConversationKey,
       providerMessageId: sent.providerMessageId,
       conversationName: sent.conversationName,
-      contactId: input.contactId,
+      contactId: input.contactSlug,
       content: input.content,
     });
   }
 
   async function createChatGroup(input: {
     provider: string;
-    providerConversationKey: string;
+    conversationKey: string;
     name: string;
     creatorId: string;
     creatorName: string;
   }) {
-    return store.createChatGroup(input);
+    const group = await store.createChatGroup({
+      provider: input.provider,
+      providerConversationKey: input.conversationKey,
+      name: input.name,
+      creatorId: input.creatorId,
+      creatorName: input.creatorName,
+    });
+
+    return {
+      groupId: group.groupId,
+      name: group.name,
+      provider: group.provider,
+      conversationKey: group.providerConversationKey,
+      creatorMember: group.creatorMember,
+      createdAt: group.createdAt,
+    };
   }
 
   async function addMemberToGroup(input: {
@@ -531,7 +555,16 @@ export async function createCommunicationModule(config: {
   }
 
   async function listChatGroups(input: { provider?: string; limit?: number }) {
-    return store.listChatGroups(input);
+    const groups = await store.listChatGroups(input);
+
+    return groups.map((group) => ({
+      groupId: group.groupId,
+      name: group.name,
+      provider: group.provider,
+      conversationKey: group.providerConversationKey,
+      createdAt: group.createdAt,
+      updatedAt: group.updatedAt,
+    }));
   }
 
   async function listGroupMembers(groupId: string) {

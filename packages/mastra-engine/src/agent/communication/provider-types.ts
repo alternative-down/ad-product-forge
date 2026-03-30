@@ -46,9 +46,8 @@ export type CommunicationProvider = {
 };
 
 export type CommunicationConversationView = {
-  conversationId: string;
+  conversationKey: string;
   provider: string;
-  providerConversationKey: string;
   latestMessageAt: string;
   unreadCount: number;
   name?: string;
@@ -60,7 +59,6 @@ export type CommunicationConversationView = {
 
 export type CommunicationMessageView = {
   messageId: string;
-  conversationId: string;
   provider: string;
   content: string;
   attachments: Attachment[];
