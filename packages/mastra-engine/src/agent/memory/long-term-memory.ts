@@ -158,6 +158,11 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       return args.messages;
     }
 
+    const currentRecord = await this.om.getRecord(context.threadId, context.resourceId);
+    if (!currentRecord) {
+      return args.messages;
+    }
+
     const hasObservationsDir =
       (await this.workspace.filesystem?.exists(this.observationsDir)) ?? false;
     const historyLimit = hasObservationsDir ? this.incrementalHistoryLimit : this.bootstrapHistoryLimit;
@@ -166,13 +171,16 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       context.resourceId,
       historyLimit,
     );
+    const pendingObservations = observations.filter(
+      (observation) => observation.id !== currentRecord.id,
+    );
 
-    if (observations.length === 0) {
+    if (pendingObservations.length === 0) {
       return args.messageList;
     }
 
     // Save each observation as an individual file (no day grouping)
-    for (const observation of observations) {
+    for (const observation of pendingObservations) {
       const filePath = path.posix.join(this.observationsDir, observation.id + '.md');
       const content = [
         '# Observation',
