@@ -204,13 +204,6 @@ export async function generateHiredAgentInstructions(
     },
   });
 
-  // Log actual tools loaded via agent.getTools()
-  const actualTools = await agent.getTools();
-  console.log(`[HiringRH] agent.getTools() result:`, {
-    count: actualTools.length,
-    tools: actualTools.map((t: any) => t.name || t.id || 'unknown'),
-  });
-
   const mastra = new Mastra({
     agents: {
       [HIRING_RH_AGENT_ID]: agent,
