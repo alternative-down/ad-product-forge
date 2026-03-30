@@ -42,7 +42,7 @@ export function createCapabilityTools(
       id: 'create_agent_function',
       description: 'Create a new internal agent function with a custom name and description.',
       inputSchema: z.object({
-        functionId: z.string().optional().describe('Function ID (optional, auto-generated if omitted).'),
+        functionId: z.string().nullish().describe('Function ID (optional, auto-generated if omitted).'),
         name: z.string().min(1).describe('Function name.'),
         description: z.string().nullish().describe('Function description.'),
       }),
@@ -64,7 +64,7 @@ export function createCapabilityTools(
       description: 'Update an existing agent function\'s name or description.',
       inputSchema: z.object({
         functionId: z.string().describe('Function ID to update.'),
-        name: z.string().optional().describe('New function name.'),
+        name: z.string().nullish().describe('New function name.'),
         description: z.string().nullish().describe('New function description.'),
       }),
       execute: async (input) => {
@@ -136,7 +136,7 @@ export function createCapabilityTools(
       id: 'create_agent_role',
       description: 'Create a new role with a custom name and description.',
       inputSchema: z.object({
-        roleId: z.string().optional().describe('Role ID (optional, auto-generated if omitted).'),
+        roleId: z.string().nullish().describe('Role ID (optional, auto-generated if omitted).'),
         name: z.string().min(1).describe('Role name.'),
         description: z.string().nullish().describe('Role description.'),
       }),
@@ -158,7 +158,7 @@ export function createCapabilityTools(
       description: 'Update an existing role\'s name or description.',
       inputSchema: z.object({
         roleId: z.string().describe('Role ID to update.'),
-        name: z.string().optional().describe('New role name.'),
+        name: z.string().nullish().describe('New role name.'),
         description: z.string().nullish().describe('New role description.'),
       }),
       execute: async (input) => {
