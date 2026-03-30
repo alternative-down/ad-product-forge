@@ -198,6 +198,38 @@ export function createAgentContractStore(db: Database) {
     };
   }
 
+  async function refundActiveContractBalance(agentId: string) {
+    const activeContract = await getActiveContract(agentId);
+
+    if (!activeContract || !activeContract.fundedAt) {
+      return null;
+    }
+
+    const spentUsd = await getContractSpend(activeContract.id);
+    const refundableUsd = Math.max(activeContract.budgetUsd - spentUsd, 0);
+
+    if (refundableUsd <= 0) {
+      return {
+        contractId: activeContract.id,
+        refundedUsd: 0,
+      };
+    }
+
+    await companyCashOperations.recordCashIn({
+      type: 'agent-contract-termination-refund',
+      amountUsd: refundableUsd,
+      description: `Contract refund for terminated agent ${agentId}`,
+      referenceType: 'agent-execution-contract',
+      referenceId: activeContract.id,
+      effectiveAt: Date.now(),
+    });
+
+    return {
+      contractId: activeContract.id,
+      refundedUsd: refundableUsd,
+    };
+  }
+
   return {
     getExecutionState,
     setExecutionState,
@@ -206,6 +238,7 @@ export function createAgentContractStore(db: Database) {
     getContractSpend,
     getUsagePricing,
     recordAgentStep,
+    refundActiveContractBalance,
   };
 
 }
