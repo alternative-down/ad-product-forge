@@ -23,6 +23,30 @@ export async function createCommunicationModule(config: {
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: ((event: AgentWakeEvent) => void) | null = null;
 
+  function formatConversationKey(providerId: string, providerConversationKey: string) {
+    return `${providerId}:${providerConversationKey}`;
+  }
+
+  function parseConversationReference(conversation: string) {
+    const separatorIndex = conversation.indexOf(':');
+
+    if (separatorIndex <= 0) {
+      return null;
+    }
+
+    const providerId = conversation.slice(0, separatorIndex);
+    const providerConversationKey = conversation.slice(separatorIndex + 1);
+
+    if (!providerConversationKey || !providers.has(providerId)) {
+      return null;
+    }
+
+    return {
+      providerId,
+      providerConversationKey,
+    };
+  }
+
   async function syncProviderContacts(provider: CommunicationProvider) {
     if (!provider.syncContacts) {
       return;
@@ -124,7 +148,10 @@ export async function createCommunicationModule(config: {
               type: `message:${provider.id}`,
               groupKey: `message:${provider.id}:${message.providerConversationKey}`,
               groupMetadata: {
-                ConversationKey: savedConversation?.providerConversationKey ?? message.providerConversationKey,
+                ConversationKey: formatConversationKey(
+                  provider.id,
+                  savedConversation?.providerConversationKey ?? message.providerConversationKey,
+                ),
                 ...(savedConversation?.name ? { ConversationName: savedConversation.name } : {}),
                 ...(contact?.slug ? { ContactSlug: contact.slug } : {}),
               },
@@ -170,7 +197,10 @@ export async function createCommunicationModule(config: {
     return {
       success: true,
       messageId: message.messageId,
-      conversationKey: conversation?.providerConversationKey ?? input.providerConversationKey,
+      conversationKey: formatConversationKey(
+        input.provider,
+        conversation?.providerConversationKey ?? input.providerConversationKey,
+      ),
     };
   }
 
@@ -274,7 +304,10 @@ export async function createCommunicationModule(config: {
       const contactDisplayName = conversation.contactId ? contactMap.get(conversation.contactId)?.displayName : undefined;
 
       return {
-        conversationKey: conversation.providerConversationKey,
+        conversationKey: formatConversationKey(
+          conversation.provider,
+          conversation.providerConversationKey,
+        ),
         provider: conversation.provider,
         latestMessageAt: conversation.latestMessageAt,
         unreadCount: conversation.unreadCount,
@@ -299,10 +332,18 @@ export async function createCommunicationModule(config: {
 
   async function getMessages(input: {
     conversationKey: string;
-    provider?: string;
     limit: number;
   }): Promise<CommunicationMessageView[]> {
-    const matches = await store.findConversationsByConversationKey(input.conversationKey, input.provider);
+    const parsedConversation = parseConversationReference(input.conversationKey);
+
+    if (!parsedConversation) {
+      throw new Error(`Conversation not found: ${input.conversationKey}`);
+    }
+
+    const matches = await store.findConversationsByConversationKey(
+      parsedConversation.providerConversationKey,
+      parsedConversation.providerId,
+    );
 
     if (matches.length === 0) {
       throw new Error(`Conversation not found: ${input.conversationKey}`);
@@ -333,21 +374,23 @@ export async function createCommunicationModule(config: {
   // This requires extending the sendMessage input contract in provider-types.ts
   // and updating the agent-facing communication tools accordingly.
   async function sendMessage(input: {
-    provider?: string;
-    conversationKey?: string;
-    contactSlug?: string;
+    conversation?: string;
     content: string;
     replyToMessageId?: string;
   }) {
+    const parsedConversation = input.conversation
+      ? parseConversationReference(input.conversation)
+      : null;
+
     // Fallback logic: resolve provider if not provided
-    let resolvedProvider: CommunicationProvider | undefined = input.provider
-      ? providers.get(input.provider)
+    let resolvedProvider: CommunicationProvider | undefined = parsedConversation
+      ? providers.get(parsedConversation.providerId)
       : undefined;
 
     if (!resolvedProvider) {
       // Try to find provider from contact's accounts
-      if (input.contactSlug) {
-        const contact = await store.getContact(input.contactSlug);
+      if (input.conversation) {
+        const contact = await store.getContact(input.conversation);
         if (contact) {
           const matchingAccount = contact.accounts.find((account) => providers.has(account.provider));
           if (matchingAccount) {
@@ -379,14 +422,17 @@ export async function createCommunicationModule(config: {
       throw new Error(`Message ${input.replyToMessageId} does not belong to provider ${provider.id}`);
     }
 
-    const conversationMatches = input.conversationKey
-      ? await store.findConversationsByConversationKey(input.conversationKey, provider.id)
+    const conversationMatches = parsedConversation
+      ? await store.findConversationsByConversationKey(
+          parsedConversation.providerConversationKey,
+          parsedConversation.providerId,
+        )
       : [];
     const conversation = conversationMatches[0] ?? null;
 
     if (conversation) {
       if (conversation.provider !== provider.id) {
-        throw new Error(`Conversation ${input.conversationKey} does not belong to provider ${provider.id}`);
+        throw new Error(`Conversation ${input.conversation} does not belong to provider ${provider.id}`);
       }
 
       if (conversation.type === 'group') {
@@ -451,15 +497,15 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    if (input.conversationKey && !input.contactSlug) {
+    if (parsedConversation) {
       const newConversation = await store.upsertConversation({
         provider: provider.id,
-        providerConversationKey: input.conversationKey,
+        providerConversationKey: parsedConversation.providerConversationKey,
         type: 'dm',
       });
 
       if (!newConversation) {
-        throw new Error(`Failed to create conversation for provider ${provider.id}: ${input.conversationKey}`);
+        throw new Error(`Failed to create conversation for provider ${provider.id}: ${input.conversation}`);
       }
 
       const sent = await provider.sendMessage({
@@ -480,22 +526,22 @@ export async function createCommunicationModule(config: {
       });
     }
 
-    if (!input.contactSlug) {
+    if (!input.conversation) {
       throw new Error(`No destination provided for provider: ${provider.id}`);
     }
 
-    let contactExternalId = await getContactExternalId(provider.id, input.contactSlug);
+    let contactExternalId = await getContactExternalId(provider.id, input.conversation);
 
     if (!contactExternalId) {
       // No registered identity found — treat the slug as the external ID directly
       // (natural for email where slug = address, or any provider where the agent
       // uses the external ID as the slug). Auto-register so future lookups work.
-      contactExternalId = input.contactSlug;
+      contactExternalId = input.conversation;
       await store.upsertContact({
-        slug: input.contactSlug,
-        displayName: input.contactSlug,
+        slug: input.conversation,
+        displayName: input.conversation,
         provider: provider.id,
-        externalUserId: input.contactSlug,
+        externalUserId: input.conversation,
       });
     }
 
@@ -511,7 +557,7 @@ export async function createCommunicationModule(config: {
       providerConversationKey: sent.providerConversationKey,
       providerMessageId: sent.providerMessageId,
       conversationName: sent.conversationName,
-      contactId: input.contactSlug,
+      contactId: input.conversation,
       content: input.content,
     });
   }
@@ -535,7 +581,7 @@ export async function createCommunicationModule(config: {
       groupId: group.groupId,
       name: group.name,
       provider: group.provider,
-      conversationKey: group.providerConversationKey,
+      conversationKey: formatConversationKey(group.provider, group.providerConversationKey),
       creatorMember: group.creatorMember,
       createdAt: group.createdAt,
     };
@@ -561,7 +607,7 @@ export async function createCommunicationModule(config: {
       groupId: group.groupId,
       name: group.name,
       provider: group.provider,
-      conversationKey: group.providerConversationKey,
+      conversationKey: formatConversationKey(group.provider, group.providerConversationKey),
       createdAt: group.createdAt,
       updatedAt: group.updatedAt,
     }));

@@ -5,18 +5,10 @@ import type { CommunicationModule } from '../module';
 
 const sendMessageInputSchema = z
   .object({
-    provider: z.string().nullish().describe('The provider to send through. If not provided, the system will select an available provider.'),
-    conversationKey: z
+    conversation: z
       .string()
-      .optional()
       .describe(
-        'Send inside an existing conversation by its conversation key. Use the exact conversationKey returned by list_conversations.',
-      ),
-    contactSlug: z
-      .string()
-      .optional()
-      .describe(
-        'Send to a known contact using the exact contact slug returned by list_contacts or get_contact. Without replyToMessageId, the provider will use direct messaging when supported.',
+        'Destination for the message. Use the exact conversationKey returned by list_conversations in the format <provider>:<value>, or use a contact slug returned by list_contacts/get_contact to start a direct message.',
       ),
     content: z.string().min(1),
     replyToMessageId: z
@@ -26,15 +18,7 @@ const sendMessageInputSchema = z
         'Optional message id to reply to. Use only a recent messageId from the same conversation. If unsure, omit it and send without reply.',
       ),
   })
-  .refine(
-    (input) =>
-      Number(Boolean(input.conversationKey)) +
-        Number(Boolean(input.contactSlug)) >=
-      1,
-    {
-      message: 'Provide at least one of conversationKey or contactSlug.',
-    },
-  );
+  ;
 
 export function createSendMessageTool(communication: CommunicationModule) {
   return createTool({
@@ -44,9 +28,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
     execute: async (input) => {
       try {
         return await communication.sendMessage({
-          provider: input.provider ?? undefined,
-          conversationKey: input.conversationKey ?? undefined,
-          contactSlug: input.contactSlug ?? undefined,
+          conversation: input.conversation,
           content: input.content,
           replyToMessageId: input.replyToMessageId ?? undefined,
         });
@@ -68,13 +50,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
           if (error.message.includes('Conversation not found')) {
             return {
               error: error.message,
-              hint: 'The conversationKey provided does not exist. Use list_conversations to find a valid conversationKey, or use contactSlug instead.',
-            };
-          }
-          if (error.message.includes('ambiguous')) {
-            return {
-              error: error.message,
-              hint: 'Provide provider together with conversationKey when the same key may exist in multiple providers.',
+              hint: 'Use the exact conversationKey returned by list_conversations in the format <provider>:<value>, or use a valid contact slug.',
             };
           }
           if (error.message.includes('no reachable recipients')) {
@@ -86,13 +62,13 @@ export function createSendMessageTool(communication: CommunicationModule) {
           if (error.message.includes('No destination provided')) {
             return {
               error: error.message,
-              hint: 'Provide at least one of: conversationKey or contactSlug to specify where to send the message.',
+              hint: 'Provide conversation using either a conversationKey from list_conversations or a contact slug from list_contacts/get_contact.',
             };
           }
           if (error.message.includes('Failed to create conversation')) {
             return {
               error: error.message,
-              hint: 'Could not create the conversation. Verify the conversationKey is valid and the provider is configured.',
+              hint: 'Could not create the conversation. Verify the conversation value is valid and the provider is configured.',
             };
           }
           // Generic error with original message
@@ -104,7 +80,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
         // Unknown error type
         return {
           error: 'An unknown error occurred while sending the message',
-          hint: 'Verify the provider is available and the destination (conversationKey or contactSlug) is valid.',
+          hint: 'Verify the destination conversation is valid and the provider is available.',
         };
       }
     },
