@@ -129,10 +129,25 @@ These ids are the current permission targets stored in role permissions.
 - `manage_role_workflow_permissions`
 - `list_available_capabilities`
 
-### MCP (Model Context Protocol)
+### MCP Configuration
+
+These tools manage MCP server and client configurations:
+
+- `list_mcp_client_configs`
+- `get_mcp_client_config`
+- `create_mcp_client_config`
+- `update_mcp_client_config`
+- `delete_mcp_client_config`
+- `list_mcp_server_configs`
+- `get_mcp_server_config`
+- `create_mcp_server_config`
+- `update_mcp_server_config`
+- `delete_mcp_server_config`
+
+### MCP Runtime Tools
 
 - MCP tools are dynamically loaded per-agente based em `agentMcpConfigs`
-- Cada servidor MCP expose tools namespaced as `{serverName}_{toolName}`
+- Cada servidor MCP exposes tools namespaced as `{serverName}_{toolName}`
 - Tools disponíveis: qualquer tool exposta pelo servidor MCP configurado
 
 ## Workflow permissions
