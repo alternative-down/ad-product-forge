@@ -2,6 +2,11 @@ import type { AgentDetail } from '../../../../lib/api';
 import { Card } from '../../../../components/ui/card';
 import { ReadOnlyField } from '../../ui';
 
+const secondaryLinkClass =
+  'inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-5 text-sm font-semibold text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]';
+const primaryLinkClass =
+  'inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--accent)] bg-[color:var(--accent)] px-5 text-sm font-semibold text-white transition hover:opacity-90';
+
 export function GitHubProvisioningCard(input: {
   provisioning: AgentDetail['githubProvisioning'];
 }) {
@@ -16,7 +21,7 @@ export function GitHubProvisioningCard(input: {
       </div>
 
       {!input.provisioning ? (
-        <div className="mt-4 rounded-lg border border-border bg-accent/50 px-4 py-3 text-sm text-muted-foreground">
+        <div className="mt-4 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-3 text-sm text-muted-foreground">
           No GitHub app provisioning exists for this agent.
         </div>
       ) : (
@@ -40,7 +45,7 @@ export function GitHubProvisioningCard(input: {
               href={input.provisioning.registrationUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent"
+              className={secondaryLinkClass}
             >
               Open registration
             </a>
@@ -49,7 +54,7 @@ export function GitHubProvisioningCard(input: {
                 href={input.provisioning.installUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-[color:var(--accent)] bg-[color:var(--accent)] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                className={primaryLinkClass}
               >
                 Open install
               </a>

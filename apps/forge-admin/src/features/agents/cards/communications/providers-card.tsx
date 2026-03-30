@@ -48,10 +48,13 @@ export function AgentProvidersCard(input: {
                 };
 
           return (
-            <div key={provider.providerType} className="rounded-lg border border-border bg-accent/50 p-4">
+            <div
+              key={provider.providerType}
+              className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4"
+            >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="font-medium">{provider.providerType}</div>
+                  <div className="font-medium text-foreground">{provider.providerType}</div>
                   <div className="text-xs text-muted-foreground">
                     Created at {formatDateTimeText(provider.createdAt)}
                   </div>
@@ -69,7 +72,7 @@ export function AgentProvidersCard(input: {
                   />
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
-                      className="h-8 px-3 text-xs"
+                      className="px-4 text-xs"
                       onClick={() => input.onSaveProvider(editableProviderType, draft.credentialsText)}
                       disabled={
                         input.pendingProviderType === editableProviderType ||
@@ -86,7 +89,7 @@ export function AgentProvidersCard(input: {
                       )}
                     </Button>
                     <Button
-                      className="h-8 px-3 text-xs"
+                      className="px-4 text-xs"
                       variant="danger"
                       onClick={() => input.onDeleteProvider(editableProviderType)}
                       disabled={input.pendingProviderType === editableProviderType}
@@ -100,8 +103,8 @@ export function AgentProvidersCard(input: {
           );
         })}
 
-        <div className="rounded-lg border border-dashed border-border p-4">
-          <h3 className="font-medium">Add new provider</h3>
+        <div className="rounded-lg border border-dashed border-[color:var(--panel-border-strong)] bg-[color:var(--panel-muted)] p-4">
+          <h3 className="font-medium text-foreground">Add new provider</h3>
           <div className="mt-3 grid gap-3">
             <div className="flex gap-2">
               <button
@@ -113,10 +116,10 @@ export function AgentProvidersCard(input: {
                   })
                 }
                 className={cn(
-                  'rounded-lg border px-4 py-2 text-sm font-medium transition',
+                  'inline-flex h-11 items-center justify-center rounded-md border px-4 text-sm font-semibold transition',
                   input.newProviderDraft.providerType === 'discord'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-border text-muted-foreground hover:border-primary/50 hover:bg-accent/50',
+                    : 'border-[color:var(--panel-border)] bg-[color:var(--panel)] text-[color:var(--muted-strong)] hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]',
                 )}
               >
                 Discord
@@ -130,10 +133,10 @@ export function AgentProvidersCard(input: {
                   })
                 }
                 className={cn(
-                  'rounded-lg border px-4 py-2 text-sm font-medium transition',
+                  'inline-flex h-11 items-center justify-center rounded-md border px-4 text-sm font-semibold transition',
                   input.newProviderDraft.providerType === 'email'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-border text-muted-foreground hover:border-primary/50 hover:bg-accent/50',
+                    : 'border-[color:var(--panel-border)] bg-[color:var(--panel)] text-[color:var(--muted-strong)] hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]',
                 )}
               >
                 Email
@@ -149,7 +152,7 @@ export function AgentProvidersCard(input: {
                 })
               }
             />
-            <Button className="h-8 px-3 text-xs" onClick={input.onCreateProvider}>
+            <Button className="px-4 text-xs" onClick={input.onCreateProvider}>
               Add provider
             </Button>
           </div>

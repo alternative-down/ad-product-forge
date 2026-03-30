@@ -44,6 +44,7 @@ import {
 } from '@mastra-engine/core';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig, WorkspaceSkillsConfig } from '../database/schema';
 import { AGENT_BASE_TOOL_ID_SET } from './base-tool-ids';
+import { ensureDefaultSkillsCreatorSkill } from './default-skills-creator-skill';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -226,6 +227,7 @@ export async function createInternalAgentRuntime<
   });
 
   await workspace.init();
+  await ensureDefaultSkillsCreatorSkill(workspace);
   // Initialize memory store by creating a thread (Issue #212)
   // This ensures mastra_messages and mastra_threads tables exist
   if (hasCreateThread(storage.stores.memory)) {

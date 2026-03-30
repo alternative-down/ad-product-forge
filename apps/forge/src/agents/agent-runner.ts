@@ -525,13 +525,7 @@ function formatPendingRunEvents(events: AgentWakeEvent[]) {
 function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
   const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
   const firstEvent = orderedEvents[0];
-  const headerLines = [describeWakeGroup(firstEvent)];
-
-  if (firstEvent.groupMetadata) {
-    for (const [key, value] of Object.entries(firstEvent.groupMetadata)) {
-      headerLines.push(`${formatWakeLabel(key)}: ${value}`);
-    }
-  }
+  const headerLines = [describeWakeGroup(firstEvent), ...formatWakeGroupMetadata(firstEvent.groupMetadata)];
 
   const itemLines = orderedEvents.map((event) => formatPendingRunEventItem(event));
 
@@ -540,7 +534,6 @@ function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
 
 function formatPendingRunEventItem(event: AgentWakeEvent) {
   const labels = [new Date(event.timestamp).toISOString()];
-  const extraMetadata: Array<[string, string]> = [];
 
   if (event.itemMetadata?.MessageId) {
     labels.push(`msg ${event.itemMetadata.MessageId}`);
@@ -550,33 +543,13 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
     labels.push(event.itemMetadata.Author);
   }
 
-  if (event.itemMetadata) {
-    for (const [key, value] of Object.entries(event.itemMetadata)) {
-      if (key === 'MessageId' || key === 'Author' || key === 'AuthorExternalId') {
-        continue;
-      }
-
-      extraMetadata.push([key, value]);
-    }
-  }
-
   const text = event.text
     .trim()
     .split('\n')
     .map((line, index) => (index === 0 ? line : `  ${line}`))
     .join('\n');
 
-  const lines = [`- ${labels.join(' | ')}`, `  ${text}`];
-
-  if (extraMetadata.length > 0) {
-    lines.push(
-      ...extraMetadata.map(
-        ([key, value]) => `  ${formatWakeLabel(key)}: ${value}`,
-      ),
-    );
-  }
-
-  return lines.join('\n');
+  return [`- ${labels.join(' | ')}`, `  ${text}`].join('\n');
 }
 
 function describeWakeGroup(event: AgentWakeEvent) {
@@ -593,6 +566,33 @@ function formatWakeLabel(value: string) {
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[-_:]+/g, ' ')
     .toLowerCase();
+}
+
+function formatWakeGroupMetadata(groupMetadata?: Record<string, string>) {
+  if (!groupMetadata) {
+    return [];
+  }
+
+  const preferredOrder = ['ConversationKey', 'ConversationName', 'ContactSlug'];
+  const lines: string[] = [];
+
+  for (const key of preferredOrder) {
+    const value = groupMetadata[key];
+
+    if (value) {
+      lines.push(`${formatWakeLabel(key)}: ${value}`);
+    }
+  }
+
+  for (const [key, value] of Object.entries(groupMetadata)) {
+    if (preferredOrder.includes(key)) {
+      continue;
+    }
+
+    lines.push(`${formatWakeLabel(key)}: ${value}`);
+  }
+
+  return lines;
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

@@ -18,8 +18,8 @@ export function AgentConfigurationCard(input: {
   return (
     <Card className="p-6">
       <div>
-        <h2 className="text-lg font-semibold text-slate-950">Agent runtime config</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-lg font-semibold text-foreground">Agent runtime config</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Updates the stored agent record and reloads the runtime if the agent is loaded.
         </p>
       </div>
@@ -40,7 +40,7 @@ export function AgentConfigurationCard(input: {
             />
           </LabeledField>
           <LabeledField label="Workspace embedder">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-3 text-sm text-[color:var(--muted-strong)]">
               {input.draft.workspaceEmbedder}
             </div>
           </LabeledField>
@@ -100,7 +100,7 @@ export function AgentConfigurationCard(input: {
         </LabeledField>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <label className="flex items-center gap-3 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-3 text-sm text-[color:var(--muted-strong)]">
             <input
               type="checkbox"
               checked={input.draft.workspaceAutoSync}
@@ -110,7 +110,7 @@ export function AgentConfigurationCard(input: {
             />
             Workspace auto sync
           </label>
-          <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <label className="flex items-center gap-3 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] px-4 py-3 text-sm text-[color:var(--muted-strong)]">
             <input
               type="checkbox"
               checked={input.draft.workspaceBm25}

@@ -76,14 +76,14 @@ export function AgentMaintenanceCard(input: {
           )}
         </div>
 
-        <div className="w-full rounded-lg border border-red-200 bg-red-50 p-4 xl:max-w-sm">
-          <div className="text-sm font-semibold text-red-800">Terminate agent</div>
-          <p className="mt-2 text-sm text-red-700">
+        <div className="w-full rounded-lg border border-red-200 bg-[color:var(--panel)] p-4 xl:max-w-sm">
+          <div className="text-sm font-semibold text-red-700">Terminate agent</div>
+          <p className="mt-2 text-sm text-muted-foreground">
             Removes runtime, schedules, mailbox, GitHub app installation, database record, and the
             workspace directory.
           </p>
           {input.terminateError && (
-            <div className="mt-3 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-700">
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {input.terminateError}
             </div>
           )}

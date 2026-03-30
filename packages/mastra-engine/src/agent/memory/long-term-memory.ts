@@ -124,8 +124,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const { formatted: workspaceResults, results: workspaceSearchResults } = await this.searchWorkspace(queryText);
     const graphContext = await this.searchGraph(queryText, workspaceSearchResults);
     const sections = [
-      workspaceResults ? 'Workspace memory:n' + workspaceResults : '',
-      graphContext ? 'Graph memory:n' + graphContext : '',
+      workspaceResults ? 'Workspace memory:\n' + workspaceResults : '',
+      graphContext ? 'Graph memory:\n' + graphContext : '',
     ].filter(Boolean);
 
     if (sections.length === 0) {
@@ -212,7 +212,9 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         .generate('Review the /observations directory, organize insights into /memory, and archive processed files in /archived.', {
           maxSteps: 1000,
         })
-        .then(() => this.memoryAgentRunning = false)
+        .finally(() => {
+          this.memoryAgentRunning = false;
+        })
       .catch((error: unknown) => {
         forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
       });
@@ -322,15 +324,36 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       .filter((message) => !['system'].includes(message.role))
       .slice(-this.maxRecentRecallMessages)
       .map(message => {
+        const messageText = this.extractMessageText(message);
         const toolText = message.content.toolInvocations?.flatMap(
           tool => this.extractTextFromArgs(tool.args),
         ).filter(Boolean).join(' ') || '';
         return `
-        ${message.content.content || ''}
-        ${message.content.reasoning || ''}
+        ${messageText}
+        ${typeof message.content.reasoning === 'string' ? message.content.reasoning : ''}
         ${toolText}
         `.trim();
       }).filter(Boolean).join('\n');
+  }
+
+  private extractMessageText(message: MastraDBMessage) {
+    if (typeof message.content.content === 'string' && message.content.content.trim()) {
+      return message.content.content;
+    }
+
+    const parts = (message.content.parts ?? []).flatMap((part) => {
+      if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'text') {
+        return [];
+      }
+
+      if (!('text' in part) || typeof part.text !== 'string') {
+        return [];
+      }
+
+      return [part.text];
+    });
+
+    return parts.join('\n').trim();
   }
 
   private getThreadContext(
