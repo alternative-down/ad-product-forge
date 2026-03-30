@@ -52,6 +52,7 @@ import {
   buildAgentLocation,
   createAgentConfigDraft,
   createEmptyScheduleDraft,
+  createProviderTemplate,
   createScheduleDraftFromRecord,
   buildProviderDraftKey,
   formatDateTimeText,
@@ -73,10 +74,9 @@ import {
   AgentConfigurationCard,
   GitHubProvisioningCard,
   AgentProvidersCard,
+  ContractTopUpCard,
+  ContractBudgetAdjustCard,
 } from './cards';
-
-// Import budget feedback components
-import { BudgetProgressCard, QuickTopUpCard, BudgetAdjustCard } from './components/budget-feedback';
 
 // Re-export types for external use
 export type {
@@ -133,7 +133,7 @@ function AgentsWorkspacePage(input: {
   const [providerDrafts, setProviderDrafts] = useState<Record<string, ProviderDraft>>({});
   const [newProviderDraft, setNewProviderDraft] = useState<ProviderDraft>({
     providerType: 'discord',
-    credentialsText: '{\n  "token": "",\n  "allowedChannelIds": [],\n  "respondToMentionsOnly": false\n}',
+    credentialsText: createProviderTemplate('discord'),
   });
 
   const agentsQuery = useQuery({
@@ -631,18 +631,25 @@ function AgentsWorkspacePage(input: {
                     {selectedRuntimeView === 'contract' ? (
                       <div className="space-y-6">
                         <WorkspaceCanvas
-                          title="Contract status"
-                          description="Budget, spend, and remaining runway of the active contract."
+                          title="Contract"
+                          description="Current budget, spend, and control actions for the active contract."
                         >
-                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                             <ReadOnlyField label="Value" value={formatUsd(agentDetailQuery.data.activeContract?.weeklyValueUsd)} />
                             <ReadOnlyField
-                              label="Used"
+                              label="Spent"
                               value={agentDetailQuery.data.activeContract ? formatUsdPrecise(agentDetailQuery.data.activeContract.spentUsd) : '—'}
                             />
                             <ReadOnlyField
-                              label="Used percent"
-                              value={agentDetailQuery.data.activeContract ? `${agentDetailQuery.data.activeContract.spentPercent.toFixed(1)}%` : '—'}
+                              label="Remaining"
+                              value={
+                                agentDetailQuery.data.activeContract
+                                  ? formatUsdPrecise(
+                                      agentDetailQuery.data.activeContract.weeklyValueUsd -
+                                      agentDetailQuery.data.activeContract.spentUsd,
+                                    )
+                                  : '—'
+                              }
                             />
                             <ReadOnlyField
                               label="Starts"
@@ -652,38 +659,47 @@ function AgentsWorkspacePage(input: {
                               label="Ends"
                               value={formatDateTime(agentDetailQuery.data.activeContract?.endsAt ?? null)}
                             />
+                            <ReadOnlyField
+                              label="Execution"
+                              value={agentDetailQuery.data.executionState}
+                            />
                           </div>
                         </WorkspaceCanvas>
 
-                        <BudgetProgressCard
-                          budgetUsed={agentDetailQuery.data.activeContract?.spentUsd ?? 0}
-                          budgetLimit={agentDetailQuery.data.activeContract?.weeklyValueUsd ?? 0}
-                          periodLabel="por semana"
-                        />
+                        {agentDetailQuery.data.activeContract ? (
+                          <div className="grid gap-6 xl:grid-cols-2">
+                            <ContractTopUpCard
+                              pending={topUpContractMutation.isPending}
+                              error={topUpContractMutation.error?.message ?? null}
+                              disabled={!agentDetailQuery.data.activeContract}
+                              onSubmit={(amountUsd) =>
+                                topUpContractMutation.mutate({
+                                  agentId: agentDetailQuery.data!.agentId,
+                                  amountUsd,
+                                })
+                              }
+                            />
 
-                        <QuickTopUpCard
-                          budgetRemaining={(agentDetailQuery.data.activeContract?.weeklyValueUsd ?? 0) - (agentDetailQuery.data.activeContract?.spentUsd ?? 0)}
-                          isLoading={topUpContractMutation.isPending}
-                          onTopUp={async (amount) => {
-                            await topUpContractMutation.mutateAsync({
-                              agentId: agentDetailQuery.data!.agentId,
-                              amountUsd: amount,
-                            });
-                          }}
-                        />
-
-                        <BudgetAdjustCard
-                          currentBudget={agentDetailQuery.data.activeContract?.weeklyValueUsd ?? 0}
-                          budgetSpent={agentDetailQuery.data.activeContract?.spentUsd ?? 0}
-                          canDecrease={agentDetailQuery.data?.executionState === 'idle'}
-                          isLoading={adjustBudgetMutation.isPending}
-                          onAdjust={async (newBudget) => {
-                            await adjustBudgetMutation.mutateAsync({
-                              agentId: agentDetailQuery.data!.agentId,
-                              newBudgetUsd: newBudget,
-                            });
-                          }}
-                        />
+                            <ContractBudgetAdjustCard
+                              pending={adjustBudgetMutation.isPending}
+                              error={adjustBudgetMutation.error?.message ?? null}
+                              disabled={!agentDetailQuery.data.activeContract}
+                              currentBudgetUsd={agentDetailQuery.data.activeContract.weeklyValueUsd}
+                              spentUsd={agentDetailQuery.data.activeContract.spentUsd}
+                              onSubmit={(newBudgetUsd) =>
+                                adjustBudgetMutation.mutate({
+                                  agentId: agentDetailQuery.data!.agentId,
+                                  newBudgetUsd,
+                                })
+                              }
+                            />
+                          </div>
+                        ) : (
+                          <WorkspaceCanvas
+                            title="No active contract"
+                            description="This agent does not have an active execution contract."
+                          />
+                        )}
                       </div>
                     ) : null}
 
@@ -1517,4 +1533,3 @@ function formatDurationShort(value: number) {
 
   return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
 }
-

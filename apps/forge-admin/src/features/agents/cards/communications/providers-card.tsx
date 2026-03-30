@@ -6,7 +6,7 @@ import { Button } from '../../../../components/ui/button';
 import { Card } from '../../../../components/ui/card';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Badge } from '../../../../components/ui/badge';
-import { buildProviderDraftKey, toPrettyJson } from '../../utils';
+import { buildProviderDraftKey, createProviderTemplate, toPrettyJson } from '../../utils';
 
 export function AgentProvidersCard(input: {
   agent: AgentDetail;
@@ -108,8 +108,8 @@ export function AgentProvidersCard(input: {
                 type="button"
                 onClick={() =>
                   input.onChangeNewProviderDraft({
-                    ...input.newProviderDraft,
                     providerType: 'discord',
+                    credentialsText: createProviderTemplate('discord'),
                   })
                 }
                 className={cn(
@@ -125,8 +125,8 @@ export function AgentProvidersCard(input: {
                 type="button"
                 onClick={() =>
                   input.onChangeNewProviderDraft({
-                    ...input.newProviderDraft,
                     providerType: 'email',
+                    credentialsText: createProviderTemplate('email'),
                   })
                 }
                 className={cn(

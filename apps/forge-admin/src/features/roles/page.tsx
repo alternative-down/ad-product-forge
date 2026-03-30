@@ -266,21 +266,13 @@ function CapabilitiesWorkspacePage(input: {
               title="Roles"
               detail={`${rolesQuery.data?.items.length ?? 0} role definitions`}
               metric={`${rolesQuery.data?.items.reduce((total, role) => total + role.assignedFunctionCount, 0) ?? 0} function assignments`}
-              to={
-                rolesQuery.data?.items[0]
-                  ? buildCapabilitiesLocation({ section: 'roles', roleId: rolesQuery.data.items[0].roleId })
-                  : null
-              }
+              to={buildCapabilitiesLocation({ section: 'roles', roleId: rolesQuery.data?.items[0]?.roleId })}
             />
             <CapabilityEntryLink
               title="Functions"
               detail={`${functionsQuery.data?.length ?? 0} function definitions`}
               metric={`${functionsQuery.data?.reduce((total, item) => total + item.assignedAgentCount, 0) ?? 0} assigned agents`}
-              to={
-                functionsQuery.data?.[0]
-                  ? buildCapabilitiesLocation({ section: 'functions', functionId: functionsQuery.data[0].functionId })
-                  : null
-              }
+              to={buildCapabilitiesLocation({ section: 'functions', functionId: functionsQuery.data?.[0]?.functionId })}
             />
           </div>
         </WorkspaceCanvas>
@@ -297,11 +289,11 @@ function CapabilitiesWorkspacePage(input: {
               tab === 'roles'
                 ? buildCapabilitiesLocation({
                     section: 'roles',
-                    roleId: rolesQuery.data?.items[0]?.roleId ?? selectedRole?.roleId ?? '',
+                    roleId: rolesQuery.data?.items[0]?.roleId ?? selectedRole?.roleId,
                   })
                 : buildCapabilitiesLocation({
                     section: 'functions',
-                    functionId: functionsQuery.data?.[0]?.functionId ?? selectedFunction?.functionId ?? '',
+                    functionId: functionsQuery.data?.[0]?.functionId ?? selectedFunction?.functionId,
                   }),
             )
           }
@@ -597,6 +589,12 @@ function CapabilitiesWorkspacePage(input: {
             </WorkspaceCanvas>
           </form>
         )}
+        {selectedTab === 'roles' && !selectedRole && !rolesQuery.isLoading && !rolesQuery.isError ? (
+          <WorkspaceCanvas
+            title="No role selected"
+            description="Create the first role from the left panel, or select one to edit permissions and metadata."
+          />
+        ) : null}
 
         {selectedTab === 'functions' && functionsQuery.data && rolesQuery.data && selectedFunction && (
           <div className="space-y-6">
@@ -731,7 +729,13 @@ function CapabilitiesWorkspacePage(input: {
             </form>
           </div>
         )}
-          </div>
+        {selectedTab === 'functions' && !selectedFunction && !functionsQuery.isLoading && !functionsQuery.isError ? (
+          <WorkspaceCanvas
+            title="No function selected"
+            description="Create the first function from the left panel, or select one to edit composition and metadata."
+          />
+        ) : null}
+      </div>
         </div>
       </div>
       )}
@@ -768,26 +772,14 @@ function CapabilityEntryLink(input: {
   detail: string;
   metric: string;
   to:
+    | { to: '/roles' }
     | { to: '/roles/roles/$roleId'; params: { roleId: string } }
     | { to: '/roles/functions/$functionId'; params: { functionId: string } }
-    | null;
 }) {
-  if (!input.to) {
-    return (
-      <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5">
-        <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
-        <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
-        <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-          {input.metric}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Link
       to={input.to.to}
-      params={input.to.params}
+      params={'params' in input.to ? input.to.params : undefined}
       className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
     >
       <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
@@ -800,12 +792,26 @@ function CapabilityEntryLink(input: {
 }
 
 function buildCapabilitiesLocation(input:
-  | { section: 'roles'; roleId: string; replace?: boolean }
-  | { section: 'functions'; functionId: string; replace?: boolean }) {
+  | { section: 'roles'; roleId?: string; replace?: boolean }
+  | { section: 'functions'; functionId?: string; replace?: boolean }) {
   if (input.section === 'roles') {
+    if (!input.roleId) {
+      return {
+        to: '/roles' as const,
+        replace: input.replace,
+      };
+    }
+
     return {
       to: '/roles/roles/$roleId' as const,
       params: { roleId: input.roleId },
+      replace: input.replace,
+    };
+  }
+
+  if (!input.functionId) {
+    return {
+      to: '/roles' as const,
       replace: input.replace,
     };
   }
