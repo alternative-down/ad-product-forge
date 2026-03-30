@@ -36,7 +36,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'list_agent_schedules')) {
     tools.list_agent_schedules = createTool({
       id: 'list_agent_schedules',
-      description: 'View all your scheduled wakes including cron-based schedules and one-time scheduled tasks with their current active/paused status.',
+      description: 'View your own schedules, including recurring cron wakes and one-time schedules that belong to this agent.',
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:schedules', 'list_agent_schedules called', { agentId });
@@ -52,7 +52,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'create_agent_schedule')) {
     tools.create_agent_schedule = createTool({
       id: 'create_agent_schedule',
-      description: 'Create a scheduled wake for this agent using cron expressions for recurring tasks or specific dates for one-time triggers.',
+      description: 'Create a schedule for this agent only. Use this for your own recurring cron wakes or one-time scheduled triggers.',
       inputSchema: z.object({
         name: z.string().min(1).describe('Name for the schedule.'),
         description: z.string().nullish().nullable().describe('Optional description.'),
@@ -90,7 +90,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'update_agent_schedule')) {
     tools.update_agent_schedule = createTool({
       id: 'update_agent_schedule',
-      description: 'Update an existing scheduled wake. At least one field besides scheduleId must be provided.',
+      description: 'Update one of your own schedules. This tool is only for schedules owned by this agent.',
       inputSchema: z.object({
         scheduleId: z.string().min(1).describe('The schedule ID to update.'),
         name: z.string().min(1).nullish().describe('New name for the schedule.'),
@@ -123,7 +123,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'delete_agent_schedule')) {
     tools.delete_agent_schedule = createTool({
       id: 'delete_agent_schedule',
-      description: 'Delete a scheduled wake permanently.',
+      description: 'Delete one of your own schedules permanently. This tool is only for schedules owned by this agent.',
       inputSchema: z.object({
         scheduleId: z.string().min(1).describe('The schedule ID to delete.'),
       }),
@@ -139,7 +139,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'create_task_for_agent')) {
     tools.create_task_for_agent = createTool({
       id: 'create_task_for_agent',
-      description: 'Create a scheduled task for another agent. This is the cross-agent scheduling surface intended for coordinator-style delegation.',
+      description: 'Create a scheduled task for another agent. Use this when you are delegating work or scheduling something on behalf of a different agent.',
       inputSchema: taskTargetInputSchema,
       execute: async (input) => {
         forgeDebug('tools:schedules', 'create_task_for_agent called', { agentId, targetAgentId: input.targetAgentId });
@@ -175,7 +175,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'list_agent_tasks')) {
     tools.list_agent_tasks = createTool({
       id: 'list_agent_tasks',
-      description: 'List scheduled tasks that you created for other agents. Optional targetAgentId filters the delegated tasks to one specific agent.',
+      description: 'List scheduled tasks that you created for other agents. This does not list your own schedules unless you created them as delegated tasks.',
       inputSchema: z.object({
         targetAgentId: z.string().min(1).nullish().describe('Optional target agent filter.'),
       }),
@@ -191,7 +191,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'update_agent_task')) {
     tools.update_agent_task = createTool({
       id: 'update_agent_task',
-      description: 'Update a scheduled task that you created for another agent. Authorization is checked through creatorId.',
+      description: 'Update a scheduled task that you created for another agent. This is for delegated tasks, not for your own self-managed schedules.',
       inputSchema: taskUpdateInputSchema,
       execute: async (input) => {
         forgeDebug('tools:schedules', 'update_agent_task called', { agentId, taskId: input.taskId });
@@ -217,7 +217,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'cancel_agent_task')) {
     tools.cancel_agent_task = createTool({
       id: 'cancel_agent_task',
-      description: 'Cancel a scheduled task that you created for another agent. Authorization is checked through creatorId.',
+      description: 'Cancel a scheduled task that you created for another agent. This is for delegated tasks, not for your own self-managed schedules.',
       inputSchema: z.object({
         taskId: z.string().min(1).describe('ID of the scheduled task to cancel.'),
       }),
