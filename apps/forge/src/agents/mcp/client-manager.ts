@@ -1,5 +1,6 @@
 import { MCPClient } from '@mastra/mcp';
 import type { MastraMCPServerDefinition } from '@mastra/mcp';
+import type { Tool } from '@mastra/core/tools';
 import { getAgentMcpServers } from './store';
 
 // Cache for MCP clients per agent
@@ -11,7 +12,9 @@ const agentMCPClients = new Map<string, InstanceType<typeof MCPClient>>();
  * @param agentId - The agent ID
  * @returns Record of tool name to tool definition
  */
-export async function getMCPToolsForAgent(agentId: string): Promise<Record<string, unknown>> {
+export async function getMCPToolsForAgent(
+  agentId: string,
+): Promise<Record<string, Tool<unknown, unknown>>> {
   try {
     // Get MCP server configs for this agent
     const mcpServers = await getAgentMcpServers(agentId);

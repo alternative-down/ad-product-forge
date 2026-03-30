@@ -18,7 +18,7 @@ export function createCapabilityTools(
   allowedToolIds?: Set<string> | null,
 ) {
   const capabilities = createCapabilityStore(db);
-  const tools: Record<string, unknown> = {};
+  const tools: Record<string, Tool<unknown, unknown>> = {};
 
   if (hasToolPermission(allowedToolIds, 'list_agent_functions')) {
     tools.list_agent_functions = createTool({

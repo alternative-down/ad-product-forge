@@ -35,7 +35,7 @@ class HireAgentDisablerProcessor implements Processor {
 
     // Check if hireAgent was called in previous steps using steps parameter
     const hasHireAgentCall = steps.some((step) => {
-      return step.toolCalls?.some((call) => getToolCallName(call) === 'hireAgent');
+      return step.toolCalls?.some((call) => call.toolName === 'hireAgent');
     });
 
     if (hasHireAgentCall) {
@@ -46,45 +46,6 @@ class HireAgentDisablerProcessor implements Processor {
     console.log(`[HireAgentDisabler] Step ${stepNumber}: allowing tools`);
     return {};
   }
-}
-
-function getToolCallName(call: unknown) {
-  if (typeof call !== 'object' || call === null) {
-    return undefined;
-  }
-
-  if ('toolName' in call && typeof call.toolName === 'string') {
-    return call.toolName;
-  }
-
-  if (
-    'payload' in call &&
-    typeof call.payload === 'object' &&
-    call.payload !== null &&
-    'toolName' in call.payload &&
-    typeof call.payload.toolName === 'string'
-  ) {
-    return call.payload.toolName;
-  }
-
-  return undefined;
-}
-
-function getToolResultPayload(chunk: unknown) {
-  if (typeof chunk !== 'object' || chunk === null) {
-    return undefined;
-  }
-
-  if (
-    'payload' in chunk &&
-    typeof chunk.payload === 'object' &&
-    chunk.payload !== null &&
-    'toolName' in chunk.payload
-  ) {
-    return chunk.payload as { toolName: string; result: unknown };
-  }
-
-  return undefined;
 }
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
@@ -110,6 +71,16 @@ const hiringRhResultSchema = z.object({
   functionId: z.string().min(1),
   instructions: z.string().min(1),
 });
+const hireAgentSuccessSchema = hiringRhResultSchema.extend({
+  valid: z.literal(true),
+  functionName: z.string().min(1),
+  functionDescription: z.string().optional(),
+});
+const hireAgentFailureSchema = z.object({
+  valid: z.literal(false),
+  error: z.string().min(1),
+});
+const hireAgentToolResultSchema = z.union([hireAgentSuccessSchema, hireAgentFailureSchema]);
 
 type HiringRhResult =
   | { valid: false; error: string }
@@ -333,18 +304,19 @@ export async function generateHiredAgentInstructions(
   console.log(`[HiringRH] result.text:`, result.text);
   console.log(
     `[HiringRH] result.toolCalls:`,
-    JSON.stringify(result.toolCalls.map((call) => ({ toolName: getToolCallName(call) })), null, 2),
+    JSON.stringify(
+      result.toolCalls.map((chunk) => ({ toolName: chunk.payload.toolName })),
+      null,
+      2,
+    ),
   );
   console.log(
     `[HiringRH] result.toolResults:`,
     JSON.stringify(
-      result.toolResults.map((chunk) => {
-        const payload = getToolResultPayload(chunk);
-        return {
-          toolName: payload?.toolName,
-          hasResult: payload !== undefined,
-        };
-      }),
+      result.toolResults.map((chunk) => ({
+        toolName: chunk.payload.toolName,
+        hasResult: true,
+      })),
       null,
       2,
     ),
@@ -352,30 +324,32 @@ export async function generateHiredAgentInstructions(
 
   // After hireAgent is called, the next step disables tools and returns text
   // Parse the text to extract the structured result
-  const toolCall = result.toolCalls.find((call) => getToolCallName(call) === 'hireAgent');
-  const toolResultPayload = result.toolResults
-    .map((chunk) => getToolResultPayload(chunk))
-    .find((payload) => payload?.toolName === 'hireAgent');
+  const toolCall = result.toolCalls.find((chunk) => chunk.payload.toolName === 'hireAgent');
+  const toolResult = result.toolResults.find((chunk) => chunk.payload.toolName === 'hireAgent');
 
   console.log(`[HiringRH] toolCall found:`, !!toolCall);
-  console.log(`[HiringRH] toolResult found:`, !!toolResultPayload);
+  console.log(`[HiringRH] toolResult found:`, !!toolResult);
 
   // If we have toolResult from hireAgent, use it
-  if (toolResultPayload?.result) {
+  if (toolResult) {
     console.log(
       `[HiringRH] toolResult.result:`,
-      JSON.stringify(toolResultPayload.result, null, 2),
+      JSON.stringify(toolResult.payload.result, null, 2),
     );
-    const agentHired = toolResultPayload.result as HiringRhResult;
-    if (agentHired.valid) {
-      console.log(`[HiringRH] SUCCESS - agentHired from toolResult:`, JSON.stringify(agentHired, null, 2));
+    const parsedToolResult = hireAgentToolResultSchema.safeParse(toolResult.payload.result);
+
+    if (parsedToolResult.success && parsedToolResult.data.valid) {
+      console.log(
+        `[HiringRH] SUCCESS - agentHired from toolResult:`,
+        JSON.stringify(parsedToolResult.data, null, 2),
+      );
       return {
-        agentName: agentHired.agentName,
-        agentDescription: agentHired.agentDescription,
-        functionId: agentHired.functionId,
-        functionName: agentHired.functionName!,
-        functionDescription: agentHired.functionDescription,
-        instructions: agentHired.instructions,
+        agentName: parsedToolResult.data.agentName,
+        agentDescription: parsedToolResult.data.agentDescription,
+        functionId: parsedToolResult.data.functionId,
+        functionName: parsedToolResult.data.functionName,
+        functionDescription: parsedToolResult.data.functionDescription,
+        instructions: parsedToolResult.data.instructions,
         costUsd,
         modelKey: hiringRhModelKey,
         valid: true,
