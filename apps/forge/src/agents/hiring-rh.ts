@@ -19,9 +19,13 @@ import { createTool } from '@mastra/core/tools';
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
   'list_agent_functions',
-  'manage_agent_function',
+  'create_agent_function',
+  'update_agent_function',
+  'delete_agent_function',
   'list_agent_roles',
-  'manage_agent_role',
+  'create_agent_role',
+  'update_agent_role',
+  'delete_agent_role',
   'assign_role_to_function',
   'list_role_tool_permissions',
   'manage_role_tool_permissions',
@@ -159,7 +163,10 @@ export async function generateHiredAgentInstructions(
           const agentFunction = await capabilities.getFunction(agent.functionId);
 
           if (!agentFunction) {
-            throw new Error(`Hiring RH returned unknown functionId: ${agent.functionId}`);
+            return {
+              error: `Function ID "${agent.functionId}" does not exist. Please use list_agent_functions to see available functions, then use create_agent_function to create a new function, or provide a valid existing functionId.`,
+              valid: false,
+            };
           }
 
           return {
@@ -167,6 +174,7 @@ export async function generateHiredAgentInstructions(
             functionId: agentFunction.functionId,
             functionName: agentFunction.name,
             functionDescription: agentFunction.description,
+            valid: true,
           };
         },
       }),
@@ -194,13 +202,21 @@ export async function generateHiredAgentInstructions(
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
   const toolCall = result.toolCalls.find((call) => call.payload.toolName === 'hireAgent');
-  if (!toolCall) throw new Error('Hiring RH not returned agent data');
+  if (!toolCall) {
+    return {
+      error: 'Hiring process did not return agent data. Please try again with list_agent_functions to find a valid functionId.',
+      valid: false,
+    };
+  }
 
   const { agent: agentHired } = toolCall.payload.args as z.infer<typeof inputSchema>;
   const agentFunction = await capabilities.getFunction(agentHired.functionId);
 
   if (!agentFunction) {
-    throw new Error(`Hiring RH returned unknown functionId: ${agentHired.functionId}`);
+    return {
+      error: `Function ID "${agentHired.functionId}" does not exist. Please use list_agent_functions to see available functions, then use create_agent_function to create a new function, or provide a valid existing functionId.`,
+      valid: false,
+    };
   }
 
   return {
@@ -209,6 +225,7 @@ export async function generateHiredAgentInstructions(
     functionDescription: agentFunction.description,
     costUsd,
     modelKey: hiringRhModelKey,
+    valid: true,
   };
 }
 
