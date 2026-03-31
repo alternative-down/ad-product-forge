@@ -278,17 +278,12 @@ export class MiniMaxClient {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return any generated images.');
     }
 
-    const images = Array.isArray(data.data)
-      ? data.data
-          .map((item) => this.getObject(item))
-          .flatMap((item) => {
-            if (!item) {
-              return [];
-            }
-
-            const base64 = this.getString(item.base64);
-            return base64 ? [base64] : [];
-          })
+    const imageBase64 = data.image_base64;
+    const images = Array.isArray(imageBase64)
+      ? imageBase64.flatMap((item) => {
+          const base64 = this.getString(item);
+          return base64 ? [base64] : [];
+        })
       : [];
 
     if (images.length === 0) {
