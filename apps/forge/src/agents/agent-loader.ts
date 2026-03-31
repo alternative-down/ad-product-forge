@@ -270,7 +270,9 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         workflows: config.workflows,
         githubApps: config.githubApps,
         coolify: config.coolify,
+        minimax: config.minimax,
         schedules: config.schedules,
+        propagateMessage: config.propagateMessage,
         agentId: agentConfig.id,
       });
       agents.set(agentConfig.id, runtime);
