@@ -672,7 +672,24 @@ export function registerAdminRoutes(input: {
     path: '/admin/agent-schedule/create',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, createScheduleSchema);
-      const schedule = await input.schedules.createSchedule(body.agentId, body);
+      const scheduleInput = body.scheduleType === 'cron'
+        ? {
+            name: body.name,
+            description: body.description,
+            scheduleType: body.scheduleType,
+            cronExpression: body.cronExpression!,
+            timezone: body.timezone,
+            content: body.content,
+          }
+        : {
+            name: body.name,
+            description: body.description,
+            scheduleType: body.scheduleType,
+            scheduledDate: body.scheduledDate!,
+            timezone: body.timezone,
+            content: body.content,
+          };
+      const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
       return jsonResponse(schedule, 201);
     },
   });

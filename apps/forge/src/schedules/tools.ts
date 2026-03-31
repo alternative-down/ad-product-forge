@@ -11,16 +11,38 @@ export function createAgentScheduleTools(
   allowedToolIds?: Set<string> | null,
 ) {
   const tools: Record<string, unknown> = {};
-  const taskTargetInputSchema = z.object({
-    targetAgentId: z.string().min(1).describe('The target agent that should receive this scheduled task.'),
-    name: z.string().min(1).describe('Name of the task.'),
+  const scheduleBaseInputShape = {
+    name: z.string().min(1).describe('Name of the schedule or task.'),
     description: z.string().nullish().describe('Optional description.'),
-    scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time.'),
-    cronExpression: z.string().min(1).nullish().describe('Cron expression (required for cron type).'),
-    scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type).'),
     timezone: z.string().min(1).default('UTC').describe('Timezone for the schedule.'),
-    content: z.string().min(1).describe('Content/payload to execute when the task triggers.'),
-  });
+    content: z.string().min(1).describe('Content/payload to execute when the schedule triggers.'),
+  } as const;
+  const createScheduleInputSchema = z.discriminatedUnion('scheduleType', [
+    z.object({
+      ...scheduleBaseInputShape,
+      scheduleType: z.literal('cron').describe('Recurring schedule with cron expression.'),
+      cronExpression: z.string().min(1).describe('Cron expression for the recurring schedule.'),
+    }),
+    z.object({
+      ...scheduleBaseInputShape,
+      scheduleType: z.literal('date').describe('One-time schedule with ISO date string.'),
+      scheduledDate: z.string().min(1).describe('ISO date string for the one-time schedule.'),
+    }),
+  ]);
+  const taskTargetInputSchema = z.discriminatedUnion('scheduleType', [
+    z.object({
+      targetAgentId: z.string().min(1).describe('The target agent that should receive this scheduled task.'),
+      ...scheduleBaseInputShape,
+      scheduleType: z.literal('cron').describe('Recurring schedule with cron expression.'),
+      cronExpression: z.string().min(1).describe('Cron expression for the recurring task.'),
+    }),
+    z.object({
+      targetAgentId: z.string().min(1).describe('The target agent that should receive this scheduled task.'),
+      ...scheduleBaseInputShape,
+      scheduleType: z.literal('date').describe('One-time schedule with ISO date string.'),
+      scheduledDate: z.string().min(1).describe('ISO date string for the one-time task.'),
+    }),
+  ]);
   const taskUpdateInputSchema = z.object({
     taskId: z.string().min(1).describe('ID of the scheduled task to update.'),
     name: z.string().min(1).nullish().describe('New name.'),
@@ -62,32 +84,16 @@ export function createAgentScheduleTools(
     tools.create_agent_schedule = createTool({
       id: 'create_agent_schedule',
       description: 'Create a schedule for this agent only. Use this for your own recurring cron wakes or one-time scheduled triggers.',
-      inputSchema: z.object({
-        name: z.string().min(1).describe('Name for the schedule.'),
-        description: z.string().nullish().nullable().describe('Optional description.'),
-        scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time.'),
-        cronExpression: z.string().min(1).nullish().describe('Cron expression (required for cron type).'),
-        scheduledDate: z.string().min(1).nullish().describe('ISO date string (required for date type).'),
-        timezone: z.string().min(1).nullish().default('UTC').describe('Timezone for the schedule.'),
-        content: z.string().min(1).describe('Content/payload to send when the schedule triggers.'),
-      }),
+      inputSchema: createScheduleInputSchema,
       execute: async (input) => {
         forgeDebug('tools:schedules', 'create_agent_schedule called', { agentId, input });
-        if (input.scheduleType === 'cron' && !input.cronExpression) {
-          forgeDebug('tools:schedules', 'create_agent_schedule validation failed', { reason: 'cronExpression required for cron type' });
-          return { valid: false, error: 'cronExpression is required when scheduleType is cron', hint: 'Provide a valid cron expression for recurring schedules.' };
-        }
-        if (input.scheduleType === 'date' && !input.scheduledDate) {
-          forgeDebug('tools:schedules', 'create_agent_schedule validation failed', { reason: 'scheduledDate required for date type' });
-          return { valid: false, error: 'scheduledDate is required when scheduleType is date', hint: 'Provide an ISO date string for one-time schedules.' };
-        }
         try {
           const result = await schedules.createSchedule(agentId, {
             name: input.name,
             description: input.description ?? undefined,
             scheduleType: input.scheduleType,
-            cronExpression: input.cronExpression ?? undefined,
-            scheduledDate: input.scheduledDate ?? undefined,
+            cronExpression: input.scheduleType === 'cron' ? input.cronExpression : undefined,
+            scheduledDate: input.scheduleType === 'date' ? input.scheduledDate : undefined,
             timezone: input.timezone ?? 'UTC',
             content: input.content,
           });
@@ -189,23 +195,14 @@ export function createAgentScheduleTools(
       inputSchema: taskTargetInputSchema,
       execute: async (input) => {
         forgeDebug('tools:schedules', 'create_task_for_agent called', { agentId, targetAgentId: input.targetAgentId });
-        if (input.scheduleType === 'cron' && !input.cronExpression) {
-          forgeDebug('tools:schedules', 'create_task_for_agent validation failed', { reason: 'cronExpression required for cron type' });
-          return { valid: false, error: 'cronExpression is required when scheduleType is cron', hint: 'Provide a valid cron expression for recurring tasks.' };
-        }
-        if (input.scheduleType === 'date' && !input.scheduledDate) {
-          forgeDebug('tools:schedules', 'create_task_for_agent validation failed', { reason: 'scheduledDate required for date type' });
-          return { valid: false, error: 'scheduledDate is required when scheduleType is date', hint: 'Provide an ISO date string for one-time tasks.' };
-        }
-
         try {
           const result = await schedules.createScheduleForAgent(agentId, {
             targetAgentId: input.targetAgentId,
             name: input.name,
             description: input.description,
             scheduleType: input.scheduleType,
-            cronExpression: input.cronExpression,
-            scheduledDate: input.scheduledDate,
+            cronExpression: input.scheduleType === 'cron' ? input.cronExpression : undefined,
+            scheduledDate: input.scheduleType === 'date' ? input.scheduledDate : undefined,
             timezone: input.timezone,
             content: input.content,
           });

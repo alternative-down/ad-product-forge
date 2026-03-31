@@ -5,20 +5,45 @@ import type { Database } from '../database/index';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentScheduleStore } from './store';
 
-const createScheduleSchema = z.object({
+const scheduleBaseSchema = {
   name: z.string().min(1),
   description: z.string().optional(),
-  scheduleType: z.enum(['cron', 'date']),
-  cronExpression: z.string().min(1).optional(),
-  scheduledDate: z.string().min(1).optional(),
   timezone: z.string().min(1).default('UTC'),
   content: z.string().min(1),
-});
+} as const;
+
+const createScheduleSchema = z.discriminatedUnion('scheduleType', [
+  z.object({
+    ...scheduleBaseSchema,
+    scheduleType: z.literal('cron'),
+    cronExpression: z.string().min(1),
+    scheduledDate: z.undefined().optional(),
+  }),
+  z.object({
+    ...scheduleBaseSchema,
+    scheduleType: z.literal('date'),
+    scheduledDate: z.string().min(1),
+    cronExpression: z.undefined().optional(),
+  }),
+]);
 
 // Schema for creating schedule for another agent (cross-agent)
-const createScheduleForAgentSchema = createScheduleSchema.extend({
-  targetAgentId: z.string().min(1),
-});
+const createScheduleForAgentSchema = z.discriminatedUnion('scheduleType', [
+  z.object({
+    ...scheduleBaseSchema,
+    targetAgentId: z.string().min(1),
+    scheduleType: z.literal('cron'),
+    cronExpression: z.string().min(1),
+    scheduledDate: z.undefined().optional(),
+  }),
+  z.object({
+    ...scheduleBaseSchema,
+    targetAgentId: z.string().min(1),
+    scheduleType: z.literal('date'),
+    scheduledDate: z.string().min(1),
+    cronExpression: z.undefined().optional(),
+  }),
+]);
 
 const HEARTBEAT_NAME = 'System heartbeat';
 const HEARTBEAT_CRON_EXPRESSION = '0 * * * *';
