@@ -282,7 +282,8 @@ export class MiniMaxClient {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return any generated images.');
     }
 
-    const imageBase64 = data.image_base64;
+    const responseData = this.getObject(data.data);
+    const imageBase64 = responseData ? responseData.image_base64 : undefined;
     const images = Array.isArray(imageBase64)
       ? imageBase64.flatMap((item) => {
           const base64 = this.getString(item);
