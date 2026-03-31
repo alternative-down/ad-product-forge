@@ -1,4 +1,6 @@
 import { createTool } from '@mastra/core/tools';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { z } from 'zod';
 
 import type { MiniMaxManager } from './manager';
@@ -11,185 +13,287 @@ export const MINIMAX_TOOL_IDS = [
 
 export type MiniMaxToolId = (typeof MINIMAX_TOOL_IDS)[number];
 
-/**
- * Create MiniMax creative tools for agents
- *
- * These tools allow agents to generate:
- * - TTS (Text-to-Speech) audio
- * - Images from text prompts
- * - Videos from text prompts
- */
+const MINIMAX_OUTPUT_DIRECTORY = 'generated/minimax';
+
+const imageAspectRatioSchema = z.enum([
+  '1:1',
+  '16:9',
+  '9:16',
+  '4:3',
+  '3:4',
+  '3:2',
+  '2:3',
+]);
+
+function createMiniMaxOutputPath(
+  workspaceDir: string,
+  kind: 'tts' | 'images' | 'videos',
+  extension: string,
+  index?: number,
+) {
+  const timestamp = Date.now();
+  const suffix = Math.random().toString(36).slice(2, 8);
+  const fileName = index === undefined
+    ? `${kind}-${timestamp}-${suffix}.${extension}`
+    : `${kind}-${timestamp}-${suffix}-${index}.${extension}`;
+  const relativePath = path.join(MINIMAX_OUTPUT_DIRECTORY, kind, fileName);
+  const absolutePath = path.join(workspaceDir, relativePath);
+
+  return {
+    absolutePath,
+    relativePath,
+  };
+}
+
+async function ensureParentDirectory(filePath: string) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+}
+
+async function writeBufferToWorkspace(
+  workspaceDir: string,
+  kind: 'tts' | 'images' | 'videos',
+  extension: string,
+  buffer: Buffer,
+  index?: number,
+) {
+  const outputPath = createMiniMaxOutputPath(workspaceDir, kind, extension, index);
+  await ensureParentDirectory(outputPath.absolutePath);
+  await fs.writeFile(outputPath.absolutePath, buffer);
+  return outputPath.relativePath;
+}
+
+async function downloadFileBuffer(downloadUrl: string) {
+  const response = await fetch(downloadUrl);
+
+  if (!response.ok) {
+    throw new Error(`MiniMax file download failed with status ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+function inferExtensionFromUrl(downloadUrl: string, fallback: string) {
+  const pathname = new URL(downloadUrl).pathname;
+  const extension = path.extname(pathname).replace('.', '');
+  return extension || fallback;
+}
+
+async function waitForVideoFile(
+  minimax: MiniMaxManager,
+  taskId: string,
+) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const status = await minimax.queryVideoGeneration(taskId);
+
+    if (!status.success) {
+      throw new Error(status.error?.message || 'Failed to query MiniMax video generation status');
+    }
+
+    const videoStatus = status.data?.status?.toLowerCase() ?? '';
+
+    if (videoStatus === 'success' && status.data?.fileId) {
+      return status.data.fileId;
+    }
+
+    if (videoStatus === 'failed') {
+      throw new Error(status.data?.failureReason || 'MiniMax video generation failed');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+
+  throw new Error('MiniMax video generation did not finish within the expected time window');
+}
+
 export function createMiniMaxTools(
   minimax: MiniMaxManager,
+  workspaceDir: string,
   allowedToolIds?: Set<string> | null,
 ) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
 
-  // TTS Tool
   if (!allowedToolIds || allowedToolIds.has('minimax_tts')) {
     tools.minimax_tts = createTool({
       id: 'minimax_tts',
       description:
-        'Generate speech audio from text using MiniMax TTS API. Creates natural-sounding voice audio from text prompts.',
+        'Generate speech audio with MiniMax, save the audio file into the workspace, and return the saved path.',
       inputSchema: z.object({
         text: z.string().min(1).describe('The text content to convert to speech.'),
-        voice_id: z
-          .string()
-          .nullish()
-          .describe(
-            'Voice ID for the audio. Available voices: male-qn-qingse (Chinese male), female-shaosheng (Chinese female), male-tianmei (English male), female-qingxue (English female), male-yunyang (Korean male), female-qianhui (Korean female).',
-          ),
-        speed: z.number().nullish().describe('Speech speed (0.5-2.0, default 1.0).'),
-        volume: z.number().nullish().describe('Audio volume (0.0-1.0, default 1.0).'),
-        pitch: z.number().nullish().describe('Voice pitch adjustment (-10 to 10, default 0).'),
-        output_format: z
-          .enum(['mp3', 'wav', 'flac'])
-          .nullish()
-          .describe('Output audio format (default mp3).'),
+        model: z.string().nullish().describe('MiniMax speech model, for example speech-2.8-turbo or speech-2.8-hd.'),
+        voice_id: z.string().nullish().describe('Voice ID to use for the generated speech.'),
+        speed: z.number().nullish().describe('Speech speed multiplier.'),
+        volume: z.number().nullish().describe('Speech volume multiplier.'),
+        pitch: z.number().nullish().describe('Pitch adjustment.'),
+        output_format: z.enum(['mp3', 'wav', 'flac']).nullish().describe('Audio file format.'),
       }),
       execute: async (input) => {
         try {
           const result = await minimax.textToSpeech({
             text: input.text,
+            model: input.model ?? undefined,
             voiceSetting: input.voice_id
               ? {
                   voiceId: input.voice_id,
-                  speed: input.speed ?? 1.0,
-                  volume: input.volume ?? 1.0,
-                  pitch: input.pitch ?? 0,
+                  speed: input.speed ?? undefined,
+                  volume: input.volume ?? undefined,
+                  pitch: input.pitch ?? undefined,
                 }
               : undefined,
             outputFormat: input.output_format ?? 'mp3',
           });
 
-          if (!result.success) {
+          if (!result.success || !result.data) {
             return {
               valid: false,
               error: result.error?.message || 'Failed to generate speech',
-              hint: 'Verify the MiniMax integration is configured and the selected voice/options are supported.',
+              hint: 'Verify the MiniMax integration is configured and the selected speech options are supported.',
             };
           }
 
+          const audioBuffer = Buffer.from(result.data.audioHex, 'hex');
+          const savedPath = await writeBufferToWorkspace(
+            workspaceDir,
+            'tts',
+            result.data.audioFormat,
+            audioBuffer,
+          );
+
           return {
             valid: true,
-            audio_file: result.data?.audio_file,
-            audio_id: result.data?.audio_id,
-            extra_info: result.data?.extra_info,
+            path: savedPath,
           };
         } catch (error) {
           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate speech',
-            hint: 'Verify the MiniMax integration is configured and try a shorter plain-text prompt.',
+            hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax speech API.',
           };
         }
       },
     });
   }
 
-  // Image Generation Tool
   if (!allowedToolIds || allowedToolIds.has('minimax_image')) {
     tools.minimax_image = createTool({
       id: 'minimax_image',
       description:
-        'Generate images from text prompts using MiniMax Image API. Creates high-quality images from descriptive text.',
+        'Generate image files with MiniMax, save them into the workspace, and return the saved path or paths.',
       inputSchema: z.object({
         prompt: z.string().min(1).describe('Text description of the image to generate.'),
-        style: z
-          .string()
-          .nullish()
-          .describe(
-            'Image style preset. Options: realistic (photorealistic), anime (animated style), 3d卡通 (3D cartoon), comic (comic book), watercolor (watercolor painting), black-and-white (monochrome).',
-          ),
-        width: z.number().nullish().describe('Image width in pixels (256-2048, default 1024).'),
-        height: z.number().nullish().describe('Image height in pixels (256-2048, default 1024).'),
-        image_count: z
-          .number()
-          .min(1)
-          .max(4)
-          .nullish()
-          .describe('Number of images to generate (1-4, default 1).'),
+        model: z.string().nullish().describe('MiniMax image model, for example image-01.'),
+        aspect_ratio: imageAspectRatioSchema.nullish().describe('Preferred aspect ratio for the generated image.'),
+        width: z.number().int().positive().nullish().describe('Explicit image width in pixels.'),
+        height: z.number().int().positive().nullish().describe('Explicit image height in pixels.'),
+        image_count: z.number().int().min(1).max(4).nullish().describe('Number of images to generate.'),
       }),
       execute: async (input) => {
         try {
           const result = await minimax.generateImage({
             prompt: input.prompt,
-            style: input.style || '<auto>',
-            width: input.width ?? 1024,
-            height: input.height ?? 1024,
-            imageCount: input.image_count ?? 1,
+            model: input.model ?? undefined,
+            aspectRatio: input.aspect_ratio ?? undefined,
+            width: input.width ?? undefined,
+            height: input.height ?? undefined,
+            imageCount: input.image_count ?? undefined,
           });
 
-          if (!result.success) {
+          if (!result.success || !result.data) {
             return {
               valid: false,
               error: result.error?.message || 'Failed to generate image',
-              hint: 'Verify the MiniMax integration is configured and try a simpler prompt or supported dimensions.',
+              hint: 'Verify the MiniMax integration is configured and the selected image options are supported.',
             };
           }
 
+          const paths = await Promise.all(
+            result.data.images.map((base64Image, index) =>
+              writeBufferToWorkspace(
+                workspaceDir,
+                'images',
+                'png',
+                Buffer.from(base64Image, 'base64'),
+                index + 1,
+              ),
+            ),
+          );
+
           return {
             valid: true,
-            image_urls: result.data?.image_urls || [],
-            extra_info: result.data?.extra_info,
+            path: paths[0],
+            paths,
           };
         } catch (error) {
           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate image',
-            hint: 'Verify the MiniMax integration is configured and try a simpler prompt.',
+            hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax image API.',
           };
         }
       },
     });
   }
 
-  // Video Generation Tool
   if (!allowedToolIds || allowedToolIds.has('minimax_video')) {
     tools.minimax_video = createTool({
       id: 'minimax_video',
       description:
-        'Generate videos from text prompts using MiniMax Video API. Creates dynamic video content from descriptive prompts.',
+        'Generate a video with MiniMax, wait for completion, save the video file into the workspace, and return the saved path.',
       inputSchema: z.object({
         prompt: z.string().min(1).describe('Text description of the video to generate.'),
-        duration: z
-          .number()
-          .min(3)
-          .max(15)
-          .nullish()
-          .describe('Video duration in seconds (3-15, default 6).'),
-        fps: z.number().nullish().describe('Frames per second (default 25).'),
-        quality: z.enum(['standard', 'high']).nullish().describe('Video quality (default high).'),
+        model: z.string().nullish().describe('MiniMax video model, for example MiniMax-Hailuo-2.3.'),
+        duration: z.number().int().min(3).max(15).nullish().describe('Video duration in seconds.'),
+        resolution: z.enum(['768P', '1080P']).nullish().describe('Output resolution.'),
+        first_frame_image: z.string().url().nullish().describe('Optional first-frame image URL for image-to-video mode.'),
+        last_frame_image: z.string().url().nullish().describe('Optional last-frame image URL for start-end-frame mode.'),
       }),
       execute: async (input) => {
         try {
-          const result = await minimax.generateVideo({
+          const task = await minimax.createVideoGenerationTask({
             prompt: input.prompt,
-            duration: input.duration ?? 6,
-            fsp: input.fps ?? 25,
-            petal_scale: input.quality === 'standard' ? 0.8 : 1.0,
+            model: input.model ?? undefined,
+            duration: input.duration ?? undefined,
+            resolution: input.resolution ?? undefined,
+            firstFrameImage: input.first_frame_image ?? undefined,
+            lastFrameImage: input.last_frame_image ?? undefined,
           });
 
-          if (!result.success) {
+          if (!task.success || !task.data) {
             return {
               valid: false,
-              error: result.error?.message || 'Failed to generate video',
-              hint: 'Verify the MiniMax integration is configured and try a shorter prompt with supported duration.',
+              error: task.error?.message || 'Failed to start video generation',
+              hint: 'Verify the MiniMax integration is configured and the selected video options are supported.',
             };
           }
 
+          const fileId = await waitForVideoFile(minimax, task.data.taskId);
+          const file = await minimax.retrieveFile(fileId);
+
+          if (!file.success || !file.data) {
+            return {
+              valid: false,
+              error: file.error?.message || 'MiniMax did not return a downloadable video file',
+              hint: 'The video task finished, but the file could not be retrieved. Try again in a moment.',
+            };
+          }
+
+          const fileBuffer = await downloadFileBuffer(file.data.downloadUrl);
+          const savedPath = await writeBufferToWorkspace(
+            workspaceDir,
+            'videos',
+            inferExtensionFromUrl(file.data.downloadUrl, 'mp4'),
+            fileBuffer,
+          );
+
           return {
             valid: true,
-            task_id: result.data?.task_id,
-            status: result.data?.status || 'completed',
-            video_url: result.data?.video_url,
-            extra_info: result.data?.extra_info,
+            path: savedPath,
           };
         } catch (error) {
           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate video',
-            hint: 'Verify the MiniMax integration is configured and try a shorter prompt.',
+            hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax video API.',
           };
         }
       },

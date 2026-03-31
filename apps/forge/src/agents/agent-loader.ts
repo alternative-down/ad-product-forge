@@ -23,6 +23,7 @@ import { createSystemSettingsStore } from '../system-settings/store';
 import { createWebTools } from '../web/tools';
 import { getMCPToolsForAgent } from './mcp/client-manager';
 import { createMiniMaxTools } from '../minimax/tools';
+import path from 'node:path';
 
 
 export interface AgentLoaderConfig {
@@ -134,6 +135,13 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     workspaceBasePath: config.workspaceBasePath,
     propagateMessage: config.propagateMessage,
   });
+  const agentWorkspaceDir = agentConfig.workspaceFilesystem?.basePath
+    ? path.resolve(
+        config.workspaceBasePath,
+        agentConfig.id,
+        agentConfig.workspaceFilesystem.basePath,
+      )
+    : path.resolve(config.workspaceBasePath, agentConfig.id, 'workspace');
   const tools = createMicroErpTools(db, allowedToolIds);
   const notificationTools = createAgentNotificationTools(db, agentConfig.id, allowedToolIds);
   const githubTools = createGitHubTools(agentConfig.id, config.githubApps, allowedToolIds);
@@ -141,7 +149,9 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
   const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
   const webTools = createWebTools(allowedToolIds);
-  const minimaxTools = config.minimax ? createMiniMaxTools(config.minimax, allowedToolIds) : {};
+  const minimaxTools = config.minimax
+    ? createMiniMaxTools(config.minimax, agentWorkspaceDir, allowedToolIds)
+    : {};
   
   // Load MCP tools for this agent
   const mcpTools = await loadMCPToolsForAgent(agentConfig.id);

@@ -1,10 +1,4 @@
-/**
- * MiniMax API client for creative generation (TTS, Image, Video)
- * API Documentation: https://platform.minimax.io/docs/guides/models-intro
- */
-
-const MINIMAX_BASE_URL = 'https://api.minimax.io';
-const MINIMAX_API_VERSION = 'v1';
+const MINIMAX_BASE_URL = 'https://api.minimax.io/v1';
 
 export interface MiniMaxConfig {
   apiKey: string;
@@ -25,212 +19,402 @@ export interface TTSOptions {
 export interface ImageOptions {
   prompt: string;
   model?: string;
+  aspectRatio?: string;
   width?: number;
   height?: number;
   imageCount?: number;
-  style?: string;
 }
 
 export interface VideoOptions {
   prompt: string;
   model?: string;
   duration?: number;
-  fsp?: number;
-  petal_scale?: number;
+  resolution?: '768P' | '1080P';
+  firstFrameImage?: string;
+  lastFrameImage?: string;
+}
+
+export interface MiniMaxError {
+  code: string;
+  message: string;
 }
 
 export interface MiniMaxResponse<T> {
   success: boolean;
   data?: T;
-  error?: {
-    code: string;
-    message: string;
-  };
+  error?: MiniMaxError;
 }
 
 export interface TTSResponse {
-  audio_file?: string;
-  audio_id?: string;
-  extra_info?: {
-    tokens: number;
-    duration_seconds: number;
-  };
+  audioHex: string;
+  audioFormat: 'mp3' | 'wav' | 'flac';
 }
 
 export interface ImageResponse {
-  image_urls?: string[];
-  base64_images?: string[];
-  extra_info?: {
-    image_count: number;
-    processing_time_ms: number;
-  };
+  images: string[];
 }
 
-export interface VideoResponse {
-  task_id?: string;
-  status?: string;
-  video_url?: string;
-  extra_info?: {
-    duration_seconds: number;
-    processing_time_ms: number;
-  };
+export interface VideoTaskResponse {
+  taskId: string;
 }
+
+export interface VideoStatusResponse {
+  taskId: string;
+  status: string;
+  fileId?: string;
+  failureReason?: string;
+}
+
+export interface FileRetrieveResponse {
+  fileId: string;
+  fileName?: string;
+  downloadUrl: string;
+}
+
+type MiniMaxJsonResponse = Record<string, unknown>;
 
 export class MiniMaxClient {
-  private apiKey: string;
+  private readonly apiKey: string;
 
   constructor(config: MiniMaxConfig) {
     this.apiKey = config.apiKey;
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {},
-  ): Promise<MiniMaxResponse<T>> {
-    const url = `${MINIMAX_BASE_URL}/${MINIMAX_API_VERSION}${endpoint}`;
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
+  private buildError(code: string, message: string): MiniMaxResponse<never> {
+    return {
+      success: false,
+      error: { code, message },
     };
+  }
 
+  private async requestJson(
+    endpoint: string,
+    init: RequestInit,
+  ): Promise<MiniMaxResponse<MiniMaxJsonResponse>> {
     try {
-      const response = await fetch(url, {
-        ...options,
+      const response = await fetch(`${MINIMAX_BASE_URL}${endpoint}`, {
+        ...init,
         headers: {
-          ...headers,
-          ...options.headers,
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          ...(init.headers ?? {}),
         },
       });
-
       const rawBody = await response.text();
-      const parsedBody = rawBody.trim()
+      const body = rawBody.trim()
         ? (() => {
             try {
-              return JSON.parse(rawBody) as Record<string, unknown>;
+              return JSON.parse(rawBody) as MiniMaxJsonResponse;
             } catch {
               return null;
             }
           })()
-        : null;
+        : {};
 
       if (!response.ok) {
-        return {
-          success: false,
-          error: {
-            code: String(response.status),
-            message:
-              (typeof parsedBody?.message === 'string' && parsedBody.message) ||
-              (typeof parsedBody?.error === 'string' && parsedBody.error) ||
-              rawBody.trim() ||
-              'Unknown error',
-          },
-        };
+        return this.buildError(
+          String(response.status),
+          this.extractErrorMessage(body, rawBody, `MiniMax request failed with status ${response.status}`),
+        );
       }
 
-      if (!parsedBody) {
-        return {
-          success: false,
-          error: {
-            code: 'INVALID_RESPONSE',
-            message: `MiniMax returned a non-JSON response for ${endpoint}`,
-          },
-        };
+      if (!body || Array.isArray(body)) {
+        return this.buildError(
+          'INVALID_RESPONSE',
+          `MiniMax returned an invalid JSON payload for ${endpoint}`,
+        );
+      }
+
+      const baseResp = this.getObject(body.base_resp);
+
+      if (baseResp) {
+        const statusCode = this.getNumber(baseResp.status_code);
+        if (statusCode !== undefined && statusCode !== 0) {
+          return this.buildError(
+            String(statusCode),
+            this.getString(baseResp.status_msg) || 'MiniMax returned an error response',
+          );
+        }
+      }
+
+      if (typeof body.baseRespStatusCode === 'number' && body.baseRespStatusCode !== 0) {
+        return this.buildError(
+          String(body.baseRespStatusCode),
+          this.getString(body.baseRespStatusMsg) || 'MiniMax returned an error response',
+        );
       }
 
       return {
         success: true,
-        data: parsedBody as T,
+        data: body,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: {
-          code: 'NETWORK_ERROR',
-          message: error instanceof Error ? error.message : 'Network request failed',
-        },
-      };
+      return this.buildError(
+        'NETWORK_ERROR',
+        error instanceof Error ? error.message : 'Network request failed',
+      );
     }
   }
 
-  /**
-   * Generate speech from text (TTS)
-   * @see https://platform.minimax.io/docs/api-reference/speech-t2a-intro
-   */
+  private extractErrorMessage(
+    body: MiniMaxJsonResponse | null,
+    rawBody: string,
+    fallback: string,
+  ) {
+    if (!body) {
+      return rawBody.trim() || fallback;
+    }
+
+    const baseResp = this.getObject(body.base_resp);
+    if (baseResp) {
+      const message = this.getString(baseResp.status_msg);
+      if (message) {
+        return message;
+      }
+    }
+
+    return (
+      this.getString(body.status_msg) ||
+      this.getString(body.message) ||
+      this.getString(body.error) ||
+      rawBody.trim() ||
+      fallback
+    );
+  }
+
+  private getObject(value: unknown): Record<string, unknown> | null {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  private getString(value: unknown) {
+    return typeof value === 'string' ? value : undefined;
+  }
+
+  private getNumber(value: unknown) {
+    return typeof value === 'number' ? value : undefined;
+  }
+
   async textToSpeech(options: TTSOptions): Promise<MiniMaxResponse<TTSResponse>> {
-    const model = options.model || 'speech-02-turbo';
-    const voiceId = options.voiceSetting?.voiceId || 'male-qn-qingse';
+    const response = await this.requestJson('/t2a_v2', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: options.model ?? 'speech-2.8-turbo',
+        text: options.text,
+        stream: false,
+        output_format: options.outputFormat ?? 'mp3',
+        output_format_params: {
+          format: 'hex',
+        },
+        voice_setting: {
+          voice_id: options.voiceSetting?.voiceId ?? 'female-shaonv',
+          speed: options.voiceSetting?.speed ?? 1,
+          vol: options.voiceSetting?.volume ?? 1,
+          pitch: options.voiceSetting?.pitch ?? 0,
+        },
+      }),
+    });
 
-    const payload = {
-      model,
-      text: options.text,
-      voice_setting: {
-        voice_id: voiceId,
-        speed: options.voiceSetting?.speed || 1.0,
-        volume: options.voiceSetting?.volume || 1.0,
-        pitch: options.voiceSetting?.pitch || 0,
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    const data = response.data;
+    if (!data) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return synthesized audio data.');
+    }
+
+    const audio = this.getString(data.data);
+    if (!audio) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return synthesized audio data.');
+    }
+
+    return {
+      success: true,
+      data: {
+        audioHex: audio,
+        audioFormat: options.outputFormat ?? 'mp3',
       },
-      audio_format: options.outputFormat || 'mp3',
-      byte_size: 128000,
     };
-
-    return this.request<TTSResponse>('/t2a_pro', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
   }
 
-  /**
-   * Generate images from text prompt
-   * @see https://platform.minimax.io/docs/api-reference/image-generation-intro
-   */
   async generateImage(options: ImageOptions): Promise<MiniMaxResponse<ImageResponse>> {
-    const model = options.model || 'image-01';
-
-    const payload = {
-      model,
+    const payload: Record<string, unknown> = {
+      model: options.model ?? 'image-01',
       prompt: options.prompt,
-      response_format: 'url',
-      n: options.imageCount || 1,
-      ...(options.width && options.height
-        ? {
-            width: options.width,
-            height: options.height,
-          }
-        : {}),
+      response_format: 'base64',
+      n: options.imageCount ?? 1,
     };
 
-    return this.request<ImageResponse>('/image_generation', {
+    if (options.aspectRatio) {
+      payload.aspect_ratio = options.aspectRatio;
+    }
+
+    if (options.width && options.height) {
+      payload.width = options.width;
+      payload.height = options.height;
+    }
+
+    const response = await this.requestJson('/image_generation', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    const data = response.data;
+    if (!data) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return any generated images.');
+    }
+
+    const images = Array.isArray(data.data)
+      ? data.data
+          .map((item) => this.getObject(item))
+          .flatMap((item) => {
+            if (!item) {
+              return [];
+            }
+
+            const base64 = this.getString(item.base64);
+            return base64 ? [base64] : [];
+          })
+      : [];
+
+    if (images.length === 0) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return any generated images.');
+    }
+
+    return {
+      success: true,
+      data: { images },
+    };
   }
 
-  /**
-   * Generate video from text prompt
-   * @see https://platform.minimax.io/docs/api-reference/video-generation-intro
-   */
-  async generateVideo(options: VideoOptions): Promise<MiniMaxResponse<VideoResponse>> {
-    const model = options.model || 'video-01-live-2.0';
-
-    const payload = {
-      model,
+  async createVideoGenerationTask(
+    options: VideoOptions,
+  ): Promise<MiniMaxResponse<VideoTaskResponse>> {
+    const payload: Record<string, unknown> = {
+      model: options.model ?? 'MiniMax-Hailuo-2.3',
       prompt: options.prompt,
-      duration: options.duration || 6,
-      fsp: options.fsp || 25,
-      petal_scale: options.petal_scale || 1.0,
+      duration: options.duration ?? 6,
+      resolution: options.resolution ?? '1080P',
     };
 
-    return this.request<VideoResponse>('/video', {
+    if (options.firstFrameImage) {
+      payload.first_frame_image = options.firstFrameImage;
+    }
+
+    if (options.lastFrameImage) {
+      payload.last_frame_image = options.lastFrameImage;
+    }
+
+    const response = await this.requestJson('/video_generation', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    const data = response.data;
+    if (!data) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a video task id.');
+    }
+
+    const taskId = this.getString(data.task_id);
+    if (!taskId) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a video task id.');
+    }
+
+    return {
+      success: true,
+      data: { taskId },
+    };
+  }
+
+  async queryVideoGeneration(
+    taskId: string,
+  ): Promise<MiniMaxResponse<VideoStatusResponse>> {
+    const response = await this.requestJson(
+      `/query/video_generation?task_id=${encodeURIComponent(taskId)}`,
+      { method: 'GET' },
+    );
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    const data = response.data;
+    if (!data) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a video task status.');
+    }
+
+    const file = this.getObject(data.file);
+    return {
+      success: true,
+      data: {
+        taskId: this.getString(data.task_id) ?? taskId,
+        status: this.getString(data.status) ?? 'Unknown',
+        fileId: file ? this.getString(file.file_id) : undefined,
+        failureReason: this.getString(data.failure_reason),
+      },
+    };
+  }
+
+  async retrieveFile(fileId: string): Promise<MiniMaxResponse<FileRetrieveResponse>> {
+    const response = await this.requestJson(
+      `/files/retrieve?file_id=${encodeURIComponent(fileId)}`,
+      { method: 'GET' },
+    );
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    const data = response.data;
+    if (!data) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return file metadata.');
+    }
+
+    const file = this.getObject(data.file);
+    const downloadUrl = file ? this.getString(file.download_url) : undefined;
+
+    if (!downloadUrl) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a download URL for the generated file.');
+    }
+
+    return {
+      success: true,
+      data: {
+        fileId: fileId,
+        fileName: file ? this.getString(file.file_name) : undefined,
+        downloadUrl,
+      },
+    };
   }
 }
 
-/**
- * Create a MiniMax client with API key from environment
- */
 export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
   const key = apiKey || process.env.MINIMAX_API_KEY;
 
@@ -238,52 +422,48 @@ export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
     throw new Error('MINIMAX_API_KEY environment variable is not set');
   }
 
-  return new MiniMaxClient({
-    apiKey: key,
-  });
+  return new MiniMaxClient({ apiKey: key });
 }
 
-/**
- * Create a MiniMax manager that fetches config from system integrations store
- */
 export function createMiniMaxManager(config: {
   integrations: ReturnType<typeof import('../system-integrations/store').createSystemIntegrationStore>;
 }) {
-  async function getConfig() {
-    return config.integrations.getMinimaxConfig();
-  }
+  async function getClient() {
+    const cfg = await config.integrations.getMinimaxConfig();
 
-  async function textToSpeech(options: Parameters<MiniMaxClient['textToSpeech']>[0]) {
-    const cfg = await getConfig();
     if (!cfg) {
       throw new Error('MiniMax integration is not configured');
     }
-    const client = new MiniMaxClient({ apiKey: cfg.apiKey });
-    return client.textToSpeech(options);
+
+    return new MiniMaxClient({ apiKey: cfg.apiKey });
   }
 
-  async function generateImage(options: Parameters<MiniMaxClient['generateImage']>[0]) {
-    const cfg = await getConfig();
-    if (!cfg) {
-      throw new Error('MiniMax integration is not configured');
-    }
-    const client = new MiniMaxClient({ apiKey: cfg.apiKey });
-    return client.generateImage(options);
+  async function textToSpeech(options: TTSOptions) {
+    return (await getClient()).textToSpeech(options);
   }
 
-  async function generateVideo(options: Parameters<MiniMaxClient['generateVideo']>[0]) {
-    const cfg = await getConfig();
-    if (!cfg) {
-      throw new Error('MiniMax integration is not configured');
-    }
-    const client = new MiniMaxClient({ apiKey: cfg.apiKey });
-    return client.generateVideo(options);
+  async function generateImage(options: ImageOptions) {
+    return (await getClient()).generateImage(options);
+  }
+
+  async function createVideoGenerationTask(options: VideoOptions) {
+    return (await getClient()).createVideoGenerationTask(options);
+  }
+
+  async function queryVideoGeneration(taskId: string) {
+    return (await getClient()).queryVideoGeneration(taskId);
+  }
+
+  async function retrieveFile(fileId: string) {
+    return (await getClient()).retrieveFile(fileId);
   }
 
   return {
     textToSpeech,
     generateImage,
-    generateVideo,
+    createVideoGenerationTask,
+    queryVideoGeneration,
+    retrieveFile,
   };
 }
 

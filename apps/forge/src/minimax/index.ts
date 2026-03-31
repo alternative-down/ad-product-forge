@@ -7,7 +7,9 @@ export type {
   ImageOptions,
   ImageResponse,
   VideoOptions,
-  VideoResponse,
+  VideoTaskResponse,
+  VideoStatusResponse,
+  FileRetrieveResponse,
 } from './manager';
 
 export {
