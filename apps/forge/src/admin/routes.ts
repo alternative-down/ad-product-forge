@@ -787,10 +787,7 @@ export function registerAdminRoutes(input: {
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, functionRoleSchema);
       const result = await capabilities.addRoleToFunction(body);
-
-      void reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId).catch((error) => {
-        console.error(`[Admin] Failed to reload agents for function ${body.functionId}:`, error);
-      });
+      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
       return jsonResponse(result);
     },
   });
@@ -801,10 +798,7 @@ export function registerAdminRoutes(input: {
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, functionRoleSchema);
       const result = await capabilities.removeRoleFromFunction(body);
-
-      void reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId).catch((error) => {
-        console.error(`[Admin] Failed to reload agents for function ${body.functionId}:`, error);
-      });
+      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
       return jsonResponse(result);
     },
   });
@@ -816,9 +810,7 @@ export function registerAdminRoutes(input: {
       try {
         const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
         const result = await capabilities.addRoleToolPermission(body);
-        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
-        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
         console.error('[Admin] Failed to add role tool permission:', error);
@@ -834,9 +826,7 @@ export function registerAdminRoutes(input: {
       try {
         const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
         const result = await capabilities.addRoleWorkflowPermission(body);
-        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
-        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
         console.error('[Admin] Failed to add role workflow permission:', error);
@@ -852,9 +842,7 @@ export function registerAdminRoutes(input: {
       try {
         const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
         const result = await capabilities.removeRoleWorkflowPermission(body);
-        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
-        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
         console.error('[Admin] Failed to remove role workflow permission:', error);
@@ -870,9 +858,7 @@ export function registerAdminRoutes(input: {
       try {
         const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
         const result = await capabilities.removeRoleToolPermission(body);
-        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
-        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
         console.error('[Admin] Failed to remove role tool permission:', error);

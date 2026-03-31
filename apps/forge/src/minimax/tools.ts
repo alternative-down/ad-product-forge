@@ -178,14 +178,13 @@ export function createMiniMaxTools(
     tools.minimax_image = createTool({
       id: 'minimax_image',
       description:
-        'Generate image files with MiniMax, save them into the workspace, and return the saved path or paths.',
+        'Generate exactly one image file with MiniMax, save it into the workspace, and return the saved path.',
       inputSchema: z.object({
         prompt: z.string().min(1).describe('Text description of the image to generate.'),
         model: z.string().nullish().describe('MiniMax image model, for example image-01.'),
         aspect_ratio: imageAspectRatioSchema.nullish().describe('Preferred aspect ratio for the generated image.'),
         width: z.number().int().positive().nullish().describe('Explicit image width in pixels.'),
         height: z.number().int().positive().nullish().describe('Explicit image height in pixels.'),
-        image_count: z.number().int().min(1).max(4).nullish().describe('Number of images to generate.'),
       }),
       execute: async (input) => {
         try {
@@ -195,7 +194,7 @@ export function createMiniMaxTools(
             aspectRatio: input.aspect_ratio ?? undefined,
             width: input.width ?? undefined,
             height: input.height ?? undefined,
-            imageCount: input.image_count ?? undefined,
+            imageCount: 1,
           });
 
           if (!result.success || !result.data) {
@@ -221,7 +220,6 @@ export function createMiniMaxTools(
           return {
             valid: true,
             path: paths[0],
-            paths,
           };
         } catch (error) {
           return {
