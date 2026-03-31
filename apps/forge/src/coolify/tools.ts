@@ -188,7 +188,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
             });
           }
           forgeDebug('tools:coolify', 'manage_coolify_application result', { action: input.action, result });
-          return result;
+          return { valid: true, ...result };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:coolify', 'manage_coolify_application error', { error: message });
@@ -213,7 +213,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
             ? await coolify.startApplication(input.applicationUuid)
             : await coolify.stopApplication(input.applicationUuid);
           forgeDebug('tools:coolify', 'toggle_coolify_application result', { state: input.state, result });
-          return result;
+          return { valid: true, applicationUuid: input.applicationUuid, ...result };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:coolify', 'toggle_coolify_application error', { error: message });
@@ -355,7 +355,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
             });
           }
           forgeDebug('tools:coolify', 'manage_coolify_application_env result', { action: input.action, key: input.key });
-          return result;
+          return { valid: true, applicationUuid: input.applicationUuid, key: input.key, ...result };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:coolify', 'manage_coolify_application_env error', { error: message });

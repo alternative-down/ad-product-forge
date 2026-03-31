@@ -16,31 +16,39 @@ export function createAddMemberTool(communication: CommunicationModule) {
     inputSchema: addMemberInputSchema,
     execute: async (input) => {
       try {
-        return await communication.addMemberToGroup({
+        const result = await communication.addMemberToGroup({
           groupId: input.groupId,
           participantSlug: input.participantSlug,
           role: input.role,
         });
+        return {
+          valid: true,
+          ...result,
+        };
       } catch (error) {
         if (error instanceof Error) {
           if (error.message.includes('not found') || error.message.includes('does not exist')) {
             return {
+              valid: false,
               error: error.message,
               hint: 'The group or contact may not exist. Use list_chat_groups and list_contacts to find valid values.',
             };
           }
           if (error.message.includes('already exists') || error.message.includes('duplicate')) {
             return {
+              valid: false,
               error: error.message,
               hint: 'The member is already in the group.',
             };
           }
           return {
+            valid: false,
             error: error.message,
             hint: 'Verify the groupId and participantSlug are valid.',
           };
         }
         return {
+          valid: false,
           error: 'An unknown error occurred while adding the member',
           hint: 'Verify the groupId and participantSlug are valid.',
         };

@@ -98,7 +98,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             defaultBranch: input.defaultBranch,
           });
           forgeDebug('tools:github', 'create_github_repository result', { id: result.id, name: result.name });
-          return result;
+          return { valid: true, repositoryName: result.name, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'create_github_repository error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Check if repository name already exists or GitHub App has create permissions.' };
@@ -131,7 +131,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             defaultBranch: input.defaultBranch,
           });
           forgeDebug('tools:github', 'update_github_repository result', { repositoryName: input.repositoryName });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'update_github_repository error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify repository exists and GitHub App has write permissions.' };
@@ -156,7 +156,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             repositoryName: input.repositoryName,
           });
           forgeDebug('tools:github', 'delete_github_repository result', { success: true });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'delete_github_repository error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify repository exists and GitHub App has admin permissions.' };
@@ -262,7 +262,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             body: input.body,
           });
           forgeDebug('tools:github', 'create_github_pull_request result', { pullRequestNumber: result.number });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'create_github_pull_request error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Check branch exists, base branch is valid, and GitHub App has write permissions.' };
@@ -297,7 +297,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             state: input.state,
           });
           forgeDebug('tools:github', 'update_github_pull_request result', { pullRequestNumber: input.pullRequestNumber });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'update_github_pull_request error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify PR number exists and GitHub App has write permissions.' };
@@ -326,7 +326,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             mergeMethod: input.mergeMethod,
           });
           forgeDebug('tools:github', 'merge_github_pull_request result', { merged: result.merged });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'merge_github_pull_request error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify PR is mergeable and GitHub App has write permissions.' };
@@ -354,7 +354,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             state: 'closed',
           });
           forgeDebug('tools:github', 'delete_github_pull_request result', { closed: true });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'delete_github_pull_request error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify PR number exists and GitHub App has write permissions.' };
@@ -443,7 +443,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             milestone: input.milestone ?? undefined,
           });
           forgeDebug('tools:github', 'create_github_issue result', { issueNumber: result.number });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'create_github_issue error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Check GitHub App has issues write permissions and labels/assignees exist.' };
@@ -480,7 +480,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             milestone: input.milestone,
           });
           forgeDebug('tools:github', 'update_github_issue result', { issueNumber: input.issueNumber });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, issueNumber: input.issueNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'update_github_issue error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has write permissions.' };
@@ -508,7 +508,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             state: 'closed',
           });
           forgeDebug('tools:github', 'delete_github_issue result', { closed: true });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'delete_github_issue error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has write permissions.' };
@@ -534,7 +534,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             ? await githubApps.reopenIssue(agentId, input)
             : await githubApps.closeIssue(agentId, input);
           forgeDebug('tools:github', 'toggle_github_issue result', { issueNumber: input.issueNumber, state: input.state });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, issueNumber: input.issueNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'toggle_github_issue error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has write permissions.' };
@@ -621,7 +621,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             body: input.body,
           });
           forgeDebug('tools:github', 'create_github_issue_comment result', { commentId: result.id });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, issueNumber: input.issueNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'create_github_issue_comment error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify issue number exists and GitHub App has write permissions.' };
@@ -650,7 +650,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             body: input.body,
           });
           forgeDebug('tools:github', 'update_github_issue_comment result', { commentId: input.commentId });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, commentId: input.commentId, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'update_github_issue_comment error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify comment ID exists and GitHub App has write permissions.' };
@@ -677,7 +677,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             commentId: input.commentId,
           });
           forgeDebug('tools:github', 'delete_github_issue_comment result', { deleted: true });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, commentId: input.commentId, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'delete_github_issue_comment error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify comment ID exists and GitHub App has admin permissions.' };
@@ -733,7 +733,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             description: input.description,
           });
           forgeDebug('tools:github', 'create_github_label result', { name: result.name });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'create_github_label error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Check label name is unique and GitHub App has admin permissions.' };
@@ -766,7 +766,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             description: input.description,
           });
           forgeDebug('tools:github', 'update_github_label result', { name: result.name });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, labelName: input.labelName, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'update_github_label error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify label exists and GitHub App has admin permissions.' };
@@ -793,7 +793,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             labelName: input.labelName,
           });
           forgeDebug('tools:github', 'delete_github_label result', { deleted: true });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, labelName: input.labelName, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'delete_github_label error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify label exists and GitHub App has admin permissions.' };
@@ -852,7 +852,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             dueOn: input.dueOn ?? undefined,
           });
           forgeDebug('tools:github', 'create_github_milestone result', { number: result.number, title: result.title });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'create_github_milestone error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Check milestone title is valid and GitHub App has write permissions.' };
@@ -887,7 +887,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             dueOn: input.dueOn,
           });
           forgeDebug('tools:github', 'update_github_milestone result', { number: input.milestoneNumber });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, milestoneNumber: input.milestoneNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'update_github_milestone error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify milestone number exists and GitHub App has write permissions.' };
@@ -914,7 +914,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             milestoneNumber: input.milestoneNumber,
           });
           forgeDebug('tools:github', 'delete_github_milestone result', { deleted: true });
-          return result;
+          return { valid: true, repositoryName: input.repositoryName, milestoneNumber: input.milestoneNumber, ...result };
         } catch (error) {
           forgeDebug('tools:github', 'delete_github_milestone error', { error: String(error) });
           return { valid: false, error: String(error), hint: 'Verify milestone number exists and GitHub App has admin permissions.' };

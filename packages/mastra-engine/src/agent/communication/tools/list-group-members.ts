@@ -13,7 +13,22 @@ export function createListGroupMembersTool(communication: CommunicationModule) {
     description: 'List all members of an internal chat group, returning participant slugs that can be used in remove_member_from_group.',
     inputSchema: listGroupMembersInputSchema,
     execute: async (input) => {
-      return communication.listGroupMembers(input.groupId);
+      try {
+        return await communication.listGroupMembers(input.groupId);
+      } catch (error) {
+        if (error instanceof Error) {
+          return {
+            valid: false,
+            error: error.message,
+            hint: 'Use list_chat_groups to confirm the groupId is correct before listing members.',
+          };
+        }
+        return {
+          valid: false,
+          error: 'An unknown error occurred while listing group members',
+          hint: 'Use list_chat_groups to confirm the groupId is correct before listing members.',
+        };
+      }
     },
   });
 }

@@ -27,12 +27,18 @@ export function createCapabilityTools(
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_agent_functions called');
-        const result = await capabilities.listFunctions();
-        forgeDebug('tools:capabilities', 'list_agent_functions result', { 
-          count: result.length, 
-          functions: result.map(f => ({ functionId: f.functionId, name: f.name, description: f.description, roleIds: f.roleIds })) 
-        });
-        return result;
+        try {
+          const result = await capabilities.listFunctions();
+          forgeDebug('tools:capabilities', 'list_agent_functions result', {
+            count: result.length,
+            functions: result.map(f => ({ functionId: f.functionId, name: f.name, description: f.description, roleIds: f.roleIds })),
+          });
+          return result;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'list_agent_functions error', { error: message });
+          return { valid: false, error: message, hint: 'Try again in a moment. If the problem persists, verify the capability store is available.' };
+        }
       },
     });
   }
@@ -48,12 +54,18 @@ export function createCapabilityTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'create_agent_function called', { input });
-        const result = await capabilities.createFunction({
-          name: input.name,
-          description: input.description ?? undefined,
-        });
-        forgeDebug('tools:capabilities', 'create_agent_function result', { result });
-        return result;
+        try {
+          const result = await capabilities.createFunction({
+            name: input.name,
+            description: input.description ?? undefined,
+          });
+          forgeDebug('tools:capabilities', 'create_agent_function result', { result });
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'create_agent_function error', { error: message });
+          return { valid: false, error: message, hint: 'Use a unique function name and try again.' };
+        }
       },
     });
   }
@@ -121,12 +133,18 @@ export function createCapabilityTools(
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_agent_roles called');
-        const result = await capabilities.listRoles();
-        forgeDebug('tools:capabilities', 'list_agent_roles result', { 
-          count: result.length, 
-          roles: result.map(r => ({ roleId: r.roleId, name: r.name, description: r.description })) 
-        });
-        return result;
+        try {
+          const result = await capabilities.listRoles();
+          forgeDebug('tools:capabilities', 'list_agent_roles result', {
+            count: result.length,
+            roles: result.map(r => ({ roleId: r.roleId, name: r.name, description: r.description })),
+          });
+          return result;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'list_agent_roles error', { error: message });
+          return { valid: false, error: message, hint: 'Try again in a moment. If the problem persists, verify the capability store is available.' };
+        }
       },
     });
   }
@@ -142,12 +160,18 @@ export function createCapabilityTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'create_agent_role called', { input });
-        const result = await capabilities.createRole({
-          name: input.name,
-          description: input.description ?? undefined,
-        });
-        forgeDebug('tools:capabilities', 'create_agent_role result', { result });
-        return result;
+        try {
+          const result = await capabilities.createRole({
+            name: input.name,
+            description: input.description ?? undefined,
+          });
+          forgeDebug('tools:capabilities', 'create_agent_role result', { result });
+          return { valid: true, ...result };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'create_agent_role error', { error: message });
+          return { valid: false, error: message, hint: 'Use a unique role name and try again.' };
+        }
       },
     });
   }
@@ -298,13 +322,19 @@ export function createCapabilityTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'list_role_tool_permissions called', { roleId: input.roleId });
-        const result = await capabilities.listRoleToolPermissions(input.roleId);
-        forgeDebug('tools:capabilities', 'list_role_tool_permissions result', { 
-          roleId: input.roleId,
-          count: result.length, 
-          permissions: result 
-        });
-        return result;
+        try {
+          const result = await capabilities.listRoleToolPermissions(input.roleId);
+          forgeDebug('tools:capabilities', 'list_role_tool_permissions result', {
+            roleId: input.roleId,
+            count: result.length,
+            permissions: result,
+          });
+          return result;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'list_role_tool_permissions error', { error: message });
+          return { valid: false, error: message, hint: 'Use list_agent_roles to confirm the roleId is correct.' };
+        }
       },
     });
   }
@@ -345,9 +375,15 @@ export function createCapabilityTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'list_role_workflow_permissions called', { roleId: input.roleId });
-        const result = await capabilities.listRoleWorkflowPermissions(input.roleId);
-        forgeDebug('tools:capabilities', 'list_role_workflow_permissions result', { count: result.length });
-        return result;
+        try {
+          const result = await capabilities.listRoleWorkflowPermissions(input.roleId);
+          forgeDebug('tools:capabilities', 'list_role_workflow_permissions result', { count: result.length });
+          return result;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'list_role_workflow_permissions error', { error: message });
+          return { valid: false, error: message, hint: 'Use list_agent_roles to confirm the roleId is correct.' };
+        }
       },
     });
   }
@@ -386,12 +422,18 @@ export function createCapabilityTools(
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_available_capabilities called');
-        const result = {
-          toolIds: forgeCustomToolIds,
-          workflowIds: forgeWorkflowIds,
-        };
-        forgeDebug('tools:capabilities', 'list_available_capabilities result', { toolCount: result.toolIds.length, workflowCount: result.workflowIds.length });
-        return result;
+        try {
+          const result = {
+            toolIds: forgeCustomToolIds,
+            workflowIds: forgeWorkflowIds,
+          };
+          forgeDebug('tools:capabilities', 'list_available_capabilities result', { toolCount: result.toolIds.length, workflowCount: result.workflowIds.length });
+          return result;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          forgeDebug('tools:capabilities', 'list_available_capabilities error', { error: message });
+          return { valid: false, error: message, hint: 'Try again in a moment. If the problem persists, verify the capability catalog is available.' };
+        }
       },
     });
   }

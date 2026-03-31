@@ -17,11 +17,22 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
         unreadOnly: z.boolean().default(false),
         limit: z.number().int().positive().max(100).default(20),
       }),
-      execute: async (input) => notifications.listNotifications({
-        agentId,
-        unreadOnly: input.unreadOnly ?? false,
-        limit: input.limit ?? 20,
-      }),
+      execute: async (input) => {
+        try {
+          return await notifications.listNotifications({
+            agentId,
+            unreadOnly: input.unreadOnly ?? false,
+            limit: input.limit ?? 20,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again in a moment. If the problem persists, verify the notification store is available.',
+          };
+        }
+      },
     });
   }
 
@@ -32,9 +43,23 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
       inputSchema: z.object({
         notificationId: z.string().min(1),
       }),
-      execute: async (input) => ({
-        success: await notifications.markNotificationRead(agentId, input.notificationId),
-      }),
+      execute: async (input) => {
+        try {
+          const marked = await notifications.markNotificationRead(agentId, input.notificationId);
+          return {
+            valid: true,
+            notificationId: input.notificationId,
+            marked,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_notifications to confirm the notificationId is correct and belongs to you.',
+          };
+        }
+      },
     });
   }
 

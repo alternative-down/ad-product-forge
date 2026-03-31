@@ -26,7 +26,18 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
       id: 'get_company_cash',
       description: 'Return the current company cash balance.',
       inputSchema: z.object({}),
-      execute: async () => microErp.getCompanyCashBalance(),
+      execute: async () => {
+        try {
+          return await microErp.getCompanyCashBalance();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again in a moment. If the problem persists, verify the finance ledger is available.',
+          };
+        }
+      },
     });
   }
 
@@ -35,7 +46,18 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
       id: 'list_company_cash',
       description: 'List company cash ledger movements and return the cash summary for the selected period.',
       inputSchema: listCompanyCashInputSchema,
-      execute: async (input) => microErp.listCompanyCashMovements(input),
+      execute: async (input) => {
+        try {
+          return await microErp.listCompanyCashMovements(input);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Review the selected filters and period, then try again.',
+          };
+        }
+      },
     });
   }
 
@@ -44,7 +66,18 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
       id: 'list_internal_agent_contracts',
       description: 'List active internal-agent contracts.',
       inputSchema: z.object({}),
-      execute: async () => microErp.listActiveInternalAgentContracts(),
+      execute: async () => {
+        try {
+          return await microErp.listActiveInternalAgentContracts();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again in a moment. If the problem persists, verify the contract store is available.',
+          };
+        }
+      },
     });
   }
 
@@ -57,10 +90,25 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         agentId: z.string().min(1),
         amountUsd: z.number().positive(),
       }),
-      execute: async (input) => topUpActiveAgentContract(db, {
-        agentId: input.agentId,
-        amountUsd: input.amountUsd,
-      }),
+      execute: async (input) => {
+        try {
+          const result = await topUpActiveAgentContract(db, {
+            agentId: input.agentId,
+            amountUsd: input.amountUsd,
+          });
+          return {
+            valid: true,
+            ...result,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_internal_agent_contracts to confirm the agent has an active contract before topping it up.',
+          };
+        }
+      },
     });
   }
 
@@ -72,10 +120,25 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         agentId: z.string().min(1),
         newBudgetUsd: z.number().min(0),
       }),
-      execute: async (input) => adjustAgentContractBudget(db, {
-        agentId: input.agentId,
-        newBudgetUsd: input.newBudgetUsd,
-      }),
+      execute: async (input) => {
+        try {
+          const result = await adjustAgentContractBudget(db, {
+            agentId: input.agentId,
+            newBudgetUsd: input.newBudgetUsd,
+          });
+          return {
+            valid: true,
+            ...result,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_internal_agent_contracts to confirm the agent contract exists and is not currently running.',
+          };
+        }
+      },
     });
   }
 

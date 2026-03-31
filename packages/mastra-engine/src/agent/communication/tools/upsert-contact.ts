@@ -24,6 +24,7 @@ export function createUpsertContactTool(communication: CommunicationModule) {
         });
 
         return {
+          valid: true,
           slug: contact.slug,
           displayName: contact.displayName,
           description: contact.description,
@@ -31,11 +32,13 @@ export function createUpsertContactTool(communication: CommunicationModule) {
       } catch (error) {
         if (error instanceof Error) {
           return {
+            valid: false,
             error: error.message,
             hint: 'Verify the slug is valid and does not contain special characters. The slug should be a stable identifier (e.g., "john-doe" or "john@example.com").',
           };
         }
         return {
+          valid: false,
           error: 'An unknown error occurred while upserting the contact',
           hint: 'Verify the slug and displayName are valid.',
         };

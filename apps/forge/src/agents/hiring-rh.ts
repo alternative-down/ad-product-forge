@@ -356,8 +356,17 @@ export async function generateHiredAgentInstructions(
           status: z.string().describe('Describe what you currently see, what tools you have access to, what you are trying to do, and any issues or difficulties.'),
         }),
         execute: async ({ status }) => {
-          console.log(`[HiringRH] Agent status report:`, status);
-          return { ok: true, logged: status };
+          try {
+            console.log(`[HiringRH] Agent status report:`, status);
+            return { valid: true, logged: status };
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return {
+              valid: false,
+              error: message,
+              hint: 'Try again in a moment. If the problem persists, report the same status in plain text.',
+            };
+          }
         },
       }),
       hireAgent: createTool({
@@ -365,23 +374,33 @@ export async function generateHiredAgentInstructions(
         description: 'Realiza contratação do agente e finaliza o processo',
         inputSchema,
         execute: async ({ agent }) => {
-          console.log(`[HiringRH] hireAgent called with:`, JSON.stringify(agent, null, 2));
-          const validation = await validateHireAgentInput(capabilities, agent.functionId);
+          try {
+            console.log(`[HiringRH] hireAgent called with:`, JSON.stringify(agent, null, 2));
+            const validation = await validateHireAgentInput(capabilities, agent.functionId);
 
-          if (!validation.valid) {
-            console.log(`[HiringRH] hireAgent ERROR:`, validation.error);
-            return validation;
+            if (!validation.valid) {
+              console.log(`[HiringRH] hireAgent ERROR:`, validation.error);
+              return validation;
+            }
+
+            const result = {
+              ...agent,
+              functionId: validation.functionId,
+              functionName: validation.functionName,
+              functionDescription: validation.functionDescription,
+              valid: true,
+            };
+            console.log(`[HiringRH] hireAgent SUCCESS, returning:`, JSON.stringify(result, null, 2));
+            return result;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.log(`[HiringRH] hireAgent FAILURE:`, message);
+            return {
+              valid: false,
+              error: message,
+              hint: 'Verify the selected function and roles are valid, then try again.',
+            };
           }
-
-          const result = {
-            ...agent,
-            functionId: validation.functionId,
-            functionName: validation.functionName,
-            functionDescription: validation.functionDescription,
-            valid: true,
-          };
-          console.log(`[HiringRH] hireAgent SUCCESS, returning:`, JSON.stringify(result, null, 2));
-          return result;
         },
       }),
       ...tools,

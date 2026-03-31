@@ -16,13 +16,24 @@ export function createListConversationsTool(communication: CommunicationModule) 
     description:
       'List message conversations from the agent inbox. Returns the internal conversationKey for existing conversations and the contactSlug when available. If unread preview messages are returned, they are automatically marked as read.',
     inputSchema: listConversationsInputSchema,
-    execute: async (input) => ({
-      conversations: await communication.listConversations({
-        provider: input.provider,
-        contactSlug: input.contactSlug,
-        unread: input.unread,
-        limit: input.limit ?? 20,
-      }),
-    }),
+    execute: async (input) => {
+      try {
+        return {
+          conversations: await communication.listConversations({
+            provider: input.provider,
+            contactSlug: input.contactSlug,
+            unread: input.unread,
+            limit: input.limit ?? 20,
+          }),
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          valid: false,
+          error: message,
+          hint: 'Try again in a moment. If the problem persists, verify the communication store is available.',
+        };
+      }
+    },
   });
 }

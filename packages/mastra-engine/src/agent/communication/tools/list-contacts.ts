@@ -18,7 +18,16 @@ export function createListContactsTool(communication: CommunicationModule) {
       "Defaults to 'others'.",
     inputSchema: listContactsInputSchema,
     execute: async (input) => {
-      return communication.listContacts(input.filter);
+      try {
+        return await communication.listContacts(input.filter);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          valid: false,
+          error: message,
+          hint: 'Try again in a moment. If the problem persists, verify the communication store is available.',
+        };
+      }
     },
   });
 }

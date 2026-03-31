@@ -14,10 +14,19 @@ export function createListChatGroupsTool(communication: CommunicationModule) {
     description: 'List all internal chat groups accessible to this agent.',
     inputSchema: listChatGroupsInputSchema,
     execute: async (input) => {
-      return communication.listChatGroups({
-        provider: input.provider,
-        limit: input.limit ?? 50,
-      });
+      try {
+        return await communication.listChatGroups({
+          provider: input.provider,
+          limit: input.limit ?? 50,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          valid: false,
+          error: message,
+          hint: 'Try again in a moment. If the problem persists, verify the communication store is available.',
+        };
+      }
     },
   });
 }

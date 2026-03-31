@@ -18,27 +18,34 @@ export function createChatGroupTool(communication: CommunicationModule) {
     inputSchema: createChatGroupInputSchema,
     execute: async (input) => {
       try {
-        return await communication.createChatGroup({
+        const result = await communication.createChatGroup({
           provider: input.provider,
           conversationKey: input.conversationKey,
           name: input.name,
           creatorId: input.creatorId,
           creatorName: input.creatorName,
         });
+        return {
+          valid: true,
+          ...result,
+        };
       } catch (error) {
         if (error instanceof Error) {
           if (error.message.includes('already exists') || error.message.includes('duplicate')) {
             return {
+              valid: false,
               error: error.message,
               hint: 'A group with this conversationKey already exists. Use a unique key or use list_chat_groups to find existing groups.',
             };
           }
           return {
+            valid: false,
             error: error.message,
             hint: 'Verify the provider is configured and the conversationKey is unique.',
           };
         }
         return {
+          valid: false,
           error: 'An unknown error occurred while creating the chat group',
           hint: 'Verify all required fields are valid and the provider is configured.',
         };

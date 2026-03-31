@@ -40,9 +40,18 @@ export function createAgentScheduleTools(
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:schedules', 'list_agent_schedules called', { agentId });
-        const result = await schedules.listSchedules(agentId);
-        forgeDebug('tools:schedules', 'list_agent_schedules result', { count: result.length });
-        return result;
+        try {
+          const result = await schedules.listSchedules(agentId);
+          forgeDebug('tools:schedules', 'list_agent_schedules result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again in a moment. If the problem persists, verify the schedule store is available.',
+          };
+        }
       },
     });
   }
@@ -66,23 +75,35 @@ export function createAgentScheduleTools(
         forgeDebug('tools:schedules', 'create_agent_schedule called', { agentId, input });
         if (input.scheduleType === 'cron' && !input.cronExpression) {
           forgeDebug('tools:schedules', 'create_agent_schedule validation failed', { reason: 'cronExpression required for cron type' });
-          return { valid: false, error: 'cronExpression is required when scheduleType is cron' };
+          return { valid: false, error: 'cronExpression is required when scheduleType is cron', hint: 'Provide a valid cron expression for recurring schedules.' };
         }
         if (input.scheduleType === 'date' && !input.scheduledDate) {
           forgeDebug('tools:schedules', 'create_agent_schedule validation failed', { reason: 'scheduledDate required for date type' });
-          return { valid: false, error: 'scheduledDate is required when scheduleType is date' };
+          return { valid: false, error: 'scheduledDate is required when scheduleType is date', hint: 'Provide an ISO date string for one-time schedules.' };
         }
-        const result = await schedules.createSchedule(agentId, {
-          name: input.name,
-          description: input.description ?? undefined,
-          scheduleType: input.scheduleType,
-          cronExpression: input.cronExpression ?? undefined,
-          scheduledDate: input.scheduledDate ?? undefined,
-          timezone: input.timezone ?? 'UTC',
-          content: input.content,
-        });
-        forgeDebug('tools:schedules', 'create_agent_schedule success', { result });
-        return result;
+        try {
+          const result = await schedules.createSchedule(agentId, {
+            name: input.name,
+            description: input.description ?? undefined,
+            scheduleType: input.scheduleType,
+            cronExpression: input.cronExpression ?? undefined,
+            scheduledDate: input.scheduledDate ?? undefined,
+            timezone: input.timezone ?? 'UTC',
+            content: input.content,
+          });
+          forgeDebug('tools:schedules', 'create_agent_schedule success', { result });
+          return {
+            valid: true,
+            ...result,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Review the schedule fields and try again. Use cron for recurring schedules or date for one-time schedules.',
+          };
+        }
       },
     });
   }
@@ -104,18 +125,30 @@ export function createAgentScheduleTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'update_agent_schedule called', { agentId, scheduleId: input.scheduleId });
-        const result = await schedules.updateSchedule(agentId, input.scheduleId, {
-          name: input.name,
-          description: input.description,
-          scheduleType: input.scheduleType,
-          cronExpression: input.cronExpression,
-          scheduledDate: input.scheduledDate,
-          timezone: input.timezone,
-          content: input.content,
-          isActive: input.isActive ?? undefined,
-        });
-        forgeDebug('tools:schedules', 'update_agent_schedule result', { result });
-        return result;
+        try {
+          const result = await schedules.updateSchedule(agentId, input.scheduleId, {
+            name: input.name,
+            description: input.description,
+            scheduleType: input.scheduleType,
+            cronExpression: input.cronExpression,
+            scheduledDate: input.scheduledDate,
+            timezone: input.timezone,
+            content: input.content,
+            isActive: input.isActive ?? undefined,
+          });
+          forgeDebug('tools:schedules', 'update_agent_schedule result', { result });
+          return {
+            valid: true,
+            ...result,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_schedules to confirm the scheduleId is correct and belongs to this agent.',
+          };
+        }
       },
     });
   }
@@ -129,9 +162,22 @@ export function createAgentScheduleTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'delete_agent_schedule called', { agentId, scheduleId: input.scheduleId });
-        const result = await schedules.deleteSchedule(agentId, input.scheduleId);
-        forgeDebug('tools:schedules', 'delete_agent_schedule result', { result });
-        return result;
+        try {
+          const result = await schedules.deleteSchedule(agentId, input.scheduleId);
+          forgeDebug('tools:schedules', 'delete_agent_schedule result', { result });
+          return {
+            valid: true,
+            scheduleId: input.scheduleId,
+            ...result,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_schedules to confirm the scheduleId is correct and belongs to this agent.',
+          };
+        }
       },
     });
   }
@@ -145,29 +191,39 @@ export function createAgentScheduleTools(
         forgeDebug('tools:schedules', 'create_task_for_agent called', { agentId, targetAgentId: input.targetAgentId });
         if (input.scheduleType === 'cron' && !input.cronExpression) {
           forgeDebug('tools:schedules', 'create_task_for_agent validation failed', { reason: 'cronExpression required for cron type' });
-          return { valid: false, error: 'cronExpression is required when scheduleType is cron' };
+          return { valid: false, error: 'cronExpression is required when scheduleType is cron', hint: 'Provide a valid cron expression for recurring tasks.' };
         }
         if (input.scheduleType === 'date' && !input.scheduledDate) {
           forgeDebug('tools:schedules', 'create_task_for_agent validation failed', { reason: 'scheduledDate required for date type' });
-          return { valid: false, error: 'scheduledDate is required when scheduleType is date' };
+          return { valid: false, error: 'scheduledDate is required when scheduleType is date', hint: 'Provide an ISO date string for one-time tasks.' };
         }
 
-        const result = await schedules.createScheduleForAgent(agentId, {
-          targetAgentId: input.targetAgentId,
-          name: input.name,
-          description: input.description,
-          scheduleType: input.scheduleType,
-          cronExpression: input.cronExpression,
-          scheduledDate: input.scheduledDate,
-          timezone: input.timezone,
-          content: input.content,
-        });
+        try {
+          const result = await schedules.createScheduleForAgent(agentId, {
+            targetAgentId: input.targetAgentId,
+            name: input.name,
+            description: input.description,
+            scheduleType: input.scheduleType,
+            cronExpression: input.cronExpression,
+            scheduledDate: input.scheduledDate,
+            timezone: input.timezone,
+            content: input.content,
+          });
 
-        forgeDebug('tools:schedules', 'create_task_for_agent result', { result });
-        return {
-          ...result,
-          taskId: result.scheduleId,
-        };
+          forgeDebug('tools:schedules', 'create_task_for_agent result', { result });
+          return {
+            valid: true,
+            ...result,
+            taskId: result.scheduleId,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Verify the targetAgentId exists and that you have permission to manage delegated tasks.',
+          };
+        }
       },
     });
   }
@@ -181,9 +237,18 @@ export function createAgentScheduleTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'list_agent_tasks called', { agentId, targetAgentId: input.targetAgentId });
-        const result = await schedules.listTasks(agentId, input.targetAgentId ?? undefined);
-        forgeDebug('tools:schedules', 'list_agent_tasks result', { count: result.length });
-        return result;
+        try {
+          const result = await schedules.listTasks(agentId, input.targetAgentId ?? undefined);
+          forgeDebug('tools:schedules', 'list_agent_tasks result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again in a moment. If the problem persists, verify the delegated task store is available.',
+          };
+        }
       },
     });
   }
@@ -195,21 +260,31 @@ export function createAgentScheduleTools(
       inputSchema: taskUpdateInputSchema,
       execute: async (input) => {
         forgeDebug('tools:schedules', 'update_agent_task called', { agentId, taskId: input.taskId });
-        const result = await schedules.editCron(agentId, input.taskId, {
-          name: input.name,
-          description: input.description,
-          scheduleType: input.scheduleType,
-          cronExpression: input.cronExpression,
-          scheduledDate: input.scheduledDate,
-          timezone: input.timezone,
-          content: input.content,
-          isActive: input.isActive,
-        });
-        forgeDebug('tools:schedules', 'update_agent_task result', { result });
-        return {
-          ...result,
-          taskId: result.scheduleId,
-        };
+        try {
+          const result = await schedules.editCron(agentId, input.taskId, {
+            name: input.name,
+            description: input.description,
+            scheduleType: input.scheduleType,
+            cronExpression: input.cronExpression,
+            scheduledDate: input.scheduledDate,
+            timezone: input.timezone,
+            content: input.content,
+            isActive: input.isActive,
+          });
+          forgeDebug('tools:schedules', 'update_agent_task result', { result });
+          return {
+            valid: true,
+            ...result,
+            taskId: result.scheduleId,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_tasks to confirm the taskId is correct and that you created this delegated task.',
+          };
+        }
       },
     });
   }
@@ -223,12 +298,22 @@ export function createAgentScheduleTools(
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'cancel_agent_task called', { agentId, taskId: input.taskId });
-        const result = await schedules.deleteCron(agentId, input.taskId);
-        forgeDebug('tools:schedules', 'cancel_agent_task result', { result });
-        return {
-          ...result,
-          taskId: input.taskId,
-        };
+        try {
+          const result = await schedules.deleteCron(agentId, input.taskId);
+          forgeDebug('tools:schedules', 'cancel_agent_task result', { result });
+          return {
+            valid: true,
+            ...result,
+            taskId: input.taskId,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_tasks to confirm the taskId is correct and that you created this delegated task.',
+          };
+        }
       },
     });
   }

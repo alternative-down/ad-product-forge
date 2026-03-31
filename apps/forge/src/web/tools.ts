@@ -17,23 +17,32 @@ export function createWebTools(allowedToolIds?: Set<string> | null) {
         limit: z.number().int().positive().max(SEARCH_RESULT_LIMIT).nullish(),
       }),
       execute: async (input) => {
-        const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(input.query)}`, {
-          headers: {
-            'user-agent': 'ad-product-forge/1.0',
-          },
-        });
+        try {
+          const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(input.query)}`, {
+            headers: {
+              'user-agent': 'ad-product-forge/1.0',
+            },
+          });
 
-        if (!response.ok) {
-          throw new Error(`Web search failed with status ${response.status}`);
+          if (!response.ok) {
+            throw new Error(`Web search failed with status ${response.status}`);
+          }
+
+          const html = await response.text();
+          const results = extractSearchResults(html, input.limit ?? 5);
+
+          return {
+            query: input.query,
+            results,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again with a more specific query. If the problem persists, the search provider may be temporarily unavailable.',
+          };
         }
-
-        const html = await response.text();
-        const results = extractSearchResults(html, input.limit ?? 5);
-
-        return {
-          query: input.query,
-          results,
-        };
       },
     });
   }

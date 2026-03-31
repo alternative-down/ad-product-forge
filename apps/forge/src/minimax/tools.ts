@@ -64,21 +64,23 @@ export function createMiniMaxTools(
 
           if (!result.success) {
             return {
-              success: false,
+              valid: false,
               error: result.error?.message || 'Failed to generate speech',
+              hint: 'Verify the MiniMax integration is configured and the selected voice/options are supported.',
             };
           }
 
           return {
-            success: true,
+            valid: true,
             audio_file: result.data?.audio_file,
             audio_id: result.data?.audio_id,
             extra_info: result.data?.extra_info,
           };
         } catch (error) {
           return {
-            success: false,
+            valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate speech',
+            hint: 'Verify the MiniMax integration is configured and try a shorter plain-text prompt.',
           };
         }
       },
@@ -120,20 +122,22 @@ export function createMiniMaxTools(
 
           if (!result.success) {
             return {
-              success: false,
+              valid: false,
               error: result.error?.message || 'Failed to generate image',
+              hint: 'Verify the MiniMax integration is configured and try a simpler prompt or supported dimensions.',
             };
           }
 
           return {
-            success: true,
+            valid: true,
             image_urls: result.data?.image_urls || [],
             extra_info: result.data?.extra_info,
           };
         } catch (error) {
           return {
-            success: false,
+            valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate image',
+            hint: 'Verify the MiniMax integration is configured and try a simpler prompt.',
           };
         }
       },
@@ -168,13 +172,14 @@ export function createMiniMaxTools(
 
           if (!result.success) {
             return {
-              success: false,
+              valid: false,
               error: result.error?.message || 'Failed to generate video',
+              hint: 'Verify the MiniMax integration is configured and try a shorter prompt with supported duration.',
             };
           }
 
           return {
-            success: true,
+            valid: true,
             task_id: result.data?.task_id,
             status: result.data?.status || 'completed',
             video_url: result.data?.video_url,
@@ -182,8 +187,9 @@ export function createMiniMaxTools(
           };
         } catch (error) {
           return {
-            success: false,
+            valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate video',
+            hint: 'Verify the MiniMax integration is configured and try a shorter prompt.',
           };
         }
       },
