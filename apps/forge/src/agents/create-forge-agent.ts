@@ -267,7 +267,7 @@ export async function createInternalAgentRuntime<
     },
   });
 
-  const inputProcessors: InputProcessorOrWorkflow[] = [toolSearch, om];
+  const inputProcessors: InputProcessorOrWorkflow[] = [om, toolSearch];
   const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
