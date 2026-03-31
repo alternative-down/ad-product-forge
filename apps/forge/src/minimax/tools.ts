@@ -15,6 +15,18 @@ export type MiniMaxToolId = (typeof MINIMAX_TOOL_IDS)[number];
 
 const MINIMAX_OUTPUT_DIRECTORY = 'generated/minimax';
 
+function buildMiniMaxHint(errorCode: string | undefined, fallback: string) {
+  if (errorCode === '2061') {
+    return 'The current MiniMax token plan does not support the requested model. Use a model enabled for this account or upgrade the MiniMax plan.';
+  }
+
+  if (errorCode === '2013') {
+    return 'MiniMax rejected the request parameters. Review the tool arguments and the current MiniMax API parameter contract.';
+  }
+
+  return fallback;
+}
+
 const imageAspectRatioSchema = z.enum([
   '1:1',
   '16:9',
@@ -147,7 +159,10 @@ export function createMiniMaxTools(
             return {
               valid: false,
               error: result.error?.message || 'Failed to generate speech',
-              hint: 'Verify the MiniMax integration is configured and the selected speech options are supported.',
+              hint: buildMiniMaxHint(
+                result.error?.code,
+                'Verify the MiniMax integration is configured and the selected speech options are supported.',
+              ),
             };
           }
 
@@ -201,7 +216,10 @@ export function createMiniMaxTools(
             return {
               valid: false,
               error: result.error?.message || 'Failed to generate image',
-              hint: 'Verify the MiniMax integration is configured and the selected image options are supported.',
+              hint: buildMiniMaxHint(
+                result.error?.code,
+                'Verify the MiniMax integration is configured and the selected image options are supported.',
+              ),
             };
           }
 
@@ -260,7 +278,10 @@ export function createMiniMaxTools(
             return {
               valid: false,
               error: task.error?.message || 'Failed to start video generation',
-              hint: 'Verify the MiniMax integration is configured and the selected video options are supported.',
+              hint: buildMiniMaxHint(
+                task.error?.code,
+                'Verify the MiniMax integration is configured and the selected video options are supported.',
+              ),
             };
           }
 

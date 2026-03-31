@@ -202,18 +202,21 @@ export class MiniMaxClient {
     const response = await this.requestJson('/t2a_v2', {
       method: 'POST',
       body: JSON.stringify({
-        model: options.model ?? 'speech-2.8-turbo',
+        model: options.model ?? 'speech-2.8-hd',
         text: options.text,
         stream: false,
-        output_format: options.outputFormat ?? 'mp3',
-        output_format_params: {
-          format: 'hex',
-        },
+        output_format: 'hex',
         voice_setting: {
           voice_id: options.voiceSetting?.voiceId ?? 'female-shaonv',
           speed: options.voiceSetting?.speed ?? 1,
           vol: options.voiceSetting?.volume ?? 1,
           pitch: options.voiceSetting?.pitch ?? 0,
+        },
+        audio_setting: {
+          sample_rate: 32000,
+          bitrate: 128000,
+          format: options.outputFormat ?? 'mp3',
+          channel: 1,
         },
       }),
     });
@@ -230,7 +233,8 @@ export class MiniMaxClient {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return synthesized audio data.');
     }
 
-    const audio = this.getString(data.data);
+    const responseData = this.getObject(data.data);
+    const audio = responseData ? this.getString(responseData.audio) : undefined;
     if (!audio) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return synthesized audio data.');
     }
@@ -362,14 +366,13 @@ export class MiniMaxClient {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a video task status.');
     }
 
-    const file = this.getObject(data.file);
     return {
       success: true,
       data: {
         taskId: this.getString(data.task_id) ?? taskId,
         status: this.getString(data.status) ?? 'Unknown',
-        fileId: file ? this.getString(file.file_id) : undefined,
-        failureReason: this.getString(data.failure_reason),
+        fileId: this.getString(data.file_id),
+        failureReason: this.getString(data.failure_reason) ?? this.getString(data.error_message),
       },
     };
   }
@@ -403,7 +406,7 @@ export class MiniMaxClient {
       success: true,
       data: {
         fileId: fileId,
-        fileName: file ? this.getString(file.file_name) : undefined,
+        fileName: file ? this.getString(file.filename) : undefined,
         downloadUrl,
       },
     };
