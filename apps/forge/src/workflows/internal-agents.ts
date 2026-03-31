@@ -7,6 +7,7 @@ import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
+import type { InternalChatService } from '../communication/internal-chat-service';
 
 const hireInternalAgentInputSchema = z.object({
   hiringRequest: z.string().min(1),
@@ -40,6 +41,7 @@ export function createInternalAgentWorkflows(config: {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   schedules: ReturnType<typeof createAgentScheduleManager>;
+  internalChat: InternalChatService;
 }) {
   const workflows = {} as InternalAgentWorkflows;
 
@@ -56,6 +58,7 @@ export function createInternalAgentWorkflows(config: {
         emailMailboxes: config.emailMailboxes,
         coolify: config.coolify,
         schedules: config.schedules,
+        internalChat: config.internalChat,
       });
     },
   });

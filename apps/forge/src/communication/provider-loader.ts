@@ -1,19 +1,10 @@
-import path from 'node:path';
-import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { createClient } from '@libsql/client';
-import { drizzle } from 'drizzle-orm/libsql';
 
 import type { CommunicationProvider } from '@mastra-engine/core';
-import { communicationSchema } from '@mastra-engine/core';
 import { createDiscordProvider } from '../discord-account';
 import { createEmailProvider } from '../email-account';
-import { createInternalChatPreset } from './presets/internal-chat';
-
-const { chatGroupMembers } = communicationSchema;
-
-// Global internal chat preset instance (singleton)
-const internalChatPreset = createInternalChatPreset();
+import { createInternalChatProvider } from './internal-chat-provider';
+import type { InternalChatService } from './internal-chat-service';
 
 export const internalChatCredentialsSchema = z.object({
   agentId: z.string(),
@@ -59,68 +50,30 @@ export type ProviderCredentialsMap = {
   };
 };
 
-export interface ProviderLoaderConfig {
-  workspaceBasePath: string;
-}
-
 /**
- * Create a getGroupMembers function that queries the agent's workspace database
- */
-function createGroupMembersGetter(workspaceBasePath: string, agentId: string) {
-  return async (groupId: string) => {
-    try {
-      const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
-      const client = createClient({
-        url: `file:${agentDatabasePath}`,
-      });
-      const db = drizzle(client, { schema: communicationSchema });
-
-      const members = await db.query.chatGroupMembers.findMany({
-        where: eq(chatGroupMembers.groupId, groupId),
-        orderBy: [chatGroupMembers.createdAt],
-      });
-
-      return members.map((member) => ({
-        id: member.participantId,
-        displayName: member.participantName,
-      }));
-    } catch (error) {
-      console.error(`[ProviderLoader] Failed to list group members for group ${groupId}:`, error);
-      return [];
-    }
-  };
-}
-
-/**
- * Load communication providers from credentials map
- * Supports: internal-chat (preset), email (IMAP/SMTP)
+ * Load communication providers from credentials map.
  */
 export function loadCommunicationProviders(
   credentials: ProviderCredentialsMap,
-  config?: ProviderLoaderConfig
+  config?: {
+    internalChat: InternalChatService;
+  },
 ): CommunicationProvider[] {
   const providers: CommunicationProvider[] = [];
 
   if (credentials['internal-chat']) {
-    const { agentId, displayName, description } = internalChatCredentialsSchema.parse(credentials['internal-chat']);
+    const internalChat = internalChatCredentialsSchema.parse(credentials['internal-chat']);
 
-    const providerConfig: {
-      id: string;
-      displayName: string;
-      description?: string;
-      getGroupMembers?: (groupId: string) => Promise<{ id: string; displayName: string }[]>;
-    } = {
-      id: agentId,
-      displayName: displayName ?? agentId,
-      description: description ?? undefined,
-    };
-
-    // Only add getGroupMembers if we have workspace config
-    if (config?.workspaceBasePath) {
-      providerConfig.getGroupMembers = createGroupMembersGetter(config.workspaceBasePath, agentId);
+    if (!config?.internalChat) {
+      throw new Error('Internal chat provider requires the internalChat service');
     }
 
-    providers.push(internalChatPreset.createProvider(providerConfig));
+    providers.push(createInternalChatProvider({
+      agentId: internalChat.agentId,
+      displayName: internalChat.displayName ?? internalChat.agentId,
+      description: internalChat.description ?? undefined,
+      internalChat: config.internalChat,
+    }));
   }
 
   if (credentials.discord) {

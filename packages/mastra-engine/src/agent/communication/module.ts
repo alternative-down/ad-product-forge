@@ -110,6 +110,14 @@ export async function createCommunicationModule(config: {
       }
 
       await provider.onMessage(async (message) => {
+        const conversationType = (
+          message.metadata &&
+          typeof message.metadata === 'object' &&
+          'conversationType' in message.metadata &&
+          typeof message.metadata.conversationType === 'string'
+        )
+          ? message.metadata.conversationType
+          : undefined;
         const contact = await syncInboundContact({
           provider: provider.id,
           authorExternalId: message.authorExternalId,
@@ -122,7 +130,8 @@ export async function createCommunicationModule(config: {
           providerConversationKey: message.providerConversationKey,
           providerMessageId: message.providerMessageId,
           conversationName: message.conversationName,
-          contactId: contact?.slug,
+          conversationType,
+          contactId: conversationType === 'dm' ? contact?.slug : undefined,
           authorExternalId: message.authorExternalId,
           authorDisplayName: message.authorDisplayName,
           authorUsername: message.authorUsername,
@@ -137,6 +146,40 @@ export async function createCommunicationModule(config: {
         }
 
         const savedConversation = await store.getConversation(savedMessage.conversationId);
+
+        const groupMembers = (
+          message.metadata &&
+          typeof message.metadata === 'object' &&
+          'groupMembers' in message.metadata &&
+          Array.isArray(message.metadata.groupMembers)
+        )
+          ? message.metadata.groupMembers
+          : [];
+
+        if (savedConversation?.type === 'group' && groupMembers.length > 0) {
+          for (const groupMember of groupMembers) {
+            if (!groupMember || typeof groupMember !== 'object') {
+              continue;
+            }
+
+            const participantId = 'agentId' in groupMember && typeof groupMember.agentId === 'string'
+              ? groupMember.agentId
+              : null;
+            const participantName = 'displayName' in groupMember && typeof groupMember.displayName === 'string'
+              ? groupMember.displayName
+              : participantId;
+
+            if (!participantId || !participantName) {
+              continue;
+            }
+
+            await store.addMemberToGroup({
+              groupId: savedConversation.conversationId,
+              participantId,
+              participantName,
+            });
+          }
+        }
 
         if (receiveMessageHandler) {
           try {
@@ -180,7 +223,11 @@ export async function createCommunicationModule(config: {
     contactId?: string;
     content: string;
   }) {
-    const message = await store.saveOutboundMessage(input);
+    const selfAccount = (await store.listSelfAccounts()).find((account) => account.provider === input.provider);
+    const message = await store.saveOutboundMessage({
+      ...input,
+      authorDisplayName: selfAccount?.displayName,
+    });
 
     if (!message) {
       throw new Error('Failed to persist outbound message');
@@ -295,7 +342,10 @@ export async function createCommunicationModule(config: {
     const contactMap = new Map(contacts.map((contact) => [contact.slug, contact]));
 
     return conversations.map((conversation) => {
-      const contactDisplayName = conversation.contactId ? contactMap.get(conversation.contactId)?.displayName : undefined;
+      const contactDisplayName = conversation.type === 'dm' && conversation.contactId
+        ? contactMap.get(conversation.contactId)?.displayName
+        : undefined;
+      const contactSlug = conversation.type === 'dm' ? conversation.contactId : undefined;
 
       return {
         conversationKey: conversation.conversationId,
@@ -304,7 +354,7 @@ export async function createCommunicationModule(config: {
         unreadCount: conversation.unreadCount,
         name: conversation.name,
         type: conversation.type,
-        contactSlug: conversation.contactId,
+        contactSlug,
         contactDisplayName,
         messages: conversation.messages.map((message) => ({
           messageId: message.messageId,
@@ -314,7 +364,7 @@ export async function createCommunicationModule(config: {
           unread: message.unread,
           createdAt: message.createdAt,
           authorDisplayName: message.authorDisplayName,
-          contactSlug: conversation.contactId,
+          contactSlug,
           contactDisplayName,
         })),
       };
@@ -341,8 +391,8 @@ export async function createCommunicationModule(config: {
       unread: message.unread,
       createdAt: message.createdAt,
       authorDisplayName: message.authorDisplayName,
-      contactSlug: conversation?.contactId,
-      contactDisplayName: contact?.displayName,
+      contactSlug: conversation.type === 'dm' ? conversation.contactId : undefined,
+      contactDisplayName: conversation.type === 'dm' ? contact?.displayName : undefined,
     }));
   }
 
@@ -387,44 +437,6 @@ export async function createCommunicationModule(config: {
     if (conversation) {
       if (conversation.provider !== provider.id) {
         throw new Error(`Conversation ${input.conversationKey} does not belong to provider ${provider.id}`);
-      }
-
-      if (conversation.type === 'group') {
-        const selfParticipantIds = new Set(
-          (await store.listSelfAccounts())
-            .filter((account) => account.provider === provider.id)
-            .map((account) => account.externalAccountId),
-        );
-        const recipients = (await store.listGroupMembers(conversation.conversationId)).filter(
-          (member) => !selfParticipantIds.has(member.participantId),
-        );
-
-        if (recipients.length === 0) {
-          throw new Error(`Chat group has no reachable recipients: ${conversation.conversationId}`);
-        }
-
-        const sentMessages = await Promise.all(
-          recipients.map((member) =>
-            provider.sendMessage({
-              providerConversationKey: conversation.providerConversationKey,
-              contactExternalId: member.participantId,
-              conversationName: conversation.name,
-              conversationType: conversation.type,
-              content: input.content,
-              replyToProviderMessageId: replyMessage?.providerMessageId,
-            }),
-          ),
-        );
-        const firstSent = sentMessages[0]!;
-
-        return saveSentMessage({
-          provider: provider.id,
-          providerConversationKey: conversation.providerConversationKey,
-          providerMessageId: firstSent.providerMessageId,
-          conversationName: conversation.name ?? firstSent.conversationName,
-          contactId: conversation.contactId,
-          content: input.content,
-        });
       }
 
       let contactExternalId: string | null = null;
@@ -528,7 +540,7 @@ export async function createCommunicationModule(config: {
     }
 
     const member = await store.addMemberToGroup({
-      groupId: input.groupId,
+      groupId: group.conversationId,
       participantId,
       participantName: contact.displayName,
       role: input.role,
@@ -564,7 +576,7 @@ export async function createCommunicationModule(config: {
     }
 
     await store.removeMemberFromGroup({
-      groupId: input.groupId,
+      groupId: group.conversationId,
       participantId,
     });
 
@@ -595,7 +607,7 @@ export async function createCommunicationModule(config: {
       throw new Error('Chat group not found');
     }
 
-    const members = await store.listGroupMembers(groupId);
+    const members = await store.listGroupMembers(group.conversationId);
 
     return Promise.all(
       members.map(async (member) => {

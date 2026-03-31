@@ -27,6 +27,7 @@ import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import type { GitHubAppManager } from '../github/manager';
 import { createSystemSettingsStore } from '../system-settings/store';
+import type { InternalChatService } from '../communication/internal-chat-service';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -51,6 +52,7 @@ export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
   githubApps: GitHubAppManager;
+  internalChat: InternalChatService;
 }) {
   const db = input.db;
   const finance = createMicroErpReadModel(db);
@@ -194,7 +196,7 @@ export function createAdminReadModel(input: {
           agentId,
           limit: RECENT_NOTIFICATION_LIMIT,
         }),
-        listRecentConversations(input.workspaceBasePath, agentId, agent.name),
+        listRecentConversations(input.workspaceBasePath, input.internalChat, agentId, agent.name),
         input.githubApps.getAgentProvisioning(agentId),
       ]);
     const registry = getInternalAgentRegistry();
@@ -453,7 +455,23 @@ export function createAdminReadModel(input: {
   };
 }
 
-async function listRecentConversations(workspaceBasePath: string, agentId: string, agentName: string) {
+async function listRecentConversations(
+  workspaceBasePath: string,
+  internalChat: InternalChatService,
+  agentId: string,
+  agentName: string,
+) {
+  const [externalConversations, internalConversations] = await Promise.all([
+    listRecentExternalConversations(workspaceBasePath, agentId, agentName),
+    listRecentInternalChatConversations(internalChat, agentId, agentName),
+  ]);
+
+  return [...internalConversations, ...externalConversations]
+    .sort((left, right) => Number(right.updatedAt) - Number(left.updatedAt))
+    .slice(0, RECENT_CONVERSATION_LIMIT);
+}
+
+async function listRecentExternalConversations(workspaceBasePath: string, agentId: string, agentName: string) {
   try {
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
     const client = createClient({
@@ -511,7 +529,7 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
 
       return {
         conversationId: conversation.conversationId,
-        conversationKey: conversation.providerConversationKey,
+        conversationKey: conversation.conversationId,
         provider: conversation.provider,
         type: conversation.type,
         name: conversation.name ?? undefined,
@@ -532,6 +550,54 @@ async function listRecentConversations(workspaceBasePath: string, agentId: strin
     });
   } catch (error) {
     console.error(`[AdminReadModel] Failed to load recent conversations for agent ${agentId}:`, error);
+    return [];
+  }
+}
+
+async function listRecentInternalChatConversations(
+  internalChat: InternalChatService,
+  agentId: string,
+  agentName: string,
+) {
+  try {
+    const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
+
+    return rows.map((conversation) => {
+      const participants = new Set<string>();
+
+      if (conversation.contactDisplayName) {
+        participants.add(conversation.contactDisplayName);
+      }
+
+      participants.add(agentName);
+
+      for (const message of conversation.messages) {
+        if (message.authorDisplayName) {
+          participants.add(message.authorDisplayName);
+        }
+      }
+
+      return {
+        conversationId: conversation.conversationKey,
+        conversationKey: conversation.conversationKey,
+        provider: conversation.provider,
+        type: conversation.type,
+        name: conversation.name ?? undefined,
+        contactId: conversation.contactSlug ?? undefined,
+        contactDisplayName: conversation.contactDisplayName ?? undefined,
+        participants: [...participants],
+        updatedAt: Date.parse(conversation.latestMessageAt) || 0,
+        messages: conversation.messages.map((message) => ({
+          messageId: message.messageId,
+          content: message.content,
+          unread: message.unread,
+          authorDisplayName: message.authorDisplayName ?? agentName,
+          createdAt: Date.parse(message.createdAt) || 0,
+        })),
+      };
+    });
+  } catch (error) {
+    console.error(`[AdminReadModel] Failed to load internal-chat conversations for agent ${agentId}:`, error);
     return [];
   }
 }

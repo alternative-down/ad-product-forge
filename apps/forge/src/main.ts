@@ -17,6 +17,7 @@ import { createAgentScheduleManager } from './schedules/manager';
 import { createAgentPendingSummaryReader } from './agents/pending-summary';
 import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
+import { createInternalChatService } from './communication/internal-chat-service';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -40,6 +41,7 @@ export async function main() {
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   const integrations = createSystemIntegrationStore(db);
+  const internalChat = createInternalChatService(db);
 
   const emailMailboxes = createAgentEmailManager({
     db,
@@ -48,6 +50,7 @@ export async function main() {
   const getAgentPendingSummary = createAgentPendingSummaryReader({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    internalChat,
   });
   const schedules = createAgentScheduleManager({
     db,
@@ -114,6 +117,7 @@ export async function main() {
     emailMailboxes,
     coolify,
     schedules,
+    internalChat,
   });
   const loaderConfig = {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
@@ -122,6 +126,7 @@ export async function main() {
     coolify,
     minimax,
     schedules,
+    internalChat,
   };
   registerAdminRoutes({
     db,
@@ -133,6 +138,7 @@ export async function main() {
     emailMailboxes,
     coolify,
     integrations,
+    internalChat,
   });
   const agents = await registry.loadAll(db, loaderConfig);
   await githubApps.loadAllAgents();

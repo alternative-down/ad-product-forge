@@ -8,6 +8,7 @@ export * from './llm/auth/anthropic';
 export * from './agent/communication/module';
 export * from './agent/communication/index';
 export * from './agent/communication/tools';
+export * from './agent/communication/conversation-key';
 export * from './agent/wake-queue';
 export * from './agent/tools/market-research';
 export * from './agent/communication/provider-types';

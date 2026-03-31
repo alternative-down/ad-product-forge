@@ -1,0 +1,798 @@
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { customAlphabet } from 'nanoid';
+
+import type {
+  CommunicationConversationView,
+  CommunicationInboundMessage,
+  CommunicationMessageView,
+} from '@mastra-engine/core';
+
+import type { Database } from '../database/index';
+import {
+  internalChatAccounts,
+  internalChatConversationMembers,
+  internalChatConversations,
+  internalChatMessageReads,
+  internalChatMessages,
+} from '../database/schema';
+import { createId } from '../utils/id';
+
+type InternalChatHandler = (message: CommunicationInboundMessage) => Promise<void> | void;
+
+const createSlugSuffix = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
+
+type InternalChatGroupMember = {
+  groupId: string;
+  participantSlug: string;
+  participantName: string;
+  role: string;
+  createdAt: string;
+};
+
+function createInternalChatSlug(displayName: string) {
+  const baseSlug = displayName
+    .trim()
+    .split(/\s+/)[0]
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'agent';
+
+  return `${baseSlug}-${createSlugSuffix()}`;
+}
+
+export function createInternalChatService(db: Database) {
+  const handlers = new Map<string, InternalChatHandler>();
+
+  async function registerAgentAccount(input: {
+    agentId: string;
+    displayName: string;
+    description?: string;
+  }) {
+    const now = Date.now();
+    const existing = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.agentId, input.agentId),
+    });
+
+    if (existing) {
+      await db
+        .update(internalChatAccounts)
+        .set({
+          displayName: input.displayName,
+          description: input.description ?? null,
+          updatedAt: now,
+        })
+        .where(eq(internalChatAccounts.agentId, input.agentId));
+
+      return {
+        agentId: input.agentId,
+        slug: existing.slug,
+        displayName: input.displayName,
+        description: input.description,
+      };
+    }
+
+    const slug = createInternalChatSlug(input.displayName);
+
+    await db.insert(internalChatAccounts).values({
+      agentId: input.agentId,
+      slug,
+      displayName: input.displayName,
+      description: input.description ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      agentId: input.agentId,
+      slug,
+      displayName: input.displayName,
+      description: input.description,
+    };
+  }
+
+  function onReceiveMessage(agentId: string, handler: InternalChatHandler) {
+    handlers.set(agentId, handler);
+  }
+
+  function clearHandler(agentId: string) {
+    handlers.delete(agentId);
+  }
+
+  async function listAccounts(input: { excludeAgentId?: string } = {}) {
+    const rows = await db.query.internalChatAccounts.findMany({
+      orderBy: (fields, { asc }) => [asc(fields.displayName)],
+    });
+
+    return rows.filter((row) => row.agentId !== input.excludeAgentId);
+  }
+
+  async function getAccountBySlug(slug: string) {
+    return db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.slug, slug),
+    });
+  }
+
+  async function getAccountByAgentId(agentId: string) {
+    return db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.agentId, agentId),
+    });
+  }
+
+  async function getConversationForAgent(agentId: string, conversationId: string) {
+    const membership = await db.query.internalChatConversationMembers.findFirst({
+      where: and(
+        eq(internalChatConversationMembers.agentId, agentId),
+        eq(internalChatConversationMembers.conversationId, conversationId),
+      ),
+    });
+
+    if (!membership) {
+      return null;
+    }
+
+    return db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, conversationId),
+    });
+  }
+
+  async function ensureDirectConversation(leftAgentId: string, rightAgentId: string) {
+    const rows = await db
+      .select({
+        conversationId: internalChatConversationMembers.conversationId,
+      })
+      .from(internalChatConversationMembers)
+      .where(inArray(internalChatConversationMembers.agentId, [leftAgentId, rightAgentId]));
+
+    const counts = new Map<string, number>();
+
+    for (const row of rows) {
+      counts.set(row.conversationId, (counts.get(row.conversationId) ?? 0) + 1);
+    }
+
+    const candidateConversationIds = Array.from(counts.entries())
+      .filter(([, count]) => count === 2)
+      .map(([conversationId]) => conversationId);
+
+    if (candidateConversationIds.length > 0) {
+      const existing = await db.query.internalChatConversations.findFirst({
+        where: and(
+          eq(internalChatConversations.type, 'dm'),
+          inArray(internalChatConversations.id, candidateConversationIds),
+        ),
+      });
+
+      if (existing) {
+        return existing;
+      }
+    }
+
+    const now = Date.now();
+    const conversationId = `conv_${createId()}`;
+
+    await db.insert(internalChatConversations).values({
+      id: conversationId,
+      type: 'dm',
+      name: null,
+      createdByAgentId: leftAgentId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db.insert(internalChatConversationMembers).values([
+      {
+        conversationId,
+        agentId: leftAgentId,
+        role: 'normal',
+        createdAt: now,
+      },
+      {
+        conversationId,
+        agentId: rightAgentId,
+        role: 'normal',
+        createdAt: now,
+      },
+    ]);
+
+    return db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, conversationId),
+    });
+  }
+
+  async function createChatGroup(input: {
+    agentId: string;
+    conversationKey: string;
+    name: string;
+    creatorName: string;
+  }) {
+    const existing = await db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, input.conversationKey),
+    });
+
+    if (existing) {
+      throw new Error(`Chat group already exists: ${input.conversationKey}`);
+    }
+
+    const now = Date.now();
+
+    await db.insert(internalChatConversations).values({
+      id: input.conversationKey,
+      type: 'group',
+      name: input.name,
+      createdByAgentId: input.agentId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db.insert(internalChatConversationMembers).values({
+      conversationId: input.conversationKey,
+      agentId: input.agentId,
+      role: 'admin',
+      createdAt: now,
+    });
+
+    return {
+      groupId: input.conversationKey,
+      name: input.name,
+      provider: 'internal-chat',
+      conversationKey: input.conversationKey,
+      creatorMember: {
+        participantId: input.agentId,
+        participantName: input.creatorName,
+        role: 'admin',
+      },
+      createdAt: new Date(now).toISOString(),
+    };
+  }
+
+  async function addMemberToGroup(input: {
+    agentId: string;
+    groupId: string;
+    participantSlug: string;
+    role?: string;
+  }) {
+    const group = await getRequiredGroupForAgent(input.agentId, input.groupId);
+    const participant = await getRequiredAccountBySlug(input.participantSlug);
+    const now = Date.now();
+
+    const existing = await db.query.internalChatConversationMembers.findFirst({
+      where: and(
+        eq(internalChatConversationMembers.conversationId, group.id),
+        eq(internalChatConversationMembers.agentId, participant.agentId),
+      ),
+    });
+
+    if (existing) {
+      throw new Error(`Group member already exists: ${input.participantSlug}`);
+    }
+
+    await db.insert(internalChatConversationMembers).values({
+      conversationId: group.id,
+      agentId: participant.agentId,
+      role: input.role ?? 'normal',
+      createdAt: now,
+    });
+
+    return {
+      groupId: group.id,
+      participantSlug: participant.slug,
+      participantName: participant.displayName,
+      role: input.role ?? 'normal',
+      createdAt: new Date(now).toISOString(),
+    };
+  }
+
+  async function removeMemberFromGroup(input: {
+    agentId: string;
+    groupId: string;
+    participantSlug: string;
+  }) {
+    await getRequiredGroupForAgent(input.agentId, input.groupId);
+    const participant = await getRequiredAccountBySlug(input.participantSlug);
+
+    await db
+      .delete(internalChatConversationMembers)
+      .where(and(
+        eq(internalChatConversationMembers.conversationId, input.groupId),
+        eq(internalChatConversationMembers.agentId, participant.agentId),
+      ));
+
+    return {
+      success: true,
+      groupId: input.groupId,
+      participantSlug: participant.slug,
+    };
+  }
+
+  async function listChatGroups(input: {
+    agentId: string;
+    limit: number;
+  }) {
+    const rows = await db
+      .select({
+        id: internalChatConversations.id,
+        name: internalChatConversations.name,
+        createdAt: internalChatConversations.createdAt,
+        updatedAt: internalChatConversations.updatedAt,
+      })
+      .from(internalChatConversations)
+      .innerJoin(
+        internalChatConversationMembers,
+        eq(internalChatConversationMembers.conversationId, internalChatConversations.id),
+      )
+      .where(and(
+        eq(internalChatConversations.type, 'group'),
+        eq(internalChatConversationMembers.agentId, input.agentId),
+      ))
+      .orderBy(desc(internalChatConversations.updatedAt))
+      .limit(input.limit);
+
+    return rows.map((row) => ({
+      groupId: row.id,
+      name: row.name ?? row.id,
+      provider: 'internal-chat',
+      conversationKey: row.id,
+      createdAt: new Date(row.createdAt).toISOString(),
+      updatedAt: new Date(row.updatedAt).toISOString(),
+    }));
+  }
+
+  async function listGroupMembers(input: { agentId: string; groupId: string }): Promise<InternalChatGroupMember[]> {
+    await getRequiredGroupForAgent(input.agentId, input.groupId);
+
+    const rows = await db
+      .select({
+        groupId: internalChatConversationMembers.conversationId,
+        participantSlug: internalChatAccounts.slug,
+        participantName: internalChatAccounts.displayName,
+        role: internalChatConversationMembers.role,
+        createdAt: internalChatConversationMembers.createdAt,
+      })
+      .from(internalChatConversationMembers)
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.agentId, internalChatConversationMembers.agentId),
+      )
+      .where(eq(internalChatConversationMembers.conversationId, input.groupId));
+
+    return rows.map((row) => ({
+      ...row,
+      createdAt: new Date(row.createdAt).toISOString(),
+    }));
+  }
+
+  async function listConversations(input: {
+    agentId: string;
+    unread?: boolean;
+    limit: number;
+  }): Promise<CommunicationConversationView[]> {
+    const conversationRows = await db
+      .select({
+        id: internalChatConversations.id,
+        name: internalChatConversations.name,
+        type: internalChatConversations.type,
+        updatedAt: internalChatConversations.updatedAt,
+      })
+      .from(internalChatConversations)
+      .innerJoin(
+        internalChatConversationMembers,
+        eq(internalChatConversationMembers.conversationId, internalChatConversations.id),
+      )
+      .where(eq(internalChatConversationMembers.agentId, input.agentId))
+      .orderBy(desc(internalChatConversations.updatedAt))
+      .limit(input.limit);
+
+    const conversationIds = conversationRows.map((row) => row.id);
+
+    if (conversationIds.length === 0) {
+      return [];
+    }
+
+    const messageRows = await db
+      .select({
+        conversationId: internalChatMessages.conversationId,
+        messageId: internalChatMessages.id,
+        content: internalChatMessages.content,
+        createdAt: internalChatMessages.createdAt,
+        authorDisplayName: internalChatAccounts.displayName,
+        authorSlug: internalChatAccounts.slug,
+        unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
+      })
+      .from(internalChatMessages)
+      .innerJoin(
+        internalChatMessageReads,
+        and(
+          eq(internalChatMessageReads.messageId, internalChatMessages.id),
+          eq(internalChatMessageReads.agentId, input.agentId),
+        ),
+      )
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.agentId, internalChatMessages.authorAgentId),
+      )
+      .where(inArray(internalChatMessages.conversationId, conversationIds))
+      .orderBy(desc(internalChatMessages.createdAt));
+
+    const messageIdsToMarkRead = new Set<string>();
+
+    const messagesByConversationId = new Map<string, CommunicationMessageView[]>();
+    const unreadCountByConversationId = new Map<string, number>();
+
+    for (const row of messageRows) {
+      unreadCountByConversationId.set(
+        row.conversationId,
+        (unreadCountByConversationId.get(row.conversationId) ?? 0) + (row.unread ? 1 : 0),
+      );
+
+      const existing = messagesByConversationId.get(row.conversationId) ?? [];
+
+      if (existing.length < 5) {
+        existing.push({
+          messageId: row.messageId,
+          provider: 'internal-chat',
+          content: row.content,
+          attachments: [],
+          unread: row.unread === 1,
+          createdAt: new Date(row.createdAt).toISOString(),
+          authorDisplayName: row.authorDisplayName,
+          contactSlug: row.authorSlug,
+          contactDisplayName: row.authorDisplayName,
+        });
+
+        if (row.unread === 1) {
+          messageIdsToMarkRead.add(row.messageId);
+        }
+      }
+
+      messagesByConversationId.set(row.conversationId, existing);
+    }
+
+    if (messageIdsToMarkRead.size > 0) {
+      const now = Date.now();
+
+      await db
+        .update(internalChatMessageReads)
+        .set({ readAt: now })
+        .where(and(
+          eq(internalChatMessageReads.agentId, input.agentId),
+          inArray(internalChatMessageReads.messageId, Array.from(messageIdsToMarkRead)),
+        ));
+    }
+
+    const views = await Promise.all(
+      conversationRows.map(async (conversation) => {
+        const participants = await listGroupMembersOrDmPeers(input.agentId, conversation.id);
+        const firstPeer = participants.find((participant) => participant.agentId !== input.agentId) ?? null;
+
+        return {
+          conversationKey: conversation.id,
+          provider: 'internal-chat',
+          latestMessageAt: new Date(conversation.updatedAt).toISOString(),
+          unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
+          name: conversation.name ?? undefined,
+          type: conversation.type,
+          contactSlug: conversation.type === 'dm' ? firstPeer?.slug : undefined,
+          contactDisplayName: conversation.type === 'dm' ? firstPeer?.displayName : undefined,
+          messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
+        };
+      }),
+    );
+
+    if (!input.unread) {
+      return views;
+    }
+
+    return views.filter((view) => view.unreadCount > 0);
+  }
+
+  async function getMessages(input: {
+    agentId: string;
+    conversationKey: string;
+    limit: number;
+  }): Promise<CommunicationMessageView[]> {
+    await requireConversationMembership(input.agentId, input.conversationKey);
+
+    const rows = await db
+      .select({
+        messageId: internalChatMessages.id,
+        content: internalChatMessages.content,
+        createdAt: internalChatMessages.createdAt,
+        authorDisplayName: internalChatAccounts.displayName,
+        authorSlug: internalChatAccounts.slug,
+        unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
+      })
+      .from(internalChatMessages)
+      .innerJoin(
+        internalChatMessageReads,
+        and(
+          eq(internalChatMessageReads.messageId, internalChatMessages.id),
+          eq(internalChatMessageReads.agentId, input.agentId),
+        ),
+      )
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.agentId, internalChatMessages.authorAgentId),
+      )
+      .where(eq(internalChatMessages.conversationId, input.conversationKey))
+      .orderBy(desc(internalChatMessages.createdAt))
+      .limit(input.limit);
+
+    const unreadMessageIds = rows.filter((row) => row.unread === 1).map((row) => row.messageId);
+
+    if (unreadMessageIds.length > 0) {
+      await db
+        .update(internalChatMessageReads)
+        .set({ readAt: Date.now() })
+        .where(and(
+          eq(internalChatMessageReads.agentId, input.agentId),
+          inArray(internalChatMessageReads.messageId, unreadMessageIds),
+        ));
+    }
+
+    return rows.reverse().map((row) => ({
+      messageId: row.messageId,
+      provider: 'internal-chat',
+      content: row.content,
+      attachments: [],
+      unread: row.unread === 1,
+      createdAt: new Date(row.createdAt).toISOString(),
+      authorDisplayName: row.authorDisplayName,
+      contactSlug: row.authorSlug,
+      contactDisplayName: row.authorDisplayName,
+    }));
+  }
+
+  async function sendMessage(input: {
+    agentId: string;
+    conversationKey: string;
+    content: string;
+    replyToMessageId?: string;
+  }) {
+    const directReference = parseInternalChatReference(input.conversationKey);
+    const conversation = directReference
+      ? await ensureDirectConversation(input.agentId, (await getRequiredAccountBySlug(directReference.contactSlug)).agentId)
+      : await getRequiredConversationForAgent(input.agentId, input.conversationKey);
+
+    if (!conversation) {
+      throw new Error(`Conversation not found: ${input.conversationKey}`);
+    }
+
+    const now = Date.now();
+    const messageId = `msg_${createId()}`;
+    const members = await db.query.internalChatConversationMembers.findMany({
+      where: eq(internalChatConversationMembers.conversationId, conversation.id),
+    });
+
+    await db.insert(internalChatMessages).values({
+      id: messageId,
+      conversationId: conversation.id,
+      authorAgentId: input.agentId,
+      content: input.content,
+      replyToMessageId: input.replyToMessageId ?? null,
+      createdAt: now,
+    });
+
+    await db.insert(internalChatMessageReads).values(
+      members.map((member) => ({
+        messageId,
+        agentId: member.agentId,
+        readAt: member.agentId === input.agentId ? now : null,
+      })),
+    );
+
+    await db
+      .update(internalChatConversations)
+      .set({
+        updatedAt: now,
+      })
+      .where(eq(internalChatConversations.id, conversation.id));
+
+    const author = await getRequiredAccount(input.agentId);
+    const participants = await listGroupMembersOrDmPeers(input.agentId, conversation.id);
+
+    const deliveries: Array<Promise<void>> = [];
+
+    for (const participant of participants) {
+      if (participant.agentId === input.agentId) {
+        continue;
+      }
+
+      const handler = handlers.get(participant.agentId);
+
+      if (!handler) {
+        continue;
+      }
+
+      deliveries.push(Promise.resolve(handler({
+        providerConversationKey: conversation.id,
+        providerMessageId: messageId,
+        conversationName: conversation.name ?? (conversation.type === 'dm' ? author.displayName : undefined),
+        authorExternalId: author.agentId,
+        authorDisplayName: author.displayName,
+        authorUsername: author.slug,
+        content: input.content,
+        attachments: [],
+        createdAt: new Date(now).toISOString(),
+        metadata: {
+          replyToProviderMessageId: input.replyToMessageId,
+          conversationType: conversation.type,
+          groupMembers: conversation.type === 'group'
+            ? participants.map((member) => ({
+                agentId: member.agentId,
+                slug: member.slug,
+                displayName: member.displayName,
+              }))
+            : undefined,
+        },
+      })));
+    }
+
+    if (deliveries.length > 0) {
+      await Promise.all(deliveries);
+    }
+
+    return {
+      success: true,
+      messageId,
+      conversationKey: conversation.id,
+    };
+  }
+
+  async function getUnreadSummary(agentId: string) {
+    const rows = await db
+      .select({
+        unreadMessageCount: sql<number>`count(*)`,
+        unreadConversationCount: sql<number>`count(distinct ${internalChatMessages.conversationId})`,
+      })
+      .from(internalChatMessageReads)
+      .innerJoin(
+        internalChatMessages,
+        eq(internalChatMessages.id, internalChatMessageReads.messageId),
+      )
+      .where(and(
+        eq(internalChatMessageReads.agentId, agentId),
+        isNull(internalChatMessageReads.readAt),
+      ));
+
+    return {
+      unreadMessageCount: rows[0]?.unreadMessageCount ?? 0,
+      unreadConversationCount: rows[0]?.unreadConversationCount ?? 0,
+    };
+  }
+
+  async function listRecentConversations(agentId: string, limit: number) {
+    return listConversations({
+      agentId,
+      limit,
+    });
+  }
+
+  async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
+    const rows = await db
+      .select({
+        agentId: internalChatConversationMembers.agentId,
+        slug: internalChatAccounts.slug,
+        displayName: internalChatAccounts.displayName,
+      })
+      .from(internalChatConversationMembers)
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.agentId, internalChatConversationMembers.agentId),
+      )
+      .where(eq(internalChatConversationMembers.conversationId, conversationId));
+
+    return rows.sort((left, right) => {
+      if (left.agentId === agentId) {
+        return -1;
+      }
+
+      if (right.agentId === agentId) {
+        return 1;
+      }
+
+      return left.displayName.localeCompare(right.displayName);
+    });
+  }
+
+  async function getRequiredAccount(agentId: string) {
+    const account = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.agentId, agentId),
+    });
+
+    if (!account) {
+      throw new Error(`Internal chat account not found: ${agentId}`);
+    }
+
+    return account;
+  }
+
+  async function getRequiredAccountBySlug(slug: string) {
+    const account = await getAccountBySlug(slug);
+
+    if (!account) {
+      throw new Error(`Contact not found: ${slug}`);
+    }
+
+    return account;
+  }
+
+  async function requireConversationMembership(agentId: string, conversationId: string) {
+    const membership = await db.query.internalChatConversationMembers.findFirst({
+      where: and(
+        eq(internalChatConversationMembers.agentId, agentId),
+        eq(internalChatConversationMembers.conversationId, conversationId),
+      ),
+    });
+
+    if (!membership) {
+      throw new Error(`Conversation not found: ${conversationId}`);
+    }
+  }
+
+  async function getRequiredConversationForAgent(agentId: string, conversationId: string) {
+    await requireConversationMembership(agentId, conversationId);
+
+    const conversation = await db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, conversationId),
+    });
+
+    if (!conversation) {
+      throw new Error(`Conversation not found: ${conversationId}`);
+    }
+
+    return conversation;
+  }
+
+  async function getRequiredGroupForAgent(agentId: string, groupId: string) {
+    const group = await getRequiredConversationForAgent(agentId, groupId);
+
+    if (group.type !== 'group') {
+      throw new Error(`Chat group not found: ${groupId}`);
+    }
+
+    return group;
+  }
+
+  function parseInternalChatReference(conversationKey: string) {
+    const separatorIndex = conversationKey.indexOf(':');
+
+    if (separatorIndex <= 0) {
+      return null;
+    }
+
+    const provider = conversationKey.slice(0, separatorIndex);
+    const contactSlug = conversationKey.slice(separatorIndex + 1);
+
+    if (provider !== 'internal-chat' || !contactSlug) {
+      return null;
+    }
+
+    return {
+      contactSlug,
+    };
+  }
+
+  return {
+    registerAgentAccount,
+    onReceiveMessage,
+    clearHandler,
+    listAccounts,
+    getAccountBySlug,
+    getAccountByAgentId,
+    getConversationForAgent,
+    createChatGroup,
+    addMemberToGroup,
+    removeMemberFromGroup,
+    listChatGroups,
+    listGroupMembers,
+    listConversations,
+    getMessages,
+    sendMessage,
+    getUnreadSummary,
+    listRecentConversations,
+  };
+}
+
+export type InternalChatService = ReturnType<typeof createInternalChatService>;

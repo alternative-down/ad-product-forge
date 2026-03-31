@@ -33,6 +33,7 @@ function hasCreateThread(store: unknown): store is MastraMemoryStore {
 }
 import {
   createCommunicationModule,
+  type CommunicationModule,
   type CommunicationProvider,
   createExternalAccountTools,
   LongTermMemory,
@@ -60,6 +61,7 @@ export type CreateForgeAgentConfig<
   companyName?: string;
   companyContext?: string;
   providers?: CommunicationProvider[];
+  communication?: CommunicationModule;
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
   workspaceSkills?: WorkspaceSkillsConfig;
@@ -108,6 +110,7 @@ export interface CreateAgentConfig<
   | 'companyName'
   | 'companyContext'
   | 'providers'
+  | 'communication'
   | 'workspaceFilesystem'
   | 'workspaceSandbox'
   | 'workspaceSkills'
@@ -237,7 +240,7 @@ export async function createInternalAgentRuntime<
     });
   }
 
-  const communication = await createCommunicationModule({
+  const communication = config.communication ?? await createCommunicationModule({
     client,
     providers: config.providers ?? [],
   });

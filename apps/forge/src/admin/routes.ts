@@ -34,6 +34,7 @@ import { encryptSecret } from '../encryption/crypto';
 import { parseProviderCredentials } from '../communication/provider-loader';
 import { createId } from '../utils/id';
 import { createSystemIntegrationStore } from '../system-integrations/store';
+import type { InternalChatService } from '../communication/internal-chat-service';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createLlmSettingsStore } from '../llm/settings-store';
@@ -324,11 +325,13 @@ export function registerAdminRoutes(input: {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
+  internalChat: InternalChatService;
 }) {
   const readModel = createAdminReadModel({
     db: input.db,
     workspaceBasePath: input.workspaceBasePath,
     githubApps: input.githubApps,
+    internalChat: input.internalChat,
   });
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
@@ -524,6 +527,7 @@ export function registerAdminRoutes(input: {
         emailMailboxes: input.emailMailboxes,
         coolify: input.coolify,
         schedules: input.schedules,
+        internalChat: input.internalChat,
       });
 
       return jsonResponse(result, 201);
