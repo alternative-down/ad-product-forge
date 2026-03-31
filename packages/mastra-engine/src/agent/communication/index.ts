@@ -37,7 +37,6 @@ export {
   communicationConversations,
   communicationMessages,
   chatGroupMembers,
-  mastraInstances,
   type CommunicationAccount,
   type NewCommunicationAccount,
   type CommunicationContact,
@@ -50,8 +49,6 @@ export {
   type NewCommunicationMessage,
   type ChatGroupMember,
   type NewChatGroupMember,
-  type MastraInstance,
-  type NewMastraInstance,
 } from './schema';
 
 export type { Attachment } from './store';

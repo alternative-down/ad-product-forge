@@ -17,8 +17,6 @@ import { createAgentScheduleManager } from './schedules/manager';
 import { createAgentPendingSummaryReader } from './agents/pending-summary';
 import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
-import { createPropagateMessageFn } from './fanout/client';
-import { registerFanOutRoutes } from './fanout/routes';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -27,7 +25,6 @@ const envSchema = z.object({
   FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
   FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
-  FORGE_INSTANCE_ID: z.string().default('default'),
 });
 
 export async function main() {
@@ -125,7 +122,6 @@ export async function main() {
     coolify,
     minimax,
     schedules,
-    propagateMessage: createPropagateMessageFn(db, env.FORGE_INSTANCE_ID) as (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>,
   };
   registerAdminRoutes({
     db,
@@ -141,91 +137,6 @@ export async function main() {
   const agents = await registry.loadAll(db, loaderConfig);
   await githubApps.loadAllAgents();
   await schedules.loadAll();
-
-  // Register fan-out routes for cross-instance message propagation
-  registerFanOutRoutes(
-    (route) => httpServer.registerRoute(route),
-    {
-      getInstances: async () => {
-        const instances = await db.query.mastraInstances.findMany();
-        return instances.map((i) => ({
-          id: i.instanceId,
-          url: i.baseUrl,
-          isHealthy: true, // TODO: implement health checks
-        }));
-      },
-      getParticipantsForConversation: async (conversationId: string) => {
-        // Query all agent workspaces for group members
-        const allAgents = await db.query.agents.findMany();
-        const participants: { participantId: string; participantName: string; instanceId: string | null }[] = [];
-
-        for (const agent of allAgents) {
-          const { getGroupMembersFromWorkspace } = await import('./fanout/group-members');
-          const members = await getGroupMembersFromWorkspace(
-            agent.id,
-            env.WORKSPACE_BASE_PATH,
-            conversationId
-          );
-          participants.push(...members);
-        }
-
-        return participants;
-      },
-      deliverMessageToParticipant: async (participantId: string, instanceId: string, message: unknown) => {
-        const entry = registry.get(participantId);
-        if (!entry) {
-          return { success: false, error: `Agent ${participantId} not found` };
-        }
-
-        try {
-          const propagatedMessage =
-            typeof message === 'object' && message !== null
-              ? message as {
-                  conversationId?: string;
-                  content?: string;
-                  senderId?: string;
-                  senderName?: string;
-                  timestamp?: string;
-                  metadata?: Record<string, unknown>;
-                }
-              : null;
-          const timestamp = propagatedMessage?.timestamp
-            ? Date.parse(propagatedMessage.timestamp) || Date.now()
-            : Date.now();
-
-          entry.runner.notifyExternalEvent({
-            type: 'message:internal-chat',
-            groupKey: propagatedMessage?.conversationId
-              ? `message:internal-chat:${propagatedMessage.conversationId}`
-              : `fanout:${participantId}`,
-            groupMetadata: {
-              Provider: 'internal-chat',
-              ...(propagatedMessage?.conversationId ? { ConversationKey: propagatedMessage.conversationId } : {}),
-              ...(instanceId ? { SourceInstanceId: instanceId } : {}),
-            },
-            idempotencyKey:
-              typeof propagatedMessage?.metadata?.providerMessageId === 'string'
-                ? propagatedMessage.metadata.providerMessageId
-                : `fanout:${participantId}:${timestamp}`,
-            itemMetadata: {
-              ...(propagatedMessage?.senderName ? { Author: propagatedMessage.senderName } : {}),
-              ...(propagatedMessage?.senderId ? { Slug: propagatedMessage.senderId } : {}),
-            },
-            text:
-              typeof propagatedMessage?.content === 'string'
-                ? propagatedMessage.content
-                : typeof message === 'string'
-                  ? message
-                  : JSON.stringify(message),
-            timestamp,
-          });
-          return { success: true };
-        } catch (error) {
-          return { success: false, error: String(error) };
-        }
-      },
-    }
-  );
 
   await httpServer.start();
   console.log(`[Forge] HTTP server listening on ${publicBaseUrl}`);

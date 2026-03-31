@@ -29,6 +29,13 @@
       "when": 1774825161701,
       "tag": "0003_seed_system_llm_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1774921357487,
+      "tag": "0004_nosy_alex_wilder",
+      "breakpoints": true
     }
   ]
 }

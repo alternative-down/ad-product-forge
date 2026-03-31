@@ -13,7 +13,6 @@ type RegisteredAgent = {
 type GroupMember = {
   id: string;
   displayName: string;
-  instanceId: string | null;
 };
 
 export function createInternalChatPreset() {
@@ -25,7 +24,6 @@ export function createInternalChatPreset() {
       displayName: string;
       description?: string;
       getGroupMembers?: (groupId: string) => Promise<GroupMember[]>;
-      propagateMessage?: (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>;
     }): CommunicationProvider {
       const agent: RegisteredAgent = {
         id: config.id,
@@ -79,35 +77,14 @@ export function createInternalChatPreset() {
             const providerMessageId = `internal:${crypto.randomUUID()}`;
             const timestamp = new Date().toISOString();
 
-            // Separate local members (same instance) from remote members (other instances)
-            const localMembers = groupMembers.filter((m) => m.instanceId === null);
-            const remoteMembers = groupMembers.filter((m) => m.instanceId !== null);
-
-            // Build the message payload for propagation
-            const messagePayload = {
-              conversationId: groupId,
-              content: input.content,
-              senderId: config.id,
-              senderName: config.displayName,
-              timestamp,
-              metadata: {
-                replyToProviderMessageId: input.replyToProviderMessageId,
-                groupDelivery: true,
-                providerMessageId,
-              },
-            };
-
-            // Deliver message to each local group member
-            const localDeliveryPromises = localMembers.map(async (member) => {
+            const deliveryPromises = groupMembers.map(async (member) => {
               const memberAgent = agents.get(member.id);
-              
+
               if (!memberAgent) {
-                // Agent not registered in this instance, skip silently
                 return;
               }
 
               if (!memberAgent.onMessage) {
-                // Agent not listening, skip silently
                 return;
               }
 
@@ -128,23 +105,7 @@ export function createInternalChatPreset() {
               });
             });
 
-            // Deliver message to remote group members via propagation API
-            const remoteDeliveryPromises = remoteMembers.map(async (member) => {
-              if (!config.propagateMessage) {
-                console.warn(`[InternalChat] Cannot propagate to ${member.id}: propagateMessage not configured`);
-                return;
-              }
-
-              const result = await config.propagateMessage(member.instanceId!, messagePayload);
-              if (!result.success) {
-                console.error(`[InternalChat] Failed to propagate message to ${member.id} on instance ${member.instanceId}:`, result.error);
-              }
-            });
-
-            await Promise.allSettled([
-              ...localDeliveryPromises,
-              ...remoteDeliveryPromises,
-            ]);
+            await Promise.allSettled(deliveryPromises);
 
             return {
               providerConversationKey: groupId!,

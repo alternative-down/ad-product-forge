@@ -33,11 +33,6 @@ export interface AgentLoaderConfig {
   coolify: CoolifyManager | null;
   minimax?: MiniMaxManager;
   schedules: ReturnType<typeof createAgentScheduleManager>;
-  /**
-   * Optional function to propagate messages to remote Mastra instances.
-   * Used for cross-instance fan-out in group messaging.
-   */
-  propagateMessage?: (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>;
 }
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
@@ -133,7 +128,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
 
   const providers = loadCommunicationProviders(providerCredentials, {
     workspaceBasePath: config.workspaceBasePath,
-    propagateMessage: config.propagateMessage,
   });
   const agentWorkspaceDir = agentConfig.workspaceFilesystem?.basePath
     ? path.resolve(
@@ -272,7 +266,6 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         coolify: config.coolify,
         minimax: config.minimax,
         schedules: config.schedules,
-        propagateMessage: config.propagateMessage,
         agentId: agentConfig.id,
       });
       agents.set(agentConfig.id, runtime);

@@ -528,29 +528,6 @@ export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
 }));
 
 /**
- * Mastra Instances - for cross-instance communication fan-out
- * This table is shared with the mastra-engine communication module
- */
-export const mastraInstances = sqliteTable(
-  'mastra_instances',
-  {
-    instanceId: text('instance_id').primaryKey(),
-    baseUrl: text('base_url').notNull(),
-    displayName: text('display_name'),
-    isLocal: integer('is_local').notNull().default(0),
-    createdAt: text('created_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
-  },
-  (table) => ({
-    baseUrlIdx: index('idx_mastra_instances_base_url').on(table.baseUrl),
-    isLocalIdx: index('idx_mastra_instances_is_local').on(table.isLocal),
-  }),
-);
-
-export type MastraInstance = typeof mastraInstances.$inferSelect;
-export type NewMastraInstance = typeof mastraInstances.$inferInsert;
-
-/**
  * MCP Server Configs - Configuration for MCP servers that agents can connect to
  */
 export const mcpServerConfigs = sqliteTable(
