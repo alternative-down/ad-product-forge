@@ -1223,13 +1223,71 @@ function AgentThreadCard(input: {
               </div>
               <div className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</div>
             </div>
-            <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
-              {message.content || '—'}
-            </div>
+            {message.content ? (
+              <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">{message.content}</div>
+            ) : null}
+            {message.reasoning ? (
+              <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                  Reasoning / Thinking
+                </summary>
+                <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
+                  {message.reasoning}
+                </div>
+              </details>
+            ) : null}
+            {message.toolCalls.map((toolCall) => (
+              <details
+                key={`${message.messageId}:${toolCall.toolCallId}:call`}
+                className="mt-3 rounded-lg border border-border bg-background px-3 py-2"
+              >
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                  Tool call: {toolCall.toolName}
+                </summary>
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="text-xs text-muted-foreground">State: {toolCall.state}</div>
+                  <ThreadJsonBlock label="Args" value={toolCall.args} />
+                </div>
+              </details>
+            ))}
+            {message.toolResults.map((toolResult) => (
+              <details
+                key={`${message.messageId}:${toolResult.toolCallId}:result`}
+                className="mt-3 rounded-lg border border-border bg-background px-3 py-2"
+              >
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                  Tool result: {toolResult.toolName}
+                </summary>
+                <div className="mt-3 space-y-2 text-sm">
+                  <ThreadJsonBlock label="Args" value={toolResult.args} />
+                  <ThreadJsonBlock label="Result" value={toolResult.result} />
+                </div>
+              </details>
+            ))}
+            {!message.content &&
+            !message.reasoning &&
+            message.toolCalls.length === 0 &&
+            message.toolResults.length === 0 ? (
+              <div className="mt-3 text-sm text-muted-foreground">—</div>
+            ) : null}
           </div>
         ))}
       </div>
     </Card>
+  );
+}
+
+function ThreadJsonBlock(input: {
+  label: string;
+  value: unknown;
+}) {
+  return (
+    <div>
+      <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
+      <pre className="mt-1 overflow-x-auto rounded-md bg-[color:var(--panel-muted)] p-3 text-xs text-foreground">
+        {JSON.stringify(input.value, null, 2)}
+      </pre>
+    </div>
   );
 }
 

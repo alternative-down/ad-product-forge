@@ -580,40 +580,122 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
       },
     });
 
-    return result.messages.map((message) => ({
-      messageId: message.id,
-      role: message.role,
-      type: message.type ?? null,
-      content: extractMessageText(message.content),
-      createdAt: message.createdAt.getTime(),
-    }));
+    type ThreadMessageRecord = (typeof result.messages)[number];
+    type ThreadMessagePart = NonNullable<ThreadMessageRecord['content']['parts']>[number];
+
+    function collectThreadText(message: ThreadMessageRecord) {
+      const textParts: string[] = [];
+      const reasoningParts: string[] = [];
+      const toolCalls: Array<{
+        toolCallId: string;
+        toolName: string;
+        state: 'partial-call' | 'call';
+        args: unknown;
+      }> = [];
+      const toolResults: Array<{
+        toolCallId: string;
+        toolName: string;
+        args: unknown;
+        result: unknown;
+      }> = [];
+
+      for (const part of message.content.parts ?? []) {
+        collectThreadPart(part, {
+          textParts,
+          reasoningParts,
+          toolCalls,
+          toolResults,
+        });
+      }
+
+      return {
+        content:
+          typeof message.content.content === 'string'
+            ? message.content.content.trim()
+            : textParts.join('\n').trim(),
+        reasoning: reasoningParts.join('\n\n').trim(),
+        toolCalls,
+        toolResults,
+      };
+    }
+
+    function collectThreadPart(
+      part: ThreadMessagePart,
+      output: {
+        textParts: string[];
+        reasoningParts: string[];
+        toolCalls: Array<{
+          toolCallId: string;
+          toolName: string;
+          state: 'partial-call' | 'call';
+          args: unknown;
+        }>;
+        toolResults: Array<{
+          toolCallId: string;
+          toolName: string;
+          args: unknown;
+          result: unknown;
+        }>;
+      },
+    ) {
+      if (part.type === 'text') {
+        const text = part.text.trim();
+        if (text) {
+          output.textParts.push(text);
+        }
+        return;
+      }
+
+      if (part.type === 'reasoning') {
+        const reasoning = part.reasoning.trim();
+        if (reasoning) {
+          output.reasoningParts.push(reasoning);
+        }
+        return;
+      }
+
+      if (part.type !== 'tool-invocation') {
+        return;
+      }
+
+      const invocation = part.toolInvocation;
+
+      if (invocation.state === 'result') {
+        output.toolResults.push({
+          toolCallId: invocation.toolCallId,
+          toolName: invocation.toolName,
+          args: invocation.args,
+          result: invocation.result,
+        });
+        return;
+      }
+
+      output.toolCalls.push({
+        toolCallId: invocation.toolCallId,
+        toolName: invocation.toolName,
+        state: invocation.state,
+        args: invocation.args,
+      });
+    }
+
+    return result.messages.map((message) => {
+      const threadContent = collectThreadText(message);
+
+      return {
+        messageId: message.id,
+        role: message.role,
+        type: message.type ?? null,
+        content: threadContent.content,
+        reasoning: threadContent.reasoning,
+        toolCalls: threadContent.toolCalls,
+        toolResults: threadContent.toolResults,
+        createdAt: message.createdAt.getTime(),
+      };
+    });
   } catch (error) {
     console.error(`[AdminReadModel] Failed to load recent thread messages for agent ${agentId}:`, error);
     return [];
   }
-}
-
-function extractMessageText(content: {
-  content?: unknown;
-  parts?: Array<unknown>;
-}) {
-  if (typeof content.content === 'string' && content.content.trim()) {
-    return content.content;
-  }
-
-  const parts = (content.parts ?? []).flatMap((part) => {
-    if (!part || typeof part !== 'object' || !('type' in part)) {
-      return [];
-    }
-
-    if (part.type !== 'text' || !('text' in part) || typeof part.text !== 'string') {
-      return [];
-    }
-
-    return [part.text];
-  });
-
-  return parts.join('\n').trim();
 }
 
 function parseProviderCredentials(encryptedCredentials: string) {

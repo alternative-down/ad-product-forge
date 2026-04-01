@@ -189,6 +189,19 @@ export type AgentDetail = {
     role: 'user' | 'assistant' | 'system';
     type: string | null;
     content: string;
+    reasoning: string;
+    toolCalls: Array<{
+      toolCallId: string;
+      toolName: string;
+      state: 'partial-call' | 'call';
+      args: unknown;
+    }>;
+    toolResults: Array<{
+      toolCallId: string;
+      toolName: string;
+      args: unknown;
+      result: unknown;
+    }>;
     createdAt: number;
   }>;
   recentConversations: Array<{
