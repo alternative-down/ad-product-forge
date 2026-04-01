@@ -1358,7 +1358,6 @@ function AgentThreadCard(input: {
             !message.content.reasoning &&
             !message.content.toolInvocations &&
             !message.content.annotations &&
-            !message.content.metadata &&
             !message.content.providerMetadata &&
             !message.content.experimental_attachments ? (
               <div className="mt-3 text-sm text-muted-foreground">—</div>
@@ -1419,16 +1418,6 @@ function ThreadMessageContent(input: {
           </summary>
           <div className="mt-3">
             <ThreadJsonBlock label="experimental_attachments" value={input.content.experimental_attachments} />
-          </div>
-        </details>
-      ) : null}
-      {input.content.metadata ? (
-        <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
-          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-            content.metadata
-          </summary>
-          <div className="mt-3">
-            <ThreadJsonBlock label="metadata" value={input.content.metadata} />
           </div>
         </details>
       ) : null}
