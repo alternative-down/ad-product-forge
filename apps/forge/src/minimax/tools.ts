@@ -121,15 +121,15 @@ export function createMiniMaxTools(
     tools.minimax_tts = createTool({
       id: 'minimax_tts',
       description:
-        'Generate speech audio with MiniMax, save the audio file into the workspace, and return the saved path.',
+        'Turn text into a speech audio file with MiniMax. The generated file is saved in your workspace and the tool returns the saved path.',
       inputSchema: z.object({
-        text: z.string().min(1).describe('The text content to convert to speech.'),
-        model: z.string().nullish().describe('MiniMax speech model, for example speech-2.8-turbo or speech-2.8-hd.'),
-        voice_id: z.string().nullish().describe('Voice ID to use for the generated speech.'),
-        speed: z.number().nullish().describe('Speech speed multiplier.'),
-        volume: z.number().nullish().describe('Speech volume multiplier.'),
-        pitch: z.number().nullish().describe('Pitch adjustment.'),
-        output_format: z.enum(['mp3', 'wav', 'flac']).nullish().describe('Audio file format.'),
+        text: z.string().min(1).describe('The text that should be spoken in the generated audio.'),
+        model: z.string().nullish().describe('Optional MiniMax speech model to use. Omit this unless you need a specific model.'),
+        voice_id: z.string().nullish().describe('Optional voice to use for the generated speech.'),
+        speed: z.number().nullish().describe('Optional speaking speed.'),
+        volume: z.number().nullish().describe('Optional output volume.'),
+        pitch: z.number().nullish().describe('Optional pitch adjustment.'),
+        output_format: z.enum(['mp3', 'wav', 'flac']).nullish().describe('Audio format for the saved file.'),
       }),
       execute: async (input, context) => {
         try {
@@ -185,13 +185,13 @@ export function createMiniMaxTools(
     tools.minimax_image = createTool({
       id: 'minimax_image',
       description:
-        'Generate exactly one image file with MiniMax, save it into the workspace, and return the saved path.',
+        'Generate one image with MiniMax. The image is saved in your workspace and the tool returns the saved path.',
       inputSchema: z.object({
-        prompt: z.string().min(1).describe('Text description of the image to generate.'),
-        model: z.string().nullish().describe('MiniMax image model, for example image-01.'),
-        aspect_ratio: imageAspectRatioSchema.nullish().describe('Preferred aspect ratio for the generated image.'),
-        width: z.number().int().positive().nullish().describe('Explicit image width in pixels.'),
-        height: z.number().int().positive().nullish().describe('Explicit image height in pixels.'),
+        prompt: z.string().min(1).describe('Describe the image you want MiniMax to generate.'),
+        model: z.string().nullish().describe('Optional MiniMax image model to use. Omit this unless you need a specific model.'),
+        aspect_ratio: imageAspectRatioSchema.nullish().describe('Optional aspect ratio for the image.'),
+        width: z.number().int().positive().nullish().describe('Optional image width in pixels.'),
+        height: z.number().int().positive().nullish().describe('Optional image height in pixels.'),
       }),
       execute: async (input, context) => {
         try {
@@ -246,14 +246,14 @@ export function createMiniMaxTools(
     tools.minimax_video = createTool({
       id: 'minimax_video',
       description:
-        'Generate a video with MiniMax, wait for completion, save the video file into the workspace, and return the saved path.',
+        'Generate a video with MiniMax. The tool waits for the generation to finish, saves the video in your workspace, and returns the saved path.',
       inputSchema: z.object({
-        prompt: z.string().min(1).describe('Text description of the video to generate.'),
-        model: z.string().nullish().describe('MiniMax video model, for example MiniMax-Hailuo-2.3.'),
-        duration: z.number().int().min(3).max(15).nullish().describe('Video duration in seconds.'),
-        resolution: z.enum(['768P', '1080P']).nullish().describe('Output resolution.'),
-        first_frame_image: z.string().url().nullish().describe('Optional first-frame image URL for image-to-video mode.'),
-        last_frame_image: z.string().url().nullish().describe('Optional last-frame image URL for start-end-frame mode.'),
+        prompt: z.string().min(1).describe('Describe the video you want MiniMax to generate.'),
+        model: z.string().nullish().describe('Optional MiniMax video model to use. Omit this unless you need a specific model.'),
+        duration: z.number().int().min(3).max(15).nullish().describe('Optional duration in seconds.'),
+        resolution: z.enum(['768P', '1080P']).nullish().describe('Optional output resolution.'),
+        first_frame_image: z.string().url().nullish().describe('Optional image URL to use as the first frame.'),
+        last_frame_image: z.string().url().nullish().describe('Optional image URL to use as the last frame.'),
       }),
       execute: async (input, context) => {
         try {

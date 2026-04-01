@@ -12,40 +12,40 @@ export function createAgentScheduleTools(
 ) {
   const tools: Record<string, unknown> = {};
   const createScheduleInputSchema = z.object({
-    name: z.string().min(1).describe('Name for the schedule.'),
-    description: z.string().nullish().nullable().describe('Optional description.'),
-    scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time.'),
-    cronExpression: z.string().min(1).nullish().describe('Cron expression. Required only when scheduleType is cron.'),
-    scheduledDate: z.string().min(1).nullish().describe('ISO date string. Required only when scheduleType is date.'),
-    timezone: z.string().min(1).nullish().default('UTC').describe('Timezone for the schedule.'),
-    content: z.string().min(1).describe('Content/payload to send when the schedule triggers.'),
+    name: z.string().min(1).describe('A short name so you can recognize this schedule later.'),
+    description: z.string().nullish().nullable().describe('Optional note explaining what this schedule is for.'),
+    scheduleType: z.enum(['cron', 'date']).describe('Use "cron" for a recurring schedule or "date" for a one-time execution.'),
+    cronExpression: z.string().min(1).nullish().describe('The cron expression to use when scheduleType is "cron".'),
+    scheduledDate: z.string().min(1).nullish().describe('The date and time to use when scheduleType is "date". Use an ISO string.'),
+    timezone: z.string().min(1).nullish().default('UTC').describe('Timezone used to interpret the schedule.'),
+    content: z.string().min(1).describe('The message or task that should be delivered when the schedule runs.'),
   });
   const taskTargetInputSchema = z.object({
-    targetAgentId: z.string().min(1).describe('The target agent that should receive this scheduled task.'),
-    name: z.string().min(1).describe('Name of the task.'),
-    description: z.string().nullish().describe('Optional description.'),
-    scheduleType: z.enum(['cron', 'date']).describe('Type of schedule: cron for recurring, date for one-time.'),
-    cronExpression: z.string().min(1).nullish().describe('Cron expression. Required only when scheduleType is cron.'),
-    scheduledDate: z.string().min(1).nullish().describe('ISO date string. Required only when scheduleType is date.'),
-    timezone: z.string().min(1).default('UTC').describe('Timezone for the schedule.'),
-    content: z.string().min(1).describe('Content/payload to execute when the task triggers.'),
+    targetAgentId: z.string().min(1).describe('The agent that should receive this scheduled task.'),
+    name: z.string().min(1).describe('A short name so you can recognize this delegated task later.'),
+    description: z.string().nullish().describe('Optional note explaining what this task is for.'),
+    scheduleType: z.enum(['cron', 'date']).describe('Use "cron" for a recurring task or "date" for a one-time task.'),
+    cronExpression: z.string().min(1).nullish().describe('The cron expression to use when scheduleType is "cron".'),
+    scheduledDate: z.string().min(1).nullish().describe('The date and time to use when scheduleType is "date". Use an ISO string.'),
+    timezone: z.string().min(1).default('UTC').describe('Timezone used to interpret the schedule.'),
+    content: z.string().min(1).describe('The message or task the other agent should receive when this runs.'),
   });
   const taskUpdateInputSchema = z.object({
-    taskId: z.string().min(1).describe('ID of the scheduled task to update.'),
-    name: z.string().min(1).nullish().describe('New name.'),
-    description: z.string().nullish().nullable().describe('New description.'),
-    scheduleType: z.enum(['cron', 'date']).nullish().describe('New schedule type.'),
-    cronExpression: z.string().min(1).nullish().nullable().describe('New cron expression.'),
-    scheduledDate: z.string().min(1).nullish().nullable().describe('New scheduled date (ISO string).'),
-    timezone: z.string().min(1).nullish().describe('New timezone.'),
-    content: z.string().min(1).nullish().describe('New content.'),
-    isActive: z.boolean().nullish().describe('Activate or pause the task.'),
+    taskId: z.string().min(1).describe('The taskId of the delegated task you want to update.'),
+    name: z.string().min(1).nullish().describe('New name for the task.'),
+    description: z.string().nullish().nullable().describe('New note explaining what this task is for.'),
+    scheduleType: z.enum(['cron', 'date']).nullish().describe('Change the task to recurring cron or one-time date.'),
+    cronExpression: z.string().min(1).nullish().nullable().describe('New cron expression when the task should be recurring.'),
+    scheduledDate: z.string().min(1).nullish().nullable().describe('New one-time execution date as an ISO string.'),
+    timezone: z.string().min(1).nullish().describe('New timezone used to interpret the schedule.'),
+    content: z.string().min(1).nullish().describe('New message or task content to deliver when it runs.'),
+    isActive: z.boolean().nullish().describe('Set this to false to pause the task without deleting it, or true to reactivate it.'),
   });
 
   if (hasToolPermission(allowedToolIds, 'list_agent_schedules')) {
     tools.list_agent_schedules = createTool({
       id: 'list_agent_schedules',
-      description: 'View your own schedules, including recurring cron wakes and one-time schedules that belong to this agent.',
+      description: 'List your own schedules. Use this to review your recurring wakes and one-time scheduled tasks, and to get the scheduleId needed for updates or deletion.',
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:schedules', 'list_agent_schedules called', { agentId });
@@ -70,7 +70,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'create_agent_schedule')) {
     tools.create_agent_schedule = createTool({
       id: 'create_agent_schedule',
-      description: 'Create a schedule for this agent only. Use this for your own recurring cron wakes or one-time scheduled triggers.',
+      description: 'Create a schedule for yourself. Use this for your own recurring wakes or one-time future tasks. Returns the new scheduleId.',
       inputSchema: createScheduleInputSchema,
       execute: async (input) => {
         forgeDebug('tools:schedules', 'create_agent_schedule called', { agentId, input });
@@ -112,17 +112,17 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'update_agent_schedule')) {
     tools.update_agent_schedule = createTool({
       id: 'update_agent_schedule',
-      description: 'Update one of your own schedules. This tool is only for schedules owned by this agent.',
+      description: 'Update one of your own schedules. Use this to change the name, timing, content, timezone, or active state of an existing schedule.',
       inputSchema: z.object({
-        scheduleId: z.string().min(1).describe('The schedule ID to update.'),
+        scheduleId: z.string().min(1).describe('The scheduleId of the schedule you want to update.'),
         name: z.string().min(1).nullish().describe('New name for the schedule.'),
-        description: z.string().nullish().nullable().describe('New description.'),
-        scheduleType: z.enum(['cron', 'date']).nullish().describe('New schedule type.'),
-        cronExpression: z.string().min(1).nullish().describe('New cron expression.'),
-        scheduledDate: z.string().min(1).nullish().describe('New date string.'),
-        timezone: z.string().min(1).nullish().describe('New timezone.'),
-        content: z.string().min(1).nullish().describe('New content/payload.'),
-        isActive: z.boolean().nullish().describe('Enable or disable the schedule without deleting it.'),
+        description: z.string().nullish().nullable().describe('New note explaining what this schedule is for.'),
+        scheduleType: z.enum(['cron', 'date']).nullish().describe('Change the schedule to recurring cron or one-time date.'),
+        cronExpression: z.string().min(1).nullish().describe('New cron expression when the schedule should be recurring.'),
+        scheduledDate: z.string().min(1).nullish().describe('New one-time execution date as an ISO string.'),
+        timezone: z.string().min(1).nullish().describe('New timezone used to interpret the schedule.'),
+        content: z.string().min(1).nullish().describe('New message or task content to deliver when the schedule runs.'),
+        isActive: z.boolean().nullish().describe('Set this to false to pause the schedule without deleting it, or true to reactivate it.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'update_agent_schedule called', { agentId, scheduleId: input.scheduleId });
@@ -157,9 +157,9 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'delete_agent_schedule')) {
     tools.delete_agent_schedule = createTool({
       id: 'delete_agent_schedule',
-      description: 'Delete one of your own schedules permanently. This tool is only for schedules owned by this agent.',
+      description: 'Delete one of your own schedules permanently. Use this when you no longer want that schedule to run again.',
       inputSchema: z.object({
-        scheduleId: z.string().min(1).describe('The schedule ID to delete.'),
+        scheduleId: z.string().min(1).describe('The scheduleId of the schedule you want to delete.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'delete_agent_schedule called', { agentId, scheduleId: input.scheduleId });
@@ -186,7 +186,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'create_task_for_agent')) {
     tools.create_task_for_agent = createTool({
       id: 'create_task_for_agent',
-      description: 'Create a scheduled task for another agent. Use this when you are delegating work or scheduling something on behalf of a different agent.',
+      description: 'Create a scheduled task for another agent. Use this when you want another agent to receive work later, either once or on a recurring schedule. Returns the new taskId.',
       inputSchema: taskTargetInputSchema,
       execute: async (input) => {
         forgeDebug('tools:schedules', 'create_task_for_agent called', { agentId, targetAgentId: input.targetAgentId });
@@ -231,9 +231,9 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'list_agent_tasks')) {
     tools.list_agent_tasks = createTool({
       id: 'list_agent_tasks',
-      description: 'List scheduled tasks that you created for other agents. This does not list your own schedules unless you created them as delegated tasks.',
+      description: 'List the delegated tasks you created for other agents. Use this to review them and get the taskId needed for updates or cancellation.',
       inputSchema: z.object({
-        targetAgentId: z.string().min(1).nullish().describe('Optional target agent filter.'),
+        targetAgentId: z.string().min(1).nullish().describe('Optional agentId if you want to see only tasks aimed at one specific agent.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'list_agent_tasks called', { agentId, targetAgentId: input.targetAgentId });
@@ -256,7 +256,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'update_agent_task')) {
     tools.update_agent_task = createTool({
       id: 'update_agent_task',
-      description: 'Update a scheduled task that you created for another agent. This is for delegated tasks, not for your own self-managed schedules.',
+      description: 'Update a delegated task that you created for another agent. Use this to change the timing, content, name, or active state of that task.',
       inputSchema: taskUpdateInputSchema,
       execute: async (input) => {
         forgeDebug('tools:schedules', 'update_agent_task called', { agentId, taskId: input.taskId });
@@ -292,9 +292,9 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'cancel_agent_task')) {
     tools.cancel_agent_task = createTool({
       id: 'cancel_agent_task',
-      description: 'Cancel a scheduled task that you created for another agent. This is for delegated tasks, not for your own self-managed schedules.',
+      description: 'Cancel a delegated task that you created for another agent. Use this when you no longer want that task to run.',
       inputSchema: z.object({
-        taskId: z.string().min(1).describe('ID of the scheduled task to cancel.'),
+        taskId: z.string().min(1).describe('The taskId of the delegated task you want to cancel.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'cancel_agent_task called', { agentId, taskId: input.taskId });

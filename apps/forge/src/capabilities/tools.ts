@@ -23,7 +23,7 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_agent_functions')) {
     tools.list_agent_functions = createTool({
       id: 'list_agent_functions',
-      description: 'View all internal agent functions available in the system. Functions define what an agent can do and are assigned to agents through roles.',
+      description: 'List the functions available in the system. Use this when you need to inspect existing functions or get a functionId for updates, assignment, or switching.',
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_agent_functions called');
@@ -46,11 +46,11 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'create_agent_function')) {
     tools.create_agent_function = createTool({
       id: 'create_agent_function',
-      description: 'Create a new internal agent function with a custom name and description.',
+      description: 'Create a new function that can later be assigned to agents. Returns the created functionId.',
       inputSchema: z.object({
-        functionId: z.string().nullish().describe('Function ID (optional, auto-generated if omitted).'),
-        name: z.string().min(1).describe('Function name.'),
-        description: z.string().nullish().describe('Function description.'),
+        functionId: z.string().nullish().describe('Optional custom functionId. Omit this unless you need to choose the ID yourself.'),
+        name: z.string().min(1).describe('The name of the new function.'),
+        description: z.string().nullish().describe('Optional description of what this function is for.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'create_agent_function called', { input });
@@ -73,11 +73,11 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'update_agent_function')) {
     tools.update_agent_function = createTool({
       id: 'update_agent_function',
-      description: 'Update an existing agent function\'s name or description.',
+      description: 'Update the name or description of an existing function.',
       inputSchema: z.object({
-        functionId: z.string().describe('Function ID to update.'),
-        name: z.string().nullish().describe('New function name.'),
-        description: z.string().nullish().describe('New function description.'),
+        functionId: z.string().describe('The functionId of the function you want to update.'),
+        name: z.string().nullish().describe('New name for the function.'),
+        description: z.string().nullish().describe('New description for the function.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'update_agent_function called', { input });
@@ -106,9 +106,9 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'delete_agent_function')) {
     tools.delete_agent_function = createTool({
       id: 'delete_agent_function',
-      description: 'Delete an unused agent function.',
+      description: 'Delete a function you no longer want in the system.',
       inputSchema: z.object({
-        functionId: z.string().describe('Function ID to delete.'),
+        functionId: z.string().describe('The functionId of the function you want to delete.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'delete_agent_function called', { functionId: input.functionId });
@@ -129,7 +129,7 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_agent_roles')) {
     tools.list_agent_roles = createTool({
       id: 'list_agent_roles',
-      description: 'View all roles configured in the system. Roles bundle functions and tool permissions to define an agent\'s capabilities.',
+      description: 'List the roles available in the system. Use this when you need to inspect existing roles or get a roleId for updates and permission changes.',
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_agent_roles called');
@@ -152,11 +152,11 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'create_agent_role')) {
     tools.create_agent_role = createTool({
       id: 'create_agent_role',
-      description: 'Create a new role with a custom name and description.',
+      description: 'Create a new role that can later be attached to functions. Returns the created roleId.',
       inputSchema: z.object({
-        roleId: z.string().nullish().describe('Role ID (optional, auto-generated if omitted).'),
-        name: z.string().min(1).describe('Role name.'),
-        description: z.string().nullish().describe('Role description.'),
+        roleId: z.string().nullish().describe('Optional custom roleId. Omit this unless you need to choose the ID yourself.'),
+        name: z.string().min(1).describe('The name of the new role.'),
+        description: z.string().nullish().describe('Optional description of what this role is for.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'create_agent_role called', { input });
@@ -179,11 +179,11 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'update_agent_role')) {
     tools.update_agent_role = createTool({
       id: 'update_agent_role',
-      description: 'Update an existing role\'s name or description.',
+      description: 'Update the name or description of an existing role.',
       inputSchema: z.object({
-        roleId: z.string().describe('Role ID to update.'),
-        name: z.string().nullish().describe('New role name.'),
-        description: z.string().nullish().describe('New role description.'),
+        roleId: z.string().describe('The roleId of the role you want to update.'),
+        name: z.string().nullish().describe('New name for the role.'),
+        description: z.string().nullish().describe('New description for the role.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'update_agent_role called', { input });
@@ -212,9 +212,9 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'delete_agent_role')) {
     tools.delete_agent_role = createTool({
       id: 'delete_agent_role',
-      description: 'Delete an unused role.',
+      description: 'Delete a role you no longer want in the system.',
       inputSchema: z.object({
-        roleId: z.string().describe('Role ID to delete.'),
+        roleId: z.string().describe('The roleId of the role you want to delete.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'delete_agent_role called', { roleId: input.roleId });
@@ -235,10 +235,10 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'assign_role_to_function')) {
     tools.assign_role_to_function = createTool({
       id: 'assign_role_to_function',
-      description: 'Associate a role with a function. Multiple roles can be assigned to the same function to combine different capability sets.',
+      description: 'Attach one role to one function. Use this when a function should gain the permissions and capabilities from that role.',
       inputSchema: z.object({
-        functionId: z.string().min(1).describe('Function ID to assign the role to.'),
-        roleId: z.string().min(1).describe('Role ID to assign.'),
+        functionId: z.string().min(1).describe('The functionId of the function that should receive the role.'),
+        roleId: z.string().min(1).describe('The roleId that should be attached to the function.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'assign_role_to_function called', { input });
@@ -259,10 +259,10 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'change_agent_function')) {
     tools.change_agent_function = createTool({
       id: 'change_agent_function',
-      description: 'Change another agent\'s assigned function. The target agent will receive a notification and wake up with the new function context.',
+      description: 'Change the function assigned to another agent. Use this when another agent should start operating under a different function.',
       inputSchema: z.object({
-        agentId: z.string().min(1).describe('Target agent ID to change function.'),
-        functionId: z.string().min(1).describe('New function ID to assign.'),
+        agentId: z.string().min(1).describe('The agentId of the agent whose function should be changed.'),
+        functionId: z.string().min(1).describe('The new functionId that should be assigned to that agent.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'change_agent_function called', { input });
@@ -288,9 +288,9 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'change_own_function')) {
     tools.change_own_function = createTool({
       id: 'change_own_function',
-      description: 'Switch your own assigned function to a different one. You will receive a notification and wake up with the new function\'s context and capabilities.',
+      description: 'Switch yourself to a different function.',
       inputSchema: z.object({
-        functionId: z.string().min(1).describe('Function ID to switch to.'),
+        functionId: z.string().min(1).describe('The functionId you want to switch to.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'change_own_function called', { functionId: input.functionId });
@@ -316,7 +316,7 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_role_tool_permissions')) {
     tools.list_role_tool_permissions = createTool({
       id: 'list_role_tool_permissions',
-      description: 'View which custom tool IDs are permitted for a specific role. Tool IDs define granular access to specific capabilities.',
+      description: 'List which tools a role is allowed to use.',
       inputSchema: z.object({
         roleId: z.string().min(1),
       }),
@@ -342,11 +342,11 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'manage_role_tool_permissions')) {
     tools.manage_role_tool_permissions = createTool({
       id: 'manage_role_tool_permissions',
-      description: 'Add or remove individual tool permissions for a role. Revoking prevents agents with that role from using the specified tool.',
+      description: 'Add or remove one tool permission for a role.',
       inputSchema: z.object({
-        action: z.enum(['add', 'remove']).describe('Action to perform: add or remove permission.'),
-        roleId: z.string().min(1).describe('Role ID to modify.'),
-        toolId: toolIdSchema.describe('Tool ID to add or remove.'),
+        action: z.enum(['add', 'remove']).describe('Choose "add" to allow the tool for the role or "remove" to revoke it.'),
+        roleId: z.string().min(1).describe('The roleId of the role you want to change.'),
+        toolId: toolIdSchema.describe('The toolId you want to allow or remove for that role.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'manage_role_tool_permissions called', { input });
@@ -369,7 +369,7 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_role_workflow_permissions')) {
     tools.list_role_workflow_permissions = createTool({
       id: 'list_role_workflow_permissions',
-      description: 'View which workflow IDs are permitted for a specific role. Workflow IDs control access to automated agent workflows.',
+      description: 'List which workflows a role is allowed to use.',
       inputSchema: z.object({
         roleId: z.string().min(1),
       }),
@@ -391,11 +391,11 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'manage_role_workflow_permissions')) {
     tools.manage_role_workflow_permissions = createTool({
       id: 'manage_role_workflow_permissions',
-      description: 'Add or remove individual workflow permissions for a role. Revoking prevents agents with that role from triggering the specified workflow.',
+      description: 'Add or remove one workflow permission for a role.',
       inputSchema: z.object({
-        action: z.enum(['add', 'remove']).describe('Action to perform: add or remove permission.'),
-        roleId: z.string().min(1).describe('Role ID to modify.'),
-        workflowId: workflowIdSchema.describe('Workflow ID to add or remove.'),
+        action: z.enum(['add', 'remove']).describe('Choose "add" to allow the workflow for the role or "remove" to revoke it.'),
+        roleId: z.string().min(1).describe('The roleId of the role you want to change.'),
+        workflowId: workflowIdSchema.describe('The workflowId you want to allow or remove for that role.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'manage_role_workflow_permissions called', { input });
@@ -418,7 +418,7 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_available_capabilities')) {
     tools.list_available_capabilities = createTool({
       id: 'list_available_capabilities',
-      description: 'Get a complete list of all available custom tool IDs and workflow IDs that can be assigned to roles for permission management.',
+      description: 'List all toolIds and workflowIds that can be assigned to roles. Use this before changing role permissions.',
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_available_capabilities called');

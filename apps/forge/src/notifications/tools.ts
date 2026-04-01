@@ -12,10 +12,10 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
   if (hasToolPermission(allowedToolIds, 'list_agent_notifications')) {
     tools.list_agent_notifications = createTool({
       id: 'list_agent_notifications',
-      description: 'View all your notifications including task assignments, system alerts, and messages from other agents.',
+      description: 'List your notifications. Use this to review alerts, assigned work, and other system messages, and to get the notificationId needed to mark one as read.',
       inputSchema: z.object({
-        unreadOnly: z.boolean().default(false),
-        limit: z.number().int().positive().max(100).default(20),
+        unreadOnly: z.boolean().default(false).describe('Set this to true if you only want unread notifications.'),
+        limit: z.number().int().positive().max(100).default(20).describe('Maximum number of notifications to return.'),
       }),
       execute: async (input) => {
         try {
@@ -39,9 +39,9 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
   if (hasToolPermission(allowedToolIds, 'mark_agent_notification_read')) {
     tools.mark_agent_notification_read = createTool({
       id: 'mark_agent_notification_read',
-      description: 'Mark a notification as read to remove it from your unread count. Use after reviewing or acting on a notification.',
+      description: 'Mark one notification as read after you have reviewed it or already acted on it.',
       inputSchema: z.object({
-        notificationId: z.string().min(1),
+        notificationId: z.string().min(1).describe('The notificationId of the notification you want to mark as read.'),
       }),
       execute: async (input) => {
         try {

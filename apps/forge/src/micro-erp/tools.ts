@@ -24,7 +24,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'get_company_cash')) {
     tools.get_company_cash = createTool({
       id: 'get_company_cash',
-      description: 'Return the current company cash balance.',
+      description: 'Show the current company cash balance.',
       inputSchema: z.object({}),
       execute: async () => {
         try {
@@ -44,7 +44,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'list_company_cash')) {
     tools.list_company_cash = createTool({
       id: 'list_company_cash',
-      description: 'List company cash ledger movements and return the cash summary for the selected period.',
+      description: 'List company cash movements for the selected period and return the cash summary. Use this when you need to inspect income, expenses, or balance changes.',
       inputSchema: listCompanyCashInputSchema,
       execute: async (input) => {
         try {
@@ -64,7 +64,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'list_internal_agent_contracts')) {
     tools.list_internal_agent_contracts = createTool({
       id: 'list_internal_agent_contracts',
-      description: 'List active internal-agent contracts.',
+      description: 'List the active contracts for internal agents. Use this before topping up or adjusting an agent budget.',
       inputSchema: z.object({}),
       execute: async () => {
         try {
@@ -84,11 +84,11 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'manage_internal_agent_contract')) {
     tools.manage_internal_agent_contract = createTool({
       id: 'manage_internal_agent_contract',
-      description: 'Top up the active execution contract of one internal agent.',
+      description: 'Add more budget to one internal agent that already has an active contract. Returns the updated contract information.',
       inputSchema: z.object({
-        action: z.literal('top-up'),
-        agentId: z.string().min(1),
-        amountUsd: z.number().positive(),
+        action: z.literal('top-up').describe('Use "top-up" to add more budget to an active contract.'),
+        agentId: z.string().min(1).describe('The agentId of the agent whose active contract should receive more budget.'),
+        amountUsd: z.number().positive().describe('How much budget to add, in USD.'),
       }),
       execute: async (input) => {
         try {
@@ -115,10 +115,10 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'adjust_agent_contract_budget')) {
     tools.adjust_agent_contract_budget = createTool({
       id: 'adjust_agent_contract_budget',
-      description: 'Adjust (increase or decrease) the budget of an internal agent contract. Use to set a new target budget. Cannot reduce below the already-spent amount. Cannot adjust while agent is running.',
+      description: 'Set a new budget target for an internal agent contract. You can increase or decrease it, but not below what has already been spent. Returns the updated contract information.',
       inputSchema: z.object({
-        agentId: z.string().min(1),
-        newBudgetUsd: z.number().min(0),
+        agentId: z.string().min(1).describe('The agentId of the agent whose contract budget should be changed.'),
+        newBudgetUsd: z.number().min(0).describe('The new total budget, in USD, that the contract should have after the change.'),
       }),
       execute: async (input) => {
         try {

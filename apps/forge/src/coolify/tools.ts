@@ -15,7 +15,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_github_apps')) {
     tools.list_coolify_github_apps = createTool({
       id: 'list_coolify_github_apps',
-      description: 'List all GitHub Apps that have been registered and connected to Coolify for deployment automation.',
+      description: 'List the GitHub Apps available in Coolify. Use this before choosing a repository to deploy.',
       inputSchema: z.object({}),
       execute: async () => {
         try {
@@ -35,9 +35,9 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_github_app_repositories')) {
     tools.list_coolify_github_app_repositories = createTool({
       id: 'list_coolify_github_app_repositories',
-      description: 'View all repositories that a specific GitHub App has access to. Useful for identifying which repos can be deployed through Coolify.',
+      description: 'List the repositories that one Coolify GitHub App can access. Use this to find a repository you want to deploy.',
       inputSchema: z.object({
-        githubAppId: z.union([z.string().min(1), z.number().int()]).describe('The GitHub App ID or UUID.'),
+        githubAppId: z.union([z.string().min(1), z.number().int()]).describe('The GitHub App ID to inspect.'),
       }),
       execute: async (input) => {
         try {
@@ -57,10 +57,10 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_github_app_repository_branches')) {
     tools.list_coolify_github_app_repository_branches = createTool({
       id: 'list_coolify_github_app_repository_branches',
-      description: 'View all available branches for a repository. Essential for selecting the correct branch when creating or updating a deployment.',
+      description: 'List the available branches for one repository. Use this before creating or updating a deployment.',
       inputSchema: z.object({
-        githubAppId: z.union([z.string().min(1), z.number().int()]).describe('The GitHub App ID or UUID.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
+        githubAppId: z.union([z.string().min(1), z.number().int()]).describe('The GitHub App ID that can access the repository.'),
+        repositoryName: z.string().min(1).describe('The repository name you want to inspect.'),
       }),
       execute: async (input) => {
         try {
@@ -80,7 +80,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_applications')) {
     tools.list_coolify_applications = createTool({
       id: 'list_coolify_applications',
-      description: 'Get an overview of all applications deployed and managed through Coolify, including their current status and deployment state.',
+      description: 'List the applications managed in Coolify. Use this to review existing deployments and get the applicationUuid needed for later actions.',
       inputSchema: z.object({}),
       execute: async () => {
         try {
@@ -100,7 +100,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'get_coolify_application')) {
     tools.get_coolify_application = createTool({
       id: 'get_coolify_application',
-      description: 'Retrieve detailed configuration and status information for a specific application, including its linked repository, build settings, and current deployment state.',
+      description: 'Show the details of one Coolify application, including its current configuration and status.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
       }),
@@ -122,21 +122,21 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'manage_coolify_application')) {
     tools.manage_coolify_application = createTool({
       id: 'manage_coolify_application',
-      description: 'Create new application deployments linked to GitHub repositories, update existing configurations (branch, build commands, environment variables), delete applications, or restart running deployments.',
+      description: 'Create, update, delete, or restart a Coolify application. Use this to manage deployments backed by a GitHub repository.',
       inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete', 'restart']).describe('The action to perform.'),
-        applicationUuid: z.string().min(1).nullish().describe('Application UUID (required for update/delete/restart).'),
-        githubAppUuid: z.string().min(1).nullish().describe('GitHub App UUID for repository access.'),
-        repositoryOwner: z.string().min(1).nullish().describe('Repository owner (organization or user).'),
-        repositoryName: z.string().min(1).nullish().describe('Repository name.'),
-        branch: z.string().min(1).nullish().describe('Branch to deploy.'),
-        name: z.string().min(1).nullish().describe('Application display name.'),
-        slug: coolifyApplicationSlugSchema.nullish().describe('Application slug (kebab-case, used for subdomain).'),
-        port: z.number().int().positive().nullish().describe('Application port.'),
-        buildCommand: z.string().nullish().describe('Build command.'),
-        startCommand: z.string().nullish().describe('Start command.'),
-        installCommand: z.string().nullish().describe('Install command.'),
-        description: z.string().nullish().describe('Application description.'),
+        action: z.enum(['create', 'update', 'delete', 'restart']).describe('Choose what you want to do with the application.'),
+        applicationUuid: z.string().min(1).nullish().describe('The applicationUuid to use for update, delete, or restart.'),
+        githubAppUuid: z.string().min(1).nullish().describe('The GitHub App that should be used to access the repository.'),
+        repositoryOwner: z.string().min(1).nullish().describe('The organization or user that owns the repository.'),
+        repositoryName: z.string().min(1).nullish().describe('The repository name to deploy.'),
+        branch: z.string().min(1).nullish().describe('The branch that Coolify should deploy.'),
+        name: z.string().min(1).nullish().describe('The display name of the application in Coolify.'),
+        slug: coolifyApplicationSlugSchema.nullish().describe('A lowercase kebab-case slug to use for the application and its subdomain.'),
+        port: z.number().int().positive().nullish().describe('The port your application listens on.'),
+        buildCommand: z.string().nullish().describe('Optional build command.'),
+        startCommand: z.string().nullish().describe('Optional start command.'),
+        installCommand: z.string().nullish().describe('Optional install command.'),
+        description: z.string().nullish().describe('Optional description of the application.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:coolify', 'manage_coolify_application called', { action: input.action, applicationUuid: input.applicationUuid });
@@ -201,10 +201,10 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'toggle_coolify_application')) {
     tools.toggle_coolify_application = createTool({
       id: 'toggle_coolify_application',
-      description: 'Immediately start or stop a deployed application. Starting activates the application; stopping deactivates it without removing configuration.',
+      description: 'Start or stop a Coolify application without deleting it.',
       inputSchema: z.object({
-        applicationUuid: z.string().min(1).describe('The application UUID from Coolify.'),
-        state: z.enum(['running', 'stopped']).describe('Target state: running to start, stopped to stop.'),
+        applicationUuid: z.string().min(1).describe('The applicationUuid of the application you want to start or stop.'),
+        state: z.enum(['running', 'stopped']).describe('Use "running" to start the application or "stopped" to stop it.'),
       }),
       execute: async (input) => {
         try {
@@ -226,9 +226,9 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'list_coolify_application_deployments')) {
     tools.list_coolify_application_deployments = createTool({
       id: 'list_coolify_application_deployments',
-      description: 'View deployment history for an application including timestamps, status, triggered by information, and deployment UUIDs for log retrieval.',
+      description: 'List recent deployments for one Coolify application. Use this to inspect deployment history and get a deploymentUuid for logs.',
       inputSchema: z.object({
-        applicationUuid: z.string().min(1).describe('The application UUID from Coolify.'),
+        applicationUuid: z.string().min(1).describe('The applicationUuid of the application you want to inspect.'),
         limit: z.number().int().positive().max(100).default(20).describe('Maximum number of deployments to return.'),
       }),
       execute: async (input) => {
@@ -249,10 +249,10 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'get_coolify_deployment_logs')) {
     tools.get_coolify_deployment_logs = createTool({
       id: 'get_coolify_deployment_logs',
-      description: 'View build and deployment logs for troubleshooting failed deployments. If deploymentUuid is omitted, retrieves logs from the most recent deployment.',
+      description: 'Show build and deployment logs for one application. If you omit deploymentUuid, the latest deployment logs are returned.',
       inputSchema: z.object({
-        applicationUuid: z.string().min(1).describe('The application UUID from Coolify.'),
-        deploymentUuid: z.string().nullish().describe('Specific deployment UUID (optional, returns latest if omitted).'),
+        applicationUuid: z.string().min(1).describe('The applicationUuid of the application you want to inspect.'),
+        deploymentUuid: z.string().nullish().describe('Optional deploymentUuid if you want logs from one specific deployment.'),
       }),
       execute: async (input) => {
         try {
@@ -272,11 +272,11 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'get_coolify_application_logs')) {
     tools.get_coolify_application_logs = createTool({
       id: 'get_coolify_application_logs',
-      description: 'View application runtime logs including application output, errors, and access logs. Useful for monitoring live application behavior.',
+      description: 'Show runtime logs for one Coolify application.',
       inputSchema: z.object({
-        applicationUuid: z.string().min(1).describe('The application UUID from Coolify.'),
-        lines: z.number().int().positive().max(5000).nullish().describe('Number of log lines to return (max 5000).'),
-        since: z.number().int().positive().nullish().describe('Start from Unix timestamp.'),
+        applicationUuid: z.string().min(1).describe('The applicationUuid of the application you want to inspect.'),
+        lines: z.number().int().positive().max(5000).nullish().describe('Optional number of log lines to return.'),
+        since: z.number().int().positive().nullish().describe('Optional Unix timestamp if you want logs only after that time.'),
       }),
       execute: async (input) => {
         try {
@@ -296,7 +296,7 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'get_coolify_application_envs')) {
     tools.get_coolify_application_envs = createTool({
       id: 'get_coolify_application_envs',
-      description: 'Retrieve all environment variables configured for an application, including sensitive values and their current settings.',
+      description: 'List the environment variables configured for one Coolify application.',
       inputSchema: z.object({
         applicationUuid: z.string().min(1),
       }),
@@ -318,16 +318,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
   if (hasToolPermission(allowedToolIds, 'manage_coolify_application_env')) {
     tools.manage_coolify_application_env = createTool({
       id: 'manage_coolify_application_env',
-      description: 'Add, update, or remove environment variables for an application. Supports literal values, multiline values, and one-time secrets.',
+      description: 'Create, update, or delete one environment variable for a Coolify application.',
       inputSchema: z.object({
-        action: z.enum(['create', 'update', 'delete']).describe('The action to perform.'),
-        applicationUuid: z.string().min(1).describe('The application UUID from Coolify.'),
-        key: z.string().min(1).describe('Environment variable key name.'),
-        value: z.string().nullish().describe('Environment variable value (required for create/update).'),
-        isPreview: z.boolean().nullish().describe('Mark as preview environment variable.'),
-        isLiteral: z.boolean().nullish().describe('Treat value as literal (not a secret reference).'),
-        isMultiline: z.boolean().nullish().describe('Allow multiline values.'),
-        isShownOnce: z.boolean().nullish().describe('Show value only once after creation.'),
+        action: z.enum(['create', 'update', 'delete']).describe('Choose whether to create, update, or delete the environment variable.'),
+        applicationUuid: z.string().min(1).describe('The applicationUuid of the application you want to change.'),
+        key: z.string().min(1).describe('The environment variable name.'),
+        value: z.string().nullish().describe('The environment variable value. Required for create and update.'),
+        isPreview: z.boolean().nullish().describe('Optional flag for preview environments.'),
+        isLiteral: z.boolean().nullish().describe('Optional flag to save the value as a literal value.'),
+        isMultiline: z.boolean().nullish().describe('Optional flag if the value contains multiple lines.'),
+        isShownOnce: z.boolean().nullish().describe('Optional flag if the value should only be shown once after creation.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:coolify', 'manage_coolify_application_env called', { action: input.action, applicationUuid: input.applicationUuid, key: input.key });

@@ -11,10 +11,10 @@ export function createWebTools(allowedToolIds?: Set<string> | null) {
   if (hasToolPermission(allowedToolIds, 'search_web')) {
     tools.search_web = createTool({
       id: 'search_web',
-      description: 'Search the public web using DuckDuckGo and return matching results with titles and URLs. Use for factual queries, definitions, and current events. Note: Results are parsed from HTML, so dynamic or JavaScript-rendered pages may not work correctly.',
+      description: 'Search the public web and return matching results with titles and URLs. Use this for factual questions, definitions, recent information, or when you need a starting point for research.',
       inputSchema: z.object({
-        query: z.string().min(1),
-        limit: z.number().int().positive().max(SEARCH_RESULT_LIMIT).nullish(),
+        query: z.string().min(1).describe('What you want to search for on the web.'),
+        limit: z.number().int().positive().max(SEARCH_RESULT_LIMIT).nullish().describe('Optional maximum number of results to return.'),
       }),
       execute: async (input) => {
         try {
