@@ -1391,6 +1391,16 @@ function ThreadMessageContent(input: {
           part={part}
         />
       ))}
+      {typeof input.content.reasoning === 'string' && input.content.reasoning.trim() ? (
+        <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            content.reasoning
+          </summary>
+          <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
+            {input.content.reasoning.trim()}
+          </div>
+        </details>
+      ) : null}
       {input.content.toolInvocations && input.content.toolInvocations.length > 0 && !hasToolInvocationParts ? (
         <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
           <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
