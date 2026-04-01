@@ -195,59 +195,57 @@ export async function createCommunicationModule(config: {
     receiveMessageHandler = handler;
   }
 
-  async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
-    const contacts = filter === 'self' ? [] : await store.listContacts();
-    const providerContacts = filter === 'self'
-      ? []
-      : await Promise.all(
-          Array.from(providers.values())
-            .filter((provider) => provider.listContacts)
-            .map((provider) => provider.listContacts!()),
-        );
-    const mergedOthers = new Map<string, {
-      slug: string;
-      displayName: string;
-      description?: string;
-      agentId?: string;
-    }>();
+  function toAgentContactView(contact: Awaited<ReturnType<typeof store.listContacts>>[number]) {
+    const internalChatAccount = contact.accounts.find((account) => account.provider === 'internal-chat');
 
-    for (const contact of contacts) {
-      mergedOthers.set(contact.slug, {
-        slug: contact.slug,
-        displayName: contact.displayName,
-        description: contact.description,
-      });
-    }
+    return {
+      slug: contact.slug,
+      displayName: contact.displayName,
+      description: contact.description,
+      agentId: internalChatAccount?.externalUserId,
+    };
+  }
 
-    for (const providerContactList of providerContacts) {
-      for (const contact of providerContactList) {
-        mergedOthers.set(contact.slug, {
+  async function syncProviderContacts() {
+    for (const provider of providers.values()) {
+      if (!provider.listContacts) {
+        continue;
+      }
+
+      const providerContacts = await provider.listContacts();
+
+      for (const contact of providerContacts) {
+        await store.upsertContact({
           slug: contact.slug,
           displayName: contact.displayName,
           description: contact.description,
-          agentId: contact.agentId,
+          provider: provider.id,
+          externalUserId: contact.agentId,
+          username: contact.slug,
         });
       }
     }
+  }
+
+  async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
+    await syncProviderContacts();
+    const contacts = filter === 'self' ? [] : await store.listContacts();
 
     return {
       self: [],
-      others: Array.from(mergedOthers.values()),
+      others: contacts.map((contact) => toAgentContactView(contact)),
     };
   }
 
   async function getContact(slug: string) {
+    await syncProviderContacts();
     const contact = await store.getContact(slug);
 
     if (!contact) {
       return null;
     }
 
-    return {
-      slug: contact.slug,
-      displayName: contact.displayName,
-      description: contact.description,
-    };
+    return toAgentContactView(contact);
   }
 
   async function upsertContact(input: { slug: string; displayName: string; description?: string }) {
