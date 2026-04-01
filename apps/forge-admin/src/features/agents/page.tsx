@@ -1352,16 +1352,9 @@ function AgentThreadCard(input: {
               </div>
               <div className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</div>
             </div>
-            {message.threadId || message.resourceId ? (
-              <div className="mt-3 text-xs text-muted-foreground">
-                {message.threadId ? `threadId: ${message.threadId}` : null}
-                {message.threadId && message.resourceId ? ' · ' : null}
-                {message.resourceId ? `resourceId: ${message.resourceId}` : null}
-              </div>
-            ) : null}
             <ThreadMessageContent content={message.content} messageId={message.id} />
-            {message.content.parts.length === 0 &&
-            !message.content.content &&
+            {message.content.parts.every((part) => !shouldRenderThreadPart(part)) &&
+            (!message.content.content || typeof message.content.content !== 'string' || !message.content.content.trim()) &&
             !message.content.reasoning &&
             !message.content.toolInvocations &&
             !message.content.annotations &&
@@ -1386,6 +1379,7 @@ function ThreadMessageContent(input: {
       part.type === 'text' && typeof part.text === 'string' && part.text.trim().length > 0,
   );
   const hasVisibleTextParts = textParts.length > 0;
+  const hasToolInvocationParts = input.content.parts.some((part) => part.type === 'tool-invocation');
 
   return (
     <>
@@ -1398,7 +1392,7 @@ function ThreadMessageContent(input: {
           part={part}
         />
       ))}
-      {input.content.toolInvocations && input.content.toolInvocations.length > 0 ? (
+      {input.content.toolInvocations && input.content.toolInvocations.length > 0 && !hasToolInvocationParts ? (
         <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
           <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
             content.toolInvocations
@@ -1457,7 +1451,15 @@ function ThreadMessagePartCard(input: {
 }) {
   const part = input.part;
 
+  if (!shouldRenderThreadPart(part)) {
+    return null;
+  }
+
   if (part.type === 'text') {
+    if (!part.text.trim()) {
+      return null;
+    }
+
     return (
       <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
         {part.text}
@@ -1466,6 +1468,10 @@ function ThreadMessagePartCard(input: {
   }
 
   if (part.type === 'reasoning') {
+    if (!part.reasoning.trim()) {
+      return null;
+    }
+
     return (
       <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
         <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
@@ -1544,6 +1550,22 @@ function ThreadMessagePartCard(input: {
       </div>
     </details>
   );
+}
+
+function shouldRenderThreadPart(part: AgentDetail['recentThreadMessages'][number]['content']['parts'][number]) {
+  if (part.type === 'step-start' || part.type.startsWith('data-')) {
+    return false;
+  }
+
+  if (part.type === 'text') {
+    return part.text.trim().length > 0;
+  }
+
+  if (part.type === 'reasoning') {
+    return part.reasoning.trim().length > 0;
+  }
+
+  return true;
 }
 
 function AgentMcpCard(input: {
