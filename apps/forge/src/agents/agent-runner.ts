@@ -11,10 +11,23 @@ const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const RUN_STOP_REMINDER = [
-  'System reminder:',
-  '- The current run will continue looping until you explicitly respond with NO_ACTION_NEEDED.',
-  '- NO_ACTION_NEEDED signals the task is complete and no further tools are needed.',
-  '- If you still need to inspect, decide, or act, call the appropriate tool.',
+  'System Message:',
+  'A response without tool calls was detected.',
+  '',
+  'If you want to take any action, use your tools.',
+  'Plain text responses without tool calls are ignored by the system.',
+  '',
+  'Respond with NO_ACTION_NEEDED only when you have finished everything you intend to do in this run.',
+  '',
+  'If you answer NO_ACTION_NEEDED:',
+  '- this run stops immediately',
+  '- you will not inspect, message, or act further now',
+  '- your execution will stay idle until a future wake event happens',
+  '',
+  'Do not use NO_ACTION_NEEDED to skip, postpone, or ignore pending work from the current wake.',
+  'If there is anything to investigate or act on now, use tools instead of answering NO_ACTION_NEEDED.',
+  '',
+  'This is an automatic system message. You do not need to reply to this message itself.',
 ].join('\n');
 type AgentUsage = {
   inputTokens?: number;
