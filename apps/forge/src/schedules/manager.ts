@@ -552,32 +552,10 @@ function createNotificationContent(input: {
   content: string;
   fireDate: Date;
 }) {
-  const lines = [
-    'Scheduled notification received.',
-    `Agent id: ${input.agentId}`,
-    `Schedule id: ${input.scheduleId}`,
-    `Schedule kind: ${input.kind}`,
-    `Schedule name: ${input.name}`,
-    `Schedule type: ${input.scheduleType}`,
-    `Triggered at: ${input.fireDate.toISOString()}`,
-    `Timezone: ${input.timezone}`,
-  ];
+  const title = input.name.trim() ? `Scheduled event: ${input.name.trim()}` : 'Scheduled event';
+  const content = input.content.trim();
 
-  if (input.description) {
-    lines.push(`Description: ${input.description}`);
-  }
-
-  if (input.cronExpression) {
-    lines.push(`Cron expression: ${input.cronExpression}`);
-  }
-
-  if (input.scheduledDate) {
-    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
-  }
-
-  lines.push('', 'Content:', input.content);
-
-  return lines.join('\n');
+  return [title, content].filter(Boolean).join('\n\n');
 }
 
 function createWakeContent(input: {
