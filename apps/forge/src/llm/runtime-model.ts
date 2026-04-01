@@ -1,5 +1,4 @@
 import type { AgentConfig } from '@mastra/core/agent';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOAuthGateway, OAUTH_GATEWAY_ID } from '@mastra-engine/core';
 
 type RuntimeProfile = {
@@ -29,41 +28,9 @@ export async function resolveProfileRuntimeModel(
     });
   }
 
-  if (profile.modelKey.startsWith('minimax-coding-plan/')) {
-    const [, ...modelIdParts] = profile.modelKey.split('/');
-    const modelId = modelIdParts.join('/');
-
-    if (!modelId) {
-      throw new Error(`Invalid MiniMax coding model key: ${profile.modelKey}`);
-    }
-
-    const anthropic = createAnthropic({
-      apiKey: profile.apiKey,
-      baseURL: resolveMiniMaxAnthropicBaseUrl(profile.baseUrl),
-    });
-
-    return anthropic(modelId);
-  }
-
   return {
     id: profile.modelKey as `${string}/${string}`,
     apiKey: profile.apiKey,
     ...(profile.baseUrl ? { url: profile.baseUrl } : {}),
   };
-}
-
-function resolveMiniMaxAnthropicBaseUrl(baseUrl: string | null) {
-  const normalizedBaseUrl = (baseUrl ?? '').trim();
-
-  if (!normalizedBaseUrl) {
-    return 'https://api.minimax.io/anthropic/v1';
-  }
-
-  const parsed = new URL(normalizedBaseUrl);
-
-  if (parsed.origin === 'https://api.minimax.io' && (parsed.pathname === '' || parsed.pathname === '/')) {
-    return 'https://api.minimax.io/anthropic/v1';
-  }
-
-  return normalizedBaseUrl.replace(/\/$/, '');
 }
