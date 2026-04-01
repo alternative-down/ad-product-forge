@@ -170,11 +170,12 @@ export function createMiniMaxTools(
       description:
         'List MiniMax voices available for TTS. Use this before minimax_tts when you want to choose a voiceId instead of using the default voice.',
       inputSchema: z.object({
-        voice_type: voiceTypeSchema.default('system').describe('Which voices to list. Use "system" for built-in voices, "voice_cloning" for cloned voices, "voice_generation" for generated voices, or "all" for everything.'),
+        voice_type: voiceTypeSchema.default('all').optional().describe('Optional voice group filter. Leave empty to list all available voices, or use "system", "voice_cloning", or "voice_generation" to narrow the result.'),
       }),
       execute: async (input) => {
         try {
-          const result = await minimax.listVoices(input.voice_type);
+          const voiceType = input.voice_type ?? 'all';
+          const result = await minimax.listVoices(voiceType);
 
           if (!result.success || !result.data) {
             return {
@@ -186,7 +187,7 @@ export function createMiniMaxTools(
 
           return {
             valid: true,
-            voiceType: input.voice_type,
+            voiceType,
             ...result.data,
           };
         } catch (error) {
