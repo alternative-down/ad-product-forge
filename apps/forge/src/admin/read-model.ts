@@ -7,7 +7,14 @@ import { LibSQLStore } from '@mastra/libsql';
 import { toMastraSafeIdentifier } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
-import { agents, agentExecutionSteps, agentProviders, agentSchedules } from '../database/schema';
+import {
+  agents,
+  agentExecutionSteps,
+  agentMcpConfigs,
+  agentProviders,
+  agentSchedules,
+  mcpServerConfigs,
+} from '../database/schema';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createCompanyPayables } from '../finance/company-payables';
@@ -161,6 +168,7 @@ export function createAdminReadModel(input: {
       functions,
       llmProfiles,
       providerRows,
+      agentMcpRows,
       recentSteps,
       agentScheduleRows,
       activeContract,
@@ -174,6 +182,25 @@ export function createAdminReadModel(input: {
         db.query.agentProviders.findMany({
           where: eq(agentProviders.agentId, agentId),
         }),
+        db
+          .select({
+            configId: agentMcpConfigs.id,
+            isActive: agentMcpConfigs.isActive,
+            serverId: mcpServerConfigs.id,
+            name: mcpServerConfigs.name,
+            description: mcpServerConfigs.description,
+            transport: mcpServerConfigs.transport,
+            command: mcpServerConfigs.command,
+            args: mcpServerConfigs.args,
+            envVars: mcpServerConfigs.envVars,
+            url: mcpServerConfigs.url,
+            headers: mcpServerConfigs.headers,
+            createdAt: mcpServerConfigs.createdAt,
+            updatedAt: mcpServerConfigs.updatedAt,
+          })
+          .from(agentMcpConfigs)
+          .innerJoin(mcpServerConfigs, eq(agentMcpConfigs.serverId, mcpServerConfigs.id))
+          .where(eq(agentMcpConfigs.agentId, agentId)),
         db.query.agentExecutionSteps.findMany({
           where: eq(agentExecutionSteps.agentId, agentId),
           orderBy: [desc(agentExecutionSteps.createdAt)],
@@ -255,6 +282,23 @@ export function createAdminReadModel(input: {
               : parseProviderCredentials(provider.encryptedCredentials),
         }))
         .sort((left, right) => left.providerType.localeCompare(right.providerType)),
+      mcpServers: agentMcpRows
+        .map((server) => ({
+          configId: server.configId,
+          serverId: server.serverId,
+          name: server.name,
+          description: server.description ?? undefined,
+          transport: server.transport as 'stdio' | 'http_streamable',
+          command: server.command ?? '',
+          argsText: server.args ?? '',
+          envVarsText: server.envVars ?? '',
+          url: server.url ?? '',
+          headersText: server.headers ?? '',
+          isActive: server.isActive === 1,
+          createdAt: server.createdAt,
+          updatedAt: server.updatedAt,
+        }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
       githubProvisioning,
       activeContract: activeContract && {
         ...activeContract,

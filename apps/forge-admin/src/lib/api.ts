@@ -144,6 +144,21 @@ export type AgentDetail = {
     editable: boolean;
     credentials: unknown;
   }>;
+  mcpServers: Array<{
+    configId: string;
+    serverId: string;
+    name: string;
+    description?: string;
+    transport: 'stdio' | 'http_streamable';
+    command: string;
+    argsText: string;
+    envVarsText: string;
+    url: string;
+    headersText: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
   githubProvisioning: {
     agentId: string;
     status: 'pending' | 'created' | 'active';
@@ -255,6 +270,33 @@ export type UpsertAgentProviderInput = {
   providerType: 'discord' | 'email';
   credentials: unknown;
 };
+
+export type AgentMcpServerInput =
+  | {
+      agentId: string;
+      name: string;
+      description?: string;
+      transport: 'stdio';
+      command: string;
+      argsText?: string;
+      envVarsText?: string;
+      isActive: boolean;
+    }
+  | {
+      agentId: string;
+      name: string;
+      description?: string;
+      transport: 'http_streamable';
+      url: string;
+      headersText?: string;
+      isActive: boolean;
+    };
+
+export type UpdateAgentMcpServerInput =
+  | ({
+      configId: string;
+      serverId: string;
+    } & AgentMcpServerInput);
 
 export type AgentFunction = {
   functionId: string;
@@ -815,6 +857,40 @@ export function deleteAgentProvider(agentId: string, providerType: 'discord' | '
     {
       method: 'POST',
       body: JSON.stringify({ agentId, providerType }),
+    },
+  );
+}
+
+export function createAgentMcpServer(input: AgentMcpServerInput) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>(
+    '/admin/agent-mcp/create',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function updateAgentMcpServer(input: UpdateAgentMcpServerInput) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>(
+    '/admin/agent-mcp/update',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function deleteAgentMcpServer(input: {
+  agentId: string;
+  configId: string;
+  serverId: string;
+}) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>(
+    '/admin/agent-mcp/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
     },
   );
 }

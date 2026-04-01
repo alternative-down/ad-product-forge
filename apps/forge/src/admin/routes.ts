@@ -29,7 +29,13 @@ import { runInternalHiring, runInternalTermination } from '../agents/internal-ag
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { GitHubAppManager } from '../github/manager';
-import { agentFunctions, agents, agentProviders } from '../database/schema';
+import {
+  agentFunctions,
+  agentMcpConfigs,
+  agents,
+  agentProviders,
+  mcpServerConfigs,
+} from '../database/schema';
 import { encryptSecret } from '../encryption/crypto';
 import { parseProviderCredentials } from '../communication/provider-loader';
 import { createId } from '../utils/id';
@@ -54,6 +60,7 @@ import {
   searchPrompts,
   type PromptType,
 } from '../agents/prompts/store';
+import { clearAgentMCPClient } from '../agents/mcp/client-manager';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -190,6 +197,51 @@ const upsertAgentProviderSchema = z.object({
 const deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
+});
+
+const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
+  z.object({
+    transport: z.literal('stdio'),
+    command: z.string().trim().min(1),
+    argsText: z.string().optional().default(''),
+    envVarsText: z.string().optional().default(''),
+    url: z.string().optional().default(''),
+    headersText: z.string().optional().default(''),
+  }),
+  z.object({
+    transport: z.literal('http_streamable'),
+    url: z.string().trim().url(),
+    headersText: z.string().optional().default(''),
+    command: z.string().optional().default(''),
+    argsText: z.string().optional().default(''),
+    envVarsText: z.string().optional().default(''),
+  }),
+]);
+
+const createAgentMcpServerSchema = z
+  .object({
+    agentId: z.string().min(1),
+    name: z.string().trim().min(1),
+    description: z.string().trim().optional().default(''),
+    isActive: z.boolean().default(true),
+  })
+  .and(mcpServerFieldsSchema);
+
+const updateAgentMcpServerSchema = z
+  .object({
+    agentId: z.string().min(1),
+    configId: z.string().min(1),
+    serverId: z.string().min(1),
+    name: z.string().trim().min(1),
+    description: z.string().trim().optional().default(''),
+    isActive: z.boolean().default(true),
+  })
+  .and(mcpServerFieldsSchema);
+
+const deleteAgentMcpServerSchema = z.object({
+  agentId: z.string().min(1),
+  configId: z.string().min(1),
+  serverId: z.string().min(1),
 });
 
 const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
@@ -704,6 +756,110 @@ export function registerAdminRoutes(input: {
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
       return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
+      const timestamp = new Date().toISOString();
+      const serverId = createId();
+      const configId = createId();
+
+      await input.db.insert(mcpServerConfigs).values({
+        id: serverId,
+        name: body.name,
+        description: normalizeOptionalText(body.description),
+        transport: body.transport,
+        command: body.transport === 'stdio' ? body.command : null,
+        args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
+        envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+        url: body.transport === 'http_streamable' ? body.url : null,
+        headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+        version: 1,
+        isActive: body.isActive ? 1 : 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+
+      await input.db.insert(agentMcpConfigs).values({
+        id: configId,
+        agentId: body.agentId,
+        serverId,
+        isActive: body.isActive ? 1 : 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
+      const timestamp = new Date().toISOString();
+
+      await input.db
+        .update(mcpServerConfigs)
+        .set({
+          name: body.name,
+          description: normalizeOptionalText(body.description),
+          transport: body.transport,
+          command: body.transport === 'stdio' ? body.command : null,
+          args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
+          envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+          url: body.transport === 'http_streamable' ? body.url : null,
+          headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+          isActive: body.isActive ? 1 : 0,
+          updatedAt: timestamp,
+        })
+        .where(eq(mcpServerConfigs.id, body.serverId));
+
+      await input.db
+        .update(agentMcpConfigs)
+        .set({
+          isActive: body.isActive ? 1 : 0,
+          updatedAt: timestamp,
+        })
+        .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+
+      await input.db
+        .delete(agentMcpConfigs)
+        .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+
+      const remainingLinks = await input.db.query.agentMcpConfigs.findMany({
+        where: eq(agentMcpConfigs.serverId, body.serverId),
+        columns: {
+          id: true,
+        },
+      });
+
+      if (remainingLinks.length === 0) {
+        await input.db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
+      }
+
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
     },
   });
 
@@ -1244,6 +1400,40 @@ export function registerAdminRoutes(input: {
       return jsonResponse({ success: true });
     },
   });
+}
+
+async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
+  clearAgentMCPClient(agentId);
+  await reloadAgentIfLoaded(db, loaderConfig, agentId);
+}
+
+function normalizeOptionalText(value?: string) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function normalizeJsonText(
+  value: string | undefined,
+  fieldName: string,
+  expectedShape: 'array' | 'object',
+) {
+  const normalized = value?.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = JSON.parse(normalized);
+  const valid =
+    expectedShape === 'array'
+      ? Array.isArray(parsed)
+      : typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
+
+  if (!valid) {
+    throw new Error(`${fieldName} must be a JSON ${expectedShape}`);
+  }
+
+  return JSON.stringify(parsed);
 }
 
 function parseJsonBody<TSchema extends z.ZodTypeAny>(

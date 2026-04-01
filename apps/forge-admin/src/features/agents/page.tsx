@@ -7,7 +7,9 @@ import {
   adjustAgentContractBudget,
   changeAgentFunction,
   createSchedule,
+  createAgentMcpServer,
   deleteAgentProvider,
+  deleteAgentMcpServer,
   deleteSchedule,
   getAgent,
   getSystemLlm,
@@ -17,11 +19,13 @@ import {
   reloadAgent,
   sendInternalChatMessageFromAdmin,
   terminateAgent,
+  updateAgentMcpServer,
   updateAgentConfig,
   updateSchedule,
   upsertAgentProvider,
   wakeAgent,
   type AgentListItem,
+  type AgentMcpServerInput,
   type AgentSchedule,
   type HireAgentResult,
   type AgentDetail,
@@ -133,6 +137,17 @@ function AgentsWorkspacePage(input: {
   const [newProviderDraft, setNewProviderDraft] = useState<ProviderDraft>({
     providerType: 'discord',
     credentialsText: createProviderTemplate('discord'),
+  });
+  const [mcpDrafts, setMcpDrafts] = useState<Record<string, AgentMcpServerInput>>({});
+  const [newMcpDraft, setNewMcpDraft] = useState<AgentMcpServerInput>({
+    agentId: input.agentId ?? '',
+    name: '',
+    description: '',
+    transport: 'stdio',
+    command: '',
+    argsText: '[]',
+    envVarsText: '{}',
+    isActive: true,
   });
 
   const agentsQuery = useQuery({
@@ -293,6 +308,41 @@ function AgentsWorkspacePage(input: {
         queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
       ]);
+    },
+  });
+  const createMcpMutation = useMutation({
+    mutationFn: createAgentMcpServer,
+    onSuccess: async (_, input) => {
+      setNewMcpDraft({
+        agentId: input.agentId,
+        name: '',
+        description: '',
+        transport: 'stdio',
+        command: '',
+        argsText: '[]',
+        envVarsText: '{}',
+        isActive: true,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+  });
+  const updateMcpMutation = useMutation({
+    mutationFn: updateAgentMcpServer,
+    onSuccess: async (_, input) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+  });
+  const deleteMcpMutation = useMutation({
+    mutationFn: deleteAgentMcpServer,
+    onSuccess: async (_, input) => {
+      setMcpDrafts((current) => {
+        const next = { ...current };
+        delete next[input.configId];
+        return next;
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
     },
   });
   const createScheduleMutation = useMutation({
@@ -798,6 +848,48 @@ function AgentsWorkspacePage(input: {
                             upsertProviderMutation.error?.message ?? deleteProviderMutation.error?.message ?? null
                           }
                         />
+
+                        <AgentMcpCard
+                          agentId={agentDetailQuery.data.agentId}
+                          servers={agentDetailQuery.data.mcpServers}
+                          draftByConfigId={mcpDrafts}
+                          newDraft={{
+                            ...newMcpDraft,
+                            agentId: agentDetailQuery.data.agentId,
+                          }}
+                          onChangeDraft={(configId, draft) =>
+                            setMcpDrafts((current) => ({
+                              ...current,
+                              [configId]: draft,
+                            }))
+                          }
+                          onChangeNewDraft={setNewMcpDraft}
+                          onCreate={(draft) =>
+                            createMcpMutation.mutate({
+                              ...draft,
+                              agentId: agentDetailQuery.data!.agentId,
+                            })
+                          }
+                          onUpdate={(input) => updateMcpMutation.mutate(input)}
+                          onDelete={(configId, serverId) =>
+                            deleteMcpMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              configId,
+                              serverId,
+                            })
+                          }
+                          pendingId={
+                            updateMcpMutation.variables?.configId ??
+                            deleteMcpMutation.variables?.configId ??
+                            (createMcpMutation.isPending ? '__new__' : null)
+                          }
+                          error={
+                            createMcpMutation.error?.message ??
+                            updateMcpMutation.error?.message ??
+                            deleteMcpMutation.error?.message ??
+                            null
+                          }
+                        />
                       </div>
                     ) : null}
 
@@ -1289,6 +1381,325 @@ function AgentThreadCard(input: {
       </div>
     </Card>
   );
+}
+
+function AgentMcpCard(input: {
+  agentId: string;
+  servers: AgentDetail['mcpServers'];
+  draftByConfigId: Record<string, AgentMcpServerInput>;
+  newDraft: AgentMcpServerInput;
+  onChangeDraft(configId: string, draft: AgentMcpServerInput): void;
+  onChangeNewDraft(draft: AgentMcpServerInput): void;
+  onCreate(draft: AgentMcpServerInput): void;
+  onUpdate(input: AgentMcpServerInput & { configId: string; serverId: string }): void;
+  onDelete(configId: string, serverId: string): void;
+  pendingId?: string | null;
+  error?: string | null;
+}) {
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">MCP</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          MCP servers connected to this agent. Each entry is scoped here and reloads the runtime after changes.
+        </p>
+      </div>
+
+      {input.error ? (
+        <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {input.error}
+        </div>
+      ) : null}
+
+      <div className="mt-5 space-y-4">
+        {input.servers.map((server) => {
+          const draft = input.draftByConfigId[server.configId] ?? toMcpDraft(input.agentId, server);
+
+          return (
+            <div key={server.configId} className="rounded-lg border border-border bg-background p-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <LabeledField label="Name">
+                  <Input
+                    value={draft.name}
+                    onChange={(event) =>
+                      input.onChangeDraft(server.configId, { ...draft, name: event.target.value })
+                    }
+                  />
+                </LabeledField>
+                <LabeledField label="Transport">
+                  <Select
+                    value={draft.transport}
+                    onChange={(event) =>
+                      input.onChangeDraft(
+                        server.configId,
+                        event.target.value === 'http_streamable'
+                          ? {
+                              agentId: draft.agentId,
+                              name: draft.name,
+                              description: draft.description,
+                              transport: 'http_streamable',
+                              url: 'url' in draft ? draft.url : '',
+                              headersText: 'headersText' in draft ? draft.headersText : '{}',
+                              isActive: draft.isActive,
+                            }
+                          : {
+                              agentId: draft.agentId,
+                              name: draft.name,
+                              description: draft.description,
+                              transport: 'stdio',
+                              command: 'command' in draft ? draft.command : '',
+                              argsText: 'argsText' in draft ? draft.argsText : '[]',
+                              envVarsText: 'envVarsText' in draft ? draft.envVarsText : '{}',
+                              isActive: draft.isActive,
+                            },
+                      )
+                    }
+                  >
+                    <option value="stdio">stdio</option>
+                    <option value="http_streamable">http_streamable</option>
+                  </Select>
+                </LabeledField>
+                <LabeledField label="Description" className="md:col-span-2">
+                  <Input
+                    value={draft.description ?? ''}
+                    onChange={(event) =>
+                      input.onChangeDraft(server.configId, { ...draft, description: event.target.value })
+                    }
+                  />
+                </LabeledField>
+                {'command' in draft ? (
+                  <>
+                    <LabeledField label="Command" className="md:col-span-2">
+                      <Input
+                        value={draft.command}
+                        onChange={(event) =>
+                          input.onChangeDraft(server.configId, { ...draft, command: event.target.value })
+                        }
+                      />
+                    </LabeledField>
+                    <LabeledField label="Args JSON">
+                      <Textarea
+                        rows={4}
+                        value={draft.argsText ?? ''}
+                        onChange={(event) =>
+                          input.onChangeDraft(server.configId, { ...draft, argsText: event.target.value })
+                        }
+                      />
+                    </LabeledField>
+                    <LabeledField label="Env JSON">
+                      <Textarea
+                        rows={4}
+                        value={draft.envVarsText ?? ''}
+                        onChange={(event) =>
+                          input.onChangeDraft(server.configId, { ...draft, envVarsText: event.target.value })
+                        }
+                      />
+                    </LabeledField>
+                  </>
+                ) : (
+                  <>
+                    <LabeledField label="URL" className="md:col-span-2">
+                      <Input
+                        value={draft.url}
+                        onChange={(event) =>
+                          input.onChangeDraft(server.configId, { ...draft, url: event.target.value })
+                        }
+                      />
+                    </LabeledField>
+                    <LabeledField label="Headers JSON" className="md:col-span-2">
+                      <Textarea
+                        rows={4}
+                        value={draft.headersText ?? ''}
+                        onChange={(event) =>
+                          input.onChangeDraft(server.configId, { ...draft, headersText: event.target.value })
+                        }
+                      />
+                    </LabeledField>
+                  </>
+                )}
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={draft.isActive}
+                    onChange={(event) =>
+                      input.onChangeDraft(server.configId, { ...draft, isActive: event.target.checked })
+                    }
+                  />
+                  active
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={input.pendingId === server.configId}
+                    onClick={() =>
+                      input.onUpdate({
+                        ...draft,
+                        configId: server.configId,
+                        serverId: server.serverId,
+                      })
+                    }
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={input.pendingId === server.configId}
+                    onClick={() => input.onDelete(server.configId, server.serverId)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="rounded-lg border border-dashed border-border bg-background p-4">
+          <div className="font-medium text-foreground">Add MCP server</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <LabeledField label="Name">
+              <Input
+                value={input.newDraft.name}
+                onChange={(event) => input.onChangeNewDraft({ ...input.newDraft, name: event.target.value })}
+              />
+            </LabeledField>
+            <LabeledField label="Transport">
+              <Select
+                value={input.newDraft.transport}
+                onChange={(event) =>
+                  input.onChangeNewDraft(
+                    event.target.value === 'http_streamable'
+                      ? {
+                          agentId: input.agentId,
+                          name: input.newDraft.name,
+                          description: input.newDraft.description,
+                          transport: 'http_streamable',
+                          url: '',
+                          headersText: '{}',
+                          isActive: input.newDraft.isActive,
+                        }
+                      : {
+                          agentId: input.agentId,
+                          name: input.newDraft.name,
+                          description: input.newDraft.description,
+                          transport: 'stdio',
+                          command: '',
+                          argsText: '[]',
+                          envVarsText: '{}',
+                          isActive: input.newDraft.isActive,
+                        },
+                  )
+                }
+              >
+                <option value="stdio">stdio</option>
+                <option value="http_streamable">http_streamable</option>
+              </Select>
+            </LabeledField>
+            <LabeledField label="Description" className="md:col-span-2">
+              <Input
+                value={input.newDraft.description ?? ''}
+                onChange={(event) =>
+                  input.onChangeNewDraft({ ...input.newDraft, description: event.target.value })
+                }
+              />
+            </LabeledField>
+            {'command' in input.newDraft ? (
+              <>
+                <LabeledField label="Command" className="md:col-span-2">
+                  <Input
+                    value={input.newDraft.command}
+                    onChange={(event) =>
+                      input.onChangeNewDraft({ ...input.newDraft, command: event.target.value })
+                    }
+                  />
+                </LabeledField>
+                <LabeledField label="Args JSON">
+                  <Textarea
+                    rows={4}
+                    value={input.newDraft.argsText ?? ''}
+                    onChange={(event) =>
+                      input.onChangeNewDraft({ ...input.newDraft, argsText: event.target.value })
+                    }
+                  />
+                </LabeledField>
+                <LabeledField label="Env JSON">
+                  <Textarea
+                    rows={4}
+                    value={input.newDraft.envVarsText ?? ''}
+                    onChange={(event) =>
+                      input.onChangeNewDraft({ ...input.newDraft, envVarsText: event.target.value })
+                    }
+                  />
+                </LabeledField>
+              </>
+            ) : (
+              <>
+                <LabeledField label="URL" className="md:col-span-2">
+                  <Input
+                    value={input.newDraft.url}
+                    onChange={(event) =>
+                      input.onChangeNewDraft({ ...input.newDraft, url: event.target.value })
+                    }
+                  />
+                </LabeledField>
+                <LabeledField label="Headers JSON" className="md:col-span-2">
+                  <Textarea
+                    rows={4}
+                    value={input.newDraft.headersText ?? ''}
+                    onChange={(event) =>
+                      input.onChangeNewDraft({ ...input.newDraft, headersText: event.target.value })
+                    }
+                  />
+                </LabeledField>
+              </>
+            )}
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={input.newDraft.isActive}
+                onChange={(event) =>
+                  input.onChangeNewDraft({ ...input.newDraft, isActive: event.target.checked })
+                }
+              />
+              active
+            </label>
+            <Button disabled={input.pendingId === '__new__'} onClick={() => input.onCreate(input.newDraft)}>
+              Add MCP server
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function toMcpDraft(agentId: string, server: AgentDetail['mcpServers'][number]): AgentMcpServerInput {
+  if (server.transport === 'http_streamable') {
+    return {
+      agentId,
+      name: server.name,
+      description: server.description ?? '',
+      transport: 'http_streamable',
+      url: server.url,
+      headersText: server.headersText || '{}',
+      isActive: server.isActive,
+    };
+  }
+
+  return {
+    agentId,
+    name: server.name,
+    description: server.description ?? '',
+    transport: 'stdio',
+    command: server.command,
+    argsText: server.argsText || '[]',
+    envVarsText: server.envVarsText || '{}',
+    isActive: server.isActive,
+  };
 }
 
 function ThreadJsonBlock(input: {
