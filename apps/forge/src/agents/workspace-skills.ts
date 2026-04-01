@@ -86,17 +86,21 @@ async function countSkillFiles(skillRoot: string): Promise<number> {
 
 function normalizeArchiveEntryPath(entryPath: string) {
   const normalizedPath = entryPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const isDirectory = normalizedPath.endsWith('/');
   const withoutSkillsPrefix = normalizedPath.startsWith('skills/')
     ? normalizedPath.slice('skills/'.length)
     : normalizedPath;
 
-  const safePath = path.posix.normalize(withoutSkillsPrefix);
+  const safePath = path.posix.normalize(isDirectory ? withoutSkillsPrefix.slice(0, -1) : withoutSkillsPrefix);
 
   if (!safePath || safePath === '.' || safePath.startsWith('../') || safePath.includes('/../')) {
     throw new Error(`Invalid skill archive entry: ${entryPath}`);
   }
 
-  return safePath;
+  return {
+    safePath,
+    isDirectory,
+  };
 }
 
 export async function listAgentWorkspaceSkills(
@@ -170,7 +174,7 @@ export async function installAgentWorkspaceSkillsFromZip(input: {
   await fs.mkdir(skillsRoot, { recursive: true });
 
   for (const [entryPath, content] of Object.entries(archive)) {
-    const safePath = normalizeArchiveEntryPath(entryPath);
+    const { safePath, isDirectory } = normalizeArchiveEntryPath(entryPath);
     const [skillName] = safePath.split('/');
 
     if (!skillName) {
@@ -182,6 +186,11 @@ export async function installAgentWorkspaceSkillsFromZip(input: {
 
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
       throw new Error(`Invalid skill archive entry: ${entryPath}`);
+    }
+
+    if (isDirectory) {
+      await fs.mkdir(targetPath, { recursive: true });
+      continue;
     }
 
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
