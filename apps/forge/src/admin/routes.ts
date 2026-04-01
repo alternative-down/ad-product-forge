@@ -61,6 +61,10 @@ import {
   type PromptType,
 } from '../agents/prompts/store';
 import { clearAgentMCPClient } from '../agents/mcp/client-manager';
+import {
+  deleteAgentWorkspaceSkill,
+  installAgentWorkspaceSkillsFromZip,
+} from '../agents/workspace-skills';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -242,6 +246,16 @@ const deleteAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
   serverId: z.string().min(1),
+});
+
+const uploadAgentSkillsSchema = z.object({
+  agentId: z.string().min(1),
+  archiveBase64: z.string().min(1),
+});
+
+const deleteAgentSkillSchema = z.object({
+  agentId: z.string().min(1),
+  skillName: z.string().min(1),
 });
 
 const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
@@ -860,6 +874,64 @@ export function registerAdminRoutes(input: {
       await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
 
       return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-skills/upload',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      const installedSkillNames = await installAgentWorkspaceSkillsFromZip({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        zipBase64: body.archiveBase64,
+      });
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        installedSkillNames,
+      }, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-skills/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      await deleteAgentWorkspaceSkill({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        skillName: body.skillName,
+      });
     },
   });
 

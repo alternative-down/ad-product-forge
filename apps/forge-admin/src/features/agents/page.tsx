@@ -7,6 +7,7 @@ import {
   adjustAgentContractBudget,
   changeAgentFunction,
   createSchedule,
+  deleteAgentSkill,
   createAgentMcpServer,
   deleteAgentProvider,
   deleteAgentMcpServer,
@@ -19,6 +20,7 @@ import {
   reloadAgent,
   sendInternalChatMessageFromAdmin,
   terminateAgent,
+  uploadAgentSkills,
   updateAgentMcpServer,
   updateAgentConfig,
   updateSchedule,
@@ -345,6 +347,18 @@ function AgentsWorkspacePage(input: {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
     },
   });
+  const uploadSkillsMutation = useMutation({
+    mutationFn: uploadAgentSkills,
+    onSuccess: async (_, input) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+  });
+  const deleteSkillMutation = useMutation({
+    mutationFn: deleteAgentSkill,
+    onSuccess: async (_, input) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+  });
   const createScheduleMutation = useMutation({
     mutationFn: createSchedule,
     onSuccess: async (_, input) => {
@@ -637,34 +651,57 @@ function AgentsWorkspacePage(input: {
                     ) : null}
 
                     {selectedRuntimeView === 'configuration' ? (
-                      <AgentConfigurationCard
-                        draft={selectedAgentConfig!}
-                        pending={updateConfigMutation.isPending}
-                        error={updateConfigMutation.error?.message ?? null}
-                        onChange={(draft) => {
-                          if (!agentDetailQuery.data) {
-                            return;
-                          }
+                      <div className="space-y-6">
+                        <AgentConfigurationCard
+                          draft={selectedAgentConfig!}
+                          pending={updateConfigMutation.isPending}
+                          error={updateConfigMutation.error?.message ?? null}
+                          onChange={(draft) => {
+                            if (!agentDetailQuery.data) {
+                              return;
+                            }
 
-                          setConfigDraft({
-                            agentId: agentDetailQuery.data.agentId,
-                            value: draft,
-                          });
-                        }}
-                        onSubmit={(draft) =>
-                          updateConfigMutation.mutate({
-                            agentId: agentDetailQuery.data!.agentId,
-                            name: draft.name,
-                            description: draft.description || null,
-                            instructions: draft.instructions,
-                            workspaceAutoSync: draft.workspaceAutoSync,
-                            workspaceBm25: draft.workspaceBm25,
-                            modelProfileId: draft.modelProfileId,
-                            omModelProfileId: draft.omModelProfileId,
-                          })
-                        }
-                        profiles={systemLlmQuery.data?.profiles ?? []}
-                      />
+                            setConfigDraft({
+                              agentId: agentDetailQuery.data.agentId,
+                              value: draft,
+                            });
+                          }}
+                          onSubmit={(draft) =>
+                            updateConfigMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              name: draft.name,
+                              description: draft.description || null,
+                              instructions: draft.instructions,
+                              workspaceAutoSync: draft.workspaceAutoSync,
+                              workspaceBm25: draft.workspaceBm25,
+                              modelProfileId: draft.modelProfileId,
+                              omModelProfileId: draft.omModelProfileId,
+                            })
+                          }
+                          profiles={systemLlmQuery.data?.profiles ?? []}
+                        />
+
+                        <AgentSkillsCard
+                          agentId={agentDetailQuery.data.agentId}
+                          skills={agentDetailQuery.data.skills}
+                          uploadPending={uploadSkillsMutation.isPending}
+                          uploadError={uploadSkillsMutation.error?.message ?? null}
+                          deletePendingSkillName={deleteSkillMutation.variables?.skillName ?? null}
+                          deleteError={deleteSkillMutation.error?.message ?? null}
+                          onUpload={(archiveBase64) =>
+                            uploadSkillsMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              archiveBase64,
+                            })
+                          }
+                          onDelete={(skillName) =>
+                            deleteSkillMutation.mutate({
+                              agentId: agentDetailQuery.data!.agentId,
+                              skillName,
+                            })
+                          }
+                        />
+                      </div>
                     ) : null}
 
                     {selectedRuntimeView === 'contract' ? (
@@ -1672,6 +1709,112 @@ function AgentMcpCard(input: {
             </Button>
           </div>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+function AgentSkillsCard(input: {
+  agentId: string;
+  skills: AgentDetail['skills'];
+  uploadPending: boolean;
+  uploadError?: string | null;
+  deletePendingSkillName?: string | null;
+  deleteError?: string | null;
+  onUpload(archiveBase64: string): void;
+  onDelete(skillName: string): void;
+}) {
+  const [selectedFileName, setSelectedFileName] = useState('');
+
+  async function handleFileChange(file: File | null) {
+    if (!file) {
+      setSelectedFileName('');
+      return;
+    }
+
+    setSelectedFileName(file.name);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = '';
+
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+
+    input.onUpload(window.btoa(binary));
+  }
+
+  return (
+    <Card className="p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Workspace skills</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Install reusable skills into this agent workspace from a zip archive. The archive is extracted into the agent skills folder and the runtime is reloaded after changes.
+        </p>
+      </div>
+
+      {input.uploadError ? (
+        <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {input.uploadError}
+        </div>
+      ) : null}
+
+      {input.deleteError ? (
+        <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {input.deleteError}
+        </div>
+      ) : null}
+
+      <div className="mt-5 rounded-lg border border-dashed border-border bg-background p-4">
+        <div className="font-medium text-foreground">Install skill archive</div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Upload one zip file containing one or more skill folders. Each skill should include its own <code>SKILL.md</code>.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+          <Input
+            type="file"
+            accept=".zip,application/zip"
+            disabled={input.uploadPending}
+            onChange={(event) => {
+              void handleFileChange(event.target.files?.[0] ?? null);
+              event.currentTarget.value = '';
+            }}
+          />
+          <div className="text-sm text-muted-foreground">
+            {input.uploadPending ? 'Uploading…' : selectedFileName || 'No file selected'}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {input.skills.length === 0 ? (
+          <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+            No skills installed in this agent workspace.
+          </div>
+        ) : (
+          input.skills.map((skill) => (
+            <div
+              key={skill.skillName}
+              className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4 md:flex-row md:items-center md:justify-between"
+            >
+              <div className="space-y-1">
+                <div className="font-medium text-foreground">{skill.skillName}</div>
+                <div className="text-sm text-muted-foreground">{skill.description || '—'}</div>
+                <div className="text-xs text-muted-foreground">
+                  {skill.fileCount} files · updated {formatDateTimeText(skill.updatedAt)}
+                </div>
+              </div>
+              <div>
+                <Button
+                  variant="destructive"
+                  disabled={input.deletePendingSkillName === skill.skillName}
+                  onClick={() => input.onDelete(skill.skillName)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </Card>
   );

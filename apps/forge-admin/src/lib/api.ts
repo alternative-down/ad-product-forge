@@ -159,6 +159,12 @@ export type AgentDetail = {
     createdAt: string;
     updatedAt: string;
   }>;
+  skills: Array<{
+    skillName: string;
+    description?: string;
+    fileCount: number;
+    updatedAt: number;
+  }>;
   githubProvisioning: {
     agentId: string;
     status: 'pending' | 'created' | 'active';
@@ -297,6 +303,16 @@ export type UpdateAgentMcpServerInput =
       configId: string;
       serverId: string;
     } & AgentMcpServerInput);
+
+export type UploadAgentSkillsInput = {
+  agentId: string;
+  archiveBase64: string;
+};
+
+export type DeleteAgentSkillInput = {
+  agentId: string;
+  skillName: string;
+};
 
 export type AgentFunction = {
   functionId: string;
@@ -888,6 +904,26 @@ export function deleteAgentMcpServer(input: {
 }) {
   return request<{ success: true; agentId: string; configId: string; serverId: string }>(
     '/admin/agent-mcp/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function uploadAgentSkills(input: UploadAgentSkillsInput) {
+  return request<{ success: true; agentId: string; installedSkillNames: string[] }>(
+    '/admin/agent-skills/upload',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function deleteAgentSkill(input: DeleteAgentSkillInput) {
+  return request<{ success: true; agentId: string; skillName: string }>(
+    '/admin/agent-skills/delete',
     {
       method: 'POST',
       body: JSON.stringify(input),

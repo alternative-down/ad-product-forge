@@ -28,6 +28,7 @@ import { createLlmModelPriceStore } from '../llm/model-price-store';
 import type { GitHubAppManager } from '../github/manager';
 import { createSystemSettingsStore } from '../system-settings/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
+import { listAgentWorkspaceSkills } from '../agents/workspace-skills';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -300,6 +301,7 @@ export function createAdminReadModel(input: {
         }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       githubProvisioning,
+      skills: await listAgentWorkspaceSkills(input.workspaceBasePath, agent),
       activeContract: activeContract && {
         ...activeContract,
         spentUsd,
