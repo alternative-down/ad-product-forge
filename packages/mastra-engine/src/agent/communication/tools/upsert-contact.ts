@@ -4,16 +4,16 @@ import { z } from 'zod';
 import type { CommunicationModule } from '../module';
 
 const upsertContactInputSchema = z.object({
-  slug: z.string(),
-  displayName: z.string(),
-  description: z.string().optional(),
+  slug: z.string().describe('A stable slug to identify this contact later.'),
+  displayName: z.string().describe('The human-readable name of the contact.'),
+  description: z.string().optional().describe('Optional notes or description about this contact.'),
 });
 
 export function createUpsertContactTool(communication: CommunicationModule) {
   return createTool({
     id: 'upsert_contact',
     description:
-      'Create or update a contact with a stable slug, display name, and free-form description.',
+      'Create a new contact or update an existing one. Returns the saved slug, display name, and description.',
     inputSchema: upsertContactInputSchema,
     execute: async (input) => {
       try {

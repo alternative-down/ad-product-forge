@@ -4,16 +4,28 @@ import { z } from 'zod';
 import type { CommunicationModule } from '../module';
 
 const listConversationsInputSchema = z.object({
-  provider: z.string().optional(),
-  unread: z.boolean().optional(),
-  limit: z.number().int().positive().max(100).default(20),
+  provider: z
+    .string()
+    .optional()
+    .describe('Optional provider filter. Leave empty to list conversations from every provider that supports conversation listing.'),
+  unread: z
+    .boolean()
+    .optional()
+    .describe('If true, return only conversations with unread messages.'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(100)
+    .default(20)
+    .describe('Maximum number of conversations to return.'),
 });
 
 export function createListConversationsTool(communication: CommunicationModule) {
   return createTool({
     id: 'list_conversations',
     description:
-      'List conversations from one provider or from all providers that support conversation listing. Each conversation returns provider and targetKey.',
+      'List conversations you can continue through the communication tools. Returns provider, targetKey, name, participants, unread count, and latest message preview when available.',
     inputSchema: listConversationsInputSchema,
     execute: async (input) => {
       try {

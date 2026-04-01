@@ -4,14 +4,18 @@ import { z } from 'zod';
 import type { CommunicationModule } from '../module';
 
 const listContactsInputSchema = z.object({
-  filter: z.enum(['self', 'others', 'all']).optional().default('others'),
+  filter: z
+    .enum(['self', 'others', 'all'])
+    .optional()
+    .default('others')
+    .describe("Which contacts to list. Use 'others' for the contacts you registered, 'self' for your own identities, or 'all' for both."),
 });
 
 export function createListContactsTool(communication: CommunicationModule) {
   return createTool({
     id: 'list_contacts',
     description:
-      "List the agent contact registry. 'self' is currently empty. 'others' returns the contacts explicitly registered by the agent. Defaults to 'others'.",
+      "List your saved contacts. Use this to discover the contact slugs you can later inspect or update. Defaults to 'others'.",
     inputSchema: listContactsInputSchema,
     execute: async (input) => {
       try {

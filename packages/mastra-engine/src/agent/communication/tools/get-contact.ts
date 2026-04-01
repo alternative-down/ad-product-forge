@@ -4,13 +4,13 @@ import { z } from 'zod';
 import type { CommunicationModule } from '../module';
 
 const getContactInputSchema = z.object({
-  slug: z.string(),
+  slug: z.string().describe('The slug of the contact you want to inspect.'),
 });
 
 export function createGetContactTool(communication: CommunicationModule) {
   return createTool({
     id: 'get_contact',
-    description: 'Get a registered contact by slug.',
+    description: 'Get one saved contact by slug. Returns the contact details if it exists.',
     inputSchema: getContactInputSchema,
     execute: async (input) => {
       try {

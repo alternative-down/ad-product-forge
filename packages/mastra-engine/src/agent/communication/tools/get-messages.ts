@@ -4,15 +4,28 @@ import { z } from 'zod';
 import type { CommunicationModule } from '../module';
 
 const getMessagesInputSchema = z.object({
-  provider: z.string().min(1),
-  targetKey: z.string().min(1),
-  limit: z.number().int().positive().max(200).default(100),
+  provider: z
+    .string()
+    .min(1)
+    .describe('Which provider the conversation belongs to, such as internal-chat, email, or discord.'),
+  targetKey: z
+    .string()
+    .min(1)
+    .describe('The conversation or destination key to read messages from in that provider.'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(200)
+    .default(100)
+    .describe('Maximum number of recent messages to return.'),
 });
 
 export function createGetMessagesTool(communication: CommunicationModule) {
   return createTool({
     id: 'get_messages',
-    description: 'Read messages from a provider conversation using the provider-specific targetKey.',
+    description:
+      'Read recent messages from one conversation in one provider. Returns the messages for the given provider and targetKey.',
     inputSchema: getMessagesInputSchema,
     execute: async (input) => {
       try {

@@ -5,19 +5,29 @@ import type { CommunicationModule } from '../module';
 
 const sendMessageInputSchema = z
   .object({
-    provider: z.string().min(1),
+    provider: z
+      .string()
+      .min(1)
+      .describe('Which communication provider to use, such as internal-chat, email, or discord.'),
     targetKey: z
       .string()
-      .describe('Provider-specific destination key. The module does not interpret this value; it is passed directly to the selected provider.'),
-    content: z.string().min(1),
-    attachments: z.array(z.string()).optional().describe('Workspace file paths to send as attachments.'),
+      .describe('Who or where to send the message in that provider. Examples: an internal-chat agentId or groupId, an email address, or a Discord channel id.'),
+    content: z
+      .string()
+      .min(1)
+      .describe('The message text to send.'),
+    attachments: z
+      .array(z.string())
+      .optional()
+      .describe('Optional file paths from your workspace to send together with the message.'),
   })
   ;
 
 export function createSendMessageTool(communication: CommunicationModule) {
   return createTool({
     id: 'send_message',
-    description: 'Send a message through one of the external providers owned by this agent.',
+    description:
+      'Send a message through a provider. Use this both to continue an existing conversation and to start a new one when that provider supports it. Returns whether the send succeeded, plus the provider, targetKey, and messageId of the sent message.',
     inputSchema: sendMessageInputSchema,
     execute: async (input) => {
       try {
