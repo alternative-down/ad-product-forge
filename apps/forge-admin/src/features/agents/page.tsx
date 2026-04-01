@@ -683,7 +683,7 @@ function AgentsWorkspacePage(input: {
 
                         <AgentSkillsCard
                           agentId={agentDetailQuery.data.agentId}
-                          skills={agentDetailQuery.data.skills}
+                          skills={agentDetailQuery.data.skills ?? []}
                           uploadPending={uploadSkillsMutation.isPending}
                           uploadError={uploadSkillsMutation.error?.message ?? null}
                           deletePendingSkillName={deleteSkillMutation.variables?.skillName ?? null}
@@ -1716,7 +1716,7 @@ function AgentMcpCard(input: {
 
 function AgentSkillsCard(input: {
   agentId: string;
-  skills: AgentDetail['skills'];
+  skills?: AgentDetail['skills'];
   uploadPending: boolean;
   uploadError?: string | null;
   deletePendingSkillName?: string | null;
@@ -1725,6 +1725,7 @@ function AgentSkillsCard(input: {
   onDelete(skillName: string): void;
 }) {
   const [selectedFileName, setSelectedFileName] = useState('');
+  const skills = input.skills ?? [];
 
   async function handleFileChange(file: File | null) {
     if (!file) {
@@ -1786,12 +1787,12 @@ function AgentSkillsCard(input: {
       </div>
 
       <div className="mt-5 space-y-3">
-        {input.skills.length === 0 ? (
+        {skills.length === 0 ? (
           <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
             No skills installed in this agent workspace.
           </div>
         ) : (
-          input.skills.map((skill) => (
+          skills.map((skill) => (
             <div
               key={skill.skillName}
               className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4 md:flex-row md:items-center md:justify-between"
