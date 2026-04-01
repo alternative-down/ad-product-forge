@@ -24,6 +24,10 @@ export interface ImageOptions {
   width?: number;
   height?: number;
   imageCount?: number;
+  subjectReference?: Array<{
+    type: string;
+    imageFile: string;
+  }>;
 }
 
 export interface VideoOptions {
@@ -348,6 +352,13 @@ export class MiniMaxClient {
     if (options.width && options.height) {
       payload.width = options.width;
       payload.height = options.height;
+    }
+
+    if (options.subjectReference && options.subjectReference.length > 0) {
+      payload.subject_reference = options.subjectReference.map((reference) => ({
+        type: reference.type,
+        image_file: reference.imageFile,
+      }));
     }
 
     const response = await this.requestJson('/image_generation', {

@@ -37,6 +37,8 @@ const imageAspectRatioSchema = z.enum([
   '2:3',
 ]);
 
+const imageReferenceTypeSchema = z.enum(['character']);
+
 const languageBoostSchema = z.enum([
   'Chinese',
   'Chinese,Yue',
@@ -81,6 +83,24 @@ const languageBoostSchema = z.enum([
   'auto',
 ]);
 
+function resolveImageContentType(filePath: string) {
+  const extension = path.extname(filePath).toLowerCase();
+
+  switch (extension) {
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.webp':
+      return 'image/webp';
+    case '.gif':
+      return 'image/gif';
+    default:
+      return null;
+  }
+}
+
 function createMiniMaxOutputPath(
   kind: 'tts' | 'images' | 'videos',
   extension: string,
@@ -121,6 +141,27 @@ async function downloadFileBuffer(downloadUrl: string) {
 
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
+}
+
+async function readWorkspaceImageAsDataUrl(
+  workspace: { filesystem?: { readFile(path: string): Promise<Uint8Array | string> } } | undefined,
+  filePath: string,
+) {
+  const filesystem = workspace?.filesystem;
+
+  if (!filesystem) {
+    throw new Error('MiniMax tools require a workspace filesystem');
+  }
+
+  const data = await filesystem.readFile(filePath);
+  const buffer = Buffer.from(typeof data === 'string' ? data : data);
+  const mimeType = resolveImageContentType(filePath);
+
+  if (!mimeType || !mimeType.startsWith('image/')) {
+    throw new Error(`Reference image must be an image file: ${filePath}`);
+  }
+
+  return `data:${mimeType};base64,${buffer.toString('base64')}`;
 }
 
 function inferExtensionFromUrl(downloadUrl: string, fallback: string) {
@@ -264,16 +305,29 @@ export function createMiniMaxTools(
     tools.minimax_image = createTool({
       id: 'minimax_image',
       description:
-        'Generate one image with MiniMax. The image is saved in your workspace and the tool returns the saved path.',
+        'Generate one image with MiniMax. You can use prompt-only generation or pass one or more reference images. Reference images can be public URLs or image paths from your workspace. The generated image is saved in your workspace and the tool returns the saved path.',
       inputSchema: z.object({
         prompt: z.string().min(1).describe('Describe the image you want MiniMax to generate.'),
         model: z.string().nullish().describe('Optional MiniMax image model to use. Omit this unless you need a specific model.'),
         aspect_ratio: imageAspectRatioSchema.nullish().describe('Optional aspect ratio for the image.'),
         width: z.number().int().positive().nullish().describe('Optional image width in pixels.'),
         height: z.number().int().positive().nullish().describe('Optional image height in pixels.'),
+        reference_type: imageReferenceTypeSchema.nullish().describe('Optional reference type for subject reference. Default is character.'),
+        reference_images: z.array(z.string().min(1)).nullish().describe('Optional reference images. Each item can be a public URL or a path to an image inside your workspace.'),
       }),
       execute: async (input, context) => {
         try {
+          const subjectReference = input.reference_images
+            ? await Promise.all(
+                input.reference_images.map(async (referenceImage: string) => ({
+                  type: input.reference_type ?? 'character',
+                  imageFile: /^https?:\/\//i.test(referenceImage)
+                    ? referenceImage
+                    : await readWorkspaceImageAsDataUrl(context.workspace, referenceImage),
+                })),
+              )
+            : undefined;
+
           const result = await minimax.generateImage({
             prompt: input.prompt,
             model: input.model ?? undefined,
@@ -281,6 +335,7 @@ export function createMiniMaxTools(
             width: input.width ?? undefined,
             height: input.height ?? undefined,
             imageCount: 1,
+            subjectReference,
           });
 
           if (!result.success || !result.data) {
