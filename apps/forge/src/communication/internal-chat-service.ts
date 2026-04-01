@@ -389,11 +389,11 @@ export function createInternalChatService(
   async function addMemberToGroup(input: {
     agentId: string;
     groupId: string;
-    participantSlug: string;
+    participantKey: string;
     role?: string;
   }) {
     const group = await getRequiredGroupForAgent(input.agentId, input.groupId);
-    const participant = await getRequiredAccountBySlug(input.participantSlug);
+    const participant = await getRequiredParticipantAccount(input.participantKey);
     const now = Date.now();
 
     const existing = await db.query.internalChatConversationMembers.findFirst({
@@ -404,7 +404,7 @@ export function createInternalChatService(
     });
 
     if (existing) {
-      throw new Error(`Group member already exists: ${input.participantSlug}`);
+      throw new Error(`Group member already exists: ${input.participantKey}`);
     }
 
     await db.insert(internalChatConversationMembers).values({
@@ -427,10 +427,10 @@ export function createInternalChatService(
   async function removeMemberFromGroup(input: {
     agentId: string;
     groupId: string;
-    participantSlug: string;
+    participantKey: string;
   }) {
     await getRequiredGroupForAgent(input.agentId, input.groupId);
-    const participant = await getRequiredAccountBySlug(input.participantSlug);
+    const participant = await getRequiredParticipantAccount(input.participantKey);
 
     await db
       .delete(internalChatConversationMembers)
@@ -881,14 +881,20 @@ export function createInternalChatService(
     return account;
   }
 
-  async function getRequiredAccountBySlug(slug: string) {
-    const account = await getAccountBySlug(slug);
+  async function getRequiredParticipantAccount(participantKey: string) {
+    const accountBySlug = await getAccountBySlug(participantKey);
 
-    if (!account) {
-      throw new Error(`Contact not found: ${slug}`);
+    if (accountBySlug) {
+      return accountBySlug;
     }
 
-    return account;
+    const accountByAgentId = await getAccountByAgentId(participantKey);
+
+    if (accountByAgentId) {
+      return accountByAgentId;
+    }
+
+    throw new Error(`Internal chat participant not found: ${participantKey}`);
   }
 
   async function requireConversationMembership(agentId: string, conversationId: string) {
