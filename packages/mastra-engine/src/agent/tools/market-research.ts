@@ -26,13 +26,13 @@ const marketResearchInputSchema = z.object({
   customPrompt: z
     .string()
     .optional()
-    .describe('Custom research prompt to override the default market research strategy'),
+    .describe('Optional custom research prompt if you want to guide the market research in a more specific direction.'),
 });
 
 export const marketResearchTool = createTool({
   id: 'market_research',
   description:
-    'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
+    'Search the web for market signals, user pain points, trends, and product opportunities. Returns structured signals you can use for strategy, discovery, or prioritization.',
   inputSchema: marketResearchInputSchema,
   execute: async (input) => {
     const API_KEY = process.env.FIRECRAWL_API_KEY;

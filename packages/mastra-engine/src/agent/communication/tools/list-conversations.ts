@@ -7,11 +7,11 @@ const listConversationsInputSchema = z.object({
   provider: z
     .string()
     .optional()
-    .describe('Optional provider filter. Leave empty to list conversations from every provider that supports conversation listing.'),
+    .describe('Optional provider filter. Leave empty to list conversations from every provider that supports this tool.'),
   unread: z
     .boolean()
     .optional()
-    .describe('If true, return only conversations with unread messages.'),
+    .describe('Set this to true if you only want conversations with unread messages.'),
   limit: z
     .number()
     .int()
@@ -25,7 +25,7 @@ export function createListConversationsTool(communication: CommunicationModule) 
   return createTool({
     id: 'list_conversations',
     description:
-      'List conversations you can continue through the communication tools. Returns provider, targetKey, name, participants, unread count, and latest message preview when available.',
+      'List conversations you can continue through the communication tools. Returns the provider and targetKey you need to read messages or send a reply, plus conversation details when available.',
     inputSchema: listConversationsInputSchema,
     execute: async (input) => {
       try {

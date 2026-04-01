@@ -11,7 +11,7 @@ const getMessagesInputSchema = z.object({
   targetKey: z
     .string()
     .min(1)
-    .describe('The conversation or destination key to read messages from in that provider.'),
+    .describe('The targetKey of the conversation you want to read. Use the same targetKey returned by list_conversations, or another key that this provider accepts.'),
   limit: z
     .number()
     .int()
@@ -25,7 +25,7 @@ export function createGetMessagesTool(communication: CommunicationModule) {
   return createTool({
     id: 'get_messages',
     description:
-      'Read recent messages from one conversation in one provider. Returns the messages for the given provider and targetKey.',
+      'Read recent messages from one conversation. Use the provider and targetKey of the conversation you want to inspect. Returns the messages from that conversation.',
     inputSchema: getMessagesInputSchema,
     execute: async (input) => {
       try {

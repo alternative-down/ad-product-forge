@@ -10,8 +10,8 @@ const sendMessageInputSchema = z
       .min(1)
       .describe('Which communication provider to use, such as internal-chat, email, or discord.'),
     targetKey: z
-      .string()
-      .describe('Who or where to send the message in that provider. Examples: an internal-chat agentId or groupId, an email address, or a Discord channel id.'),
+    .string()
+    .describe('Who or where to send the message in that provider. Examples: an internal-chat agentId or groupId, an email address, or a Discord channel id.'),
     content: z
       .string()
       .min(1)
@@ -27,7 +27,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
   return createTool({
     id: 'send_message',
     description:
-      'Send a message through a provider. Use this both to continue an existing conversation and to start a new one when that provider supports it. Returns whether the send succeeded, plus the provider, targetKey, and messageId of the sent message.',
+      'Send a message through a provider. Use this both to continue an existing conversation and to start a new one when that provider supports it. Returns the sent message information, including the provider, targetKey, and messageId.',
     inputSchema: sendMessageInputSchema,
     execute: async (input) => {
       try {

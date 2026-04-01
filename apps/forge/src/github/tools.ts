@@ -11,9 +11,9 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_git_credentials')) {
     tools.get_github_git_credentials = createTool({
       id: 'get_github_git_credentials',
-      description: 'Generate temporary HTTPS credentials for authenticating with GitHub repositories. Use repositoryName to get credentials for a specific repo, or omit to get credentials for all accessible repos.',
+      description: 'Get temporary Git credentials for cloning, pulling, or pushing GitHub repositories that this agent can access. You can request credentials for one repository or for all accessible repositories.',
       inputSchema: z.object({
-        repositoryName: z.string().nullish(),
+        repositoryName: z.string().nullish().describe('Optional repository name if you want credentials for one specific repository. Leave empty to get all available credentials.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'get_github_git_credentials called', { repositoryName: input.repositoryName });
@@ -35,7 +35,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_repositories')) {
     tools.list_github_repositories = createTool({
       id: 'list_github_repositories',
-      description: 'Returns a list of all repositories your GitHub App has access to, including their names, visibility, and default branch.',
+      description: 'List the GitHub repositories this agent can access.',
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:github', 'list_github_repositories called', {});
@@ -54,10 +54,10 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_repository')) {
     tools.get_github_repository = createTool({
       id: 'get_github_repository',
-      description: 'Fetch detailed information about a specific repository including description, privacy status, language, topics, and contributor count. Provide repositoryName (required) and optional owner if the repository belongs to a different organization.',
+      description: 'Show the details of one repository, including its metadata and current settings.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name (slug, not full URL).'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        repositoryName: z.string().min(1).describe('The repository name you want to inspect.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'get_github_repository called', { owner: input.owner, repositoryName: input.repositoryName });
@@ -78,14 +78,14 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'create_github_repository')) {
     tools.create_github_repository = createTool({
       id: 'create_github_repository',
-      description: 'Create a new repository in the company GitHub organization.',
+      description: 'Create a new GitHub repository. Returns the created repository information.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        name: z.string().min(1).describe('The name for the new repository.'),
-        description: z.string().nullish().describe('Repository description.'),
-        private: z.boolean().nullish().describe('Whether the repository should be private.'),
-        autoInit: z.boolean().nullish().describe('Automatically initialize with a README.'),
-        defaultBranch: z.string().nullish().describe('Default branch name (e.g., main, develop).'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        name: z.string().min(1).describe('The name of the repository to create.'),
+        description: z.string().nullish().describe('Optional repository description.'),
+        private: z.boolean().nullish().describe('Set this to true if the repository should be private.'),
+        autoInit: z.boolean().nullish().describe('Set this to true if GitHub should create the repository with an initial README.'),
+        defaultBranch: z.string().nullish().describe('Optional default branch name, such as main or develop.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'create_github_repository called', { name: input.name });
@@ -110,14 +110,14 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'update_github_repository')) {
     tools.update_github_repository = createTool({
       id: 'update_github_repository',
-      description: 'Update an existing repository in the company GitHub organization.',
+      description: 'Update an existing GitHub repository.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name to update.'),
-        name: z.string().min(1).nullish().describe('New repository name.'),
-        description: z.string().nullish().describe('New repository description.'),
-        private: z.boolean().nullish().describe('Change privacy setting.'),
-        defaultBranch: z.string().nullish().describe('New default branch name.'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        repositoryName: z.string().min(1).describe('The repository name you want to update.'),
+        name: z.string().min(1).nullish().describe('Optional new repository name.'),
+        description: z.string().nullish().describe('Optional new repository description.'),
+        private: z.boolean().nullish().describe('Optional new privacy setting.'),
+        defaultBranch: z.string().nullish().describe('Optional new default branch name.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'update_github_repository called', { repositoryName: input.repositoryName });
@@ -143,10 +143,10 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'delete_github_repository')) {
     tools.delete_github_repository = createTool({
       id: 'delete_github_repository',
-      description: 'Delete a repository from the company GitHub organization.',
+      description: 'Delete a GitHub repository.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name to delete.'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        repositoryName: z.string().min(1).describe('The repository name you want to delete.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'delete_github_repository called', { repositoryName: input.repositoryName });
@@ -168,11 +168,11 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_pull_requests')) {
     tools.list_github_pull_requests = createTool({
       id: 'list_github_pull_requests',
-      description: 'Retrieve a list of pull requests filtered by state (open, closed, or all). Useful for reviewing pending work, closed PRs, or tracking team progress.',
+      description: 'List pull requests in one repository. Use this to review open work, closed work, or all pull requests.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        state: z.enum(['open', 'closed', 'all']).default('open').describe('Filter by PR state.'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        repositoryName: z.string().min(1).describe('The repository name you want to inspect.'),
+        state: z.enum(['open', 'closed', 'all']).default('open').describe('Which pull request state you want to list.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'list_github_pull_requests called', { repositoryName: input.repositoryName, state: input.state });
@@ -191,7 +191,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_pull_request')) {
     tools.get_github_pull_request = createTool({
       id: 'get_github_pull_request',
-      description: 'Retrieve complete details of a specific pull request including title, description, author, reviewers, status, and associated branch information.',
+      description: 'Show the details of one pull request.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -214,12 +214,12 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_pull_request_comments')) {
     tools.list_github_pull_request_comments = createTool({
       id: 'list_github_pull_request_comments',
-      description: 'Retrieve all review comments on a pull request, including the author, timestamp, and file locations for each comment.',
+      description: 'List the review comments on one pull request.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        pullRequestNumber: z.number().int().positive().describe('The pull request number.'),
-        direction: z.enum(['asc', 'desc']).default('asc').describe('Sort direction for comments.'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        repositoryName: z.string().min(1).describe('The repository name you want to inspect.'),
+        pullRequestNumber: z.number().int().positive().describe('The pull request number you want to inspect.'),
+        direction: z.enum(['asc', 'desc']).default('asc').describe('Whether the comments should be returned from oldest to newest or newest to oldest.'),
         limit: z.number().int().positive().max(100).default(100).describe('Maximum number of comments to return.'),
       }),
       execute: async (input) => {
@@ -241,14 +241,14 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'create_github_pull_request')) {
     tools.create_github_pull_request = createTool({
       id: 'create_github_pull_request',
-      description: 'Create a new pull request.',
+      description: 'Create a new pull request. Returns the created pull request information.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        repositoryName: z.string().min(1).describe('The repository where the pull request should be created.'),
         title: z.string().min(1).describe('The pull request title.'),
-        head: z.string().min(1).describe('The branch containing your changes.'),
-        base: z.string().min(1).describe('The branch to merge into (e.g., main, develop).'),
-        body: z.string().nullish().describe('Description of the changes.'),
+        head: z.string().min(1).describe('The branch that contains your changes.'),
+        base: z.string().min(1).describe('The branch you want to merge into, such as main or develop.'),
+        body: z.string().nullish().describe('Optional pull request description.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'create_github_pull_request called', { repositoryName: input.repositoryName, title: input.title });
@@ -274,15 +274,15 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'update_github_pull_request')) {
     tools.update_github_pull_request = createTool({
       id: 'update_github_pull_request',
-      description: 'Update an existing pull request (title, body, base, or state).',
+      description: 'Update an existing pull request.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        pullRequestNumber: z.number().int().positive().describe('The pull request number to update.'),
-        title: z.string().min(1).nullish().describe('New PR title.'),
-        body: z.string().nullish().describe('New PR body/description.'),
-        base: z.string().min(1).nullish().describe('New target branch.'),
-        state: z.enum(['open', 'closed']).nullish().describe('Open or close the PR.'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        repositoryName: z.string().min(1).describe('The repository that contains the pull request.'),
+        pullRequestNumber: z.number().int().positive().describe('The pull request number you want to update.'),
+        title: z.string().min(1).nullish().describe('Optional new pull request title.'),
+        body: z.string().nullish().describe('Optional new pull request description.'),
+        base: z.string().min(1).nullish().describe('Optional new base branch.'),
+        state: z.enum(['open', 'closed']).nullish().describe('Optional new state if you want to open or close the pull request.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'update_github_pull_request called', { repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber });
@@ -311,10 +311,10 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
       id: 'merge_github_pull_request',
       description: 'Merge a pull request.',
       inputSchema: z.object({
-        owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
-        repositoryName: z.string().min(1).describe('The repository name.'),
-        pullRequestNumber: z.number().int().positive().describe('The pull request number to merge.'),
-        mergeMethod: z.enum(['merge', 'squash', 'rebase']).nullish().describe('Merge strategy: merge (default), squash, or rebase.'),
+        owner: z.string().nullish().describe('Optional repository owner. Leave empty to use the default company owner.'),
+        repositoryName: z.string().min(1).describe('The repository that contains the pull request.'),
+        pullRequestNumber: z.number().int().positive().describe('The pull request number you want to merge.'),
+        mergeMethod: z.enum(['merge', 'squash', 'rebase']).nullish().describe('Optional merge method.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:github', 'merge_github_pull_request called', { repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber });
@@ -338,7 +338,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'delete_github_pull_request')) {
     tools.delete_github_pull_request = createTool({
       id: 'delete_github_pull_request',
-      description: 'Delete/close a pull request.',
+      description: 'Close a pull request without merging it.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -366,7 +366,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_issues')) {
     tools.list_github_issues = createTool({
       id: 'list_github_issues',
-      description: 'Search and filter issues by state (open/closed/all), labels, assignees, or creator. Returns issue details including title, body, labels, and metadata.',
+      description: 'List issues in one repository. You can filter by state, labels, assignee, or creator.',
       inputSchema: z.object({
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name.'),
@@ -395,7 +395,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_issue')) {
     tools.get_github_issue = createTool({
       id: 'get_github_issue',
-      description: 'Fetch complete details of a specific issue including title, body, author, labels, assignees, milestone, and creation/update timestamps.',
+      description: 'Show the details of one issue.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -420,7 +420,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'create_github_issue')) {
     tools.create_github_issue = createTool({
       id: 'create_github_issue',
-      description: 'Create a new issue in a repository.',
+      description: 'Create a new issue in a repository. Returns the created issue information.',
       inputSchema: z.object({
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name.'),
@@ -492,7 +492,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'delete_github_issue')) {
     tools.delete_github_issue = createTool({
       id: 'delete_github_issue',
-      description: 'Delete/close an issue in a repository.',
+      description: 'Close an issue.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -520,7 +520,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'toggle_github_issue')) {
     tools.toggle_github_issue = createTool({
       id: 'toggle_github_issue',
-      description: 'Quickly open or close an issue by specifying its number and desired state (open or closed).',
+      description: 'Open or close an issue.',
       inputSchema: z.object({
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name.'),
@@ -577,7 +577,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'get_github_issue_comment')) {
     tools.get_github_issue_comment = createTool({
       id: 'get_github_issue_comment',
-      description: 'Get one specific comment by its ID. Use when you need to read the full content of a single comment.',
+      description: 'Show one specific issue comment.',
       inputSchema: z.object({
         owner: z.string().nullish(),
         repositoryName: z.string().min(1),
@@ -604,7 +604,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'create_github_issue_comment')) {
     tools.create_github_issue_comment = createTool({
       id: 'create_github_issue_comment',
-      description: 'Create a new comment on an issue.',
+      description: 'Create a new comment on an issue. Returns the created comment information.',
       inputSchema: z.object({
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name.'),
@@ -714,7 +714,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'create_github_label')) {
     tools.create_github_label = createTool({
       id: 'create_github_label',
-      description: 'Create a new label in a repository.',
+      description: 'Create a new label in a repository. Returns the created label information.',
       inputSchema: z.object({
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name.'),
@@ -805,7 +805,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'list_github_milestones')) {
     tools.list_github_milestones = createTool({
       id: 'list_github_milestones',
-      description: 'List milestones in a repository filtered by state.',
+      description: 'List milestones in a repository. You can filter by state.',
       inputSchema: z.object({
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name.'),
@@ -831,7 +831,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
   if (hasToolPermission(allowedToolIds, 'create_github_milestone')) {
     tools.create_github_milestone = createTool({
       id: 'create_github_milestone',
-      description: 'Create a new milestone in a repository.',
+      description: 'Create a new milestone in a repository. Returns the created milestone information.',
       inputSchema: z.object({
         owner: z.string().nullish().describe('Organization or user owning the repository. Defaults to the company organization.'),
         repositoryName: z.string().min(1).describe('The repository name.'),
