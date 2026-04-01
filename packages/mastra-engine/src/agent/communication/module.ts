@@ -180,7 +180,7 @@ export async function createCommunicationModule(config: {
         itemMetadata: {
           MessageId: message.messageId,
           ...(message.authorDisplayName ? { Author: message.authorDisplayName } : {}),
-          ...(message.authorId ? { AuthorId: message.authorId } : {}),
+          ...(message.authorUsername ? { AuthorKey: message.authorUsername } : {}),
           ...(messageView.attachments.length > 0
             ? { Attachments: messageView.attachments.map((attachment) => attachment.path).join(', ') }
             : {}),

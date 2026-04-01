@@ -14,6 +14,7 @@ export function createSystemSettingsStore(db: Database) {
     return {
       companyName: row?.companyName ?? '',
       companyContext: row?.companyContext ?? '',
+      stepDelayEnabled: row ? row.stepDelayEnabled === 1 : true,
       updatedAt: row?.updatedAt ?? null,
     };
   }
@@ -21,6 +22,7 @@ export function createSystemSettingsStore(db: Database) {
   async function upsertSettings(input: {
     companyName: string;
     companyContext: string;
+    stepDelayEnabled: boolean;
   }) {
     const now = Date.now();
 
@@ -30,6 +32,7 @@ export function createSystemSettingsStore(db: Database) {
         id: SYSTEM_SETTINGS_ID,
         companyName: input.companyName,
         companyContext: input.companyContext,
+        stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
         updatedAt: now,
       })
       .onConflictDoUpdate({
@@ -37,6 +40,7 @@ export function createSystemSettingsStore(db: Database) {
         set: {
           companyName: input.companyName,
           companyContext: input.companyContext,
+          stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
           updatedAt: now,
         },
       });
@@ -44,6 +48,7 @@ export function createSystemSettingsStore(db: Database) {
     return {
       companyName: input.companyName,
       companyContext: input.companyContext,
+      stepDelayEnabled: input.stepDelayEnabled,
       updatedAt: now,
     };
   }

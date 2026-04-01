@@ -4,6 +4,7 @@ import type { AgentWakeEvent } from '@mastra-engine/core';
 import type { InternalAgentRuntime } from './create-forge-agent';
 import { createAgentContractStore } from './agent-contract-store';
 import type { Database } from '../database/index';
+import { createSystemSettingsStore } from '../system-settings/store';
 
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
@@ -37,6 +38,7 @@ type OmObservationEndPart = {
 
 export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
+  const systemSettings = createSystemSettingsStore(db);
   const wakeQueue = createAgentWakeQueue({
     label: runtime.id,
     execute,
@@ -305,11 +307,13 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     backoffMs = ONE_MINUTE_MS;
+    const settings = await systemSettings.getSettings();
 
     return {
       execute: true as const,
       contractId: contract.id,
       delayMs: instant
+        || !settings.stepDelayEnabled
         ? 0
         : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
     };
@@ -536,7 +540,7 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
   const timeLabel = formatWakeTime(event.timestamp);
   const messageId = event.itemMetadata?.MessageId;
   const actor = event.itemMetadata?.Author ?? describeWakeActor(event);
-  const actorId = event.itemMetadata?.AuthorId;
+  const actorKey = event.itemMetadata?.AuthorKey;
   const attachments = event.itemMetadata?.Attachments;
   const text = event.text.trim().replace(/\s*\n+\s*/g, ' ');
 
@@ -544,8 +548,8 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
     `[${timeLabel}]`,
     messageId ? `[msg: ${messageId}]` : '',
     actor
-      ? actorId
-        ? `${actor} (id: ${actorId})`
+      ? actorKey
+        ? `${actor} (${actorKey})`
         : actor
       : '',
   ]
@@ -567,7 +571,9 @@ function describeWakeGroup(event: AgentWakeEvent) {
   }
 
   if (event.type === 'schedule') {
-    return `Schedule: ${event.groupMetadata?.ScheduleId ?? event.groupKey}`;
+    return event.groupMetadata?.ScheduleName
+      ? `Schedule: ${event.groupMetadata.ScheduleName}`
+      : 'Schedule';
   }
 
   if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {

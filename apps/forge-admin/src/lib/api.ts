@@ -367,6 +367,7 @@ export type SystemLlmResponse = {
 export type SystemSettings = {
   companyName: string;
   companyContext: string;
+  stepDelayEnabled: boolean;
   updatedAt: number | null;
 };
 
@@ -691,6 +692,7 @@ export function upsertLlmModelPrice(input: UpsertLlmModelPriceInput) {
 export function upsertSystemSettings(input: {
   companyName: string;
   companyContext: string;
+  stepDelayEnabled: boolean;
 }) {
   return request<SystemSettings>('/admin/system/settings/upsert', {
     method: 'POST',

@@ -136,6 +136,7 @@ export const systemSettings = sqliteTable('system_settings', {
   id: text('id').primaryKey(),
   companyName: text('company_name').notNull(),
   companyContext: text('company_context').notNull(),
+  stepDelayEnabled: integer('step_delay_enabled').notNull().default(1),
   updatedAt: integer('updated_at').notNull(),
 });
 

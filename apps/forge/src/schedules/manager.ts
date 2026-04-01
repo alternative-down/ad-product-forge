@@ -67,7 +67,13 @@ export function createAgentScheduleManager(input: {
     unreadConversationCount: number;
     unreadMessageCount: number;
   }>;
-  notifyAgent(input: { agentId: string; scheduleId: string; content: string; timestamp: number }): void;
+  notifyAgent(input: {
+    agentId: string;
+    scheduleId: string;
+    scheduleName: string;
+    content: string;
+    timestamp: number;
+  }): void;
 }) {
   const store = createAgentScheduleStore(input.db);
   const notifications = createAgentNotificationStore(input.db);
@@ -426,10 +432,6 @@ export function createAgentScheduleManager(input: {
     nextTriggerAt: number | null = null,
   ) {
     cancelCompletedDateJob(scheduleRecord.scheduleId, remainsActive);
-    const pendingSummary = input.getAgentPendingSummary
-      ? await input.getAgentPendingSummary(scheduleRecord.agentId)
-      : null;
-
     if (scheduleRecord.kind === 'agent') {
       await notifications.createNotification({
         agentId: scheduleRecord.agentId,
@@ -458,18 +460,8 @@ export function createAgentScheduleManager(input: {
     input.notifyAgent({
       agentId: scheduleRecord.agentId,
       scheduleId: scheduleRecord.scheduleId,
+      scheduleName: scheduleRecord.name,
       content: createWakeContent({
-        agentId: scheduleRecord.agentId,
-        scheduleId: scheduleRecord.scheduleId,
-        kind: scheduleRecord.kind,
-        name: scheduleRecord.name,
-        description: scheduleRecord.description,
-        scheduleType: scheduleRecord.scheduleType,
-        cronExpression: scheduleRecord.cronExpression,
-        scheduledDate: scheduleRecord.scheduledDate,
-        timezone: scheduleRecord.timezone,
-        fireDate,
-        pendingSummary,
         content: scheduleRecord.kind === 'agent'
           ? scheduleRecord.content
           : createHeartbeatWakeInstruction(scheduleRecord.agentId),
@@ -589,59 +581,9 @@ function createNotificationContent(input: {
 }
 
 function createWakeContent(input: {
-  agentId: string;
-  scheduleId: string;
-  kind: 'agent' | 'heartbeat';
-  name: string;
-  description?: string | null;
-  scheduleType: 'cron' | 'date';
-  cronExpression?: string | null;
-  scheduledDate?: number | null;
-  timezone: string;
-  fireDate: Date;
-  pendingSummary?: {
-    unreadNotificationCount: number;
-    unreadConversationCount: number;
-    unreadMessageCount: number;
-  } | null;
   content: string;
 }) {
-  const lines = [
-    'Scheduled wake event received.',
-    `Agent id: ${input.agentId}`,
-    `Schedule id: ${input.scheduleId}`,
-    `Schedule kind: ${input.kind}`,
-    `Schedule name: ${input.name}`,
-    `Schedule type: ${input.scheduleType}`,
-    `Triggered at: ${input.fireDate.toISOString()}`,
-    `Timezone: ${input.timezone}`,
-  ];
-
-  if (input.description) {
-    lines.push(`Schedule description: ${input.description}`);
-  }
-
-  if (input.cronExpression) {
-    lines.push(`Cron expression: ${input.cronExpression}`);
-  }
-
-  if (input.scheduledDate) {
-    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
-  }
-
-  if (input.pendingSummary) {
-    lines.push(
-      '',
-      'Pending summary:',
-      `Unread notifications: ${input.pendingSummary.unreadNotificationCount}`,
-      `Unread conversations: ${input.pendingSummary.unreadConversationCount}`,
-      `Unread messages: ${input.pendingSummary.unreadMessageCount}`,
-    );
-  }
-
-  lines.push('', 'Scheduled content:', input.content.trim());
-
-  return lines.join('\n');
+  return input.content.trim();
 }
 
 function createHeartbeatWakeInstruction(agentId: string) {

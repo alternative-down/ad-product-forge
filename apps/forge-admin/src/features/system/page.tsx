@@ -601,16 +601,19 @@ function SystemSettingsCard(input: {
   onSave(input: {
     companyName: string;
     companyContext: string;
+    stepDelayEnabled: boolean;
   }): void;
 }) {
   const [draft, setDraft] = useState({
     companyName: input.settings.companyName,
     companyContext: input.settings.companyContext,
+    stepDelayEnabled: input.settings.stepDelayEnabled,
   });
 
   const changed =
     draft.companyName !== input.settings.companyName ||
-    draft.companyContext !== input.settings.companyContext;
+    draft.companyContext !== input.settings.companyContext ||
+    draft.stepDelayEnabled !== input.settings.stepDelayEnabled;
 
   return (
     <Card className="p-6">
@@ -646,6 +649,22 @@ function SystemSettingsCard(input: {
             placeholder="Describe the company, business model, operating context, and any fixed information every agent should know."
           />
         </LabeledField>
+
+        <LabeledField label="Delay between steps">
+          <label className="flex items-center gap-3 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-4 py-3 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={draft.stepDelayEnabled}
+              onChange={(event) => setDraft({
+                ...draft,
+                stepDelayEnabled: event.target.checked,
+              })}
+            />
+            <span>
+              Keep the budget-based delay control between agent steps enabled.
+            </span>
+          </label>
+        </LabeledField>
       </div>
 
       <div className="mt-5 flex items-center justify-between gap-3">
@@ -655,6 +674,7 @@ function SystemSettingsCard(input: {
           onClick={() => input.onSave({
             companyName: draft.companyName,
             companyContext: draft.companyContext,
+            stepDelayEnabled: draft.stepDelayEnabled,
           })}
         >
           {input.pending ? 'Saving...' : 'Save company context'}

@@ -265,6 +265,7 @@ const upsertLlmModelPriceSchema = z.object({
 const upsertSystemSettingsSchema = z.object({
   companyName: z.string(),
   companyContext: z.string(),
+  stepDelayEnabled: z.boolean().default(true),
 });
 
 const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
@@ -425,6 +426,7 @@ export function registerAdminRoutes(input: {
       const result = await systemSettings.upsertSettings({
         companyName: body.companyName.trim(),
         companyContext: body.companyContext.trim(),
+        stepDelayEnabled: body.stepDelayEnabled,
       });
       const registry = getInternalAgentRegistry();
 
