@@ -84,6 +84,35 @@ async function countSkillFiles(skillRoot: string): Promise<number> {
   return fileCount;
 }
 
+async function ensureDirectory(targetPath: string) {
+  try {
+    const stat = await fs.stat(targetPath);
+
+    if (stat.isDirectory()) {
+      return;
+    }
+
+    await fs.rm(targetPath, { force: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  await fs.mkdir(targetPath, { recursive: true });
+}
+
+async function ensureParentDirectories(targetPath: string, rootPath: string) {
+  const relativePath = path.relative(rootPath, targetPath);
+  const segments = relativePath.split(path.sep).slice(0, -1);
+  let currentPath = rootPath;
+
+  for (const segment of segments) {
+    currentPath = path.resolve(currentPath, segment);
+    await ensureDirectory(currentPath);
+  }
+}
+
 function normalizeArchiveEntryPath(entryPath: string) {
   const normalizedPath = entryPath.replace(/\\/g, '/').replace(/^\/+/, '');
   const isDirectory = normalizedPath.endsWith('/');
@@ -189,11 +218,11 @@ export async function installAgentWorkspaceSkillsFromZip(input: {
     }
 
     if (isDirectory) {
-      await fs.mkdir(targetPath, { recursive: true });
+      await ensureDirectory(targetPath);
       continue;
     }
 
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    await ensureParentDirectories(targetPath, skillsRoot);
     await fs.writeFile(targetPath, Buffer.from(content));
     writtenSkills.add(skillName);
   }
