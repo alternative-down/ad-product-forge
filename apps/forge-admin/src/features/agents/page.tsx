@@ -1474,7 +1474,15 @@ function ThreadMessagePartCard(input: {
   }
 
   if (part.type === 'reasoning') {
-    if (!part.reasoning.trim()) {
+    const reasoningText =
+      part.reasoning.trim() ||
+      part.details
+        .filter((detail) => detail.type === 'text' && typeof detail.text === 'string' && detail.text.trim().length > 0)
+        .map((detail) => detail.text)
+        .join('\n')
+        .trim();
+
+    if (!reasoningText) {
       return null;
     }
 
@@ -1485,7 +1493,7 @@ function ThreadMessagePartCard(input: {
         </summary>
         <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
           <div className="mb-2 text-xs font-medium text-muted-foreground">Reasoning / Thinking · content.parts.reasoning</div>
-          {part.reasoning}
+          {reasoningText}
         </div>
       </details>
     );
@@ -1569,7 +1577,11 @@ function shouldRenderThreadPart(part: AgentDetail['recentThreadMessages'][number
   }
 
   if (part.type === 'reasoning') {
-    return part.reasoning.trim().length > 0;
+    if (part.reasoning.trim().length > 0) {
+      return true;
+    }
+
+    return part.details.some((detail) => detail.type === 'text' && typeof detail.text === 'string' && detail.text.trim().length > 0);
   }
 
   return true;
