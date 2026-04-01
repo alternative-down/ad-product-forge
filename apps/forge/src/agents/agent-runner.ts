@@ -257,19 +257,16 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       await recordObservationalMemorySteps(contractId, result.steps);
 
-      const hadToolActivity = result.steps.some(
-        (step) => step.toolCalls.length > 0 || step.toolResults.length > 0,
-      );
       const stopRequested = result.text.trim() === NO_ACTION_NEEDED_PREFIX;
 
-      if (!hadToolActivity && stopRequested) {
+      if (result.toolCalls.length === 0 && stopRequested) {
         nextStepAt = null;
         await store.setExecutionState(runtime.id, 'idle');
         await wakeQueue.onRunnerIdle();
         return;
       }
 
-      if (!hadToolActivity) {
+      if (result.toolCalls.length === 0) {
         appendPendingRunMessages([
           {
             type: 'runner-reminder',
