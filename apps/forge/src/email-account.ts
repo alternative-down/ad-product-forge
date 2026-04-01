@@ -14,15 +14,100 @@ type EmailProviderConfig = {
 export function createEmailProvider(config: EmailProviderConfig): CommunicationProvider {
   // Connection timeout in milliseconds (30 seconds)
   const CONNECTION_TIMEOUT_MS = 30_000;
+  const RECENT_EMAIL_SCAN_LIMIT = 200;
+  const OUTBOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   let client: ImapFlow | null = null;
   let reconnectDelayMs = 1000;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
+  const recentOutboundMessages = new Map<string, Array<{
+    messageId: string;
+    content: string;
+    createdAt: string;
+    unread: boolean;
+    authorId: string;
+    authorDisplayName: string;
+  }>>();
 
   function resolveConversationKey(messageId: string, email: Email) {
     const firstReference = email.references?.trim().split(/\s+/).find(Boolean);
     return firstReference ?? email.inReplyTo ?? messageId;
+  }
+
+  function pruneRecentOutboundMessages() {
+    const cutoff = Date.now() - OUTBOUND_CACHE_TTL_MS;
+
+    for (const [targetKey, messages] of recentOutboundMessages.entries()) {
+      const visibleMessages = messages.filter((message) => Date.parse(message.createdAt) >= cutoff);
+
+      if (visibleMessages.length === 0) {
+        recentOutboundMessages.delete(targetKey);
+        continue;
+      }
+
+      recentOutboundMessages.set(targetKey, visibleMessages);
+    }
+  }
+
+  function getAddressValue(address?: Email['from']) {
+    if (!address || !('address' in address) || !address.address) {
+      return null;
+    }
+
+    return address.address.toLowerCase();
+  }
+
+  function getAddressDisplayName(address?: Email['from']) {
+    if (!address || !('address' in address)) {
+      return null;
+    }
+
+    return address.name || address.address || null;
+  }
+
+  function getFirstRecipient(addresses?: Email['to']) {
+    if (!addresses) {
+      return null;
+    }
+
+    for (const address of addresses) {
+      if (!('address' in address) || !address.address) {
+        continue;
+      }
+
+      return {
+        address: address.address.toLowerCase(),
+        displayName: address.name || address.address,
+      };
+    }
+
+    return null;
+  }
+
+  function resolveConversationParticipant(email: Email) {
+    const fromAddress = getAddressValue(email.from);
+    const selfAddress = config.imap.user.toLowerCase();
+
+    if (fromAddress && fromAddress !== selfAddress) {
+      return {
+        targetKey: fromAddress,
+        authorId: fromAddress,
+        authorDisplayName: getAddressDisplayName(email.from) ?? fromAddress,
+      };
+    }
+
+    const recipient = getFirstRecipient(email.to);
+
+    if (recipient) {
+      return {
+        targetKey: recipient.address,
+        authorId: selfAddress,
+        authorDisplayName: config.imap.user,
+      };
+    }
+
+    return null;
   }
 
   function resolveCreatedAt(email: Email) {
@@ -132,10 +217,10 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         }));
 
         await deliverMessage({
-          providerMessageId,
-          providerConversationKey: resolveConversationKey(providerMessageId, parsed),
+          messageId: providerMessageId,
+          targetKey: resolveConversationKey(providerMessageId, parsed),
           conversationName: parsed.subject ?? undefined,
-          authorExternalId: parsed.from?.address ?? 'unknown',
+          authorId: parsed.from?.address ?? 'unknown',
           authorUsername: parsed.from?.address ?? 'unknown',
           authorDisplayName: parsed.from?.name ?? parsed.from?.address ?? 'unknown',
           content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
@@ -166,6 +251,80 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     }
   }
 
+  async function getConnectedClient() {
+    if (client) {
+      return client;
+    }
+
+    return connectImap();
+  }
+
+  async function listRecentInboxEmails(limit: number) {
+    const currentClient = await getConnectedClient();
+    await currentClient.mailboxOpen('INBOX');
+    const uids = await currentClient.search({ all: true }, { uid: true });
+    const recentUids = Array.isArray(uids)
+      ? uids.slice(Math.max(0, uids.length - Math.min(limit, RECENT_EMAIL_SCAN_LIMIT)))
+      : [];
+
+    if (recentUids.length === 0) {
+      return [];
+    }
+
+    const emails: Array<{
+      messageId: string;
+      targetKey: string;
+      authorId: string;
+      authorDisplayName: string;
+      content: string;
+      createdAt: string;
+      unread: boolean;
+      conversationName?: string;
+      attachments: Attachment[];
+    }> = [];
+
+    for await (const message of currentClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
+      if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
+        continue;
+      }
+
+      const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
+      const parsed = await PostalMime.parse(source);
+      const participant = resolveConversationParticipant(parsed);
+
+      if (!participant) {
+        continue;
+      }
+
+      const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${emails.length}`;
+      const attachments: Attachment[] = (parsed.attachments ?? []).map((attachment, index) => ({
+        id: attachment.contentId ?? `${providerMessageId}:${index}`,
+        name: attachment.filename ?? undefined,
+        url: '',
+        contentType: attachment.mimeType ?? undefined,
+        sizeBytes:
+          typeof attachment.content === 'string'
+            ? Buffer.byteLength(attachment.content, 'utf8')
+            : attachment.content.byteLength,
+      }));
+
+      emails.push({
+        messageId: providerMessageId,
+        targetKey: participant.targetKey,
+        authorId: participant.authorId,
+        authorDisplayName: participant.authorDisplayName,
+        content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
+        createdAt: resolveCreatedAt(parsed),
+        unread: !(message.flags?.has?.('\\Seen') ?? false),
+        conversationName: parsed.subject ?? undefined,
+        attachments,
+      });
+    }
+
+    pruneRecentOutboundMessages();
+    return emails;
+  }
+
   async function reconnect() {
     await new Promise((resolve) => setTimeout(resolve, reconnectDelayMs));
     reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30000);
@@ -192,21 +351,85 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
   return {
     id: config.id ?? 'email',
-    async getAccount() {
-      return {
-        externalAccountId: config.imap.user,
-        displayName: config.imap.user,
-      };
-    },
     onMessage(callback) {
       onInboundMessage = callback;
       void flushPendingMessages();
     },
+    async listConversations() {
+      const inboxEmails = await listRecentInboxEmails(50);
+      const grouped = new Map<string, typeof inboxEmails>();
+
+      for (const email of inboxEmails) {
+        const existing = grouped.get(email.targetKey) ?? [];
+        existing.push(email);
+        grouped.set(email.targetKey, existing);
+      }
+
+      for (const [targetKey, messages] of recentOutboundMessages.entries()) {
+        const existing = grouped.get(targetKey) ?? [];
+        existing.push(...messages.map((message) => ({
+          ...message,
+          targetKey,
+          attachments: [],
+        })));
+        grouped.set(targetKey, existing);
+      }
+
+      return Array.from(grouped.entries())
+        .map(([targetKey, messages]) => {
+          const ordered = messages.sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
+          const latest = ordered[ordered.length - 1];
+
+          return {
+            provider: config.id ?? 'email',
+            targetKey,
+            latestMessageAt: latest.createdAt,
+            unreadCount: ordered.filter((message) => message.unread).length,
+            name: latest.conversationName ?? targetKey,
+            participants: [targetKey],
+            messages: ordered.slice(-5).map((message) => ({
+              messageId: message.messageId,
+              provider: config.id ?? 'email',
+              authorId: message.authorId,
+              targetKey,
+              content: message.content,
+              attachments: message.attachments,
+              unread: message.unread,
+              createdAt: message.createdAt,
+              authorDisplayName: message.authorDisplayName,
+            })),
+          };
+        })
+        .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt));
+    },
+    async getMessages({ targetKey, limit }) {
+      const inboxEmails = await listRecentInboxEmails(Math.max(limit * 4, 50));
+      const outboundMessages = recentOutboundMessages.get(targetKey) ?? [];
+
+      return [...inboxEmails.filter((email) => email.targetKey === targetKey), ...outboundMessages.map((message) => ({
+        ...message,
+        targetKey,
+        attachments: [],
+      }))]
+        .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))
+        .slice(-limit)
+        .map((message) => ({
+          messageId: message.messageId,
+          provider: config.id ?? 'email',
+          authorId: message.authorId,
+          targetKey,
+          content: message.content,
+          attachments: message.attachments,
+          unread: message.unread,
+          createdAt: message.createdAt,
+          authorDisplayName: message.authorDisplayName,
+        }));
+    },
     async sendMessage(input) {
-      const recipientAddress = input.contactExternalId;
+      const recipientAddress = input.targetKey;
 
       if (!recipientAddress) {
-        throw new Error(`[email] Cannot send: no recipient address resolved for conversation ${input.providerConversationKey}`);
+        throw new Error('[email] Cannot send without a targetKey');
       }
 
       const transporter = nodemailer.createTransport({
@@ -221,38 +444,36 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       });
 
       try {
-        const isReply = Boolean(input.providerConversationKey);
-        const replyTarget = input.replyToProviderMessageId ?? input.providerConversationKey;
-        const references = [input.providerConversationKey, input.replyToProviderMessageId].filter(Boolean);
         const mailOptions: Record<string, unknown> = {
           from: config.smtp.user,
           to: recipientAddress,
-          subject: isReply ? 'Re: Conversation' : `Message from ${config.smtp.user}`,
+          subject: `Message from ${config.smtp.user}`,
           text: input.content,
           bcc: config.bcc,
         };
 
-        if (replyTarget) {
-          mailOptions.inReplyTo = replyTarget;
-        }
-
-        if (references.length > 0) {
-          mailOptions.references = references.join(' ');
-        }
-
         const info = await transporter.sendMail(mailOptions);
+        const createdAt = new Date().toISOString();
+        const existingOutbound = recentOutboundMessages.get(recipientAddress) ?? [];
+        existingOutbound.push({
+          messageId: info.messageId,
+          content: input.content,
+          createdAt,
+          unread: false,
+          authorId: config.imap.user,
+          authorDisplayName: config.imap.user,
+        });
+        recentOutboundMessages.set(recipientAddress, existingOutbound);
+        pruneRecentOutboundMessages();
 
         return {
-          providerMessageId: info.messageId,
-          providerConversationKey: input.providerConversationKey ?? info.messageId,
+          messageId: info.messageId,
+          targetKey: recipientAddress,
           conversationName: String(mailOptions.subject),
         };
       } finally {
         await transporter.close();
       }
-    },
-    async syncContacts() {
-      return [];
     },
   };
 }

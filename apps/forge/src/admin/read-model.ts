@@ -1,17 +1,10 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 
-import { desc, eq, inArray, sql } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/libsql';
+import { desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibSQLStore } from '@mastra/libsql';
-import {
-  chatGroupMembers,
-  communicationConversations,
-  communicationMessages,
-  communicationSchema,
-  toMastraSafeIdentifier,
-} from '@mastra-engine/core';
+import { toMastraSafeIdentifier } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
 import { agents, agentExecutionSteps, agentProviders, agentSchedules } from '../database/schema';
@@ -33,7 +26,6 @@ const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
 const RECENT_CONVERSATION_LIMIT = 10;
-const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
 
 interface MastraMemoryStore {
   createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
@@ -471,87 +463,8 @@ async function listRecentConversations(
     .slice(0, RECENT_CONVERSATION_LIMIT);
 }
 
-async function listRecentExternalConversations(workspaceBasePath: string, agentId: string, agentName: string) {
-  try {
-    const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
-    const client = createClient({
-      url: `file:${agentDatabasePath}`,
-    });
-    const db = drizzle(client, { schema: communicationSchema });
-    const rows = await db.query.communicationConversations.findMany({
-      orderBy: [desc(communicationConversations.updatedAt)],
-      limit: RECENT_CONVERSATION_LIMIT,
-      with: {
-        contact: true,
-        messages: {
-          orderBy: [desc(communicationMessages.createdAt)],
-          limit: RECENT_CONVERSATION_MESSAGE_LIMIT,
-        },
-      },
-    });
-    const groupConversationIds = rows
-      .filter((conversation) => conversation.type === 'group')
-      .map((conversation) => conversation.conversationId);
-    const groupMembers = groupConversationIds.length > 0
-      ? await db.query.chatGroupMembers.findMany({
-          where: inArray(chatGroupMembers.groupId, groupConversationIds),
-          orderBy: [chatGroupMembers.createdAt],
-        })
-      : [];
-    const groupParticipantsByConversationId = new Map<string, string[]>();
-
-    for (const member of groupMembers) {
-      const participants = groupParticipantsByConversationId.get(member.groupId) ?? [];
-      participants.push(member.participantName);
-      groupParticipantsByConversationId.set(member.groupId, participants);
-    }
-
-    return rows.map((conversation) => {
-      const participants = new Set<string>();
-
-      if (conversation.type === 'group') {
-        for (const participantName of groupParticipantsByConversationId.get(conversation.conversationId) ?? []) {
-          participants.add(participantName);
-        }
-      } else {
-        if (conversation.contact?.displayName) {
-          participants.add(conversation.contact.displayName);
-        }
-
-        participants.add(agentName);
-
-        for (const message of conversation.messages) {
-          if (message.authorDisplayName) {
-            participants.add(message.authorDisplayName);
-          }
-        }
-      }
-
-      return {
-        conversationId: conversation.conversationId,
-        conversationKey: conversation.conversationId,
-        provider: conversation.provider,
-        type: conversation.type,
-        name: conversation.name ?? undefined,
-        contactId: conversation.contactId ?? undefined,
-        contactDisplayName: conversation.contact?.displayName ?? undefined,
-        participants: [...participants],
-        updatedAt: conversation.updatedAt,
-        messages: [...conversation.messages]
-          .reverse()
-          .map((message) => ({
-            messageId: message.messageId,
-            content: message.content,
-            unread: message.unread === 1,
-            authorDisplayName: message.authorDisplayName ?? agentName,
-            createdAt: message.createdAt,
-          })),
-      };
-    });
-  } catch (error) {
-    console.error(`[AdminReadModel] Failed to load recent conversations for agent ${agentId}:`, error);
-    return [];
-  }
+async function listRecentExternalConversations(_workspaceBasePath: string, _agentId: string, _agentName: string) {
+  return [];
 }
 
 async function listRecentInternalChatConversations(
@@ -565,8 +478,8 @@ async function listRecentInternalChatConversations(
     return rows.map((conversation) => {
       const participants = new Set<string>();
 
-      if (conversation.contactDisplayName) {
-        participants.add(conversation.contactDisplayName);
+      for (const participantId of conversation.participants ?? []) {
+        participants.add(participantId);
       }
 
       participants.add(agentName);
@@ -578,13 +491,10 @@ async function listRecentInternalChatConversations(
       }
 
       return {
-        conversationId: conversation.conversationKey,
-        conversationKey: conversation.conversationKey,
+        conversationId: conversation.targetKey,
+        conversationKey: conversation.targetKey,
         provider: conversation.provider,
-        type: conversation.type,
         name: conversation.name ?? undefined,
-        contactId: conversation.contactSlug ?? undefined,
-        contactDisplayName: conversation.contactDisplayName ?? undefined,
         participants: [...participants],
         updatedAt: Date.parse(conversation.latestMessageAt) || 0,
         messages: conversation.messages.map((message) => ({

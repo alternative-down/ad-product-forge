@@ -70,8 +70,6 @@ export function loadCommunicationProviders(
 
     providers.push(createInternalChatProvider({
       agentId: internalChat.agentId,
-      displayName: internalChat.displayName ?? internalChat.agentId,
-      description: internalChat.description ?? undefined,
       internalChat: config.internalChat,
     }));
   }

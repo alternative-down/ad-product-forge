@@ -396,8 +396,8 @@ export function createInternalChatService(db: Database) {
         messageId: internalChatMessages.id,
         content: internalChatMessages.content,
         createdAt: internalChatMessages.createdAt,
+        authorAgentId: internalChatMessages.authorAgentId,
         authorDisplayName: internalChatAccounts.displayName,
-        authorSlug: internalChatAccounts.slug,
         unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
       })
       .from(internalChatMessages)
@@ -432,13 +432,13 @@ export function createInternalChatService(db: Database) {
         existing.push({
           messageId: row.messageId,
           provider: 'internal-chat',
+          authorId: row.authorAgentId,
+          targetKey: row.conversationId,
           content: row.content,
           attachments: [],
           unread: row.unread === 1,
           createdAt: new Date(row.createdAt).toISOString(),
           authorDisplayName: row.authorDisplayName,
-          contactSlug: row.authorSlug,
-          contactDisplayName: row.authorDisplayName,
         });
 
         if (row.unread === 1) {
@@ -464,17 +464,13 @@ export function createInternalChatService(db: Database) {
     const views = await Promise.all(
       conversationRows.map(async (conversation) => {
         const participants = await listGroupMembersOrDmPeers(input.agentId, conversation.id);
-        const firstPeer = participants.find((participant) => participant.agentId !== input.agentId) ?? null;
-
         return {
-          conversationKey: conversation.id,
+          targetKey: conversation.id,
           provider: 'internal-chat',
           latestMessageAt: new Date(conversation.updatedAt).toISOString(),
           unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
           name: conversation.name ?? undefined,
-          type: conversation.type,
-          contactSlug: conversation.type === 'dm' ? firstPeer?.slug : undefined,
-          contactDisplayName: conversation.type === 'dm' ? firstPeer?.displayName : undefined,
+          participants: participants.map((participant) => participant.agentId),
           messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
         };
       }),
@@ -499,8 +495,8 @@ export function createInternalChatService(db: Database) {
         messageId: internalChatMessages.id,
         content: internalChatMessages.content,
         createdAt: internalChatMessages.createdAt,
+        authorAgentId: internalChatMessages.authorAgentId,
         authorDisplayName: internalChatAccounts.displayName,
-        authorSlug: internalChatAccounts.slug,
         unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
       })
       .from(internalChatMessages)
@@ -534,13 +530,13 @@ export function createInternalChatService(db: Database) {
     return rows.reverse().map((row) => ({
       messageId: row.messageId,
       provider: 'internal-chat',
+      authorId: row.authorAgentId,
+      targetKey: input.conversationKey,
       content: row.content,
       attachments: [],
       unread: row.unread === 1,
       createdAt: new Date(row.createdAt).toISOString(),
       authorDisplayName: row.authorDisplayName,
-      contactSlug: row.authorSlug,
-      contactDisplayName: row.authorDisplayName,
     }));
   }
 
@@ -548,7 +544,6 @@ export function createInternalChatService(db: Database) {
     agentId: string;
     conversationKey: string;
     content: string;
-    replyToMessageId?: string;
   }) {
     const directReference = parseInternalChatReference(input.conversationKey);
     const conversation = directReference
@@ -570,7 +565,7 @@ export function createInternalChatService(db: Database) {
       conversationId: conversation.id,
       authorAgentId: input.agentId,
       content: input.content,
-      replyToMessageId: input.replyToMessageId ?? null,
+      replyToMessageId: null,
       createdAt: now,
     });
 
@@ -606,17 +601,16 @@ export function createInternalChatService(db: Database) {
       }
 
       deliveries.push(Promise.resolve(handler({
-        providerConversationKey: conversation.id,
-        providerMessageId: messageId,
+        targetKey: conversation.id,
+        messageId,
         conversationName: conversation.name ?? (conversation.type === 'dm' ? author.displayName : undefined),
-        authorExternalId: author.agentId,
+        authorId: author.agentId,
         authorDisplayName: author.displayName,
         authorUsername: author.slug,
         content: input.content,
         attachments: [],
         createdAt: new Date(now).toISOString(),
         metadata: {
-          replyToProviderMessageId: input.replyToMessageId,
           conversationType: conversation.type,
           groupMembers: conversation.type === 'group'
             ? participants.map((member) => ({

@@ -4,70 +4,51 @@ import type { InternalChatService } from './internal-chat-service';
 
 export function createInternalChatProvider(input: {
   agentId: string;
-  displayName: string;
-  description?: string;
   internalChat: InternalChatService;
 }): CommunicationProvider {
+  async function resolveTargetKey(targetKey: string) {
+    const account = await input.internalChat.getAccountByAgentId(targetKey);
+
+    if (!account) {
+      return targetKey;
+    }
+
+    return `internal-chat:${account.slug}`;
+  }
+
   return {
     id: 'internal-chat',
-    async getAccount() {
-      const account = await input.internalChat.registerAgentAccount({
-        agentId: input.agentId,
-        displayName: input.displayName,
-        description: input.description,
-      });
-
-      return {
-        externalAccountId: account.agentId,
-        displayName: account.displayName,
-        metadata: {
-          slug: account.slug,
-        },
-      };
-    },
     onMessage(callback) {
       input.internalChat.onReceiveMessage(input.agentId, callback);
     },
-    async syncContacts() {
-      const accounts = await input.internalChat.listAccounts({
-        excludeAgentId: input.agentId,
+    async listConversations({ limit, unread }) {
+      return input.internalChat.listConversations({
+        agentId: input.agentId,
+        limit,
+        unread,
       });
+    },
+    async getMessages({ targetKey, limit }) {
+      const resolvedTargetKey = await resolveTargetKey(targetKey);
 
-      return accounts.map((account) => ({
-        slug: account.slug,
-        displayName: account.displayName,
-        externalUserId: account.agentId,
-        username: account.slug,
-      }));
+      return input.internalChat.getMessages({
+        agentId: input.agentId,
+        conversationKey: resolvedTargetKey,
+        limit,
+      });
     },
     async sendMessage(message) {
-      let conversationKey = message.providerConversationKey;
-
-      if (!conversationKey && message.contactExternalId) {
-        const account = await input.internalChat.getAccountByAgentId(message.contactExternalId);
-
-        if (!account) {
-          throw new Error(`Internal chat target not found: ${message.contactExternalId}`);
-        }
-
-        conversationKey = `internal-chat:${account.slug}`;
-      }
-
-      if (!conversationKey) {
-        throw new Error('Internal chat requires a conversation or recipient');
-      }
+      const conversationKey = await resolveTargetKey(message.targetKey);
 
       const sent = await input.internalChat.sendMessage({
         agentId: input.agentId,
         conversationKey,
         content: message.content,
-        replyToMessageId: message.replyToProviderMessageId,
       });
 
       return {
-        providerConversationKey: sent.conversationKey,
-        providerMessageId: sent.messageId,
-        conversationName: message.conversationName,
+        targetKey: sent.conversationKey,
+        messageId: sent.messageId,
       };
     },
   };

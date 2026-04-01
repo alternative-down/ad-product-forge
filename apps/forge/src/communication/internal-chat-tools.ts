@@ -1,10 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import {
-  createCommunicationConversationKey,
-  type CommunicationModule,
-} from '@mastra-engine/core';
 import type { InternalChatService } from './internal-chat-service';
 
 function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolId: string) {
@@ -19,50 +15,37 @@ export function createInternalChatTools(
   agentId: string,
   agentName: string,
   internalChat: InternalChatService,
-  communication: CommunicationModule,
   allowedToolIds?: Set<string> | null,
 ) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
 
-  function getConversationKey(groupId: string) {
-    return createCommunicationConversationKey('internal-chat', groupId);
-  }
-
   if (hasToolPermission(allowedToolIds, 'create_chat_group')) {
     tools.create_chat_group = createTool({
       id: 'create_chat_group',
-      description: 'Create a new internal-chat group. Returns groupId for membership management and conversationKey for send_message/get_messages.',
+      description: 'Create a new internal-chat group. Use the returned groupId as the targetKey with provider="internal-chat".',
       inputSchema: z.object({
-        conversationKey: z.string().min(1),
+        groupId: z.string().min(1),
         name: z.string().min(1),
       }),
       execute: async (input) => {
         try {
           const result = await internalChat.createChatGroup({
             agentId,
-            conversationKey: input.conversationKey,
+            conversationKey: input.groupId,
             name: input.name,
-            creatorName: agentName,
-          });
-          await communication.createChatGroup({
-            provider: 'internal-chat',
-            conversationKey: result.groupId,
-            name: result.name,
-            creatorId: agentId,
             creatorName: agentName,
           });
 
           return {
             valid: true,
             ...result,
-            conversationKey: getConversationKey(result.groupId),
           };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           return {
             valid: false,
             error: message,
-            hint: 'Use a unique conversationKey and a clear name for the internal-chat group.',
+            hint: 'Use a unique groupId and a clear name for the internal-chat group.',
           };
         }
       },
@@ -83,11 +66,6 @@ export function createInternalChatTools(
           const result = await internalChat.addMemberToGroup({
             agentId,
             groupId: input.groupId,
-            participantSlug: input.participantSlug,
-            role: input.role,
-          });
-          await communication.addMemberToGroup({
-            groupId: getConversationKey(input.groupId),
             participantSlug: input.participantSlug,
             role: input.role,
           });
@@ -123,10 +101,6 @@ export function createInternalChatTools(
             groupId: input.groupId,
             participantSlug: input.participantSlug,
           });
-          await communication.removeMemberFromGroup({
-            groupId: getConversationKey(input.groupId),
-            participantSlug: input.participantSlug,
-          });
 
           return {
             valid: true,
@@ -147,7 +121,7 @@ export function createInternalChatTools(
   if (hasToolPermission(allowedToolIds, 'list_chat_groups')) {
     tools.list_chat_groups = createTool({
       id: 'list_chat_groups',
-      description: 'List the internal-chat groups that this agent can access. Use groupId for member management and conversationKey for send_message/get_messages.',
+      description: 'List the internal-chat groups that this agent can access. Use groupId for member management and as the targetKey with provider="internal-chat".',
       inputSchema: z.object({
         limit: z.number().int().positive().max(100).default(50),
       }),
@@ -156,12 +130,7 @@ export function createInternalChatTools(
           return await internalChat.listChatGroups({
             agentId,
             limit: input.limit,
-          }).then((groups) =>
-            groups.map((group) => ({
-              ...group,
-              conversationKey: getConversationKey(group.groupId),
-            })),
-          );
+          });
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           return {

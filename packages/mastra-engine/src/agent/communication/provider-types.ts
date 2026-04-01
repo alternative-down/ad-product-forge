@@ -1,10 +1,10 @@
 import type { Attachment } from './store';
 
 export type CommunicationInboundMessage = {
-  providerConversationKey: string;
-  providerMessageId: string;
+  targetKey: string;
+  messageId: string;
   conversationName?: string;
-  authorExternalId?: string;
+  authorId?: string;
   authorDisplayName?: string;
   authorUsername?: string;
   content: string;
@@ -15,56 +15,43 @@ export type CommunicationInboundMessage = {
 
 export type CommunicationProvider = {
   id: string;
-  getAccount(): Promise<{
-    externalAccountId: string;
-    displayName?: string;
-    metadata?: Record<string, unknown>;
-  }>;
   onMessage?(callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> | void;
-  syncContacts?(): Promise<
-    Array<{
-      slug: string;
-      displayName: string;
-      externalUserId?: string;
-      username?: string;
-    }>
-  >;
-  // TODO: Extend to support multiple TO recipients, CC, and BCC fields.
-  // Currently limited to a single recipient via conversationId or contactExternalId.
+  listConversations?(input: {
+    limit: number;
+    unread?: boolean;
+  }): Promise<CommunicationConversationView[]>;
+  getMessages?(input: {
+    targetKey: string;
+    limit: number;
+  }): Promise<CommunicationMessageView[]>;
   sendMessage(input: {
-    providerConversationKey?: string;
-    contactExternalId?: string;
-    conversationName?: string;
-    conversationType?: string;
+    targetKey: string;
     content: string;
-    replyToProviderMessageId?: string;
   }): Promise<{
-    providerConversationKey: string;
-    providerMessageId?: string;
+    targetKey: string;
+    messageId?: string;
     conversationName?: string;
   }>;
 };
 
 export type CommunicationConversationView = {
-  conversationKey: string;
+  targetKey: string;
   provider: string;
   latestMessageAt: string;
   unreadCount: number;
   name?: string;
-  type?: string;
-  contactSlug?: string;
-  contactDisplayName?: string;
+  participants?: string[];
   messages: CommunicationMessageView[];
 };
 
 export type CommunicationMessageView = {
   messageId: string;
   provider: string;
+  authorId?: string;
+  targetKey?: string;
   content: string;
   attachments: Attachment[];
   unread: boolean;
   createdAt: string;
   authorDisplayName?: string;
-  contactSlug?: string;
-  contactDisplayName?: string;
 };

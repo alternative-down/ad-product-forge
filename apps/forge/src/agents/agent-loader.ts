@@ -165,7 +165,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     agentConfig.id,
     agentConfig.name,
     config.internalChat,
-    communication,
     allowedToolIds,
   );
   const minimaxTools = config.minimax
