@@ -555,9 +555,7 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
   const actor = event.itemMetadata?.Author ?? describeWakeActor(event);
   const actorKey = event.itemMetadata?.AuthorKey;
   const attachments = event.itemMetadata?.Attachments;
-  const text = event.type === 'runner-reminder'
-    ? event.text.trim()
-    : event.text.trim().replace(/\s*\n+\s*/g, ' ');
+  const text = event.text.trim();
 
   const label = [
     `[${timeLabel}]`,
@@ -573,7 +571,7 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
 
   const suffix = attachments ? ` (attachments: ${attachments})` : '';
 
-  if (event.type === 'runner-reminder') {
+  if (text.includes('\n')) {
     return actor
       ? `${label}:\n${text}${suffix}`
       : `${[label, `${text}${suffix}`.trim()].filter(Boolean).join('\n')}`.trim();
