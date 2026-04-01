@@ -308,7 +308,7 @@ export function createInternalChatService(
     }
 
     const now = Date.now();
-    const conversationId = `conv_${createId()}`;
+    const conversationId = createId();
 
     await db.insert(internalChatConversations).values({
       id: conversationId,
@@ -707,7 +707,7 @@ export function createInternalChatService(
     }
 
     const now = Date.now();
-    const messageId = `msg_${createId()}`;
+    const messageId = createId();
     const members = await db.query.internalChatConversationMembers.findMany({
       where: eq(internalChatConversationMembers.conversationId, conversation.id),
     });
