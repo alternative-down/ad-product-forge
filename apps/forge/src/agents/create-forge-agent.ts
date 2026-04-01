@@ -84,6 +84,7 @@ export type InternalAgentRuntime<
   omPricingModelKey: string;
   omModelProfileId?: string;
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
+  communication: CommunicationModule;
   onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
 };
 
@@ -312,6 +313,7 @@ export async function createInternalAgentRuntime<
     omPricingModelKey,
     omModelProfileId: config.omModelProfileId,
     agent,
+    communication,
     onReceiveMessage: communication.onReceiveMessage,
   };
 }

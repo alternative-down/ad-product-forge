@@ -464,7 +464,39 @@ async function listRecentConversations(
 }
 
 async function listRecentExternalConversations(_workspaceBasePath: string, _agentId: string, _agentName: string) {
-  return [];
+  const runtime = getInternalAgentRegistry().get(_agentId)?.runtime;
+
+  if (!runtime) {
+    return [];
+  }
+
+  try {
+    const rows = await runtime.communication.listConversations({
+      limit: RECENT_CONVERSATION_LIMIT,
+    });
+
+    return rows
+      .filter((conversation) => conversation.provider !== 'internal-chat')
+      .map((conversation) => ({
+        conversationId: `${conversation.provider}:${conversation.targetKey}`,
+        conversationKey: conversation.targetKey,
+        provider: conversation.provider,
+        type: 'conversation',
+        name: conversation.name ?? undefined,
+        participants: [...(conversation.participants ?? [])],
+        updatedAt: Date.parse(conversation.latestMessageAt) || 0,
+        messages: conversation.messages.map((message) => ({
+          messageId: message.messageId,
+          content: message.content,
+          unread: message.unread,
+          authorDisplayName: message.authorDisplayName ?? 'Unknown author',
+          createdAt: Date.parse(message.createdAt) || 0,
+        })),
+      }));
+  } catch (error) {
+    console.error(`[AdminReadModel] Failed to load external conversations for agent ${_agentId}:`, error);
+    return [];
+  }
 }
 
 async function listRecentInternalChatConversations(
@@ -494,6 +526,7 @@ async function listRecentInternalChatConversations(
         conversationId: conversation.targetKey,
         conversationKey: conversation.targetKey,
         provider: conversation.provider,
+        type: participants.size > 2 ? 'group' : 'dm',
         name: conversation.name ?? undefined,
         participants: [...participants],
         updatedAt: Date.parse(conversation.latestMessageAt) || 0,
