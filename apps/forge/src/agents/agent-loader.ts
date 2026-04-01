@@ -1,9 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { ToolsInput } from '@mastra/core/agent';
 import type { Tool } from '@mastra/core/tools';
-import { createClient } from '@libsql/client';
 import type { Database } from '../database/index';
-import { createCommunicationModule } from '@mastra-engine/core';
 import { agents, agentProviders } from '../database/schema';
 import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentRuntime } from './create-forge-agent';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader';
@@ -27,7 +25,6 @@ import { createWebTools } from '../web/tools';
 import { getMCPToolsForAgent } from './mcp/client-manager';
 import { createMiniMaxTools } from '../minimax/tools';
 import { createInternalChatTools } from '../communication/internal-chat-tools';
-import path from 'node:path';
 
 
 export interface AgentLoaderConfig {
@@ -134,26 +131,12 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const providers = loadCommunicationProviders(providerCredentials, {
     internalChat: config.internalChat,
   });
-  const communication = await createCommunicationModule({
-    client: createClient({
-      url: `file:${path.resolve(config.workspaceBasePath, agentConfig.id, 'database.db')}`,
-    }),
-    providers,
-  });
-
   await config.internalChat.registerAgentAccount({
     agentId: agentConfig.id,
     displayName: providerCredentials['internal-chat']?.displayName ?? agentConfig.name,
     description: providerCredentials['internal-chat']?.description ?? agentConfig.description ?? undefined,
   });
 
-  const agentWorkspaceDir = agentConfig.workspaceFilesystem?.basePath
-    ? path.resolve(
-        config.workspaceBasePath,
-        agentConfig.id,
-        agentConfig.workspaceFilesystem.basePath,
-      )
-    : path.resolve(config.workspaceBasePath, agentConfig.id, 'workspace');
   const tools = createMicroErpTools(db, allowedToolIds);
   const notificationTools = createAgentNotificationTools(db, agentConfig.id, allowedToolIds);
   const githubTools = createGitHubTools(agentConfig.id, config.githubApps, allowedToolIds);
@@ -168,7 +151,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     allowedToolIds,
   );
   const minimaxTools = config.minimax
-    ? createMiniMaxTools(config.minimax, agentWorkspaceDir, allowedToolIds)
+    ? createMiniMaxTools(config.minimax, allowedToolIds)
     : {};
   
   // Load MCP tools for this agent
@@ -218,7 +201,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       companyName: companySettings.companyName,
       companyContext: companySettings.companyContext,
       tools: customTools,
-      communication,
+      providers,
       workflows: filteredWorkflows,
       workspaceBasePath: config.workspaceBasePath,
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,

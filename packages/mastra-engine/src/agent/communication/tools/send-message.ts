@@ -10,6 +10,7 @@ const sendMessageInputSchema = z
       .string()
       .describe('Provider-specific destination key. The module does not interpret this value; it is passed directly to the selected provider.'),
     content: z.string().min(1),
+    attachments: z.array(z.string()).optional().describe('Workspace file paths to send as attachments.'),
   })
   ;
 
@@ -24,6 +25,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
           provider: input.provider,
           targetKey: input.targetKey,
           content: input.content,
+          attachments: input.attachments,
         });
         return result;
       } catch (error) {
@@ -40,6 +42,20 @@ export function createSendMessageTool(communication: CommunicationModule) {
               valid: false,
               error: error.message,
               hint: 'This provider does not support sending to this kind of targetKey. Use a key that the provider accepts.',
+            };
+          }
+          if (error.message.includes('Attachment path is outside the workspace')) {
+            return {
+              valid: false,
+              error: error.message,
+              hint: 'Use only attachment paths inside the agent workspace.',
+            };
+          }
+          if (error.message.includes('ENOENT')) {
+            return {
+              valid: false,
+              error: error.message,
+              hint: 'One of the attachment paths does not exist in the workspace.',
             };
           }
           return {

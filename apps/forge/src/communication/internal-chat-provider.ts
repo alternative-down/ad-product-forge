@@ -6,16 +6,6 @@ export function createInternalChatProvider(input: {
   agentId: string;
   internalChat: InternalChatService;
 }): CommunicationProvider {
-  async function resolveTargetKey(targetKey: string) {
-    const account = await input.internalChat.getAccountByAgentId(targetKey);
-
-    if (!account) {
-      return targetKey;
-    }
-
-    return `internal-chat:${account.slug}`;
-  }
-
   return {
     id: 'internal-chat',
     onMessage(callback) {
@@ -29,21 +19,18 @@ export function createInternalChatProvider(input: {
       });
     },
     async getMessages({ targetKey, limit }) {
-      const resolvedTargetKey = await resolveTargetKey(targetKey);
-
       return input.internalChat.getMessages({
         agentId: input.agentId,
-        conversationKey: resolvedTargetKey,
+        conversationKey: targetKey,
         limit,
       });
     },
     async sendMessage(message) {
-      const conversationKey = await resolveTargetKey(message.targetKey);
-
       const sent = await input.internalChat.sendMessage({
         agentId: input.agentId,
-        conversationKey,
+        targetKey: message.targetKey,
         content: message.content,
+        attachments: message.attachments,
       });
 
       return {

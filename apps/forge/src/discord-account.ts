@@ -1,16 +1,21 @@
 import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
 
-import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
 type DiscordSendableChannel = {
   id: string;
   name?: string | null;
   sendTyping(): Promise<unknown>;
-  send(content: string): Promise<Message>;
+  send(input: string | { content?: string; files?: Array<{ attachment: Buffer; name: string }> }): Promise<Message>;
   messages: {
     fetch(messageId: string): Promise<Message>;
     fetch(options: { limit: number }): Promise<Collection<string, Message>>;
   };
+};
+
+type DiscordOutboundFile = {
+  attachment: Buffer;
+  name: string;
 };
 
 export function createDiscordProvider(config: {
@@ -107,18 +112,49 @@ export function createDiscordProvider(config: {
     return chunks;
   }
 
+  async function downloadDiscordAttachments(message: Message): Promise<CommunicationFile[]> {
+    return Promise.all(
+      Array.from(message.attachments.values()).map(async (attachment) => {
+        const response = await fetch(attachment.url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to download Discord attachment: ${attachment.url}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+
+        return {
+          name: attachment.name ?? attachment.id,
+          data: new Uint8Array(arrayBuffer),
+          contentType: attachment.contentType ?? undefined,
+          sizeBytes: attachment.size,
+        };
+      }),
+    );
+  }
+
+  function toDiscordOutboundFiles(attachments: CommunicationFile[]): DiscordOutboundFile[] {
+    return attachments.map((attachment) => ({
+      attachment: Buffer.from(attachment.data),
+      name: attachment.name,
+    }));
+  }
+
   async function sendDiscordChunks(input: {
     channel: DiscordSendableChannel;
     content: string;
-    replyToProviderMessageId?: string;
+    attachments: CommunicationFile[];
   }) {
     const messageChunks = splitDiscordMessageContent(input.content);
     let lastSentMessage: Message | null = null;
+    const outboundFiles = toDiscordOutboundFiles(input.attachments);
 
     for (const [index, chunk] of messageChunks.entries()) {
-      if (index === 0 && input.replyToProviderMessageId) {
-        const replyTarget = await input.channel.messages.fetch(input.replyToProviderMessageId);
-        lastSentMessage = await replyTarget.reply(chunk);
+      if (index === 0) {
+        lastSentMessage = await input.channel.send({
+          content: chunk,
+          ...(outboundFiles.length > 0 ? { files: outboundFiles } : {}),
+        });
       } else {
         lastSentMessage = await input.channel.send(chunk);
       }
@@ -208,15 +244,6 @@ export function createDiscordProvider(config: {
       return null;
     }
 
-    const attachments = Array.from(message.attachments.values()).map((attachment) => ({
-      id: attachment.id,
-      name: attachment.name,
-      url: attachment.url,
-      contentType: attachment.contentType ?? undefined,
-      sizeBytes: attachment.size,
-      description: attachment.description ?? undefined,
-    }));
-
     return {
       targetKey: message.channelId,
       messageId: message.id,
@@ -226,7 +253,7 @@ export function createDiscordProvider(config: {
       authorDisplayName,
       authorUsername: message.author.username,
       content: content || '[attachment only]',
-      attachments,
+      attachments: await downloadDiscordAttachments(message),
       createdAt: new Date(message.createdTimestamp).toISOString(),
       metadata: {
         serverName: message.guild?.name ?? 'direct-message',
@@ -320,27 +347,22 @@ export function createDiscordProvider(config: {
   async function listChannelMessages(channel: DiscordSendableChannel, limit: number) {
     const messages = await channel.messages.fetch({ limit });
 
-    return Array.from(messages.values())
-      .filter((message) => !message.author.bot || message.author.id === client.user?.id)
-      .sort((left, right) => left.createdTimestamp - right.createdTimestamp)
-      .map((message) => ({
-        messageId: message.id,
-        provider: 'discord',
-        authorId: message.author.id,
-        targetKey: channel.id,
-        content: message.content.trim() || '[attachment only]',
-        attachments: Array.from(message.attachments.values()).map((attachment) => ({
-          id: attachment.id,
-          name: attachment.name,
-          url: attachment.url,
-          contentType: attachment.contentType ?? undefined,
-          sizeBytes: attachment.size,
-          description: attachment.description ?? undefined,
+    return Promise.all(
+      Array.from(messages.values())
+        .filter((message) => !message.author.bot || message.author.id === client.user?.id)
+        .sort((left, right) => left.createdTimestamp - right.createdTimestamp)
+        .map(async (message) => ({
+          messageId: message.id,
+          provider: 'discord',
+          authorId: message.author.id,
+          targetKey: channel.id,
+          content: message.content.trim() || '[attachment only]',
+          attachments: await downloadDiscordAttachments(message),
+          unread: false,
+          createdAt: new Date(message.createdTimestamp).toISOString(),
+          authorDisplayName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
         })),
-        unread: false,
-        createdAt: new Date(message.createdTimestamp).toISOString(),
-        authorDisplayName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
-      }));
+    );
   }
 
   return {
@@ -403,6 +425,7 @@ export function createDiscordProvider(config: {
         const sent = await sendDiscordChunks({
           channel: channel as DiscordSendableChannel,
           content: input.content,
+          attachments: input.attachments,
         });
 
         return {

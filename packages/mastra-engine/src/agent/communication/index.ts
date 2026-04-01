@@ -28,7 +28,16 @@ export { createCommunicationModule } from './module';
 export { createCommunicationStore } from './store';
 export * as communicationSchema from './schema';
 
-export type { CommunicationProvider, CommunicationConversationView, CommunicationMessageView } from './provider-types';
+export type {
+  CommunicationProvider,
+  CommunicationConversationView,
+  CommunicationMessageView,
+  CommunicationFile,
+  CommunicationAttachmentView,
+  CommunicationProviderConversation,
+  CommunicationProviderMessage,
+  CommunicationInboundMessage,
+} from './provider-types';
 
 export {
   communicationAccounts,
@@ -50,5 +59,3 @@ export {
   type ChatGroupMember,
   type NewChatGroupMember,
 } from './schema';
-
-export type { Attachment } from './store';

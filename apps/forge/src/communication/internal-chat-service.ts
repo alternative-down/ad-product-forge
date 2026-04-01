@@ -1,10 +1,13 @@
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { customAlphabet } from 'nanoid';
 
 import type {
-  CommunicationConversationView,
+  CommunicationFile,
   CommunicationInboundMessage,
-  CommunicationMessageView,
+  CommunicationProviderConversation,
+  CommunicationProviderMessage,
 } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
@@ -43,8 +46,89 @@ function createInternalChatSlug(displayName: string) {
   return `${baseSlug}-${createSlugSuffix()}`;
 }
 
-export function createInternalChatService(db: Database) {
+function sanitizeAttachmentName(fileName: string) {
+  const value = fileName
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .trim();
+
+  return value || 'attachment';
+}
+
+function resolveContentType(fileName: string) {
+  const extension = path.extname(fileName).toLowerCase();
+
+  if (extension === '.png') return 'image/png';
+  if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
+  if (extension === '.gif') return 'image/gif';
+  if (extension === '.webp') return 'image/webp';
+  if (extension === '.pdf') return 'application/pdf';
+  if (extension === '.json') return 'application/json';
+  if (extension === '.txt' || extension === '.md') return 'text/plain';
+  if (extension === '.csv') return 'text/csv';
+  if (extension === '.mp3') return 'audio/mpeg';
+  if (extension === '.wav') return 'audio/wav';
+  if (extension === '.mp4') return 'video/mp4';
+
+  return undefined;
+}
+
+export function createInternalChatService(
+  db: Database,
+  config: {
+    dataRoot: string;
+  },
+) {
   const handlers = new Map<string, InternalChatHandler>();
+  const attachmentRoot = path.resolve(config.dataRoot, 'internal-chat', 'attachments');
+
+  async function storeMessageAttachments(messageId: string, attachments: CommunicationFile[]) {
+    if (attachments.length === 0) {
+      return;
+    }
+
+    const messageDir = path.resolve(attachmentRoot, messageId);
+    await fs.mkdir(messageDir, { recursive: true });
+
+    await Promise.all(
+      attachments.map(async (attachment, index) => {
+        const fileName = `${index}-${sanitizeAttachmentName(attachment.name)}`;
+        await fs.writeFile(path.resolve(messageDir, fileName), attachment.data);
+      }),
+    );
+  }
+
+  async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {
+    const messageDir = path.resolve(attachmentRoot, messageId);
+
+    try {
+      const entries = await fs.readdir(messageDir, { withFileTypes: true });
+      const files = entries
+        .filter((entry) => entry.isFile())
+        .sort((left, right) => left.name.localeCompare(right.name));
+
+      return Promise.all(
+        files.map(async (entry) => {
+          const filePath = path.resolve(messageDir, entry.name);
+          const [data, stats] = await Promise.all([fs.readFile(filePath), fs.stat(filePath)]);
+          const [, ...nameParts] = entry.name.split('-');
+          const name = nameParts.join('-') || entry.name;
+
+          return {
+            name,
+            data: new Uint8Array(data),
+            contentType: resolveContentType(name),
+            sizeBytes: stats.size,
+          };
+        }),
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return [];
+      }
+
+      throw error;
+    }
+  }
 
   async function registerAgentAccount(input: {
     agentId: string;
@@ -367,7 +451,7 @@ export function createInternalChatService(db: Database) {
     agentId: string;
     unread?: boolean;
     limit: number;
-  }): Promise<CommunicationConversationView[]> {
+  }): Promise<CommunicationProviderConversation[]> {
     const conversationRows = await db
       .select({
         id: internalChatConversations.id,
@@ -417,7 +501,7 @@ export function createInternalChatService(db: Database) {
 
     const messageIdsToMarkRead = new Set<string>();
 
-    const messagesByConversationId = new Map<string, CommunicationMessageView[]>();
+    const messagesByConversationId = new Map<string, CommunicationProviderMessage[]>();
     const unreadCountByConversationId = new Map<string, number>();
 
     for (const row of messageRows) {
@@ -435,7 +519,7 @@ export function createInternalChatService(db: Database) {
           authorId: row.authorAgentId,
           targetKey: row.conversationId,
           content: row.content,
-          attachments: [],
+          attachments: await readMessageAttachments(row.messageId),
           unread: row.unread === 1,
           createdAt: new Date(row.createdAt).toISOString(),
           authorDisplayName: row.authorDisplayName,
@@ -487,7 +571,7 @@ export function createInternalChatService(db: Database) {
     agentId: string;
     conversationKey: string;
     limit: number;
-  }): Promise<CommunicationMessageView[]> {
+  }): Promise<CommunicationProviderMessage[]> {
     await requireConversationMembership(input.agentId, input.conversationKey);
 
     const rows = await db
@@ -527,31 +611,34 @@ export function createInternalChatService(db: Database) {
         ));
     }
 
-    return rows.reverse().map((row) => ({
-      messageId: row.messageId,
-      provider: 'internal-chat',
-      authorId: row.authorAgentId,
-      targetKey: input.conversationKey,
-      content: row.content,
-      attachments: [],
-      unread: row.unread === 1,
-      createdAt: new Date(row.createdAt).toISOString(),
-      authorDisplayName: row.authorDisplayName,
-    }));
+    return Promise.all(
+      rows.reverse().map(async (row) => ({
+        messageId: row.messageId,
+        provider: 'internal-chat',
+        authorId: row.authorAgentId,
+        targetKey: input.conversationKey,
+        content: row.content,
+        attachments: await readMessageAttachments(row.messageId),
+        unread: row.unread === 1,
+        createdAt: new Date(row.createdAt).toISOString(),
+        authorDisplayName: row.authorDisplayName,
+      })),
+    );
   }
 
   async function sendMessage(input: {
     agentId: string;
-    conversationKey: string;
+    targetKey: string;
     content: string;
+    attachments: CommunicationFile[];
   }) {
-    const directReference = parseInternalChatReference(input.conversationKey);
-    const conversation = directReference
-      ? await ensureDirectConversation(input.agentId, (await getRequiredAccountBySlug(directReference.contactSlug)).agentId)
-      : await getRequiredConversationForAgent(input.agentId, input.conversationKey);
+    const directAccount = await getAccountByAgentId(input.targetKey);
+    const conversation = directAccount
+      ? await ensureDirectConversation(input.agentId, directAccount.agentId)
+      : await getRequiredConversationForAgent(input.agentId, input.targetKey);
 
     if (!conversation) {
-      throw new Error(`Conversation not found: ${input.conversationKey}`);
+      throw new Error(`Conversation not found: ${input.targetKey}`);
     }
 
     const now = Date.now();
@@ -568,6 +655,7 @@ export function createInternalChatService(db: Database) {
       replyToMessageId: null,
       createdAt: now,
     });
+    await storeMessageAttachments(messageId, input.attachments);
 
     await db.insert(internalChatMessageReads).values(
       members.map((member) => ({
@@ -608,7 +696,7 @@ export function createInternalChatService(db: Database) {
         authorDisplayName: author.displayName,
         authorUsername: author.slug,
         content: input.content,
-        attachments: [],
+        attachments: input.attachments,
         createdAt: new Date(now).toISOString(),
         metadata: {
           conversationType: conversation.type,
@@ -747,25 +835,6 @@ export function createInternalChatService(db: Database) {
     }
 
     return group;
-  }
-
-  function parseInternalChatReference(conversationKey: string) {
-    const separatorIndex = conversationKey.indexOf(':');
-
-    if (separatorIndex <= 0) {
-      return null;
-    }
-
-    const provider = conversationKey.slice(0, separatorIndex);
-    const contactSlug = conversationKey.slice(separatorIndex + 1);
-
-    if (provider !== 'internal-chat' || !contactSlug) {
-      return null;
-    }
-
-    return {
-      contactSlug,
-    };
   }
 
   return {

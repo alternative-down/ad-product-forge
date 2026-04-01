@@ -1,5 +1,7 @@
 import type { Client } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
+import path from 'node:path';
+import type { Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 
 import { runMigrations } from '../../database/migrate';
 import { createCommunicationStore } from './store';
@@ -8,12 +10,34 @@ import type { AgentWakeEvent } from '../wake-queue';
 import type {
   CommunicationConversationView,
   CommunicationMessageView,
+  CommunicationProviderConversation,
+  CommunicationProviderMessage,
   CommunicationProvider,
 } from './provider-types';
+
+function resolveContentType(fileName: string) {
+  const extension = path.extname(fileName).toLowerCase();
+
+  if (extension === '.png') return 'image/png';
+  if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
+  if (extension === '.gif') return 'image/gif';
+  if (extension === '.webp') return 'image/webp';
+  if (extension === '.pdf') return 'application/pdf';
+  if (extension === '.json') return 'application/json';
+  if (extension === '.txt' || extension === '.md') return 'text/plain';
+  if (extension === '.csv') return 'text/csv';
+  if (extension === '.mp3') return 'audio/mpeg';
+  if (extension === '.wav') return 'audio/wav';
+  if (extension === '.mp4') return 'video/mp4';
+
+  return undefined;
+}
 
 export async function createCommunicationModule(config: {
   client: Client;
   providers: CommunicationProvider[];
+  workspace: WorkspaceRuntime;
+  workspaceRoot: string;
 }) {
   console.log('[Communication] Initializing communication database...');
   const db = drizzle(config.client, { schema: communicationSchema });
@@ -22,6 +46,102 @@ export async function createCommunicationModule(config: {
   const store = await createCommunicationStore(db);
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: ((event: AgentWakeEvent) => void) | null = null;
+  const filesystem = config.workspace.filesystem;
+
+  if (!filesystem) {
+    throw new Error('Communication module requires a workspace filesystem');
+  }
+  const workspaceFilesystem = filesystem;
+
+  function resolveWorkspacePath(filePath: string) {
+    if (path.isAbsolute(filePath)) {
+      const resolvedPath = path.resolve(filePath);
+      const relativePath = path.relative(config.workspaceRoot, resolvedPath);
+
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        throw new Error(`Attachment path is outside the workspace: ${filePath}`);
+      }
+
+      return relativePath;
+    }
+
+    const normalizedPath = path.normalize(filePath);
+
+    if (normalizedPath.startsWith('..') || path.isAbsolute(normalizedPath)) {
+      throw new Error(`Attachment path is outside the workspace: ${filePath}`);
+    }
+
+    return normalizedPath;
+  }
+
+  async function readOutboundAttachments(attachmentPaths: string[]) {
+    return Promise.all(
+      attachmentPaths.map(async (attachmentPath) => {
+        const workspacePath = resolveWorkspacePath(attachmentPath);
+        const data = await workspaceFilesystem.readFile(workspacePath);
+        const buffer = typeof data === 'string' ? new Uint8Array(Buffer.from(data)) : new Uint8Array(data);
+
+        return {
+          name: path.basename(workspacePath),
+          data: buffer,
+          contentType: resolveContentType(workspacePath),
+          sizeBytes: buffer.byteLength,
+        };
+      }),
+    );
+  }
+
+  function sanitizeFileName(fileName: string) {
+    const value = fileName
+      .replace(/[/\\?%*:|"<>]/g, '-')
+      .trim();
+
+    return value || 'attachment';
+  }
+
+  async function materializeInboundAttachments(messageId: string, attachments: CommunicationProviderMessage['attachments']) {
+    return Promise.all(
+      attachments.map(async (attachment, index) => {
+        const safeName = sanitizeFileName(attachment.name);
+        const targetPath = path.posix.join('tmp', `${messageId}-${index}-${safeName}`);
+
+        await workspaceFilesystem.writeFile(targetPath, attachment.data);
+
+        return {
+          path: targetPath,
+          name: safeName,
+          contentType: attachment.contentType,
+          sizeBytes: attachment.sizeBytes ?? attachment.data.byteLength,
+        };
+      }),
+    );
+  }
+
+  async function toAgentMessageView(message: CommunicationProviderMessage): Promise<CommunicationMessageView> {
+    return {
+      messageId: message.messageId,
+      provider: message.provider,
+      authorId: message.authorId,
+      targetKey: message.targetKey,
+      content: message.content,
+      attachments: await materializeInboundAttachments(message.messageId, message.attachments),
+      unread: message.unread,
+      createdAt: message.createdAt,
+      authorDisplayName: message.authorDisplayName,
+    };
+  }
+
+  async function toAgentConversationView(conversation: CommunicationProviderConversation): Promise<CommunicationConversationView> {
+    return {
+      targetKey: conversation.targetKey,
+      provider: conversation.provider,
+      latestMessageAt: conversation.latestMessageAt,
+      unreadCount: conversation.unreadCount,
+      name: conversation.name,
+      participants: conversation.participants,
+      messages: await Promise.all(conversation.messages.map((message) => toAgentMessageView(message))),
+    };
+  }
 
   for (const provider of config.providers) {
     providers.set(provider.id, provider);
@@ -36,10 +156,17 @@ export async function createCommunicationModule(config: {
       }
 
       const text = message.content.trim();
-
-      if (!text) {
-        return;
-      }
+      const messageView = await toAgentMessageView({
+        messageId: message.messageId,
+        provider: provider.id,
+        authorId: message.authorId,
+        targetKey: message.targetKey,
+        content: text,
+        attachments: message.attachments ?? [],
+        unread: true,
+        createdAt: message.createdAt,
+        authorDisplayName: message.authorDisplayName,
+      });
 
       receiveMessageHandler({
         type: `message:${provider.id}`,
@@ -54,6 +181,9 @@ export async function createCommunicationModule(config: {
           MessageId: message.messageId,
           ...(message.authorDisplayName ? { Author: message.authorDisplayName } : {}),
           ...(message.authorId ? { AuthorId: message.authorId } : {}),
+          ...(messageView.attachments.length > 0
+            ? { Attachments: messageView.attachments.map((attachment) => attachment.path).join(', ') }
+            : {}),
         },
         text,
         timestamp: Date.parse(message.createdAt) || Date.now(),
@@ -122,10 +252,12 @@ export async function createCommunicationModule(config: {
         throw new Error(`Provider does not support listing conversations: ${input.provider}`);
       }
 
-      return provider.listConversations({
+      const conversations = await provider.listConversations({
         unread: input.unread,
         limit: input.limit,
       });
+
+      return Promise.all(conversations.map((conversation) => toAgentConversationView(conversation)));
     }
 
     const supportedProviders = Array.from(providers.values()).filter((provider) => provider.listConversations);
@@ -138,10 +270,11 @@ export async function createCommunicationModule(config: {
       ),
     );
 
-    return conversationGroups
+    return Promise.all(conversationGroups
       .flat()
       .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt))
-      .slice(0, input.limit);
+      .slice(0, input.limit)
+      .map((conversation) => toAgentConversationView(conversation)));
   }
 
   async function getMessages(input: {
@@ -159,16 +292,17 @@ export async function createCommunicationModule(config: {
       throw new Error(`Provider does not support reading messages: ${input.provider}`);
     }
 
-    return provider.getMessages({
+    return Promise.all((await provider.getMessages({
       targetKey: input.targetKey,
       limit: input.limit,
-    });
+    })).map((message) => toAgentMessageView(message)));
   }
 
   async function sendMessage(input: {
     provider: string;
     targetKey: string;
     content: string;
+    attachments?: string[];
   }) {
     const provider = providers.get(input.provider);
 
@@ -179,6 +313,7 @@ export async function createCommunicationModule(config: {
     const result = await provider.sendMessage({
       targetKey: input.targetKey,
       content: input.content,
+      attachments: await readOutboundAttachments(input.attachments ?? []),
     });
 
     return {

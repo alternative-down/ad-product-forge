@@ -537,6 +537,7 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
   const messageId = event.itemMetadata?.MessageId;
   const actor = event.itemMetadata?.Author ?? describeWakeActor(event);
   const actorId = event.itemMetadata?.AuthorId;
+  const attachments = event.itemMetadata?.Attachments;
   const text = event.text.trim().replace(/\s*\n+\s*/g, ' ');
 
   const label = [
@@ -551,7 +552,11 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
     .filter(Boolean)
     .join('');
 
-  return actor ? `${label}: ${text}` : `${[label, text].filter(Boolean).join(' ')}`.trim();
+  const suffix = attachments ? ` (attachments: ${attachments})` : '';
+
+  return actor
+    ? `${label}: ${text}${suffix}`
+    : `${[label, `${text}${suffix}`.trim()].filter(Boolean).join(' ')}`.trim();
 }
 
 function describeWakeGroup(event: AgentWakeEvent) {

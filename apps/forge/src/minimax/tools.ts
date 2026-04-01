@@ -1,5 +1,4 @@
 import { createTool } from '@mastra/core/tools';
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
 
@@ -38,7 +37,6 @@ const imageAspectRatioSchema = z.enum([
 ]);
 
 function createMiniMaxOutputPath(
-  workspaceDir: string,
   kind: 'tts' | 'images' | 'videos',
   extension: string,
   index?: number,
@@ -48,30 +46,25 @@ function createMiniMaxOutputPath(
   const fileName = index === undefined
     ? `${kind}-${timestamp}-${suffix}.${extension}`
     : `${kind}-${timestamp}-${suffix}-${index}.${extension}`;
-  const relativePath = path.join(MINIMAX_OUTPUT_DIRECTORY, kind, fileName);
-  const absolutePath = path.join(workspaceDir, relativePath);
-
-  return {
-    absolutePath,
-    relativePath,
-  };
-}
-
-async function ensureParentDirectory(filePath: string) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  return path.posix.join(MINIMAX_OUTPUT_DIRECTORY, kind, fileName);
 }
 
 async function writeBufferToWorkspace(
-  workspaceDir: string,
+  workspace: { filesystem?: { writeFile(path: string, content: Uint8Array): Promise<unknown> } } | undefined,
   kind: 'tts' | 'images' | 'videos',
   extension: string,
   buffer: Buffer,
   index?: number,
 ) {
-  const outputPath = createMiniMaxOutputPath(workspaceDir, kind, extension, index);
-  await ensureParentDirectory(outputPath.absolutePath);
-  await fs.writeFile(outputPath.absolutePath, buffer);
-  return outputPath.relativePath;
+  const filesystem = workspace?.filesystem;
+
+  if (!filesystem) {
+    throw new Error('MiniMax tools require a workspace filesystem');
+  }
+
+  const outputPath = createMiniMaxOutputPath(kind, extension, index);
+  await filesystem.writeFile(outputPath, new Uint8Array(buffer));
+  return outputPath;
 }
 
 async function downloadFileBuffer(downloadUrl: string) {
@@ -120,7 +113,6 @@ async function waitForVideoFile(
 
 export function createMiniMaxTools(
   minimax: MiniMaxManager,
-  workspaceDir: string,
   allowedToolIds?: Set<string> | null,
 ) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
@@ -139,7 +131,7 @@ export function createMiniMaxTools(
         pitch: z.number().nullish().describe('Pitch adjustment.'),
         output_format: z.enum(['mp3', 'wav', 'flac']).nullish().describe('Audio file format.'),
       }),
-      execute: async (input) => {
+      execute: async (input, context) => {
         try {
           const result = await minimax.textToSpeech({
             text: input.text,
@@ -168,7 +160,7 @@ export function createMiniMaxTools(
 
           const audioBuffer = Buffer.from(result.data.audioHex, 'hex');
           const savedPath = await writeBufferToWorkspace(
-            workspaceDir,
+            context.workspace,
             'tts',
             result.data.audioFormat,
             audioBuffer,
@@ -201,7 +193,7 @@ export function createMiniMaxTools(
         width: z.number().int().positive().nullish().describe('Explicit image width in pixels.'),
         height: z.number().int().positive().nullish().describe('Explicit image height in pixels.'),
       }),
-      execute: async (input) => {
+      execute: async (input, context) => {
         try {
           const result = await minimax.generateImage({
             prompt: input.prompt,
@@ -226,7 +218,7 @@ export function createMiniMaxTools(
           const paths = await Promise.all(
             result.data.images.map((base64Image, index) =>
               writeBufferToWorkspace(
-                workspaceDir,
+                context.workspace,
                 'images',
                 'png',
                 Buffer.from(base64Image, 'base64'),
@@ -263,7 +255,7 @@ export function createMiniMaxTools(
         first_frame_image: z.string().url().nullish().describe('Optional first-frame image URL for image-to-video mode.'),
         last_frame_image: z.string().url().nullish().describe('Optional last-frame image URL for start-end-frame mode.'),
       }),
-      execute: async (input) => {
+      execute: async (input, context) => {
         try {
           const task = await minimax.createVideoGenerationTask({
             prompt: input.prompt,
@@ -298,7 +290,7 @@ export function createMiniMaxTools(
 
           const fileBuffer = await downloadFileBuffer(file.data.downloadUrl);
           const savedPath = await writeBufferToWorkspace(
-            workspaceDir,
+            context.workspace,
             'videos',
             inferExtensionFromUrl(file.data.downloadUrl, 'mp4'),
             fileBuffer,

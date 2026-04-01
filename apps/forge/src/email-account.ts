@@ -2,7 +2,7 @@ import { ImapFlow } from 'imapflow';
 import nodemailer from 'nodemailer';
 import PostalMime, { type Email } from 'postal-mime';
 
-import type { Attachment, CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
 type EmailProviderConfig = {
   id?: string;
@@ -24,15 +24,36 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   const recentOutboundMessages = new Map<string, Array<{
     messageId: string;
     content: string;
+    attachments: CommunicationFile[];
     createdAt: string;
     unread: boolean;
     authorId: string;
     authorDisplayName: string;
   }>>();
 
-  function resolveConversationKey(messageId: string, email: Email) {
-    const firstReference = email.references?.trim().split(/\s+/).find(Boolean);
-    return firstReference ?? email.inReplyTo ?? messageId;
+  function toUint8Array(value: ArrayBuffer | Uint8Array | string) {
+    if (value instanceof Uint8Array) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      return new Uint8Array(Buffer.from(value, 'utf8'));
+    }
+
+    return new Uint8Array(value);
+  }
+
+  function toCommunicationAttachments(email: Email, providerMessageId: string) {
+    return (email.attachments ?? []).map((attachment, index) => {
+      const data = toUint8Array(attachment.content);
+
+      return {
+        name: attachment.filename ?? `${providerMessageId}-${index}`,
+        data,
+        contentType: attachment.mimeType ?? undefined,
+        sizeBytes: data.byteLength,
+      };
+    });
   }
 
   function pruneRecentOutboundMessages() {
@@ -198,33 +219,28 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
         const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
         const parsed = await PostalMime.parse(source);
+        const participant = resolveConversationParticipant(parsed);
 
         if (parsed.from?.address?.toLowerCase() === config.imap.user.toLowerCase()) {
           await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
           continue;
         }
 
-        const providerMessageId = parsed.messageId ?? `${uid}-${Date.now()}`;
-        const attachments: Attachment[] = (parsed.attachments ?? []).map((attachment, index) => ({
-          id: attachment.contentId ?? `${providerMessageId}:${index}`,
-          name: attachment.filename ?? undefined,
-          url: '',
-          contentType: attachment.mimeType ?? undefined,
-          sizeBytes:
-            typeof attachment.content === 'string'
-              ? Buffer.byteLength(attachment.content, 'utf8')
-              : attachment.content.byteLength,
-        }));
+        if (!participant) {
+          await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+          continue;
+        }
 
+        const providerMessageId = parsed.messageId ?? `${uid}-${Date.now()}`;
         await deliverMessage({
           messageId: providerMessageId,
-          targetKey: resolveConversationKey(providerMessageId, parsed),
+          targetKey: participant.targetKey,
           conversationName: parsed.subject ?? undefined,
-          authorId: parsed.from?.address ?? 'unknown',
+          authorId: participant.authorId,
           authorUsername: parsed.from?.address ?? 'unknown',
-          authorDisplayName: parsed.from?.name ?? parsed.from?.address ?? 'unknown',
+          authorDisplayName: participant.authorDisplayName,
           content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
-          attachments,
+          attachments: toCommunicationAttachments(parsed, providerMessageId),
           createdAt: resolveCreatedAt(parsed),
         });
 
@@ -280,7 +296,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       createdAt: string;
       unread: boolean;
       conversationName?: string;
-      attachments: Attachment[];
+      attachments: CommunicationFile[];
     }> = [];
 
     for await (const message of currentClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
@@ -297,17 +313,6 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       }
 
       const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${emails.length}`;
-      const attachments: Attachment[] = (parsed.attachments ?? []).map((attachment, index) => ({
-        id: attachment.contentId ?? `${providerMessageId}:${index}`,
-        name: attachment.filename ?? undefined,
-        url: '',
-        contentType: attachment.mimeType ?? undefined,
-        sizeBytes:
-          typeof attachment.content === 'string'
-            ? Buffer.byteLength(attachment.content, 'utf8')
-            : attachment.content.byteLength,
-      }));
-
       emails.push({
         messageId: providerMessageId,
         targetKey: participant.targetKey,
@@ -317,7 +322,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         createdAt: resolveCreatedAt(parsed),
         unread: !(message.flags?.has?.('\\Seen') ?? false),
         conversationName: parsed.subject ?? undefined,
-        attachments,
+        attachments: toCommunicationAttachments(parsed, providerMessageId),
       });
     }
 
@@ -370,7 +375,6 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         existing.push(...messages.map((message) => ({
           ...message,
           targetKey,
-          attachments: [],
         })));
         grouped.set(targetKey, existing);
       }
@@ -409,7 +413,6 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       return [...inboxEmails.filter((email) => email.targetKey === targetKey), ...outboundMessages.map((message) => ({
         ...message,
         targetKey,
-        attachments: [],
       }))]
         .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))
         .slice(-limit)
@@ -450,6 +453,11 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           subject: `Message from ${config.smtp.user}`,
           text: input.content,
           bcc: config.bcc,
+          attachments: input.attachments.map((attachment) => ({
+            filename: attachment.name,
+            content: Buffer.from(attachment.data),
+            contentType: attachment.contentType,
+          })),
         };
 
         const info = await transporter.sendMail(mailOptions);
@@ -458,6 +466,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         existingOutbound.push({
           messageId: info.messageId,
           content: input.content,
+          attachments: input.attachments,
           createdAt,
           unread: false,
           authorId: config.imap.user,

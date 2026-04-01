@@ -243,6 +243,8 @@ export async function createInternalAgentRuntime<
   const communication = config.communication ?? await createCommunicationModule({
     client,
     providers: config.providers ?? [],
+    workspace,
+    workspaceRoot: agentWorkspaceDir,
   });
   const allAgentTools = {
     ...createExternalAccountTools(communication),

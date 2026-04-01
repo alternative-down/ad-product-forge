@@ -12,7 +12,6 @@ export * from './agent/communication/conversation-key';
 export * from './agent/wake-queue';
 export * from './agent/tools/market-research';
 export * from './agent/communication/provider-types';
-export type { Attachment } from './agent/communication/store';
 export { LongTermMemory } from './agent/memory/long-term-memory';
 export { embedTextWithFastembed } from './agent/memory/embedder';
 export { createAgentMemory } from './agent/memory/memory';
