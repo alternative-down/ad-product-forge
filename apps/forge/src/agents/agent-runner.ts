@@ -571,9 +571,13 @@ function describeWakeGroup(event: AgentWakeEvent) {
   }
 
   if (event.type === 'schedule') {
-    return event.groupMetadata?.ScheduleName
-      ? `Schedule: ${event.groupMetadata.ScheduleName}`
-      : 'Schedule';
+    if (event.groupMetadata?.ScheduleKind === 'heartbeat') {
+      return 'scheduler';
+    }
+
+    return event.groupMetadata?.ScheduleId
+      ? `scheduler: ${event.groupMetadata.ScheduleId}`
+      : 'scheduler';
   }
 
   if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
@@ -606,7 +610,7 @@ function formatWakeLabel(value: string) {
 
 function describeWakeActor(event: AgentWakeEvent) {
   if (event.type === 'schedule') {
-    return 'Scheduler';
+    return '';
   }
 
   if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {

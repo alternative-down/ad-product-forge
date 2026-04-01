@@ -71,6 +71,8 @@ export async function main() {
         groupKey: `schedule:${input.scheduleId}`,
         groupMetadata: {
           Source: 'scheduler',
+          ScheduleId: input.scheduleId,
+          ScheduleKind: input.scheduleKind,
           ScheduleName: input.scheduleName,
         },
         idempotencyKey: `schedule:${input.scheduleId}:${input.timestamp}`,

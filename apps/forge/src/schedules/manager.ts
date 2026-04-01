@@ -70,6 +70,7 @@ export function createAgentScheduleManager(input: {
   notifyAgent(input: {
     agentId: string;
     scheduleId: string;
+    scheduleKind: 'agent' | 'heartbeat';
     scheduleName: string;
     content: string;
     timestamp: number;
@@ -460,6 +461,7 @@ export function createAgentScheduleManager(input: {
     input.notifyAgent({
       agentId: scheduleRecord.agentId,
       scheduleId: scheduleRecord.scheduleId,
+      scheduleKind: scheduleRecord.kind,
       scheduleName: scheduleRecord.name,
       content: createWakeContent({
         content: scheduleRecord.kind === 'agent'
@@ -552,10 +554,22 @@ function createNotificationContent(input: {
   content: string;
   fireDate: Date;
 }) {
-  const title = input.name.trim() ? `Scheduled event: ${input.name.trim()}` : 'Scheduled event';
+  const title = input.kind === 'heartbeat' ? 'Cron' : `Cron: ${input.scheduleId}`;
+  const sections = [title];
+  const description = input.description?.trim();
   const content = input.content.trim();
 
-  return [title, content].filter(Boolean).join('\n\n');
+  if (description) {
+    sections.push(`Description: ${description}`);
+  }
+
+  if (content) {
+    sections.push(`Task:\n${content}`);
+  }
+
+  sections.push(input.fireDate.toISOString());
+
+  return sections.join('\n\n');
 }
 
 function createWakeContent(input: {
