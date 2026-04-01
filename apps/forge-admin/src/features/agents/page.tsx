@@ -1383,7 +1383,10 @@ function ThreadMessageContent(input: {
   return (
     <>
       {!hasVisibleTextParts && typeof input.content.content === 'string' && input.content.content.trim() ? (
-        <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">{input.content.content.trim()}</div>
+        <div className="mt-3">
+          <div className="text-xs font-medium text-muted-foreground">Response text · content.content</div>
+          <div className="mt-1 whitespace-pre-wrap text-sm text-foreground">{input.content.content.trim()}</div>
+        </div>
       ) : null}
       {input.content.parts.map((part, index) => (
         <ThreadMessagePartCard
@@ -1397,6 +1400,7 @@ function ThreadMessageContent(input: {
             content.reasoning
           </summary>
           <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Reasoning / Thinking · content.reasoning</div>
             {input.content.reasoning.trim()}
           </div>
         </details>
@@ -1460,8 +1464,11 @@ function ThreadMessagePartCard(input: {
     }
 
     return (
-      <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
-        {part.text}
+      <div className="mt-3">
+        <div className="text-xs font-medium text-muted-foreground">Response text · content.parts.text</div>
+        <div className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+          {part.text}
+        </div>
       </div>
     );
   }
@@ -1477,6 +1484,7 @@ function ThreadMessagePartCard(input: {
           Reasoning / Thinking
         </summary>
         <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Reasoning / Thinking · content.parts.reasoning</div>
           {part.reasoning}
         </div>
       </details>
