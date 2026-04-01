@@ -9,7 +9,7 @@ type DiscordSendableChannel = {
   send(input: string | { content?: string; files?: Array<{ attachment: Buffer; name: string }> }): Promise<Message>;
   messages: {
     fetch(messageId: string): Promise<Message>;
-    fetch(options: { limit: number }): Promise<Collection<string, Message>>;
+    fetch(options: { limit: number; before?: string }): Promise<Collection<string, Message>>;
   };
 };
 
@@ -344,24 +344,54 @@ export function createDiscordProvider(config: {
     return channels;
   }
 
-  async function listChannelMessages(channel: DiscordSendableChannel, limit: number) {
-    const messages = await channel.messages.fetch({ limit });
+  async function listChannelMessages(channel: DiscordSendableChannel, limit: number, offset: number) {
+    const targetCount = limit + offset;
+    const collected = new Collection<string, Message>();
+    let before: string | undefined;
+
+    while (collected.size < targetCount) {
+      const batch = await channel.messages.fetch({
+        limit: Math.min(100, targetCount - collected.size),
+        ...(before ? { before } : {}),
+      });
+
+      if (batch.size === 0) {
+        break;
+      }
+
+      for (const [messageId, message] of batch) {
+        collected.set(messageId, message);
+      }
+
+      const oldestMessage = Array.from(batch.values()).at(-1);
+
+      if (!oldestMessage) {
+        break;
+      }
+
+      before = oldestMessage.id;
+    }
+
+    const sortedMessages = Array.from(collected.values())
+      .filter((message) => !message.author.bot || message.author.id === client.user?.id)
+      .sort((left, right) => left.createdTimestamp - right.createdTimestamp);
+    const filteredMessages = sortedMessages.slice(
+      Math.max(0, sortedMessages.length - targetCount),
+      offset > 0 ? sortedMessages.length - offset : undefined,
+    );
 
     return Promise.all(
-      Array.from(messages.values())
-        .filter((message) => !message.author.bot || message.author.id === client.user?.id)
-        .sort((left, right) => left.createdTimestamp - right.createdTimestamp)
-        .map(async (message) => ({
-          messageId: message.id,
-          provider: 'discord',
-          authorId: message.author.id,
-          targetKey: channel.id,
-          content: message.content.trim() || '[attachment only]',
-          attachments: await downloadDiscordAttachments(message),
-          unread: false,
-          createdAt: new Date(message.createdTimestamp).toISOString(),
-          authorDisplayName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
-        })),
+      filteredMessages.map(async (message) => ({
+        messageId: message.id,
+        provider: 'discord',
+        authorId: message.author.id,
+        targetKey: channel.id,
+        content: message.content.trim() || '[attachment only]',
+        attachments: await downloadDiscordAttachments(message),
+        unread: false,
+        createdAt: new Date(message.createdTimestamp).toISOString(),
+        authorDisplayName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
+      })),
     );
   }
 
@@ -376,7 +406,7 @@ export function createDiscordProvider(config: {
       const conversations = [];
 
       for (const channel of channels) {
-        const messages = await listChannelMessages(channel, 5);
+        const messages = await listChannelMessages(channel, 5, 0);
 
         if (messages.length === 0) {
           continue;
@@ -398,7 +428,7 @@ export function createDiscordProvider(config: {
         .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt))
         .slice(0, limit);
     },
-    async getMessages({ targetKey, limit }) {
+    async getMessages({ targetKey, limit, offset }) {
       await getReadyClient();
       const channel = await client.channels.fetch(targetKey);
 
@@ -406,7 +436,7 @@ export function createDiscordProvider(config: {
         throw new Error(`Discord target is not readable: ${targetKey}`);
       }
 
-      return listChannelMessages(channel as DiscordSendableChannel, limit);
+      return listChannelMessages(channel as DiscordSendableChannel, limit, offset);
     },
     async sendMessage(input) {
       await getReadyClient();

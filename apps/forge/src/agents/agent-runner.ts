@@ -613,12 +613,6 @@ function describeWakeGroup(event: AgentWakeEvent) {
   return `${formatWakeLabel(event.type)}: ${event.groupKey}`;
 }
 
-function formatWakeProvider(value: string) {
-  return value
-    .replace(/[-_]+/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
 function formatWakeLabel(value: string) {
   return value
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')

@@ -636,6 +636,7 @@ export function createInternalChatService(
     agentId: string;
     conversationKey: string;
     limit: number;
+    offset: number;
   }): Promise<CommunicationProviderMessage[]> {
     await requireConversationMembership(input.agentId, input.conversationKey);
 
@@ -662,6 +663,7 @@ export function createInternalChatService(
       )
       .where(eq(internalChatMessages.conversationId, input.conversationKey))
       .orderBy(desc(internalChatMessages.createdAt))
+      .offset(input.offset)
       .limit(input.limit);
 
     const unreadMessageIds = rows.filter((row) => row.unread === 1).map((row) => row.messageId);

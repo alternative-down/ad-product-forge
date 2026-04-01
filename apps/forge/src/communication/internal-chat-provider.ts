@@ -28,11 +28,12 @@ export function createInternalChatProvider(input: {
         unread,
       });
     },
-    async getMessages({ targetKey, limit }) {
+    async getMessages({ targetKey, limit, offset }) {
       return input.internalChat.getMessages({
         agentId: input.agentId,
         conversationKey: targetKey,
         limit,
+        offset,
       });
     },
     async sendMessage(message) {

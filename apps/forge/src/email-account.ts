@@ -406,8 +406,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         })
         .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt));
     },
-    async getMessages({ targetKey, limit }) {
-      const inboxEmails = await listRecentInboxEmails(Math.max(limit * 4, 50));
+    async getMessages({ targetKey, limit, offset }) {
+      const inboxEmails = await listRecentInboxEmails(Math.max((limit + offset) * 4, 50));
       const outboundMessages = recentOutboundMessages.get(targetKey) ?? [];
 
       return [...inboxEmails.filter((email) => email.targetKey === targetKey), ...outboundMessages.map((message) => ({
@@ -415,7 +415,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         targetKey,
       }))]
         .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))
-        .slice(-limit)
+        .slice(Math.max(0, -(limit + offset)), offset > 0 ? -offset : undefined)
         .map((message) => ({
           messageId: message.messageId,
           provider: config.id ?? 'email',

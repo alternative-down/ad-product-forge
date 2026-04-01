@@ -306,6 +306,7 @@ export async function createCommunicationModule(config: {
     provider: string;
     targetKey: string;
     limit: number;
+    offset: number;
   }): Promise<CommunicationMessageView[]> {
     const provider = providers.get(input.provider);
 
@@ -320,6 +321,7 @@ export async function createCommunicationModule(config: {
     return Promise.all((await provider.getMessages({
       targetKey: input.targetKey,
       limit: input.limit,
+      offset: input.offset,
     })).map((message) => toAgentMessageView(message)));
   }
 

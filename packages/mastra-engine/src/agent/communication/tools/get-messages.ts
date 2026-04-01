@@ -19,6 +19,12 @@ const getMessagesInputSchema = z.object({
     .max(200)
     .default(100)
     .describe('Maximum number of recent messages to return.'),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .describe('How many most-recent messages to skip before returning results. Use this to page through older messages.'),
 });
 
 export function createGetMessagesTool(communication: CommunicationModule) {
@@ -34,6 +40,7 @@ export function createGetMessagesTool(communication: CommunicationModule) {
             provider: input.provider,
             targetKey: input.targetKey,
             limit: input.limit ?? 100,
+            offset: input.offset ?? 0,
           }),
         };
       } catch (error) {
