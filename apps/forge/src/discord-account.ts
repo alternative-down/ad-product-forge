@@ -112,6 +112,20 @@ export function createDiscordProvider(config: {
     return chunks;
   }
 
+  function parseFilterDate(value: string | undefined, fieldName: string) {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = Date.parse(value);
+
+    if (Number.isNaN(parsed)) {
+      throw new Error(`Invalid ${fieldName}: ${value}`);
+    }
+
+    return parsed;
+  }
+
   async function downloadDiscordAttachments(message: Message): Promise<CommunicationFile[]> {
     return Promise.all(
       Array.from(message.attachments.values()).map(async (attachment) => {
@@ -344,13 +358,26 @@ export function createDiscordProvider(config: {
     return channels;
   }
 
-  async function listChannelMessages(channel: DiscordSendableChannel, limit: number, offset: number) {
-    const targetCount = limit + offset;
+  async function listChannelMessages(input: {
+    channel: DiscordSendableChannel;
+    limit: number;
+    offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) {
+    const parsedDateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
+    const parsedDateTo = parseFilterDate(input.dateTo, 'dateTo');
+    const matchesMessage = (message: Message) =>
+      (!input.query || message.content.includes(input.query) || message.attachments.size > 0) &&
+      (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
+      (parsedDateTo === null || message.createdTimestamp <= parsedDateTo);
+    const targetCount = input.limit + input.offset;
     const collected = new Collection<string, Message>();
     let before: string | undefined;
 
     while (collected.size < targetCount) {
-      const batch = await channel.messages.fetch({
+      const batch = await input.channel.messages.fetch({
         limit: Math.min(100, targetCount - collected.size),
         ...(before ? { before } : {}),
       });
@@ -374,10 +401,11 @@ export function createDiscordProvider(config: {
 
     const sortedMessages = Array.from(collected.values())
       .filter((message) => !message.author.bot || message.author.id === client.user?.id)
+      .filter(matchesMessage)
       .sort((left, right) => left.createdTimestamp - right.createdTimestamp);
     const filteredMessages = sortedMessages.slice(
       Math.max(0, sortedMessages.length - targetCount),
-      offset > 0 ? sortedMessages.length - offset : undefined,
+      input.offset > 0 ? sortedMessages.length - input.offset : undefined,
     );
 
     return Promise.all(
@@ -385,7 +413,7 @@ export function createDiscordProvider(config: {
         messageId: message.id,
         provider: 'discord',
         authorId: message.author.id,
-        targetKey: channel.id,
+        targetKey: input.channel.id,
         content: message.content.trim() || '[attachment only]',
         attachments: await downloadDiscordAttachments(message),
         unread: false,
@@ -406,7 +434,7 @@ export function createDiscordProvider(config: {
       const conversations = [];
 
       for (const channel of channels) {
-        const messages = await listChannelMessages(channel, 5, 0);
+        const messages = await listChannelMessages({ channel, limit: 5, offset: 0 });
 
         if (messages.length === 0) {
           continue;
@@ -428,7 +456,7 @@ export function createDiscordProvider(config: {
         .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt))
         .slice(0, limit);
     },
-    async getMessages({ targetKey, limit, offset }) {
+    async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
       await getReadyClient();
       const channel = await client.channels.fetch(targetKey);
 
@@ -436,7 +464,14 @@ export function createDiscordProvider(config: {
         throw new Error(`Discord target is not readable: ${targetKey}`);
       }
 
-      return listChannelMessages(channel as DiscordSendableChannel, limit, offset);
+      return listChannelMessages({
+        channel: channel as DiscordSendableChannel,
+        limit,
+        offset,
+        query,
+        dateFrom,
+        dateTo,
+      });
     },
     async sendMessage(input) {
       await getReadyClient();

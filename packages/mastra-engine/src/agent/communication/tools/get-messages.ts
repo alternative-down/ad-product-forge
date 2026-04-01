@@ -25,6 +25,24 @@ const getMessagesInputSchema = z.object({
     .min(0)
     .default(0)
     .describe('How many most-recent messages to skip before returning results. Use this to page through older messages.'),
+  query: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe('Optional text filter. Only messages containing this text will be returned.'),
+  dateFrom: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe('Optional start of the time window. Use an ISO date or date-time, such as 2026-04-01 or 2026-04-01T09:00:00Z.'),
+  dateTo: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe('Optional end of the time window. Use an ISO date or date-time, such as 2026-04-01 or 2026-04-01T18:00:00Z.'),
 });
 
 export function createGetMessagesTool(communication: CommunicationModule) {
@@ -41,6 +59,9 @@ export function createGetMessagesTool(communication: CommunicationModule) {
             targetKey: input.targetKey,
             limit: input.limit ?? 100,
             offset: input.offset ?? 0,
+            query: input.query,
+            dateFrom: input.dateFrom,
+            dateTo: input.dateTo,
           }),
         };
       } catch (error) {

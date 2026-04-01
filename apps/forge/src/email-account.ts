@@ -79,6 +79,20 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     return address.address.toLowerCase();
   }
 
+  function parseFilterDate(value: string | undefined, fieldName: string) {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = Date.parse(value);
+
+    if (Number.isNaN(parsed)) {
+      throw new Error(`Invalid ${fieldName}: ${value}`);
+    }
+
+    return parsed;
+  }
+
   function getAddressDisplayName(address?: Email['from']) {
     if (!address || !('address' in address)) {
       return null;
@@ -406,7 +420,9 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         })
         .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt));
     },
-    async getMessages({ targetKey, limit, offset }) {
+    async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
+      const parsedDateFrom = parseFilterDate(dateFrom, 'dateFrom');
+      const parsedDateTo = parseFilterDate(dateTo, 'dateTo');
       const inboxEmails = await listRecentInboxEmails(Math.max((limit + offset) * 4, 50));
       const outboundMessages = recentOutboundMessages.get(targetKey) ?? [];
 
@@ -414,6 +430,9 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         ...message,
         targetKey,
       }))]
+        .filter((message) => !query || message.content.includes(query))
+        .filter((message) => parsedDateFrom === null || Date.parse(message.createdAt) >= parsedDateFrom)
+        .filter((message) => parsedDateTo === null || Date.parse(message.createdAt) <= parsedDateTo)
         .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))
         .slice(Math.max(0, -(limit + offset)), offset > 0 ? -offset : undefined)
         .map((message) => ({

@@ -307,6 +307,9 @@ export async function createCommunicationModule(config: {
     targetKey: string;
     limit: number;
     offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }): Promise<CommunicationMessageView[]> {
     const provider = providers.get(input.provider);
 
@@ -322,6 +325,9 @@ export async function createCommunicationModule(config: {
       targetKey: input.targetKey,
       limit: input.limit,
       offset: input.offset,
+      query: input.query,
+      dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
     })).map((message) => toAgentMessageView(message)));
   }
 

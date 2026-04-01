@@ -88,6 +88,9 @@ export type CommunicationProvider = {
     targetKey: string;
     limit: number;
     offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }): Promise<CommunicationProviderMessage[]>;
   sendMessage(input: {
     targetKey: string;

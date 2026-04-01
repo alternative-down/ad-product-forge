@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, like, lte, sql } from 'drizzle-orm';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { customAlphabet } from 'nanoid';
@@ -23,6 +23,20 @@ import { createId } from '../utils/id';
 type InternalChatHandler = (message: CommunicationInboundMessage) => Promise<void> | void;
 
 const createSlugSuffix = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
+
+function parseFilterDate(value: string | undefined, fieldName: string) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+
+  if (Number.isNaN(parsed)) {
+    throw new Error(`Invalid ${fieldName}: ${value}`);
+  }
+
+  return parsed;
+}
 
 type InternalChatGroupMember = {
   groupId: string;
@@ -637,8 +651,19 @@ export function createInternalChatService(
     conversationKey: string;
     limit: number;
     offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }): Promise<CommunicationProviderMessage[]> {
     await requireConversationMembership(input.agentId, input.conversationKey);
+    const dateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
+    const dateTo = parseFilterDate(input.dateTo, 'dateTo');
+    const filters = [
+      eq(internalChatMessages.conversationId, input.conversationKey),
+      ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
+      ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
+      ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
+    ];
 
     const rows = await db
       .select({
@@ -661,7 +686,7 @@ export function createInternalChatService(
         internalChatAccounts,
         eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
       )
-      .where(eq(internalChatMessages.conversationId, input.conversationKey))
+      .where(and(...filters))
       .orderBy(desc(internalChatMessages.createdAt))
       .offset(input.offset)
       .limit(input.limit);
