@@ -48,6 +48,8 @@ type CoolifyDraft = {
   isEnabled: boolean;
   baseUrl: string;
   adminToken: string;
+  serverId: string;
+  destinationId: string;
   applicationsBaseDomain: string;
 };
 
@@ -1372,6 +1374,30 @@ function CoolifyIntegrationCard(input: {
             placeholder="Optional override. Leave empty to use Coolify wildcard domain."
           />
         </LabeledField>
+        <LabeledField label="Server ID">
+          <Input
+            value={draft.serverId}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                serverId: event.target.value,
+              }))
+            }
+            placeholder="Coolify server UUID"
+          />
+        </LabeledField>
+        <LabeledField label="Destination ID">
+          <Input
+            value={draft.destinationId}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                destinationId: event.target.value,
+              }))
+            }
+            placeholder="Coolify destination UUID"
+          />
+        </LabeledField>
       </div>
       <label className="mt-4 flex items-center gap-3 text-sm text-foreground">
         <input
@@ -1397,6 +1423,8 @@ function CoolifyIntegrationCard(input: {
               config: {
                 baseUrl: draft.baseUrl,
                 adminToken: draft.adminToken,
+                serverId: draft.serverId,
+                destinationId: draft.destinationId,
                 ...(draft.applicationsBaseDomain.trim()
                   ? { applicationsBaseDomain: draft.applicationsBaseDomain.trim() }
                   : {}),
@@ -1768,6 +1796,8 @@ function getCoolifyDraft(integration: SystemIntegration | null): CoolifyDraft {
       isEnabled: true,
       baseUrl: '',
       adminToken: '',
+      serverId: '',
+      destinationId: '',
       applicationsBaseDomain: '',
     };
   }
@@ -1776,6 +1806,8 @@ function getCoolifyDraft(integration: SystemIntegration | null): CoolifyDraft {
     isEnabled: integration.isEnabled,
     baseUrl: integration.config?.baseUrl ?? '',
     adminToken: integration.config?.adminToken ?? '',
+    serverId: integration.config?.serverId ?? '',
+    destinationId: integration.config?.destinationId ?? '',
     applicationsBaseDomain: integration.config?.applicationsBaseDomain ?? '',
   };
 }

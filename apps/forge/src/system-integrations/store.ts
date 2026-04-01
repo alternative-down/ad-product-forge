@@ -19,6 +19,8 @@ const migaduConfigSchema = z.object({
 const coolifyConfigSchema = z.object({
   baseUrl: z.string().url(),
   adminToken: z.string().min(1),
+  serverId: z.string().min(1),
+  destinationId: z.string().min(1),
   applicationsBaseDomain: z.string().min(1).optional(),
 });
 

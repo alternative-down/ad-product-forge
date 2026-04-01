@@ -290,12 +290,14 @@ export type SystemIntegration =
       createdAt: number;
       updatedAt: number;
     }
-  | {
+    | {
       providerType: 'coolify';
       isEnabled: boolean;
       config: {
         baseUrl: string;
         adminToken: string;
+        serverId: string;
+        destinationId: string;
         applicationsBaseDomain?: string;
       } | null;
       createdAt: number;
@@ -437,6 +439,8 @@ export type UpsertSystemIntegrationInput =
       config: {
         baseUrl: string;
         adminToken: string;
+        serverId: string;
+        destinationId: string;
         applicationsBaseDomain?: string;
       };
     }
