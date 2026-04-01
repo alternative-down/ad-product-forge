@@ -6,13 +6,14 @@ export interface MiniMaxConfig {
 
 export interface TTSOptions {
   text: string;
-  model?: string;
   voiceSetting?: {
     voiceId: string;
     speed?: number;
     volume?: number;
     pitch?: number;
   };
+  languageBoost?: string;
+  pronunciationToneReplacements?: string[];
   outputFormat?: 'mp3' | 'wav' | 'flac';
 }
 
@@ -69,6 +70,19 @@ export interface FileRetrieveResponse {
   fileId: string;
   fileName?: string;
   downloadUrl: string;
+}
+
+export interface MiniMaxVoice {
+  voiceId: string;
+  voiceName?: string;
+  description: string[];
+  createdTime?: string;
+}
+
+export interface VoiceListResponse {
+  systemVoices: MiniMaxVoice[];
+  voiceCloning: MiniMaxVoice[];
+  voiceGeneration: MiniMaxVoice[];
 }
 
 type MiniMaxJsonResponse = Record<string, unknown>;
@@ -202,16 +216,22 @@ export class MiniMaxClient {
     const response = await this.requestJson('/t2a_v2', {
       method: 'POST',
       body: JSON.stringify({
-        model: options.model ?? 'speech-2.8-hd',
+        model: 'speech-2.8-hd',
         text: options.text,
         stream: false,
+        language_boost: options.languageBoost,
         output_format: 'hex',
         voice_setting: {
-          voice_id: options.voiceSetting?.voiceId ?? 'female-shaonv',
+          voice_id: options.voiceSetting?.voiceId ?? 'English_expressive_narrator',
           speed: options.voiceSetting?.speed ?? 1,
           vol: options.voiceSetting?.volume ?? 1,
           pitch: options.voiceSetting?.pitch ?? 0,
         },
+        pronunciation_dict: options.pronunciationToneReplacements
+          ? {
+              tone: options.pronunciationToneReplacements,
+            }
+          : undefined,
         audio_setting: {
           sample_rate: 32000,
           bitrate: 128000,
@@ -244,6 +264,71 @@ export class MiniMaxClient {
       data: {
         audioHex: audio,
         audioFormat: options.outputFormat ?? 'mp3',
+      },
+    };
+  }
+
+  async listVoices(voiceType: 'system' | 'voice_cloning' | 'voice_generation' | 'all'): Promise<MiniMaxResponse<VoiceListResponse>> {
+    const response = await this.requestJson('/get_voice', {
+      method: 'POST',
+      body: JSON.stringify({
+        voice_type: voiceType,
+      }),
+    });
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    const data = response.data;
+
+    if (!data) {
+      return this.buildError('INVALID_RESPONSE', 'MiniMax did not return any voice information.');
+    }
+
+    const parseVoices = (value: unknown): MiniMaxVoice[] => {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+
+      return value.flatMap((item) => {
+        const record = this.getObject(item);
+
+        if (!record) {
+          return [];
+        }
+
+        const voiceId = this.getString(record.voice_id);
+
+        if (!voiceId) {
+          return [];
+        }
+
+        const description = Array.isArray(record.description)
+          ? record.description.flatMap((entry) => {
+              const text = this.getString(entry);
+              return text ? [text] : [];
+            })
+          : [];
+
+        return [{
+          voiceId,
+          voiceName: this.getString(record.voice_name),
+          description,
+          createdTime: this.getString(record.created_time),
+        }];
+      });
+    };
+
+    return {
+      success: true,
+      data: {
+        systemVoices: parseVoices(data.system_voice),
+        voiceCloning: parseVoices(data.voice_cloning),
+        voiceGeneration: parseVoices(data.voice_generation),
       },
     };
   }
@@ -445,6 +530,10 @@ export function createMiniMaxManager(config: {
     return (await getClient()).generateImage(options);
   }
 
+  async function listVoices(voiceType: 'system' | 'voice_cloning' | 'voice_generation' | 'all') {
+    return (await getClient()).listVoices(voiceType);
+  }
+
   async function createVideoGenerationTask(options: VideoOptions) {
     return (await getClient()).createVideoGenerationTask(options);
   }
@@ -459,6 +548,7 @@ export function createMiniMaxManager(config: {
 
   return {
     textToSpeech,
+    listVoices,
     generateImage,
     createVideoGenerationTask,
     queryVideoGeneration,

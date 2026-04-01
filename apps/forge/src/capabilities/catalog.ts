@@ -90,6 +90,7 @@ export const forgeCustomToolIds = [
   'list_role_workflow_permissions',
   'manage_role_workflow_permissions',
   'list_available_capabilities',
+  'list_minimax_voices',
   'minimax_tts',
   'minimax_image',
   'minimax_video',

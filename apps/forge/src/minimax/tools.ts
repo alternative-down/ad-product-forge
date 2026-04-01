@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { MiniMaxManager } from './manager';
 
 export const MINIMAX_TOOL_IDS = [
+  'list_minimax_voices',
   'minimax_tts',
   'minimax_image',
   'minimax_video',
@@ -35,6 +36,52 @@ const imageAspectRatioSchema = z.enum([
   '3:2',
   '2:3',
 ]);
+
+const languageBoostSchema = z.enum([
+  'Chinese',
+  'Chinese,Yue',
+  'English',
+  'Arabic',
+  'Russian',
+  'Spanish',
+  'French',
+  'Portuguese',
+  'German',
+  'Turkish',
+  'Dutch',
+  'Ukrainian',
+  'Vietnamese',
+  'Indonesian',
+  'Japanese',
+  'Italian',
+  'Korean',
+  'Thai',
+  'Polish',
+  'Romanian',
+  'Greek',
+  'Czech',
+  'Finnish',
+  'Hindi',
+  'Bulgarian',
+  'Danish',
+  'Hebrew',
+  'Malay',
+  'Persian',
+  'Slovak',
+  'Swedish',
+  'Croatian',
+  'Filipino',
+  'Hungarian',
+  'Norwegian',
+  'Slovenian',
+  'Catalan',
+  'Nynorsk',
+  'Tamil',
+  'Afrikaans',
+  'auto',
+]);
+
+const voiceTypeSchema = z.enum(['system', 'voice_cloning', 'voice_generation', 'all']);
 
 function createMiniMaxOutputPath(
   kind: 'tts' | 'images' | 'videos',
@@ -117,33 +164,69 @@ export function createMiniMaxTools(
 ) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
 
+  if (!allowedToolIds || allowedToolIds.has('list_minimax_voices')) {
+    tools.list_minimax_voices = createTool({
+      id: 'list_minimax_voices',
+      description:
+        'List MiniMax voices available for TTS. Use this before minimax_tts when you want to choose a voiceId instead of using the default voice.',
+      inputSchema: z.object({
+        voice_type: voiceTypeSchema.default('system').describe('Which voices to list. Use "system" for built-in voices, "voice_cloning" for cloned voices, "voice_generation" for generated voices, or "all" for everything.'),
+      }),
+      execute: async (input) => {
+        try {
+          const result = await minimax.listVoices(input.voice_type);
+
+          if (!result.success || !result.data) {
+            return {
+              valid: false,
+              error: result.error?.message || 'Failed to list voices',
+              hint: 'Verify the MiniMax integration is configured and try again.',
+            };
+          }
+
+          return {
+            valid: true,
+            voiceType: input.voice_type,
+            ...result.data,
+          };
+        } catch (error) {
+          return {
+            valid: false,
+            error: error instanceof Error ? error.message : 'Failed to list voices',
+            hint: 'Verify the MiniMax integration is configured and the voice list API is available.',
+          };
+        }
+      },
+    });
+  }
+
   if (!allowedToolIds || allowedToolIds.has('minimax_tts')) {
     tools.minimax_tts = createTool({
       id: 'minimax_tts',
       description:
-        'Turn text into a speech audio file with MiniMax. The generated file is saved in your workspace and the tool returns the saved path.',
+        'Turn text into a speech audio file with MiniMax. You can use plain text, newline breaks between paragraphs, pause markers like <#1.5#>, and interjection tags such as (laughs) or (sighs) when using the 2.8 speech models. The generated file is saved in your workspace and the tool returns the saved path.',
       inputSchema: z.object({
-        text: z.string().min(1).describe('The text that should be spoken in the generated audio.'),
-        model: z.string().nullish().describe('Optional MiniMax speech model to use. Omit this unless you need a specific model.'),
-        voice_id: z.string().nullish().describe('Optional voice to use for the generated speech.'),
-        speed: z.number().nullish().describe('Optional speaking speed.'),
-        volume: z.number().nullish().describe('Optional output volume.'),
-        pitch: z.number().nullish().describe('Optional pitch adjustment.'),
-        output_format: z.enum(['mp3', 'wav', 'flac']).nullish().describe('Audio format for the saved file.'),
+        text: z.string().min(1).describe('The text to speak. Keep it under 10,000 characters. Use newline breaks for paragraphs, pause markers like <#1.5#> for pauses in seconds, and interjection tags like (laughs), (sighs), or (coughs) when you want those effects.'),
+        voice_id: z.string().nullish().describe('Optional voiceId. If omitted, the default voice is English_expressive_narrator. Use list_minimax_voices if you want to choose another voice.'),
+        speed: z.number().nullish().describe('Optional speaking speed. Default is 1.'),
+        volume: z.number().nullish().describe('Optional voice volume. Default is 1.'),
+        pitch: z.number().nullish().describe('Optional voice pitch. Default is 0.'),
+        language_boost: languageBoostSchema.nullish().describe('Optional language hint. Use this when the text is in a specific language or dialect, or use auto when the language is mixed or uncertain.'),
+        pronunciation_tone_replacements: z.array(z.string().min(1)).nullish().describe('Optional pronunciation replacements in the form "original/replacement", for example "Omg/Oh my god".'),
+        output_format: z.enum(['mp3', 'wav', 'flac']).nullish().describe('Audio format for the saved file. Default is mp3.'),
       }),
       execute: async (input, context) => {
         try {
           const result = await minimax.textToSpeech({
             text: input.text,
-            model: input.model ?? undefined,
-            voiceSetting: input.voice_id
-              ? {
-                  voiceId: input.voice_id,
-                  speed: input.speed ?? undefined,
-                  volume: input.volume ?? undefined,
-                  pitch: input.pitch ?? undefined,
-                }
-              : undefined,
+            voiceSetting: {
+              voiceId: input.voice_id ?? 'English_expressive_narrator',
+              speed: input.speed ?? undefined,
+              volume: input.volume ?? undefined,
+              pitch: input.pitch ?? undefined,
+            },
+            languageBoost: input.language_boost ?? undefined,
+            pronunciationToneReplacements: input.pronunciation_tone_replacements ?? undefined,
             outputFormat: input.output_format ?? 'mp3',
           });
 
