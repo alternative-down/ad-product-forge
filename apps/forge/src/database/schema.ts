@@ -241,9 +241,9 @@ export const agentSchedules = sqliteTable('agent_schedules', {
 export type AgentSchedule = typeof agentSchedules.$inferSelect;
 export type NewAgentSchedule = typeof agentSchedules.$inferInsert;
 
-export const internalChatAccounts = sqliteTable('internal_chat_accounts', {
+export const internalChatAccounts = sqliteTable('forge_internal_chat_accounts', {
+  id: text('id').primaryKey(),
   agentId: text('agent_id')
-    .primaryKey()
     .references(() => agents.id, { onDelete: 'cascade' }),
   slug: text('slug').notNull(),
   displayName: text('display_name').notNull(),
@@ -251,65 +251,66 @@ export const internalChatAccounts = sqliteTable('internal_chat_accounts', {
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
-  internalChatAccountsSlugIdx: uniqueIndex('internal_chat_accounts_slug_idx').on(table.slug),
+  internalChatAccountsSlugIdx: uniqueIndex('forge_internal_chat_accounts_slug_idx').on(table.slug),
+  internalChatAccountsAgentIdIdx: uniqueIndex('forge_internal_chat_accounts_agent_id_idx').on(table.agentId),
 }));
 
 export type InternalChatAccount = typeof internalChatAccounts.$inferSelect;
 export type NewInternalChatAccount = typeof internalChatAccounts.$inferInsert;
 
-export const internalChatConversations = sqliteTable('internal_chat_conversations', {
+export const internalChatConversations = sqliteTable('forge_internal_chat_conversations', {
   id: text('id').primaryKey(),
   type: text('type').notNull(),
   name: text('name'),
-  createdByAgentId: text('created_by_agent_id')
-    .references(() => agents.id, { onDelete: 'set null' }),
+  createdByAccountId: text('created_by_account_id')
+    .references(() => internalChatAccounts.id, { onDelete: 'set null' }),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
-  internalChatConversationsTypeIdx: index('internal_chat_conversations_type_idx').on(table.type),
-  internalChatConversationsUpdatedAtIdx: index('internal_chat_conversations_updated_at_idx').on(table.updatedAt),
+  internalChatConversationsTypeIdx: index('forge_internal_chat_conversations_type_idx').on(table.type),
+  internalChatConversationsUpdatedAtIdx: index('forge_internal_chat_conversations_updated_at_idx').on(table.updatedAt),
 }));
 
 export type InternalChatConversation = typeof internalChatConversations.$inferSelect;
 export type NewInternalChatConversation = typeof internalChatConversations.$inferInsert;
 
-export const internalChatConversationMembers = sqliteTable('internal_chat_conversation_members', {
+export const internalChatConversationMembers = sqliteTable('forge_internal_chat_conversation_members', {
   conversationId: text('conversation_id')
     .notNull()
     .references(() => internalChatConversations.id, { onDelete: 'cascade' }),
-  agentId: text('agent_id')
+  accountId: text('account_id')
     .notNull()
-    .references(() => agents.id, { onDelete: 'cascade' }),
+    .references(() => internalChatAccounts.id, { onDelete: 'cascade' }),
   role: text('role').notNull().default('normal'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
-  internalChatConversationMembersUniqueIdx: uniqueIndex('internal_chat_conversation_members_unique_idx').on(table.conversationId, table.agentId),
-  internalChatConversationMembersAgentIdx: index('internal_chat_conversation_members_agent_idx').on(table.agentId),
+  internalChatConversationMembersUniqueIdx: uniqueIndex('forge_internal_chat_conversation_members_unique_idx').on(table.conversationId, table.accountId),
+  internalChatConversationMembersAccountIdx: index('forge_internal_chat_conversation_members_account_idx').on(table.accountId),
 }));
 
 export type InternalChatConversationMember = typeof internalChatConversationMembers.$inferSelect;
 export type NewInternalChatConversationMember = typeof internalChatConversationMembers.$inferInsert;
 
-export const internalChatMessages = sqliteTable('internal_chat_messages', {
+export const internalChatMessages = sqliteTable('forge_internal_chat_messages', {
   id: text('id').primaryKey(),
   conversationId: text('conversation_id')
     .notNull()
     .references(() => internalChatConversations.id, { onDelete: 'cascade' }),
-  authorAgentId: text('author_agent_id')
+  authorAccountId: text('author_account_id')
     .notNull()
-    .references(() => agents.id, { onDelete: 'cascade' }),
+    .references(() => internalChatAccounts.id, { onDelete: 'cascade' }),
   content: text('content').notNull(),
   replyToMessageId: text('reply_to_message_id'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
-  internalChatMessagesConversationIdx: index('internal_chat_messages_conversation_idx').on(table.conversationId),
-  internalChatMessagesCreatedAtIdx: index('internal_chat_messages_created_at_idx').on(table.createdAt),
+  internalChatMessagesConversationIdx: index('forge_internal_chat_messages_conversation_idx').on(table.conversationId),
+  internalChatMessagesCreatedAtIdx: index('forge_internal_chat_messages_created_at_idx').on(table.createdAt),
 }));
 
 export type InternalChatMessage = typeof internalChatMessages.$inferSelect;
 export type NewInternalChatMessage = typeof internalChatMessages.$inferInsert;
 
-export const internalChatMessageReads = sqliteTable('internal_chat_message_reads', {
+export const internalChatMessageReads = sqliteTable('forge_internal_chat_message_reads', {
   messageId: text('message_id')
     .notNull()
     .references(() => internalChatMessages.id, { onDelete: 'cascade' }),
@@ -318,9 +319,9 @@ export const internalChatMessageReads = sqliteTable('internal_chat_message_reads
     .references(() => agents.id, { onDelete: 'cascade' }),
   readAt: integer('read_at'),
 }, (table) => ({
-  internalChatMessageReadsUniqueIdx: uniqueIndex('internal_chat_message_reads_unique_idx').on(table.messageId, table.agentId),
-  internalChatMessageReadsAgentIdx: index('internal_chat_message_reads_agent_idx').on(table.agentId),
-  internalChatMessageReadsReadAtIdx: index('internal_chat_message_reads_read_at_idx').on(table.readAt),
+  internalChatMessageReadsUniqueIdx: uniqueIndex('forge_internal_chat_message_reads_unique_idx').on(table.messageId, table.agentId),
+  internalChatMessageReadsAgentIdx: index('forge_internal_chat_message_reads_agent_idx').on(table.agentId),
+  internalChatMessageReadsReadAtIdx: index('forge_internal_chat_message_reads_read_at_idx').on(table.readAt),
 }));
 
 export type InternalChatMessageRead = typeof internalChatMessageReads.$inferSelect;
@@ -621,9 +622,9 @@ export const internalChatAccountsRelations = relations(internalChatAccounts, ({ 
 }));
 
 export const internalChatConversationsRelations = relations(internalChatConversations, ({ one, many }) => ({
-  creator: one(agents, {
-    fields: [internalChatConversations.createdByAgentId],
-    references: [agents.id],
+  creator: one(internalChatAccounts, {
+    fields: [internalChatConversations.createdByAccountId],
+    references: [internalChatAccounts.id],
   }),
   members: many(internalChatConversationMembers),
   messages: many(internalChatMessages),
@@ -634,9 +635,9 @@ export const internalChatConversationMembersRelations = relations(internalChatCo
     fields: [internalChatConversationMembers.conversationId],
     references: [internalChatConversations.id],
   }),
-  agent: one(agents, {
-    fields: [internalChatConversationMembers.agentId],
-    references: [agents.id],
+  account: one(internalChatAccounts, {
+    fields: [internalChatConversationMembers.accountId],
+    references: [internalChatAccounts.id],
   }),
 }));
 
@@ -645,9 +646,9 @@ export const internalChatMessagesRelations = relations(internalChatMessages, ({ 
     fields: [internalChatMessages.conversationId],
     references: [internalChatConversations.id],
   }),
-  author: one(agents, {
-    fields: [internalChatMessages.authorAgentId],
-    references: [agents.id],
+  author: one(internalChatAccounts, {
+    fields: [internalChatMessages.authorAccountId],
+    references: [internalChatAccounts.id],
   }),
   reads: many(internalChatMessageReads),
 }));

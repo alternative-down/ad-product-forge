@@ -224,6 +224,14 @@ export type UpdateAgentConfigInput = {
   omModelProfileId: string;
 };
 
+export type SendInternalChatMessageFromAdminInput = {
+  agentId: string;
+  targetKey?: string;
+  senderSlug: string;
+  senderDisplayName: string;
+  content: string;
+};
+
 export type UpsertAgentProviderInput = {
   agentId: string;
   providerType: 'discord' | 'email';
@@ -699,6 +707,16 @@ export function wakeAgent(agentId: string) {
     method: 'POST',
     body: JSON.stringify({ agentId }),
   });
+}
+
+export function sendInternalChatMessageFromAdmin(input: SendInternalChatMessageFromAdminInput) {
+  return request<{ success: true; conversationKey: string; messageId: string }>(
+    '/admin/agent/internal-chat/send',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function reloadAgent(agentId: string) {

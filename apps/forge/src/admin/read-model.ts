@@ -477,12 +477,12 @@ async function listRecentInternalChatConversations(
 
     return rows.map((conversation) => {
       const participants = new Set<string>();
-
-      for (const participantId of conversation.participants ?? []) {
-        participants.add(participantId);
-      }
+      const conversationName = conversation.name ?? 'Conversation';
 
       participants.add(agentName);
+      if (conversationName !== 'Conversation') {
+        participants.add(conversationName);
+      }
 
       for (const message of conversation.messages) {
         if (message.authorDisplayName) {

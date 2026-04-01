@@ -26,8 +26,14 @@ export function createInternalChatProvider(input: {
       });
     },
     async sendMessage(message) {
+      const account = await input.internalChat.getAccountByAgentId(input.agentId);
+
+      if (!account) {
+        throw new Error(`Internal chat account not found for agent: ${input.agentId}`);
+      }
+
       const sent = await input.internalChat.sendMessage({
-        agentId: input.agentId,
+        accountId: account.id,
         targetKey: message.targetKey,
         content: message.content,
         attachments: message.attachments,

@@ -137,6 +137,14 @@ const agentActionSchema = z.object({
   agentId: z.string().min(1),
 });
 
+const adminInternalChatSendSchema = z.object({
+  agentId: z.string().min(1),
+  targetKey: z.string().min(1).optional(),
+  senderSlug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  senderDisplayName: z.string().trim().min(1),
+  content: z.string().trim().min(1),
+});
+
 const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
   amountUsd: z.coerce.number().positive(),
@@ -478,6 +486,30 @@ export function registerAdminRoutes(input: {
         timestamp,
       });
       return jsonResponse({ success: true });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/internal-chat/send',
+    handler: async (request) => {
+      const payload = parseJsonBody(request.bodyText, adminInternalChatSendSchema);
+      const sender = await input.internalChat.registerExternalAccount({
+        slug: payload.senderSlug,
+        displayName: payload.senderDisplayName,
+      });
+      const sent = await input.internalChat.sendMessage({
+        accountId: sender.accountId,
+        targetKey: payload.targetKey ?? payload.agentId,
+        content: payload.content,
+        attachments: [],
+      });
+
+      return jsonResponse({
+        success: true,
+        conversationKey: sent.conversationKey,
+        messageId: sent.messageId,
+      });
     },
   });
 

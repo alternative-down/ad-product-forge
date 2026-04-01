@@ -26,6 +26,7 @@ const createSlugSuffix = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 
 
 type InternalChatGroupMember = {
   groupId: string;
+  participantId: string;
   participantSlug: string;
   participantName: string;
   role: string;
@@ -151,6 +152,7 @@ export function createInternalChatService(
         .where(eq(internalChatAccounts.agentId, input.agentId));
 
       return {
+        accountId: existing.id,
         agentId: input.agentId,
         slug: existing.slug,
         displayName: input.displayName,
@@ -159,8 +161,10 @@ export function createInternalChatService(
     }
 
     const slug = createInternalChatSlug(input.displayName);
+    const accountId = `acct_${createId()}`;
 
     await db.insert(internalChatAccounts).values({
+      id: accountId,
       agentId: input.agentId,
       slug,
       displayName: input.displayName,
@@ -170,8 +174,57 @@ export function createInternalChatService(
     });
 
     return {
+      accountId,
       agentId: input.agentId,
       slug,
+      displayName: input.displayName,
+      description: input.description,
+    };
+  }
+
+  async function registerExternalAccount(input: {
+    slug: string;
+    displayName: string;
+    description?: string;
+  }) {
+    const now = Date.now();
+    const existing = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.slug, input.slug),
+    });
+
+    if (existing) {
+      await db
+        .update(internalChatAccounts)
+        .set({
+          displayName: input.displayName,
+          description: input.description ?? null,
+          updatedAt: now,
+        })
+        .where(eq(internalChatAccounts.id, existing.id));
+
+      return {
+        accountId: existing.id,
+        slug: existing.slug,
+        displayName: input.displayName,
+        description: input.description,
+      };
+    }
+
+    const accountId = `acct_${createId()}`;
+
+    await db.insert(internalChatAccounts).values({
+      id: accountId,
+      agentId: null,
+      slug: input.slug,
+      displayName: input.displayName,
+      description: input.description ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      accountId,
+      slug: input.slug,
       displayName: input.displayName,
       description: input.description,
     };
@@ -206,9 +259,10 @@ export function createInternalChatService(
   }
 
   async function getConversationForAgent(agentId: string, conversationId: string) {
+    const account = await getRequiredAgentAccount(agentId);
     const membership = await db.query.internalChatConversationMembers.findFirst({
       where: and(
-        eq(internalChatConversationMembers.agentId, agentId),
+        eq(internalChatConversationMembers.accountId, account.id),
         eq(internalChatConversationMembers.conversationId, conversationId),
       ),
     });
@@ -222,13 +276,13 @@ export function createInternalChatService(
     });
   }
 
-  async function ensureDirectConversation(leftAgentId: string, rightAgentId: string) {
+  async function ensureDirectConversation(leftAccountId: string, rightAccountId: string) {
     const rows = await db
       .select({
         conversationId: internalChatConversationMembers.conversationId,
       })
       .from(internalChatConversationMembers)
-      .where(inArray(internalChatConversationMembers.agentId, [leftAgentId, rightAgentId]));
+      .where(inArray(internalChatConversationMembers.accountId, [leftAccountId, rightAccountId]));
 
     const counts = new Map<string, number>();
 
@@ -260,7 +314,7 @@ export function createInternalChatService(
       id: conversationId,
       type: 'dm',
       name: null,
-      createdByAgentId: leftAgentId,
+      createdByAccountId: leftAccountId,
       createdAt: now,
       updatedAt: now,
     });
@@ -268,13 +322,13 @@ export function createInternalChatService(
     await db.insert(internalChatConversationMembers).values([
       {
         conversationId,
-        agentId: leftAgentId,
+        accountId: leftAccountId,
         role: 'normal',
         createdAt: now,
       },
       {
         conversationId,
-        agentId: rightAgentId,
+        accountId: rightAccountId,
         role: 'normal',
         createdAt: now,
       },
@@ -300,19 +354,20 @@ export function createInternalChatService(
     }
 
     const now = Date.now();
+    const creatorAccount = await getRequiredAgentAccount(input.agentId);
 
     await db.insert(internalChatConversations).values({
       id: input.conversationKey,
       type: 'group',
       name: input.name,
-      createdByAgentId: input.agentId,
+      createdByAccountId: creatorAccount.id,
       createdAt: now,
       updatedAt: now,
     });
 
     await db.insert(internalChatConversationMembers).values({
       conversationId: input.conversationKey,
-      agentId: input.agentId,
+      accountId: creatorAccount.id,
       role: 'admin',
       createdAt: now,
     });
@@ -323,7 +378,7 @@ export function createInternalChatService(
       provider: 'internal-chat',
       conversationKey: input.conversationKey,
       creatorMember: {
-        participantId: input.agentId,
+        participantId: creatorAccount.id,
         participantName: input.creatorName,
         role: 'admin',
       },
@@ -344,7 +399,7 @@ export function createInternalChatService(
     const existing = await db.query.internalChatConversationMembers.findFirst({
       where: and(
         eq(internalChatConversationMembers.conversationId, group.id),
-        eq(internalChatConversationMembers.agentId, participant.agentId),
+        eq(internalChatConversationMembers.accountId, participant.id),
       ),
     });
 
@@ -354,7 +409,7 @@ export function createInternalChatService(
 
     await db.insert(internalChatConversationMembers).values({
       conversationId: group.id,
-      agentId: participant.agentId,
+      accountId: participant.id,
       role: input.role ?? 'normal',
       createdAt: now,
     });
@@ -362,6 +417,7 @@ export function createInternalChatService(
     return {
       groupId: group.id,
       participantSlug: participant.slug,
+      participantId: participant.id,
       participantName: participant.displayName,
       role: input.role ?? 'normal',
       createdAt: new Date(now).toISOString(),
@@ -380,7 +436,7 @@ export function createInternalChatService(
       .delete(internalChatConversationMembers)
       .where(and(
         eq(internalChatConversationMembers.conversationId, input.groupId),
-        eq(internalChatConversationMembers.agentId, participant.agentId),
+        eq(internalChatConversationMembers.accountId, participant.id),
       ));
 
     return {
@@ -394,6 +450,7 @@ export function createInternalChatService(
     agentId: string;
     limit: number;
   }) {
+    const agentAccount = await getRequiredAgentAccount(input.agentId);
     const rows = await db
       .select({
         id: internalChatConversations.id,
@@ -408,7 +465,7 @@ export function createInternalChatService(
       )
       .where(and(
         eq(internalChatConversations.type, 'group'),
-        eq(internalChatConversationMembers.agentId, input.agentId),
+        eq(internalChatConversationMembers.accountId, agentAccount.id),
       ))
       .orderBy(desc(internalChatConversations.updatedAt))
       .limit(input.limit);
@@ -429,6 +486,7 @@ export function createInternalChatService(
     const rows = await db
       .select({
         groupId: internalChatConversationMembers.conversationId,
+        participantId: internalChatAccounts.id,
         participantSlug: internalChatAccounts.slug,
         participantName: internalChatAccounts.displayName,
         role: internalChatConversationMembers.role,
@@ -437,7 +495,7 @@ export function createInternalChatService(
       .from(internalChatConversationMembers)
       .innerJoin(
         internalChatAccounts,
-        eq(internalChatAccounts.agentId, internalChatConversationMembers.agentId),
+        eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
       )
       .where(eq(internalChatConversationMembers.conversationId, input.groupId));
 
@@ -452,6 +510,7 @@ export function createInternalChatService(
     unread?: boolean;
     limit: number;
   }): Promise<CommunicationProviderConversation[]> {
+    const agentAccount = await getRequiredAgentAccount(input.agentId);
     const conversationRows = await db
       .select({
         id: internalChatConversations.id,
@@ -464,7 +523,7 @@ export function createInternalChatService(
         internalChatConversationMembers,
         eq(internalChatConversationMembers.conversationId, internalChatConversations.id),
       )
-      .where(eq(internalChatConversationMembers.agentId, input.agentId))
+      .where(eq(internalChatConversationMembers.accountId, agentAccount.id))
       .orderBy(desc(internalChatConversations.updatedAt))
       .limit(input.limit);
 
@@ -480,7 +539,7 @@ export function createInternalChatService(
         messageId: internalChatMessages.id,
         content: internalChatMessages.content,
         createdAt: internalChatMessages.createdAt,
-        authorAgentId: internalChatMessages.authorAgentId,
+        authorAccountId: internalChatMessages.authorAccountId,
         authorDisplayName: internalChatAccounts.displayName,
         unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
       })
@@ -494,7 +553,7 @@ export function createInternalChatService(
       )
       .innerJoin(
         internalChatAccounts,
-        eq(internalChatAccounts.agentId, internalChatMessages.authorAgentId),
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
       )
       .where(inArray(internalChatMessages.conversationId, conversationIds))
       .orderBy(desc(internalChatMessages.createdAt));
@@ -516,7 +575,7 @@ export function createInternalChatService(
         existing.push({
           messageId: row.messageId,
           provider: 'internal-chat',
-          authorId: row.authorAgentId,
+          authorId: row.authorAccountId,
           targetKey: row.conversationId,
           content: row.content,
           attachments: await readMessageAttachments(row.messageId),
@@ -548,13 +607,19 @@ export function createInternalChatService(
     const views = await Promise.all(
       conversationRows.map(async (conversation) => {
         const participants = await listGroupMembersOrDmPeers(input.agentId, conversation.id);
+        const conversationName = conversation.name
+          ?? (
+            participants.find((participant) => participant.accountId !== agentAccount.id)?.displayName
+            ?? participants[0]?.displayName
+          );
+
         return {
           targetKey: conversation.id,
           provider: 'internal-chat',
           latestMessageAt: new Date(conversation.updatedAt).toISOString(),
           unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
-          name: conversation.name ?? undefined,
-          participants: participants.map((participant) => participant.agentId),
+          name: conversationName,
+          participants: participants.map((participant) => participant.accountId),
           messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
         };
       }),
@@ -579,7 +644,7 @@ export function createInternalChatService(
         messageId: internalChatMessages.id,
         content: internalChatMessages.content,
         createdAt: internalChatMessages.createdAt,
-        authorAgentId: internalChatMessages.authorAgentId,
+        authorAccountId: internalChatMessages.authorAccountId,
         authorDisplayName: internalChatAccounts.displayName,
         unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
       })
@@ -593,7 +658,7 @@ export function createInternalChatService(
       )
       .innerJoin(
         internalChatAccounts,
-        eq(internalChatAccounts.agentId, internalChatMessages.authorAgentId),
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
       )
       .where(eq(internalChatMessages.conversationId, input.conversationKey))
       .orderBy(desc(internalChatMessages.createdAt))
@@ -615,7 +680,7 @@ export function createInternalChatService(
       rows.reverse().map(async (row) => ({
         messageId: row.messageId,
         provider: 'internal-chat',
-        authorId: row.authorAgentId,
+        authorId: row.authorAccountId,
         targetKey: input.conversationKey,
         content: row.content,
         attachments: await readMessageAttachments(row.messageId),
@@ -627,15 +692,15 @@ export function createInternalChatService(
   }
 
   async function sendMessage(input: {
-    agentId: string;
+    accountId: string;
     targetKey: string;
     content: string;
     attachments: CommunicationFile[];
   }) {
     const directAccount = await getAccountByAgentId(input.targetKey);
     const conversation = directAccount
-      ? await ensureDirectConversation(input.agentId, directAccount.agentId)
-      : await getRequiredConversationForAgent(input.agentId, input.targetKey);
+      ? await ensureDirectConversation(input.accountId, directAccount.id)
+      : await getRequiredConversationForAccount(input.accountId, input.targetKey);
 
     if (!conversation) {
       throw new Error(`Conversation not found: ${input.targetKey}`);
@@ -650,20 +715,27 @@ export function createInternalChatService(
     await db.insert(internalChatMessages).values({
       id: messageId,
       conversationId: conversation.id,
-      authorAgentId: input.agentId,
+      authorAccountId: input.accountId,
       content: input.content,
       replyToMessageId: null,
       createdAt: now,
     });
     await storeMessageAttachments(messageId, input.attachments);
 
-    await db.insert(internalChatMessageReads).values(
-      members.map((member) => ({
-        messageId,
-        agentId: member.agentId,
-        readAt: member.agentId === input.agentId ? now : null,
-      })),
+    const memberAccounts = await Promise.all(
+      members.map((member) => getRequiredAccount(member.accountId)),
     );
+    const readRows = memberAccounts
+      .filter((memberAccount) => memberAccount.agentId)
+      .map((memberAccount) => ({
+        messageId,
+        agentId: memberAccount.agentId as string,
+        readAt: memberAccount.id === input.accountId ? now : null,
+      }));
+
+    if (readRows.length > 0) {
+      await db.insert(internalChatMessageReads).values(readRows);
+    }
 
     await db
       .update(internalChatConversations)
@@ -672,13 +744,13 @@ export function createInternalChatService(
       })
       .where(eq(internalChatConversations.id, conversation.id));
 
-    const author = await getRequiredAccount(input.agentId);
-    const participants = await listGroupMembersOrDmPeers(input.agentId, conversation.id);
+    const author = await getRequiredAccount(input.accountId);
+    const participants = await listGroupMembersOrDmPeersByAccount(input.accountId, conversation.id);
 
     const deliveries: Array<Promise<void>> = [];
 
     for (const participant of participants) {
-      if (participant.agentId === input.agentId) {
+      if (participant.accountId === input.accountId || !participant.agentId) {
         continue;
       }
 
@@ -692,7 +764,7 @@ export function createInternalChatService(
         targetKey: conversation.id,
         messageId,
         conversationName: conversation.name ?? (conversation.type === 'dm' ? author.displayName : undefined),
-        authorId: author.agentId,
+        authorId: author.id,
         authorDisplayName: author.displayName,
         authorUsername: author.slug,
         content: input.content,
@@ -702,6 +774,7 @@ export function createInternalChatService(
           conversationType: conversation.type,
           groupMembers: conversation.type === 'group'
             ? participants.map((member) => ({
+                participantId: member.accountId,
                 agentId: member.agentId,
                 slug: member.slug,
                 displayName: member.displayName,
@@ -752,25 +825,31 @@ export function createInternalChatService(
   }
 
   async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
+    const account = await getRequiredAgentAccount(agentId);
+    return listGroupMembersOrDmPeersByAccount(account.id, conversationId);
+  }
+
+  async function listGroupMembersOrDmPeersByAccount(accountId: string, conversationId: string) {
     const rows = await db
       .select({
-        agentId: internalChatConversationMembers.agentId,
+        accountId: internalChatConversationMembers.accountId,
+        agentId: internalChatAccounts.agentId,
         slug: internalChatAccounts.slug,
         displayName: internalChatAccounts.displayName,
       })
       .from(internalChatConversationMembers)
       .innerJoin(
         internalChatAccounts,
-        eq(internalChatAccounts.agentId, internalChatConversationMembers.agentId),
+        eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
       )
       .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
     return rows.sort((left, right) => {
-      if (left.agentId === agentId) {
+      if (left.accountId === accountId) {
         return -1;
       }
 
-      if (right.agentId === agentId) {
+      if (right.accountId === accountId) {
         return 1;
       }
 
@@ -778,13 +857,25 @@ export function createInternalChatService(
     });
   }
 
-  async function getRequiredAccount(agentId: string) {
+  async function getRequiredAccount(accountId: string) {
+    const account = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.id, accountId),
+    });
+
+    if (!account) {
+      throw new Error(`Internal chat account not found: ${accountId}`);
+    }
+
+    return account;
+  }
+
+  async function getRequiredAgentAccount(agentId: string) {
     const account = await db.query.internalChatAccounts.findFirst({
       where: eq(internalChatAccounts.agentId, agentId),
     });
 
     if (!account) {
-      throw new Error(`Internal chat account not found: ${agentId}`);
+      throw new Error(`Internal chat account not found for agent: ${agentId}`);
     }
 
     return account;
@@ -801,9 +892,14 @@ export function createInternalChatService(
   }
 
   async function requireConversationMembership(agentId: string, conversationId: string) {
+    const account = await getRequiredAgentAccount(agentId);
+    return requireConversationMembershipByAccount(account.id, conversationId);
+  }
+
+  async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
     const membership = await db.query.internalChatConversationMembers.findFirst({
       where: and(
-        eq(internalChatConversationMembers.agentId, agentId),
+        eq(internalChatConversationMembers.accountId, accountId),
         eq(internalChatConversationMembers.conversationId, conversationId),
       ),
     });
@@ -814,7 +910,12 @@ export function createInternalChatService(
   }
 
   async function getRequiredConversationForAgent(agentId: string, conversationId: string) {
-    await requireConversationMembership(agentId, conversationId);
+    const account = await getRequiredAgentAccount(agentId);
+    return getRequiredConversationForAccount(account.id, conversationId);
+  }
+
+  async function getRequiredConversationForAccount(accountId: string, conversationId: string) {
+    await requireConversationMembershipByAccount(accountId, conversationId);
 
     const conversation = await db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, conversationId),
@@ -839,6 +940,7 @@ export function createInternalChatService(
 
   return {
     registerAgentAccount,
+    registerExternalAccount,
     onReceiveMessage,
     clearHandler,
     listAccounts,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bot, Clock3 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
@@ -15,6 +15,7 @@ import {
   listAgents,
   listFunctions,
   reloadAgent,
+  sendInternalChatMessageFromAdmin,
   terminateAgent,
   updateAgentConfig,
   updateSchedule,
@@ -802,6 +803,7 @@ function AgentsWorkspacePage(input: {
 
                     {selectedCommunicationView === 'inbox' ? (
                       <AgentInboxCard
+                        agentId={agentDetailQuery.data.agentId}
                         notifications={agentDetailQuery.data.recentNotifications}
                         conversations={agentDetailQuery.data.recentConversations}
                       />
@@ -911,13 +913,31 @@ function AgentsWorkspacePage(input: {
 }
 
 function AgentInboxCard(input: {
+  agentId: string;
   notifications: AgentDetail['recentNotifications'];
   conversations: AgentDetail['recentConversations'];
 }) {
+  const queryClient = useQueryClient();
   const [view, setView] = useState<'conversations' | 'notifications'>('conversations');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
     input.conversations[0]?.conversationId ?? null,
   );
+  const [creatingConversation, setCreatingConversation] = useState(false);
+  const [senderDisplayName, setSenderDisplayName] = useState(() => {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+
+    return window.localStorage.getItem('forge-admin-internal-chat-display-name') ?? '';
+  });
+  const [senderSlug, setSenderSlug] = useState(() => {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+
+    return window.localStorage.getItem('forge-admin-internal-chat-slug') ?? '';
+  });
+  const [messageDraft, setMessageDraft] = useState('');
   const unreadNotificationCount = input.notifications.filter((notification) => !notification.read).length;
   const unreadMessageCount = input.conversations.reduce(
     (total, conversation) => total + conversation.messages.filter((message) => message.unread).length,
@@ -926,6 +946,34 @@ function AgentInboxCard(input: {
   const selectedConversation = input.conversations.find(
     (conversation) => conversation.conversationId === selectedConversationId,
   ) ?? input.conversations[0] ?? null;
+  const selectedInternalChatConversation =
+    selectedConversation?.provider === 'internal-chat' ? selectedConversation : null;
+  const canSend = Boolean(senderDisplayName.trim() && senderSlug.trim() && messageDraft.trim());
+
+  useEffect(() => {
+    window.localStorage.setItem('forge-admin-internal-chat-display-name', senderDisplayName);
+  }, [senderDisplayName]);
+
+  useEffect(() => {
+    window.localStorage.setItem('forge-admin-internal-chat-slug', senderSlug);
+  }, [senderSlug]);
+
+  const sendMessageMutation = useMutation({
+    mutationFn: () =>
+      sendInternalChatMessageFromAdmin({
+        agentId: input.agentId,
+        targetKey: creatingConversation ? undefined : selectedInternalChatConversation?.conversationKey,
+        senderDisplayName: senderDisplayName.trim(),
+        senderSlug: senderSlug.trim().toLowerCase(),
+        content: messageDraft.trim(),
+      }),
+    onSuccess: async (result) => {
+      setMessageDraft('');
+      setCreatingConversation(false);
+      setSelectedConversationId(result.conversationKey);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -1076,6 +1124,69 @@ function AgentInboxCard(input: {
               ) : null}
             </div>
           )}
+
+          <div className="mt-5 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Send via internal-chat</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Send a simple message to this agent. Use the selected internal-chat conversation or start a new one.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant={creatingConversation ? 'default' : 'outline'}
+                onClick={() => setCreatingConversation((current) => !current)}
+              >
+                {creatingConversation ? 'Using new conversation' : 'New conversation'}
+              </Button>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <LabeledField label="Your name">
+                <Input
+                  value={senderDisplayName}
+                  onChange={(event) => setSenderDisplayName(event.target.value)}
+                  placeholder="Nicolas Fraga Faust"
+                />
+              </LabeledField>
+              <LabeledField label="Your slug">
+                <Input
+                  value={senderSlug}
+                  onChange={(event) => setSenderSlug(event.target.value)}
+                  placeholder="nicolasfragafaust"
+                />
+              </LabeledField>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="text-xs text-muted-foreground">
+                {creatingConversation
+                  ? `Target: new internal-chat conversation with ${input.agentId}`
+                  : selectedInternalChatConversation
+                    ? `Target: ${selectedInternalChatConversation.conversationKey}`
+                    : 'Select an internal-chat conversation or click "New conversation".'}
+              </div>
+              <Textarea
+                value={messageDraft}
+                onChange={(event) => setMessageDraft(event.target.value)}
+                placeholder="Write a message to the agent"
+                rows={4}
+              />
+              {sendMessageMutation.error ? (
+                <div className="text-sm text-destructive">{sendMessageMutation.error.message}</div>
+              ) : null}
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  disabled={!canSend || (!creatingConversation && !selectedInternalChatConversation) || sendMessageMutation.isPending}
+                  onClick={() => sendMessageMutation.mutate()}
+                >
+                  {sendMessageMutation.isPending ? 'Sending...' : 'Send message'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </Card>
       )}
     </div>
