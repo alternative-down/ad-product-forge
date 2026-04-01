@@ -1,10 +1,13 @@
 import { eq } from 'drizzle-orm';
 import type { ToolsInput } from '@mastra/core/agent';
 import type { Tool } from '@mastra/core/tools';
+import { createClient } from '@libsql/client';
 import type { Database } from '../database/index';
+import { createCommunicationModule } from '@mastra-engine/core';
 import { agents, agentProviders } from '../database/schema';
 import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentRuntime } from './create-forge-agent';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader';
+import type { InternalChatService } from '../communication/internal-chat-service';
 import { decryptSecret } from '../encryption/crypto';
 import { createMicroErpTools } from '../micro-erp/tools';
 import { createAgentNotificationTools } from '../notifications/tools';
@@ -23,6 +26,7 @@ import { createSystemSettingsStore } from '../system-settings/store';
 import { createWebTools } from '../web/tools';
 import { getMCPToolsForAgent } from './mcp/client-manager';
 import { createMiniMaxTools } from '../minimax/tools';
+import { createInternalChatTools } from '../communication/internal-chat-tools';
 import path from 'node:path';
 
 
@@ -33,6 +37,7 @@ export interface AgentLoaderConfig {
   coolify: CoolifyManager | null;
   minimax?: MiniMaxManager;
   schedules: ReturnType<typeof createAgentScheduleManager>;
+  internalChat: InternalChatService;
 }
 
 export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
@@ -127,8 +132,21 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   }
 
   const providers = loadCommunicationProviders(providerCredentials, {
-    workspaceBasePath: config.workspaceBasePath,
+    internalChat: config.internalChat,
   });
+  const communication = await createCommunicationModule({
+    client: createClient({
+      url: `file:${path.resolve(config.workspaceBasePath, agentConfig.id, 'database.db')}`,
+    }),
+    providers,
+  });
+
+  await config.internalChat.registerAgentAccount({
+    agentId: agentConfig.id,
+    displayName: providerCredentials['internal-chat']?.displayName ?? agentConfig.name,
+    description: providerCredentials['internal-chat']?.description ?? agentConfig.description ?? undefined,
+  });
+
   const agentWorkspaceDir = agentConfig.workspaceFilesystem?.basePath
     ? path.resolve(
         config.workspaceBasePath,
@@ -143,6 +161,12 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
   const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
   const webTools = createWebTools(allowedToolIds);
+  const internalChatTools = createInternalChatTools(
+    agentConfig.id,
+    agentConfig.name,
+    config.internalChat,
+    allowedToolIds,
+  );
   const minimaxTools = config.minimax
     ? createMiniMaxTools(config.minimax, agentWorkspaceDir, allowedToolIds)
     : {};
@@ -158,6 +182,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...scheduleTools,
     ...capabilityTools,
     ...webTools,
+    ...internalChatTools,
     ...minimaxTools,
     ...mcpTools,
   };
@@ -170,6 +195,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     schedules: Object.keys(scheduleTools).length,
     capabilities: Object.keys(capabilityTools).length,
     web: Object.keys(webTools).length,
+    internalChat: Object.keys(internalChatTools).length,
     minimax: Object.keys(minimaxTools).length,
     mcp: Object.keys(mcpTools).length,
     total: Object.keys(customTools).length,
@@ -192,7 +218,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       companyName: companySettings.companyName,
       companyContext: companySettings.companyContext,
       tools: customTools,
-      providers,
+      communication,
       workflows: filteredWorkflows,
       workspaceBasePath: config.workspaceBasePath,
       workspaceFilesystem: agentConfig.workspaceFilesystem ?? undefined,
@@ -266,6 +292,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         coolify: config.coolify,
         minimax: config.minimax,
         schedules: config.schedules,
+        internalChat: config.internalChat,
         agentId: agentConfig.id,
       });
       agents.set(agentConfig.id, runtime);

@@ -23,231 +23,63 @@ export async function createCommunicationModule(config: {
   const providers = new Map<string, CommunicationProvider>();
   let receiveMessageHandler: ((event: AgentWakeEvent) => void) | null = null;
 
-  function parseConversationReference(conversation: string) {
-    const separatorIndex = conversation.indexOf(':');
-
-    if (separatorIndex <= 0) {
-      return null;
-    }
-
-    const providerId = conversation.slice(0, separatorIndex);
-    const contactSlug = conversation.slice(separatorIndex + 1);
-
-    if (!contactSlug || !providers.has(providerId)) {
-      return null;
-    }
-
-    return {
-      providerId,
-      contactSlug,
-    };
-  }
-
-  async function syncProviderContacts(provider: CommunicationProvider) {
-    if (!provider.syncContacts) {
-      return;
-    }
-
-    for (const contact of await provider.syncContacts()) {
-      await store.upsertContact({
-        slug: contact.slug,
-        displayName: contact.displayName,
-        provider: provider.id,
-        externalUserId: contact.externalUserId,
-        username: contact.username,
-      });
-    }
-  }
-
-  async function syncInboundContact(input: {
-    provider: string;
-    authorExternalId?: string;
-    authorDisplayName?: string;
-    authorUsername?: string;
-  }) {
-    if (!input.authorExternalId && !input.authorUsername && !input.authorDisplayName) {
-      return null;
-    }
-
-    const existingContact = await store.findContactByIdentity(
-      input.provider,
-      input.authorExternalId,
-      input.authorUsername,
-    );
-
-    if (existingContact && (!input.authorDisplayName || existingContact.displayName === input.authorDisplayName)) {
-      return existingContact;
-    }
-
-    const slug = existingContact?.slug || input.authorUsername || input.authorDisplayName || input.authorExternalId || 'contact';
-    const displayName = input.authorDisplayName || existingContact?.displayName || input.authorUsername || input.authorExternalId || slug;
-
-    return store.upsertContact({
-      slug,
-      displayName,
-      description: existingContact?.description,
-      provider: input.provider,
-      externalUserId: input.authorExternalId,
-      username: input.authorUsername,
-    });
-  }
-
   for (const provider of config.providers) {
-      const account = await provider.getAccount();
+    providers.set(provider.id, provider);
 
-      await store.upsertSelfAccount({
-        provider: provider.id,
-        externalAccountId: account.externalAccountId,
-        displayName: account.displayName,
-        metadata: account.metadata,
-      });
+    if (!provider.onMessage) {
+      continue;
+    }
 
-      providers.set(provider.id, provider);
-      await syncProviderContacts(provider);
-
-      if (!provider.onMessage) {
-        continue;
+    await provider.onMessage(async (message) => {
+      if (!receiveMessageHandler) {
+        return;
       }
 
-      await provider.onMessage(async (message) => {
-        const contact = await syncInboundContact({
-          provider: provider.id,
-          authorExternalId: message.authorExternalId,
-          authorDisplayName: message.authorDisplayName,
-          authorUsername: message.authorUsername,
-        });
+      const text = message.content.trim();
 
-        const savedMessage = await store.saveInboundMessage({
-          provider: provider.id,
-          providerConversationKey: message.providerConversationKey,
-          providerMessageId: message.providerMessageId,
-          conversationName: message.conversationName,
-          contactId: contact?.slug,
-          authorExternalId: message.authorExternalId,
-          authorDisplayName: message.authorDisplayName,
-          authorUsername: message.authorUsername,
-          content: message.content,
-          attachments: message.attachments,
-          createdAt: message.createdAt,
-          metadata: message.metadata,
-        });
+      if (!text) {
+        return;
+      }
 
-        if (!savedMessage) {
-          throw new Error('Failed to persist inbound message');
-        }
-
-        const savedConversation = await store.getConversation(savedMessage.conversationId);
-
-        if (receiveMessageHandler) {
-          try {
-            receiveMessageHandler({
-              type: `message:${provider.id}`,
-              groupKey: `message:${provider.id}:${message.providerConversationKey}`,
-              groupMetadata: {
-                ...(savedConversation?.conversationId ? { ConversationKey: savedConversation.conversationId } : {}),
-                ...(savedConversation?.name ? { ConversationName: savedConversation.name } : {}),
-                ...(contact?.slug ? { ContactSlug: contact.slug } : {}),
-              },
-              idempotencyKey: `${provider.id}:${message.providerMessageId}`,
-              itemMetadata: {
-                MessageId: savedMessage.messageId,
-                ...(message.authorDisplayName
-                  ? { Author: message.authorDisplayName }
-                  : message.authorUsername
-                    ? { Author: message.authorUsername }
-                    : {}),
-                ...(contact?.slug ? { Slug: contact.slug } : {}),
-              },
-              text: message.content.trim(),
-              timestamp: Date.parse(message.createdAt) || Date.now(),
-            });
-          } catch (error) {
-            console.error('Error in receiveMessageHandler:', error);
-          }
-        }
+      receiveMessageHandler({
+        type: `message:${provider.id}`,
+        groupKey: `message:${provider.id}:${message.targetKey}`,
+        groupMetadata: {
+          Provider: provider.id,
+          TargetKey: message.targetKey,
+          ...(message.conversationName ? { ConversationName: message.conversationName } : {}),
+        },
+        idempotencyKey: `${provider.id}:${message.messageId}`,
+        itemMetadata: {
+          MessageId: message.messageId,
+          ...(message.authorDisplayName ? { Author: message.authorDisplayName } : {}),
+          ...(message.authorId ? { AuthorId: message.authorId } : {}),
+        },
+        text,
+        timestamp: Date.parse(message.createdAt) || Date.now(),
       });
+    });
   }
 
   function onReceiveMessage(handler: (event: AgentWakeEvent) => void) {
     receiveMessageHandler = handler;
   }
 
-  async function saveSentMessage(input: {
-    provider: string;
-    providerConversationKey: string;
-    providerMessageId?: string;
-    conversationName?: string;
-    contactId?: string;
-    content: string;
-  }) {
-    const message = await store.saveOutboundMessage(input);
-
-    if (!message) {
-      throw new Error('Failed to persist outbound message');
-    }
-
-    const conversation = await store.getConversation(message.conversationId);
-
-    return {
-      success: true,
-      messageId: message.messageId,
-      conversationKey: conversation?.conversationId ?? message.conversationId,
-    };
-  }
-
-  async function getContactExternalId(providerId: string, contactSlug: string) {
-    const contact = await store.getContact(contactSlug);
-    const identity = contact?.accounts.find((account) => account.provider === providerId);
-
-    if (identity) {
-      return identity.externalUserId || identity.username || null;
-    }
-
-    const provider = providers.get(providerId);
-    if (provider) {
-      await syncProviderContacts(provider);
-
-      const syncedContact = await store.getContact(contactSlug);
-      const syncedIdentity = syncedContact?.accounts.find((account) => account.provider === providerId);
-
-      return syncedIdentity?.externalUserId || syncedIdentity?.username || null;
-    }
-
-    return null;
-  }
-
   async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
-    await Promise.all(Array.from(providers.values()).map((provider) => syncProviderContacts(provider)));
-
-    const [selfAccounts, otherContacts] = await Promise.all([
-      filter !== 'others' ? store.listSelfAccounts() : Promise.resolve([]),
-      filter !== 'self' ? store.listContacts() : Promise.resolve([]),
-    ]);
+    const contacts = filter === 'self' ? [] : await store.listContacts();
 
     return {
-      self: selfAccounts.map((account) => ({
-        provider: account.provider,
-        displayName: account.displayName,
-      })),
-      others: otherContacts.map((contact) => ({
+      self: [],
+      others: contacts.map((contact) => ({
         slug: contact.slug,
         displayName: contact.displayName,
         description: contact.description,
-        accounts: contact.accounts.map((account) => ({
-          provider: account.provider,
-          username: account.username,
-        })),
       })),
     };
   }
 
   async function getContact(slug: string) {
-    let contact = await store.getContact(slug);
-
-    if (!contact) {
-      await Promise.all(Array.from(providers.values()).map((provider) => syncProviderContacts(provider)));
-      contact = await store.getContact(slug);
-    }
+    const contact = await store.getContact(slug);
 
     if (!contact) {
       return null;
@@ -257,10 +89,6 @@ export async function createCommunicationModule(config: {
       slug: contact.slug,
       displayName: contact.displayName,
       description: contact.description,
-      accounts: contact.accounts.map((account) => ({
-        provider: account.provider,
-        username: account.username,
-      })),
     };
   }
 
@@ -280,340 +108,86 @@ export async function createCommunicationModule(config: {
 
   async function listConversations(input: {
     provider?: string;
-    contactSlug?: string;
     unread?: boolean;
     limit: number;
   }): Promise<CommunicationConversationView[]> {
-    const conversations = await store.listConversations({
-      provider: input.provider,
-      contactId: input.contactSlug,
-      unread: input.unread,
-      limit: input.limit,
-    });
-    const contacts = await store.listContacts();
+    if (input.provider) {
+      const provider = providers.get(input.provider);
 
-    const contactMap = new Map(contacts.map((contact) => [contact.slug, contact]));
+      if (!provider) {
+        throw new Error(`Provider not available: ${input.provider}`);
+      }
 
-    return conversations.map((conversation) => {
-      const contactDisplayName = conversation.contactId ? contactMap.get(conversation.contactId)?.displayName : undefined;
+      if (!provider.listConversations) {
+        throw new Error(`Provider does not support listing conversations: ${input.provider}`);
+      }
 
-      return {
-        conversationKey: conversation.conversationId,
-        provider: conversation.provider,
-        latestMessageAt: conversation.latestMessageAt,
-        unreadCount: conversation.unreadCount,
-        name: conversation.name,
-        type: conversation.type,
-        contactSlug: conversation.contactId,
-        contactDisplayName,
-        messages: conversation.messages.map((message) => ({
-          messageId: message.messageId,
-          provider: message.provider,
-          content: message.content,
-          attachments: message.attachments,
-          unread: message.unread,
-          createdAt: message.createdAt,
-          authorDisplayName: message.authorDisplayName,
-          contactSlug: conversation.contactId,
-          contactDisplayName,
-        })),
-      };
-    });
+      return provider.listConversations({
+        unread: input.unread,
+        limit: input.limit,
+      });
+    }
+
+    const supportedProviders = Array.from(providers.values()).filter((provider) => provider.listConversations);
+    const conversationGroups = await Promise.all(
+      supportedProviders.map((provider) =>
+        provider.listConversations!({
+          unread: input.unread,
+          limit: input.limit,
+        }),
+      ),
+    );
+
+    return conversationGroups
+      .flat()
+      .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt))
+      .slice(0, input.limit);
   }
 
   async function getMessages(input: {
-    conversationKey: string;
+    provider: string;
+    targetKey: string;
     limit: number;
   }): Promise<CommunicationMessageView[]> {
-    const conversation = await store.getConversation(input.conversationKey);
-
-    if (!conversation) {
-      throw new Error(`Conversation not found: ${input.conversationKey}`);
-    }
-    const messages = await store.getMessages(conversation.conversationId, input.limit);
-    const contact = conversation?.contactId ? await store.getContact(conversation.contactId) : null;
-
-    return messages.map((message) => ({
-      messageId: message.messageId,
-      provider: message.provider,
-      content: message.content,
-      attachments: message.attachments,
-      unread: message.unread,
-      createdAt: message.createdAt,
-      authorDisplayName: message.authorDisplayName,
-      contactSlug: conversation?.contactId,
-      contactDisplayName: contact?.displayName,
-    }));
-  }
-
-  // TODO: Future enhancement — support multiple recipients (TO, CC) per message.
-  // This requires extending the sendMessage input contract in provider-types.ts
-  // and updating the agent-facing communication tools accordingly.
-  async function sendMessage(input: {
-    conversationKey?: string;
-    content: string;
-    replyToMessageId?: string;
-  }) {
-    if (!input.conversationKey) {
-      throw new Error('No destination provided');
-    }
-
-    const existingConversation = await store.getConversation(input.conversationKey);
-    const parsedConversation = existingConversation
-      ? null
-      : parseConversationReference(input.conversationKey);
-    const provider = existingConversation
-      ? providers.get(existingConversation.provider)
-      : parsedConversation
-        ? providers.get(parsedConversation.providerId)
-        : null;
+    const provider = providers.get(input.provider);
 
     if (!provider) {
-      if (parsedConversation) {
-        throw new Error(`Provider not available: ${input.conversationKey}`);
-      }
-
-      throw new Error(`Conversation not found: ${input.conversationKey}`);
+      throw new Error(`Provider not available: ${input.provider}`);
     }
 
-    const replyMessage = input.replyToMessageId ? await store.getMessage(input.replyToMessageId) : null;
-
-    if (replyMessage && replyMessage.provider !== provider.id) {
-      throw new Error(`Message ${input.replyToMessageId} does not belong to provider ${provider.id}`);
+    if (!provider.getMessages) {
+      throw new Error(`Provider does not support reading messages: ${input.provider}`);
     }
 
-    const conversation = existingConversation;
-
-    if (conversation) {
-      if (conversation.provider !== provider.id) {
-        throw new Error(`Conversation ${input.conversationKey} does not belong to provider ${provider.id}`);
-      }
-
-      if (conversation.type === 'group') {
-        const selfParticipantIds = new Set(
-          (await store.listSelfAccounts())
-            .filter((account) => account.provider === provider.id)
-            .map((account) => account.externalAccountId),
-        );
-        const recipients = (await store.listGroupMembers(conversation.conversationId)).filter(
-          (member) => !selfParticipantIds.has(member.participantId),
-        );
-
-        if (recipients.length === 0) {
-          throw new Error(`Chat group has no reachable recipients: ${conversation.conversationId}`);
-        }
-
-        const sentMessages = await Promise.all(
-          recipients.map((member) =>
-            provider.sendMessage({
-              providerConversationKey: conversation.providerConversationKey,
-              contactExternalId: member.participantId,
-              conversationName: conversation.name,
-              conversationType: conversation.type,
-              content: input.content,
-              replyToProviderMessageId: replyMessage?.providerMessageId,
-            }),
-          ),
-        );
-        const firstSent = sentMessages[0]!;
-
-        return saveSentMessage({
-          provider: provider.id,
-          providerConversationKey: conversation.providerConversationKey,
-          providerMessageId: firstSent.providerMessageId,
-          conversationName: conversation.name ?? firstSent.conversationName,
-          contactId: conversation.contactId,
-          content: input.content,
-        });
-      }
-
-      let contactExternalId: string | null = null;
-      if (conversation.contactId) {
-        contactExternalId = await getContactExternalId(provider.id, conversation.contactId);
-      }
-
-      const sent = await provider.sendMessage({
-        providerConversationKey: conversation.providerConversationKey,
-        conversationName: conversation.name,
-        conversationType: conversation.type,
-        contactExternalId: contactExternalId || undefined,
-        content: input.content,
-        replyToProviderMessageId: replyMessage?.providerMessageId,
-      });
-
-      return saveSentMessage({
-        provider: provider.id,
-        providerConversationKey: sent.providerConversationKey,
-        providerMessageId: sent.providerMessageId,
-        conversationName: sent.conversationName,
-        contactId: conversation.contactId,
-        content: input.content,
-      });
-    }
-
-    if (parsedConversation && await store.getContact(parsedConversation.contactSlug)) {
-      const contactExternalId = await getContactExternalId(provider.id, parsedConversation.contactSlug);
-
-      if (!contactExternalId) {
-        throw new Error(`Contact not found: ${input.conversationKey}`);
-      }
-
-      const sent = await provider.sendMessage({
-        contactExternalId,
-        conversationType: 'dm',
-        content: input.content,
-        replyToProviderMessageId: replyMessage?.providerMessageId,
-      });
-
-      return saveSentMessage({
-        provider: provider.id,
-        providerConversationKey: sent.providerConversationKey,
-        providerMessageId: sent.providerMessageId,
-        conversationName: sent.conversationName,
-        contactId: parsedConversation.contactSlug,
-        content: input.content,
-      });
-    }
-
-    throw new Error(`Contact not found: ${input.conversationKey}`);
+    return provider.getMessages({
+      targetKey: input.targetKey,
+      limit: input.limit,
+    });
   }
 
-  async function createChatGroup(input: {
+  async function sendMessage(input: {
     provider: string;
-    conversationKey: string;
-    name: string;
-    creatorId: string;
-    creatorName: string;
+    targetKey: string;
+    content: string;
   }) {
-    const group = await store.createChatGroup({
+    const provider = providers.get(input.provider);
+
+    if (!provider) {
+      throw new Error(`Provider not available: ${input.provider}`);
+    }
+
+    const result = await provider.sendMessage({
+      targetKey: input.targetKey,
+      content: input.content,
+    });
+
+    return {
+      valid: true,
       provider: input.provider,
-      providerConversationKey: input.conversationKey,
-      name: input.name,
-      creatorId: input.creatorId,
-      creatorName: input.creatorName,
-    });
-
-    return {
-      groupId: group.groupId,
-      name: group.name,
-      provider: group.provider,
-      conversationKey: group.groupId,
-      creatorMember: group.creatorMember,
-      createdAt: group.createdAt,
+      targetKey: result.targetKey,
+      ...(result.messageId ? { messageId: result.messageId } : {}),
+      ...(result.conversationName ? { conversationName: result.conversationName } : {}),
     };
-  }
-
-  async function addMemberToGroup(input: {
-    groupId: string;
-    participantSlug: string;
-    role?: string;
-  }) {
-    const group = await store.getConversation(input.groupId);
-
-    if (!group || group.type !== 'group') {
-      throw new Error('Chat group not found');
-    }
-
-    const contact = await store.getContact(input.participantSlug);
-
-    if (!contact) {
-      throw new Error(`Contact not found: ${input.participantSlug}`);
-    }
-
-    const identity = contact.accounts.find((account) => account.provider === group.provider);
-    const participantId = identity?.externalUserId || identity?.username;
-
-    if (!participantId) {
-      throw new Error(`Contact ${input.participantSlug} is not reachable on provider ${group.provider}`);
-    }
-
-    const member = await store.addMemberToGroup({
-      groupId: input.groupId,
-      participantId,
-      participantName: contact.displayName,
-      role: input.role,
-    });
-
-    return {
-      groupId: member.groupId,
-      participantSlug: contact.slug,
-      participantName: member.participantName,
-      role: member.role,
-      createdAt: member.createdAt,
-    };
-  }
-
-  async function removeMemberFromGroup(input: { groupId: string; participantSlug: string }) {
-    const group = await store.getConversation(input.groupId);
-
-    if (!group || group.type !== 'group') {
-      throw new Error('Chat group not found');
-    }
-
-    const contact = await store.getContact(input.participantSlug);
-
-    if (!contact) {
-      throw new Error(`Contact not found: ${input.participantSlug}`);
-    }
-
-    const identity = contact.accounts.find((account) => account.provider === group.provider);
-    const participantId = identity?.externalUserId || identity?.username;
-
-    if (!participantId) {
-      throw new Error(`Contact ${input.participantSlug} is not reachable on provider ${group.provider}`);
-    }
-
-    await store.removeMemberFromGroup({
-      groupId: input.groupId,
-      participantId,
-    });
-
-    return {
-      success: true,
-      groupId: input.groupId,
-      participantSlug: contact.slug,
-    };
-  }
-
-  async function listChatGroups(input: { provider?: string; limit?: number }) {
-    const groups = await store.listChatGroups(input);
-
-    return groups.map((group) => ({
-      groupId: group.groupId,
-      name: group.name,
-      provider: group.provider,
-      conversationKey: group.groupId,
-      createdAt: group.createdAt,
-      updatedAt: group.updatedAt,
-    }));
-  }
-
-  async function listGroupMembers(groupId: string) {
-    const group = await store.getConversation(groupId);
-
-    if (!group || group.type !== 'group') {
-      throw new Error('Chat group not found');
-    }
-
-    const members = await store.listGroupMembers(groupId);
-
-    return Promise.all(
-      members.map(async (member) => {
-        const contact = await store.findContactByIdentity(
-          group.provider,
-          member.participantId,
-          member.participantId,
-        );
-
-        return {
-          groupId: member.groupId,
-          participantSlug: contact?.slug ?? member.participantId,
-          participantName: contact?.displayName ?? member.participantName,
-          role: member.role,
-          createdAt: member.createdAt,
-        };
-      }),
-    );
   }
 
   return {
@@ -624,11 +198,6 @@ export async function createCommunicationModule(config: {
     listConversations,
     getMessages,
     sendMessage,
-    createChatGroup,
-    addMemberToGroup,
-    removeMemberFromGroup,
-    listChatGroups,
-    listGroupMembers,
   };
 }
 

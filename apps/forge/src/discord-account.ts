@@ -1,4 +1,4 @@
-import { ChannelType, Client, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
+import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
 
 import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
@@ -9,6 +9,7 @@ type DiscordSendableChannel = {
   send(content: string): Promise<Message>;
   messages: {
     fetch(messageId: string): Promise<Message>;
+    fetch(options: { limit: number }): Promise<Collection<string, Message>>;
   };
 };
 
@@ -135,8 +136,8 @@ export function createDiscordProvider(config: {
   async function withTyping<T extends { sendTyping(): Promise<unknown> }>(
     channel: T,
     run: () => Promise<{
-      providerConversationKey: string;
-      providerMessageId?: string;
+      targetKey: string;
+      messageId?: string;
       conversationName?: string;
     }>,
   ) {
@@ -217,11 +218,11 @@ export function createDiscordProvider(config: {
     }));
 
     return {
-      providerConversationKey: message.channelId,
-      providerMessageId: message.id,
+      targetKey: message.channelId,
+      messageId: message.id,
       conversationName:
         message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
-      authorExternalId: message.author.id,
+      authorId: message.author.id,
       authorDisplayName,
       authorUsername: message.author.username,
       content: content || '[attachment only]',
@@ -291,61 +292,122 @@ export function createDiscordProvider(config: {
     return ready;
   }
 
+  async function listCandidateChannels() {
+    await getReadyClient();
+    const channelIds = new Set<string>(allowedChannelIds);
+
+    for (const channel of client.channels.cache.values()) {
+      if (channel.type === ChannelType.DM || channel.type === ChannelType.GroupDM) {
+        channelIds.add(channel.id);
+      }
+    }
+
+    const channels: DiscordSendableChannel[] = [];
+
+    for (const channelId of channelIds) {
+      const channel = await client.channels.fetch(channelId);
+
+      if (!channel?.isTextBased() || !channel.isSendable()) {
+        continue;
+      }
+
+      channels.push(channel as DiscordSendableChannel);
+    }
+
+    return channels;
+  }
+
+  async function listChannelMessages(channel: DiscordSendableChannel, limit: number) {
+    const messages = await channel.messages.fetch({ limit });
+
+    return Array.from(messages.values())
+      .filter((message) => !message.author.bot || message.author.id === client.user?.id)
+      .sort((left, right) => left.createdTimestamp - right.createdTimestamp)
+      .map((message) => ({
+        messageId: message.id,
+        provider: 'discord',
+        authorId: message.author.id,
+        targetKey: channel.id,
+        content: message.content.trim() || '[attachment only]',
+        attachments: Array.from(message.attachments.values()).map((attachment) => ({
+          id: attachment.id,
+          name: attachment.name,
+          url: attachment.url,
+          contentType: attachment.contentType ?? undefined,
+          sizeBytes: attachment.size,
+          description: attachment.description ?? undefined,
+        })),
+        unread: false,
+        createdAt: new Date(message.createdTimestamp).toISOString(),
+        authorDisplayName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
+      }));
+  }
+
   return {
     id: 'discord',
-    async getAccount() {
-      const user = await getReadyClient();
-
-      return {
-        externalAccountId: user.id,
-        displayName: user.tag,
-      };
-    },
     onMessage(callback) {
       onInboundMessage = callback;
       void flushPendingMessages();
     },
-    async sendMessage(input) {
-      await getReadyClient();
+    async listConversations({ limit }) {
+      const channels = await listCandidateChannels();
+      const conversations = [];
 
-      if (input.contactExternalId && !input.providerConversationKey) {
-        const targetUser = await client.users.fetch(input.contactExternalId);
-        const channel = await targetUser.createDM();
+      for (const channel of channels) {
+        const messages = await listChannelMessages(channel, 5);
 
-        return withTyping(channel, async () => {
-          const sent = await sendDiscordChunks({
-            channel: channel as DiscordSendableChannel,
-            content: input.content,
-          });
+        if (messages.length === 0) {
+          continue;
+        }
 
-          return {
-            providerConversationKey: channel.id,
-            providerMessageId: sent.id,
-            conversationName: 'direct-message',
-          };
+        const latestMessage = messages[messages.length - 1];
+        conversations.push({
+          provider: 'discord',
+          targetKey: channel.id,
+          latestMessageAt: latestMessage.createdAt,
+          unreadCount: 0,
+          name: 'name' in channel ? channel.name ?? undefined : 'direct-message',
+          participants: [],
+          messages,
         });
       }
 
-      if (!input.providerConversationKey || !/^\d+$/.test(input.providerConversationKey)) {
-        throw new Error(`Unsupported Discord conversation: ${input.providerConversationKey}`);
+      return conversations
+        .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt))
+        .slice(0, limit);
+    },
+    async getMessages({ targetKey, limit }) {
+      await getReadyClient();
+      const channel = await client.channels.fetch(targetKey);
+
+      if (!channel?.isTextBased() || !channel.isSendable()) {
+        throw new Error(`Discord target is not readable: ${targetKey}`);
       }
 
-      const channel = await client.channels.fetch(input.providerConversationKey);
+      return listChannelMessages(channel as DiscordSendableChannel, limit);
+    },
+    async sendMessage(input) {
+      await getReadyClient();
+
+      if (!/^\d+$/.test(input.targetKey)) {
+        throw new Error(`Unsupported Discord targetKey: ${input.targetKey}`);
+      }
+
+      const channel = await client.channels.fetch(input.targetKey);
 
       if (!channel?.isSendable()) {
-        throw new Error(`Discord target is not sendable: ${input.providerConversationKey}`);
+        throw new Error(`Discord target is not sendable: ${input.targetKey}`);
       }
 
       return withTyping(channel, async () => {
         const sent = await sendDiscordChunks({
           channel: channel as DiscordSendableChannel,
           content: input.content,
-          replyToProviderMessageId: input.replyToProviderMessageId,
         });
 
         return {
-          providerConversationKey: sent.channelId,
-          providerMessageId: sent.id,
+          targetKey: sent.channelId,
+          messageId: sent.id,
           conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
         };
       });

@@ -527,27 +527,24 @@ function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
   const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
   const firstEvent = orderedEvents[0];
   const header = describeWakeGroup(firstEvent);
-  const itemLines = orderedEvents.map((event) => formatPendingRunEventItem(event, firstEvent.groupMetadata));
+  const itemLines = orderedEvents.map((event) => formatPendingRunEventItem(event));
 
   return [header, '', ...itemLines].join('\n');
 }
 
-function formatPendingRunEventItem(
-  event: AgentWakeEvent,
-  groupMetadata?: Record<string, string>,
-) {
+function formatPendingRunEventItem(event: AgentWakeEvent) {
   const timeLabel = formatWakeTime(event.timestamp);
   const messageId = event.itemMetadata?.MessageId;
   const actor = event.itemMetadata?.Author ?? describeWakeActor(event);
-  const slug = event.itemMetadata?.Slug ?? groupMetadata?.ContactSlug;
+  const actorId = event.itemMetadata?.AuthorId;
   const text = event.text.trim().replace(/\s*\n+\s*/g, ' ');
 
   const label = [
     `[${timeLabel}]`,
     messageId ? `[msg: ${messageId}]` : '',
     actor
-      ? slug
-        ? `${actor} (slug: ${slug})`
+      ? actorId
+        ? `${actor} (id: ${actorId})`
         : actor
       : '',
   ]
@@ -559,17 +556,9 @@ function formatPendingRunEventItem(
 
 function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
-    const provider = event.type.split(':')[1] ?? 'message';
-    const conversationKind =
-      event.groupMetadata?.ConversationName === 'direct-message' || event.groupMetadata?.ContactSlug
-        ? 'DM'
-        : 'Group';
-    const reference =
-      event.groupMetadata?.ConversationKey ??
-      event.groupMetadata?.ContactSlug ??
-      event.groupMetadata?.ConversationName ??
-      event.groupKey;
-    return `${formatWakeProvider(provider)} (${conversationKind}): ${reference}`;
+    const provider = event.groupMetadata?.Provider ?? event.type.split(':')[1] ?? 'message';
+    const targetKey = event.groupMetadata?.TargetKey ?? event.groupKey;
+    return `${formatWakeProvider(provider)}: ${targetKey}`;
   }
 
   if (event.type === 'schedule') {

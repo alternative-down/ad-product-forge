@@ -5,18 +5,11 @@ import type { CommunicationModule } from '../module';
 
 const sendMessageInputSchema = z
   .object({
-    conversationKey: z
+    provider: z.string().min(1),
+    targetKey: z
       .string()
-      .describe(
-        'Destination for the message. Use the exact conversationKey returned by list_conversations for an existing conversation, or use <provider>:<contactSlug> to start a direct message with a known contact.',
-      ),
+      .describe('Provider-specific destination key. The module does not interpret this value; it is passed directly to the selected provider.'),
     content: z.string().min(1),
-    replyToMessageId: z
-      .string()
-      .optional()
-      .describe(
-        'Optional message id to reply to. Use only a recent messageId from the same conversation. If unsure, omit it and send without reply.',
-      ),
   })
   ;
 
@@ -28,78 +21,37 @@ export function createSendMessageTool(communication: CommunicationModule) {
     execute: async (input) => {
       try {
         const result = await communication.sendMessage({
-          conversationKey: input.conversationKey,
+          provider: input.provider,
+          targetKey: input.targetKey,
           content: input.content,
-          replyToMessageId: input.replyToMessageId ?? undefined,
         });
-        return {
-          valid: true,
-          ...result,
-        };
+        return result;
       } catch (error) {
         if (error instanceof Error) {
-          // Provide actionable hints based on error type
           if (error.message.includes('Provider not available')) {
             return {
               valid: false,
               error: error.message,
-              hint: 'Call list_contacts with filter="self" to see available providers, then use <provider>:<contactSlug> with one of those providers.',
+              hint: 'Use a provider configured for this agent, such as internal-chat, email, or discord.',
             };
           }
-          if (error.message.includes('does not belong to provider')) {
+          if (error.message.includes('does not support')) {
             return {
               valid: false,
               error: error.message,
-              hint: 'The conversationKey or replyToMessageId points to a different provider. Use the conversationKey returned by list_conversations and a messageId from that same conversation.',
+              hint: 'This provider does not support sending to this kind of targetKey. Use a key that the provider accepts.',
             };
           }
-          if (error.message.includes('Conversation not found')) {
-            return {
-              valid: false,
-              error: error.message,
-              hint: 'Use the exact conversationKey returned by list_conversations, or use <provider>:<contactSlug> for a known contact.',
-            };
-          }
-          if (error.message.includes('Contact not found')) {
-            return {
-              valid: false,
-              error: error.message,
-              hint: 'Use a known contact slug from list_contacts, prefixed as <provider>:<contactSlug>.',
-            };
-          }
-          if (error.message.includes('no reachable recipients')) {
-            return {
-              valid: false,
-              error: error.message,
-              hint: 'The group has no members to receive the message. Add members to the group using add_member_to_group before sending.',
-            };
-          }
-          if (error.message.includes('No destination provided')) {
-            return {
-              valid: false,
-              error: error.message,
-              hint: 'Provide a conversationKey from list_conversations, or use <provider>:<contactSlug>.',
-            };
-          }
-          if (error.message.includes('Failed to create conversation')) {
-            return {
-              valid: false,
-              error: error.message,
-              hint: 'Could not create the conversation. Verify the conversation value is valid and the provider is configured.',
-            };
-          }
-          // Generic error with original message
           return {
             valid: false,
             error: error.message,
-            hint: 'Review the error message above and adjust your request accordingly.',
+            hint: 'Verify the provider and targetKey. The targetKey must be valid for that specific provider.',
           };
         }
-        // Unknown error type
         return {
           valid: false,
           error: 'An unknown error occurred while sending the message',
-          hint: 'Verify the destination conversationKey is valid, or use <provider>:<contactSlug> for a known contact.',
+          hint: 'Verify the provider and targetKey are correct for the selected provider.',
         };
       }
     },

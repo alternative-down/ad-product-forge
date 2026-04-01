@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { eq, and, inArray, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from './schema';
+import { createCommunicationConversationKey } from './conversation-key';
 
 const attachmentSchema = z.object({
   id: z.string().optional(),
@@ -396,7 +397,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       return loadConversation(existing.conversationId);
     }
 
-    const conversationId = `conv_${crypto.randomUUID()}`;
+    const conversationId = createCommunicationConversationKey(input.provider, input.providerConversationKey);
 
     await db.insert(schema.communicationConversations).values({
       conversationId,
@@ -416,59 +417,12 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     return loadConversation(conversationId);
   }
 
-  async function getConversationByProviderConversationKey(provider: string, providerConversationKey: string) {
-    const conversation = await db.query.communicationConversations.findFirst({
-      where: and(
-        eq(schema.communicationConversations.provider, provider),
-        eq(schema.communicationConversations.providerConversationKey, providerConversationKey),
-      ),
-    });
-
-    if (!conversation) {
-      return null;
-    }
-
-    return conversationSchema.parse({
-      conversationId: conversation.conversationId,
-      provider: conversation.provider,
-      providerConversationKey: conversation.providerConversationKey,
-      name: conversation.name ?? undefined,
-      type: conversation.type,
-      contactId: conversation.contactId ?? undefined,
-      createdAt: conversation.createdAt,
-      updatedAt: conversation.updatedAt,
-    });
-  }
-
-  async function findConversationsByConversationKey(providerConversationKey: string, provider?: string) {
-    const conversations = await db.query.communicationConversations.findMany({
-      where: provider
-        ? and(
-            eq(schema.communicationConversations.providerConversationKey, providerConversationKey),
-            eq(schema.communicationConversations.provider, provider),
-          )
-        : eq(schema.communicationConversations.providerConversationKey, providerConversationKey),
-    });
-
-    return conversations.map((conversation) =>
-      conversationSchema.parse({
-        conversationId: conversation.conversationId,
-        provider: conversation.provider,
-        providerConversationKey: conversation.providerConversationKey,
-        name: conversation.name ?? undefined,
-        type: conversation.type,
-        contactId: conversation.contactId ?? undefined,
-        createdAt: conversation.createdAt,
-        updatedAt: conversation.updatedAt,
-      }),
-    );
-  }
-
   async function saveInboundMessage(input: {
     provider: string;
     providerConversationKey: string;
     providerMessageId: string;
     conversationName?: string;
+    conversationType?: string;
     contactId?: string;
     authorExternalId?: string;
     authorDisplayName?: string;
@@ -482,6 +436,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
       name: input.conversationName,
+      type: input.conversationType,
       contactId: input.contactId,
       createdAt: input.createdAt,
     });
@@ -527,6 +482,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     providerMessageId?: string;
     conversationName?: string;
     contactId?: string;
+    authorDisplayName?: string;
     content: string;
     createdAt?: string;
     metadata?: Record<string, unknown>;
@@ -551,7 +507,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: input.provider,
       providerMessageId: input.providerMessageId ?? null,
       authorExternalId: null,
-      authorDisplayName: null,
+      authorDisplayName: input.authorDisplayName ?? null,
       authorUsername: null,
       content: input.content,
       attachmentsJson: JSON.stringify([]),
@@ -842,8 +798,6 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     upsertContact,
     upsertConversation,
     getConversation,
-    getConversationByProviderConversationKey,
-    findConversationsByConversationKey,
     saveInboundMessage,
     saveOutboundMessage,
     getMessage,

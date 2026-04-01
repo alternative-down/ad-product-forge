@@ -20,6 +20,7 @@ import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { loadAgent } from './agent-loader';
+import type { InternalChatService } from '../communication/internal-chat-service';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -42,6 +43,7 @@ export type HireInternalAgentInput = {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   schedules: ReturnType<typeof createAgentScheduleManager>;
+  internalChat: InternalChatService;
 };
 
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
@@ -111,6 +113,12 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       await db.insert(agentProviders).values(providerRecord);
     }
 
+    await input.internalChat.registerAgentAccount({
+      agentId,
+      displayName: input.name,
+      description: input.functionDescription ?? input.description ?? undefined,
+    });
+
     await input.schedules.createHeartbeatSchedule(agentId);
     const runtime = await loadAgent(db, {
       agentId,
@@ -119,6 +127,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       githubApps: input.githubApps,
       coolify: input.coolify,
       schedules: input.schedules,
+      internalChat: input.internalChat,
     });
 
     await getInternalAgentRegistry().add(db, runtime);

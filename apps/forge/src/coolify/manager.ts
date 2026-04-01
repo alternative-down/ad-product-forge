@@ -590,7 +590,7 @@ export function createCoolifyManager(config: {
     return {
       baseUrl: `${integration.baseUrl.replace(/\/$/, '')}/api/v1`,
       adminToken: integration.adminToken,
-      applicationsBaseDomain: integration.applicationsBaseDomain?.replace(/^\./, '').trim() || null,
+      applicationsBaseDomain: normalizeDomainHost(integration.applicationsBaseDomain) || null,
     };
   }
 
@@ -598,7 +598,7 @@ export function createCoolifyManager(config: {
     const server = serverUuid
       ? extractItem(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`), ServerSchema)
       : await getDefaultServer();
-    const wildcardDomain = server.wildcard_domain?.replace(/^\./, '').trim();
+    const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
 
     if (!wildcardDomain) {
       throw new Error(
@@ -608,6 +608,24 @@ export function createCoolifyManager(config: {
 
     return wildcardDomain;
   }
+}
+
+function normalizeDomainHost(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  const normalized = /^[a-z]+:\/\//i.test(trimmed)
+    ? new URL(trimmed).host
+    : trimmed.replace(/^\./, '').replace(/\/+$/, '');
+
+  return normalized || null;
 }
 
 function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>) {

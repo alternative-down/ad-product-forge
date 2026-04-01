@@ -6,9 +6,9 @@
  * - agent_providers: Associação agente-provedor com credenciais
  *
  * IMPORTANTE:
- * - conversations e messages são do módulo de comunicação no mastra-engine
+ * - internal-chat é persistido no banco central da aplicação
+ * - os demais providers continuam no módulo de comunicação do mastra-engine por enquanto
  * - Cada agente tem seu próprio banco de dados (path relativo a workspace)
- * - Este schema é APENAS para a aplicação central
  */
 
 import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
@@ -241,6 +241,91 @@ export const agentSchedules = sqliteTable('agent_schedules', {
 export type AgentSchedule = typeof agentSchedules.$inferSelect;
 export type NewAgentSchedule = typeof agentSchedules.$inferInsert;
 
+export const internalChatAccounts = sqliteTable('internal_chat_accounts', {
+  agentId: text('agent_id')
+    .primaryKey()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  displayName: text('display_name').notNull(),
+  description: text('description'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  internalChatAccountsSlugIdx: uniqueIndex('internal_chat_accounts_slug_idx').on(table.slug),
+}));
+
+export type InternalChatAccount = typeof internalChatAccounts.$inferSelect;
+export type NewInternalChatAccount = typeof internalChatAccounts.$inferInsert;
+
+export const internalChatConversations = sqliteTable('internal_chat_conversations', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  name: text('name'),
+  createdByAgentId: text('created_by_agent_id')
+    .references(() => agents.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  internalChatConversationsTypeIdx: index('internal_chat_conversations_type_idx').on(table.type),
+  internalChatConversationsUpdatedAtIdx: index('internal_chat_conversations_updated_at_idx').on(table.updatedAt),
+}));
+
+export type InternalChatConversation = typeof internalChatConversations.$inferSelect;
+export type NewInternalChatConversation = typeof internalChatConversations.$inferInsert;
+
+export const internalChatConversationMembers = sqliteTable('internal_chat_conversation_members', {
+  conversationId: text('conversation_id')
+    .notNull()
+    .references(() => internalChatConversations.id, { onDelete: 'cascade' }),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('normal'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  internalChatConversationMembersUniqueIdx: uniqueIndex('internal_chat_conversation_members_unique_idx').on(table.conversationId, table.agentId),
+  internalChatConversationMembersAgentIdx: index('internal_chat_conversation_members_agent_idx').on(table.agentId),
+}));
+
+export type InternalChatConversationMember = typeof internalChatConversationMembers.$inferSelect;
+export type NewInternalChatConversationMember = typeof internalChatConversationMembers.$inferInsert;
+
+export const internalChatMessages = sqliteTable('internal_chat_messages', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id')
+    .notNull()
+    .references(() => internalChatConversations.id, { onDelete: 'cascade' }),
+  authorAgentId: text('author_agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  replyToMessageId: text('reply_to_message_id'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  internalChatMessagesConversationIdx: index('internal_chat_messages_conversation_idx').on(table.conversationId),
+  internalChatMessagesCreatedAtIdx: index('internal_chat_messages_created_at_idx').on(table.createdAt),
+}));
+
+export type InternalChatMessage = typeof internalChatMessages.$inferSelect;
+export type NewInternalChatMessage = typeof internalChatMessages.$inferInsert;
+
+export const internalChatMessageReads = sqliteTable('internal_chat_message_reads', {
+  messageId: text('message_id')
+    .notNull()
+    .references(() => internalChatMessages.id, { onDelete: 'cascade' }),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  readAt: integer('read_at'),
+}, (table) => ({
+  internalChatMessageReadsUniqueIdx: uniqueIndex('internal_chat_message_reads_unique_idx').on(table.messageId, table.agentId),
+  internalChatMessageReadsAgentIdx: index('internal_chat_message_reads_agent_idx').on(table.agentId),
+  internalChatMessageReadsReadAtIdx: index('internal_chat_message_reads_read_at_idx').on(table.readAt),
+}));
+
+export type InternalChatMessageRead = typeof internalChatMessageReads.$inferSelect;
+export type NewInternalChatMessageRead = typeof internalChatMessageReads.$inferInsert;
+
 export const llmModelPrices = sqliteTable('llm_model_prices', {
   modelKey: text('model_key').primaryKey(),
   inputPerMillionUsd: real('input_per_million_usd').notNull(),
@@ -433,6 +518,12 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
   prompts: many(agentPrompts),
+  internalChatAccount: one(internalChatAccounts, {
+    fields: [agents.id],
+    references: [internalChatAccounts.agentId],
+  }),
+  internalChatMemberships: many(internalChatConversationMembers),
+  internalChatMessages: many(internalChatMessages),
 }));
 
 export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
@@ -516,6 +607,56 @@ export const agentNotificationsRelations = relations(agentNotifications, ({ one 
 export const agentSchedulesRelations = relations(agentSchedules, ({ one }) => ({
   agent: one(agents, {
     fields: [agentSchedules.agentId],
+    references: [agents.id],
+  }),
+}));
+
+export const internalChatAccountsRelations = relations(internalChatAccounts, ({ one }) => ({
+  agent: one(agents, {
+    fields: [internalChatAccounts.agentId],
+    references: [agents.id],
+  }),
+}));
+
+export const internalChatConversationsRelations = relations(internalChatConversations, ({ one, many }) => ({
+  creator: one(agents, {
+    fields: [internalChatConversations.createdByAgentId],
+    references: [agents.id],
+  }),
+  members: many(internalChatConversationMembers),
+  messages: many(internalChatMessages),
+}));
+
+export const internalChatConversationMembersRelations = relations(internalChatConversationMembers, ({ one }) => ({
+  conversation: one(internalChatConversations, {
+    fields: [internalChatConversationMembers.conversationId],
+    references: [internalChatConversations.id],
+  }),
+  agent: one(agents, {
+    fields: [internalChatConversationMembers.agentId],
+    references: [agents.id],
+  }),
+}));
+
+export const internalChatMessagesRelations = relations(internalChatMessages, ({ one, many }) => ({
+  conversation: one(internalChatConversations, {
+    fields: [internalChatMessages.conversationId],
+    references: [internalChatConversations.id],
+  }),
+  author: one(agents, {
+    fields: [internalChatMessages.authorAgentId],
+    references: [agents.id],
+  }),
+  reads: many(internalChatMessageReads),
+}));
+
+export const internalChatMessageReadsRelations = relations(internalChatMessageReads, ({ one }) => ({
+  message: one(internalChatMessages, {
+    fields: [internalChatMessageReads.messageId],
+    references: [internalChatMessages.id],
+  }),
+  agent: one(agents, {
+    fields: [internalChatMessageReads.agentId],
     references: [agents.id],
   }),
 }));

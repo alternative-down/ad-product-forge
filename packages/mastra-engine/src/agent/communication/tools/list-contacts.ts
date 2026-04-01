@@ -11,11 +11,7 @@ export function createListContactsTool(communication: CommunicationModule) {
   return createTool({
     id: 'list_contacts',
     description:
-      'List your contacts organized by category. ' +
-      "'self': Returns your accounts on each provider. " +
-      "'others': Returns external contacts. " +
-      "Use <provider>:<contactSlug> to start a direct message via send_message. " +
-      "Defaults to 'others'.",
+      "List the agent contact registry. 'self' is currently empty. 'others' returns the contacts explicitly registered by the agent. Defaults to 'others'.",
     inputSchema: listContactsInputSchema,
     execute: async (input) => {
       try {

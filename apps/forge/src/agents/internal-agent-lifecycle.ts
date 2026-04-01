@@ -9,6 +9,7 @@ import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
+import type { InternalChatService } from '../communication/internal-chat-service';
 
 type RunInternalHiringInput = {
   hiringRequest: string;
@@ -20,6 +21,7 @@ type RunInternalHiringInput = {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   schedules: ReturnType<typeof createAgentScheduleManager>;
+  internalChat: InternalChatService;
 };
 
 export async function runInternalHiring(db: Database, input: RunInternalHiringInput) {
@@ -32,6 +34,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       githubApps: input.githubApps,
       coolify: input.coolify,
       schedules: input.schedules,
+      internalChat: input.internalChat,
     },
   });
 
@@ -56,6 +59,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     emailMailboxes: input.emailMailboxes,
     coolify: input.coolify,
     schedules: input.schedules,
+    internalChat: input.internalChat,
   });
   try {
     const githubApp = await (

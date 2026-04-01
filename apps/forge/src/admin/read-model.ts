@@ -1,17 +1,10 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 
-import { desc, eq, inArray, sql } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/libsql';
+import { desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibSQLStore } from '@mastra/libsql';
-import {
-  chatGroupMembers,
-  communicationConversations,
-  communicationMessages,
-  communicationSchema,
-  toMastraSafeIdentifier,
-} from '@mastra-engine/core';
+import { toMastraSafeIdentifier } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
 import { agents, agentExecutionSteps, agentProviders, agentSchedules } from '../database/schema';
@@ -27,12 +20,12 @@ import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import type { GitHubAppManager } from '../github/manager';
 import { createSystemSettingsStore } from '../system-settings/store';
+import type { InternalChatService } from '../communication/internal-chat-service';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
 const RECENT_CONVERSATION_LIMIT = 10;
-const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
 
 interface MastraMemoryStore {
   createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
@@ -51,6 +44,7 @@ export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
   githubApps: GitHubAppManager;
+  internalChat: InternalChatService;
 }) {
   const db = input.db;
   const finance = createMicroErpReadModel(db);
@@ -194,7 +188,7 @@ export function createAdminReadModel(input: {
           agentId,
           limit: RECENT_NOTIFICATION_LIMIT,
         }),
-        listRecentConversations(input.workspaceBasePath, agentId, agent.name),
+        listRecentConversations(input.workspaceBasePath, input.internalChat, agentId, agent.name),
         input.githubApps.getAgentProvisioning(agentId),
       ]);
     const registry = getInternalAgentRegistry();
@@ -453,85 +447,67 @@ export function createAdminReadModel(input: {
   };
 }
 
-async function listRecentConversations(workspaceBasePath: string, agentId: string, agentName: string) {
-  try {
-    const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
-    const client = createClient({
-      url: `file:${agentDatabasePath}`,
-    });
-    const db = drizzle(client, { schema: communicationSchema });
-    const rows = await db.query.communicationConversations.findMany({
-      orderBy: [desc(communicationConversations.updatedAt)],
-      limit: RECENT_CONVERSATION_LIMIT,
-      with: {
-        contact: true,
-        messages: {
-          orderBy: [desc(communicationMessages.createdAt)],
-          limit: RECENT_CONVERSATION_MESSAGE_LIMIT,
-        },
-      },
-    });
-    const groupConversationIds = rows
-      .filter((conversation) => conversation.type === 'group')
-      .map((conversation) => conversation.conversationId);
-    const groupMembers = groupConversationIds.length > 0
-      ? await db.query.chatGroupMembers.findMany({
-          where: inArray(chatGroupMembers.groupId, groupConversationIds),
-          orderBy: [chatGroupMembers.createdAt],
-        })
-      : [];
-    const groupParticipantsByConversationId = new Map<string, string[]>();
+async function listRecentConversations(
+  workspaceBasePath: string,
+  internalChat: InternalChatService,
+  agentId: string,
+  agentName: string,
+) {
+  const [externalConversations, internalConversations] = await Promise.all([
+    listRecentExternalConversations(workspaceBasePath, agentId, agentName),
+    listRecentInternalChatConversations(internalChat, agentId, agentName),
+  ]);
 
-    for (const member of groupMembers) {
-      const participants = groupParticipantsByConversationId.get(member.groupId) ?? [];
-      participants.push(member.participantName);
-      groupParticipantsByConversationId.set(member.groupId, participants);
-    }
+  return [...internalConversations, ...externalConversations]
+    .sort((left, right) => Number(right.updatedAt) - Number(left.updatedAt))
+    .slice(0, RECENT_CONVERSATION_LIMIT);
+}
+
+async function listRecentExternalConversations(_workspaceBasePath: string, _agentId: string, _agentName: string) {
+  return [];
+}
+
+async function listRecentInternalChatConversations(
+  internalChat: InternalChatService,
+  agentId: string,
+  agentName: string,
+) {
+  try {
+    const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
 
     return rows.map((conversation) => {
       const participants = new Set<string>();
 
-      if (conversation.type === 'group') {
-        for (const participantName of groupParticipantsByConversationId.get(conversation.conversationId) ?? []) {
-          participants.add(participantName);
-        }
-      } else {
-        if (conversation.contact?.displayName) {
-          participants.add(conversation.contact.displayName);
-        }
+      for (const participantId of conversation.participants ?? []) {
+        participants.add(participantId);
+      }
 
-        participants.add(agentName);
+      participants.add(agentName);
 
-        for (const message of conversation.messages) {
-          if (message.authorDisplayName) {
-            participants.add(message.authorDisplayName);
-          }
+      for (const message of conversation.messages) {
+        if (message.authorDisplayName) {
+          participants.add(message.authorDisplayName);
         }
       }
 
       return {
-        conversationId: conversation.conversationId,
-        conversationKey: conversation.providerConversationKey,
+        conversationId: conversation.targetKey,
+        conversationKey: conversation.targetKey,
         provider: conversation.provider,
-        type: conversation.type,
         name: conversation.name ?? undefined,
-        contactId: conversation.contactId ?? undefined,
-        contactDisplayName: conversation.contact?.displayName ?? undefined,
         participants: [...participants],
-        updatedAt: conversation.updatedAt,
-        messages: [...conversation.messages]
-          .reverse()
-          .map((message) => ({
-            messageId: message.messageId,
-            content: message.content,
-            unread: message.unread === 1,
-            authorDisplayName: message.authorDisplayName ?? agentName,
-            createdAt: message.createdAt,
-          })),
+        updatedAt: Date.parse(conversation.latestMessageAt) || 0,
+        messages: conversation.messages.map((message) => ({
+          messageId: message.messageId,
+          content: message.content,
+          unread: message.unread,
+          authorDisplayName: message.authorDisplayName ?? agentName,
+          createdAt: Date.parse(message.createdAt) || 0,
+        })),
       };
     });
   } catch (error) {
-    console.error(`[AdminReadModel] Failed to load recent conversations for agent ${agentId}:`, error);
+    console.error(`[AdminReadModel] Failed to load internal-chat conversations for agent ${agentId}:`, error);
     return [];
   }
 }
