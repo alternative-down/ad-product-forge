@@ -11,6 +11,16 @@ export function createInternalChatProvider(input: {
     onMessage(callback) {
       input.internalChat.onReceiveMessage(input.agentId, callback);
     },
+    async listContacts() {
+      const accounts = await input.internalChat.listAccounts({ excludeAgentId: input.agentId });
+
+      return accounts.map((account) => ({
+        slug: account.slug,
+        displayName: account.displayName,
+        description: account.description ?? undefined,
+        agentId: account.agentId ?? undefined,
+      }));
+    },
     async listConversations({ limit, unread }) {
       return input.internalChat.listConversations({
         agentId: input.agentId,

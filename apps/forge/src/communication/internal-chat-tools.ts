@@ -55,10 +55,10 @@ export function createInternalChatTools(
   if (hasToolPermission(allowedToolIds, 'add_member_to_group')) {
     tools.add_member_to_group = createTool({
       id: 'add_member_to_group',
-      description: 'Add one participant to an internal-chat group. Use the participant agentId or the participant internal-chat slug. Returns the updated group information.',
+      description: 'Add one participant to an internal-chat group. Use the participant slug returned by list_contacts. Returns the updated group information.',
       inputSchema: z.object({
         groupId: z.string().min(1).describe('The groupId of the internal-chat group that should receive the new participant.'),
-        participantKey: z.string().min(1).describe('The participant agentId or internal-chat slug to add to the group.'),
+        participantSlug: z.string().min(1).describe('The participant slug returned by list_contacts.'),
         role: z.enum(['admin', 'normal']).default('normal').describe('The role for the new participant inside the group.'),
       }),
       execute: async (input) => {
@@ -66,7 +66,7 @@ export function createInternalChatTools(
           const result = await internalChat.addMemberToGroup({
             agentId,
             groupId: input.groupId,
-            participantKey: input.participantKey,
+            participantSlug: input.participantSlug,
             role: input.role,
           });
 
@@ -79,7 +79,7 @@ export function createInternalChatTools(
           return {
             valid: false,
             error: message,
-            hint: 'Use list_chat_groups to confirm the groupId. For the participant, use the agentId or the internal-chat account slug.',
+            hint: 'Use list_chat_groups to confirm the groupId, then use the participant slug returned by list_contacts.',
           };
         }
       },
@@ -89,17 +89,17 @@ export function createInternalChatTools(
   if (hasToolPermission(allowedToolIds, 'remove_member_from_group')) {
     tools.remove_member_from_group = createTool({
       id: 'remove_member_from_group',
-      description: 'Remove one participant from an internal-chat group. Use the participant agentId or the participant internal-chat slug. Returns the updated group information.',
+      description: 'Remove one participant from an internal-chat group. Use the participant slug already present in the group. Returns the updated group information.',
       inputSchema: z.object({
         groupId: z.string().min(1).describe('The groupId of the internal-chat group.'),
-        participantKey: z.string().min(1).describe('The participant agentId or internal-chat slug to remove from the group.'),
+        participantSlug: z.string().min(1).describe('The participant slug to remove from the group.'),
       }),
       execute: async (input) => {
         try {
           const result = await internalChat.removeMemberFromGroup({
             agentId,
             groupId: input.groupId,
-            participantKey: input.participantKey,
+            participantSlug: input.participantSlug,
           });
 
           return {
@@ -111,7 +111,7 @@ export function createInternalChatTools(
           return {
             valid: false,
             error: message,
-            hint: 'Use list_group_members to confirm the current members. You can remove by participant agentId or internal-chat slug.',
+            hint: 'Use list_group_members to confirm the participant slug before removing it.',
           };
         }
       },
@@ -146,7 +146,7 @@ export function createInternalChatTools(
   if (hasToolPermission(allowedToolIds, 'list_group_members')) {
     tools.list_group_members = createTool({
       id: 'list_group_members',
-      description: 'List the members of one internal-chat group. Use this before adding or removing members, or when you need the participant agentId and internal-chat slug already in the group.',
+      description: 'List the members of one internal-chat group. Use this before adding or removing members, or when you need the participant slugs already in the group.',
       inputSchema: z.object({
         groupId: z.string().min(1).describe('The groupId of the internal-chat group.'),
       }),

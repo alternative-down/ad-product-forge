@@ -197,14 +197,42 @@ export async function createCommunicationModule(config: {
 
   async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
     const contacts = filter === 'self' ? [] : await store.listContacts();
+    const providerContacts = filter === 'self'
+      ? []
+      : await Promise.all(
+          Array.from(providers.values())
+            .filter((provider) => provider.listContacts)
+            .map((provider) => provider.listContacts!()),
+        );
+    const mergedOthers = new Map<string, {
+      slug: string;
+      displayName: string;
+      description?: string;
+      agentId?: string;
+    }>();
 
-    return {
-      self: [],
-      others: contacts.map((contact) => ({
+    for (const contact of contacts) {
+      mergedOthers.set(contact.slug, {
         slug: contact.slug,
         displayName: contact.displayName,
         description: contact.description,
-      })),
+      });
+    }
+
+    for (const providerContactList of providerContacts) {
+      for (const contact of providerContactList) {
+        mergedOthers.set(contact.slug, {
+          slug: contact.slug,
+          displayName: contact.displayName,
+          description: contact.description,
+          agentId: contact.agentId,
+        });
+      }
+    }
+
+    return {
+      self: [],
+      others: Array.from(mergedOthers.values()),
     };
   }
 

@@ -37,6 +37,13 @@ export type CommunicationProviderMessage = {
   authorDisplayName?: string;
 };
 
+export type CommunicationProviderContact = {
+  slug: string;
+  displayName: string;
+  description?: string;
+  agentId?: string;
+};
+
 export type CommunicationProviderConversation = {
   targetKey: string;
   provider: string;
@@ -72,6 +79,7 @@ export type CommunicationMessageView = {
 export type CommunicationProvider = {
   id: string;
   onMessage?(callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> | void;
+  listContacts?(): Promise<CommunicationProviderContact[]>;
   listConversations?(input: {
     limit: number;
     unread?: boolean;
