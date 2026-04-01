@@ -18,7 +18,7 @@ const listConversationsInputSchema = z.object({
     .positive()
     .max(100)
     .default(20)
-    .describe('Maximum number of conversations to return.'),
+    .describe('Maximum number of conversations to request from each provider.'),
 });
 
 export function createListConversationsTool(communication: CommunicationModule) {

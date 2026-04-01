@@ -299,7 +299,6 @@ export async function createCommunicationModule(config: {
     return Promise.all(conversationGroups
       .flat()
       .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt))
-      .slice(0, input.limit)
       .map((conversation) => toAgentConversationView(conversation)));
   }
 
