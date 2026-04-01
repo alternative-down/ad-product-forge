@@ -551,7 +551,7 @@ function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
 
 function formatPendingRunEventItem(event: AgentWakeEvent) {
   const timeLabel = formatWakeTime(event.timestamp);
-  const messageId = event.itemMetadata?.MessageId;
+  const messageId = normalizeProviderCode(event.itemMetadata?.MessageId);
   const actor = event.itemMetadata?.Author ?? describeWakeActor(event);
   const actorKey = event.itemMetadata?.AuthorKey;
   const attachments = event.itemMetadata?.Attachments;
@@ -584,7 +584,7 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
 
 function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
-    const targetKey = event.groupMetadata?.TargetKey ?? event.groupKey;
+    const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
     return targetKey;
   }
 
@@ -624,6 +624,16 @@ function formatWakeLabel(value: string) {
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[-_:]+/g, ' ')
     .toLowerCase();
+}
+
+function normalizeProviderCode(value?: string) {
+  if (!value) {
+    return value;
+  }
+
+  return value
+    .replace(/^conv_/, '')
+    .replace(/^msg_/, '');
 }
 
 function describeWakeActor(event: AgentWakeEvent) {
