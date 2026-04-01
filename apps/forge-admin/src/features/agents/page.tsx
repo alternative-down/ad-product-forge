@@ -1264,10 +1264,24 @@ function AgentThreadCard(input: {
                 </div>
               </details>
             ))}
+            {message.otherParts.map((part, index) => (
+              <details
+                key={`${message.messageId}:${part.type}:${index}`}
+                className="mt-3 rounded-lg border border-border bg-background px-3 py-2"
+              >
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                  {part.type}: {part.summary}
+                </summary>
+                <div className="mt-3 space-y-2 text-sm">
+                  <ThreadJsonBlock label="Data" value={part.data} />
+                </div>
+              </details>
+            ))}
             {!message.content &&
             !message.reasoning &&
             message.toolCalls.length === 0 &&
-            message.toolResults.length === 0 ? (
+            message.toolResults.length === 0 &&
+            message.otherParts.length === 0 ? (
               <div className="mt-3 text-sm text-muted-foreground">—</div>
             ) : null}
           </div>

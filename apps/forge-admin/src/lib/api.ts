@@ -202,6 +202,11 @@ export type AgentDetail = {
       args: unknown;
       result: unknown;
     }>;
+    otherParts: Array<{
+      type: 'source' | 'file' | 'step-start';
+      summary: string;
+      data: unknown;
+    }>;
     createdAt: number;
   }>;
   recentConversations: Array<{

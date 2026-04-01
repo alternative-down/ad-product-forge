@@ -598,6 +598,11 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
         args: unknown;
         result: unknown;
       }> = [];
+      const otherParts: Array<{
+        type: 'source' | 'file' | 'step-start';
+        summary: string;
+        data: unknown;
+      }> = [];
 
       for (const part of message.content.parts ?? []) {
         collectThreadPart(part, {
@@ -605,6 +610,7 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
           reasoningParts,
           toolCalls,
           toolResults,
+          otherParts,
         });
       }
 
@@ -616,6 +622,7 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
         reasoning: reasoningParts.join('\n\n').trim(),
         toolCalls,
         toolResults,
+        otherParts,
       };
     }
 
@@ -636,6 +643,11 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
           args: unknown;
           result: unknown;
         }>;
+        otherParts: Array<{
+          type: 'source' | 'file' | 'step-start';
+          summary: string;
+          data: unknown;
+        }>;
       },
     ) {
       if (part.type === 'text') {
@@ -655,6 +667,38 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
       }
 
       if (part.type !== 'tool-invocation') {
+        if (part.type === 'source') {
+          output.otherParts.push({
+            type: 'source',
+            summary: part.source.title?.trim() || part.source.url,
+            data: {
+              title: part.source.title ?? null,
+              url: part.source.url,
+            },
+          });
+          return;
+        }
+
+        if (part.type === 'file') {
+          output.otherParts.push({
+            type: 'file',
+            summary: part.mimeType,
+            data: {
+              mimeType: part.mimeType,
+            },
+          });
+          return;
+        }
+
+        if (part.type === 'step-start') {
+          output.otherParts.push({
+            type: 'step-start',
+            summary: 'Step start',
+            data: {
+              type: part.type,
+            },
+          });
+        }
         return;
       }
 
@@ -689,6 +733,7 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
         reasoning: threadContent.reasoning,
         toolCalls: threadContent.toolCalls,
         toolResults: threadContent.toolResults,
+        otherParts: threadContent.otherParts,
         createdAt: message.createdAt.getTime(),
       };
     });
