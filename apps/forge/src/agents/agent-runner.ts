@@ -559,7 +559,7 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
 
   const label = [
     `[${timeLabel}]`,
-    messageId ? `[msg: ${messageId}]` : '',
+    messageId ? `[${messageId}]` : '',
     actor
       ? actorKey
         ? `${actor} (${actorKey})`
@@ -584,9 +584,8 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
 
 function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
-    const provider = event.groupMetadata?.Provider ?? event.type.split(':')[1] ?? 'message';
     const targetKey = event.groupMetadata?.TargetKey ?? event.groupKey;
-    return `${formatWakeProvider(provider)}: ${targetKey}`;
+    return targetKey;
   }
 
   if (event.type === 'schedule') {
