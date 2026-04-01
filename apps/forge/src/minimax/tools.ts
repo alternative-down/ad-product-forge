@@ -81,8 +81,6 @@ const languageBoostSchema = z.enum([
   'auto',
 ]);
 
-const voiceTypeSchema = z.enum(['system', 'voice_cloning', 'voice_generation', 'all']);
-
 function createMiniMaxOutputPath(
   kind: 'tts' | 'images' | 'videos',
   extension: string,
@@ -169,13 +167,10 @@ export function createMiniMaxTools(
       id: 'list_minimax_voices',
       description:
         'List MiniMax voices available for TTS. Use this before minimax_tts when you want to choose a voiceId instead of using the default voice.',
-      inputSchema: z.object({
-        voice_type: voiceTypeSchema.default('all').optional().describe('Optional voice group filter. Leave empty to list all available voices, or use "system", "voice_cloning", or "voice_generation" to narrow the result.'),
-      }),
-      execute: async (input) => {
+      inputSchema: z.object({}),
+      execute: async () => {
         try {
-          const voiceType = input.voice_type ?? 'all';
-          const result = await minimax.listVoices(voiceType);
+          const result = await minimax.listVoices('all');
 
           if (!result.success || !result.data) {
             return {
@@ -187,7 +182,7 @@ export function createMiniMaxTools(
 
           return {
             valid: true,
-            voiceType,
+            voiceType: 'all',
             ...result.data,
           };
         } catch (error) {
