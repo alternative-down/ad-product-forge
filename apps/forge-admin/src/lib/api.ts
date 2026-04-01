@@ -1,3 +1,5 @@
+import type { MastraDBMessage } from '@mastra/core/agent';
+
 export type AdminOverview = {
   totals: {
     agents: number;
@@ -52,6 +54,13 @@ export type AdminFinance = {
     createdAt: number;
     updatedAt: number;
   }>;
+};
+
+export type AdminThreadMessage = Omit<MastraDBMessage, 'createdAt'> & {
+  createdAt: number;
+  threadId: string | null;
+  resourceId: string | null;
+  type: string | null;
 };
 
 export type AgentListItem = {
@@ -206,29 +215,13 @@ export type AgentDetail = {
     read: boolean;
   }>;
   recentThreadMessages: Array<{
-    messageId: string;
-    role: 'user' | 'assistant' | 'system';
-    type: string | null;
-    content: string;
-    reasoning: string;
-    toolCalls: Array<{
-      toolCallId: string;
-      toolName: string;
-      state: 'partial-call' | 'call';
-      args: unknown;
-    }>;
-    toolResults: Array<{
-      toolCallId: string;
-      toolName: string;
-      args: unknown;
-      result: unknown;
-    }>;
-    otherParts: Array<{
-      type: 'source' | 'file' | 'step-start';
-      summary: string;
-      data: unknown;
-    }>;
-    createdAt: number;
+    id: AdminThreadMessage['id'];
+    role: AdminThreadMessage['role'];
+    createdAt: AdminThreadMessage['createdAt'];
+    threadId: AdminThreadMessage['threadId'];
+    resourceId: AdminThreadMessage['resourceId'];
+    type: AdminThreadMessage['type'];
+    content: AdminThreadMessage['content'];
   }>;
   recentConversations: Array<{
     conversationId: string;

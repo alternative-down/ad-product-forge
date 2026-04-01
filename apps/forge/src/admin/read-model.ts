@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibSQLStore } from '@mastra/libsql';
+import type { MastraDBMessage } from '@mastra/core/agent';
 import { toMastraSafeIdentifier } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
@@ -625,164 +626,15 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
         direction: 'DESC',
       },
     });
-
-    type ThreadMessageRecord = (typeof result.messages)[number];
-    type ThreadMessagePart = NonNullable<ThreadMessageRecord['content']['parts']>[number];
-
-    function collectThreadText(message: ThreadMessageRecord) {
-      const textParts: string[] = [];
-      const reasoningParts: string[] = [];
-      const toolCalls: Array<{
-        toolCallId: string;
-        toolName: string;
-        state: 'partial-call' | 'call';
-        args: unknown;
-      }> = [];
-      const toolResults: Array<{
-        toolCallId: string;
-        toolName: string;
-        args: unknown;
-        result: unknown;
-      }> = [];
-      const otherParts: Array<{
-        type: 'source' | 'file' | 'step-start';
-        summary: string;
-        data: unknown;
-      }> = [];
-
-      for (const part of message.content.parts ?? []) {
-        collectThreadPart(part, {
-          textParts,
-          reasoningParts,
-          toolCalls,
-          toolResults,
-          otherParts,
-        });
-      }
-
-      return {
-        content:
-          typeof message.content.content === 'string'
-            ? message.content.content.trim()
-            : textParts.join('\n').trim(),
-        reasoning: reasoningParts.join('\n\n').trim(),
-        toolCalls,
-        toolResults,
-        otherParts,
-      };
-    }
-
-    function collectThreadPart(
-      part: ThreadMessagePart,
-      output: {
-        textParts: string[];
-        reasoningParts: string[];
-        toolCalls: Array<{
-          toolCallId: string;
-          toolName: string;
-          state: 'partial-call' | 'call';
-          args: unknown;
-        }>;
-        toolResults: Array<{
-          toolCallId: string;
-          toolName: string;
-          args: unknown;
-          result: unknown;
-        }>;
-        otherParts: Array<{
-          type: 'source' | 'file' | 'step-start';
-          summary: string;
-          data: unknown;
-        }>;
-      },
-    ) {
-      if (part.type === 'text') {
-        const text = part.text.trim();
-        if (text) {
-          output.textParts.push(text);
-        }
-        return;
-      }
-
-      if (part.type === 'reasoning') {
-        const reasoning = part.reasoning.trim();
-        if (reasoning) {
-          output.reasoningParts.push(reasoning);
-        }
-        return;
-      }
-
-      if (part.type !== 'tool-invocation') {
-        if (part.type === 'source') {
-          output.otherParts.push({
-            type: 'source',
-            summary: part.source.title?.trim() || part.source.url,
-            data: {
-              title: part.source.title ?? null,
-              url: part.source.url,
-            },
-          });
-          return;
-        }
-
-        if (part.type === 'file') {
-          output.otherParts.push({
-            type: 'file',
-            summary: part.mimeType,
-            data: {
-              mimeType: part.mimeType,
-            },
-          });
-          return;
-        }
-
-        if (part.type === 'step-start') {
-          output.otherParts.push({
-            type: 'step-start',
-            summary: 'Step start',
-            data: {
-              type: part.type,
-            },
-          });
-        }
-        return;
-      }
-
-      const invocation = part.toolInvocation;
-
-      if (invocation.state === 'result') {
-        output.toolResults.push({
-          toolCallId: invocation.toolCallId,
-          toolName: invocation.toolName,
-          args: invocation.args,
-          result: invocation.result,
-        });
-        return;
-      }
-
-      output.toolCalls.push({
-        toolCallId: invocation.toolCallId,
-        toolName: invocation.toolName,
-        state: invocation.state,
-        args: invocation.args,
-      });
-    }
-
-    return result.messages.map((message) => {
-      const threadContent = collectThreadText(message);
-
-      return {
-        messageId: message.id,
-        role: message.role,
-        type: message.type ?? null,
-        content: threadContent.content,
-        reasoning: threadContent.reasoning,
-        toolCalls: threadContent.toolCalls,
-        toolResults: threadContent.toolResults,
-        otherParts: threadContent.otherParts,
-        createdAt: message.createdAt.getTime(),
-      };
-    });
+    return result.messages.map((message: MastraDBMessage) => ({
+      id: message.id,
+      role: message.role,
+      createdAt: message.createdAt.getTime(),
+      threadId: message.threadId ?? null,
+      resourceId: message.resourceId ?? null,
+      type: message.type ?? null,
+      content: message.content,
+    }));
   } catch (error) {
     console.error(`[AdminReadModel] Failed to load recent thread messages for agent ${agentId}:`, error);
     return [];

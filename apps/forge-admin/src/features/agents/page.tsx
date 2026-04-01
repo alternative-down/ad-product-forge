@@ -1342,7 +1342,7 @@ function AgentThreadCard(input: {
         )}
         {input.messages.map((message) => (
           <div
-            key={message.messageId}
+            key={message.id}
             className="rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4"
           >
             <div className="flex items-center justify-between gap-3">
@@ -1352,71 +1352,197 @@ function AgentThreadCard(input: {
               </div>
               <div className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</div>
             </div>
-            {message.content ? (
-              <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">{message.content}</div>
+            {message.threadId || message.resourceId ? (
+              <div className="mt-3 text-xs text-muted-foreground">
+                {message.threadId ? `threadId: ${message.threadId}` : null}
+                {message.threadId && message.resourceId ? ' · ' : null}
+                {message.resourceId ? `resourceId: ${message.resourceId}` : null}
+              </div>
             ) : null}
-            {message.reasoning ? (
-              <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
-                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-                  Reasoning / Thinking
-                </summary>
-                <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
-                  {message.reasoning}
-                </div>
-              </details>
-            ) : null}
-            {message.toolCalls.map((toolCall) => (
-              <details
-                key={`${message.messageId}:${toolCall.toolCallId}:call`}
-                className="mt-3 rounded-lg border border-border bg-background px-3 py-2"
-              >
-                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-                  Tool call: {toolCall.toolName}
-                </summary>
-                <div className="mt-3 space-y-2 text-sm">
-                  <div className="text-xs text-muted-foreground">State: {toolCall.state}</div>
-                  <ThreadJsonBlock label="Args" value={toolCall.args} />
-                </div>
-              </details>
-            ))}
-            {message.toolResults.map((toolResult) => (
-              <details
-                key={`${message.messageId}:${toolResult.toolCallId}:result`}
-                className="mt-3 rounded-lg border border-border bg-background px-3 py-2"
-              >
-                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-                  Tool result: {toolResult.toolName}
-                </summary>
-                <div className="mt-3 space-y-2 text-sm">
-                  <ThreadJsonBlock label="Args" value={toolResult.args} />
-                  <ThreadJsonBlock label="Result" value={toolResult.result} />
-                </div>
-              </details>
-            ))}
-            {message.otherParts.map((part, index) => (
-              <details
-                key={`${message.messageId}:${part.type}:${index}`}
-                className="mt-3 rounded-lg border border-border bg-background px-3 py-2"
-              >
-                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-                  {part.type}: {part.summary}
-                </summary>
-                <div className="mt-3 space-y-2 text-sm">
-                  <ThreadJsonBlock label="Data" value={part.data} />
-                </div>
-              </details>
-            ))}
-            {!message.content &&
-            !message.reasoning &&
-            message.toolCalls.length === 0 &&
-            message.toolResults.length === 0 &&
-            message.otherParts.length === 0 ? (
+            <ThreadMessageContent content={message.content} messageId={message.id} />
+            {message.content.parts.length === 0 &&
+            !message.content.content &&
+            !message.content.reasoning &&
+            !message.content.toolInvocations &&
+            !message.content.annotations &&
+            !message.content.metadata &&
+            !message.content.providerMetadata &&
+            !message.content.experimental_attachments ? (
               <div className="mt-3 text-sm text-muted-foreground">—</div>
             ) : null}
           </div>
         ))}
       </div>
     </Card>
+  );
+}
+
+function ThreadMessageContent(input: {
+  content: AgentDetail['recentThreadMessages'][number]['content'];
+  messageId: string;
+}) {
+  const textParts = input.content.parts.filter(
+    (part): part is Extract<(typeof input.content.parts)[number], { type: 'text'; text: string }> =>
+      part.type === 'text' && typeof part.text === 'string' && part.text.trim().length > 0,
+  );
+  const hasVisibleTextParts = textParts.length > 0;
+
+  return (
+    <>
+      {!hasVisibleTextParts && typeof input.content.content === 'string' && input.content.content.trim() ? (
+        <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">{input.content.content.trim()}</div>
+      ) : null}
+      {input.content.parts.map((part, index) => (
+        <ThreadMessagePartCard
+          key={`${input.messageId}:${part.type}:${index}`}
+          part={part}
+        />
+      ))}
+      {input.content.toolInvocations && input.content.toolInvocations.length > 0 ? (
+        <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            content.toolInvocations
+          </summary>
+          <div className="mt-3">
+            <ThreadJsonBlock label="toolInvocations" value={input.content.toolInvocations} />
+          </div>
+        </details>
+      ) : null}
+      {input.content.annotations && input.content.annotations.length > 0 ? (
+        <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            content.annotations
+          </summary>
+          <div className="mt-3">
+            <ThreadJsonBlock label="annotations" value={input.content.annotations} />
+          </div>
+        </details>
+      ) : null}
+      {input.content.experimental_attachments && input.content.experimental_attachments.length > 0 ? (
+        <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            content.experimental_attachments
+          </summary>
+          <div className="mt-3">
+            <ThreadJsonBlock label="experimental_attachments" value={input.content.experimental_attachments} />
+          </div>
+        </details>
+      ) : null}
+      {input.content.metadata ? (
+        <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            content.metadata
+          </summary>
+          <div className="mt-3">
+            <ThreadJsonBlock label="metadata" value={input.content.metadata} />
+          </div>
+        </details>
+      ) : null}
+      {input.content.providerMetadata ? (
+        <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            content.providerMetadata
+          </summary>
+          <div className="mt-3">
+            <ThreadJsonBlock label="providerMetadata" value={input.content.providerMetadata} />
+          </div>
+        </details>
+      ) : null}
+    </>
+  );
+}
+
+function ThreadMessagePartCard(input: {
+  part: AgentDetail['recentThreadMessages'][number]['content']['parts'][number];
+}) {
+  const part = input.part;
+
+  if (part.type === 'text') {
+    return (
+      <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
+        {part.text}
+      </div>
+    );
+  }
+
+  if (part.type === 'reasoning') {
+    return (
+      <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+          Reasoning / Thinking
+        </summary>
+        <div className="mt-3 whitespace-pre-wrap text-sm text-foreground">
+          {part.reasoning}
+        </div>
+      </details>
+    );
+  }
+
+  if (part.type === 'tool-invocation') {
+    const invocation = part.toolInvocation;
+    const isResult = invocation.state === 'result';
+
+    return (
+      <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+          {isResult ? 'Tool result' : 'Tool call'}: {invocation.toolName}
+        </summary>
+        <div className="mt-3 space-y-2 text-sm">
+          <div className="text-xs text-muted-foreground">State: {invocation.state}</div>
+          <ThreadJsonBlock label="toolInvocation" value={invocation} />
+        </div>
+      </details>
+    );
+  }
+
+  if (part.type === 'source') {
+    return (
+      <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+          source: {part.source.title?.trim() || part.source.url}
+        </summary>
+        <div className="mt-3 space-y-2 text-sm">
+          <ThreadJsonBlock label="source" value={part.source} />
+        </div>
+      </details>
+    );
+  }
+
+  if (part.type === 'file') {
+    return (
+      <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+          file: {part.mimeType}
+        </summary>
+        <div className="mt-3 space-y-2 text-sm">
+          <ThreadJsonBlock label="file" value={{ mimeType: part.mimeType }} />
+        </div>
+      </details>
+    );
+  }
+
+  if (part.type === 'step-start') {
+    return (
+      <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+          step-start
+        </summary>
+        <div className="mt-3 space-y-2 text-sm">
+          <ThreadJsonBlock label="part" value={part} />
+        </div>
+      </details>
+    );
+  }
+
+  return (
+    <details className="mt-3 rounded-lg border border-border bg-background px-3 py-2">
+      <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+        {part.type}
+      </summary>
+      <div className="mt-3 space-y-2 text-sm">
+        <ThreadJsonBlock label="part" value={part} />
+      </div>
+    </details>
   );
 }
 
