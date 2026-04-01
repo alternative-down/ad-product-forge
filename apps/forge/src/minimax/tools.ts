@@ -244,7 +244,7 @@ export function createMiniMaxTools(
         'Turn text into a speech audio file with MiniMax. You can use plain text, newline breaks between paragraphs, pause markers like <#1.5#>, and interjection tags such as (laughs) or (sighs) when using the 2.8 speech models. The generated file is saved in your workspace and the tool returns the saved path.',
       inputSchema: z.object({
         text: z.string().min(1).describe('The text to speak. Keep it under 10,000 characters. Use newline breaks for paragraphs, pause markers like <#1.5#> for pauses in seconds, and interjection tags like (laughs), (sighs), or (coughs) when you want those effects.'),
-        voice_id: z.string().nullish().describe('Optional voiceId. If omitted, the default voice is English_expressive_narrator. Use list_minimax_voices if you want to choose another voice.'),
+        voice_id: z.string().nullish().describe('Optional voiceId. If omitted, the default voice is Portuguese_CaptivatingStoryteller. Use list_minimax_voices if you want to choose another voice.'),
         speed: z.number().nullish().describe('Optional speaking speed. Default is 1.'),
         volume: z.number().nullish().describe('Optional voice volume. Default is 1.'),
         pitch: z.number().nullish().describe('Optional voice pitch. Default is 0.'),
@@ -257,7 +257,7 @@ export function createMiniMaxTools(
           const result = await minimax.textToSpeech({
             text: input.text,
             voiceSetting: {
-              voiceId: input.voice_id ?? 'English_expressive_narrator',
+              voiceId: input.voice_id ?? 'Portuguese_CaptivatingStoryteller',
               speed: input.speed ?? undefined,
               volume: input.volume ?? undefined,
               pitch: input.pitch ?? undefined,

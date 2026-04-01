@@ -226,7 +226,7 @@ export class MiniMaxClient {
         language_boost: options.languageBoost,
         output_format: 'hex',
         voice_setting: {
-          voice_id: options.voiceSetting?.voiceId ?? 'English_expressive_narrator',
+          voice_id: options.voiceSetting?.voiceId ?? 'Portuguese_CaptivatingStoryteller',
           speed: options.voiceSetting?.speed ?? 1,
           vol: options.voiceSetting?.volume ?? 1,
           pitch: options.voiceSetting?.pitch ?? 0,
