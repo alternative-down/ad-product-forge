@@ -464,7 +464,7 @@ export function createAgentScheduleManager(input: {
       content: createWakeContent({
         content: scheduleRecord.kind === 'agent'
           ? scheduleRecord.content
-          : createHeartbeatWakeInstruction(scheduleRecord.agentId),
+          : createHeartbeatWakeInstruction(),
       }),
       timestamp: fireDate.getTime(),
     });
@@ -564,9 +564,9 @@ function createWakeContent(input: {
   return input.content.trim();
 }
 
-function createHeartbeatWakeInstruction(agentId: string) {
+function createHeartbeatWakeInstruction() {
   return [
-    `Heartbeat triggered for ${agentId}.`,
+    'Heartbeat triggered.',
     'Use this run to re-orient yourself in the current operational state.',
     'Check your unread conversations, unread notifications, pending schedules, and any unresolved work you may have left behind in earlier runs.',
     'If you find pending work, inspect it with tools and act on it. If nothing requires action, stop cleanly.',
