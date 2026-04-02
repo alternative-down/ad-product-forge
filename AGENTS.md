@@ -21,8 +21,9 @@
 - Keep naming literal and obvious.
 
 ## Forge Admin Frontend
+- Follow [docs/design-system/forge-admin-ui-system.md](./docs/design-system/forge-admin-ui-system.md) as the design source of truth for the new Forge Admin UI.
 - Avoid cards and technical explanatory text in the admin UI unless they are truly necessary for the task.
-- Admin UI should be minimal brutalist: clean, restrained, and without decorative elements beyond what is strictly necessary.
+- Admin UI should be light, friendly, and clear. Avoid enterprise, industrial, and cinematic aesthetics.
 - Admin routes must use directory-based file routing with `route.tsx` and `index.tsx` inside each route directory. Do not model routes with filename-based route modules when creating or refactoring admin routes.
 - Prefer using existing `shadcn/ui` components whenever possible.
 - Do not modify the generated `shadcn/ui` components in their own folder. If a variation is needed, create a separate wrapper/component and apply the variation there.
