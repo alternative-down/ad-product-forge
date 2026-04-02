@@ -207,17 +207,22 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
 
     if (isLastStep && !this.memoryAgentRunning && this.memoryAgent) {
       this.memoryAgentRunning = true;
-      // Fire-and-forget: call memory agent to organize observations
-      this.memoryAgent
-        .generate('Review observations and the current memory directory, improve the organization and quality of memory, consolidate new observations into memory, remove redundancy when appropriate, and archive processed observation files into archived. Use workspace-relative paths only.', {
-          maxSteps: 1000,
-        })
-        .finally(() => {
-          this.memoryAgentRunning = false;
-        })
-      .catch((error: unknown) => {
+      try {
+        // Fire-and-forget: call memory agent to organize observations
+        this.memoryAgent
+          .generate('Review observations and the current memory directory, improve the organization and quality of memory, consolidate new observations into memory, remove redundancy when appropriate, and archive processed observation files into archived. Use workspace-relative paths only.', {
+            maxSteps: 1000,
+          })
+          .catch((error: unknown) => {
+            forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
+          })
+          .finally(() => {
+            this.memoryAgentRunning = false;
+          });
+      } catch (error) {
+        this.memoryAgentRunning = false;
         forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
-      });
+      }
     }
 
     return args.messageList;
