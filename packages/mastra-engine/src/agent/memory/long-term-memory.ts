@@ -67,7 +67,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     this.workspace = new WorkspaceRuntime({
       autoSync: true,
       bm25: true,
-      autoIndexPaths: ['observations', 'memory'],
+      autoIndexPaths: ['/observations', '/memory'],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({ basePath: memoryPath }),
       vectorStore: this.vectorStore,
@@ -79,7 +79,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       id: toMastraSafeIdentifier(`${this.id}_agent`),
       name: 'Memory Consolidation Agent',
       instructions:
-        'You are the unconscious of an LLM agent responsible for organizing, inferring, maintaining, and improving long-term memory from raw data. You have access to three directories inside the workspace: memory (organized knowledge), observations (raw observations), and archived (archived observations). Always use workspace-relative paths without a leading slash. Start by listing observations and memory using list_files so you understand both the new raw material and the current organized memory base. Process new observation files, extract insights, learnings, processes, and key information, then write or update organized files in memory with meaningful names. Also review existing memory files to improve structure, merge duplicates, remove low-value or obsolete information, clarify learnings, and reorganize knowledge when the current structure can be made better. Move processed observation files to archived after incorporating them. IMPORTANT: Always check with list_files to see what exists before reading, never attempt to read_file on a directory path, and check if a file exists before writing with overwrite:false. Use overwrite:true when updating existing files.',
+        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to list the contents of /observations first using list_files, then read only the FILES (not directories), extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed files to /archived. IMPORTANT: Always check with list_files to see what exists before reading, and never attempt to read_file on a directory path (IsDirectoryError), and check if a file exists before writing with overwrite:false (FileExistsError). Use overwrite:true when updating existing files.',
       model: this.omModel,
       workspace: this.workspace,
     });
@@ -209,7 +209,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       this.memoryAgentRunning = true;
       // Fire-and-forget: call memory agent to organize observations
       this.memoryAgent
-        .generate('Review observations and the current memory directory, improve the organization and quality of memory, consolidate new observations into memory, remove redundancy when appropriate, and archive processed observation files into archived. Use workspace-relative paths only.', {
+        .generate('Review the /observations directory, organize insights into /memory, and archive processed files in /archived.', {
           maxSteps: 1000,
         })
         .finally(() => {
@@ -329,7 +329,14 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const recentMessages = args.messages
       .filter((message) => message.role !== 'system')
       .slice(-this.maxRecentRecallMessages)
-      .map((message) => this.extractMessageRecallText(message));
+      .map((message) =>
+        [
+          this.extractMessageContentText(message),
+          typeof message.content.reasoning === 'string' ? message.content.reasoning : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
 
     const recentSteps = args.steps.slice(-this.maxRecentRecallMessages).map((step) =>
       [
@@ -361,98 +368,8 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     return parts.join('\n').trim();
   }
 
-  private extractMessageRecallText(message: MastraDBMessage) {
-    const sections = [
-      this.extractMessageContentText(message),
-      this.extractMessageReasoningText(message),
-      this.extractMessageToolText(message),
-    ].filter(Boolean);
-
-    return sections.join('\n').trim();
-  }
-
-  private extractMessageReasoningText(message: MastraDBMessage) {
-    const topLevelReasoning =
-      typeof message.content.reasoning === 'string' ? message.content.reasoning.trim() : '';
-
-    const partReasoning = message.content.parts
-      .flatMap((part) => {
-        if (!this.isReasoningMessagePart(part)) {
-          return [];
-        }
-
-        const detailText = part.details
-          .filter(
-            (
-              detail,
-            ): detail is Extract<typeof part.details[number], { type: 'text'; text: string }> =>
-              detail.type === 'text' &&
-              typeof detail.text === 'string' &&
-              detail.text.trim().length > 0,
-          )
-          .map((detail) => detail.text.trim())
-          .join('\n')
-          .trim();
-
-        const reasoningText = part.reasoning.trim();
-
-        return [reasoningText || detailText].filter(Boolean);
-      })
-      .join('\n')
-      .trim();
-
-    return [topLevelReasoning, partReasoning].filter(Boolean).join('\n').trim();
-  }
-
-  private extractMessageToolText(message: MastraDBMessage) {
-    const partInvocations = message.content.parts
-      .flatMap((part) => {
-        if (!this.isToolInvocationMessagePart(part)) {
-          return [];
-        }
-
-        const invocation = part.toolInvocation;
-        const sections = [
-          invocation.toolName,
-          this.extractValueText('args' in invocation ? invocation.args : null),
-          invocation.state === 'result' ? this.extractValueText(invocation.result) : '',
-        ].filter(Boolean);
-
-        return sections.length > 0 ? [sections.join('\n')] : [];
-      })
-      .join('\n')
-      .trim();
-
-    const topLevelInvocations = (message.content.toolInvocations ?? [])
-      .flatMap((invocation) => {
-        const sections = [
-          invocation.toolName,
-          this.extractValueText('args' in invocation ? invocation.args : null),
-          invocation.state === 'result' ? this.extractValueText(invocation.result) : '',
-        ].filter(Boolean);
-
-        return sections.length > 0 ? [sections.join('\n')] : [];
-      })
-      .join('\n')
-      .trim();
-
-    return [partInvocations, topLevelInvocations].filter(Boolean).join('\n').trim();
-  }
-
   private isTextMessagePart(part: MastraMessagePart): part is MastraMessagePart & { type: 'text'; text: string } {
     return part.type === 'text' && typeof part.text === 'string';
-  }
-
-  private isReasoningMessagePart(
-    part: MastraMessagePart,
-  ): part is Extract<MastraMessagePart, { type: 'reasoning'; reasoning: string; details: Array<{ type: string }> }> {
-    return part.type === 'reasoning';
-  }
-
-  private isToolInvocationMessagePart(
-    part: MastraMessagePart,
-  ): part is Extract<MastraMessagePart, { type: 'tool-invocation' }> {
-    return part.type === 'tool-invocation';
   }
 
   private getThreadContext(
