@@ -19,6 +19,7 @@ export function AccessGate(input: {
             input.onSave(value);
           }}
         >
+          <div className="text-center text-xl font-semibold tracking-[-0.04em]">Forge</div>
           <Input
             type="password"
             value={value}
