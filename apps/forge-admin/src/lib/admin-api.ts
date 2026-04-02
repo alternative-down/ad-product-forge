@@ -1,5 +1,7 @@
 const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
 
+import { getStoredAdminSecret } from '@/lib/admin-secret';
+
 function stripTrailingSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
@@ -36,6 +38,50 @@ function buildApiUrl(path: string) {
   }
 
   return `${baseUrl}${path}`;
+}
+
+async function request<TResponse>(path: string, init?: RequestInit) {
+  const secret = getStoredAdminSecret();
+  const response = await fetch(buildApiUrl(path), {
+    ...init,
+    headers: {
+      'content-type': 'application/json',
+      ...(secret ? { [ADMIN_API_KEY_HEADER]: secret } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    let message = 'Não foi possível concluir a operação.';
+
+    try {
+      const payload = (await response.json()) as { error?: string };
+      message = payload.error ?? message;
+    } catch {
+      // Keep default message.
+    }
+
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<TResponse>;
+}
+
+export type SystemSettings = {
+  companyName: string;
+  companyContext: string;
+  stepDelayEnabled: boolean;
+};
+
+export function getSystemSettings() {
+  return request<SystemSettings>('/admin/system/settings');
+}
+
+export function upsertSystemSettings(input: SystemSettings) {
+  return request<SystemSettings>('/admin/system/settings/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export async function validateAdminSecret(secret: string) {
