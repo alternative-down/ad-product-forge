@@ -67,7 +67,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     this.workspace = new WorkspaceRuntime({
       autoSync: true,
       bm25: true,
-      autoIndexPaths: ['/observations', '/memory'],
+      autoIndexPaths: ['observations', 'memory'],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({ basePath: memoryPath }),
       vectorStore: this.vectorStore,
@@ -79,7 +79,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       id: toMastraSafeIdentifier(`${this.id}_agent`),
       name: 'Memory Consolidation Agent',
       instructions:
-        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories: /memory (organized knowledge), /observations (raw observations), /archived (archived observations). Your task is to list the contents of /observations first using list_files, then read only the FILES (not directories), extract insights, learnings, processes, and key information, create organized files in /memory with meaningful names, and move processed files to /archived. IMPORTANT: Always check with list_files to see what exists before reading, and never attempt to read_file on a directory path (IsDirectoryError), and check if a file exists before writing with overwrite:false (FileExistsError). Use overwrite:true when updating existing files.',
+        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories inside the workspace: memory (organized knowledge), observations (raw observations), and archived (archived observations). Always use workspace-relative paths without a leading slash. Your task is to list the contents of observations first using list_files, then read only the files, extract insights, learnings, processes, and key information, create organized files in memory with meaningful names, and move processed files to archived. IMPORTANT: Always check with list_files to see what exists before reading, never attempt to read_file on a directory path, and check if a file exists before writing with overwrite:false. Use overwrite:true when updating existing files.',
       model: this.omModel,
       workspace: this.workspace,
     });
@@ -209,7 +209,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       this.memoryAgentRunning = true;
       // Fire-and-forget: call memory agent to organize observations
       this.memoryAgent
-        .generate('Review the /observations directory, organize insights into /memory, and archive processed files in /archived.', {
+        .generate('Review the observations directory, organize insights into memory, and archive processed files in archived. Use workspace-relative paths only.', {
           maxSteps: 1000,
         })
         .finally(() => {
