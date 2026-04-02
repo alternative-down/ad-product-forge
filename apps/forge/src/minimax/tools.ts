@@ -202,6 +202,7 @@ export function createMiniMaxTools(
   allowedToolIds?: Set<string> | null,
 ) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
+  const videoToolEnabled = false;
 
   if (!allowedToolIds || allowedToolIds.has('list_minimax_voices')) {
     tools.list_minimax_voices = createTool({
@@ -376,7 +377,7 @@ export function createMiniMaxTools(
     });
   }
 
-  if (!allowedToolIds || allowedToolIds.has('minimax_video')) {
+  if (videoToolEnabled && (!allowedToolIds || allowedToolIds.has('minimax_video'))) {
     tools.minimax_video = createTool({
       id: 'minimax_video',
       description:

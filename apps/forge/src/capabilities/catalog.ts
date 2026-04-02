@@ -74,17 +74,12 @@ export const forgeCustomToolIds = [
   'list_agent_tasks',
   'cancel_agent_task',
   'update_agent_task',
-  'list_agent_functions',
-  'create_agent_function',
-  'update_agent_function',
-  'delete_agent_function',
   'list_agent_roles',
   'create_agent_role',
   'update_agent_role',
   'delete_agent_role',
-  'assign_role_to_function',
-  'change_agent_function',
-  'change_own_function',
+  'change_agent_role',
+  'change_own_role',
   'list_role_tool_permissions',
   'manage_role_tool_permissions',
   'list_role_workflow_permissions',
@@ -93,7 +88,6 @@ export const forgeCustomToolIds = [
   'list_minimax_voices',
   'minimax_tts',
   'minimax_image',
-  'minimax_video',
 ] as const;
 
 export const forgeWorkflowIds = [

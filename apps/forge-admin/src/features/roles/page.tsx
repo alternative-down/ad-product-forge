@@ -6,17 +6,11 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import {
   addRoleToolPermission,
   addRoleWorkflowPermission,
-  addRoleToFunction,
-  createFunction,
   createRole,
-  deleteFunction,
   deleteRole,
-  listFunctions,
   listRoles,
-  removeRoleFromFunction,
   removeRoleToolPermission,
   removeRoleWorkflowPermission,
-  updateFunction,
   updateRole,
 } from '../../lib/api';
 import { Button } from '../../components/ui/button';
@@ -26,7 +20,6 @@ import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 import { PageHeader } from '../../components/layout/page-header';
 import { WorkspaceCanvas } from '../../components/layout/section-nav';
-import { SegmentedTabs } from '../../components/ui/segmented-tabs';
 
 type RoleDraft = {
   name: string;
@@ -35,30 +28,15 @@ type RoleDraft = {
   workflowIds: string[];
 };
 
-type FunctionDraft = {
-  name: string;
-  description: string;
-  roleIds: string[];
-};
-
 export function RolesPage() {
-  return <CapabilitiesWorkspacePage mode="directory" />;
+  return <RolesWorkspacePage />;
 }
 
 export function RoleDetailPage(input: { roleId: string }) {
-  return <CapabilitiesWorkspacePage mode="detail" section="roles" roleId={input.roleId} />;
+  return <RolesWorkspacePage roleId={input.roleId} />;
 }
 
-export function FunctionDetailPage(input: { functionId: string }) {
-  return <CapabilitiesWorkspacePage mode="detail" section="functions" functionId={input.functionId} />;
-}
-
-function CapabilitiesWorkspacePage(input: {
-  mode: 'directory' | 'detail';
-  section?: 'roles' | 'functions';
-  roleId?: string;
-  functionId?: string;
-}) {
+function RolesWorkspacePage(input: { roleId?: string }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [roleDraft, setRoleDraft] = useState<RoleDraft | null>(null);
@@ -68,24 +46,12 @@ function CapabilitiesWorkspacePage(input: {
     toolIds: [],
     workflowIds: [],
   });
-  const [functionDrafts, setFunctionDrafts] = useState<Record<string, FunctionDraft>>({});
-  const [newFunctionDraft, setNewFunctionDraft] = useState<FunctionDraft>({
-    name: '',
-    description: '',
-    roleIds: [],
-  });
 
   const rolesQuery = useQuery({
     queryKey: ['admin', 'roles'],
     queryFn: listRoles,
   });
-  const functionsQuery = useQuery({
-    queryKey: ['admin', 'functions'],
-    queryFn: listFunctions,
-  });
-
   const selectedRole = rolesQuery.data?.items.find((role) => role.roleId === input.roleId) ?? null;
-  const selectedFunction = functionsQuery.data?.find((item) => item.functionId === input.functionId) ?? null;
   const selectedRoleDraft = selectedRole
     ? roleDraft && selectedRole.roleId === input.roleId
       ? roleDraft
@@ -96,6 +62,7 @@ function CapabilitiesWorkspacePage(input: {
           workflowIds: selectedRole.workflowIds,
         }
     : null;
+
   const createRoleMutation = useMutation({
     mutationFn: createRole,
     onSuccess: async (result) => {
@@ -106,56 +73,54 @@ function CapabilitiesWorkspacePage(input: {
         workflowIds: [],
       });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
-      void navigate(buildCapabilitiesLocation({ section: 'roles', roleId: result.roleId }));
+      void navigate({ to: '/roles/roles/$roleId', params: { roleId: result.roleId } });
     },
   });
+
   const updateRoleMutation = useMutation({
-    mutationFn: async (input: {
+    mutationFn: async (next: {
       roleId: string;
       name: string;
       description: string | null;
-      nextToolIds: string[];
-      nextWorkflowIds: string[];
       currentToolIds: string[];
       currentWorkflowIds: string[];
+      nextToolIds: string[];
+      nextWorkflowIds: string[];
     }) => {
       await updateRole({
-        roleId: input.roleId,
-        name: input.name,
-        description: input.description,
+        roleId: next.roleId,
+        name: next.name,
+        description: next.description,
       });
 
-      const toolAdds = input.nextToolIds.filter((toolId) => !input.currentToolIds.includes(toolId));
-      const toolRemovals = input.currentToolIds.filter((toolId) => !input.nextToolIds.includes(toolId));
-      const workflowAdds = input.nextWorkflowIds.filter(
-        (workflowId) => !input.currentWorkflowIds.includes(workflowId),
-      );
-      const workflowRemovals = input.currentWorkflowIds.filter(
-        (workflowId) => !input.nextWorkflowIds.includes(workflowId),
-      );
+      const toolAdds = next.nextToolIds.filter((toolId) => !next.currentToolIds.includes(toolId));
+      const toolRemovals = next.currentToolIds.filter((toolId) => !next.nextToolIds.includes(toolId));
+      const workflowAdds = next.nextWorkflowIds.filter((workflowId) => !next.currentWorkflowIds.includes(workflowId));
+      const workflowRemovals = next.currentWorkflowIds.filter((workflowId) => !next.nextWorkflowIds.includes(workflowId));
 
       for (const toolId of toolAdds) {
-        await addRoleToolPermission(input.roleId, toolId);
+        await addRoleToolPermission(next.roleId, toolId);
       }
 
       for (const toolId of toolRemovals) {
-        await removeRoleToolPermission(input.roleId, toolId);
+        await removeRoleToolPermission(next.roleId, toolId);
       }
 
       for (const workflowId of workflowAdds) {
-        await addRoleWorkflowPermission(input.roleId, workflowId);
+        await addRoleWorkflowPermission(next.roleId, workflowId);
       }
 
       for (const workflowId of workflowRemovals) {
-        await removeRoleWorkflowPermission(input.roleId, workflowId);
+        await removeRoleWorkflowPermission(next.roleId, workflowId);
       }
     },
-    onSuccess: async (_, input) => {
+    onSuccess: async (_, next) => {
       setRoleDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
-      void navigate(buildCapabilitiesLocation({ section: 'roles', roleId: input.roleId }));
+      void navigate({ to: '/roles/roles/$roleId', params: { roleId: next.roleId } });
     },
   });
+
   const deleteRoleMutation = useMutation({
     mutationFn: deleteRole,
     onSuccess: async (_, roleId) => {
@@ -166,381 +131,194 @@ function CapabilitiesWorkspacePage(input: {
         queryFn: listRoles,
       });
       const nextRoleId = nextRoles.items.find((role) => role.roleId !== roleId)?.roleId;
+
       if (nextRoleId) {
-        void navigate(buildCapabilitiesLocation({ section: 'roles', roleId: nextRoleId, replace: true }));
+        void navigate({ to: '/roles/roles/$roleId', params: { roleId: nextRoleId }, replace: true });
         return;
       }
 
       void navigate({ to: '/roles', replace: true });
     },
   });
-  const createFunctionMutation = useMutation({
-    mutationFn: createFunction,
-    onSuccess: async () => {
-      setNewFunctionDraft({
-        name: '',
-        description: '',
-        roleIds: [],
-      });
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] });
-    },
-  });
-  const updateFunctionMutation = useMutation({
-    mutationFn: async (input: {
-      functionId: string;
-      name: string;
-      description: string | null;
-      nextRoleIds: string[];
-      currentRoleIds: string[];
-    }) => {
-      await updateFunction({
-        functionId: input.functionId,
-        name: input.name,
-        description: input.description,
-      });
 
-      const roleAdds = input.nextRoleIds.filter((roleId) => !input.currentRoleIds.includes(roleId));
-      const roleRemovals = input.currentRoleIds.filter(
-        (roleId) => !input.nextRoleIds.includes(roleId),
-      );
-
-      for (const roleId of roleAdds) {
-        await addRoleToFunction(input.functionId, roleId);
-      }
-
-      for (const roleId of roleRemovals) {
-        await removeRoleFromFunction(input.functionId, roleId);
-      }
-    },
-    onSuccess: async (_, input) => {
-      setFunctionDrafts((current) => {
-        const next = { ...current };
-        delete next[input.functionId];
-        return next;
-      });
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] });
-    },
-  });
-  const deleteFunctionMutation = useMutation({
-    mutationFn: deleteFunction,
-    onSuccess: async (_, functionId) => {
-      setFunctionDrafts((current) => {
-        const next = { ...current };
-        delete next[functionId];
-        return next;
-      });
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] });
-    },
-  });
   const toolGroups = useMemo(
     () => groupIds(rolesQuery.data?.availableToolIds ?? []),
     [rolesQuery.data?.availableToolIds],
   );
-  const selectedTab = input.section ?? 'roles';
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Capabilities"
-        title="Capability graph"
-        description="Roles define permissions. Functions compose roles. Keep one editor open at a time."
-        actions={
-          input.mode === 'detail' ? (
-            <Link
-              to="/roles"
-              className="inline-flex h-11 items-center justify-center rounded-md border border-[color:var(--panel-border-strong)] bg-[color:var(--panel-strong)] px-5 text-sm font-semibold text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
-            >
-              Back to capabilities
-            </Link>
-          ) : null
-        }
+        title="Roles"
+        description="Roles are the single capability layer. They define the tools and workflows each agent can use."
       />
 
-      {input.mode === 'directory' ? (
-        <WorkspaceCanvas
-          title="Capability areas"
-          description="Open one capability concern at a time: roles or functions."
-        >
-          <div className="grid gap-4 md:grid-cols-2">
-            <CapabilityEntryLink
-              title="Roles"
-              detail={`${rolesQuery.data?.items.length ?? 0} role definitions`}
-              metric={`${rolesQuery.data?.items.reduce((total, role) => total + role.assignedFunctionCount, 0) ?? 0} function assignments`}
-              to={buildCapabilitiesLocation({ section: 'roles', roleId: rolesQuery.data?.items[0]?.roleId })}
-            />
-            <CapabilityEntryLink
-              title="Functions"
-              detail={`${functionsQuery.data?.length ?? 0} function definitions`}
-              metric={`${functionsQuery.data?.reduce((total, item) => total + item.assignedAgentCount, 0) ?? 0} assigned agents`}
-              to={buildCapabilitiesLocation({ section: 'functions', functionId: functionsQuery.data?.[0]?.functionId })}
-            />
-          </div>
-        </WorkspaceCanvas>
-      ) : (
-      <div className="space-y-6">
-        <SegmentedTabs
-          value={selectedTab}
-          items={[
-            { value: 'roles', label: 'Roles', description: `${rolesQuery.data?.items.length ?? 0} role definitions` },
-            { value: 'functions', label: 'Functions', description: `${functionsQuery.data?.length ?? 0} function definitions` },
-          ]}
-          onChange={(tab) =>
-            void navigate(
-              tab === 'roles'
-                ? buildCapabilitiesLocation({
-                    section: 'roles',
-                    roleId: rolesQuery.data?.items[0]?.roleId ?? selectedRole?.roleId,
-                  })
-                : buildCapabilitiesLocation({
-                    section: 'functions',
-                    functionId: functionsQuery.data?.[0]?.functionId ?? selectedFunction?.functionId,
-                  }),
-            )
-          }
-        />
-
-        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <div className="space-y-4">
-            <Card className="overflow-hidden">
-              <div className="border-b border-[color:var(--panel-border)] px-4 py-4">
-                <h2 className="text-base font-semibold text-[color:var(--ink)]">
-                  {selectedTab === 'roles' ? 'Roles' : 'Functions'}
-                </h2>
-                <p className="mt-1 text-sm text-[color:var(--muted)]">
-                  {selectedTab === 'roles'
-                    ? 'Select one role to edit permissions and metadata.'
-                    : 'Select one function to edit composition and metadata.'}
-                </p>
-              </div>
-              <div className="max-h-[calc(100vh-18rem)] overflow-y-auto p-3">
-            {selectedTab === 'roles' && rolesQuery.isLoading && <PanelLoading label="Loading roles" />}
-            {selectedTab === 'roles' && rolesQuery.isError && <PanelError message={rolesQuery.error.message} />}
-            {selectedTab === 'roles' && rolesQuery.data?.items.map((role) => (
-              <Link
-                key={role.roleId}
-                to="/roles/roles/$roleId"
-                params={{ roleId: role.roleId }}
-                className={cn(
-                  'mb-2 block w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
-                  input.roleId === role.roleId
-                    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
-                )}
-              >
-                <div className="truncate font-semibold">{role.name}</div>
-                <div
+      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <Card className="overflow-hidden">
+            <div className="border-b border-[color:var(--panel-border)] px-4 py-4">
+              <h2 className="text-base font-semibold text-[color:var(--ink)]">Roles</h2>
+              <p className="mt-1 text-sm text-[color:var(--muted)]">
+                Select one role to edit identity and permissions.
+              </p>
+            </div>
+            <div className="max-h-[calc(100vh-18rem)] overflow-y-auto p-3">
+              {rolesQuery.isLoading && <PanelLoading label="Loading roles" />}
+              {rolesQuery.isError && <PanelError message={rolesQuery.error.message} />}
+              {rolesQuery.data?.items.map((role) => (
+                <Link
+                  key={role.roleId}
+                  to="/roles/roles/$roleId"
+                  params={{ roleId: role.roleId }}
                   className={cn(
-                    'mt-1 text-xs',
+                    'mb-2 block w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
                     input.roleId === role.roleId
-                      ? 'text-[color:var(--accent)]/80'
-                      : 'text-[color:var(--muted)]',
+                      ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
+                      : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
                   )}
                 >
-                  {role.assignedFunctionCount} function assignments
-                </div>
-              </Link>
-            ))}
-            {selectedTab === 'functions' && functionsQuery.isLoading && <PanelLoading label="Loading functions" />}
-            {selectedTab === 'functions' && functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
-            {selectedTab === 'functions' && functionsQuery.data?.map((item) => (
-              <Link
-                key={item.functionId}
-                to="/roles/functions/$functionId"
-                params={{ functionId: item.functionId }}
-                className={cn(
-                  'mb-2 block w-full rounded-md border px-4 py-4 text-left transition last:mb-0',
-                  input.functionId === item.functionId
-                    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
-                    : 'border-[color:var(--panel-border)] bg-white hover:border-[color:var(--panel-border-strong)]',
-                )}
-              >
-                <div className="truncate font-semibold">{item.name}</div>
-                <div
-                  className={cn(
-                    'mt-1 text-xs',
-                    input.functionId === item.functionId
-                      ? 'text-[color:var(--accent)]/80'
-                      : 'text-[color:var(--muted)]',
-                  )}
-                >
-                  {item.roleIds.length} roles
-                </div>
-              </Link>
-            ))}
-          </div>
-        </Card>
-
-            {selectedTab === 'roles' && <Card className="p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <Plus className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold text-foreground">Create role</h3>
-              </div>
-              <form
-                className="space-y-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  createRoleMutation.mutate({
-                    name: newRoleDraft.name,
-                    description: newRoleDraft.description || undefined,
-                  });
-                }}
-              >
-                <LabeledField label="Name">
-                  <Input
-                    value={newRoleDraft.name}
-                    onChange={(event) =>
-                      setNewRoleDraft({ ...newRoleDraft, name: event.target.value })
-                    }
-                    required
-                  />
-                </LabeledField>
-                <LabeledField label="Description">
-                  <Textarea
-                    value={newRoleDraft.description}
-                    onChange={(event) =>
-                      setNewRoleDraft({ ...newRoleDraft, description: event.target.value })
-                    }
-                  />
-                </LabeledField>
-                {createRoleMutation.error && <InlineError message={createRoleMutation.error.message} />}
-                <Button type="submit" disabled={createRoleMutation.isPending}>
-                  {createRoleMutation.isPending ? 'Creating...' : 'Create role'}
-                </Button>
-              </form>
-            </Card>}
-            {selectedTab === 'functions' && <Card className="p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <Plus className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold text-foreground">Create function</h3>
-              </div>
-              <form
-                className="space-y-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  createFunctionMutation.mutate({
-                    name: newFunctionDraft.name,
-                    description: newFunctionDraft.description || undefined,
-                  });
-                }}
-              >
-                <LabeledField label="Name">
-                  <Input
-                    value={newFunctionDraft.name}
-                    onChange={(event) => setNewFunctionDraft({ ...newFunctionDraft, name: event.target.value })}
-                    required
-                  />
-                </LabeledField>
-                <LabeledField label="Description">
-                  <Textarea
-                    value={newFunctionDraft.description}
-                    onChange={(event) => setNewFunctionDraft({ ...newFunctionDraft, description: event.target.value })}
-                  />
-                </LabeledField>
-                {createFunctionMutation.error ? <InlineError message={createFunctionMutation.error.message} /> : null}
-                <Button type="submit" disabled={createFunctionMutation.isPending}>
-                  {createFunctionMutation.isPending ? 'Creating...' : 'Create function'}
-                </Button>
-              </form>
-            </Card>}
-          </div>
-
-          <div className="space-y-6">
-        {functionsQuery.isLoading && <PanelLoading label="Loading functions" />}
-        {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
-
-        {selectedTab === 'roles' && selectedRole && rolesQuery.data && functionsQuery.data && selectedRoleDraft && (
-          <form
-            className="space-y-6"
-            onSubmit={(event) => {
-              event.preventDefault();
-              updateRoleMutation.mutate({
-                roleId: selectedRole.roleId,
-                name: selectedRoleDraft.name,
-                description: selectedRoleDraft.description || null,
-                nextToolIds: selectedRoleDraft.toolIds,
-                nextWorkflowIds: selectedRoleDraft.workflowIds,
-                currentToolIds: selectedRole.toolIds,
-                currentWorkflowIds: selectedRole.workflowIds,
-              });
-            }}
-          >
-            <WorkspaceCanvas
-              title={selectedRole.name}
-              description="Edit identity first, then tool and workflow permissions."
-            >
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <ReadOnlyField label="Functions" value={String(selectedRole.assignedFunctionCount)} />
-                <ReadOnlyField label="Tools" value={String(selectedRole.toolIds.length)} />
-                <ReadOnlyField label="Workflows" value={String(selectedRole.workflowIds.length)} />
-                <ReadOnlyField label="Role id" value={selectedRole.roleId} />
-              </div>
-            </WorkspaceCanvas>
-
-            <WorkspaceCanvas
-              title="Role identity"
-              description="Human-readable name and description for this role."
-            >
-              <div className="max-w-3xl space-y-4">
-                <LabeledField label="Role name">
-                  <Input
-                    value={selectedRoleDraft.name}
-                    onChange={(event) =>
-                      setRoleDraft({
-                        name: event.target.value,
-                        description: selectedRoleDraft.description,
-                        toolIds: selectedRoleDraft.toolIds,
-                        workflowIds: selectedRoleDraft.workflowIds,
-                      })
-                    }
-                    required
-                  />
-                </LabeledField>
-                <LabeledField label="Description">
-                  <Textarea
-                    value={selectedRoleDraft.description}
-                    onChange={(event) =>
-                      setRoleDraft({
-                        name: selectedRoleDraft.name,
-                        description: event.target.value,
-                        toolIds: selectedRoleDraft.toolIds,
-                        workflowIds: selectedRoleDraft.workflowIds,
-                      })
-                    }
-                  />
-                </LabeledField>
-                {(updateRoleMutation.error || deleteRoleMutation.error) && (
-                  <InlineError
-                    message={updateRoleMutation.error?.message ?? deleteRoleMutation.error?.message ?? ''}
-                  />
-                )}
-                <div className="flex gap-3">
-                  <Button type="submit" disabled={updateRoleMutation.isPending}>
-                    {updateRoleMutation.isPending ? 'Saving...' : 'Save role'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={deleteRoleMutation.isPending || selectedRole.assignedFunctionCount > 0}
-                    onClick={() => {
-                      deleteRoleMutation.mutate(selectedRole.roleId);
-                    }}
+                  <div className="truncate font-semibold">{role.name}</div>
+                  <div
+                    className={cn(
+                      'mt-1 text-xs',
+                      input.roleId === role.roleId
+                        ? 'text-[color:var(--accent)]/80'
+                        : 'text-[color:var(--muted)]',
+                    )}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete role
-                  </Button>
-                </div>
-              </div>
-            </WorkspaceCanvas>
+                    {role.assignedAgentCount} assigned agents
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Card>
 
-            <WorkspaceCanvas
-              title="Tool grants"
-              description="Tools this role is allowed to use."
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Plus className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-base font-semibold text-foreground">Create role</h3>
+            </div>
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                createRoleMutation.mutate({
+                  name: newRoleDraft.name,
+                  description: newRoleDraft.description || undefined,
+                });
+              }}
             >
-              <div className="space-y-4">
-                {Object.entries(toolGroups).map(([group, toolIds]) => (
-                  <PermissionGroup key={group} title={group}>
-                    {toolIds.map((toolId) => {
-                      return (
+              <LabeledField label="Name">
+                <Input
+                  value={newRoleDraft.name}
+                  onChange={(event) => setNewRoleDraft({ ...newRoleDraft, name: event.target.value })}
+                  required
+                />
+              </LabeledField>
+              <LabeledField label="Description">
+                <Textarea
+                  value={newRoleDraft.description}
+                  onChange={(event) => setNewRoleDraft({ ...newRoleDraft, description: event.target.value })}
+                />
+              </LabeledField>
+              {createRoleMutation.error && <InlineError message={createRoleMutation.error.message} />}
+              <Button type="submit" disabled={createRoleMutation.isPending}>
+                {createRoleMutation.isPending ? 'Creating...' : 'Create role'}
+              </Button>
+            </form>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          {selectedRole && selectedRoleDraft ? (
+            <form
+              className="space-y-6"
+              onSubmit={(event) => {
+                event.preventDefault();
+                updateRoleMutation.mutate({
+                  roleId: selectedRole.roleId,
+                  name: selectedRoleDraft.name,
+                  description: selectedRoleDraft.description || null,
+                  currentToolIds: selectedRole.toolIds,
+                  currentWorkflowIds: selectedRole.workflowIds,
+                  nextToolIds: selectedRoleDraft.toolIds,
+                  nextWorkflowIds: selectedRoleDraft.workflowIds,
+                });
+              }}
+            >
+              <WorkspaceCanvas
+                title={selectedRole.name}
+                description="Edit identity, then adjust tool and workflow permissions."
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <ReadOnlyField label="Assigned agents" value={String(selectedRole.assignedAgentCount)} />
+                  <ReadOnlyField label="Tools" value={String(selectedRole.toolIds.length)} />
+                  <ReadOnlyField label="Workflows" value={String(selectedRole.workflowIds.length)} />
+                  <ReadOnlyField label="Role id" value={selectedRole.roleId} />
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Role identity"
+                description="Name and description for this role."
+              >
+                <div className="max-w-3xl space-y-4">
+                  <LabeledField label="Role name">
+                    <Input
+                      value={selectedRoleDraft.name}
+                      onChange={(event) =>
+                        setRoleDraft({
+                          ...selectedRoleDraft,
+                          name: event.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </LabeledField>
+                  <LabeledField label="Description">
+                    <Textarea
+                      value={selectedRoleDraft.description}
+                      onChange={(event) =>
+                        setRoleDraft({
+                          ...selectedRoleDraft,
+                          description: event.target.value,
+                        })
+                      }
+                    />
+                  </LabeledField>
+                  {(updateRoleMutation.error || deleteRoleMutation.error) ? (
+                    <InlineError
+                      message={updateRoleMutation.error?.message ?? deleteRoleMutation.error?.message ?? ''}
+                    />
+                  ) : null}
+                  <div className="flex gap-3">
+                    <Button type="submit" disabled={updateRoleMutation.isPending}>
+                      {updateRoleMutation.isPending ? 'Saving...' : 'Save role'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={deleteRoleMutation.isPending || selectedRole.assignedAgentCount > 0}
+                      onClick={() => {
+                        deleteRoleMutation.mutate(selectedRole.roleId);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete role
+                    </Button>
+                  </div>
+                </div>
+              </WorkspaceCanvas>
+
+              <WorkspaceCanvas
+                title="Tool grants"
+                description="Tools this role is allowed to use."
+              >
+                <div className="space-y-4">
+                  {Object.entries(toolGroups).map(([group, toolIds]) => (
+                    <PermissionGroup key={group} title={group}>
+                      {toolIds.map((toolId) => (
                         <PermissionToggle
                           key={toolId}
                           label={toolId}
@@ -555,20 +333,18 @@ function CapabilitiesWorkspacePage(input: {
                             });
                           }}
                         />
-                      );
-                    })}
-                  </PermissionGroup>
-                ))}
-              </div>
-            </WorkspaceCanvas>
+                      ))}
+                    </PermissionGroup>
+                  ))}
+                </div>
+              </WorkspaceCanvas>
 
-            <WorkspaceCanvas
-              title="Workflow grants"
-              description="Workflows this role can trigger."
-            >
-              <PermissionGroup title="workflows">
-                {rolesQuery.data.availableWorkflowIds.map((workflowId) => {
-                  return (
+              <WorkspaceCanvas
+                title="Workflow grants"
+                description="Workflows this role can trigger."
+              >
+                <PermissionGroup title="workflows">
+                  {(rolesQuery.data?.availableWorkflowIds ?? []).map((workflowId) => (
                     <PermissionToggle
                       key={workflowId}
                       label={workflowId}
@@ -583,162 +359,18 @@ function CapabilitiesWorkspacePage(input: {
                         });
                       }}
                     />
-                  );
-                })}
-              </PermissionGroup>
-            </WorkspaceCanvas>
-          </form>
-        )}
-        {selectedTab === 'roles' && !selectedRole && !rolesQuery.isLoading && !rolesQuery.isError ? (
-          <WorkspaceCanvas
-            title="No role selected"
-            description="Create the first role from the left panel, or select one to edit permissions and metadata."
-          />
-        ) : null}
-
-        {selectedTab === 'functions' && functionsQuery.data && rolesQuery.data && selectedFunction && (
-          <div className="space-y-6">
-            <WorkspaceCanvas
-              title={selectedFunction.name}
-              description="Functions compose roles and are assigned to agents."
-            >
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <ReadOnlyField label="Assigned agents" value={String(selectedFunction.assignedAgentCount)} />
-                <ReadOnlyField label="Roles" value={String(selectedFunction.roleIds.length)} />
-                <ReadOnlyField label="Function id" value={selectedFunction.functionId} />
-                <ReadOnlyField label="Description" value={selectedFunction.description ?? '—'} />
-              </div>
-            </WorkspaceCanvas>
-
-            <form
-              className="space-y-6"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const draft = functionDrafts[selectedFunction.functionId] ?? {
-                  name: selectedFunction.name,
-                  description: selectedFunction.description ?? '',
-                  roleIds: selectedFunction.roleIds,
-                };
-
-                updateFunctionMutation.mutate({
-                  functionId: selectedFunction.functionId,
-                  name: draft.name,
-                  description: draft.description || null,
-                  nextRoleIds: draft.roleIds,
-                  currentRoleIds: selectedFunction.roleIds,
-                });
-              }}
-            >
-              {(() => {
-                const draft = functionDrafts[selectedFunction.functionId] ?? {
-                  name: selectedFunction.name,
-                  description: selectedFunction.description ?? '',
-                  roleIds: selectedFunction.roleIds,
-                };
-
-                return (
-                  <>
-                    <WorkspaceCanvas
-                      title="Function identity"
-                      description="Name and description of this function."
-                    >
-                      <div className="max-w-3xl space-y-4">
-                        <LabeledField label="Function name">
-                          <Input
-                            value={draft.name}
-                            onChange={(event) =>
-                              setFunctionDrafts({
-                                ...functionDrafts,
-                                [selectedFunction.functionId]: {
-                                  ...draft,
-                                  name: event.target.value,
-                                },
-                              })
-                            }
-                          />
-                        </LabeledField>
-                        <LabeledField label="Description">
-                          <Textarea
-                            value={draft.description}
-                            onChange={(event) =>
-                              setFunctionDrafts({
-                                ...functionDrafts,
-                                [selectedFunction.functionId]: {
-                                  ...draft,
-                                  description: event.target.value,
-                                },
-                              })
-                            }
-                          />
-                        </LabeledField>
-                      </div>
-                    </WorkspaceCanvas>
-
-                    <WorkspaceCanvas
-                      title="Role composition"
-                      description="Choose which roles compose this function."
-                    >
-                      <div className="grid gap-2 rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-4 md:grid-cols-2">
-                        {rolesQuery.data.items.map((role) => (
-                          <PermissionToggle
-                            key={role.roleId}
-                            label={role.name}
-                            checked={draft.roleIds.includes(role.roleId)}
-                            pending={updateFunctionMutation.isPending}
-                            onChange={() => {
-                              setFunctionDrafts({
-                                ...functionDrafts,
-                                [selectedFunction.functionId]: {
-                                  ...draft,
-                                  roleIds: draft.roleIds.includes(role.roleId)
-                                    ? draft.roleIds.filter((id) => id !== role.roleId)
-                                    : [...draft.roleIds, role.roleId],
-                                },
-                              });
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </WorkspaceCanvas>
-
-                    {(updateFunctionMutation.error || deleteFunctionMutation.error) ? (
-                      <InlineError
-                        message={updateFunctionMutation.error?.message ?? deleteFunctionMutation.error?.message ?? ''}
-                      />
-                    ) : null}
-
-                    <div className="flex gap-3">
-                      <Button type="submit" disabled={updateFunctionMutation.isPending}>
-                        {updateFunctionMutation.isPending ? 'Saving...' : 'Save function'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={deleteFunctionMutation.isPending || selectedFunction.assignedAgentCount > 0}
-                        onClick={() => {
-                          deleteFunctionMutation.mutate(selectedFunction.functionId);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete function
-                      </Button>
-                    </div>
-                  </>
-                );
-              })()}
+                  ))}
+                </PermissionGroup>
+              </WorkspaceCanvas>
             </form>
-          </div>
-        )}
-        {selectedTab === 'functions' && !selectedFunction && !functionsQuery.isLoading && !functionsQuery.isError ? (
-          <WorkspaceCanvas
-            title="No function selected"
-            description="Create the first function from the left panel, or select one to edit composition and metadata."
-          />
-        ) : null}
-      </div>
+          ) : (
+            <WorkspaceCanvas
+              title="No role selected"
+              description="Create the first role from the left panel, or select one to edit permissions and metadata."
+            />
+          )}
         </div>
       </div>
-      )}
     </div>
   );
 }
@@ -767,62 +399,6 @@ function PermissionToggle(input: {
   );
 }
 
-function CapabilityEntryLink(input: {
-  title: string;
-  detail: string;
-  metric: string;
-  to:
-    | { to: '/roles' }
-    | { to: '/roles/roles/$roleId'; params: { roleId: string } }
-    | { to: '/roles/functions/$functionId'; params: { functionId: string } }
-}) {
-  return (
-    <Link
-      to={input.to.to}
-      params={'params' in input.to ? input.to.params : undefined}
-      className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-strong)] px-5 py-5 transition hover:border-[color:var(--panel-border-strong)] hover:bg-[color:var(--panel)]"
-    >
-      <div className="text-lg font-semibold text-[color:var(--ink)]">{input.title}</div>
-      <div className="mt-2 text-sm text-[color:var(--muted)]">{input.detail}</div>
-      <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-        {input.metric}
-      </div>
-    </Link>
-  );
-}
-
-function buildCapabilitiesLocation(input:
-  | { section: 'roles'; roleId?: string; replace?: boolean }
-  | { section: 'functions'; functionId?: string; replace?: boolean }) {
-  if (input.section === 'roles') {
-    if (!input.roleId) {
-      return {
-        to: '/roles' as const,
-        replace: input.replace,
-      };
-    }
-
-    return {
-      to: '/roles/roles/$roleId' as const,
-      params: { roleId: input.roleId },
-      replace: input.replace,
-    };
-  }
-
-  if (!input.functionId) {
-    return {
-      to: '/roles' as const,
-      replace: input.replace,
-    };
-  }
-
-  return {
-    to: '/roles/functions/$functionId' as const,
-    params: { functionId: input.functionId },
-    replace: input.replace,
-  };
-}
-
 function groupIds(ids: string[]) {
   return ids.reduce<Record<string, string[]>>((groups, id) => {
     const group = getGroup(id);
@@ -849,12 +425,7 @@ function getGroup(value: string) {
     return 'finance';
   }
 
-  if (
-    value.includes('agent_function') ||
-    value.includes('agent_role') ||
-    value.includes('role_') ||
-    value.includes('workflow')
-  ) {
+  if (value.includes('agent_role') || value.includes('role_') || value.includes('workflow')) {
     return 'capabilities';
   }
 
@@ -901,5 +472,9 @@ function PanelLoading(input: { label: string }) {
 }
 
 function PanelError(input: { message: string }) {
-  return <Card className="border-red-200 bg-red-50 p-6 text-sm text-red-700">{input.message}</Card>;
+  return (
+    <Card className="border-red-200 bg-red-50 p-6 text-sm text-red-700">
+      {input.message}
+    </Card>
+  );
 }

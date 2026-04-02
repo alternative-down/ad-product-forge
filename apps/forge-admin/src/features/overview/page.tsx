@@ -64,8 +64,8 @@ export function OverviewPage() {
             to="/roles"
             icon={Shield}
             title="Capabilities"
-            detail="Roles, functions, tool grants, and workflow grants."
-            metric={`${overview.totals.functions} functions · ${overview.totals.roles} roles`}
+            detail="Roles, tool grants, and workflow grants."
+            metric={`${overview.totals.roles} roles`}
           />
         </div>
       </WorkspaceCanvas>

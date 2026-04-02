@@ -4,14 +4,6 @@ import { Button } from '../../../../components/ui/button';
 import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 
-const FUNCTION_LABELS: Record<string, string> = {
-  copywriter: 'Copywriter',
-  researcher: 'Researcher',
-  developer: 'Developer',
-  support: 'Support',
-  analyst: 'Analyst',
-};
-
 const MODEL_LABELS: Record<string, string> = {
   'gpt-4o': 'GPT-4o',
   'gpt-4o-mini': 'GPT-4o Mini',
@@ -80,8 +72,8 @@ export function Step4Review() {
               <div className="font-medium">{basicInfo.agentName}</div>
             </div>
             <div>
-              <span className="text-muted-foreground">Function:</span>
-              <div className="font-medium">{FUNCTION_LABELS[basicInfo.function]}</div>
+              <span className="text-muted-foreground">Role:</span>
+              <div className="font-medium">{basicInfo.role}</div>
             </div>
             {basicInfo.description && (
               <div className="col-span-2">

@@ -5,7 +5,7 @@ import type { Database } from '../database/index';
 import { forgeCustomToolIds, forgeWorkflowIds, hasToolPermission } from './catalog';
 import { createCapabilityStore } from './store';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
-import { changeAgentFunction, reloadAgentsForFunction, reloadAgentsForRole } from './runtime';
+import { changeAgentRole, reloadAgentsForRole } from './runtime';
 import { forgeDebug } from '@mastra-engine/core';
 
 const toolIdSchema = z.enum(forgeCustomToolIds);
@@ -20,130 +20,32 @@ export function createCapabilityTools(
   const capabilities = createCapabilityStore(db);
   const tools: Record<string, Tool<unknown, unknown>> = {};
 
-  if (hasToolPermission(allowedToolIds, 'list_agent_functions')) {
-    tools.list_agent_functions = createTool({
-      id: 'list_agent_functions',
-      description: 'List the functions available in the system. Use this when you need to inspect existing functions or get a functionId for updates, assignment, or switching.',
-      inputSchema: z.object({}),
-      execute: async () => {
-        forgeDebug('tools:capabilities', 'list_agent_functions called');
-        try {
-          const result = await capabilities.listFunctions();
-          forgeDebug('tools:capabilities', 'list_agent_functions result', {
-            count: result.length,
-            functions: result.map(f => ({ functionId: f.functionId, name: f.name, description: f.description, roleIds: f.roleIds })),
-          });
-          return result;
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          forgeDebug('tools:capabilities', 'list_agent_functions error', { error: message });
-          return { valid: false, error: message, hint: 'Try again in a moment. If the problem persists, verify the capability store is available.' };
-        }
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'create_agent_function')) {
-    tools.create_agent_function = createTool({
-      id: 'create_agent_function',
-      description: 'Create a new function that can later be assigned to agents. Returns the created functionId.',
-      inputSchema: z.object({
-        functionId: z.string().nullish().describe('Optional custom functionId. Omit this unless you need to choose the ID yourself.'),
-        name: z.string().min(1).describe('The name of the new function.'),
-        description: z.string().nullish().describe('Optional description of what this function is for.'),
-      }),
-      execute: async (input) => {
-        forgeDebug('tools:capabilities', 'create_agent_function called', { input });
-        try {
-          const result = await capabilities.createFunction({
-            name: input.name,
-            description: input.description ?? undefined,
-          });
-          forgeDebug('tools:capabilities', 'create_agent_function result', { result });
-          return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          forgeDebug('tools:capabilities', 'create_agent_function error', { error: message });
-          return { valid: false, error: message, hint: 'Use a unique function name and try again.' };
-        }
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'update_agent_function')) {
-    tools.update_agent_function = createTool({
-      id: 'update_agent_function',
-      description: 'Update the name or description of an existing function.',
-      inputSchema: z.object({
-        functionId: z.string().describe('The functionId of the function you want to update.'),
-        name: z.string().nullish().describe('New name for the function.'),
-        description: z.string().nullish().describe('New description for the function.'),
-      }),
-      execute: async (input) => {
-        forgeDebug('tools:capabilities', 'update_agent_function called', { input });
-        if (!input.name && input.description === undefined) {
-          forgeDebug('tools:capabilities', 'update_agent_function validation failed', { reason: 'no fields provided' });
-          return { valid: false, error: 'At least one field besides functionId must be provided', hint: 'Provide at least one of: name or description.' };
-        }
-        try {
-          const result = await capabilities.updateFunction({
-            functionId: input.functionId,
-            name: input.name,
-            description: input.description,
-          });
-          await reloadAgentsForFunction(db, loaderConfig, input.functionId);
-          forgeDebug('tools:capabilities', 'update_agent_function success', { result });
-          return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          forgeDebug('tools:capabilities', 'update_agent_function error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_functions to find valid function IDs.' };
-        }
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'delete_agent_function')) {
-    tools.delete_agent_function = createTool({
-      id: 'delete_agent_function',
-      description: 'Delete a function you no longer want in the system.',
-      inputSchema: z.object({
-        functionId: z.string().describe('The functionId of the function you want to delete.'),
-      }),
-      execute: async (input) => {
-        forgeDebug('tools:capabilities', 'delete_agent_function called', { functionId: input.functionId });
-        try {
-          const result = await capabilities.deleteFunction(input.functionId);
-          await reloadAgentsForFunction(db, loaderConfig, input.functionId);
-          forgeDebug('tools:capabilities', 'delete_agent_function success', { result });
-          return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          forgeDebug('tools:capabilities', 'delete_agent_function error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_functions to find valid function IDs. Ensure no agents are using this function before deleting.' };
-        }
-      },
-    });
-  }
-
   if (hasToolPermission(allowedToolIds, 'list_agent_roles')) {
     tools.list_agent_roles = createTool({
       id: 'list_agent_roles',
-      description: 'List the roles available in the system. Use this when you need to inspect existing roles or get a roleId for updates and permission changes.',
+      description: 'List the roles available in the system. Use this when you need a roleId to inspect, update, assign to an agent, or manage permissions.',
       inputSchema: z.object({}),
       execute: async () => {
         forgeDebug('tools:capabilities', 'list_agent_roles called');
+
         try {
           const result = await capabilities.listRoles();
           forgeDebug('tools:capabilities', 'list_agent_roles result', {
             count: result.length,
-            roles: result.map(r => ({ roleId: r.roleId, name: r.name, description: r.description })),
+            roles: result.map((role) => ({
+              roleId: role.roleId,
+              name: role.name,
+            })),
           });
           return result;
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:capabilities', 'list_agent_roles error', { error: message });
-          return { valid: false, error: message, hint: 'Try again in a moment. If the problem persists, verify the capability store is available.' };
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again in a moment. If the problem persists, verify the capability store is available.',
+          };
         }
       },
     });
@@ -152,14 +54,14 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'create_agent_role')) {
     tools.create_agent_role = createTool({
       id: 'create_agent_role',
-      description: 'Create a new role that can later be attached to functions. Returns the created roleId.',
+      description: 'Create a new role. Roles are the unit that grant tools and workflows, and they are assigned directly to agents.',
       inputSchema: z.object({
-        roleId: z.string().nullish().describe('Optional custom roleId. Omit this unless you need to choose the ID yourself.'),
-        name: z.string().min(1).describe('The name of the new role.'),
-        description: z.string().nullish().describe('Optional description of what this role is for.'),
+        name: z.string().min(1).describe('Name of the new role.'),
+        description: z.string().nullish().describe('Optional description of what this role is responsible for.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'create_agent_role called', { input });
+
         try {
           const result = await capabilities.createRole({
             name: input.name,
@@ -167,10 +69,14 @@ export function createCapabilityTools(
           });
           forgeDebug('tools:capabilities', 'create_agent_role result', { result });
           return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:capabilities', 'create_agent_role error', { error: message });
-          return { valid: false, error: message, hint: 'Use a unique role name and try again.' };
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use a unique role name and try again.',
+          };
         }
       },
     });
@@ -181,16 +87,21 @@ export function createCapabilityTools(
       id: 'update_agent_role',
       description: 'Update the name or description of an existing role.',
       inputSchema: z.object({
-        roleId: z.string().describe('The roleId of the role you want to update.'),
+        roleId: z.string().min(1).describe('The roleId you want to update.'),
         name: z.string().nullish().describe('New name for the role.'),
         description: z.string().nullish().describe('New description for the role.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'update_agent_role called', { input });
+
         if (!input.name && input.description === undefined) {
-          forgeDebug('tools:capabilities', 'update_agent_role validation failed', { reason: 'no fields provided' });
-          return { valid: false, error: 'At least one field besides roleId must be provided', hint: 'Provide at least one of: name or description.' };
+          return {
+            valid: false,
+            error: 'At least one field besides roleId must be provided.',
+            hint: 'Provide a new name, a new description, or both.',
+          };
         }
+
         try {
           const result = await capabilities.updateRole({
             roleId: input.roleId,
@@ -200,10 +111,14 @@ export function createCapabilityTools(
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
           forgeDebug('tools:capabilities', 'update_agent_role success', { result });
           return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:capabilities', 'update_agent_role error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_roles to find valid role IDs.' };
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_roles to confirm the roleId.',
+          };
         }
       },
     });
@@ -212,102 +127,93 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'delete_agent_role')) {
     tools.delete_agent_role = createTool({
       id: 'delete_agent_role',
-      description: 'Delete a role you no longer want in the system.',
+      description: 'Delete a role that is no longer needed. This only works when no agents are currently assigned to that role.',
       inputSchema: z.object({
-        roleId: z.string().describe('The roleId of the role you want to delete.'),
+        roleId: z.string().min(1).describe('The roleId you want to delete.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'delete_agent_role called', { roleId: input.roleId });
+
         try {
           const result = await capabilities.deleteRole(input.roleId);
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
           forgeDebug('tools:capabilities', 'delete_agent_role success', { result });
           return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:capabilities', 'delete_agent_role error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_roles to find valid role IDs. Ensure no functions are using this role before deleting.' };
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_roles to confirm the roleId. If the role is assigned, move those agents to another role first.',
+          };
         }
       },
     });
   }
 
-  if (hasToolPermission(allowedToolIds, 'assign_role_to_function')) {
-    tools.assign_role_to_function = createTool({
-      id: 'assign_role_to_function',
-      description: 'Attach one role to one function. Use this when a function should gain the permissions and capabilities from that role.',
+  if (hasToolPermission(allowedToolIds, 'change_agent_role')) {
+    tools.change_agent_role = createTool({
+      id: 'change_agent_role',
+      description: 'Change the role assigned to another agent.',
       inputSchema: z.object({
-        functionId: z.string().min(1).describe('The functionId of the function that should receive the role.'),
-        roleId: z.string().min(1).describe('The roleId that should be attached to the function.'),
+        agentId: z.string().min(1).describe('The agentId of the agent whose role should change.'),
+        roleId: z.string().min(1).describe('The new roleId that should be assigned to that agent.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'assign_role_to_function called', { input });
-        try {
-          const result = await capabilities.addRoleToFunction(input);
-          await reloadAgentsForFunction(db, loaderConfig, input.functionId);
-          forgeDebug('tools:capabilities', 'assign_role_to_function success', { result });
-          return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          forgeDebug('tools:capabilities', 'assign_role_to_function error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_functions and list_agent_roles to verify both IDs exist.' };
-        }
-      },
-    });
-  }
+        forgeDebug('tools:capabilities', 'change_agent_role called', { input });
 
-  if (hasToolPermission(allowedToolIds, 'change_agent_function')) {
-    tools.change_agent_function = createTool({
-      id: 'change_agent_function',
-      description: 'Change the function assigned to another agent. Use this when another agent should start operating under a different function.',
-      inputSchema: z.object({
-        agentId: z.string().min(1).describe('The agentId of the agent whose function should be changed.'),
-        functionId: z.string().min(1).describe('The new functionId that should be assigned to that agent.'),
-      }),
-      execute: async (input) => {
-        forgeDebug('tools:capabilities', 'change_agent_function called', { input });
         try {
-          const result = await changeAgentFunction({
+          const result = await changeAgentRole({
             db,
             loaderConfig,
             actorAgentId: currentAgentId,
             targetAgentId: input.agentId,
-            functionId: input.functionId,
+            roleId: input.roleId,
           });
-          forgeDebug('tools:capabilities', 'change_agent_function success', { result });
+          forgeDebug('tools:capabilities', 'change_agent_role success', { result });
           return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          forgeDebug('tools:capabilities', 'change_agent_function error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agents and list_agent_functions to verify both IDs exist.' };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:capabilities', 'change_agent_role error', { error: message });
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agents and list_agent_roles to verify the agentId and roleId.',
+          };
         }
       },
     });
   }
 
-  if (hasToolPermission(allowedToolIds, 'change_own_function')) {
-    tools.change_own_function = createTool({
-      id: 'change_own_function',
-      description: 'Switch yourself to a different function.',
+  if (hasToolPermission(allowedToolIds, 'change_own_role')) {
+    tools.change_own_role = createTool({
+      id: 'change_own_role',
+      description: 'Switch yourself to another role.',
       inputSchema: z.object({
-        functionId: z.string().min(1).describe('The functionId you want to switch to.'),
+        roleId: z.string().min(1).describe('The roleId you want to switch to.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'change_own_function called', { functionId: input.functionId });
+        forgeDebug('tools:capabilities', 'change_own_role called', { roleId: input.roleId });
+
         try {
-          const result = await changeAgentFunction({
+          const result = await changeAgentRole({
             db,
             loaderConfig,
             actorAgentId: currentAgentId,
             targetAgentId: currentAgentId,
-            functionId: input.functionId,
+            roleId: input.roleId,
           });
-          forgeDebug('tools:capabilities', 'change_own_function success', { result });
+          forgeDebug('tools:capabilities', 'change_own_role success', { result });
           return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          forgeDebug('tools:capabilities', 'change_own_function error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_functions to find valid function IDs.' };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:capabilities', 'change_own_role error', { error: message });
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_roles to find a valid roleId.',
+          };
         }
       },
     });
@@ -318,22 +224,21 @@ export function createCapabilityTools(
       id: 'list_role_tool_permissions',
       description: 'List which tools a role is allowed to use.',
       inputSchema: z.object({
-        roleId: z.string().min(1),
+        roleId: z.string().min(1).describe('The roleId you want to inspect.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'list_role_tool_permissions called', { roleId: input.roleId });
+
         try {
-          const result = await capabilities.listRoleToolPermissions(input.roleId);
-          forgeDebug('tools:capabilities', 'list_role_tool_permissions result', {
-            roleId: input.roleId,
-            count: result.length,
-            permissions: result,
-          });
-          return result;
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+          return await capabilities.listRoleToolPermissions(input.roleId);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:capabilities', 'list_role_tool_permissions error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_roles to confirm the roleId is correct.' };
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_roles to confirm the roleId.',
+          };
         }
       },
     });
@@ -344,12 +249,13 @@ export function createCapabilityTools(
       id: 'manage_role_tool_permissions',
       description: 'Add or remove one tool permission for a role.',
       inputSchema: z.object({
-        action: z.enum(['add', 'remove']).describe('Choose "add" to allow the tool for the role or "remove" to revoke it.'),
-        roleId: z.string().min(1).describe('The roleId of the role you want to change.'),
-        toolId: toolIdSchema.describe('The toolId you want to allow or remove for that role.'),
+        action: z.enum(['add', 'remove']).describe('Choose add to grant the tool or remove to revoke it.'),
+        roleId: z.string().min(1).describe('The roleId you want to change.'),
+        toolId: toolIdSchema.describe('The toolId to grant or revoke.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'manage_role_tool_permissions called', { input });
+
         try {
           const result = input.action === 'add'
             ? await capabilities.addRoleToolPermission({ roleId: input.roleId, toolId: input.toolId })
@@ -357,10 +263,14 @@ export function createCapabilityTools(
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
           forgeDebug('tools:capabilities', 'manage_role_tool_permissions success', { result });
           return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:capabilities', 'manage_role_tool_permissions error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_roles and list_available_capabilities to verify role ID and tool ID exist.' };
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_roles and list_available_capabilities to verify the roleId and toolId.',
+          };
         }
       },
     });
@@ -371,18 +281,21 @@ export function createCapabilityTools(
       id: 'list_role_workflow_permissions',
       description: 'List which workflows a role is allowed to use.',
       inputSchema: z.object({
-        roleId: z.string().min(1),
+        roleId: z.string().min(1).describe('The roleId you want to inspect.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'list_role_workflow_permissions called', { roleId: input.roleId });
+
         try {
-          const result = await capabilities.listRoleWorkflowPermissions(input.roleId);
-          forgeDebug('tools:capabilities', 'list_role_workflow_permissions result', { count: result.length });
-          return result;
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+          return await capabilities.listRoleWorkflowPermissions(input.roleId);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:capabilities', 'list_role_workflow_permissions error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_roles to confirm the roleId is correct.' };
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_roles to confirm the roleId.',
+          };
         }
       },
     });
@@ -393,12 +306,13 @@ export function createCapabilityTools(
       id: 'manage_role_workflow_permissions',
       description: 'Add or remove one workflow permission for a role.',
       inputSchema: z.object({
-        action: z.enum(['add', 'remove']).describe('Choose "add" to allow the workflow for the role or "remove" to revoke it.'),
-        roleId: z.string().min(1).describe('The roleId of the role you want to change.'),
-        workflowId: workflowIdSchema.describe('The workflowId you want to allow or remove for that role.'),
+        action: z.enum(['add', 'remove']).describe('Choose add to grant the workflow or remove to revoke it.'),
+        roleId: z.string().min(1).describe('The roleId you want to change.'),
+        workflowId: workflowIdSchema.describe('The workflowId to grant or revoke.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'manage_role_workflow_permissions called', { input });
+
         try {
           const result = input.action === 'add'
             ? await capabilities.addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.workflowId })
@@ -406,10 +320,14 @@ export function createCapabilityTools(
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
           forgeDebug('tools:capabilities', 'manage_role_workflow_permissions success', { result });
           return { valid: true, ...result };
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           forgeDebug('tools:capabilities', 'manage_role_workflow_permissions error', { error: message });
-          return { valid: false, error: message, hint: 'Use list_agent_roles and list_available_capabilities to verify role ID and workflow ID exist.' };
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_agent_roles and list_available_capabilities to verify the roleId and workflowId.',
+          };
         }
       },
     });
@@ -418,25 +336,14 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_available_capabilities')) {
     tools.list_available_capabilities = createTool({
       id: 'list_available_capabilities',
-      description: 'List all toolIds and workflowIds that can be assigned to roles. Use this before changing role permissions.',
+      description: 'List all toolIds and workflowIds that can be granted to a role.',
       inputSchema: z.object({}),
-      execute: async () => {
-        forgeDebug('tools:capabilities', 'list_available_capabilities called');
-        try {
-          const result = {
-            toolIds: forgeCustomToolIds,
-            workflowIds: forgeWorkflowIds,
-          };
-          forgeDebug('tools:capabilities', 'list_available_capabilities result', { toolCount: result.toolIds.length, workflowCount: result.workflowIds.length });
-          return result;
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          forgeDebug('tools:capabilities', 'list_available_capabilities error', { error: message });
-          return { valid: false, error: message, hint: 'Try again in a moment. If the problem persists, verify the capability catalog is available.' };
-        }
-      },
+      execute: async () => ({
+        toolIds: forgeCustomToolIds,
+        workflowIds: forgeWorkflowIds,
+      }),
     });
   }
 
-  return tools as Record<string, Tool<unknown, unknown>>;
+  return tools;
 }

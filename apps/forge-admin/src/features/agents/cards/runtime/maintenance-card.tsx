@@ -1,25 +1,26 @@
 import { LoaderCircle, Trash2 } from 'lucide-react';
-import type { AgentFunction, getAgent } from '../../../../lib/api';
+import type { RoleListResponse, getAgent } from '../../../../lib/api';
 import { Button } from '../../../../components/ui/button';
 import { Card } from '../../../../components/ui/card';
 import { Select } from '../../../../components/ui/select';
 import { LabeledField } from '../../ui';
 
 type AgentData = Awaited<ReturnType<typeof getAgent>>;
+type AgentRole = RoleListResponse['items'][number];
 
 export function AgentMaintenanceCard(input: {
   agent: AgentData;
-  functions: AgentFunction[];
-  selectedFunctionId: string;
-  onSelectedFunctionIdChange(functionId: string): void;
-  onApplyFunctionChange(): void;
-  functionPending: boolean;
-  functionError: string | null;
+  roles: AgentRole[];
+  selectedRoleId: string;
+  onSelectedRoleIdChange(roleId: string): void;
+  onApplyRoleChange(): void;
+  rolePending: boolean;
+  roleError: string | null;
   onTerminate(): void;
   terminatePending: boolean;
   terminateError: string | null;
 }) {
-  const currentFunctionId = input.agent?.function?.functionId ?? '';
+  const currentRoleId = input.agent?.role?.roleId ?? '';
 
   return (
     <Card className="p-6">
@@ -27,22 +28,22 @@ export function AgentMaintenanceCard(input: {
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold">Agent maintenance</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Human-facing adjustments only. Functions stay read-only here except for reassignment on
-            the selected agent.
+            Human-facing adjustments only. Change the agent role here when you need to switch the
+            permission set and operating profile of the selected agent.
           </p>
 
           <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
-            <LabeledField label="Assigned function">
+            <LabeledField label="Assigned role">
               <Select
-                value={input.selectedFunctionId}
-                onChange={(value) => input.onSelectedFunctionIdChange(value)}
+                value={input.selectedRoleId}
+                onChange={(value) => input.onSelectedRoleIdChange(value)}
               >
                 <option value="" disabled>
-                  Select function
+                  Select role
                 </option>
-                {input.functions.map((agentFunction) => (
-                  <option key={agentFunction.functionId} value={agentFunction.functionId}>
-                    {agentFunction.name}
+                {input.roles.map((role) => (
+                  <option key={role.roleId} value={role.roleId}>
+                    {role.name}
                   </option>
                 ))}
               </Select>
@@ -50,28 +51,28 @@ export function AgentMaintenanceCard(input: {
             <div className="flex items-end">
               <Button
                 variant="secondary"
-                onClick={input.onApplyFunctionChange}
+                onClick={input.onApplyRoleChange}
                 disabled={
-                  input.functionPending ||
-                  !input.selectedFunctionId ||
-                  input.selectedFunctionId === currentFunctionId
+                  input.rolePending ||
+                  !input.selectedRoleId ||
+                  input.selectedRoleId === currentRoleId
                 }
               >
-                {input.functionPending ? (
+                {input.rolePending ? (
                   <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                     Applying...
                   </>
                 ) : (
-                  'Apply function'
+                  'Apply role'
                 )}
               </Button>
             </div>
           </div>
 
-          {input.functionError && (
+          {input.roleError && (
             <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {input.functionError}
+              {input.roleError}
             </div>
           )}
         </div>

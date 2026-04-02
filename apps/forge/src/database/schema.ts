@@ -37,8 +37,8 @@ export const agents = sqliteTable('agents', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
-  functionId: text('function_id')
-    .references(() => agentFunctions.id, { onDelete: 'set null' }),
+  roleId: text('function_id')
+    .references(() => agentRoles.id, { onDelete: 'set null' }),
   modelProfileId: text('model_profile_id')
     .notNull()
     .references(() => llmProfiles.id, { onDelete: 'restrict' }),
@@ -502,9 +502,9 @@ export type NewAgentPrompt = typeof agentPrompts.$inferInsert;
  * Relações
  */
 export const agentsRelations = relations(agents, ({ one, many }) => ({
-  function: one(agentFunctions, {
-    fields: [agents.functionId],
-    references: [agentFunctions.id],
+  role: one(agentRoles, {
+    fields: [agents.roleId],
+    references: [agentRoles.id],
   }),
   modelProfile: one(llmProfiles, {
     relationName: 'agent_model_profile',
@@ -541,10 +541,10 @@ export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
 
 export const agentFunctionsRelations = relations(agentFunctions, ({ many }) => ({
   roleLinks: many(functionRoles),
-  agents: many(agents),
 }));
 
 export const agentRolesRelations = relations(agentRoles, ({ many }) => ({
+  agents: many(agents),
   functionLinks: many(functionRoles),
   toolPermissions: many(roleToolPermissions),
   workflowPermissions: many(roleWorkflowPermissions),

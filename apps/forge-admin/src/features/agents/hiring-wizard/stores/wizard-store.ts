@@ -11,14 +11,13 @@ export const WIZARD_STEPS = [
 ];
 
 // Types based on wireframes
-export type AgentFunction = 'copywriter' | 'researcher' | 'developer' | 'support' | 'analyst';
 export type AIModel = 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo' | 'claude-3-5-sonnet' | 'claude-3-5-haiku';
 export type BudgetType = 'week' | 'month' | 'year';
 export type ScheduleType = 'always' | 'scheduled';
 
 export interface BasicInfo {
   agentName: string;
-  function: AgentFunction;
+  role: string;
   description: string;
 }
 
@@ -65,7 +64,7 @@ export interface WizardActions {
 
 const initialState: WizardState = {
   currentStep: 1,
-  basicInfo: { agentName: '', function: 'copywriter', description: '' },
+  basicInfo: { agentName: '', role: '', description: '' },
   configuration: { model: 'gpt-4o-mini', instructions: '', workspace: '' },
   contract: { budgetType: 'month', budgetAmount: '25', estimatedUsage: 0, scheduleType: 'always', scheduleDays: ['tue', 'wed', 'thu', 'fri'], scheduleStartTime: '09:00', scheduleEndTime: '18:00' },
   isSubmitting: false, error: null, isComplete: false, createdAgentId: null,
@@ -98,7 +97,7 @@ export const useWizardStore = create<WizardState & WizardActions>((set, get) => 
 
       const hiringRequest = `
 Agent: ${basicInfo.agentName}
-Function: ${basicInfo.function}
+Role: ${basicInfo.role}
 Description: ${basicInfo.description || 'N/A'}
 
 Configuration:
@@ -150,7 +149,7 @@ export const validateBasicInfo = (info: BasicInfo): Record<string, string> => {
   else if (info.agentName.length < 3) errors.agentName = 'Nome deve ter pelo menos 3 caracteres';
   else if (info.agentName.length > 50) errors.agentName = 'Nome deve ter no máximo 50 caracteres';
   else if (!/^[a-z0-9-]+$/.test(info.agentName)) errors.agentName = 'Use apenas letras minúsculas, números e hífens';
-  if (!info.function) errors.function = 'Selecione uma função';
+  if (!info.role?.trim()) errors.role = 'Informe um role';
   if (info.description?.length > 500) errors.description = 'Máximo 500 caracteres';
   return errors;
 };

@@ -1,6 +1,5 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
 import {
-  ToolSearchProcessor,
   type InputProcessorOrWorkflow,
   type OutputProcessorOrWorkflow,
 } from '@mastra/core/processors';
@@ -44,7 +43,6 @@ import {
   toMastraSafeIdentifier,
 } from '@mastra-engine/core';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig, WorkspaceSkillsConfig } from '../database/schema';
-import { AGENT_BASE_TOOL_ID_SET } from './base-tool-ids';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -249,12 +247,6 @@ export async function createInternalAgentRuntime<
     ...createExternalAccountTools(communication),
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
-  const alwaysAvailableTools = Object.fromEntries(
-    Object.entries(allAgentTools).filter(([toolId]) => AGENT_BASE_TOOL_ID_SET.has(toolId)),
-  );
-  const searchableTools = Object.fromEntries(
-    Object.entries(allAgentTools).filter(([toolId]) => !AGENT_BASE_TOOL_ID_SET.has(toolId)),
-  );
   const memory = createAgentMemory({ storage, vector });
   const omModelKey = config.omModel ?? config.model;
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
@@ -263,15 +255,8 @@ export async function createInternalAgentRuntime<
     storage,
     model: omModelKey,
   });
-  const toolSearch = new ToolSearchProcessor({
-    tools: searchableTools,
-    search: {
-      topK: 8,
-      minScore: 0.1,
-    },
-  });
 
-  const inputProcessors: InputProcessorOrWorkflow[] = [om, toolSearch];
+  const inputProcessors: InputProcessorOrWorkflow[] = [om];
   const outputProcessors: OutputProcessorOrWorkflow[] = [om];
 
   if (options.longTermMemory) {
@@ -294,7 +279,7 @@ export async function createInternalAgentRuntime<
       buildAgentSystemPrompt(config.instructions, config.companyName, config.companyContext),
     ),
     model: config.model,
-    tools: alwaysAvailableTools as TTools,
+    tools: allAgentTools as TTools,
     workflows: config.workflows,
     workspace,
     agents: config.agents,

@@ -16,9 +16,8 @@ import { loadAgent } from '../agents/agent-loader';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createCapabilityStore } from '../capabilities/store';
 import {
-  changeAgentFunctionFromAdmin,
+  changeAgentRoleFromAdmin,
   reloadAgentIfLoaded,
-  reloadAgentsForFunction,
   reloadAgentsForRole,
   updateInternalChatProviderProfile,
 } from '../capabilities/runtime';
@@ -30,10 +29,10 @@ import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { GitHubAppManager } from '../github/manager';
 import {
-  agentFunctions,
   agentMcpConfigs,
   agents,
   agentProviders,
+  agentRoles,
   mcpServerConfigs,
 } from '../database/schema';
 import { encryptSecret } from '../encryption/crypto';
@@ -92,26 +91,6 @@ const updateRoleSchema = z.object({
 });
 
 const deleteRoleSchema = z.object({
-  roleId: z.string().min(1),
-});
-
-const createFunctionSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-});
-
-const updateFunctionSchema = z.object({
-  functionId: z.string().min(1),
-  name: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-});
-
-const deleteFunctionSchema = z.object({
-  functionId: z.string().min(1),
-});
-
-const functionRoleSchema = z.object({
-  functionId: z.string().min(1),
   roleId: z.string().min(1),
 });
 
@@ -176,9 +155,9 @@ const terminateAgentSchema = z.object({
   agentId: z.string().min(1),
 });
 
-const changeAgentFunctionSchema = z.object({
+const changeAgentRoleSchema = z.object({
   agentId: z.string().min(1),
-  functionId: z.string().min(1),
+  roleId: z.string().min(1),
 });
 
 const updateAgentConfigSchema = z.object({
@@ -450,12 +429,6 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'GET',
-    path: '/admin/functions',
-    handler: async () => jsonResponse(await readModel.listFunctions()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
     path: '/admin/roles',
     handler: async () => jsonResponse(await readModel.listRoles()),
   });
@@ -656,14 +629,14 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
-    path: '/admin/agent/change-function',
+    path: '/admin/agent/change-role',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, changeAgentFunctionSchema);
-      const result = await changeAgentFunctionFromAdmin({
+      const body = parseJsonBody(request.bodyText, changeAgentRoleSchema);
+      const result = await changeAgentRoleFromAdmin({
         db: input.db,
         loaderConfig: input.loaderConfig,
         targetAgentId: body.agentId,
-        functionId: body.functionId,
+        roleId: body.roleId,
       });
 
       return jsonResponse(result);
@@ -697,16 +670,16 @@ export function registerAdminRoutes(input: {
         })
         .where(eq(agents.id, body.agentId));
 
-      const agentFunction = agent.functionId
-        ? await input.db.query.agentFunctions.findFirst({
-            where: eq(agentFunctions.id, agent.functionId),
+      const role = agent.roleId
+        ? await input.db.query.agentRoles.findFirst({
+            where: eq(agentRoles.id, agent.roleId),
           })
         : null;
 
       await updateInternalChatProviderProfile(input.db, {
         agentId: body.agentId,
         displayName: body.name,
-        description: agentFunction?.description ?? agentFunction?.name ?? body.name,
+        description: role?.description ?? role?.name ?? body.name,
       });
 
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
@@ -896,6 +869,9 @@ export function registerAdminRoutes(input: {
         zipBase64: body.archiveBase64,
       });
 
+      // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
+      // Reload is acceptable here because skill changes are rare, but this is the place to
+      // switch to explicit skill refresh if we want to avoid full runtime recreation later.
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
       return jsonResponse({
@@ -925,6 +901,9 @@ export function registerAdminRoutes(input: {
         skillName: body.skillName,
       });
 
+      // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
+      // Reload is acceptable here because skill changes are rare, but this is the place to
+      // switch to explicit skill refresh if we want to avoid full runtime recreation later.
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
       return jsonResponse({
@@ -1034,57 +1013,6 @@ export function registerAdminRoutes(input: {
         console.error('[Admin] Failed to delete role:', error);
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function/create',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createFunctionSchema);
-      return jsonResponse(await capabilities.createFunction(body), 201);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function/update',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateFunctionSchema);
-      const result = await capabilities.updateFunction(body);
-      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteFunctionSchema);
-      return jsonResponse(await capabilities.deleteFunction(body.functionId));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function-role/add',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, functionRoleSchema);
-      const result = await capabilities.addRoleToFunction(body);
-      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function-role/remove',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, functionRoleSchema);
-      const result = await capabilities.removeRoleFromFunction(body);
-      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
-      return jsonResponse(result);
     },
   });
 

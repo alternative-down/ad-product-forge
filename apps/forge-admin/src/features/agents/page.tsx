@@ -5,7 +5,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 
 import {
   adjustAgentContractBudget,
-  changeAgentFunction,
+  changeAgentRole,
   createSchedule,
   deleteAgentSkill,
   createAgentMcpServer,
@@ -16,7 +16,7 @@ import {
   getSystemLlm,
   hireAgent,
   listAgents,
-  listFunctions,
+  listRoles,
   reloadAgent,
   sendInternalChatMessageFromAdmin,
   terminateAgent,
@@ -127,9 +127,9 @@ function AgentsWorkspacePage(input: {
     weeklyBudgetUsd: '25',
   });
   const [hireResult, setHireResult] = useState<HireAgentResult | null>(null);
-  const [functionDraft, setFunctionDraft] = useState<{
+  const [roleDraft, setRoleDraft] = useState<{
     agentId: string;
-    functionId: string;
+    roleId: string;
   } | null>(null);
   const [configDraft, setConfigDraft] = useState<{
     agentId: string;
@@ -156,9 +156,9 @@ function AgentsWorkspacePage(input: {
     queryKey: ['admin', 'agents'],
     queryFn: listAgents,
   });
-  const functionsQuery = useQuery({
-    queryKey: ['admin', 'functions'],
-    queryFn: listFunctions,
+  const rolesQuery = useQuery({
+    queryKey: ['admin', 'roles'],
+    queryFn: listRoles,
   });
   const systemLlmQuery = useQuery({
     queryKey: ['admin', 'system', 'llm'],
@@ -172,10 +172,10 @@ function AgentsWorkspacePage(input: {
     refetchOnWindowFocus: true,
   });
 
-  const selectedAgentFunctionId =
-    agentDetailQuery.data && functionDraft?.agentId === agentDetailQuery.data.agentId
-      ? functionDraft.functionId
-      : (agentDetailQuery.data?.function?.functionId ?? '');
+  const selectedAgentRoleId =
+    agentDetailQuery.data && roleDraft?.agentId === agentDetailQuery.data.agentId
+      ? roleDraft.roleId
+      : (agentDetailQuery.data?.role?.roleId ?? '');
   const selectedAgentConfig =
     agentDetailQuery.data && configDraft?.agentId === agentDetailQuery.data.agentId
       ? configDraft.value
@@ -225,7 +225,7 @@ function AgentsWorkspacePage(input: {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] }),
       ]);
 
       const nextLocation = buildAgentLocation({
@@ -237,16 +237,16 @@ function AgentsWorkspacePage(input: {
       void navigate({ to: nextLocation });
     },
   });
-  const changeFunctionMutation = useMutation({
-    mutationFn: ({ agentId, functionId }: { agentId: string; functionId: string }) =>
-      changeAgentFunction(agentId, functionId),
+  const changeRoleMutation = useMutation({
+    mutationFn: ({ agentId, roleId }: { agentId: string; roleId: string }) =>
+      changeAgentRole(agentId, roleId),
     onSuccess: async (_, input) => {
-      setFunctionDraft(null);
+      setRoleDraft(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] }),
       ]);
     },
   });
@@ -254,11 +254,11 @@ function AgentsWorkspacePage(input: {
     mutationFn: terminateAgent,
     onSuccess: async ({ agentId }) => {
       setScheduleDraft(null);
-      setFunctionDraft(null);
+      setRoleDraft(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'functions'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] }),
         queryClient.removeQueries({ queryKey: ['admin', 'agent', agentId] }),
       ]);
 
@@ -423,7 +423,7 @@ function AgentsWorkspacePage(input: {
       {input.mode === 'hire' ? (
         <WorkspaceCanvas
           title="Hire an internal collaborator"
-          description="Describe the collaborator you want. The hiring workflow will shape the function, generate the operating prompt, contract the agent, and return the onboarding links."
+          description="Describe the collaborator you want. The hiring workflow will shape the role, generate the operating prompt, contract the agent, and return the onboarding links."
         >
           <div className="mx-auto max-w-4xl">
             <HireAgentCard
@@ -468,7 +468,7 @@ function AgentsWorkspacePage(input: {
                       <div className="min-w-0">
                         <div className="font-semibold text-[color:var(--ink)]">{agent.name}</div>
                         <div className="mt-1 text-sm text-[color:var(--muted)]">
-                          {agent.functionName ?? 'No function assigned'}
+                          {agent.roleName ?? 'No role assigned'}
                         </div>
                       </div>
                       <Badge>{agent.executionState}</Badge>
@@ -492,7 +492,7 @@ function AgentsWorkspacePage(input: {
           <div className="space-y-6">
             {agentDetailQuery.isLoading && <PanelLoading label="Loading agent detail" />}
             {agentDetailQuery.isError && <PanelError message={agentDetailQuery.error.message} />}
-            {functionsQuery.isError && <PanelError message={functionsQuery.error.message} />}
+            {rolesQuery.isError && <PanelError message={rolesQuery.error.message} />}
             {!input.agentId && !agentDetailQuery.isLoading ? (
               <WorkspaceCanvas
                 title="Select an agent"
@@ -546,10 +546,10 @@ function AgentsWorkspacePage(input: {
 
                 <WorkspaceCanvas
                   title={agentDetailQuery.data.name}
-                  description={`${agentDetailQuery.data.function?.name ?? 'No function assigned'} · ${agentDetailQuery.data.executionState}`}
+                  description={`${agentDetailQuery.data.role?.name ?? 'No role assigned'} · ${agentDetailQuery.data.executionState}`}
                 >
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <CompactStat label="Function" value={agentDetailQuery.data.function?.name ?? '—'} />
+                    <CompactStat label="Role" value={agentDetailQuery.data.role?.name ?? '—'} />
                     <CompactStat label="Providers" value={agentDetailQuery.data.providers.map((provider) => provider.providerType).join(', ') || 'none'} />
                     <CompactStat label="Contract" value={agentDetailQuery.data.activeContract ? `${formatUsd(agentDetailQuery.data.activeContract.weeklyValueUsd)} / week` : 'no contract'} />
                     <CompactStat label="Model" value={agentDetailQuery.data.modelProfile?.name ?? '—'} />
@@ -577,12 +577,12 @@ function AgentsWorkspacePage(input: {
                   }}
                 />
 
-                {selectedTab === 'runtime' && functionsQuery.data && (
+                {selectedTab === 'runtime' && rolesQuery.data && (
                   <div className="space-y-6">
                     <SegmentedTabs
                       value={selectedRuntimeView}
                       items={[
-                        { value: 'assignment', label: 'Assignment', description: 'function and lifecycle changes' },
+                        { value: 'assignment', label: 'Role', description: 'role assignment and lifecycle changes' },
                         { value: 'configuration', label: 'Configuration', description: 'identity, prompt, and workspace controls' },
                         { value: 'contract', label: 'Contract', description: 'budget and top-up control' },
                         { value: 'github', label: 'GitHub', description: 'provisioning status and links' },
@@ -604,12 +604,12 @@ function AgentsWorkspacePage(input: {
                     {selectedRuntimeView === 'assignment' ? (
                       <div className="space-y-6">
                         <WorkspaceCanvas
-                          title="Current assignment"
-                          description="The agent keeps one function assignment. Capability changes happen through the function and its linked roles."
+                          title="Current role"
+                          description="The agent keeps one role assignment. Capability changes happen directly through that role."
                         >
                           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                            <ReadOnlyField label="Assigned function" value={agentDetailQuery.data.function?.name ?? '—'} />
-                            <ReadOnlyField label="Roles" value={formatInteger(agentDetailQuery.data.function?.roles.length ?? 0)} />
+                            <ReadOnlyField label="Assigned role" value={agentDetailQuery.data.role?.name ?? '—'} />
+                            <ReadOnlyField label="Role id" value={agentDetailQuery.data.role?.roleId ?? '—'} />
                             <ReadOnlyField
                               label="Primary model"
                               value={agentDetailQuery.data.modelProfile?.name ?? '—'}
@@ -623,26 +623,26 @@ function AgentsWorkspacePage(input: {
 
                         <AgentMaintenanceCard
                           agent={agentDetailQuery.data}
-                          functions={functionsQuery.data}
-                          selectedFunctionId={selectedAgentFunctionId}
-                          onSelectedFunctionIdChange={(functionId) => {
+                          roles={rolesQuery.data.items}
+                          selectedRoleId={selectedAgentRoleId}
+                          onSelectedRoleIdChange={(roleId) => {
                             if (!agentDetailQuery.data) {
                               return;
                             }
 
-                            setFunctionDraft({
+                            setRoleDraft({
                               agentId: agentDetailQuery.data.agentId,
-                              functionId,
+                              roleId,
                             });
                           }}
-                          onApplyFunctionChange={() =>
-                            changeFunctionMutation.mutate({
+                          onApplyRoleChange={() =>
+                            changeRoleMutation.mutate({
                               agentId: agentDetailQuery.data!.agentId,
-                              functionId: selectedAgentFunctionId,
+                              roleId: selectedAgentRoleId,
                             })
                           }
-                          functionPending={changeFunctionMutation.isPending}
-                          functionError={changeFunctionMutation.error?.message ?? null}
+                          rolePending={changeRoleMutation.isPending}
+                          roleError={changeRoleMutation.error?.message ?? null}
                           onTerminate={() => terminateMutation.mutate(agentDetailQuery.data!.agentId)}
                           terminatePending={terminateMutation.isPending}
                           terminateError={terminateMutation.error?.message ?? null}

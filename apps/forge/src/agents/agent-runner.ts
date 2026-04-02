@@ -602,8 +602,8 @@ function describeWakeGroup(event: AgentWakeEvent) {
     return `GitHub: ${event.groupMetadata?.EventType ?? event.groupKey}`;
   }
 
-  if (event.type === 'function-change') {
-    return `Function change: ${event.groupMetadata?.TargetAgentId ?? event.groupKey}`;
+  if (event.type === 'role-change') {
+    return `Role change: ${event.groupMetadata?.TargetAgentId ?? event.groupKey}`;
   }
 
   if (event.type === 'runner-reminder') {
@@ -639,7 +639,7 @@ function describeWakeActor(event: AgentWakeEvent) {
     return 'GitHub';
   }
 
-  if (event.type === 'function-change') {
+  if (event.type === 'role-change') {
     return 'System';
   }
 

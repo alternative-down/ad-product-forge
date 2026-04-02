@@ -48,8 +48,8 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
   });
   const companyCashOperations = createCompanyCashOperations(db);
   const hired = await hireInternalAgent(db, {
-    functionId: hiringRh.functionId,
-    functionDescription: hiringRh.functionDescription,
+    roleId: hiringRh.roleId,
+    roleDescription: hiringRh.roleDescription,
     ...profile,
     instructions: hiringRh.instructions,
     weeklyBudgetUsd: input.weeklyBudgetUsd,
@@ -73,7 +73,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     await companyCashOperations.recordCashOut({
       type: 'agent-hiring-process',
       amountUsd: hiringRh.costUsd,
-      description: `Hiring workflow cost for ${hiringRh.functionDescription}`,
+      description: `Hiring workflow cost for ${hiringRh.roleDescription}`,
       referenceType: 'hiring-workflow',
       referenceId: hired.agentId,
     });

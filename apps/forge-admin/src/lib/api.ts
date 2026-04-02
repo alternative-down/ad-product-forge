@@ -6,7 +6,6 @@ export type AdminOverview = {
     loadedAgents: number;
     idleAgents: number;
     runningAgents: number;
-    functions: number;
     roles: number;
     activeContracts: number;
   };
@@ -68,8 +67,8 @@ export type AgentListItem = {
   name: string;
   description?: string;
   executionState: 'idle' | 'running';
-  functionId: string | null;
-  functionName: string | null;
+  roleId: string | null;
+  roleName: string | null;
   modelProfile: {
     profileId: string;
     name: string;
@@ -127,16 +126,10 @@ export type AgentDetail = {
   executionState: 'idle' | 'running';
   modelProfile: AgentListItem['modelProfile'];
   omModelProfile: AgentListItem['omModelProfile'];
-  function: {
-    functionId: string;
+  role: {
+    roleId: string;
     name: string;
     description?: string;
-    roleIds: string[];
-    roles: Array<{
-      roleId: string;
-      name: string;
-      description?: string;
-    }>;
   } | null;
   loaded: boolean;
   runner: AgentListItem['runner'];
@@ -307,21 +300,6 @@ export type DeleteAgentSkillInput = {
   skillName: string;
 };
 
-export type AgentFunction = {
-  functionId: string;
-  name: string;
-  description?: string;
-  roleIds: string[];
-  roles: Array<{
-    roleId: string;
-    name: string;
-    description?: string;
-  }>;
-  createdAt: number;
-  updatedAt: number;
-  assignedAgentCount: number;
-};
-
 export type HireAgentInput = {
   hiringRequest: string;
   additionalContext?: string;
@@ -348,7 +326,7 @@ export type RoleListResponse = {
     roleId: string;
     name: string;
     description?: string;
-    assignedFunctionCount: number;
+    assignedAgentCount: number;
     toolIds: string[];
     workflowIds: string[];
     createdAt: number;
@@ -572,17 +550,6 @@ export type UpdateRoleInput = {
   description?: string | null;
 };
 
-export type CreateFunctionInput = {
-  name: string;
-  description?: string;
-};
-
-export type UpdateFunctionInput = {
-  functionId: string;
-  name?: string;
-  description?: string | null;
-};
-
 export type CreateInvestmentInput = {
   amountUsd: number;
   description?: string;
@@ -719,10 +686,6 @@ export function getAgent(agentId: string) {
   return request<AgentDetail>(`/admin/agent?agentId=${encodeURIComponent(agentId)}`);
 }
 
-export function listFunctions() {
-  return request<AgentFunction[]>('/admin/functions');
-}
-
 export function listWorkspaces() {
   return request<Workspace[]>('/admin/workspaces');
 }
@@ -831,15 +794,15 @@ export function terminateAgent(agentId: string) {
   });
 }
 
-export function changeAgentFunction(agentId: string, functionId: string) {
+export function changeAgentRole(agentId: string, roleId: string) {
   return request<{
     agentId: string;
-    functionId: string;
-    functionName: string;
+    roleId: string;
+    roleName: string;
     changedBy: string;
-  }>('/admin/agent/change-function', {
+  }>('/admin/agent/change-role', {
     method: 'POST',
-    body: JSON.stringify({ agentId, functionId }),
+    body: JSON.stringify({ agentId, roleId }),
   });
 }
 
@@ -1000,41 +963,6 @@ export function deleteRole(roleId: string) {
   return request<{ roleId: string; success: true }>('/admin/role/delete', {
     method: 'POST',
     body: JSON.stringify({ roleId }),
-  });
-}
-
-export function createFunction(input: CreateFunctionInput) {
-  return request<{ functionId: string; name: string; description?: string }>('/admin/function/create', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-export function updateFunction(input: UpdateFunctionInput) {
-  return request<{ functionId: string; name: string; description?: string }>('/admin/function/update', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-export function deleteFunction(functionId: string) {
-  return request<{ functionId: string; success: true }>('/admin/function/delete', {
-    method: 'POST',
-    body: JSON.stringify({ functionId }),
-  });
-}
-
-export function addRoleToFunction(functionId: string, roleId: string) {
-  return request<{ functionId: string; roleId: string }>('/admin/function-role/add', {
-    method: 'POST',
-    body: JSON.stringify({ functionId, roleId }),
-  });
-}
-
-export function removeRoleFromFunction(functionId: string, roleId: string) {
-  return request<{ functionId: string; roleId: string }>('/admin/function-role/remove', {
-    method: 'POST',
-    body: JSON.stringify({ functionId, roleId }),
   });
 }
 

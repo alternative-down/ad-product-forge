@@ -1,17 +1,7 @@
 import { useState } from 'react';
-import { Info } from 'lucide-react';
-import { useWizardStore, validateBasicInfo, type AgentFunction } from '../stores/wizard-store';
+import { useWizardStore, validateBasicInfo } from '../stores/wizard-store';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
-import { Select } from '../../../../components/ui/select';
-
-const FUNCTION_OPTIONS: { value: AgentFunction; label: string; description: string }[] = [
-  { value: 'copywriter', label: 'Copywriter', description: 'Gera textos de marketing' },
-  { value: 'researcher', label: 'Researcher', description: 'Pesquisa e análise de dados' },
-  { value: 'developer', label: 'Developer', description: 'Escreve e revisa código' },
-  { value: 'support', label: 'Support', description: 'Atende e resolve dúvidas' },
-  { value: 'analyst', label: 'Analyst', description: 'Analisa dados e gera insights' },
-];
 
 export function Step1BasicInfo() {
   const { basicInfo, setBasicInfo } = useWizardStore();
@@ -52,23 +42,19 @@ export function Step1BasicInfo() {
 
         <div>
           <label className="text-sm font-medium flex items-center gap-1">
-            Function <span className="text-destructive">*</span>
-            <span title="Define permissões e ferramentas disponíveis."><Info className="w-3 h-3 text-muted-foreground" /></span>
+            Role <span className="text-destructive">*</span>
           </label>
-          <Select
-            value={basicInfo.function}
-            onChange={(value) => setBasicInfo({ function: value as AgentFunction })}
-            onBlur={() => handleBlur('function')}
-            className={touched.function && errors.function ? 'border-destructive' : ''}
-          >
-            <option value="">Selecione uma função</option>
-            {FUNCTION_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label} - {opt.description}</option>
-            ))}
-          </Select>
-          {touched.function && errors.function && (
-            <p className="text-xs text-destructive mt-1">{errors.function}</p>
+          <Input
+            placeholder="ex: sales-ops, product-designer, finance-analyst"
+            value={basicInfo.role}
+            onChange={(e) => setBasicInfo({ role: e.target.value })}
+            onBlur={() => handleBlur('role')}
+            className={touched.role && errors.role ? 'border-destructive' : ''}
+          />
+          {touched.role && errors.role && (
+            <p className="text-xs text-destructive mt-1">{errors.role}</p>
           )}
+          <p className="text-xs text-muted-foreground mt-1">Use the role you want this agent to play in the company.</p>
         </div>
 
         <div>

@@ -66,7 +66,7 @@ export function createAdminReadModel(input: {
   const systemSettings = createSystemSettingsStore(db);
 
   async function getDashboard() {
-    const [agentRows, balance, summary, activeContracts, cashMovements, functions, roles] =
+    const [agentRows, balance, summary, activeContracts, cashMovements, roles] =
       await Promise.all([
         db.query.agents.findMany(),
         finance.getCompanyCashBalance(),
@@ -75,7 +75,6 @@ export function createAdminReadModel(input: {
         finance.listCompanyCashMovements({
           limit: RECENT_CASH_MOVEMENT_LIMIT,
         }),
-        capabilities.listFunctions(),
         capabilities.listRoles(),
       ]);
     const registry = getInternalAgentRegistry();
@@ -87,7 +86,6 @@ export function createAdminReadModel(input: {
         loadedAgents: loadedAgentIds.size,
         idleAgents: agentRows.filter((agent) => agent.executionState === 'idle').length,
         runningAgents: agentRows.filter((agent) => agent.executionState === 'running').length,
-        functions: functions.length,
         roles: roles.length,
         activeContracts: activeContracts.items.length,
       },
@@ -100,16 +98,16 @@ export function createAdminReadModel(input: {
   }
 
   async function listAgents() {
-    const [agentRows, functionRows, providerRows, llmProfiles] = await Promise.all([
+    const [agentRows, roleRows, providerRows, llmProfiles] = await Promise.all([
       db.query.agents.findMany({
         orderBy: (fields, { asc }) => [asc(fields.name)],
       }),
-      capabilities.listFunctions(),
+      capabilities.listRoles(),
       db.query.agentProviders.findMany(),
       llmSettings.listProfiles(),
     ]);
     const registry = getInternalAgentRegistry();
-    const functionMap = new Map(functionRows.map((row) => [row.functionId, row]));
+    const roleMap = new Map(roleRows.map((row) => [row.roleId, row]));
     const llmProfileMap = new Map(
       llmProfiles.map((row) => [
         row.profileId,
@@ -131,7 +129,7 @@ export function createAdminReadModel(input: {
     return agentRows.map((agent) => {
       const loadedAgent = registry.get(agent.id);
       const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
-      const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
+      const role = agent.roleId ? (roleMap.get(agent.roleId) ?? null) : null;
       const modelProfile = llmProfileMap.get(agent.modelProfileId);
       const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
       const executionState =
@@ -144,8 +142,8 @@ export function createAdminReadModel(input: {
         name: agent.name,
         description: agent.description ?? undefined,
         executionState,
-        functionId: agent.functionId,
-        functionName: agentFunction?.name ?? null,
+        roleId: agent.roleId,
+        roleName: role?.name ?? null,
         modelProfile: modelProfile ?? null,
         omModelProfile: omModelProfile ?? null,
         loaded: Boolean(loadedAgent),
@@ -167,7 +165,7 @@ export function createAdminReadModel(input: {
     }
 
     const [
-      functions,
+      roles,
       llmProfiles,
       providerRows,
       agentMcpRows,
@@ -179,7 +177,7 @@ export function createAdminReadModel(input: {
       githubProvisioning,
     ] =
       await Promise.all([
-        capabilities.listFunctions(),
+        capabilities.listRoles(),
         llmSettings.listProfiles(),
         db.query.agentProviders.findMany({
           where: eq(agentProviders.agentId, agentId),
@@ -222,7 +220,7 @@ export function createAdminReadModel(input: {
       ]);
     const registry = getInternalAgentRegistry();
     const loadedAgent = registry.get(agentId);
-    const functionMap = new Map(functions.map((row) => [row.functionId, row]));
+    const roleMap = new Map(roles.map((row) => [row.roleId, row]));
     const llmProfileMap = new Map(
       llmProfiles.map((row) => [
         row.profileId,
@@ -233,7 +231,7 @@ export function createAdminReadModel(input: {
         },
       ]),
     );
-    const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
+    const role = agent.roleId ? (roleMap.get(agent.roleId) ?? null) : null;
     const modelProfile = llmProfileMap.get(agent.modelProfileId);
     const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
     const heartbeat = agentScheduleRows.find((schedule) => schedule.kind === 'heartbeat') ?? null;
@@ -260,9 +258,9 @@ export function createAdminReadModel(input: {
       executionState,
       modelProfile: modelProfile ?? null,
       omModelProfile: omModelProfile ?? null,
-      function: agentFunction && {
-        ...agentFunction,
-        description: agentFunction.description ?? null,
+      role: role && {
+        ...role,
+        description: role.description ?? null,
       },
       loaded: Boolean(loadedAgent),
       runner: runnerSnapshot,
@@ -330,33 +328,16 @@ export function createAdminReadModel(input: {
     };
   }
 
-  async function listFunctions() {
-    const [functions, agentCounts] = await Promise.all([
-      capabilities.listFunctions(),
+  async function listRoles() {
+    const [roles, agentCounts] = await Promise.all([
+      capabilities.listRoles(),
       db
         .select({
-          functionId: agents.functionId,
+          roleId: agents.roleId,
           count: sql<number>`count(*)`,
         })
         .from(agents)
-        .groupBy(agents.functionId),
-    ]);
-    const countMap = new Map(
-      agentCounts
-        .filter((row) => row.functionId)
-        .map((row) => [row.functionId as string, row.count]),
-    );
-
-    return functions.map((agentFunction) => ({
-      ...agentFunction,
-      assignedAgentCount: countMap.get(agentFunction.functionId) ?? 0,
-    }));
-  }
-
-  async function listRoles() {
-    const [roles, functions] = await Promise.all([
-      capabilities.listRoles(),
-      capabilities.listFunctions(),
+        .groupBy(agents.roleId),
     ]);
     const [toolPermissions, workflowPermissions] = await Promise.all([
       Promise.all(
@@ -372,16 +353,11 @@ export function createAdminReadModel(input: {
         })),
       ),
     ]);
-    const functionCountByRoleId = new Map<string, number>();
-
-    for (const agentFunction of functions) {
-      for (const roleId of agentFunction.roleIds) {
-        functionCountByRoleId.set(
-          roleId,
-          (functionCountByRoleId.get(roleId) ?? 0) + 1,
-        );
-      }
-    }
+    const assignedAgentCountByRoleId = new Map(
+      agentCounts
+        .filter((row) => row.roleId)
+        .map((row) => [row.roleId as string, row.count]),
+    );
 
     const toolMap = new Map(toolPermissions.map((row) => [row.roleId, row.toolIds]));
     const workflowMap = new Map(workflowPermissions.map((row) => [row.roleId, row.workflowIds]));
@@ -393,7 +369,7 @@ export function createAdminReadModel(input: {
         roleId: role.roleId,
         name: role.name,
         description: role.description,
-        assignedFunctionCount: functionCountByRoleId.get(role.roleId) ?? 0,
+        assignedAgentCount: assignedAgentCountByRoleId.get(role.roleId) ?? 0,
         toolIds: toolMap.get(role.roleId) ?? [],
         workflowIds: workflowMap.get(role.roleId) ?? [],
         createdAt: role.createdAt,
@@ -484,7 +460,6 @@ export function createAdminReadModel(input: {
     getDashboard,
     listAgents,
     getAgent,
-    listFunctions,
     listRoles,
     listSystemIntegrations,
     getSystemSettings,

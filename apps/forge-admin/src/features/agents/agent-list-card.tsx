@@ -98,7 +98,7 @@ export function AgentListCard(input: {
                       </span>
                     </div>
                     <div className="mt-1 text-xs text-[color:var(--muted)]">
-                      {agent.functionName ?? 'No function assigned'}
+                      {agent.roleName ?? 'No role assigned'}
                     </div>
                   </div>
                   <Badge

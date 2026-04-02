@@ -81,8 +81,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
 
-  if (!agentConfig.functionId) {
-    throw new Error(`Agent is missing functionId: ${config.agentId}`);
+  if (!agentConfig.roleId) {
+    throw new Error(`Agent is missing roleId: ${config.agentId}`);
   }
 
   const llmSettings = createLlmSettingsStore(db);
