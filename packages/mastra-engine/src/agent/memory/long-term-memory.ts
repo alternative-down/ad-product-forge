@@ -198,15 +198,6 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         recursive: true,
         overwrite: true,
       });
-
-      await this.workspace.index(filePath, content, {
-        type: 'text',
-        mimeType: 'text/markdown',
-        metadata: {
-          originType: observation.originType,
-          observationId: observation.id,
-        },
-      });
     }
 
     // Only call memory agent if this is the last step (no toolCalls + has text response)
