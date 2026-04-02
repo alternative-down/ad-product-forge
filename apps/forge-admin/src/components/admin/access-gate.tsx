@@ -9,7 +9,7 @@ export function AccessGate(input: {
   onForget(): void;
 }) {
   const [value, setValue] = useState(input.initialValue);
-  const hasStoredKey = input.initialValue.trim().length > 0;
+  const [hasStoredKey, setHasStoredKey] = useState(input.initialValue.trim().length > 0);
 
   return (
     <div className="forja-app">
@@ -19,6 +19,7 @@ export function AccessGate(input: {
           onSubmit={(event) => {
             event.preventDefault();
             input.onSave(value);
+            setHasStoredKey(value.trim().length > 0);
           }}
         >
           <div className="text-center text-5xl font-semibold tracking-[-0.07em] sm:text-6xl">Forja</div>
@@ -40,6 +41,7 @@ export function AccessGate(input: {
                 className="h-12 px-5"
                 onClick={() => {
                   setValue('');
+                  setHasStoredKey(false);
                   input.onForget();
                 }}
               >
