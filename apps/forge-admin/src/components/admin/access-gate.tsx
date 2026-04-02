@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 export function AccessGate(input: {
   initialValue: string;
   onSave(value: string): void;
-  onClear(): void;
+  onForget(): void;
 }) {
   const [value, setValue] = useState(input.initialValue);
   const hasStoredKey = input.initialValue.trim().length > 0;
@@ -40,7 +40,7 @@ export function AccessGate(input: {
                 className="h-12 px-5"
                 onClick={() => {
                   setValue('');
-                  input.onClear();
+                  input.onForget();
                 }}
               >
                 Esquecer

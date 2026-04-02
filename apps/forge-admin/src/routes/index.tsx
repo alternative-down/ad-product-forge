@@ -15,7 +15,7 @@ function AdminSecretRoute() {
       onSave={(value) => {
         setStoredAdminSecret(value);
       }}
-      onClear={() => {
+      onForget={() => {
         setStoredAdminSecret('');
       }}
     />
