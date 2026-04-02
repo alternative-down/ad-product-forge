@@ -1,7 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router';
-
-import { OverviewPage } from '../features/overview/page';
+import { Navigate, createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/')({
-  component: OverviewPage,
+  component: IndexRedirectRoute,
 });
+
+function IndexRedirectRoute() {
+  return <Navigate to="/v1" />;
+}
