@@ -12,7 +12,7 @@ export function AccessGate(input: {
   const hasStoredKey = input.initialValue.trim().length > 0;
 
   return (
-    <div className="forge-admin-v2 min-h-screen bg-[color:var(--v2-bg)] text-[color:var(--v2-text)]">
+    <div className="forja-app">
       <div className="flex min-h-screen items-center justify-center px-6">
         <form
           className="flex w-full max-w-sm flex-col gap-3"
@@ -22,7 +22,7 @@ export function AccessGate(input: {
           }}
         >
           <div className="text-center text-4xl font-semibold tracking-[-0.06em]">Forja</div>
-          <div className="text-center text-sm text-[color:var(--v2-muted)]">
+          <div className="text-center text-sm text-muted-foreground">
             Informe sua chave de acesso.
           </div>
           {hasStoredKey ? (
@@ -43,7 +43,7 @@ export function AccessGate(input: {
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
                 placeholder="Chave de acesso"
-              className="h-11 rounded-lg border-[color:var(--v2-border)] bg-white"
+                className="h-11 rounded-lg bg-background"
               />
               <Button type="submit" disabled={!value.trim()}>
                 Entrar

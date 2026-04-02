@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import '../styles/app.css';
 import { AccessGate } from '@/components/admin/access-gate';
 import { getStoredAdminSecret, setStoredAdminSecret } from '@/lib/admin-secret';
 
