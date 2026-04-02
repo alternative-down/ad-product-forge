@@ -21,7 +21,7 @@ export function AccessGate(input: {
             input.onSave(value);
           }}
         >
-          <div className="text-center text-4xl font-semibold tracking-[-0.06em]">Forge</div>
+          <div className="text-center text-4xl font-semibold tracking-[-0.06em]">Forja</div>
           <div className="text-center text-sm text-[color:var(--v2-muted)]">
             Informe sua chave de acesso.
           </div>
