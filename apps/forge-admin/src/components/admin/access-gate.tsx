@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 
 export function AccessGate(input: {
   initialValue: string;
-  onSave(value: string): void;
+  warningMessage?: string | null;
+  submitting?: boolean;
+  onSave(value: string): void | Promise<void>;
   onForget(): void;
 }) {
   const [value, setValue] = useState(input.initialValue);
@@ -33,6 +35,9 @@ export function AccessGate(input: {
             placeholder="Chave de acesso"
             className="h-11 rounded-md bg-background"
           />
+          {input.warningMessage ? (
+            <div className="text-sm text-destructive">{input.warningMessage}</div>
+          ) : null}
           <div className="flex justify-end">
             {hasStoredKey ? (
               <Button
@@ -48,8 +53,8 @@ export function AccessGate(input: {
                 Esquecer
               </Button>
             ) : (
-              <Button type="submit" className="h-12 px-5" disabled={!value.trim()}>
-                Entrar
+              <Button type="submit" className="h-12 px-5" disabled={!value.trim() || input.submitting}>
+                {input.submitting ? 'Entrando...' : 'Entrar'}
               </Button>
             )}
           </div>
