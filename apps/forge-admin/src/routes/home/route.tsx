@@ -1,8 +1,7 @@
-import { Home } from 'lucide-react';
 import { Link, Navigate, Outlet, createFileRoute, useRouterState } from '@tanstack/react-router';
 
 import '../../styles/app.css';
-import { AppShell, TopBar } from '@/components/admin';
+import { AppShell } from '@/components/admin';
 import { getStoredAdminSecret } from '@/lib/admin-secret';
 
 export const Route = createFileRoute('/home')({
@@ -21,21 +20,17 @@ function HomeLayoutRoute() {
   return (
     <AppShell
       topbar={
-        <TopBar
-          title="Forja"
-          actions={
-            <div className="flex items-center gap-2">
-              <Link
-                to="/home"
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm"
-                data-active={pathname === '/home' ? 'true' : 'false'}
-              >
-                <Home className="h-4 w-4" />
-                Home
-              </Link>
-            </div>
-          }
-        />
+        <div className="flex min-h-18 items-center gap-8 px-6 py-4">
+          <div className="text-2xl font-semibold tracking-[-0.06em] sm:text-3xl">Forja</div>
+          <nav className="flex items-center gap-4">
+            <Link
+              to="/home"
+              className={pathname === '/home' ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+            >
+              Home
+            </Link>
+          </nav>
+        </div>
       }
     >
       <Outlet />
