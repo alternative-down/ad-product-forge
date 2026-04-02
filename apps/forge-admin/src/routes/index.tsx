@@ -14,6 +14,9 @@ function AdminSecretRoute() {
       onSave={(value) => {
         setStoredAdminSecret(value);
       }}
+      onClear={() => {
+        setStoredAdminSecret('');
+      }}
     />
   );
 }

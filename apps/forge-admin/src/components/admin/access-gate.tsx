@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 export function AccessGate(input: {
   initialValue: string;
   onSave(value: string): void;
+  onClear(): void;
 }) {
   const [value, setValue] = useState(input.initialValue);
+  const hasStoredKey = input.initialValue.trim().length > 0;
 
   return (
     <div className="forge-admin-v2 min-h-screen bg-[color:var(--v2-bg)] text-[color:var(--v2-text)]">
@@ -19,17 +21,35 @@ export function AccessGate(input: {
             input.onSave(value);
           }}
         >
-          <div className="text-center text-xl font-semibold tracking-[-0.04em]">Forge</div>
-          <Input
-            type="password"
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder="Access key"
-            className="h-11 border-[color:var(--v2-border)] bg-white"
-          />
-          <Button type="submit" disabled={!value.trim()}>
-            Enter
-          </Button>
+          <div className="text-center text-4xl font-semibold tracking-[-0.06em]">Forge</div>
+          <div className="text-center text-sm text-[color:var(--v2-muted)]">
+            Informe sua chave de acesso.
+          </div>
+          {hasStoredKey ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setValue('');
+                input.onClear();
+              }}
+            >
+              Esquecer
+            </Button>
+          ) : (
+            <>
+              <Input
+                type="password"
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                placeholder="Chave de acesso"
+                className="h-11 border-[color:var(--v2-border)] bg-white"
+              />
+              <Button type="submit" disabled={!value.trim()}>
+                Entrar
+              </Button>
+            </>
+          )}
         </form>
       </div>
     </div>
