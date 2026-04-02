@@ -37,7 +37,7 @@ export const agents = sqliteTable('agents', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
-  roleId: text('function_id')
+  roleId: text('role_id')
     .references(() => agentRoles.id, { onDelete: 'set null' }),
   modelProfileId: text('model_profile_id')
     .notNull()
@@ -61,19 +61,6 @@ export const agents = sqliteTable('agents', {
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
 
-export const agentFunctions = sqliteTable('agent_functions', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-}, (table) => ({
-  agentFunctionsNameIdx: uniqueIndex('agent_functions_name_idx').on(table.name),
-}));
-
-export type AgentFunction = typeof agentFunctions.$inferSelect;
-export type NewAgentFunction = typeof agentFunctions.$inferInsert;
-
 export const agentRoles = sqliteTable('agent_roles', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -86,23 +73,6 @@ export const agentRoles = sqliteTable('agent_roles', {
 
 export type AgentRole = typeof agentRoles.$inferSelect;
 export type NewAgentRole = typeof agentRoles.$inferInsert;
-
-export const functionRoles = sqliteTable('function_roles', {
-  functionId: text('function_id')
-    .notNull()
-    .references(() => agentFunctions.id, { onDelete: 'cascade' }),
-  roleId: text('role_id')
-    .notNull()
-    .references(() => agentRoles.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at').notNull(),
-}, (table) => ({
-  functionRolesUniqueIdx: uniqueIndex('function_roles_unique_idx').on(table.functionId, table.roleId),
-  functionRolesFunctionIdIdx: index('function_roles_function_id_idx').on(table.functionId),
-  functionRolesRoleIdIdx: index('function_roles_role_id_idx').on(table.roleId),
-}));
-
-export type FunctionRole = typeof functionRoles.$inferSelect;
-export type NewFunctionRole = typeof functionRoles.$inferInsert;
 
 export const roleToolPermissions = sqliteTable('role_tool_permissions', {
   roleId: text('role_id')
@@ -539,26 +509,10 @@ export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
   }),
 }));
 
-export const agentFunctionsRelations = relations(agentFunctions, ({ many }) => ({
-  roleLinks: many(functionRoles),
-}));
-
 export const agentRolesRelations = relations(agentRoles, ({ many }) => ({
   agents: many(agents),
-  functionLinks: many(functionRoles),
   toolPermissions: many(roleToolPermissions),
   workflowPermissions: many(roleWorkflowPermissions),
-}));
-
-export const functionRolesRelations = relations(functionRoles, ({ one }) => ({
-  function: one(agentFunctions, {
-    fields: [functionRoles.functionId],
-    references: [agentFunctions.id],
-  }),
-  role: one(agentRoles, {
-    fields: [functionRoles.roleId],
-    references: [agentRoles.id],
-  }),
 }));
 
 export const roleToolPermissionsRelations = relations(roleToolPermissions, ({ one }) => ({

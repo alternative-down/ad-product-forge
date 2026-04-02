@@ -34,7 +34,6 @@ import { Route as SystemIntegrationsMigaduRouteImport } from './routes/system.in
 import { Route as SystemIntegrationsGithubRouteImport } from './routes/system.integrations.github'
 import { Route as SystemIntegrationsCoolifyRouteImport } from './routes/system.integrations.coolify'
 import { Route as RolesRolesRoleIdRouteImport } from './routes/roles.roles.$roleId'
-import { Route as RolesFunctionsFunctionIdRouteImport } from './routes/roles.functions.$functionId'
 import { Route as AgentsAgentIdSchedulesRouteImport } from './routes/agents.$agentId.schedules'
 import { Route as AgentsAgentIdHistoryRouteImport } from './routes/agents.$agentId.history'
 import { Route as AgentsAgentIdRuntimeRuntimeViewRouteImport } from './routes/agents.$agentId.runtime.$runtimeView'
@@ -169,12 +168,6 @@ const RolesRolesRoleIdRoute = RolesRolesRoleIdRouteImport.update({
   path: '/roles/$roleId',
   getParentRoute: () => RolesRoute,
 } as any)
-const RolesFunctionsFunctionIdRoute =
-  RolesFunctionsFunctionIdRouteImport.update({
-    id: '/functions/$functionId',
-    path: '/functions/$functionId',
-    getParentRoute: () => RolesRoute,
-  } as any)
 const AgentsAgentIdSchedulesRoute = AgentsAgentIdSchedulesRouteImport.update({
   id: '/$agentId/schedules',
   path: '/$agentId/schedules',
@@ -218,7 +211,6 @@ export interface FileRoutesByFullPath {
   '/system/': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
-  '/roles/functions/$functionId': typeof RolesFunctionsFunctionIdRoute
   '/roles/roles/$roleId': typeof RolesRolesRoleIdRoute
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
   '/system/integrations/github': typeof SystemIntegrationsGithubRoute
@@ -246,7 +238,6 @@ export interface FileRoutesByTo {
   '/system': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
-  '/roles/functions/$functionId': typeof RolesFunctionsFunctionIdRoute
   '/roles/roles/$roleId': typeof RolesRolesRoleIdRoute
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
   '/system/integrations/github': typeof SystemIntegrationsGithubRoute
@@ -279,7 +270,6 @@ export interface FileRoutesById {
   '/system/': typeof SystemIndexRoute
   '/agents/$agentId/history': typeof AgentsAgentIdHistoryRoute
   '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRoute
-  '/roles/functions/$functionId': typeof RolesFunctionsFunctionIdRoute
   '/roles/roles/$roleId': typeof RolesRolesRoleIdRoute
   '/system/integrations/coolify': typeof SystemIntegrationsCoolifyRoute
   '/system/integrations/github': typeof SystemIntegrationsGithubRoute
@@ -313,7 +303,6 @@ export interface FileRouteTypes {
     | '/system/'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
-    | '/roles/functions/$functionId'
     | '/roles/roles/$roleId'
     | '/system/integrations/coolify'
     | '/system/integrations/github'
@@ -341,7 +330,6 @@ export interface FileRouteTypes {
     | '/system'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
-    | '/roles/functions/$functionId'
     | '/roles/roles/$roleId'
     | '/system/integrations/coolify'
     | '/system/integrations/github'
@@ -373,7 +361,6 @@ export interface FileRouteTypes {
     | '/system/'
     | '/agents/$agentId/history'
     | '/agents/$agentId/schedules'
-    | '/roles/functions/$functionId'
     | '/roles/roles/$roleId'
     | '/system/integrations/coolify'
     | '/system/integrations/github'
@@ -571,13 +558,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RolesRolesRoleIdRouteImport
       parentRoute: typeof RolesRoute
     }
-    '/roles/functions/$functionId': {
-      id: '/roles/functions/$functionId'
-      path: '/functions/$functionId'
-      fullPath: '/roles/functions/$functionId'
-      preLoaderRoute: typeof RolesFunctionsFunctionIdRouteImport
-      parentRoute: typeof RolesRoute
-    }
     '/agents/$agentId/schedules': {
       id: '/agents/$agentId/schedules'
       path: '/$agentId/schedules'
@@ -652,13 +632,11 @@ const FinanceRouteWithChildren =
 
 interface RolesRouteChildren {
   RolesIndexRoute: typeof RolesIndexRoute
-  RolesFunctionsFunctionIdRoute: typeof RolesFunctionsFunctionIdRoute
   RolesRolesRoleIdRoute: typeof RolesRolesRoleIdRoute
 }
 
 const RolesRouteChildren: RolesRouteChildren = {
   RolesIndexRoute: RolesIndexRoute,
-  RolesFunctionsFunctionIdRoute: RolesFunctionsFunctionIdRoute,
   RolesRolesRoleIdRoute: RolesRolesRoleIdRoute,
 }
 
