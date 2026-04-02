@@ -69,3 +69,7 @@
 .forja-app textarea {
   font: inherit;
 }
+
+.forja-app form[data-loading='true'] {
+  opacity: 0.72;
+}

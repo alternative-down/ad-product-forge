@@ -1,3 +1,4 @@
+import { LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -15,9 +16,10 @@ export function AccessGate(input: {
 
   return (
     <div className="forja-app">
-      <div className="flex min-h-screen items-center justify-center px-6">
+      <div className="flex min-h-screen items-center justify-center px-6 animate-in fade-in duration-300">
         <form
-          className="flex w-full max-w-sm flex-col gap-3"
+          className="flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200"
+          data-loading={input.submitting ? 'true' : 'false'}
           onSubmit={(event) => {
             event.preventDefault();
             input.onSave(value);
@@ -53,7 +55,8 @@ export function AccessGate(input: {
                 Esquecer
               </Button>
             ) : (
-              <Button type="submit" className="h-12 px-5" disabled={!value.trim() || input.submitting}>
+              <Button type="submit" className="h-12 gap-2 px-5" disabled={!value.trim() || input.submitting}>
+                {input.submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
                 {input.submitting ? 'Entrando...' : 'Entrar'}
               </Button>
             )}
