@@ -43,7 +43,7 @@ export function AccessGate(input: {
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
                 placeholder="Chave de acesso"
-                className="h-11 rounded-lg bg-background"
+                className="h-11 rounded-md bg-background"
               />
               <Button type="submit" disabled={!value.trim()}>
                 Entrar
