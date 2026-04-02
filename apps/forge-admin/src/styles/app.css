@@ -35,23 +35,23 @@
 
 .forja-app {
   --background: #f7f5ef;
-  --foreground: #181814;
+  --foreground: #24211d;
   --card: #ffffff;
-  --card-foreground: #181814;
+  --card-foreground: #24211d;
   --popover: #ffffff;
-  --popover-foreground: #181814;
-  --primary: #181814;
+  --popover-foreground: #24211d;
+  --primary: #8a616d;
   --primary-foreground: #ffffff;
   --secondary: #ece7dd;
-  --secondary-foreground: #181814;
+  --secondary-foreground: #24211d;
   --muted: #f1ede4;
   --muted-foreground: #6b675e;
   --accent: #ece7dd;
-  --accent-foreground: #181814;
+  --accent-foreground: #24211d;
   --destructive: #c75858;
   --border: #d8d2c7;
   --input: #d8d2c7;
-  --ring: #181814;
+  --ring: #8a616d;
   --radius: 0.375rem;
   min-height: 100vh;
   background: var(--background);
