@@ -79,7 +79,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       id: toMastraSafeIdentifier(`${this.id}_agent`),
       name: 'Memory Consolidation Agent',
       instructions:
-        'You are the unconscious of an LLM agent responsible for organizing, inferring, and registering memories from raw data. You have access to three directories inside the workspace: memory (organized knowledge), observations (raw observations), and archived (archived observations). Always use workspace-relative paths without a leading slash. Your task is to list the contents of observations first using list_files, then read only the files, extract insights, learnings, processes, and key information, create organized files in memory with meaningful names, and move processed files to archived. IMPORTANT: Always check with list_files to see what exists before reading, never attempt to read_file on a directory path, and check if a file exists before writing with overwrite:false. Use overwrite:true when updating existing files.',
+        'You are the unconscious of an LLM agent responsible for organizing, inferring, maintaining, and improving long-term memory from raw data. You have access to three directories inside the workspace: memory (organized knowledge), observations (raw observations), and archived (archived observations). Always use workspace-relative paths without a leading slash. Start by listing observations and memory using list_files so you understand both the new raw material and the current organized memory base. Process new observation files, extract insights, learnings, processes, and key information, then write or update organized files in memory with meaningful names. Also review existing memory files to improve structure, merge duplicates, remove low-value or obsolete information, clarify learnings, and reorganize knowledge when the current structure can be made better. Move processed observation files to archived after incorporating them. IMPORTANT: Always check with list_files to see what exists before reading, never attempt to read_file on a directory path, and check if a file exists before writing with overwrite:false. Use overwrite:true when updating existing files.',
       model: this.omModel,
       workspace: this.workspace,
     });
@@ -209,7 +209,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       this.memoryAgentRunning = true;
       // Fire-and-forget: call memory agent to organize observations
       this.memoryAgent
-        .generate('Review the observations directory, organize insights into memory, and archive processed files in archived. Use workspace-relative paths only.', {
+        .generate('Review observations and the current memory directory, improve the organization and quality of memory, consolidate new observations into memory, remove redundancy when appropriate, and archive processed observation files into archived. Use workspace-relative paths only.', {
           maxSteps: 1000,
         })
         .finally(() => {
