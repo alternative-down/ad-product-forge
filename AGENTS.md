@@ -19,3 +19,10 @@
 - Validate unknown input at the boundary with Zod.
 - Do not leak provider-specific external ids or metadata through agent-facing tool outputs unless explicitly required.
 - Keep naming literal and obvious.
+
+## Forge Admin Frontend
+- Avoid cards and technical explanatory text in the admin UI unless they are truly necessary for the task.
+- Admin UI should be minimal brutalist: clean, restrained, and without decorative elements beyond what is strictly necessary.
+- Admin routes must use directory-based file routing with `route.tsx` and `index.tsx` inside each route directory. Do not model routes with filename-based route modules when creating or refactoring admin routes.
+- Prefer using existing `shadcn/ui` components whenever possible.
+- Do not modify the generated `shadcn/ui` components in their own folder. If a variation is needed, create a separate wrapper/component and apply the variation there.
