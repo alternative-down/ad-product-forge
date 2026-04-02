@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Activity, Bot, Cable, Moon, Shield, Sun, Wallet } from 'lucide-react';
+import { Activity, Bot, Cable, KeyRound, Moon, Shield, Sun, Wallet } from 'lucide-react';
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
-import { AccessGate } from '@/components/admin/access-gate';
 import {
   AdminApiKeyError,
   getOverview,
@@ -11,7 +10,9 @@ import {
   setStoredAdminApiKey,
 } from '../../lib/api';
 import { formatUsd } from '../../lib/format';
+import { Card } from '../ui/card';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { cn } from '../../lib/utils';
 
 const navigationItems = [
@@ -44,7 +45,7 @@ export function AppShell() {
 
   if (!adminApiKey || overviewQuery.error instanceof AdminApiKeyError) {
     return (
-      <AccessGate
+      <AdminApiKeyGate
         initialValue={adminApiKey}
         errorMessage={overviewQuery.error instanceof AdminApiKeyError ? overviewQuery.error.message : null}
         theme={theme}
@@ -122,6 +123,92 @@ export function AppShell() {
       <main className="px-4 py-6 lg:px-6">
         <Outlet />
       </main>
+    </div>
+  );
+}
+
+function AdminApiKeyGate(input: {
+  initialValue: string;
+  errorMessage: string | null;
+  theme: 'light' | 'dark';
+  onThemeToggle(): void;
+  onSave(value: string): void;
+  onClear(): void;
+}) {
+  const [value, setValue] = useState(input.initialValue);
+
+  return (
+    <div className="min-h-screen px-4 py-8 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center">
+        <Card className="grid w-full overflow-hidden lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="bg-[color:var(--bg-rail)] px-8 py-10 text-white">
+            <div className="flex items-start justify-between gap-4">
+              <div className="inline-flex items-center rounded-md border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
+                Access gate
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                onClick={input.onThemeToggle}
+              >
+                {input.theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+            </div>
+            <h1 className="mt-6 font-serif text-4xl tracking-tight">Unlock Forge Admin</h1>
+            <p className="mt-4 max-w-md text-sm leading-6 text-white/65">
+              The admin console uses the Forge admin API key for every privileged request. The key is
+              kept only in localStorage on this browser.
+            </p>
+          </div>
+
+          <div className="px-8 py-10">
+            <div className="flex items-start gap-4">
+              <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--panel-muted)] p-3 text-[color:var(--ink)]">
+                <KeyRound className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-serif text-3xl tracking-tight text-[color:var(--ink)]">
+                  Admin API key
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
+                  Paste the current key and enter the console. If the backend rejects it, the session
+                  is cleared and the gate opens again.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-4">
+              <Input
+                type="password"
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                placeholder="Forge admin API key"
+              />
+              {input.errorMessage ? (
+                <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {input.errorMessage}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-3">
+                <Button type="button" onClick={() => input.onSave(value)} disabled={!value.trim()}>
+                  Unlock admin
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setValue('');
+                    input.onClear();
+                  }}
+                >
+                  Clear cached key
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

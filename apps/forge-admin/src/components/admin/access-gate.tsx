@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 export function AccessGate(input: {
   initialValue: string;
   errorMessage: string | null;
+  statusMessage?: string | null;
   theme: 'light' | 'dark';
   onThemeToggle(): void;
   onSave(value: string): void;
@@ -88,6 +89,11 @@ export function AccessGate(input: {
                 {input.errorMessage ? (
                   <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--v2-danger)_24%,white)] bg-[color:color-mix(in_srgb,var(--v2-danger)_8%,white)] px-4 py-3 text-sm text-[color:var(--v2-danger)]">
                     {input.errorMessage}
+                  </div>
+                ) : null}
+                {input.statusMessage ? (
+                  <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--v2-accent)_18%,white)] bg-[color:color-mix(in_srgb,var(--v2-accent)_8%,white)] px-4 py-3 text-sm text-[color:var(--v2-accent)]">
+                    {input.statusMessage}
                   </div>
                 ) : null}
 
