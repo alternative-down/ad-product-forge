@@ -198,6 +198,15 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         recursive: true,
         overwrite: true,
       });
+
+      await this.workspace.index(filePath, content, {
+        type: 'text',
+        mimeType: 'text/markdown',
+        metadata: {
+          originType: observation.originType,
+          observationId: observation.id,
+        },
+      });
     }
 
     // Only call memory agent if this is the last step (no toolCalls + has text response)
@@ -329,14 +338,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const recentMessages = args.messages
       .filter((message) => message.role !== 'system')
       .slice(-this.maxRecentRecallMessages)
-      .map((message) =>
-        [
-          this.extractMessageContentText(message),
-          typeof message.content.reasoning === 'string' ? message.content.reasoning : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      );
+      .map((message) => this.extractMessageRecallText(message));
 
     const recentSteps = args.steps.slice(-this.maxRecentRecallMessages).map((step) =>
       [
@@ -368,8 +370,98 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     return parts.join('\n').trim();
   }
 
+  private extractMessageRecallText(message: MastraDBMessage) {
+    const sections = [
+      this.extractMessageContentText(message),
+      this.extractMessageReasoningText(message),
+      this.extractMessageToolText(message),
+    ].filter(Boolean);
+
+    return sections.join('\n').trim();
+  }
+
+  private extractMessageReasoningText(message: MastraDBMessage) {
+    const topLevelReasoning =
+      typeof message.content.reasoning === 'string' ? message.content.reasoning.trim() : '';
+
+    const partReasoning = message.content.parts
+      .flatMap((part) => {
+        if (!this.isReasoningMessagePart(part)) {
+          return [];
+        }
+
+        const detailText = part.details
+          .filter(
+            (
+              detail,
+            ): detail is Extract<typeof part.details[number], { type: 'text'; text: string }> =>
+              detail.type === 'text' &&
+              typeof detail.text === 'string' &&
+              detail.text.trim().length > 0,
+          )
+          .map((detail) => detail.text.trim())
+          .join('\n')
+          .trim();
+
+        const reasoningText = part.reasoning.trim();
+
+        return [reasoningText || detailText].filter(Boolean);
+      })
+      .join('\n')
+      .trim();
+
+    return [topLevelReasoning, partReasoning].filter(Boolean).join('\n').trim();
+  }
+
+  private extractMessageToolText(message: MastraDBMessage) {
+    const partInvocations = message.content.parts
+      .flatMap((part) => {
+        if (!this.isToolInvocationMessagePart(part)) {
+          return [];
+        }
+
+        const invocation = part.toolInvocation;
+        const sections = [
+          invocation.toolName,
+          this.extractValueText('args' in invocation ? invocation.args : null),
+          invocation.state === 'result' ? this.extractValueText(invocation.result) : '',
+        ].filter(Boolean);
+
+        return sections.length > 0 ? [sections.join('\n')] : [];
+      })
+      .join('\n')
+      .trim();
+
+    const topLevelInvocations = (message.content.toolInvocations ?? [])
+      .flatMap((invocation) => {
+        const sections = [
+          invocation.toolName,
+          this.extractValueText('args' in invocation ? invocation.args : null),
+          invocation.state === 'result' ? this.extractValueText(invocation.result) : '',
+        ].filter(Boolean);
+
+        return sections.length > 0 ? [sections.join('\n')] : [];
+      })
+      .join('\n')
+      .trim();
+
+    return [partInvocations, topLevelInvocations].filter(Boolean).join('\n').trim();
+  }
+
   private isTextMessagePart(part: MastraMessagePart): part is MastraMessagePart & { type: 'text'; text: string } {
     return part.type === 'text' && typeof part.text === 'string';
+  }
+
+  private isReasoningMessagePart(
+    part: MastraMessagePart,
+  ): part is Extract<MastraMessagePart, { type: 'reasoning'; reasoning: string; details: Array<{ type: string }> }> {
+    return part.type === 'reasoning';
+  }
+
+  private isToolInvocationMessagePart(
+    part: MastraMessagePart,
+  ): part is Extract<MastraMessagePart, { type: 'tool-invocation' }> {
+    return part.type === 'tool-invocation';
   }
 
   private getThreadContext(
