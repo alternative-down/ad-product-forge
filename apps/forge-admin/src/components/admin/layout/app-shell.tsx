@@ -10,12 +10,16 @@ export function AppShell(input: {
   className?: string;
 }) {
   return (
-    <div className={cn('forge-admin-v2 v2-shell', input.className)}>
+    <div className={cn('forja-app min-h-screen bg-background text-foreground', input.className)}>
       <div className="grid min-h-screen grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="v2-sidebar flex min-h-screen flex-col">{input.sidebar}</aside>
+        <aside className="flex min-h-screen flex-col border-r border-border bg-muted/40">
+          {input.sidebar}
+        </aside>
         <div className="flex min-h-screen min-w-0 flex-col">
           {input.topbar ? (
-            <header className="v2-topbar sticky top-0 z-10">{input.topbar}</header>
+            <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
+              {input.topbar}
+            </header>
           ) : null}
           <div
             className={cn(

@@ -34,7 +34,7 @@ function AdminSecretRoute() {
 
           setStoredAdminSecret(value);
           setSubmitting(false);
-          await navigate({ to: '/v1' });
+          await navigate({ to: '/home' });
         } catch {
           setSubmitting(false);
           setWarningMessage('Não foi possível validar a chave.');

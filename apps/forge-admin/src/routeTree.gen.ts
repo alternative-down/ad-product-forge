@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as V1RouteImport } from './routes/v1'
+import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as V1IndexRouteImport } from './routes/v1.index'
+import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as V1SystemRouteImport } from './routes/v1.system'
 import { Route as V1RolesRouteImport } from './routes/v1.roles'
 import { Route as V1FinanceRouteImport } from './routes/v1.finance'
@@ -46,6 +48,11 @@ const V1Route = V1RouteImport.update({
   path: '/v1',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HomeRouteRoute = HomeRouteRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,6 +62,11 @@ const V1IndexRoute = V1IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => V1Route,
+} as any)
+const HomeIndexRoute = HomeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HomeRouteRoute,
 } as any)
 const V1SystemRoute = V1SystemRouteImport.update({
   id: '/system',
@@ -206,11 +218,13 @@ const V1AgentsAgentIdCommunicationsCommunicationViewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/home': typeof HomeRouteRouteWithChildren
   '/v1': typeof V1RouteWithChildren
   '/v1/agents': typeof V1AgentsRouteWithChildren
   '/v1/finance': typeof V1FinanceRouteWithChildren
   '/v1/roles': typeof V1RolesRouteWithChildren
   '/v1/system': typeof V1SystemRouteWithChildren
+  '/home/': typeof HomeIndexRoute
   '/v1/': typeof V1IndexRoute
   '/v1/agents/hire': typeof V1AgentsHireRoute
   '/v1/finance/capital': typeof V1FinanceCapitalRoute
@@ -239,6 +253,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/home': typeof HomeIndexRoute
   '/v1': typeof V1IndexRoute
   '/v1/agents/hire': typeof V1AgentsHireRoute
   '/v1/finance/capital': typeof V1FinanceCapitalRoute
@@ -268,11 +283,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/home': typeof HomeRouteRouteWithChildren
   '/v1': typeof V1RouteWithChildren
   '/v1/agents': typeof V1AgentsRouteWithChildren
   '/v1/finance': typeof V1FinanceRouteWithChildren
   '/v1/roles': typeof V1RolesRouteWithChildren
   '/v1/system': typeof V1SystemRouteWithChildren
+  '/home/': typeof HomeIndexRoute
   '/v1/': typeof V1IndexRoute
   '/v1/agents/hire': typeof V1AgentsHireRoute
   '/v1/finance/capital': typeof V1FinanceCapitalRoute
@@ -303,11 +320,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/home'
     | '/v1'
     | '/v1/agents'
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
+    | '/home/'
     | '/v1/'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
@@ -336,6 +355,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/home'
     | '/v1'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
@@ -364,11 +384,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/home'
     | '/v1'
     | '/v1/agents'
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
+    | '/home/'
     | '/v1/'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
@@ -398,6 +420,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HomeRouteRoute: typeof HomeRouteRouteWithChildren
   V1Route: typeof V1RouteWithChildren
 }
 
@@ -408,6 +431,13 @@ declare module '@tanstack/react-router' {
       path: '/v1'
       fullPath: '/v1'
       preLoaderRoute: typeof V1RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -423,6 +453,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/v1/'
       preLoaderRoute: typeof V1IndexRouteImport
       parentRoute: typeof V1Route
+    }
+    '/home/': {
+      id: '/home/'
+      path: '/'
+      fullPath: '/home/'
+      preLoaderRoute: typeof HomeIndexRouteImport
+      parentRoute: typeof HomeRouteRoute
     }
     '/v1/system': {
       id: '/v1/system'
@@ -623,6 +660,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface HomeRouteRouteChildren {
+  HomeIndexRoute: typeof HomeIndexRoute
+}
+
+const HomeRouteRouteChildren: HomeRouteRouteChildren = {
+  HomeIndexRoute: HomeIndexRoute,
+}
+
+const HomeRouteRouteWithChildren = HomeRouteRoute._addFileChildren(
+  HomeRouteRouteChildren,
+)
+
 interface V1AgentsRouteChildren {
   V1AgentsHireRoute: typeof V1AgentsHireRoute
   V1AgentsIndexRoute: typeof V1AgentsIndexRoute
@@ -732,6 +781,7 @@ const V1RouteWithChildren = V1Route._addFileChildren(V1RouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HomeRouteRoute: HomeRouteRouteWithChildren,
   V1Route: V1RouteWithChildren,
 }
 export const routeTree = rootRouteImport

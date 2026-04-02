@@ -9,9 +9,15 @@ export function PageHeader(input: {
   return (
     <div className="flex flex-col gap-4 pb-2 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
-        {input.eyebrow ? <div className="v2-label">{input.eyebrow}</div> : null}
-        <h1 className="v2-title mt-1">{input.title}</h1>
-        {input.description ? <p className="v2-subtitle mt-3 max-w-3xl">{input.description}</p> : null}
+        {input.eyebrow ? (
+          <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            {input.eyebrow}
+          </div>
+        ) : null}
+        <h1 className="mt-1 text-4xl font-semibold tracking-[-0.06em]">{input.title}</h1>
+        {input.description ? (
+          <p className="mt-3 max-w-3xl text-base text-muted-foreground">{input.description}</p>
+        ) : null}
       </div>
       {input.actions ? <div className="flex items-center gap-2">{input.actions}</div> : null}
     </div>
