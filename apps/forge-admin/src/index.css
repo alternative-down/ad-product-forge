@@ -57,7 +57,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -324,14 +324,14 @@ code {
 .forge-admin-v2 .v2-section {
   background: color-mix(in srgb, var(--v2-surface) 78%, white);
   border: 1px solid var(--v2-border);
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: var(--v2-shadow);
 }
 
 .forge-admin-v2 .v2-section-quiet {
   background: rgba(255, 255, 255, 0.52);
   border: 1px solid rgba(216, 210, 199, 0.8);
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 .forge-admin-v2 .v2-hairline {
