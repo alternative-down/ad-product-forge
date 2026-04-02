@@ -136,7 +136,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       {
         role: 'system',
         content: [
-          'Recovered past memory relevant to the current step. Use it as supporting recall, not as a replacement for the current conversation.',
+          'These are search results from your past memory. They may not reflect your current reality and must not be assumed as true by default. Treat them only as potentially relevant context that can be considered or mentioned when useful. If your more recent context conflicts with these results, prefer the more recent context. Treat this memory as extra information that may be outdated, incomplete, or incorrect.',
           sections.join('\n'),
         ].join('\n'),
       },
