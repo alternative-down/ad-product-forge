@@ -40,10 +40,6 @@ function AdminSecretRoute() {
           setWarningMessage('Não foi possível validar a chave.');
         }
       }}
-      onForget={() => {
-        setStoredAdminSecret('');
-        setWarningMessage(null);
-      }}
     />
   );
 }

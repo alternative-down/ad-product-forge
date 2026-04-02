@@ -9,10 +9,8 @@ export function AccessGate(input: {
   warningMessage?: string | null;
   submitting?: boolean;
   onSave(value: string): void | Promise<void>;
-  onForget(): void;
 }) {
   const [value, setValue] = useState(input.initialValue);
-  const [hasStoredKey, setHasStoredKey] = useState(input.initialValue.trim().length > 0);
 
   return (
     <div className="forja-app">
@@ -23,7 +21,6 @@ export function AccessGate(input: {
           onSubmit={(event) => {
             event.preventDefault();
             input.onSave(value);
-            setHasStoredKey(value.trim().length > 0);
           }}
         >
           <div className="text-center text-5xl font-semibold tracking-[-0.07em] sm:text-6xl">Forja</div>
@@ -41,25 +38,10 @@ export function AccessGate(input: {
             <div className="text-sm text-destructive">{input.warningMessage}</div>
           ) : null}
           <div className="flex justify-end">
-            {hasStoredKey ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 px-5"
-                onClick={() => {
-                  setValue('');
-                  setHasStoredKey(false);
-                  input.onForget();
-                }}
-              >
-                Esquecer
-              </Button>
-            ) : (
-              <Button type="submit" className="h-12 gap-2 px-5" disabled={!value.trim() || input.submitting}>
-                {input.submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                {input.submitting ? 'Entrando...' : 'Entrar'}
-              </Button>
-            )}
+            <Button type="submit" className="h-12 gap-2 px-5" disabled={!value.trim() || input.submitting}>
+              {input.submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+              {input.submitting ? 'Entrando...' : 'Entrar'}
+            </Button>
           </div>
         </form>
       </div>
