@@ -8,6 +8,7 @@ export function createAgentMemory(config: {
   storage: LibSQLStore;
   vector: LibSQLVector;
 }) {
+  // Working memory stays enabled here; long-term memory is handled by a separate processor.
   return new Memory({
     embedder: fastembed,
     storage: config.storage,
