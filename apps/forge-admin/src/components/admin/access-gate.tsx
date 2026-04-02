@@ -25,31 +25,32 @@ export function AccessGate(input: {
           <div className="text-center text-sm text-muted-foreground">
             Informe sua chave de acesso.
           </div>
-          {hasStoredKey ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setValue('');
-                input.onClear();
-              }}
-            >
-              Esquecer
-            </Button>
-          ) : (
-            <>
-              <Input
-                type="password"
-                value={value}
-                onChange={(event) => setValue(event.target.value)}
-                placeholder="Chave de acesso"
-                className="h-11 rounded-md bg-background"
-              />
-              <Button type="submit" disabled={!value.trim()}>
+          <Input
+            type="password"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder="Chave de acesso"
+            className="h-11 rounded-md bg-background"
+          />
+          <div className="flex justify-end">
+            {hasStoredKey ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 px-5"
+                onClick={() => {
+                  setValue('');
+                  input.onClear();
+                }}
+              >
+                Esquecer
+              </Button>
+            ) : (
+              <Button type="submit" className="h-12 px-5" disabled={!value.trim()}>
                 Entrar
               </Button>
-            </>
-          )}
+            )}
+          </div>
         </form>
       </div>
     </div>

@@ -24,6 +24,11 @@
 - Follow [docs/design-system/forge-admin-ui-system.md](./docs/design-system/forge-admin-ui-system.md) as the design source of truth for the new Forge Admin UI.
 - Avoid cards and technical explanatory text in the admin UI unless they are truly necessary for the task.
 - Admin UI should be light, friendly, and clear. Avoid enterprise, industrial, and cinematic aesthetics.
+- The target aesthetic is friendly minimal UI with subtle anime influence: light, human, calm, and quietly expressive.
+- Keep the admin UI warm or gently neutral. Prefer soft light backgrounds, graphite text, soft borders, and restrained accents.
+- Avoid hard corporate blues, heavy dark neutrals, aggressive contrast, neon, dramatic gradients, and generic enterprise dashboard styling.
+- Minimal should not become sterile. Preserve warmth, softness, and a little atmosphere.
+- Prefer buttons sized to their content. Do not stretch primary actions to full width unless the task clearly requires it.
 - Admin routes must use directory-based file routing with `route.tsx` and `index.tsx` inside each route directory. Do not model routes with filename-based route modules when creating or refactoring admin routes.
 - Prefer using existing `shadcn/ui` components whenever possible.
 - Do not modify the generated `shadcn/ui` components in their own folder. If a variation is needed, create a separate wrapper/component and apply the variation there.
