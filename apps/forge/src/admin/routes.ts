@@ -504,6 +504,12 @@ export function registerAdminRoutes(input: {
   });
 
   input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/finance/contracts',
+    handler: async () => jsonResponse(await readModel.getFinanceContracts()),
+  });
+
+  input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/wake',
     handler: async (request) => {

@@ -398,6 +398,10 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function getFinanceContracts() {
+    return finance.listActiveInternalAgentContracts();
+  }
+
   async function getSystemLlm() {
     const [profiles, defaults, prices] = await Promise.all([
       llmSettings.listProfiles(),
@@ -466,6 +470,7 @@ export function createAdminReadModel(input: {
     getSystemLlm,
     getApplicationMigrations,
     getFinance,
+    getFinanceContracts,
   };
 }
 

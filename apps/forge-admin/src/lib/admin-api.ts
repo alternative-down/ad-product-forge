@@ -146,6 +146,80 @@ export type RolesResponse = {
   items: RoleItem[];
 };
 
+export type AdminFinance = {
+  balanceUsd: number;
+  summary: {
+    periodStart: number;
+    periodEnd: number;
+    totalInUsd: number;
+    totalOutUsd: number;
+    netUsd: number;
+    balanceUsd: number;
+    scheduledInUsd: number;
+    scheduledOutUsd: number;
+  };
+  movements: {
+    items: Array<{
+      id: string;
+      type: string;
+      direction: 'in' | 'out';
+      amountUsd: number;
+      description?: string;
+      status: string;
+      dueAt?: number;
+      effectiveAt?: number;
+      createdAt: number;
+    }>;
+    total: number;
+  };
+  recurringPayables: Array<{
+    payableId: string;
+    name: string;
+    description?: string;
+    amountUsd: number;
+    recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+    nextDueAt: number;
+    isActive: boolean;
+    createdAt: number;
+    updatedAt: number;
+  }>;
+};
+
+export type CreateInvestmentInput = {
+  amountUsd: number;
+  description?: string;
+  effectiveAt?: string;
+};
+
+export type CreatePayableInput =
+  | {
+      kind: 'single';
+      name: string;
+      description?: string;
+      amountUsd: number;
+      dueAt: string;
+    }
+  | {
+      kind: 'recurring';
+      name: string;
+      description?: string;
+      amountUsd: number;
+      dueAt: string;
+      recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+    };
+
+export type FinanceContractsResponse = {
+  items: Array<{
+    contractId: string;
+    agentId: string;
+    agentName: string;
+    startsAt: number;
+    endsAt: number;
+    weeklyValueUsd: number;
+    autoRenew: boolean;
+  }>;
+};
+
 export type SystemIntegration =
   | {
       providerType: 'github';
@@ -275,6 +349,61 @@ export function upsertSystemIntegration(
 
 export function getRoles() {
   return request<RolesResponse>('/admin/roles');
+}
+
+export function getFinance() {
+  return request<AdminFinance>('/admin/finance');
+}
+
+export function getFinanceContracts() {
+  return request<FinanceContractsResponse>('/admin/finance/contracts');
+}
+
+export function createInvestment(input: CreateInvestmentInput) {
+  return request<{ success: true }>('/admin/finance/investment/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function createPayable(input: CreatePayableInput) {
+  return request<{ kind: 'single' | 'recurring'; entryId: string; payableId?: string }>(
+    '/admin/finance/payable/create',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function postPlannedLedgerEntry(entryId: string, effectiveAt?: string) {
+  return request<{ entryId: string; status: 'posted'; effectiveAt: number }>(
+    '/admin/finance/ledger/post',
+    {
+      method: 'POST',
+      body: JSON.stringify({ entryId, effectiveAt }),
+    },
+  );
+}
+
+export function cancelPlannedLedgerEntry(entryId: string) {
+  return request<{ entryId: string; status: 'canceled' }>(
+    '/admin/finance/ledger/cancel',
+    {
+      method: 'POST',
+      body: JSON.stringify({ entryId }),
+    },
+  );
+}
+
+export function setRecurringPayableActive(payableId: string, isActive: boolean) {
+  return request<{ payableId: string; isActive: boolean }>(
+    '/admin/finance/recurring-payable/set-active',
+    {
+      method: 'POST',
+      body: JSON.stringify({ payableId, isActive }),
+    },
+  );
 }
 
 export function createRole(input: {
