@@ -69,6 +69,18 @@ const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
 });
 
+const agentExecutionStepsQuerySchema = z.object({
+  agentId: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+const agentThreadMessagesQuerySchema = z.object({
+  agentId: z.string().min(1),
+  page: z.coerce.number().int().min(0).default(0),
+  perPage: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 const roleToolPermissionSchema = z.object({
   roleId: z.string().min(1),
   toolId: z.string().min(1),
@@ -424,6 +436,34 @@ export function registerAdminRoutes(input: {
       }
 
       return jsonResponse(agent);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agent/execution-steps',
+    handler: async (request) => {
+      const query = agentExecutionStepsQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        limit: request.query.get('limit') ?? undefined,
+        offset: request.query.get('offset') ?? undefined,
+      });
+
+      return jsonResponse(await readModel.listAgentExecutionSteps(query));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agent/thread-messages',
+    handler: async (request) => {
+      const query = agentThreadMessagesQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        page: request.query.get('page') ?? undefined,
+        perPage: request.query.get('perPage') ?? undefined,
+      });
+
+      return jsonResponse(await readModel.listAgentThreadMessages(query));
     },
   });
 

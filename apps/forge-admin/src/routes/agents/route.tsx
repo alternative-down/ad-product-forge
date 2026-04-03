@@ -1,9 +1,11 @@
 import { Link, Navigate, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import '../../styles/app.css';
 import { AdminTopbar, AppShell } from '@/components/admin';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getAgent } from '@/lib/admin-api';
 import { getStoredAdminSecret, getStoredAdminTheme, setStoredAdminTheme } from '@/lib/admin-secret';
 import { applyAdminThemeToDocument, clearAdminThemeFromDocument } from '@/lib/admin-theme';
 
@@ -18,8 +20,18 @@ function AgentsLayoutRoute() {
   });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
   const profileActive = pathname.startsWith('/agents/');
-  const currentSection = profileActive ? pathname : '/agents';
-  const currentSectionLabel = profileActive ? 'Perfil' : 'Lista';
+  const agentId = profileActive ? pathname.split('/')[2] ?? '' : '';
+  const agentQuery = useQuery({
+    queryKey: ['admin', 'agent', agentId],
+    queryFn: () => getAgent(agentId),
+    enabled: Boolean(agentId),
+  });
+  const sectionItems = buildAgentSectionItems({
+    agentId,
+    pathname,
+    providerTypes: agentQuery.data?.providers.map((provider) => provider.providerType) ?? [],
+  });
+  const currentSection = sectionItems.find((item) => item.value === pathname) ?? sectionItems[0];
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -49,33 +61,34 @@ function AgentsLayoutRoute() {
     >
       <div className="space-y-6 md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8 md:space-y-0">
         <div className="md:hidden">
-          <Select value={currentSection} onValueChange={(value) => void navigate({ to: value })}>
+          <Select value={currentSection?.value ?? '/agents'} onValueChange={(value) => void navigate({ to: value })}>
             <SelectTrigger className="w-full">
-              <SelectValue>{currentSectionLabel}</SelectValue>
+              <SelectValue>{currentSection?.label ?? 'Lista'}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="/agents">Lista</SelectItem>
-              {profileActive ? <SelectItem value={pathname}>Perfil</SelectItem> : null}
+              {sectionItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <aside className="hidden md:block">
           <nav className="flex flex-col gap-1">
-            <Link
-              to="/agents"
-              className={
-                pathname === '/agents'
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              Lista
-            </Link>
-            {profileActive ? (
-              <div className="rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground">
-                Perfil
-              </div>
-            ) : null}
+            {sectionItems.map((item) => (
+              <Link
+                key={item.value}
+                to={item.value}
+                className={
+                  pathname === item.value
+                    ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                    : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
+                }
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </aside>
         <div className="min-w-0">
@@ -84,4 +97,51 @@ function AgentsLayoutRoute() {
       </div>
     </AppShell>
   );
+}
+
+function buildAgentSectionItems(input: {
+  agentId: string;
+  pathname: string;
+  providerTypes: string[];
+}) {
+  const items = [{ value: '/agents', label: 'Lista' }];
+
+  if (!input.agentId) {
+    return items;
+  }
+
+  items.push(
+    { value: `/agents/${input.agentId}`, label: 'Perfil' },
+    { value: `/agents/${input.agentId}/contract`, label: 'Contrato' },
+  );
+
+  for (const providerType of input.providerTypes) {
+    items.push({
+      value: `/agents/${input.agentId}/providers/${providerType}`,
+      label: humanizeProviderType(providerType),
+    });
+  }
+
+  items.push(
+    { value: `/agents/${input.agentId}/log`, label: 'Log' },
+    { value: `/agents/${input.agentId}/conversations`, label: 'Conversas' },
+  );
+
+  return items;
+}
+
+function humanizeProviderType(providerType: string) {
+  if (providerType === 'internal-chat') {
+    return 'Internal Chat';
+  }
+
+  if (providerType === 'discord') {
+    return 'Discord';
+  }
+
+  if (providerType === 'email') {
+    return 'Email';
+  }
+
+  return providerType;
 }

@@ -328,6 +328,47 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function listAgentExecutionSteps(input: {
+    agentId: string;
+    limit: number;
+    offset: number;
+  }) {
+    const rows = await db.query.agentExecutionSteps.findMany({
+      where: eq(agentExecutionSteps.agentId, input.agentId),
+      orderBy: [desc(agentExecutionSteps.createdAt)],
+      limit: input.limit,
+      offset: input.offset,
+    });
+
+    return {
+      items: rows.map((step) => {
+        const { id, ...rest } = step;
+
+        return {
+          ...rest,
+          stepId: id,
+        };
+      }),
+      hasMore: rows.length === input.limit,
+    };
+  }
+
+  async function listAgentThreadMessages(params: {
+    agentId: string;
+    page: number;
+    perPage: number;
+  }) {
+    const items = await listThreadMessages(input.workspaceBasePath, params.agentId, {
+      page: params.page,
+      perPage: params.perPage,
+    });
+
+    return {
+      items,
+      hasMore: items.length === params.perPage,
+    };
+  }
+
   async function listRoles() {
     const [roles, agentCounts] = await Promise.all([
       capabilities.listRoles(),
@@ -464,6 +505,8 @@ export function createAdminReadModel(input: {
     getDashboard,
     listAgents,
     getAgent,
+    listAgentExecutionSteps,
+    listAgentThreadMessages,
     listRoles,
     listSystemIntegrations,
     getSystemSettings,
@@ -573,6 +616,20 @@ async function listRecentInternalChatConversations(
 }
 
 async function listRecentThreadMessages(workspaceBasePath: string, agentId: string) {
+  return listThreadMessages(workspaceBasePath, agentId, {
+    page: 0,
+    perPage: 20,
+  });
+}
+
+async function listThreadMessages(
+  workspaceBasePath: string,
+  agentId: string,
+  input: {
+    page: number;
+    perPage: number;
+  },
+) {
   try {
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
@@ -599,8 +656,8 @@ async function listRecentThreadMessages(workspaceBasePath: string, agentId: stri
     const result = await memory.listMessages({
       threadId: mastraAgentId,
       resourceId: mastraAgentId,
-      page: 0,
-      perPage: 20,
+      page: input.page,
+      perPage: input.perPage,
       orderBy: {
         field: 'createdAt',
         direction: 'DESC',

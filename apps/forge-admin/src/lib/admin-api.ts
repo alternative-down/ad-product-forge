@@ -123,6 +123,12 @@ export type AgentDetail = {
     name: string;
     description?: string | null;
   } | null;
+  providers: Array<{
+    providerType: string;
+    createdAt: number;
+    editable: boolean;
+    credentials: unknown;
+  }>;
   activeContract: {
     contractId: string;
     agentId: string;
@@ -149,6 +155,47 @@ export type AgentDetail = {
     costUsd: number;
     createdAt: number;
   }>;
+  recentConversations: Array<{
+    conversationId: string;
+    conversationKey: string;
+    provider: string;
+    type: string;
+    name?: string;
+    participants: string[];
+    updatedAt: number;
+    messages: Array<{
+      messageId: string;
+      content: string;
+      unread: boolean;
+      authorDisplayName: string;
+      createdAt: number;
+    }>;
+  }>;
+};
+
+export type AgentExecutionStepsResponse = {
+  items: AgentDetail['recentExecutionSteps'];
+  hasMore: boolean;
+};
+
+export type AgentThreadMessage = {
+  id: string;
+  role: string;
+  createdAt: number;
+  threadId: string | null;
+  resourceId: string | null;
+  type: string | null;
+  content: {
+    content?: string;
+    reasoning?: string;
+    parts?: Array<Record<string, unknown>>;
+    toolInvocations?: Array<Record<string, unknown>>;
+  };
+};
+
+export type AgentThreadMessagesResponse = {
+  items: AgentThreadMessage[];
+  hasMore: boolean;
 };
 
 export type LlmProfile = {
@@ -362,6 +409,18 @@ export function getAgents() {
 
 export function getAgent(agentId: string) {
   return request<AgentDetail>(`/admin/agent?agentId=${encodeURIComponent(agentId)}`);
+}
+
+export function getAgentExecutionSteps(agentId: string, limit: number, offset: number) {
+  return request<AgentExecutionStepsResponse>(
+    `/admin/agent/execution-steps?agentId=${encodeURIComponent(agentId)}&limit=${limit}&offset=${offset}`,
+  );
+}
+
+export function getAgentThreadMessages(agentId: string, page: number, perPage: number) {
+  return request<AgentThreadMessagesResponse>(
+    `/admin/agent/thread-messages?agentId=${encodeURIComponent(agentId)}&page=${page}&perPage=${perPage}`,
+  );
 }
 
 export function getSystemIntegrations() {
