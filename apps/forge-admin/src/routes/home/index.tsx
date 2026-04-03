@@ -50,6 +50,9 @@ function HomeIndexRoute() {
   const primaryProfileId = defaultsDraft?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '';
   const omProfileId = defaultsDraft?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '';
   const hiringRhProfileId = defaultsDraft?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '';
+  const primaryProfileName = enabledProfiles.find((profile) => profile.profileId === primaryProfileId)?.name;
+  const omProfileName = enabledProfiles.find((profile) => profile.profileId === omProfileId)?.name;
+  const hiringRhProfileName = enabledProfiles.find((profile) => profile.profileId === hiringRhProfileId)?.name;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -154,7 +157,7 @@ function HomeIndexRoute() {
                   disabled={llmQuery.isLoading || defaultsMutation.isPending || enabledProfiles.length === 0}
                 >
                   <SelectTrigger id="default-primary-profile" className="w-full">
-                    <SelectValue placeholder="Selecione um perfil" />
+                    <SelectValue placeholder="Selecione um perfil">{primaryProfileName}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {enabledProfiles.map((profile) => (
@@ -182,7 +185,7 @@ function HomeIndexRoute() {
                   disabled={llmQuery.isLoading || defaultsMutation.isPending || enabledProfiles.length === 0}
                 >
                   <SelectTrigger id="default-om-profile" className="w-full">
-                    <SelectValue placeholder="Selecione um perfil" />
+                    <SelectValue placeholder="Selecione um perfil">{omProfileName}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {enabledProfiles.map((profile) => (
@@ -210,7 +213,7 @@ function HomeIndexRoute() {
                   disabled={llmQuery.isLoading || defaultsMutation.isPending || enabledProfiles.length === 0}
                 >
                   <SelectTrigger id="default-hiring-rh-profile" className="w-full">
-                    <SelectValue placeholder="Selecione um perfil" />
+                    <SelectValue placeholder="Selecione um perfil">{hiringRhProfileName}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {enabledProfiles.map((profile) => (
