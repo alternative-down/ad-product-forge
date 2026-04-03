@@ -26,8 +26,8 @@ function AgentsIndexRoute() {
           {agents.map((agent) => (
             <article key={agent.agentId} className="rounded-sm border border-border bg-background px-5 py-4">
               <div className="flex items-start gap-4">
-                <Avatar className="h-14 w-14 rounded-sm border border-border bg-muted [&::after]:rounded-sm">
-                  <AvatarFallback className="rounded-sm bg-muted text-sm font-medium text-foreground">
+                <Avatar className="h-14 w-14 border border-border bg-muted">
+                  <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
                     {getAgentInitials(agent.name)}
                   </AvatarFallback>
                 </Avatar>
