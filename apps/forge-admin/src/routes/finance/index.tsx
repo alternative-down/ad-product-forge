@@ -44,6 +44,9 @@ function FinanceIndexRoute() {
     [financeQuery.data?.movements.items],
   );
   const contracts = contractsQuery.data?.items ?? [];
+  const scheduledOutUsd =
+    (financeQuery.data?.summary.scheduledOutUsd ?? 0) +
+    contracts.reduce((total, item) => total + item.weeklyValueUsd, 0);
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -58,7 +61,7 @@ function FinanceIndexRoute() {
           <MetricItem label="Saldo" value={formatUsd(financeQuery.data?.balanceUsd ?? 0)} />
           <MetricItem label="Entradas" value={formatUsd(financeQuery.data?.summary.totalInUsd ?? 0)} />
           <MetricItem label="Saídas" value={formatUsd(financeQuery.data?.summary.totalOutUsd ?? 0)} />
-          <MetricItem label="Saídas previstas" value={formatUsd(financeQuery.data?.summary.scheduledOutUsd ?? 0)} />
+          <MetricItem label="Saídas previstas" value={formatUsd(scheduledOutUsd)} />
         </dl>
       </section>
 

@@ -31,7 +31,8 @@ export const Route = createFileRoute('/finance/accounts/')({
 });
 
 type MovementForm = {
-  kind: 'movement' | 'single' | 'recurring';
+  kind: 'single' | 'recurring';
+  direction: 'in' | 'out';
   name: string;
   description: string;
   amountUsd: number;
@@ -41,7 +42,8 @@ type MovementForm = {
 
 function createEmptyMovementForm(): MovementForm {
   return {
-    kind: 'movement',
+    kind: 'single',
+    direction: 'out',
     name: '',
     description: '',
     amountUsd: 0,
@@ -60,7 +62,7 @@ function FinanceAccountsIndexRoute() {
   const [movementForm, setMovementForm] = useState<MovementForm>(createEmptyMovementForm);
   const createMutation = useMutation({
     mutationFn: async (input: MovementForm) => {
-      if (input.kind === 'movement') {
+      if (input.kind === 'single' && input.direction === 'in') {
         return createInvestment({
           amountUsd: input.amountUsd,
           description: input.description.trim() || input.name.trim() || undefined,
@@ -283,17 +285,43 @@ function FinanceAccountsIndexRoute() {
                 disabled={createMutation.isPending}
               >
                 <SelectTrigger id="finance-entry-kind" className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {movementForm.kind === 'single' ? 'Movimento avulso' : 'Conta recorrente'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="movement">Movimento</SelectItem>
-                  <SelectItem value="single">Conta avulsa</SelectItem>
+                  <SelectItem value="single">Movimento avulso</SelectItem>
                   <SelectItem value="recurring">Conta recorrente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {movementForm.kind === 'movement' ? null : (
+            {movementForm.kind === 'single' ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="finance-entry-direction">
+                  Direção
+                </label>
+                <Select
+                  value={movementForm.direction}
+                  onValueChange={(value: 'in' | 'out') =>
+                    setMovementForm((current) => ({ ...current, direction: value }))
+                  }
+                  disabled={createMutation.isPending}
+                >
+                  <SelectTrigger id="finance-entry-direction" className="w-full">
+                    <SelectValue>
+                      {movementForm.direction === 'in' ? 'Entrada' : 'Saída'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in">Entrada</SelectItem>
+                    <SelectItem value="out">Saída</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
+            {movementForm.kind === 'recurring' || movementForm.direction === 'out' ? (
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="finance-entry-name">
                   Nome
@@ -305,7 +333,7 @@ function FinanceAccountsIndexRoute() {
                   disabled={createMutation.isPending}
                 />
               </div>
-            )}
+            ) : null}
 
             <div className="grid gap-4 min-[560px]:grid-cols-2">
               <div className="space-y-2">
@@ -354,7 +382,9 @@ function FinanceAccountsIndexRoute() {
                   disabled={createMutation.isPending}
                 >
                   <SelectTrigger id="finance-entry-recurrence" className="w-full">
-                    <SelectValue />
+                    <SelectValue>
+                      {humanizeRecurrencePeriod(movementForm.recurrencePeriod)}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="weekly">Semanal</SelectItem>
@@ -394,7 +424,7 @@ function toPayableInput(form: MovementForm): CreatePayableInput {
   if (form.kind === 'single') {
     return {
       kind: 'single',
-      name: form.name.trim(),
+      name: form.name.trim() || 'Movimento avulso',
       description: form.description.trim() || undefined,
       amountUsd: form.amountUsd,
       dueAt: form.date,
