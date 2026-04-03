@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Power, PowerOff } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -14,7 +15,6 @@ import {
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   createPayable,
@@ -130,18 +130,21 @@ function FinanceAccountsIndexRoute() {
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
-                    <div className="flex justify-end">
-                      <Switch
-                        checked={payable.isActive}
+                    <div className="flex justify-end gap-2">
+                      <AdminButton
+                        variant="ghost"
+                        size="icon"
                         disabled={recurringMutation.isPending}
-                        onCheckedChange={(checked) => {
+                        onClick={() => {
                           recurringMutation.mutate({
                             payableId: payable.payableId,
-                            isActive: checked,
+                            isActive: !payable.isActive,
                           });
                         }}
-                        aria-label={`Ativar ${payable.name}`}
-                      />
+                      >
+                        {payable.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                        <span className="sr-only">{payable.isActive ? 'Inativar' : 'Ativar'}</span>
+                      </AdminButton>
                     </div>
                   </TableCell>
                 </TableRow>
