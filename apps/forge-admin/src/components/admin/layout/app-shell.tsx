@@ -25,7 +25,7 @@ export function AppShell(input: {
             input.detailPane ? 'xl:grid-cols-[minmax(0,1fr)_340px]' : '',
           )}
         >
-          <main className="min-w-0">{input.children}</main>
+          <main className="min-w-0 overflow-x-hidden">{input.children}</main>
           {input.detailPane ? <aside className="min-w-0">{input.detailPane}</aside> : null}
         </div>
       </div>
