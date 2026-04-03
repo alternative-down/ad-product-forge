@@ -52,6 +52,11 @@ function createProfileForm(profile: LlmProfile): UpsertLlmProfileInput {
   };
 }
 
+type ModelKeyOption = {
+  label: string;
+  value: string;
+};
+
 function HomeLlmProfilesRoute() {
   const queryClient = useQueryClient();
   const llmQuery = useQuery({
@@ -83,9 +88,19 @@ function HomeLlmProfilesRoute() {
     () => profiles.filter((profile) => profile.isEnabled === (statusFilter === 'active')),
     [profiles, statusFilter],
   );
-  const modelKeys = useMemo(
-    () => [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort((left, right) => left.localeCompare(right)),
+  const modelKeyOptions = useMemo<ModelKeyOption[]>(
+    () =>
+      [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))]
+        .sort((left, right) => left.localeCompare(right))
+        .map((modelKey) => ({
+          label: modelKey,
+          value: modelKey,
+        })),
     [llmQuery.data?.prices],
+  );
+  const selectedModelKeyOption = useMemo(
+    () => modelKeyOptions.find((option) => option.value === profileForm.modelKey) ?? null,
+    [modelKeyOptions, profileForm.modelKey],
   );
   const modelKeyAnchor = useComboboxAnchor();
   const setProfileFilter = (value: string) => {
@@ -188,11 +203,11 @@ function HomeLlmProfilesRoute() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
           <AdminDialogHeader>
-            <AdminDialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Adicionar perfil'}</AdminDialogTitle>
+            <AdminDialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Novo perfil'}</AdminDialogTitle>
           </AdminDialogHeader>
 
           <form
-            className="space-y-4"
+            className="space-y-4 px-6 py-5"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({
@@ -221,27 +236,30 @@ function HomeLlmProfilesRoute() {
                   Model key
                 </label>
                 <div ref={modelKeyAnchor} className="w-full">
-                  <Combobox
-                    items={modelKeys}
-                    value={profileForm.modelKey || null}
+                  <Combobox<ModelKeyOption>
+                    items={modelKeyOptions}
+                    itemToStringLabel={(item) => item.label}
+                    itemToStringValue={(item) => item.value}
+                    isItemEqualToValue={(item, value) => item.value === value.value}
+                    value={selectedModelKeyOption}
                     onValueChange={(value) =>
                       setProfileForm((current) => ({
                         ...current,
-                        modelKey: value ?? '',
+                        modelKey: value?.value ?? '',
                       }))
                     }
                   >
                     <ComboboxInput
-                      placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
+                      placeholder={modelKeyOptions.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
                       className="h-10 w-full rounded-sm border-border/80 bg-background/80 shadow-none"
-                      disabled={mutation.isPending || modelKeys.length === 0}
+                      disabled={mutation.isPending || modelKeyOptions.length === 0}
                     />
                     <ComboboxContent anchor={modelKeyAnchor}>
                       <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
                       <ComboboxList>
-                        {(modelKey: string) => (
-                          <ComboboxItem key={modelKey} value={modelKey}>
-                            {modelKey}
+                        {(modelKey: ModelKeyOption) => (
+                          <ComboboxItem key={modelKey.value} value={modelKey}>
+                            {modelKey.label}
                           </ComboboxItem>
                         )}
                       </ComboboxList>
@@ -295,7 +313,7 @@ function HomeLlmProfilesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <AdminDialogFooter>
+            <AdminDialogFooter className="-mx-6 -mb-5 mt-6 px-6 py-4">
               <AdminButton type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
               </AdminButton>

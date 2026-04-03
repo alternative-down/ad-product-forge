@@ -117,11 +117,11 @@ function HomeLlmPricesRoute() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
           <AdminDialogHeader>
-            <AdminDialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Adicionar preço'}</AdminDialogTitle>
+            <AdminDialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Novo preço'}</AdminDialogTitle>
           </AdminDialogHeader>
 
           <form
-            className="space-y-4"
+            className="space-y-4 px-6 py-5"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({
@@ -201,7 +201,7 @@ function HomeLlmPricesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <AdminDialogFooter>
+            <AdminDialogFooter className="-mx-6 -mb-5 mt-6 px-6 py-4">
               <AdminButton type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
               </AdminButton>
