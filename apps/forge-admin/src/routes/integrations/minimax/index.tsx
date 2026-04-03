@@ -38,7 +38,7 @@ function IntegrationsMinimaxRoute() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
         title="MiniMax"
-        description="Conecta o sistema ao MiniMax para geração de texto, imagem e voz."
+        description="Conecta o sistema ao MiniMax para geração de voz, imagem e vídeo usada pelas tools dos agentes."
       />
 
       <div className="max-w-3xl space-y-5">
