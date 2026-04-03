@@ -7,7 +7,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
   return (
     <DialogContent
       className={cn(
-        'rounded-sm [&_[data-slot=dialog-close]]:rounded-sm [&_[data-slot=dialog-close]]:bg-destructive/10 [&_[data-slot=dialog-close]]:text-destructive [&_[data-slot=dialog-close]]:hover:bg-destructive/20 [&_[data-slot=dialog-close]]:hover:text-destructive',
+        'rounded-sm [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-destructive/10 [&_[data-slot=dialog-close]]:text-foreground [&_[data-slot=dialog-close]]:hover:bg-destructive/20 [&_[data-slot=dialog-close]]:hover:text-foreground',
         className,
       )}
       {...props}
