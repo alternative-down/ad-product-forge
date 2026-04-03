@@ -9,45 +9,45 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as V1RouteImport } from './routes/v1'
+import { Route as V1RouteRouteImport } from './routes/v1/route'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as V1IndexRouteImport } from './routes/v1.index'
+import { Route as V1IndexRouteImport } from './routes/v1/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
-import { Route as V1SystemRouteImport } from './routes/v1.system'
-import { Route as V1RolesRouteImport } from './routes/v1.roles'
-import { Route as V1FinanceRouteImport } from './routes/v1.finance'
-import { Route as V1AgentsRouteImport } from './routes/v1.agents'
+import { Route as V1SystemRouteRouteImport } from './routes/v1/system/route'
+import { Route as V1RolesRouteRouteImport } from './routes/v1/roles/route'
+import { Route as V1FinanceRouteRouteImport } from './routes/v1/finance/route'
+import { Route as V1AgentsRouteRouteImport } from './routes/v1/agents/route'
 import { Route as HomeLlmRouteRouteImport } from './routes/home/llm/route'
-import { Route as V1SystemIndexRouteImport } from './routes/v1.system.index'
-import { Route as V1RolesIndexRouteImport } from './routes/v1.roles.index'
-import { Route as V1FinanceIndexRouteImport } from './routes/v1.finance.index'
-import { Route as V1AgentsIndexRouteImport } from './routes/v1.agents.index'
+import { Route as V1SystemIndexRouteImport } from './routes/v1/system/index'
+import { Route as V1RolesIndexRouteImport } from './routes/v1/roles/index'
+import { Route as V1FinanceIndexRouteImport } from './routes/v1/finance/index'
+import { Route as V1AgentsIndexRouteImport } from './routes/v1/agents/index'
 import { Route as HomeLlmIndexRouteImport } from './routes/home/llm/index'
-import { Route as V1SystemOauthRouteImport } from './routes/v1.system.oauth'
-import { Route as V1SystemMigrationsRouteImport } from './routes/v1.system.migrations'
-import { Route as V1SystemCompanyRouteImport } from './routes/v1.system.company'
-import { Route as V1FinanceRecurringRouteImport } from './routes/v1.finance.recurring'
-import { Route as V1FinancePayablesRouteImport } from './routes/v1.finance.payables'
-import { Route as V1FinanceLedgerRouteImport } from './routes/v1.finance.ledger'
-import { Route as V1FinanceCapitalRouteImport } from './routes/v1.finance.capital'
-import { Route as V1AgentsHireRouteImport } from './routes/v1.agents.hire'
 import { Route as HomeLlmPricesRouteRouteImport } from './routes/home/llm/prices/route'
+import { Route as V1SystemOauthIndexRouteImport } from './routes/v1/system/oauth/index'
+import { Route as V1SystemMigrationsIndexRouteImport } from './routes/v1/system/migrations/index'
+import { Route as V1SystemCompanyIndexRouteImport } from './routes/v1/system/company/index'
+import { Route as V1FinanceRecurringIndexRouteImport } from './routes/v1/finance/recurring/index'
+import { Route as V1FinancePayablesIndexRouteImport } from './routes/v1/finance/payables/index'
+import { Route as V1FinanceLedgerIndexRouteImport } from './routes/v1/finance/ledger/index'
+import { Route as V1FinanceCapitalIndexRouteImport } from './routes/v1/finance/capital/index'
+import { Route as V1AgentsHireIndexRouteImport } from './routes/v1/agents/hire/index'
 import { Route as HomeLlmPricesIndexRouteImport } from './routes/home/llm/prices/index'
-import { Route as V1SystemLlmProfilesRouteImport } from './routes/v1.system.llm.profiles'
-import { Route as V1SystemLlmPricesRouteImport } from './routes/v1.system.llm.prices'
-import { Route as V1SystemLlmDefaultsRouteImport } from './routes/v1.system.llm.defaults'
-import { Route as V1SystemIntegrationsMinimaxRouteImport } from './routes/v1.system.integrations.minimax'
-import { Route as V1SystemIntegrationsMigaduRouteImport } from './routes/v1.system.integrations.migadu'
-import { Route as V1SystemIntegrationsGithubRouteImport } from './routes/v1.system.integrations.github'
-import { Route as V1SystemIntegrationsCoolifyRouteImport } from './routes/v1.system.integrations.coolify'
-import { Route as V1RolesRolesRoleIdRouteImport } from './routes/v1.roles.roles.$roleId'
-import { Route as V1AgentsAgentIdSchedulesRouteImport } from './routes/v1.agents.$agentId.schedules'
-import { Route as V1AgentsAgentIdHistoryRouteImport } from './routes/v1.agents.$agentId.history'
-import { Route as V1AgentsAgentIdRuntimeRuntimeViewRouteImport } from './routes/v1.agents.$agentId.runtime.$runtimeView'
-import { Route as V1AgentsAgentIdCommunicationsCommunicationViewRouteImport } from './routes/v1.agents.$agentId.communications.$communicationView'
+import { Route as V1SystemLlmProfilesIndexRouteImport } from './routes/v1/system/llm/profiles/index'
+import { Route as V1SystemLlmPricesIndexRouteImport } from './routes/v1/system/llm/prices/index'
+import { Route as V1SystemLlmDefaultsIndexRouteImport } from './routes/v1/system/llm/defaults/index'
+import { Route as V1SystemIntegrationsMinimaxIndexRouteImport } from './routes/v1/system/integrations/minimax/index'
+import { Route as V1SystemIntegrationsMigaduIndexRouteImport } from './routes/v1/system/integrations/migadu/index'
+import { Route as V1SystemIntegrationsGithubIndexRouteImport } from './routes/v1/system/integrations/github/index'
+import { Route as V1SystemIntegrationsCoolifyIndexRouteImport } from './routes/v1/system/integrations/coolify/index'
+import { Route as V1RolesRolesRoleIdIndexRouteImport } from './routes/v1/roles/roles/$roleId/index'
+import { Route as V1AgentsAgentIdSchedulesIndexRouteImport } from './routes/v1/agents/$agentId/schedules/index'
+import { Route as V1AgentsAgentIdHistoryIndexRouteImport } from './routes/v1/agents/$agentId/history/index'
+import { Route as V1AgentsAgentIdRuntimeRuntimeViewIndexRouteImport } from './routes/v1/agents/$agentId/runtime/$runtimeView/index'
+import { Route as V1AgentsAgentIdCommunicationsCommunicationViewIndexRouteImport } from './routes/v1/agents/$agentId/communications/$communicationView/index'
 
-const V1Route = V1RouteImport.update({
+const V1RouteRoute = V1RouteRouteImport.update({
   id: '/v1',
   path: '/v1',
   getParentRoute: () => rootRouteImport,
@@ -65,32 +65,32 @@ const IndexRoute = IndexRouteImport.update({
 const V1IndexRoute = V1IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => V1Route,
+  getParentRoute: () => V1RouteRoute,
 } as any)
 const HomeIndexRoute = HomeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => HomeRouteRoute,
 } as any)
-const V1SystemRoute = V1SystemRouteImport.update({
+const V1SystemRouteRoute = V1SystemRouteRouteImport.update({
   id: '/system',
   path: '/system',
-  getParentRoute: () => V1Route,
+  getParentRoute: () => V1RouteRoute,
 } as any)
-const V1RolesRoute = V1RolesRouteImport.update({
+const V1RolesRouteRoute = V1RolesRouteRouteImport.update({
   id: '/roles',
   path: '/roles',
-  getParentRoute: () => V1Route,
+  getParentRoute: () => V1RouteRoute,
 } as any)
-const V1FinanceRoute = V1FinanceRouteImport.update({
+const V1FinanceRouteRoute = V1FinanceRouteRouteImport.update({
   id: '/finance',
   path: '/finance',
-  getParentRoute: () => V1Route,
+  getParentRoute: () => V1RouteRoute,
 } as any)
-const V1AgentsRoute = V1AgentsRouteImport.update({
+const V1AgentsRouteRoute = V1AgentsRouteRouteImport.update({
   id: '/agents',
   path: '/agents',
-  getParentRoute: () => V1Route,
+  getParentRoute: () => V1RouteRoute,
 } as any)
 const HomeLlmRouteRoute = HomeLlmRouteRouteImport.update({
   id: '/llm',
@@ -100,255 +100,258 @@ const HomeLlmRouteRoute = HomeLlmRouteRouteImport.update({
 const V1SystemIndexRoute = V1SystemIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => V1SystemRoute,
+  getParentRoute: () => V1SystemRouteRoute,
 } as any)
 const V1RolesIndexRoute = V1RolesIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => V1RolesRoute,
+  getParentRoute: () => V1RolesRouteRoute,
 } as any)
 const V1FinanceIndexRoute = V1FinanceIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => V1FinanceRoute,
+  getParentRoute: () => V1FinanceRouteRoute,
 } as any)
 const V1AgentsIndexRoute = V1AgentsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => V1AgentsRoute,
+  getParentRoute: () => V1AgentsRouteRoute,
 } as any)
 const HomeLlmIndexRoute = HomeLlmIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => HomeLlmRouteRoute,
 } as any)
-const V1SystemOauthRoute = V1SystemOauthRouteImport.update({
-  id: '/oauth',
-  path: '/oauth',
-  getParentRoute: () => V1SystemRoute,
-} as any)
-const V1SystemMigrationsRoute = V1SystemMigrationsRouteImport.update({
-  id: '/migrations',
-  path: '/migrations',
-  getParentRoute: () => V1SystemRoute,
-} as any)
-const V1SystemCompanyRoute = V1SystemCompanyRouteImport.update({
-  id: '/company',
-  path: '/company',
-  getParentRoute: () => V1SystemRoute,
-} as any)
-const V1FinanceRecurringRoute = V1FinanceRecurringRouteImport.update({
-  id: '/recurring',
-  path: '/recurring',
-  getParentRoute: () => V1FinanceRoute,
-} as any)
-const V1FinancePayablesRoute = V1FinancePayablesRouteImport.update({
-  id: '/payables',
-  path: '/payables',
-  getParentRoute: () => V1FinanceRoute,
-} as any)
-const V1FinanceLedgerRoute = V1FinanceLedgerRouteImport.update({
-  id: '/ledger',
-  path: '/ledger',
-  getParentRoute: () => V1FinanceRoute,
-} as any)
-const V1FinanceCapitalRoute = V1FinanceCapitalRouteImport.update({
-  id: '/capital',
-  path: '/capital',
-  getParentRoute: () => V1FinanceRoute,
-} as any)
-const V1AgentsHireRoute = V1AgentsHireRouteImport.update({
-  id: '/hire',
-  path: '/hire',
-  getParentRoute: () => V1AgentsRoute,
-} as any)
 const HomeLlmPricesRouteRoute = HomeLlmPricesRouteRouteImport.update({
   id: '/prices',
   path: '/prices',
   getParentRoute: () => HomeLlmRouteRoute,
+} as any)
+const V1SystemOauthIndexRoute = V1SystemOauthIndexRouteImport.update({
+  id: '/oauth/',
+  path: '/oauth/',
+  getParentRoute: () => V1SystemRouteRoute,
+} as any)
+const V1SystemMigrationsIndexRoute = V1SystemMigrationsIndexRouteImport.update({
+  id: '/migrations/',
+  path: '/migrations/',
+  getParentRoute: () => V1SystemRouteRoute,
+} as any)
+const V1SystemCompanyIndexRoute = V1SystemCompanyIndexRouteImport.update({
+  id: '/company/',
+  path: '/company/',
+  getParentRoute: () => V1SystemRouteRoute,
+} as any)
+const V1FinanceRecurringIndexRoute = V1FinanceRecurringIndexRouteImport.update({
+  id: '/recurring/',
+  path: '/recurring/',
+  getParentRoute: () => V1FinanceRouteRoute,
+} as any)
+const V1FinancePayablesIndexRoute = V1FinancePayablesIndexRouteImport.update({
+  id: '/payables/',
+  path: '/payables/',
+  getParentRoute: () => V1FinanceRouteRoute,
+} as any)
+const V1FinanceLedgerIndexRoute = V1FinanceLedgerIndexRouteImport.update({
+  id: '/ledger/',
+  path: '/ledger/',
+  getParentRoute: () => V1FinanceRouteRoute,
+} as any)
+const V1FinanceCapitalIndexRoute = V1FinanceCapitalIndexRouteImport.update({
+  id: '/capital/',
+  path: '/capital/',
+  getParentRoute: () => V1FinanceRouteRoute,
+} as any)
+const V1AgentsHireIndexRoute = V1AgentsHireIndexRouteImport.update({
+  id: '/hire/',
+  path: '/hire/',
+  getParentRoute: () => V1AgentsRouteRoute,
 } as any)
 const HomeLlmPricesIndexRoute = HomeLlmPricesIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => HomeLlmPricesRouteRoute,
 } as any)
-const V1SystemLlmProfilesRoute = V1SystemLlmProfilesRouteImport.update({
-  id: '/llm/profiles',
-  path: '/llm/profiles',
-  getParentRoute: () => V1SystemRoute,
+const V1SystemLlmProfilesIndexRoute =
+  V1SystemLlmProfilesIndexRouteImport.update({
+    id: '/llm/profiles/',
+    path: '/llm/profiles/',
+    getParentRoute: () => V1SystemRouteRoute,
+  } as any)
+const V1SystemLlmPricesIndexRoute = V1SystemLlmPricesIndexRouteImport.update({
+  id: '/llm/prices/',
+  path: '/llm/prices/',
+  getParentRoute: () => V1SystemRouteRoute,
 } as any)
-const V1SystemLlmPricesRoute = V1SystemLlmPricesRouteImport.update({
-  id: '/llm/prices',
-  path: '/llm/prices',
-  getParentRoute: () => V1SystemRoute,
+const V1SystemLlmDefaultsIndexRoute =
+  V1SystemLlmDefaultsIndexRouteImport.update({
+    id: '/llm/defaults/',
+    path: '/llm/defaults/',
+    getParentRoute: () => V1SystemRouteRoute,
+  } as any)
+const V1SystemIntegrationsMinimaxIndexRoute =
+  V1SystemIntegrationsMinimaxIndexRouteImport.update({
+    id: '/integrations/minimax/',
+    path: '/integrations/minimax/',
+    getParentRoute: () => V1SystemRouteRoute,
+  } as any)
+const V1SystemIntegrationsMigaduIndexRoute =
+  V1SystemIntegrationsMigaduIndexRouteImport.update({
+    id: '/integrations/migadu/',
+    path: '/integrations/migadu/',
+    getParentRoute: () => V1SystemRouteRoute,
+  } as any)
+const V1SystemIntegrationsGithubIndexRoute =
+  V1SystemIntegrationsGithubIndexRouteImport.update({
+    id: '/integrations/github/',
+    path: '/integrations/github/',
+    getParentRoute: () => V1SystemRouteRoute,
+  } as any)
+const V1SystemIntegrationsCoolifyIndexRoute =
+  V1SystemIntegrationsCoolifyIndexRouteImport.update({
+    id: '/integrations/coolify/',
+    path: '/integrations/coolify/',
+    getParentRoute: () => V1SystemRouteRoute,
+  } as any)
+const V1RolesRolesRoleIdIndexRoute = V1RolesRolesRoleIdIndexRouteImport.update({
+  id: '/roles/$roleId/',
+  path: '/roles/$roleId/',
+  getParentRoute: () => V1RolesRouteRoute,
 } as any)
-const V1SystemLlmDefaultsRoute = V1SystemLlmDefaultsRouteImport.update({
-  id: '/llm/defaults',
-  path: '/llm/defaults',
-  getParentRoute: () => V1SystemRoute,
-} as any)
-const V1SystemIntegrationsMinimaxRoute =
-  V1SystemIntegrationsMinimaxRouteImport.update({
-    id: '/integrations/minimax',
-    path: '/integrations/minimax',
-    getParentRoute: () => V1SystemRoute,
+const V1AgentsAgentIdSchedulesIndexRoute =
+  V1AgentsAgentIdSchedulesIndexRouteImport.update({
+    id: '/$agentId/schedules/',
+    path: '/$agentId/schedules/',
+    getParentRoute: () => V1AgentsRouteRoute,
   } as any)
-const V1SystemIntegrationsMigaduRoute =
-  V1SystemIntegrationsMigaduRouteImport.update({
-    id: '/integrations/migadu',
-    path: '/integrations/migadu',
-    getParentRoute: () => V1SystemRoute,
+const V1AgentsAgentIdHistoryIndexRoute =
+  V1AgentsAgentIdHistoryIndexRouteImport.update({
+    id: '/$agentId/history/',
+    path: '/$agentId/history/',
+    getParentRoute: () => V1AgentsRouteRoute,
   } as any)
-const V1SystemIntegrationsGithubRoute =
-  V1SystemIntegrationsGithubRouteImport.update({
-    id: '/integrations/github',
-    path: '/integrations/github',
-    getParentRoute: () => V1SystemRoute,
+const V1AgentsAgentIdRuntimeRuntimeViewIndexRoute =
+  V1AgentsAgentIdRuntimeRuntimeViewIndexRouteImport.update({
+    id: '/$agentId/runtime/$runtimeView/',
+    path: '/$agentId/runtime/$runtimeView/',
+    getParentRoute: () => V1AgentsRouteRoute,
   } as any)
-const V1SystemIntegrationsCoolifyRoute =
-  V1SystemIntegrationsCoolifyRouteImport.update({
-    id: '/integrations/coolify',
-    path: '/integrations/coolify',
-    getParentRoute: () => V1SystemRoute,
-  } as any)
-const V1RolesRolesRoleIdRoute = V1RolesRolesRoleIdRouteImport.update({
-  id: '/roles/$roleId',
-  path: '/roles/$roleId',
-  getParentRoute: () => V1RolesRoute,
-} as any)
-const V1AgentsAgentIdSchedulesRoute =
-  V1AgentsAgentIdSchedulesRouteImport.update({
-    id: '/$agentId/schedules',
-    path: '/$agentId/schedules',
-    getParentRoute: () => V1AgentsRoute,
-  } as any)
-const V1AgentsAgentIdHistoryRoute = V1AgentsAgentIdHistoryRouteImport.update({
-  id: '/$agentId/history',
-  path: '/$agentId/history',
-  getParentRoute: () => V1AgentsRoute,
-} as any)
-const V1AgentsAgentIdRuntimeRuntimeViewRoute =
-  V1AgentsAgentIdRuntimeRuntimeViewRouteImport.update({
-    id: '/$agentId/runtime/$runtimeView',
-    path: '/$agentId/runtime/$runtimeView',
-    getParentRoute: () => V1AgentsRoute,
-  } as any)
-const V1AgentsAgentIdCommunicationsCommunicationViewRoute =
-  V1AgentsAgentIdCommunicationsCommunicationViewRouteImport.update({
-    id: '/$agentId/communications/$communicationView',
-    path: '/$agentId/communications/$communicationView',
-    getParentRoute: () => V1AgentsRoute,
+const V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute =
+  V1AgentsAgentIdCommunicationsCommunicationViewIndexRouteImport.update({
+    id: '/$agentId/communications/$communicationView/',
+    path: '/$agentId/communications/$communicationView/',
+    getParentRoute: () => V1AgentsRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/home': typeof HomeRouteRouteWithChildren
-  '/v1': typeof V1RouteWithChildren
+  '/v1': typeof V1RouteRouteWithChildren
   '/home/llm': typeof HomeLlmRouteRouteWithChildren
-  '/v1/agents': typeof V1AgentsRouteWithChildren
-  '/v1/finance': typeof V1FinanceRouteWithChildren
-  '/v1/roles': typeof V1RolesRouteWithChildren
-  '/v1/system': typeof V1SystemRouteWithChildren
+  '/v1/agents': typeof V1AgentsRouteRouteWithChildren
+  '/v1/finance': typeof V1FinanceRouteRouteWithChildren
+  '/v1/roles': typeof V1RolesRouteRouteWithChildren
+  '/v1/system': typeof V1SystemRouteRouteWithChildren
   '/home/': typeof HomeIndexRoute
   '/v1/': typeof V1IndexRoute
   '/home/llm/prices': typeof HomeLlmPricesRouteRouteWithChildren
-  '/v1/agents/hire': typeof V1AgentsHireRoute
-  '/v1/finance/capital': typeof V1FinanceCapitalRoute
-  '/v1/finance/ledger': typeof V1FinanceLedgerRoute
-  '/v1/finance/payables': typeof V1FinancePayablesRoute
-  '/v1/finance/recurring': typeof V1FinanceRecurringRoute
-  '/v1/system/company': typeof V1SystemCompanyRoute
-  '/v1/system/migrations': typeof V1SystemMigrationsRoute
-  '/v1/system/oauth': typeof V1SystemOauthRoute
   '/home/llm/': typeof HomeLlmIndexRoute
   '/v1/agents/': typeof V1AgentsIndexRoute
   '/v1/finance/': typeof V1FinanceIndexRoute
   '/v1/roles/': typeof V1RolesIndexRoute
   '/v1/system/': typeof V1SystemIndexRoute
-  '/v1/agents/$agentId/history': typeof V1AgentsAgentIdHistoryRoute
-  '/v1/agents/$agentId/schedules': typeof V1AgentsAgentIdSchedulesRoute
-  '/v1/roles/roles/$roleId': typeof V1RolesRolesRoleIdRoute
-  '/v1/system/integrations/coolify': typeof V1SystemIntegrationsCoolifyRoute
-  '/v1/system/integrations/github': typeof V1SystemIntegrationsGithubRoute
-  '/v1/system/integrations/migadu': typeof V1SystemIntegrationsMigaduRoute
-  '/v1/system/integrations/minimax': typeof V1SystemIntegrationsMinimaxRoute
-  '/v1/system/llm/defaults': typeof V1SystemLlmDefaultsRoute
-  '/v1/system/llm/prices': typeof V1SystemLlmPricesRoute
-  '/v1/system/llm/profiles': typeof V1SystemLlmProfilesRoute
   '/home/llm/prices/': typeof HomeLlmPricesIndexRoute
-  '/v1/agents/$agentId/communications/$communicationView': typeof V1AgentsAgentIdCommunicationsCommunicationViewRoute
-  '/v1/agents/$agentId/runtime/$runtimeView': typeof V1AgentsAgentIdRuntimeRuntimeViewRoute
+  '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
+  '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
+  '/v1/finance/ledger/': typeof V1FinanceLedgerIndexRoute
+  '/v1/finance/payables/': typeof V1FinancePayablesIndexRoute
+  '/v1/finance/recurring/': typeof V1FinanceRecurringIndexRoute
+  '/v1/system/company/': typeof V1SystemCompanyIndexRoute
+  '/v1/system/migrations/': typeof V1SystemMigrationsIndexRoute
+  '/v1/system/oauth/': typeof V1SystemOauthIndexRoute
+  '/v1/agents/$agentId/history/': typeof V1AgentsAgentIdHistoryIndexRoute
+  '/v1/agents/$agentId/schedules/': typeof V1AgentsAgentIdSchedulesIndexRoute
+  '/v1/roles/roles/$roleId/': typeof V1RolesRolesRoleIdIndexRoute
+  '/v1/system/integrations/coolify/': typeof V1SystemIntegrationsCoolifyIndexRoute
+  '/v1/system/integrations/github/': typeof V1SystemIntegrationsGithubIndexRoute
+  '/v1/system/integrations/migadu/': typeof V1SystemIntegrationsMigaduIndexRoute
+  '/v1/system/integrations/minimax/': typeof V1SystemIntegrationsMinimaxIndexRoute
+  '/v1/system/llm/defaults/': typeof V1SystemLlmDefaultsIndexRoute
+  '/v1/system/llm/prices/': typeof V1SystemLlmPricesIndexRoute
+  '/v1/system/llm/profiles/': typeof V1SystemLlmProfilesIndexRoute
+  '/v1/agents/$agentId/communications/$communicationView/': typeof V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute
+  '/v1/agents/$agentId/runtime/$runtimeView/': typeof V1AgentsAgentIdRuntimeRuntimeViewIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/home': typeof HomeIndexRoute
   '/v1': typeof V1IndexRoute
-  '/v1/agents/hire': typeof V1AgentsHireRoute
-  '/v1/finance/capital': typeof V1FinanceCapitalRoute
-  '/v1/finance/ledger': typeof V1FinanceLedgerRoute
-  '/v1/finance/payables': typeof V1FinancePayablesRoute
-  '/v1/finance/recurring': typeof V1FinanceRecurringRoute
-  '/v1/system/company': typeof V1SystemCompanyRoute
-  '/v1/system/migrations': typeof V1SystemMigrationsRoute
-  '/v1/system/oauth': typeof V1SystemOauthRoute
   '/home/llm': typeof HomeLlmIndexRoute
   '/v1/agents': typeof V1AgentsIndexRoute
   '/v1/finance': typeof V1FinanceIndexRoute
   '/v1/roles': typeof V1RolesIndexRoute
   '/v1/system': typeof V1SystemIndexRoute
-  '/v1/agents/$agentId/history': typeof V1AgentsAgentIdHistoryRoute
-  '/v1/agents/$agentId/schedules': typeof V1AgentsAgentIdSchedulesRoute
-  '/v1/roles/roles/$roleId': typeof V1RolesRolesRoleIdRoute
-  '/v1/system/integrations/coolify': typeof V1SystemIntegrationsCoolifyRoute
-  '/v1/system/integrations/github': typeof V1SystemIntegrationsGithubRoute
-  '/v1/system/integrations/migadu': typeof V1SystemIntegrationsMigaduRoute
-  '/v1/system/integrations/minimax': typeof V1SystemIntegrationsMinimaxRoute
-  '/v1/system/llm/defaults': typeof V1SystemLlmDefaultsRoute
-  '/v1/system/llm/prices': typeof V1SystemLlmPricesRoute
-  '/v1/system/llm/profiles': typeof V1SystemLlmProfilesRoute
   '/home/llm/prices': typeof HomeLlmPricesIndexRoute
-  '/v1/agents/$agentId/communications/$communicationView': typeof V1AgentsAgentIdCommunicationsCommunicationViewRoute
-  '/v1/agents/$agentId/runtime/$runtimeView': typeof V1AgentsAgentIdRuntimeRuntimeViewRoute
+  '/v1/agents/hire': typeof V1AgentsHireIndexRoute
+  '/v1/finance/capital': typeof V1FinanceCapitalIndexRoute
+  '/v1/finance/ledger': typeof V1FinanceLedgerIndexRoute
+  '/v1/finance/payables': typeof V1FinancePayablesIndexRoute
+  '/v1/finance/recurring': typeof V1FinanceRecurringIndexRoute
+  '/v1/system/company': typeof V1SystemCompanyIndexRoute
+  '/v1/system/migrations': typeof V1SystemMigrationsIndexRoute
+  '/v1/system/oauth': typeof V1SystemOauthIndexRoute
+  '/v1/agents/$agentId/history': typeof V1AgentsAgentIdHistoryIndexRoute
+  '/v1/agents/$agentId/schedules': typeof V1AgentsAgentIdSchedulesIndexRoute
+  '/v1/roles/roles/$roleId': typeof V1RolesRolesRoleIdIndexRoute
+  '/v1/system/integrations/coolify': typeof V1SystemIntegrationsCoolifyIndexRoute
+  '/v1/system/integrations/github': typeof V1SystemIntegrationsGithubIndexRoute
+  '/v1/system/integrations/migadu': typeof V1SystemIntegrationsMigaduIndexRoute
+  '/v1/system/integrations/minimax': typeof V1SystemIntegrationsMinimaxIndexRoute
+  '/v1/system/llm/defaults': typeof V1SystemLlmDefaultsIndexRoute
+  '/v1/system/llm/prices': typeof V1SystemLlmPricesIndexRoute
+  '/v1/system/llm/profiles': typeof V1SystemLlmProfilesIndexRoute
+  '/v1/agents/$agentId/communications/$communicationView': typeof V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute
+  '/v1/agents/$agentId/runtime/$runtimeView': typeof V1AgentsAgentIdRuntimeRuntimeViewIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/home': typeof HomeRouteRouteWithChildren
-  '/v1': typeof V1RouteWithChildren
+  '/v1': typeof V1RouteRouteWithChildren
   '/home/llm': typeof HomeLlmRouteRouteWithChildren
-  '/v1/agents': typeof V1AgentsRouteWithChildren
-  '/v1/finance': typeof V1FinanceRouteWithChildren
-  '/v1/roles': typeof V1RolesRouteWithChildren
-  '/v1/system': typeof V1SystemRouteWithChildren
+  '/v1/agents': typeof V1AgentsRouteRouteWithChildren
+  '/v1/finance': typeof V1FinanceRouteRouteWithChildren
+  '/v1/roles': typeof V1RolesRouteRouteWithChildren
+  '/v1/system': typeof V1SystemRouteRouteWithChildren
   '/home/': typeof HomeIndexRoute
   '/v1/': typeof V1IndexRoute
   '/home/llm/prices': typeof HomeLlmPricesRouteRouteWithChildren
-  '/v1/agents/hire': typeof V1AgentsHireRoute
-  '/v1/finance/capital': typeof V1FinanceCapitalRoute
-  '/v1/finance/ledger': typeof V1FinanceLedgerRoute
-  '/v1/finance/payables': typeof V1FinancePayablesRoute
-  '/v1/finance/recurring': typeof V1FinanceRecurringRoute
-  '/v1/system/company': typeof V1SystemCompanyRoute
-  '/v1/system/migrations': typeof V1SystemMigrationsRoute
-  '/v1/system/oauth': typeof V1SystemOauthRoute
   '/home/llm/': typeof HomeLlmIndexRoute
   '/v1/agents/': typeof V1AgentsIndexRoute
   '/v1/finance/': typeof V1FinanceIndexRoute
   '/v1/roles/': typeof V1RolesIndexRoute
   '/v1/system/': typeof V1SystemIndexRoute
-  '/v1/agents/$agentId/history': typeof V1AgentsAgentIdHistoryRoute
-  '/v1/agents/$agentId/schedules': typeof V1AgentsAgentIdSchedulesRoute
-  '/v1/roles/roles/$roleId': typeof V1RolesRolesRoleIdRoute
-  '/v1/system/integrations/coolify': typeof V1SystemIntegrationsCoolifyRoute
-  '/v1/system/integrations/github': typeof V1SystemIntegrationsGithubRoute
-  '/v1/system/integrations/migadu': typeof V1SystemIntegrationsMigaduRoute
-  '/v1/system/integrations/minimax': typeof V1SystemIntegrationsMinimaxRoute
-  '/v1/system/llm/defaults': typeof V1SystemLlmDefaultsRoute
-  '/v1/system/llm/prices': typeof V1SystemLlmPricesRoute
-  '/v1/system/llm/profiles': typeof V1SystemLlmProfilesRoute
   '/home/llm/prices/': typeof HomeLlmPricesIndexRoute
-  '/v1/agents/$agentId/communications/$communicationView': typeof V1AgentsAgentIdCommunicationsCommunicationViewRoute
-  '/v1/agents/$agentId/runtime/$runtimeView': typeof V1AgentsAgentIdRuntimeRuntimeViewRoute
+  '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
+  '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
+  '/v1/finance/ledger/': typeof V1FinanceLedgerIndexRoute
+  '/v1/finance/payables/': typeof V1FinancePayablesIndexRoute
+  '/v1/finance/recurring/': typeof V1FinanceRecurringIndexRoute
+  '/v1/system/company/': typeof V1SystemCompanyIndexRoute
+  '/v1/system/migrations/': typeof V1SystemMigrationsIndexRoute
+  '/v1/system/oauth/': typeof V1SystemOauthIndexRoute
+  '/v1/agents/$agentId/history/': typeof V1AgentsAgentIdHistoryIndexRoute
+  '/v1/agents/$agentId/schedules/': typeof V1AgentsAgentIdSchedulesIndexRoute
+  '/v1/roles/roles/$roleId/': typeof V1RolesRolesRoleIdIndexRoute
+  '/v1/system/integrations/coolify/': typeof V1SystemIntegrationsCoolifyIndexRoute
+  '/v1/system/integrations/github/': typeof V1SystemIntegrationsGithubIndexRoute
+  '/v1/system/integrations/migadu/': typeof V1SystemIntegrationsMigaduIndexRoute
+  '/v1/system/integrations/minimax/': typeof V1SystemIntegrationsMinimaxIndexRoute
+  '/v1/system/llm/defaults/': typeof V1SystemLlmDefaultsIndexRoute
+  '/v1/system/llm/prices/': typeof V1SystemLlmPricesIndexRoute
+  '/v1/system/llm/profiles/': typeof V1SystemLlmProfilesIndexRoute
+  '/v1/agents/$agentId/communications/$communicationView/': typeof V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute
+  '/v1/agents/$agentId/runtime/$runtimeView/': typeof V1AgentsAgentIdRuntimeRuntimeViewIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -364,37 +367,43 @@ export interface FileRouteTypes {
     | '/home/'
     | '/v1/'
     | '/home/llm/prices'
-    | '/v1/agents/hire'
-    | '/v1/finance/capital'
-    | '/v1/finance/ledger'
-    | '/v1/finance/payables'
-    | '/v1/finance/recurring'
-    | '/v1/system/company'
-    | '/v1/system/migrations'
-    | '/v1/system/oauth'
     | '/home/llm/'
     | '/v1/agents/'
     | '/v1/finance/'
     | '/v1/roles/'
     | '/v1/system/'
-    | '/v1/agents/$agentId/history'
-    | '/v1/agents/$agentId/schedules'
-    | '/v1/roles/roles/$roleId'
-    | '/v1/system/integrations/coolify'
-    | '/v1/system/integrations/github'
-    | '/v1/system/integrations/migadu'
-    | '/v1/system/integrations/minimax'
-    | '/v1/system/llm/defaults'
-    | '/v1/system/llm/prices'
-    | '/v1/system/llm/profiles'
     | '/home/llm/prices/'
-    | '/v1/agents/$agentId/communications/$communicationView'
-    | '/v1/agents/$agentId/runtime/$runtimeView'
+    | '/v1/agents/hire/'
+    | '/v1/finance/capital/'
+    | '/v1/finance/ledger/'
+    | '/v1/finance/payables/'
+    | '/v1/finance/recurring/'
+    | '/v1/system/company/'
+    | '/v1/system/migrations/'
+    | '/v1/system/oauth/'
+    | '/v1/agents/$agentId/history/'
+    | '/v1/agents/$agentId/schedules/'
+    | '/v1/roles/roles/$roleId/'
+    | '/v1/system/integrations/coolify/'
+    | '/v1/system/integrations/github/'
+    | '/v1/system/integrations/migadu/'
+    | '/v1/system/integrations/minimax/'
+    | '/v1/system/llm/defaults/'
+    | '/v1/system/llm/prices/'
+    | '/v1/system/llm/profiles/'
+    | '/v1/agents/$agentId/communications/$communicationView/'
+    | '/v1/agents/$agentId/runtime/$runtimeView/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/home'
     | '/v1'
+    | '/home/llm'
+    | '/v1/agents'
+    | '/v1/finance'
+    | '/v1/roles'
+    | '/v1/system'
+    | '/home/llm/prices'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
     | '/v1/finance/ledger'
@@ -403,11 +412,6 @@ export interface FileRouteTypes {
     | '/v1/system/company'
     | '/v1/system/migrations'
     | '/v1/system/oauth'
-    | '/home/llm'
-    | '/v1/agents'
-    | '/v1/finance'
-    | '/v1/roles'
-    | '/v1/system'
     | '/v1/agents/$agentId/history'
     | '/v1/agents/$agentId/schedules'
     | '/v1/roles/roles/$roleId'
@@ -418,7 +422,6 @@ export interface FileRouteTypes {
     | '/v1/system/llm/defaults'
     | '/v1/system/llm/prices'
     | '/v1/system/llm/profiles'
-    | '/home/llm/prices'
     | '/v1/agents/$agentId/communications/$communicationView'
     | '/v1/agents/$agentId/runtime/$runtimeView'
   id:
@@ -434,38 +437,38 @@ export interface FileRouteTypes {
     | '/home/'
     | '/v1/'
     | '/home/llm/prices'
-    | '/v1/agents/hire'
-    | '/v1/finance/capital'
-    | '/v1/finance/ledger'
-    | '/v1/finance/payables'
-    | '/v1/finance/recurring'
-    | '/v1/system/company'
-    | '/v1/system/migrations'
-    | '/v1/system/oauth'
     | '/home/llm/'
     | '/v1/agents/'
     | '/v1/finance/'
     | '/v1/roles/'
     | '/v1/system/'
-    | '/v1/agents/$agentId/history'
-    | '/v1/agents/$agentId/schedules'
-    | '/v1/roles/roles/$roleId'
-    | '/v1/system/integrations/coolify'
-    | '/v1/system/integrations/github'
-    | '/v1/system/integrations/migadu'
-    | '/v1/system/integrations/minimax'
-    | '/v1/system/llm/defaults'
-    | '/v1/system/llm/prices'
-    | '/v1/system/llm/profiles'
     | '/home/llm/prices/'
-    | '/v1/agents/$agentId/communications/$communicationView'
-    | '/v1/agents/$agentId/runtime/$runtimeView'
+    | '/v1/agents/hire/'
+    | '/v1/finance/capital/'
+    | '/v1/finance/ledger/'
+    | '/v1/finance/payables/'
+    | '/v1/finance/recurring/'
+    | '/v1/system/company/'
+    | '/v1/system/migrations/'
+    | '/v1/system/oauth/'
+    | '/v1/agents/$agentId/history/'
+    | '/v1/agents/$agentId/schedules/'
+    | '/v1/roles/roles/$roleId/'
+    | '/v1/system/integrations/coolify/'
+    | '/v1/system/integrations/github/'
+    | '/v1/system/integrations/migadu/'
+    | '/v1/system/integrations/minimax/'
+    | '/v1/system/llm/defaults/'
+    | '/v1/system/llm/prices/'
+    | '/v1/system/llm/profiles/'
+    | '/v1/agents/$agentId/communications/$communicationView/'
+    | '/v1/agents/$agentId/runtime/$runtimeView/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
-  V1Route: typeof V1RouteWithChildren
+  V1RouteRoute: typeof V1RouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -474,7 +477,7 @@ declare module '@tanstack/react-router' {
       id: '/v1'
       path: '/v1'
       fullPath: '/v1'
-      preLoaderRoute: typeof V1RouteImport
+      preLoaderRoute: typeof V1RouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/home': {
@@ -496,7 +499,7 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/v1/'
       preLoaderRoute: typeof V1IndexRouteImport
-      parentRoute: typeof V1Route
+      parentRoute: typeof V1RouteRoute
     }
     '/home/': {
       id: '/home/'
@@ -509,29 +512,29 @@ declare module '@tanstack/react-router' {
       id: '/v1/system'
       path: '/system'
       fullPath: '/v1/system'
-      preLoaderRoute: typeof V1SystemRouteImport
-      parentRoute: typeof V1Route
+      preLoaderRoute: typeof V1SystemRouteRouteImport
+      parentRoute: typeof V1RouteRoute
     }
     '/v1/roles': {
       id: '/v1/roles'
       path: '/roles'
       fullPath: '/v1/roles'
-      preLoaderRoute: typeof V1RolesRouteImport
-      parentRoute: typeof V1Route
+      preLoaderRoute: typeof V1RolesRouteRouteImport
+      parentRoute: typeof V1RouteRoute
     }
     '/v1/finance': {
       id: '/v1/finance'
       path: '/finance'
       fullPath: '/v1/finance'
-      preLoaderRoute: typeof V1FinanceRouteImport
-      parentRoute: typeof V1Route
+      preLoaderRoute: typeof V1FinanceRouteRouteImport
+      parentRoute: typeof V1RouteRoute
     }
     '/v1/agents': {
       id: '/v1/agents'
       path: '/agents'
       fullPath: '/v1/agents'
-      preLoaderRoute: typeof V1AgentsRouteImport
-      parentRoute: typeof V1Route
+      preLoaderRoute: typeof V1AgentsRouteRouteImport
+      parentRoute: typeof V1RouteRoute
     }
     '/home/llm': {
       id: '/home/llm'
@@ -545,28 +548,28 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/v1/system/'
       preLoaderRoute: typeof V1SystemIndexRouteImport
-      parentRoute: typeof V1SystemRoute
+      parentRoute: typeof V1SystemRouteRoute
     }
     '/v1/roles/': {
       id: '/v1/roles/'
       path: '/'
       fullPath: '/v1/roles/'
       preLoaderRoute: typeof V1RolesIndexRouteImport
-      parentRoute: typeof V1RolesRoute
+      parentRoute: typeof V1RolesRouteRoute
     }
     '/v1/finance/': {
       id: '/v1/finance/'
       path: '/'
       fullPath: '/v1/finance/'
       preLoaderRoute: typeof V1FinanceIndexRouteImport
-      parentRoute: typeof V1FinanceRoute
+      parentRoute: typeof V1FinanceRouteRoute
     }
     '/v1/agents/': {
       id: '/v1/agents/'
       path: '/'
       fullPath: '/v1/agents/'
       preLoaderRoute: typeof V1AgentsIndexRouteImport
-      parentRoute: typeof V1AgentsRoute
+      parentRoute: typeof V1AgentsRouteRoute
     }
     '/home/llm/': {
       id: '/home/llm/'
@@ -575,68 +578,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeLlmIndexRouteImport
       parentRoute: typeof HomeLlmRouteRoute
     }
-    '/v1/system/oauth': {
-      id: '/v1/system/oauth'
-      path: '/oauth'
-      fullPath: '/v1/system/oauth'
-      preLoaderRoute: typeof V1SystemOauthRouteImport
-      parentRoute: typeof V1SystemRoute
-    }
-    '/v1/system/migrations': {
-      id: '/v1/system/migrations'
-      path: '/migrations'
-      fullPath: '/v1/system/migrations'
-      preLoaderRoute: typeof V1SystemMigrationsRouteImport
-      parentRoute: typeof V1SystemRoute
-    }
-    '/v1/system/company': {
-      id: '/v1/system/company'
-      path: '/company'
-      fullPath: '/v1/system/company'
-      preLoaderRoute: typeof V1SystemCompanyRouteImport
-      parentRoute: typeof V1SystemRoute
-    }
-    '/v1/finance/recurring': {
-      id: '/v1/finance/recurring'
-      path: '/recurring'
-      fullPath: '/v1/finance/recurring'
-      preLoaderRoute: typeof V1FinanceRecurringRouteImport
-      parentRoute: typeof V1FinanceRoute
-    }
-    '/v1/finance/payables': {
-      id: '/v1/finance/payables'
-      path: '/payables'
-      fullPath: '/v1/finance/payables'
-      preLoaderRoute: typeof V1FinancePayablesRouteImport
-      parentRoute: typeof V1FinanceRoute
-    }
-    '/v1/finance/ledger': {
-      id: '/v1/finance/ledger'
-      path: '/ledger'
-      fullPath: '/v1/finance/ledger'
-      preLoaderRoute: typeof V1FinanceLedgerRouteImport
-      parentRoute: typeof V1FinanceRoute
-    }
-    '/v1/finance/capital': {
-      id: '/v1/finance/capital'
-      path: '/capital'
-      fullPath: '/v1/finance/capital'
-      preLoaderRoute: typeof V1FinanceCapitalRouteImport
-      parentRoute: typeof V1FinanceRoute
-    }
-    '/v1/agents/hire': {
-      id: '/v1/agents/hire'
-      path: '/hire'
-      fullPath: '/v1/agents/hire'
-      preLoaderRoute: typeof V1AgentsHireRouteImport
-      parentRoute: typeof V1AgentsRoute
-    }
     '/home/llm/prices': {
       id: '/home/llm/prices'
       path: '/prices'
       fullPath: '/home/llm/prices'
       preLoaderRoute: typeof HomeLlmPricesRouteRouteImport
       parentRoute: typeof HomeLlmRouteRoute
+    }
+    '/v1/system/oauth/': {
+      id: '/v1/system/oauth/'
+      path: '/oauth'
+      fullPath: '/v1/system/oauth/'
+      preLoaderRoute: typeof V1SystemOauthIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
+    }
+    '/v1/system/migrations/': {
+      id: '/v1/system/migrations/'
+      path: '/migrations'
+      fullPath: '/v1/system/migrations/'
+      preLoaderRoute: typeof V1SystemMigrationsIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
+    }
+    '/v1/system/company/': {
+      id: '/v1/system/company/'
+      path: '/company'
+      fullPath: '/v1/system/company/'
+      preLoaderRoute: typeof V1SystemCompanyIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
+    }
+    '/v1/finance/recurring/': {
+      id: '/v1/finance/recurring/'
+      path: '/recurring'
+      fullPath: '/v1/finance/recurring/'
+      preLoaderRoute: typeof V1FinanceRecurringIndexRouteImport
+      parentRoute: typeof V1FinanceRouteRoute
+    }
+    '/v1/finance/payables/': {
+      id: '/v1/finance/payables/'
+      path: '/payables'
+      fullPath: '/v1/finance/payables/'
+      preLoaderRoute: typeof V1FinancePayablesIndexRouteImport
+      parentRoute: typeof V1FinanceRouteRoute
+    }
+    '/v1/finance/ledger/': {
+      id: '/v1/finance/ledger/'
+      path: '/ledger'
+      fullPath: '/v1/finance/ledger/'
+      preLoaderRoute: typeof V1FinanceLedgerIndexRouteImport
+      parentRoute: typeof V1FinanceRouteRoute
+    }
+    '/v1/finance/capital/': {
+      id: '/v1/finance/capital/'
+      path: '/capital'
+      fullPath: '/v1/finance/capital/'
+      preLoaderRoute: typeof V1FinanceCapitalIndexRouteImport
+      parentRoute: typeof V1FinanceRouteRoute
+    }
+    '/v1/agents/hire/': {
+      id: '/v1/agents/hire/'
+      path: '/hire'
+      fullPath: '/v1/agents/hire/'
+      preLoaderRoute: typeof V1AgentsHireIndexRouteImport
+      parentRoute: typeof V1AgentsRouteRoute
     }
     '/home/llm/prices/': {
       id: '/home/llm/prices/'
@@ -645,89 +648,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeLlmPricesIndexRouteImport
       parentRoute: typeof HomeLlmPricesRouteRoute
     }
-    '/v1/system/llm/profiles': {
-      id: '/v1/system/llm/profiles'
+    '/v1/system/llm/profiles/': {
+      id: '/v1/system/llm/profiles/'
       path: '/llm/profiles'
-      fullPath: '/v1/system/llm/profiles'
-      preLoaderRoute: typeof V1SystemLlmProfilesRouteImport
-      parentRoute: typeof V1SystemRoute
+      fullPath: '/v1/system/llm/profiles/'
+      preLoaderRoute: typeof V1SystemLlmProfilesIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
     }
-    '/v1/system/llm/prices': {
-      id: '/v1/system/llm/prices'
+    '/v1/system/llm/prices/': {
+      id: '/v1/system/llm/prices/'
       path: '/llm/prices'
-      fullPath: '/v1/system/llm/prices'
-      preLoaderRoute: typeof V1SystemLlmPricesRouteImport
-      parentRoute: typeof V1SystemRoute
+      fullPath: '/v1/system/llm/prices/'
+      preLoaderRoute: typeof V1SystemLlmPricesIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
     }
-    '/v1/system/llm/defaults': {
-      id: '/v1/system/llm/defaults'
+    '/v1/system/llm/defaults/': {
+      id: '/v1/system/llm/defaults/'
       path: '/llm/defaults'
-      fullPath: '/v1/system/llm/defaults'
-      preLoaderRoute: typeof V1SystemLlmDefaultsRouteImport
-      parentRoute: typeof V1SystemRoute
+      fullPath: '/v1/system/llm/defaults/'
+      preLoaderRoute: typeof V1SystemLlmDefaultsIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
     }
-    '/v1/system/integrations/minimax': {
-      id: '/v1/system/integrations/minimax'
+    '/v1/system/integrations/minimax/': {
+      id: '/v1/system/integrations/minimax/'
       path: '/integrations/minimax'
-      fullPath: '/v1/system/integrations/minimax'
-      preLoaderRoute: typeof V1SystemIntegrationsMinimaxRouteImport
-      parentRoute: typeof V1SystemRoute
+      fullPath: '/v1/system/integrations/minimax/'
+      preLoaderRoute: typeof V1SystemIntegrationsMinimaxIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
     }
-    '/v1/system/integrations/migadu': {
-      id: '/v1/system/integrations/migadu'
+    '/v1/system/integrations/migadu/': {
+      id: '/v1/system/integrations/migadu/'
       path: '/integrations/migadu'
-      fullPath: '/v1/system/integrations/migadu'
-      preLoaderRoute: typeof V1SystemIntegrationsMigaduRouteImport
-      parentRoute: typeof V1SystemRoute
+      fullPath: '/v1/system/integrations/migadu/'
+      preLoaderRoute: typeof V1SystemIntegrationsMigaduIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
     }
-    '/v1/system/integrations/github': {
-      id: '/v1/system/integrations/github'
+    '/v1/system/integrations/github/': {
+      id: '/v1/system/integrations/github/'
       path: '/integrations/github'
-      fullPath: '/v1/system/integrations/github'
-      preLoaderRoute: typeof V1SystemIntegrationsGithubRouteImport
-      parentRoute: typeof V1SystemRoute
+      fullPath: '/v1/system/integrations/github/'
+      preLoaderRoute: typeof V1SystemIntegrationsGithubIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
     }
-    '/v1/system/integrations/coolify': {
-      id: '/v1/system/integrations/coolify'
+    '/v1/system/integrations/coolify/': {
+      id: '/v1/system/integrations/coolify/'
       path: '/integrations/coolify'
-      fullPath: '/v1/system/integrations/coolify'
-      preLoaderRoute: typeof V1SystemIntegrationsCoolifyRouteImport
-      parentRoute: typeof V1SystemRoute
+      fullPath: '/v1/system/integrations/coolify/'
+      preLoaderRoute: typeof V1SystemIntegrationsCoolifyIndexRouteImport
+      parentRoute: typeof V1SystemRouteRoute
     }
-    '/v1/roles/roles/$roleId': {
-      id: '/v1/roles/roles/$roleId'
+    '/v1/roles/roles/$roleId/': {
+      id: '/v1/roles/roles/$roleId/'
       path: '/roles/$roleId'
-      fullPath: '/v1/roles/roles/$roleId'
-      preLoaderRoute: typeof V1RolesRolesRoleIdRouteImport
-      parentRoute: typeof V1RolesRoute
+      fullPath: '/v1/roles/roles/$roleId/'
+      preLoaderRoute: typeof V1RolesRolesRoleIdIndexRouteImport
+      parentRoute: typeof V1RolesRouteRoute
     }
-    '/v1/agents/$agentId/schedules': {
-      id: '/v1/agents/$agentId/schedules'
+    '/v1/agents/$agentId/schedules/': {
+      id: '/v1/agents/$agentId/schedules/'
       path: '/$agentId/schedules'
-      fullPath: '/v1/agents/$agentId/schedules'
-      preLoaderRoute: typeof V1AgentsAgentIdSchedulesRouteImport
-      parentRoute: typeof V1AgentsRoute
+      fullPath: '/v1/agents/$agentId/schedules/'
+      preLoaderRoute: typeof V1AgentsAgentIdSchedulesIndexRouteImport
+      parentRoute: typeof V1AgentsRouteRoute
     }
-    '/v1/agents/$agentId/history': {
-      id: '/v1/agents/$agentId/history'
+    '/v1/agents/$agentId/history/': {
+      id: '/v1/agents/$agentId/history/'
       path: '/$agentId/history'
-      fullPath: '/v1/agents/$agentId/history'
-      preLoaderRoute: typeof V1AgentsAgentIdHistoryRouteImport
-      parentRoute: typeof V1AgentsRoute
+      fullPath: '/v1/agents/$agentId/history/'
+      preLoaderRoute: typeof V1AgentsAgentIdHistoryIndexRouteImport
+      parentRoute: typeof V1AgentsRouteRoute
     }
-    '/v1/agents/$agentId/runtime/$runtimeView': {
-      id: '/v1/agents/$agentId/runtime/$runtimeView'
+    '/v1/agents/$agentId/runtime/$runtimeView/': {
+      id: '/v1/agents/$agentId/runtime/$runtimeView/'
       path: '/$agentId/runtime/$runtimeView'
-      fullPath: '/v1/agents/$agentId/runtime/$runtimeView'
-      preLoaderRoute: typeof V1AgentsAgentIdRuntimeRuntimeViewRouteImport
-      parentRoute: typeof V1AgentsRoute
+      fullPath: '/v1/agents/$agentId/runtime/$runtimeView/'
+      preLoaderRoute: typeof V1AgentsAgentIdRuntimeRuntimeViewIndexRouteImport
+      parentRoute: typeof V1AgentsRouteRoute
     }
-    '/v1/agents/$agentId/communications/$communicationView': {
-      id: '/v1/agents/$agentId/communications/$communicationView'
+    '/v1/agents/$agentId/communications/$communicationView/': {
+      id: '/v1/agents/$agentId/communications/$communicationView/'
       path: '/$agentId/communications/$communicationView'
-      fullPath: '/v1/agents/$agentId/communications/$communicationView'
-      preLoaderRoute: typeof V1AgentsAgentIdCommunicationsCommunicationViewRouteImport
-      parentRoute: typeof V1AgentsRoute
+      fullPath: '/v1/agents/$agentId/communications/$communicationView/'
+      preLoaderRoute: typeof V1AgentsAgentIdCommunicationsCommunicationViewIndexRouteImport
+      parentRoute: typeof V1AgentsRouteRoute
     }
   }
 }
@@ -771,117 +774,119 @@ const HomeRouteRouteWithChildren = HomeRouteRoute._addFileChildren(
   HomeRouteRouteChildren,
 )
 
-interface V1AgentsRouteChildren {
-  V1AgentsHireRoute: typeof V1AgentsHireRoute
+interface V1AgentsRouteRouteChildren {
   V1AgentsIndexRoute: typeof V1AgentsIndexRoute
-  V1AgentsAgentIdHistoryRoute: typeof V1AgentsAgentIdHistoryRoute
-  V1AgentsAgentIdSchedulesRoute: typeof V1AgentsAgentIdSchedulesRoute
-  V1AgentsAgentIdCommunicationsCommunicationViewRoute: typeof V1AgentsAgentIdCommunicationsCommunicationViewRoute
-  V1AgentsAgentIdRuntimeRuntimeViewRoute: typeof V1AgentsAgentIdRuntimeRuntimeViewRoute
+  V1AgentsHireIndexRoute: typeof V1AgentsHireIndexRoute
+  V1AgentsAgentIdHistoryIndexRoute: typeof V1AgentsAgentIdHistoryIndexRoute
+  V1AgentsAgentIdSchedulesIndexRoute: typeof V1AgentsAgentIdSchedulesIndexRoute
+  V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute: typeof V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute
+  V1AgentsAgentIdRuntimeRuntimeViewIndexRoute: typeof V1AgentsAgentIdRuntimeRuntimeViewIndexRoute
 }
 
-const V1AgentsRouteChildren: V1AgentsRouteChildren = {
-  V1AgentsHireRoute: V1AgentsHireRoute,
+const V1AgentsRouteRouteChildren: V1AgentsRouteRouteChildren = {
   V1AgentsIndexRoute: V1AgentsIndexRoute,
-  V1AgentsAgentIdHistoryRoute: V1AgentsAgentIdHistoryRoute,
-  V1AgentsAgentIdSchedulesRoute: V1AgentsAgentIdSchedulesRoute,
-  V1AgentsAgentIdCommunicationsCommunicationViewRoute:
-    V1AgentsAgentIdCommunicationsCommunicationViewRoute,
-  V1AgentsAgentIdRuntimeRuntimeViewRoute:
-    V1AgentsAgentIdRuntimeRuntimeViewRoute,
+  V1AgentsHireIndexRoute: V1AgentsHireIndexRoute,
+  V1AgentsAgentIdHistoryIndexRoute: V1AgentsAgentIdHistoryIndexRoute,
+  V1AgentsAgentIdSchedulesIndexRoute: V1AgentsAgentIdSchedulesIndexRoute,
+  V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute:
+    V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute,
+  V1AgentsAgentIdRuntimeRuntimeViewIndexRoute:
+    V1AgentsAgentIdRuntimeRuntimeViewIndexRoute,
 }
 
-const V1AgentsRouteWithChildren = V1AgentsRoute._addFileChildren(
-  V1AgentsRouteChildren,
+const V1AgentsRouteRouteWithChildren = V1AgentsRouteRoute._addFileChildren(
+  V1AgentsRouteRouteChildren,
 )
 
-interface V1FinanceRouteChildren {
-  V1FinanceCapitalRoute: typeof V1FinanceCapitalRoute
-  V1FinanceLedgerRoute: typeof V1FinanceLedgerRoute
-  V1FinancePayablesRoute: typeof V1FinancePayablesRoute
-  V1FinanceRecurringRoute: typeof V1FinanceRecurringRoute
+interface V1FinanceRouteRouteChildren {
   V1FinanceIndexRoute: typeof V1FinanceIndexRoute
+  V1FinanceCapitalIndexRoute: typeof V1FinanceCapitalIndexRoute
+  V1FinanceLedgerIndexRoute: typeof V1FinanceLedgerIndexRoute
+  V1FinancePayablesIndexRoute: typeof V1FinancePayablesIndexRoute
+  V1FinanceRecurringIndexRoute: typeof V1FinanceRecurringIndexRoute
 }
 
-const V1FinanceRouteChildren: V1FinanceRouteChildren = {
-  V1FinanceCapitalRoute: V1FinanceCapitalRoute,
-  V1FinanceLedgerRoute: V1FinanceLedgerRoute,
-  V1FinancePayablesRoute: V1FinancePayablesRoute,
-  V1FinanceRecurringRoute: V1FinanceRecurringRoute,
+const V1FinanceRouteRouteChildren: V1FinanceRouteRouteChildren = {
   V1FinanceIndexRoute: V1FinanceIndexRoute,
+  V1FinanceCapitalIndexRoute: V1FinanceCapitalIndexRoute,
+  V1FinanceLedgerIndexRoute: V1FinanceLedgerIndexRoute,
+  V1FinancePayablesIndexRoute: V1FinancePayablesIndexRoute,
+  V1FinanceRecurringIndexRoute: V1FinanceRecurringIndexRoute,
 }
 
-const V1FinanceRouteWithChildren = V1FinanceRoute._addFileChildren(
-  V1FinanceRouteChildren,
+const V1FinanceRouteRouteWithChildren = V1FinanceRouteRoute._addFileChildren(
+  V1FinanceRouteRouteChildren,
 )
 
-interface V1RolesRouteChildren {
+interface V1RolesRouteRouteChildren {
   V1RolesIndexRoute: typeof V1RolesIndexRoute
-  V1RolesRolesRoleIdRoute: typeof V1RolesRolesRoleIdRoute
+  V1RolesRolesRoleIdIndexRoute: typeof V1RolesRolesRoleIdIndexRoute
 }
 
-const V1RolesRouteChildren: V1RolesRouteChildren = {
+const V1RolesRouteRouteChildren: V1RolesRouteRouteChildren = {
   V1RolesIndexRoute: V1RolesIndexRoute,
-  V1RolesRolesRoleIdRoute: V1RolesRolesRoleIdRoute,
+  V1RolesRolesRoleIdIndexRoute: V1RolesRolesRoleIdIndexRoute,
 }
 
-const V1RolesRouteWithChildren =
-  V1RolesRoute._addFileChildren(V1RolesRouteChildren)
-
-interface V1SystemRouteChildren {
-  V1SystemCompanyRoute: typeof V1SystemCompanyRoute
-  V1SystemMigrationsRoute: typeof V1SystemMigrationsRoute
-  V1SystemOauthRoute: typeof V1SystemOauthRoute
-  V1SystemIndexRoute: typeof V1SystemIndexRoute
-  V1SystemIntegrationsCoolifyRoute: typeof V1SystemIntegrationsCoolifyRoute
-  V1SystemIntegrationsGithubRoute: typeof V1SystemIntegrationsGithubRoute
-  V1SystemIntegrationsMigaduRoute: typeof V1SystemIntegrationsMigaduRoute
-  V1SystemIntegrationsMinimaxRoute: typeof V1SystemIntegrationsMinimaxRoute
-  V1SystemLlmDefaultsRoute: typeof V1SystemLlmDefaultsRoute
-  V1SystemLlmPricesRoute: typeof V1SystemLlmPricesRoute
-  V1SystemLlmProfilesRoute: typeof V1SystemLlmProfilesRoute
-}
-
-const V1SystemRouteChildren: V1SystemRouteChildren = {
-  V1SystemCompanyRoute: V1SystemCompanyRoute,
-  V1SystemMigrationsRoute: V1SystemMigrationsRoute,
-  V1SystemOauthRoute: V1SystemOauthRoute,
-  V1SystemIndexRoute: V1SystemIndexRoute,
-  V1SystemIntegrationsCoolifyRoute: V1SystemIntegrationsCoolifyRoute,
-  V1SystemIntegrationsGithubRoute: V1SystemIntegrationsGithubRoute,
-  V1SystemIntegrationsMigaduRoute: V1SystemIntegrationsMigaduRoute,
-  V1SystemIntegrationsMinimaxRoute: V1SystemIntegrationsMinimaxRoute,
-  V1SystemLlmDefaultsRoute: V1SystemLlmDefaultsRoute,
-  V1SystemLlmPricesRoute: V1SystemLlmPricesRoute,
-  V1SystemLlmProfilesRoute: V1SystemLlmProfilesRoute,
-}
-
-const V1SystemRouteWithChildren = V1SystemRoute._addFileChildren(
-  V1SystemRouteChildren,
+const V1RolesRouteRouteWithChildren = V1RolesRouteRoute._addFileChildren(
+  V1RolesRouteRouteChildren,
 )
 
-interface V1RouteChildren {
-  V1AgentsRoute: typeof V1AgentsRouteWithChildren
-  V1FinanceRoute: typeof V1FinanceRouteWithChildren
-  V1RolesRoute: typeof V1RolesRouteWithChildren
-  V1SystemRoute: typeof V1SystemRouteWithChildren
+interface V1SystemRouteRouteChildren {
+  V1SystemIndexRoute: typeof V1SystemIndexRoute
+  V1SystemCompanyIndexRoute: typeof V1SystemCompanyIndexRoute
+  V1SystemMigrationsIndexRoute: typeof V1SystemMigrationsIndexRoute
+  V1SystemOauthIndexRoute: typeof V1SystemOauthIndexRoute
+  V1SystemIntegrationsCoolifyIndexRoute: typeof V1SystemIntegrationsCoolifyIndexRoute
+  V1SystemIntegrationsGithubIndexRoute: typeof V1SystemIntegrationsGithubIndexRoute
+  V1SystemIntegrationsMigaduIndexRoute: typeof V1SystemIntegrationsMigaduIndexRoute
+  V1SystemIntegrationsMinimaxIndexRoute: typeof V1SystemIntegrationsMinimaxIndexRoute
+  V1SystemLlmDefaultsIndexRoute: typeof V1SystemLlmDefaultsIndexRoute
+  V1SystemLlmPricesIndexRoute: typeof V1SystemLlmPricesIndexRoute
+  V1SystemLlmProfilesIndexRoute: typeof V1SystemLlmProfilesIndexRoute
+}
+
+const V1SystemRouteRouteChildren: V1SystemRouteRouteChildren = {
+  V1SystemIndexRoute: V1SystemIndexRoute,
+  V1SystemCompanyIndexRoute: V1SystemCompanyIndexRoute,
+  V1SystemMigrationsIndexRoute: V1SystemMigrationsIndexRoute,
+  V1SystemOauthIndexRoute: V1SystemOauthIndexRoute,
+  V1SystemIntegrationsCoolifyIndexRoute: V1SystemIntegrationsCoolifyIndexRoute,
+  V1SystemIntegrationsGithubIndexRoute: V1SystemIntegrationsGithubIndexRoute,
+  V1SystemIntegrationsMigaduIndexRoute: V1SystemIntegrationsMigaduIndexRoute,
+  V1SystemIntegrationsMinimaxIndexRoute: V1SystemIntegrationsMinimaxIndexRoute,
+  V1SystemLlmDefaultsIndexRoute: V1SystemLlmDefaultsIndexRoute,
+  V1SystemLlmPricesIndexRoute: V1SystemLlmPricesIndexRoute,
+  V1SystemLlmProfilesIndexRoute: V1SystemLlmProfilesIndexRoute,
+}
+
+const V1SystemRouteRouteWithChildren = V1SystemRouteRoute._addFileChildren(
+  V1SystemRouteRouteChildren,
+)
+
+interface V1RouteRouteChildren {
+  V1AgentsRouteRoute: typeof V1AgentsRouteRouteWithChildren
+  V1FinanceRouteRoute: typeof V1FinanceRouteRouteWithChildren
+  V1RolesRouteRoute: typeof V1RolesRouteRouteWithChildren
+  V1SystemRouteRoute: typeof V1SystemRouteRouteWithChildren
   V1IndexRoute: typeof V1IndexRoute
 }
 
-const V1RouteChildren: V1RouteChildren = {
-  V1AgentsRoute: V1AgentsRouteWithChildren,
-  V1FinanceRoute: V1FinanceRouteWithChildren,
-  V1RolesRoute: V1RolesRouteWithChildren,
-  V1SystemRoute: V1SystemRouteWithChildren,
+const V1RouteRouteChildren: V1RouteRouteChildren = {
+  V1AgentsRouteRoute: V1AgentsRouteRouteWithChildren,
+  V1FinanceRouteRoute: V1FinanceRouteRouteWithChildren,
+  V1RolesRouteRoute: V1RolesRouteRouteWithChildren,
+  V1SystemRouteRoute: V1SystemRouteRouteWithChildren,
   V1IndexRoute: V1IndexRoute,
 }
 
-const V1RouteWithChildren = V1Route._addFileChildren(V1RouteChildren)
+const V1RouteRouteWithChildren =
+  V1RouteRoute._addFileChildren(V1RouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HomeRouteRoute: HomeRouteRouteWithChildren,
-  V1Route: V1RouteWithChildren,
+  V1RouteRoute: V1RouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
