@@ -5,6 +5,7 @@ dist
 coverage
 .env
 .DS_Store
+apps/forge-admin/.tanstack/
 
 artifacts
 .agent_codex
