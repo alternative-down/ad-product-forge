@@ -10,7 +10,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
   return (
     <DialogContent
       className={cn(
-        'rounded-lg',
+        'max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg',
         className,
       )}
       showCloseButton={false}
