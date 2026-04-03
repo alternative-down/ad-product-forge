@@ -121,6 +121,12 @@ export type UpsertLlmModelPriceInput = {
   outputPerMillionUsd: number;
 };
 
+export type UpdateLlmDefaultsInput = {
+  primaryProfileId: string;
+  omProfileId: string;
+  hiringRhProfileId: string;
+};
+
 export function getSystemSettings() {
   return request<SystemSettings>('/admin/system/settings');
 }
@@ -145,6 +151,13 @@ export function upsertLlmProfile(input: UpsertLlmProfileInput) {
 
 export function upsertLlmModelPrice(input: UpsertLlmModelPriceInput) {
   return request<UpsertLlmModelPriceInput>('/admin/system/llm/price/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateLlmDefaults(input: UpdateLlmDefaultsInput) {
+  return request<UpdateLlmDefaultsInput>('/admin/system/llm/defaults/update', {
     method: 'POST',
     body: JSON.stringify(input),
   });
