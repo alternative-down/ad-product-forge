@@ -1,39 +1,20 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import {
-  AdminButton,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  PageHeader,
-  AdminTextarea,
-} from '@/components/admin';
-import { Dialog } from '@/components/ui/dialog';
+import { AdminButton, PageHeader } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   cancelPlannedLedgerEntry,
-  createInvestment,
   getFinance,
+  getFinanceContracts,
   postPlannedLedgerEntry,
-  type CreateInvestmentInput,
 } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/finance/')({
   component: FinanceIndexRoute,
 });
-
-function createEmptyInvestmentForm(): CreateInvestmentInput {
-  return {
-    amountUsd: 0,
-    description: '',
-    effectiveAt: '',
-  };
-}
 
 function FinanceIndexRoute() {
   const queryClient = useQueryClient();
@@ -41,15 +22,9 @@ function FinanceIndexRoute() {
     queryKey: ['admin', 'finance'],
     queryFn: getFinance,
   });
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [investmentForm, setInvestmentForm] = useState<CreateInvestmentInput>(createEmptyInvestmentForm);
-  const investmentMutation = useMutation({
-    mutationFn: createInvestment,
-    onSuccess: async () => {
-      setDialogOpen(false);
-      setInvestmentForm(createEmptyInvestmentForm());
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
-    },
+  const contractsQuery = useQuery({
+    queryKey: ['admin', 'finance-contracts'],
+    queryFn: getFinanceContracts,
   });
   const postMutation = useMutation({
     mutationFn: ({ entryId, effectiveAt }: { entryId: string; effectiveAt?: string }) =>
@@ -68,6 +43,7 @@ function FinanceIndexRoute() {
     () => financeQuery.data?.movements.items ?? [],
     [financeQuery.data?.movements.items],
   );
+  const contracts = contractsQuery.data?.items ?? [];
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -88,18 +64,25 @@ function FinanceIndexRoute() {
 
       <section className="space-y-5">
         <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-[-0.03em]">Movimentos</div>
+          <div className="text-lg font-semibold tracking-[-0.03em]">Contratos</div>
         </div>
 
-        <div className="flex justify-end">
-          <AdminButton
-            onClick={() => {
-              setInvestmentForm(createEmptyInvestmentForm());
-              setDialogOpen(true);
-            }}
-          >
-            Novo
-          </AdminButton>
+        <dl className="grid gap-4 min-[720px]:grid-cols-3">
+          <MetricItem label="Ativos" value={String(contracts.length)} />
+          <MetricItem
+            label="Valor semanal"
+            value={formatUsd(contracts.reduce((total, item) => total + item.weeklyValueUsd, 0))}
+          />
+          <MetricItem
+            label="Renovação automática"
+            value={String(contracts.filter((item) => item.autoRenew).length)}
+          />
+        </dl>
+      </section>
+
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Movimentos</div>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -169,91 +152,10 @@ function FinanceIndexRoute() {
         </div>
 
         {financeQuery.error ? <div className="pt-4 text-sm text-destructive">{financeQuery.error.message}</div> : null}
-        {investmentMutation.error ? <div className="pt-4 text-sm text-destructive">{investmentMutation.error.message}</div> : null}
+        {contractsQuery.error ? <div className="pt-4 text-sm text-destructive">{contractsQuery.error.message}</div> : null}
         {postMutation.error ? <div className="pt-4 text-sm text-destructive">{postMutation.error.message}</div> : null}
         {cancelMutation.error ? <div className="pt-4 text-sm text-destructive">{cancelMutation.error.message}</div> : null}
       </section>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>Novo movimento</AdminDialogTitle>
-          </AdminDialogHeader>
-
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              investmentMutation.mutate({
-                amountUsd: investmentForm.amountUsd,
-                description: investmentForm.description?.trim() || undefined,
-                effectiveAt: investmentForm.effectiveAt || undefined,
-              });
-            }}
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="finance-investment-amount">
-                Valor
-              </label>
-              <AdminInput
-                id="finance-investment-amount"
-                type="number"
-                step="0.01"
-                value={investmentForm.amountUsd}
-                onChange={(event) =>
-                  setInvestmentForm((current) => ({
-                    ...current,
-                    amountUsd: Number(event.target.value) || 0,
-                  }))
-                }
-                disabled={investmentMutation.isPending}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="finance-investment-date">
-                Data
-              </label>
-              <AdminInput
-                id="finance-investment-date"
-                type="datetime-local"
-                value={investmentForm.effectiveAt ?? ''}
-                onChange={(event) =>
-                  setInvestmentForm((current) => ({
-                    ...current,
-                    effectiveAt: event.target.value,
-                  }))
-                }
-                disabled={investmentMutation.isPending}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="finance-investment-description">
-                Descrição
-              </label>
-              <AdminTextarea
-                id="finance-investment-description"
-                rows={4}
-                value={investmentForm.description ?? ''}
-                onChange={(event) =>
-                  setInvestmentForm((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
-                disabled={investmentMutation.isPending}
-              />
-            </div>
-
-            <AdminDialogFooter>
-              <AdminButton type="submit" disabled={investmentMutation.isPending}>
-                {investmentMutation.isPending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
-            </AdminDialogFooter>
-          </form>
-        </AdminDialogContent>
-      </Dialog>
     </div>
   );
 }

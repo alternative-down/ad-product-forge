@@ -1,42 +1,81 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
+import { useState } from 'react';
 
-import { PageHeader } from '@/components/admin';
+import {
+  AdminButton,
+  AdminDialogContent,
+  AdminDialogFooter,
+  AdminDialogHeader,
+  AdminDialogTitle,
+  AdminInput,
+  PageHeader,
+} from '@/components/admin';
+import { Dialog } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getFinanceContracts } from '@/lib/admin-api';
+import {
+  adjustAgentContractBudget,
+  getFinanceContracts,
+  topUpAgentContract,
+  type FinanceContractsResponse,
+} from '@/lib/admin-api';
 
 export const Route = createFileRoute('/finance/contracts/')({
   component: FinanceContractsIndexRoute,
 });
 
+type ContractForm = {
+  agentId: string;
+  agentName: string;
+  action: 'adjust-budget' | 'top-up';
+  amountUsd: number;
+};
+
+function createContractForm(contract: FinanceContractsResponse['items'][number]): ContractForm {
+  return {
+    agentId: contract.agentId,
+    agentName: contract.agentName,
+    action: 'adjust-budget',
+    amountUsd: contract.weeklyValueUsd,
+  };
+}
+
 function FinanceContractsIndexRoute() {
+  const queryClient = useQueryClient();
   const contractsQuery = useQuery({
     queryKey: ['admin', 'finance-contracts'],
     queryFn: getFinanceContracts,
+  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [contractForm, setContractForm] = useState<ContractForm | null>(null);
+  const mutation = useMutation({
+    mutationFn: async (input: ContractForm) => {
+      if (input.action === 'top-up') {
+        return topUpAgentContract({
+          agentId: input.agentId,
+          amountUsd: input.amountUsd,
+        });
+      }
+
+      return adjustAgentContractBudget({
+        agentId: input.agentId,
+        newBudgetUsd: input.amountUsd,
+      });
+    },
+    onSuccess: async () => {
+      setDialogOpen(false);
+      setContractForm(null);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
+    },
   });
   const contracts = contractsQuery.data?.items ?? [];
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader title="Contratos" />
-
-      <section className="space-y-5">
-        <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-[-0.03em]">Resumo</div>
-        </div>
-
-        <dl className="grid gap-4 min-[720px]:grid-cols-3">
-          <MetricItem label="Ativos" value={String(contracts.length)} />
-          <MetricItem
-            label="Valor semanal"
-            value={formatUsd(contracts.reduce((total, item) => total + item.weeklyValueUsd, 0))}
-          />
-          <MetricItem
-            label="Renovação automática"
-            value={String(contracts.filter((item) => item.autoRenew).length)}
-          />
-        </dl>
-      </section>
 
       <section className="space-y-5">
         <div className="space-y-1">
@@ -48,6 +87,7 @@ function FinanceContractsIndexRoute() {
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+                <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,11 +102,26 @@ function FinanceContractsIndexRoute() {
                       </div>
                     </div>
                   </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-2">
+                      <AdminButton
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setContractForm(createContractForm(contract));
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Editar</span>
+                      </AdminButton>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
               {contracts.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground">
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
                     Nenhum contrato ativo agora.
                   </TableCell>
                 </TableRow>
@@ -75,20 +130,86 @@ function FinanceContractsIndexRoute() {
           </Table>
         </div>
 
-        {contractsQuery.error ? <div className="pt-4 text-sm text-destructive">{contractsQuery.error.message}</div> : null}
+        {contractsQuery.error ? <div className="text-sm text-destructive">{contractsQuery.error.message}</div> : null}
+        {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
       </section>
-    </div>
-  );
-}
 
-function MetricItem(input: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="space-y-1">
-      <dt className="text-sm text-muted-foreground">{input.label}</dt>
-      <dd className="text-xl font-semibold tracking-[-0.03em]">{input.value}</dd>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+
+          if (!open) {
+            setContractForm(null);
+          }
+        }}
+      >
+        <AdminDialogContent>
+          <AdminDialogHeader>
+            <AdminDialogTitle>{contractForm ? `Alterar contrato · ${contractForm.agentName}` : 'Alterar contrato'}</AdminDialogTitle>
+          </AdminDialogHeader>
+
+          {contractForm ? (
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                mutation.mutate(contractForm);
+              }}
+            >
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="finance-contract-action">
+                  Ação
+                </label>
+                <Select
+                  value={contractForm.action}
+                  onValueChange={(value: ContractForm['action']) =>
+                    setContractForm((current) => (current ? { ...current, action: value } : current))
+                  }
+                  disabled={mutation.isPending}
+                >
+                  <SelectTrigger id="finance-contract-action" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="adjust-budget">Ajustar orçamento</SelectItem>
+                    <SelectItem value="top-up">Adicionar saldo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="finance-contract-amount">
+                  {contractForm.action === 'top-up' ? 'Valor adicional' : 'Novo valor semanal'}
+                </label>
+                <AdminInput
+                  id="finance-contract-amount"
+                  type="number"
+                  step="0.01"
+                  value={contractForm.amountUsd}
+                  onChange={(event) =>
+                    setContractForm((current) =>
+                      current
+                        ? {
+                            ...current,
+                            amountUsd: Number(event.target.value) || 0,
+                          }
+                        : current,
+                    )
+                  }
+                  disabled={mutation.isPending}
+                />
+              </div>
+
+              <AdminDialogFooter>
+                <AdminButton type="submit" disabled={mutation.isPending}>
+                  {mutation.isPending ? 'Salvando...' : 'Salvar'}
+                </AdminButton>
+              </AdminDialogFooter>
+            </form>
+          ) : null}
+        </AdminDialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -220,6 +220,16 @@ export type FinanceContractsResponse = {
   }>;
 };
 
+export type TopUpAgentContractInput = {
+  agentId: string;
+  amountUsd: number;
+};
+
+export type AdjustAgentContractBudgetInput = {
+  agentId: string;
+  newBudgetUsd: number;
+};
+
 export type SystemIntegration =
   | {
       providerType: 'github';
@@ -404,6 +414,31 @@ export function setRecurringPayableActive(payableId: string, isActive: boolean) 
       body: JSON.stringify({ payableId, isActive }),
     },
   );
+}
+
+export function topUpAgentContract(input: TopUpAgentContractInput) {
+  return request<{
+    agentId: string;
+    contractId: string;
+    budgetUsd: number;
+  }>('/admin/agent/contract/top-up', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function adjustAgentContractBudget(input: AdjustAgentContractBudgetInput) {
+  return request<{
+    agentId: string;
+    contractId: string;
+    previousBudgetUsd: number;
+    newBudgetUsd: number;
+    changeAmountUsd: number;
+    changeType: 'none' | 'increase' | 'decrease';
+  }>('/admin/agent/contract/adjust-budget', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function createRole(input: {
