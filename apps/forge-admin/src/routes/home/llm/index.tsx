@@ -14,6 +14,7 @@ import {
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSystemLlm, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
 
@@ -119,25 +120,25 @@ function HomeLlmProfilesRoute() {
         </TabsList>
       </Tabs>
 
-      <div className="w-full min-w-0 overflow-x-auto rounded-sm border border-border">
-        <table className="min-w-[760px] w-full text-sm">
-          <thead className="bg-muted/50 text-left text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Nome</th>
-              <th className="px-4 py-3 font-medium">Model key</th>
-              <th className="px-4 py-3 font-medium">Base URL</th>
-              <th className="px-4 py-3 font-medium">Ativo</th>
-              <th className="px-4 py-3 text-right font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
+        <Table className="min-w-[760px] text-sm">
+          <TableHeader className="bg-muted/50 text-left text-muted-foreground">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Model key</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Base URL</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Ativo</TableHead>
+              <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filteredProfiles.map((profile) => (
-              <tr key={profile.profileId} className="border-t border-border">
-                <td className="px-4 py-3">{profile.name}</td>
-                <td className="px-4 py-3">{profile.modelKey}</td>
-                <td className="px-4 py-3">{profile.baseUrl || '—'}</td>
-                <td className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</td>
-                <td className="px-4 py-3 text-right">
+              <TableRow key={profile.profileId}>
+                <TableCell className="px-4 py-3">{profile.name}</TableCell>
+                <TableCell className="px-4 py-3">{profile.modelKey}</TableCell>
+                <TableCell className="px-4 py-3">{profile.baseUrl || '—'}</TableCell>
+                <TableCell className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</TableCell>
+                <TableCell className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
                     <AdminButton
                       variant="ghost"
@@ -165,18 +166,18 @@ function HomeLlmProfilesRoute() {
                       <span className="sr-only">{profile.isEnabled ? 'Inativar' : 'Ativar'}</span>
                     </AdminButton>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
             {filteredProfiles.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-muted-foreground" colSpan={5}>
+              <TableRow>
+                <TableCell className="px-4 py-6 text-muted-foreground" colSpan={5}>
                   {statusFilter === 'active' ? 'Nenhum perfil ativo.' : 'Nenhum perfil inativo.'}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : null}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

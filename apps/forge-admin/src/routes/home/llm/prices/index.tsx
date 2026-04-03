@@ -13,6 +13,7 @@ import {
   PageHeader,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/llm/prices/')({
@@ -65,25 +66,25 @@ function HomeLlmPricesRoute() {
         }
       />
 
-      <div className="w-full min-w-0 overflow-x-auto rounded-sm border border-border">
-        <table className="min-w-[760px] w-full text-sm">
-          <thead className="bg-muted/50 text-left text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Model key</th>
-              <th className="px-4 py-3 font-medium">Input</th>
-              <th className="px-4 py-3 font-medium">Cache</th>
-              <th className="px-4 py-3 font-medium">Output</th>
-              <th className="px-4 py-3 text-right font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
+        <Table className="min-w-[760px] text-sm">
+          <TableHeader className="bg-muted/50 text-left text-muted-foreground">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="px-4 py-3 font-medium">Model key</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Input</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Cache</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Output</TableHead>
+              <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {prices.map((price) => (
-              <tr key={price.modelKey} className="border-t border-border">
-                <td className="px-4 py-3">{price.modelKey}</td>
-                <td className="px-4 py-3">{price.inputPerMillionUsd}</td>
-                <td className="px-4 py-3">{price.inputCachePerMillionUsd}</td>
-                <td className="px-4 py-3">{price.outputPerMillionUsd}</td>
-                <td className="px-4 py-3 text-right">
+              <TableRow key={price.modelKey}>
+                <TableCell className="px-4 py-3">{price.modelKey}</TableCell>
+                <TableCell className="px-4 py-3">{price.inputPerMillionUsd}</TableCell>
+                <TableCell className="px-4 py-3">{price.inputCachePerMillionUsd}</TableCell>
+                <TableCell className="px-4 py-3">{price.outputPerMillionUsd}</TableCell>
+                <TableCell className="px-4 py-3 text-right">
                   <AdminButton
                     variant="ghost"
                     size="icon"
@@ -100,18 +101,18 @@ function HomeLlmPricesRoute() {
                     <Pencil className="h-4 w-4" />
                     <span className="sr-only">Editar</span>
                   </AdminButton>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
             {prices.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-muted-foreground" colSpan={5}>
+              <TableRow>
+                <TableCell className="px-4 py-6 text-muted-foreground" colSpan={5}>
                   Nenhum preço ainda.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : null}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
