@@ -9,7 +9,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
     <DialogContent
       data-theme={getStoredAdminTheme()}
       className={cn(
-        'forja-theme max-w-[calc(100vw-2rem)] rounded-2xl border border-border/70 bg-background/95 p-4 shadow-xl shadow-black/5 sm:max-w-2xl sm:p-5',
+        'forja-theme max-w-[calc(100vw-2rem)] border-border/70 bg-background/95 shadow-xl shadow-black/5 sm:max-w-2xl',
         className,
       )}
       {...props}

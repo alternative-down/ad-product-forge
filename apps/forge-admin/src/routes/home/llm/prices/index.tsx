@@ -67,7 +67,7 @@ function HomeLlmPricesRoute() {
         }
       />
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="overflow-x-auto rounded-sm border border-border">
         <table className="min-w-[760px] w-full text-sm">
           <thead className="bg-muted/50 text-left text-muted-foreground">
             <tr>

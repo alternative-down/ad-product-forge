@@ -109,23 +109,23 @@ function HomeLlmProfilesRoute() {
       />
 
       <Tabs value={statusFilter} onValueChange={setProfileFilter}>
-        <TabsList className="h-auto gap-3 rounded-none border-b border-border bg-transparent p-0">
+        <TabsList className="h-9 gap-1 rounded-sm bg-secondary/80 p-1">
           <TabsTrigger
             value="active"
-            className="rounded-none border-b-2 border-transparent px-1 py-2 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+            className="rounded-sm px-3 text-sm text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Ativos
           </TabsTrigger>
           <TabsTrigger
             value="inactive"
-            className="rounded-none border-b-2 border-transparent px-1 py-2 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+            className="rounded-sm px-3 text-sm text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Inativos
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="overflow-x-auto rounded-sm border border-border">
         <table className="min-w-[760px] w-full text-sm">
           <thead className="bg-muted/50 text-left text-muted-foreground">
             <tr>
@@ -232,10 +232,10 @@ function HomeLlmProfilesRoute() {
                 >
                   <ComboboxInput
                     placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
-                    className="h-10 w-full rounded-md border-border/80 bg-background/80 shadow-none"
+                    className="h-10 w-full rounded-sm border-border/80 bg-background/80 shadow-none"
                     disabled={mutation.isPending || modelKeys.length === 0}
                   />
-                  <ComboboxContent className="rounded-xl border border-border/70 bg-background/98 shadow-lg shadow-black/5">
+                  <ComboboxContent className="rounded-sm border border-border/70 bg-background/98 shadow-lg shadow-black/5">
                     <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
                     <ComboboxList>
                       {modelKeys.map((modelKey) => (
