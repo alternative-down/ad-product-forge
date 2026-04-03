@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/integrations/coolify/')({
@@ -88,13 +88,10 @@ function IntegrationsCoolifyRoute() {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="coolify-status">Status</label>
-            <Select value={isEnabled ? 'enabled' : 'disabled'} onValueChange={(value) => setDraft((current) => ({ baseUrl: current?.baseUrl ?? integration?.config?.baseUrl ?? '', adminToken: current?.adminToken ?? integration?.config?.adminToken ?? '', serverId: current?.serverId ?? integration?.config?.serverId ?? '', destinationId: current?.destinationId ?? integration?.config?.destinationId ?? '', applicationsBaseDomain: current?.applicationsBaseDomain ?? integration?.config?.applicationsBaseDomain ?? '', isEnabled: value === 'enabled' }))} disabled={mutation.isPending}>
-              <SelectTrigger id="coolify-status" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="enabled">Ativa</SelectItem>
-                <SelectItem value="disabled">Inativa</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex min-h-9 items-center justify-between rounded-lg border border-border bg-background px-3">
+              <span className="text-sm text-muted-foreground">{isEnabled ? 'Ativa' : 'Inativa'}</span>
+              <Switch id="coolify-status" checked={isEnabled} onCheckedChange={(checked) => setDraft((current) => ({ baseUrl: current?.baseUrl ?? integration?.config?.baseUrl ?? '', adminToken: current?.adminToken ?? integration?.config?.adminToken ?? '', serverId: current?.serverId ?? integration?.config?.serverId ?? '', destinationId: current?.destinationId ?? integration?.config?.destinationId ?? '', applicationsBaseDomain: current?.applicationsBaseDomain ?? integration?.config?.applicationsBaseDomain ?? '', isEnabled: checked }))} disabled={mutation.isPending} />
+            </div>
           </div>
           {integrationsQuery.error ? <div className="text-sm text-destructive">{integrationsQuery.error.message}</div> : null}
           {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
