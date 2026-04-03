@@ -11,7 +11,6 @@ import {
   AdminDialogTitle,
   AdminInput,
   PageHeader,
-  SectionBlock,
   AdminTextarea,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
@@ -74,30 +73,25 @@ function FinanceIndexRoute() {
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader title="Fluxo de caixa" />
 
-      <SectionBlock>
-        <div className="grid gap-3 min-[720px]:grid-cols-2 xl:grid-cols-4">
-          <MetricItem
-            label="Saldo"
-            value={formatUsd(financeQuery.data?.balanceUsd ?? 0)}
-          />
-          <MetricItem
-            label="Entradas"
-            value={formatUsd(financeQuery.data?.summary.totalInUsd ?? 0)}
-          />
-          <MetricItem
-            label="Saídas"
-            value={formatUsd(financeQuery.data?.summary.totalOutUsd ?? 0)}
-          />
-          <MetricItem
-            label="Saídas previstas"
-            value={formatUsd(financeQuery.data?.summary.scheduledOutUsd ?? 0)}
-          />
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Resumo</div>
         </div>
-      </SectionBlock>
 
-      <SectionBlock
-        title="Movimentos"
-        actions={
+        <dl className="grid gap-4 min-[720px]:grid-cols-2 xl:grid-cols-4">
+          <MetricItem label="Saldo" value={formatUsd(financeQuery.data?.balanceUsd ?? 0)} />
+          <MetricItem label="Entradas" value={formatUsd(financeQuery.data?.summary.totalInUsd ?? 0)} />
+          <MetricItem label="Saídas" value={formatUsd(financeQuery.data?.summary.totalOutUsd ?? 0)} />
+          <MetricItem label="Saídas previstas" value={formatUsd(financeQuery.data?.summary.scheduledOutUsd ?? 0)} />
+        </dl>
+      </section>
+
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Movimentos</div>
+        </div>
+
+        <div className="flex justify-end">
           <AdminButton
             onClick={() => {
               setInvestmentForm(createEmptyInvestmentForm());
@@ -106,8 +100,8 @@ function FinanceIndexRoute() {
           >
             Novo
           </AdminButton>
-        }
-      >
+        </div>
+
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
           <Table className="text-sm">
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
@@ -178,7 +172,7 @@ function FinanceIndexRoute() {
         {investmentMutation.error ? <div className="pt-4 text-sm text-destructive">{investmentMutation.error.message}</div> : null}
         {postMutation.error ? <div className="pt-4 text-sm text-destructive">{postMutation.error.message}</div> : null}
         {cancelMutation.error ? <div className="pt-4 text-sm text-destructive">{cancelMutation.error.message}</div> : null}
-      </SectionBlock>
+      </section>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
@@ -269,9 +263,9 @@ function MetricItem(input: {
   value: string;
 }) {
   return (
-    <div className="rounded-sm border border-border bg-muted/30 p-4">
-      <div className="text-sm text-muted-foreground">{input.label}</div>
-      <div className="mt-2 text-xl font-semibold tracking-[-0.03em]">{input.value}</div>
+    <div className="space-y-1">
+      <dt className="text-sm text-muted-foreground">{input.label}</dt>
+      <dd className="text-xl font-semibold tracking-[-0.03em]">{input.value}</dd>
     </div>
   );
 }

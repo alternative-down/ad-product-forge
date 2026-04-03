@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
-import { PageHeader, SectionBlock } from '@/components/admin';
+import { PageHeader } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getFinanceContracts } from '@/lib/admin-api';
 
@@ -20,8 +20,12 @@ function FinanceContractsIndexRoute() {
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader title="Contratos" />
 
-      <SectionBlock>
-        <div className="grid gap-3 min-[720px]:grid-cols-3">
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Resumo</div>
+        </div>
+
+        <dl className="grid gap-4 min-[720px]:grid-cols-3">
           <MetricItem label="Ativos" value={String(contracts.length)} />
           <MetricItem
             label="Valor semanal"
@@ -31,10 +35,14 @@ function FinanceContractsIndexRoute() {
             label="Renovação automática"
             value={String(contracts.filter((item) => item.autoRenew).length)}
           />
-        </div>
-      </SectionBlock>
+        </dl>
+      </section>
 
-      <SectionBlock title="Contratos ativos">
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Contratos ativos</div>
+        </div>
+
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
           <Table className="text-sm">
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
@@ -68,7 +76,7 @@ function FinanceContractsIndexRoute() {
         </div>
 
         {contractsQuery.error ? <div className="pt-4 text-sm text-destructive">{contractsQuery.error.message}</div> : null}
-      </SectionBlock>
+      </section>
     </div>
   );
 }
@@ -78,9 +86,9 @@ function MetricItem(input: {
   value: string;
 }) {
   return (
-    <div className="rounded-sm border border-border bg-muted/30 p-4">
-      <div className="text-sm text-muted-foreground">{input.label}</div>
-      <div className="mt-2 text-xl font-semibold tracking-[-0.03em]">{input.value}</div>
+    <div className="space-y-1">
+      <dt className="text-sm text-muted-foreground">{input.label}</dt>
+      <dd className="text-xl font-semibold tracking-[-0.03em]">{input.value}</dd>
     </div>
   );
 }

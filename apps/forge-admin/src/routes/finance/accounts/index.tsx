@@ -11,7 +11,6 @@ import {
   AdminInput,
   AdminTextarea,
   PageHeader,
-  SectionBlock,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -81,18 +80,25 @@ function FinanceAccountsIndexRoute() {
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader title="Contas a pagar/receber" />
 
-      <SectionBlock>
-        <div className="grid gap-3 min-[720px]:grid-cols-2 xl:grid-cols-4">
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Resumo</div>
+        </div>
+
+        <dl className="grid gap-4 min-[720px]:grid-cols-2 xl:grid-cols-4">
           <MetricItem label="Recorrentes" value={String(recurringPayables.length)} />
           <MetricItem label="Ativas" value={String(activeRecurringCount)} />
           <MetricItem label="Saídas previstas" value={formatUsd(financeQuery.data?.summary.scheduledOutUsd ?? 0)} />
           <MetricItem label="Saldo" value={formatUsd(financeQuery.data?.balanceUsd ?? 0)} />
-        </div>
-      </SectionBlock>
+        </dl>
+      </section>
 
-      <SectionBlock
-        title="Contas recorrentes"
-        actions={
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Contas recorrentes</div>
+        </div>
+
+        <div className="flex justify-end">
           <AdminButton
             onClick={() => {
               setPayableForm(createEmptyPayableForm());
@@ -101,8 +107,8 @@ function FinanceAccountsIndexRoute() {
           >
             Novo
           </AdminButton>
-        }
-      >
+        </div>
+
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
           <Table className="text-sm">
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
@@ -154,7 +160,7 @@ function FinanceAccountsIndexRoute() {
         {financeQuery.error ? <div className="pt-4 text-sm text-destructive">{financeQuery.error.message}</div> : null}
         {payableMutation.error ? <div className="pt-4 text-sm text-destructive">{payableMutation.error.message}</div> : null}
         {recurringMutation.error ? <div className="pt-4 text-sm text-destructive">{recurringMutation.error.message}</div> : null}
-      </SectionBlock>
+      </section>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
@@ -316,9 +322,9 @@ function MetricItem(input: {
   value: string;
 }) {
   return (
-    <div className="rounded-sm border border-border bg-muted/30 p-4">
-      <div className="text-sm text-muted-foreground">{input.label}</div>
-      <div className="mt-2 text-xl font-semibold tracking-[-0.03em]">{input.value}</div>
+    <div className="space-y-1">
+      <dt className="text-sm text-muted-foreground">{input.label}</dt>
+      <dd className="text-xl font-semibold tracking-[-0.03em]">{input.value}</dd>
     </div>
   );
 }
