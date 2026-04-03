@@ -13,6 +13,7 @@ import {
   AdminTextarea,
   PageHeader,
 } from '@/components/admin';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -248,50 +249,57 @@ function HomeRolesIndexRoute() {
             <div className="space-y-3">
               <div className="text-sm font-medium">Ferramentas</div>
 
-              <div className="space-y-4">
+              <Accordion className="space-y-3">
                 {toolSections.map((section) => (
-                  <div key={section.title} className="space-y-3">
-                    <div className="text-sm text-muted-foreground">{section.title}</div>
-                    <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
-                      <Table className="min-w-[640px] text-sm">
-                        <TableHeader className="bg-muted/50 text-left text-muted-foreground">
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead className="px-4 py-3 font-medium">Ferramenta</TableHead>
-                            <TableHead className="px-4 py-3 text-right font-medium">Ativa</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {section.toolIds.map((toolId) => {
-                            const enabled = roleForm.toolIds.includes(toolId);
+                  <AccordionItem key={section.title} value={section.title} className="overflow-hidden rounded-sm border border-border">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex items-center gap-3">
+                        <span>{section.title}</span>
+                        <span className="text-xs text-muted-foreground">{section.toolIds.length}</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-0">
+                      <div className="w-full min-w-0 overflow-hidden border-t border-border">
+                        <Table className="min-w-[640px] text-sm">
+                          <TableHeader className="bg-muted/50 text-left text-muted-foreground">
+                            <TableRow className="hover:bg-transparent">
+                              <TableHead className="px-4 py-3 font-medium">Ferramenta</TableHead>
+                              <TableHead className="px-4 py-3 text-right font-medium">Ativa</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {section.toolIds.map((toolId) => {
+                              const enabled = roleForm.toolIds.includes(toolId);
 
-                            return (
-                              <TableRow key={toolId}>
-                                <TableCell className="px-4 py-3 font-mono text-[13px]">{toolId}</TableCell>
-                                <TableCell className="px-4 py-3 text-right">
-                                  <div className="flex justify-end">
-                                    <Switch
-                                      checked={enabled}
-                                      disabled={roleMutation.isPending}
-                                      onCheckedChange={(checked) =>
-                                        setRoleForm((current) => ({
-                                          ...current,
-                                          toolIds: checked
-                                            ? [...current.toolIds, toolId]
-                                            : current.toolIds.filter((currentToolId) => currentToolId !== toolId),
-                                        }))
-                                      }
-                                    />
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
+                              return (
+                                <TableRow key={toolId}>
+                                  <TableCell className="px-4 py-3 font-mono text-[13px]">{toolId}</TableCell>
+                                  <TableCell className="px-4 py-3 text-right">
+                                    <div className="flex justify-end">
+                                      <Switch
+                                        checked={enabled}
+                                        disabled={roleMutation.isPending}
+                                        onCheckedChange={(checked) =>
+                                          setRoleForm((current) => ({
+                                            ...current,
+                                            toolIds: checked
+                                              ? [...current.toolIds, toolId]
+                                              : current.toolIds.filter((currentToolId) => currentToolId !== toolId),
+                                          }))
+                                        }
+                                      />
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
+              </Accordion>
             </div>
 
             {roleMutation.error ? <div className="text-sm text-destructive">{roleMutation.error.message}</div> : null}
@@ -310,6 +318,17 @@ function HomeRolesIndexRoute() {
 
 function groupToolIds(toolIds: string[]) {
   const sections = new Map<string, string[]>();
+  const orderedSectionTitles = [
+    'Pesquisa',
+    'Comunicação',
+    'Github',
+    'Coolify',
+    'Agenda & Tarefas',
+    'Financeiro & Contratos',
+    'Equipe & Papéis',
+    'MiniMax',
+    'Outras',
+  ];
 
   for (const toolId of [...toolIds].sort((left, right) => left.localeCompare(right))) {
     const title = getToolSectionTitle(toolId);
@@ -318,15 +337,20 @@ function groupToolIds(toolIds: string[]) {
     sections.set(title, current);
   }
 
-  return [...sections.entries()].map(([title, groupedToolIds]) => ({
-    title,
-    toolIds: groupedToolIds,
-  }));
+  return [...sections.entries()]
+    .sort((left, right) => orderedSectionTitles.indexOf(left[0]) - orderedSectionTitles.indexOf(right[0]))
+    .map(([title, groupedToolIds]) => ({
+      title,
+      toolIds: groupedToolIds,
+    }));
 }
 
 function getToolSectionTitle(toolId: string) {
+  if (toolId === 'search_web') {
+    return 'Pesquisa';
+  }
+
   if (
-    toolId === 'search_web' ||
     toolId.includes('contact') ||
     toolId.includes('conversation') ||
     toolId.includes('message') ||
@@ -348,11 +372,11 @@ function getToolSectionTitle(toolId: string) {
   }
 
   if (toolId.includes('contract') || toolId.includes('cash') || toolId.includes('notification')) {
-    return 'Operação';
+    return 'Financeiro & Contratos';
   }
 
   if (toolId.includes('role') || toolId.includes('capabilities')) {
-    return 'Papéis';
+    return 'Equipe & Papéis';
   }
 
   if (toolId.includes('minimax')) {
