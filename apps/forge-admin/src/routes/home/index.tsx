@@ -34,67 +34,72 @@ function HomeIndexRoute() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader title="Empresa" />
-      <form
-        className="max-w-3xl space-y-5"
-        onSubmit={(event) => {
-          event.preventDefault();
+      <div className="grid gap-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <aside>
+          <div className="rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground">Geral</div>
+        </aside>
+        <form
+          className="max-w-3xl space-y-5"
+          onSubmit={(event) => {
+            event.preventDefault();
 
-          if (!settingsQuery.data) {
-            return;
-          }
+            if (!settingsQuery.data) {
+              return;
+            }
 
-          mutation.mutate({
-            companyName: companyName.trim(),
-            companyContext: companyContext.trim(),
-            stepDelayEnabled: settingsQuery.data.stepDelayEnabled,
-          });
-        }}
-      >
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="company-name">
-            Nome
-          </label>
-          <Input
-            id="company-name"
-            value={companyName}
-            onChange={(event) =>
-              setDraft({
-                companyName: event.target.value,
-                companyContext,
-              })
-            }
-            disabled={settingsQuery.isLoading || mutation.isPending}
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="company-description">
-            Descrição
-          </label>
-          <Textarea
-            id="company-description"
-            rows={8}
-            value={companyContext}
-            onChange={(event) =>
-              setDraft({
-                companyName,
-                companyContext: event.target.value,
-              })
-            }
-            disabled={settingsQuery.isLoading || mutation.isPending}
-          />
-        </div>
-        {settingsQuery.error ? (
-          <div className="text-sm text-destructive">{settingsQuery.error.message}</div>
-        ) : null}
-        {mutation.error ? (
-          <div className="text-sm text-destructive">{mutation.error.message}</div>
-        ) : null}
-        <div className="flex justify-end">
-          <Button type="submit" className="h-12 px-5" disabled={settingsQuery.isLoading || mutation.isPending}>
-            {mutation.isPending ? 'Salvando...' : 'Salvar'}
-          </Button>
-        </div>
-      </form>
+            mutation.mutate({
+              companyName: companyName.trim(),
+              companyContext: companyContext.trim(),
+              stepDelayEnabled: settingsQuery.data.stepDelayEnabled,
+            });
+          }}
+        >
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="company-name">
+              Nome
+            </label>
+            <Input
+              id="company-name"
+              value={companyName}
+              onChange={(event) =>
+                setDraft({
+                  companyName: event.target.value,
+                  companyContext,
+                })
+              }
+              disabled={settingsQuery.isLoading || mutation.isPending}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="company-description">
+              Descrição
+            </label>
+            <Textarea
+              id="company-description"
+              rows={8}
+              value={companyContext}
+              onChange={(event) =>
+                setDraft({
+                  companyName,
+                  companyContext: event.target.value,
+                })
+              }
+              disabled={settingsQuery.isLoading || mutation.isPending}
+            />
+          </div>
+          {settingsQuery.error ? (
+            <div className="text-sm text-destructive">{settingsQuery.error.message}</div>
+          ) : null}
+          {mutation.error ? (
+            <div className="text-sm text-destructive">{mutation.error.message}</div>
+          ) : null}
+          <div className="flex justify-end">
+            <Button type="submit" className="h-12 px-5" disabled={settingsQuery.isLoading || mutation.isPending}>
+              {mutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
