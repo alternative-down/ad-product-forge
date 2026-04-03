@@ -231,93 +231,99 @@ function IntegrationsProfilesRoute() {
         </form>
       </section>
 
-      <div className="flex items-end justify-between gap-3">
-        <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value === 'inactive' ? 'inactive' : 'active')}>
-          <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
-            <TabsTrigger
-              value="active"
-              className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
-            >
-              Ativos
-            </TabsTrigger>
-            <TabsTrigger
-              value="inactive"
-              className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
-            >
-              Inativos
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <section className="space-y-5 border-t border-border pt-6">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Perfis cadastrados</div>
+        </div>
 
-        <AdminButton
-          onClick={() => {
-            setProfileForm(createEmptyProfileForm());
-            setDialogOpen(true);
-          }}
-        >
-          Novo
-        </AdminButton>
-      </div>
+        <div className="flex items-end justify-between gap-3">
+          <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value === 'inactive' ? 'inactive' : 'active')}>
+            <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
+              <TabsTrigger
+                value="active"
+                className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
+              >
+                Ativos
+              </TabsTrigger>
+              <TabsTrigger
+                value="inactive"
+                className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
+              >
+                Inativos
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-      <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
-        <Table className="min-w-[760px] text-sm">
-          <TableHeader className="bg-muted/50 text-left text-muted-foreground">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
-              <TableHead className="px-4 py-3 font-medium">Model key</TableHead>
-              <TableHead className="px-4 py-3 font-medium">Base URL</TableHead>
-              <TableHead className="px-4 py-3 font-medium">Ativo</TableHead>
-              <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredProfiles.map((profile) => (
-              <TableRow key={profile.profileId}>
-                <TableCell className="px-4 py-3">{profile.name}</TableCell>
-                <TableCell className="px-4 py-3">{profile.modelKey}</TableCell>
-                <TableCell className="px-4 py-3">{profile.baseUrl || '—'}</TableCell>
-                <TableCell className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</TableCell>
-                <TableCell className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    <AdminButton
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setProfileForm(createProfileForm(profile));
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Editar</span>
-                    </AdminButton>
-                    <AdminButton
-                      variant="ghost"
-                      size="icon"
-                      disabled={statusMutation.isPending}
-                      onClick={() =>
-                        statusMutation.mutate({
-                          ...createProfileForm(profile),
-                          isEnabled: !profile.isEnabled,
-                        })
-                      }
-                    >
-                      {profile.isEnabled ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                      <span className="sr-only">{profile.isEnabled ? 'Inativar' : 'Ativar'}</span>
-                    </AdminButton>
-                  </div>
-                </TableCell>
+          <AdminButton
+            onClick={() => {
+              setProfileForm(createEmptyProfileForm());
+              setDialogOpen(true);
+            }}
+          >
+            Novo
+          </AdminButton>
+        </div>
+
+        <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
+          <Table className="min-w-[760px] text-sm">
+            <TableHeader className="bg-muted/50 text-left text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Model key</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Base URL</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Ativo</TableHead>
+                <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
-            ))}
-            {filteredProfiles.length === 0 ? (
-              <TableRow>
-                <TableCell className="px-4 py-6 text-muted-foreground" colSpan={5}>
-                  {statusFilter === 'active' ? 'Nenhum perfil ativo.' : 'Nenhum perfil inativo.'}
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filteredProfiles.map((profile) => (
+                <TableRow key={profile.profileId}>
+                  <TableCell className="px-4 py-3">{profile.name}</TableCell>
+                  <TableCell className="px-4 py-3">{profile.modelKey}</TableCell>
+                  <TableCell className="px-4 py-3">{profile.baseUrl || '—'}</TableCell>
+                  <TableCell className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</TableCell>
+                  <TableCell className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-2">
+                      <AdminButton
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setProfileForm(createProfileForm(profile));
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Editar</span>
+                      </AdminButton>
+                      <AdminButton
+                        variant="ghost"
+                        size="icon"
+                        disabled={statusMutation.isPending}
+                        onClick={() =>
+                          statusMutation.mutate({
+                            ...createProfileForm(profile),
+                            isEnabled: !profile.isEnabled,
+                          })
+                        }
+                      >
+                        {profile.isEnabled ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                        <span className="sr-only">{profile.isEnabled ? 'Inativar' : 'Ativar'}</span>
+                      </AdminButton>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredProfiles.length === 0 ? (
+                <TableRow>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={5}>
+                    {statusFilter === 'active' ? 'Nenhum perfil ativo.' : 'Nenhum perfil inativo.'}
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
