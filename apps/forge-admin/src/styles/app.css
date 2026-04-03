@@ -101,3 +101,8 @@ body.forja-theme-root select,
 body.forja-theme-root textarea {
   font: inherit;
 }
+
+.forja-app :is(button, input, textarea, [data-slot="select-trigger"], [data-slot="dialog-content"], [data-slot="dialog-close"]),
+body.forja-theme-root :is(button, input, textarea, [data-slot="select-trigger"], [data-slot="dialog-content"], [data-slot="dialog-close"]) {
+  border-radius: var(--radius-sm);
+}
