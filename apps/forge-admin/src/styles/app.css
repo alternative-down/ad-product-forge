@@ -54,7 +54,7 @@ body.forja-theme-root {
   --border: #d8d2c7;
   --input: #d8d2c7;
   --ring: #8a616d;
-  --radius: 0.3125rem;
+  --radius: 0.25rem;
   background: var(--background);
   color: var(--foreground);
   font-family: 'Instrument Sans', sans-serif;
@@ -100,9 +100,4 @@ body.forja-theme-root input,
 body.forja-theme-root select,
 body.forja-theme-root textarea {
   font: inherit;
-}
-
-.forja-app :is(button:not(.admin-dialog-close), input, textarea, [data-slot="card"], [data-slot="dialog-content"], [data-slot="select-trigger"], [data-slot="tabs-list"], [data-slot="tabs-trigger"]),
-body.forja-theme-root :is(button:not(.admin-dialog-close), input, textarea, [data-slot="card"], [data-slot="dialog-content"], [data-slot="select-trigger"], [data-slot="tabs-list"], [data-slot="tabs-trigger"]) {
-  border-radius: calc(var(--radius) * 0.75);
 }
