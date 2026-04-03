@@ -13,6 +13,7 @@ export function AdminTopbar(input: {
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const homeActive = input.pathname === '/home';
+  const agentsActive = input.pathname.startsWith('/agents');
   const integrationsActive = input.pathname.startsWith('/integrations');
   const financeActive = input.pathname.startsWith('/finance');
 
@@ -45,6 +46,13 @@ export function AdminTopbar(input: {
                 Home
               </Link>
               <Link
+                to="/agents"
+                onClick={() => setMobileMenuOpen(false)}
+                className={agentsActive ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground' : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'}
+              >
+                Agentes
+              </Link>
+              <Link
                 to="/finance"
                 onClick={() => setMobileMenuOpen(false)}
                 className={financeActive ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground' : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'}
@@ -69,6 +77,12 @@ export function AdminTopbar(input: {
             className={homeActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
           >
             Home
+          </Link>
+          <Link
+            to="/agents"
+            className={agentsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+          >
+            Agentes
           </Link>
           <Link
             to="/finance"

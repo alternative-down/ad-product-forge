@@ -13,11 +13,13 @@ import { Route as V1RouteRouteImport } from './routes/v1/route'
 import { Route as IntegrationsRouteRouteImport } from './routes/integrations/route'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as FinanceRouteRouteImport } from './routes/finance/route'
+import { Route as AgentsRouteRouteImport } from './routes/agents/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as V1IndexRouteImport } from './routes/v1/index'
 import { Route as IntegrationsIndexRouteImport } from './routes/integrations/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as FinanceIndexRouteImport } from './routes/finance/index'
+import { Route as AgentsIndexRouteImport } from './routes/agents/index'
 import { Route as V1SystemRouteRouteImport } from './routes/v1/system/route'
 import { Route as V1RolesRouteRouteImport } from './routes/v1/roles/route'
 import { Route as V1FinanceRouteRouteImport } from './routes/v1/finance/route'
@@ -83,6 +85,11 @@ const FinanceRouteRoute = FinanceRouteRouteImport.update({
   path: '/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentsRouteRoute = AgentsRouteRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -107,6 +114,11 @@ const FinanceIndexRoute = FinanceIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => FinanceRouteRoute,
+} as any)
+const AgentsIndexRoute = AgentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentsRouteRoute,
 } as any)
 const V1SystemRouteRoute = V1SystemRouteRouteImport.update({
   id: '/system',
@@ -345,6 +357,7 @@ const V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agents': typeof AgentsRouteRouteWithChildren
   '/finance': typeof FinanceRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/integrations': typeof IntegrationsRouteRouteWithChildren
@@ -361,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/v1/finance': typeof V1FinanceRouteRouteWithChildren
   '/v1/roles': typeof V1RolesRouteRouteWithChildren
   '/v1/system': typeof V1SystemRouteRouteWithChildren
+  '/agents/': typeof AgentsIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/home/': typeof HomeIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
@@ -400,6 +414,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agents': typeof AgentsIndexRoute
   '/finance': typeof FinanceIndexRoute
   '/home': typeof HomeIndexRoute
   '/integrations': typeof IntegrationsIndexRoute
@@ -440,6 +455,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agents': typeof AgentsRouteRouteWithChildren
   '/finance': typeof FinanceRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/integrations': typeof IntegrationsRouteRouteWithChildren
@@ -456,6 +472,7 @@ export interface FileRoutesById {
   '/v1/finance': typeof V1FinanceRouteRouteWithChildren
   '/v1/roles': typeof V1RolesRouteRouteWithChildren
   '/v1/system': typeof V1SystemRouteRouteWithChildren
+  '/agents/': typeof AgentsIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/home/': typeof HomeIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
@@ -497,6 +514,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agents'
     | '/finance'
     | '/home'
     | '/integrations'
@@ -513,6 +531,7 @@ export interface FileRouteTypes {
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
+    | '/agents/'
     | '/finance/'
     | '/home/'
     | '/integrations/'
@@ -552,6 +571,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agents'
     | '/finance'
     | '/home'
     | '/integrations'
@@ -591,6 +611,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/agents'
     | '/finance'
     | '/home'
     | '/integrations'
@@ -607,6 +628,7 @@ export interface FileRouteTypes {
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
+    | '/agents/'
     | '/finance/'
     | '/home/'
     | '/integrations/'
@@ -647,6 +669,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgentsRouteRoute: typeof AgentsRouteRouteWithChildren
   FinanceRouteRoute: typeof FinanceRouteRouteWithChildren
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
   IntegrationsRouteRoute: typeof IntegrationsRouteRouteWithChildren
@@ -683,6 +706,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agents': {
+      id: '/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AgentsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -717,6 +747,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/finance/'
       preLoaderRoute: typeof FinanceIndexRouteImport
       parentRoute: typeof FinanceRouteRoute
+    }
+    '/agents/': {
+      id: '/agents/'
+      path: '/'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof AgentsIndexRouteImport
+      parentRoute: typeof AgentsRouteRoute
     }
     '/v1/system': {
       id: '/v1/system'
@@ -1029,6 +1066,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AgentsRouteRouteChildren {
+  AgentsIndexRoute: typeof AgentsIndexRoute
+}
+
+const AgentsRouteRouteChildren: AgentsRouteRouteChildren = {
+  AgentsIndexRoute: AgentsIndexRoute,
+}
+
+const AgentsRouteRouteWithChildren = AgentsRouteRoute._addFileChildren(
+  AgentsRouteRouteChildren,
+)
+
 interface FinanceAccountsRouteRouteChildren {
   FinanceAccountsIndexRoute: typeof FinanceAccountsIndexRoute
 }
@@ -1297,6 +1346,7 @@ const V1RouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgentsRouteRoute: AgentsRouteRouteWithChildren,
   FinanceRouteRoute: FinanceRouteRouteWithChildren,
   HomeRouteRoute: HomeRouteRouteWithChildren,
   IntegrationsRouteRoute: IntegrationsRouteRouteWithChildren,

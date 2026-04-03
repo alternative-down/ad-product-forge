@@ -73,6 +73,45 @@ export type SystemSettings = {
   stepDelayEnabled: boolean;
 };
 
+export type AgentListItem = {
+  agentId: string;
+  name: string;
+  description?: string;
+  executionState: 'idle' | 'running';
+  roleId: string | null;
+  roleName: string | null;
+  modelProfile: {
+    profileId: string;
+    name: string;
+    modelKey: string;
+  } | null;
+  omModelProfile: {
+    profileId: string;
+    name: string;
+    modelKey: string;
+  } | null;
+  loaded: boolean;
+  runner: {
+    stopped: boolean;
+    instant: boolean;
+    executing: boolean;
+    scheduled: boolean;
+    backoffMs: number;
+    nextStepAt: number | null;
+    estimatedDelayMs: number | null;
+    lastWakeStartedAt: number | null;
+    wake: {
+      pending: boolean;
+      waitingForIdle: boolean;
+      firstPendingAt: number | null;
+      nextTriggerAt: number | null;
+    };
+  } | null;
+  providerTypes: string[];
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type LlmProfile = {
   profileId: string;
   name: string;
@@ -276,6 +315,10 @@ export type SystemIntegration =
 
 export function getSystemSettings() {
   return request<SystemSettings>('/admin/system/settings');
+}
+
+export function getAgents() {
+  return request<AgentListItem[]>('/admin/agents');
 }
 
 export function getSystemIntegrations() {
