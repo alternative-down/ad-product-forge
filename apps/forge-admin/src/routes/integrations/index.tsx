@@ -269,9 +269,6 @@ function IntegrationsProfilesRoute() {
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
-                <TableHead className="px-4 py-3 font-medium">Model key</TableHead>
-                <TableHead className="px-4 py-3 font-medium">Base URL</TableHead>
-                <TableHead className="px-4 py-3 font-medium">Ativo</TableHead>
                 <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -279,9 +276,6 @@ function IntegrationsProfilesRoute() {
               {filteredProfiles.map((profile) => (
                 <TableRow key={profile.profileId}>
                   <TableCell className="px-4 py-3">{profile.name}</TableCell>
-                  <TableCell className="px-4 py-3">{profile.modelKey}</TableCell>
-                  <TableCell className="px-4 py-3">{profile.baseUrl || '—'}</TableCell>
-                  <TableCell className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <AdminButton
@@ -315,7 +309,7 @@ function IntegrationsProfilesRoute() {
               ))}
               {filteredProfiles.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={5}>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
                     {statusFilter === 'active' ? 'Nenhum perfil ativo.' : 'Nenhum perfil inativo.'}
                   </TableCell>
                 </TableRow>

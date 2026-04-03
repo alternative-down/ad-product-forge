@@ -70,9 +70,6 @@ function IntegrationsPricesRoute() {
           <TableHeader className="bg-muted/50 text-left text-muted-foreground">
             <TableRow className="hover:bg-transparent">
               <TableHead className="px-4 py-3 font-medium">Model key</TableHead>
-              <TableHead className="px-4 py-3 font-medium">Input</TableHead>
-              <TableHead className="px-4 py-3 font-medium">Cache</TableHead>
-              <TableHead className="px-4 py-3 font-medium">Output</TableHead>
               <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -80,9 +77,6 @@ function IntegrationsPricesRoute() {
             {prices.map((price) => (
               <TableRow key={price.modelKey}>
                 <TableCell className="px-4 py-3">{price.modelKey}</TableCell>
-                <TableCell className="px-4 py-3">{price.inputPerMillionUsd}</TableCell>
-                <TableCell className="px-4 py-3">{price.inputCachePerMillionUsd}</TableCell>
-                <TableCell className="px-4 py-3">{price.outputPerMillionUsd}</TableCell>
                 <TableCell className="px-4 py-3 text-right">
                   <AdminButton
                     variant="ghost"
@@ -105,7 +99,7 @@ function IntegrationsPricesRoute() {
             ))}
             {prices.length === 0 ? (
               <TableRow>
-                <TableCell className="px-4 py-6 text-muted-foreground" colSpan={5}>
+                <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
                   Nenhum preço ainda.
                 </TableCell>
               </TableRow>
