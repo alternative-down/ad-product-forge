@@ -32,6 +32,8 @@ import { Route as V1FinancePayablesRouteImport } from './routes/v1.finance.payab
 import { Route as V1FinanceLedgerRouteImport } from './routes/v1.finance.ledger'
 import { Route as V1FinanceCapitalRouteImport } from './routes/v1.finance.capital'
 import { Route as V1AgentsHireRouteImport } from './routes/v1.agents.hire'
+import { Route as HomeLlmPricesRouteRouteImport } from './routes/home/llm/prices/route'
+import { Route as HomeLlmPricesIndexRouteImport } from './routes/home/llm/prices/index'
 import { Route as V1SystemLlmProfilesRouteImport } from './routes/v1.system.llm.profiles'
 import { Route as V1SystemLlmPricesRouteImport } from './routes/v1.system.llm.prices'
 import { Route as V1SystemLlmDefaultsRouteImport } from './routes/v1.system.llm.defaults'
@@ -160,6 +162,16 @@ const V1AgentsHireRoute = V1AgentsHireRouteImport.update({
   path: '/hire',
   getParentRoute: () => V1AgentsRoute,
 } as any)
+const HomeLlmPricesRouteRoute = HomeLlmPricesRouteRouteImport.update({
+  id: '/prices',
+  path: '/prices',
+  getParentRoute: () => HomeLlmRouteRoute,
+} as any)
+const HomeLlmPricesIndexRoute = HomeLlmPricesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HomeLlmPricesRouteRoute,
+} as any)
 const V1SystemLlmProfilesRoute = V1SystemLlmProfilesRouteImport.update({
   id: '/llm/profiles',
   path: '/llm/profiles',
@@ -239,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/v1/system': typeof V1SystemRouteWithChildren
   '/home/': typeof HomeIndexRoute
   '/v1/': typeof V1IndexRoute
+  '/home/llm/prices': typeof HomeLlmPricesRouteRouteWithChildren
   '/v1/agents/hire': typeof V1AgentsHireRoute
   '/v1/finance/capital': typeof V1FinanceCapitalRoute
   '/v1/finance/ledger': typeof V1FinanceLedgerRoute
@@ -262,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/v1/system/llm/defaults': typeof V1SystemLlmDefaultsRoute
   '/v1/system/llm/prices': typeof V1SystemLlmPricesRoute
   '/v1/system/llm/profiles': typeof V1SystemLlmProfilesRoute
+  '/home/llm/prices/': typeof HomeLlmPricesIndexRoute
   '/v1/agents/$agentId/communications/$communicationView': typeof V1AgentsAgentIdCommunicationsCommunicationViewRoute
   '/v1/agents/$agentId/runtime/$runtimeView': typeof V1AgentsAgentIdRuntimeRuntimeViewRoute
 }
@@ -292,6 +306,7 @@ export interface FileRoutesByTo {
   '/v1/system/llm/defaults': typeof V1SystemLlmDefaultsRoute
   '/v1/system/llm/prices': typeof V1SystemLlmPricesRoute
   '/v1/system/llm/profiles': typeof V1SystemLlmProfilesRoute
+  '/home/llm/prices': typeof HomeLlmPricesIndexRoute
   '/v1/agents/$agentId/communications/$communicationView': typeof V1AgentsAgentIdCommunicationsCommunicationViewRoute
   '/v1/agents/$agentId/runtime/$runtimeView': typeof V1AgentsAgentIdRuntimeRuntimeViewRoute
 }
@@ -307,6 +322,7 @@ export interface FileRoutesById {
   '/v1/system': typeof V1SystemRouteWithChildren
   '/home/': typeof HomeIndexRoute
   '/v1/': typeof V1IndexRoute
+  '/home/llm/prices': typeof HomeLlmPricesRouteRouteWithChildren
   '/v1/agents/hire': typeof V1AgentsHireRoute
   '/v1/finance/capital': typeof V1FinanceCapitalRoute
   '/v1/finance/ledger': typeof V1FinanceLedgerRoute
@@ -330,6 +346,7 @@ export interface FileRoutesById {
   '/v1/system/llm/defaults': typeof V1SystemLlmDefaultsRoute
   '/v1/system/llm/prices': typeof V1SystemLlmPricesRoute
   '/v1/system/llm/profiles': typeof V1SystemLlmProfilesRoute
+  '/home/llm/prices/': typeof HomeLlmPricesIndexRoute
   '/v1/agents/$agentId/communications/$communicationView': typeof V1AgentsAgentIdCommunicationsCommunicationViewRoute
   '/v1/agents/$agentId/runtime/$runtimeView': typeof V1AgentsAgentIdRuntimeRuntimeViewRoute
 }
@@ -346,6 +363,7 @@ export interface FileRouteTypes {
     | '/v1/system'
     | '/home/'
     | '/v1/'
+    | '/home/llm/prices'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
     | '/v1/finance/ledger'
@@ -369,6 +387,7 @@ export interface FileRouteTypes {
     | '/v1/system/llm/defaults'
     | '/v1/system/llm/prices'
     | '/v1/system/llm/profiles'
+    | '/home/llm/prices/'
     | '/v1/agents/$agentId/communications/$communicationView'
     | '/v1/agents/$agentId/runtime/$runtimeView'
   fileRoutesByTo: FileRoutesByTo
@@ -399,6 +418,7 @@ export interface FileRouteTypes {
     | '/v1/system/llm/defaults'
     | '/v1/system/llm/prices'
     | '/v1/system/llm/profiles'
+    | '/home/llm/prices'
     | '/v1/agents/$agentId/communications/$communicationView'
     | '/v1/agents/$agentId/runtime/$runtimeView'
   id:
@@ -413,6 +433,7 @@ export interface FileRouteTypes {
     | '/v1/system'
     | '/home/'
     | '/v1/'
+    | '/home/llm/prices'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
     | '/v1/finance/ledger'
@@ -436,6 +457,7 @@ export interface FileRouteTypes {
     | '/v1/system/llm/defaults'
     | '/v1/system/llm/prices'
     | '/v1/system/llm/profiles'
+    | '/home/llm/prices/'
     | '/v1/agents/$agentId/communications/$communicationView'
     | '/v1/agents/$agentId/runtime/$runtimeView'
   fileRoutesById: FileRoutesById
@@ -609,6 +631,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1AgentsHireRouteImport
       parentRoute: typeof V1AgentsRoute
     }
+    '/home/llm/prices': {
+      id: '/home/llm/prices'
+      path: '/prices'
+      fullPath: '/home/llm/prices'
+      preLoaderRoute: typeof HomeLlmPricesRouteRouteImport
+      parentRoute: typeof HomeLlmRouteRoute
+    }
+    '/home/llm/prices/': {
+      id: '/home/llm/prices/'
+      path: '/'
+      fullPath: '/home/llm/prices/'
+      preLoaderRoute: typeof HomeLlmPricesIndexRouteImport
+      parentRoute: typeof HomeLlmPricesRouteRoute
+    }
     '/v1/system/llm/profiles': {
       id: '/v1/system/llm/profiles'
       path: '/llm/profiles'
@@ -696,11 +732,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface HomeLlmPricesRouteRouteChildren {
+  HomeLlmPricesIndexRoute: typeof HomeLlmPricesIndexRoute
+}
+
+const HomeLlmPricesRouteRouteChildren: HomeLlmPricesRouteRouteChildren = {
+  HomeLlmPricesIndexRoute: HomeLlmPricesIndexRoute,
+}
+
+const HomeLlmPricesRouteRouteWithChildren =
+  HomeLlmPricesRouteRoute._addFileChildren(HomeLlmPricesRouteRouteChildren)
+
 interface HomeLlmRouteRouteChildren {
+  HomeLlmPricesRouteRoute: typeof HomeLlmPricesRouteRouteWithChildren
   HomeLlmIndexRoute: typeof HomeLlmIndexRoute
 }
 
 const HomeLlmRouteRouteChildren: HomeLlmRouteRouteChildren = {
+  HomeLlmPricesRouteRoute: HomeLlmPricesRouteRouteWithChildren,
   HomeLlmIndexRoute: HomeLlmIndexRoute,
 }
 
