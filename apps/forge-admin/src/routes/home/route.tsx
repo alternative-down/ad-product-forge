@@ -34,7 +34,6 @@ function HomeLayoutRoute() {
 
   return (
     <AppShell
-      theme={theme}
       topbar={
         <div className="flex min-h-18 items-center justify-between gap-8 px-6 py-4">
           <div className="flex items-center gap-8">

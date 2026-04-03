@@ -7,12 +7,9 @@ export function AppShell(input: {
   children: ReactNode;
   detailPane?: ReactNode;
   className?: string;
-  theme?: 'light' | 'dark';
 }) {
   return (
-    <div
-      className={cn('forja-app min-h-screen bg-background text-foreground', input.theme === 'dark' ? 'dark' : '', input.className)}
-    >
+    <div className={cn('min-h-screen bg-background text-foreground', input.className)}>
       <div className="flex min-h-screen min-w-0 flex-col">
         {input.topbar ? (
           <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
