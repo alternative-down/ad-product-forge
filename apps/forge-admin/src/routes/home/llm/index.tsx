@@ -8,6 +8,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminDialogTitle,
   AdminInput,
   PageHeader,
 } from '@/components/admin';
@@ -19,10 +20,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from '@/components/ui/combobox';
-import {
-  Dialog,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSystemLlm, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
 
@@ -188,7 +186,7 @@ function HomeLlmProfilesRoute() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
           <AdminDialogHeader>
-            <DialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Adicionar perfil'}</DialogTitle>
+            <AdminDialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Adicionar perfil'}</AdminDialogTitle>
           </AdminDialogHeader>
 
           <form

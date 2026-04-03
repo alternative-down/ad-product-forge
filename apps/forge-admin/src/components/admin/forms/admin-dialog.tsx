@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 
-import { DialogContent, DialogFooter, DialogHeader } from '@/components/ui/dialog';
+import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getStoredAdminTheme } from '@/lib/admin-secret';
 import { cn } from '@/lib/utils';
 
@@ -25,10 +25,14 @@ export function AdminDialogHeader({ className, ...props }: ComponentProps<typeof
   return (
     <DialogHeader
       className={cn(
-        '-mx-4 -mt-4 gap-1 border-b border-border/70 bg-muted/35 px-4 py-3 sm:-mx-5 sm:-mt-5 sm:px-5 sm:py-4',
+        '-mx-4 -mt-4 items-center gap-1 border-b border-border/70 bg-muted/35 px-4 py-3 text-center sm:-mx-5 sm:-mt-5 sm:px-5 sm:py-4',
         className,
       )}
       {...props}
     />
   );
+}
+
+export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof DialogTitle>) {
+  return <DialogTitle className={cn('text-lg font-semibold tracking-[-0.03em]', className)} {...props} />;
 }

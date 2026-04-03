@@ -8,13 +8,11 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminDialogTitle,
   AdminInput,
   PageHeader,
 } from '@/components/admin';
-import {
-  Dialog,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/llm/prices/')({
@@ -119,7 +117,7 @@ function HomeLlmPricesRoute() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
           <AdminDialogHeader>
-            <DialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Adicionar preço'}</DialogTitle>
+            <AdminDialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Adicionar preço'}</AdminDialogTitle>
           </AdminDialogHeader>
 
           <form
