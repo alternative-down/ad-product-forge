@@ -9,7 +9,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
     <DialogContent
       data-theme={getStoredAdminTheme()}
       className={cn(
-        'forja-app max-w-[calc(100vw-2.5rem)] rounded-2xl border border-border/70 bg-background/95 p-5 shadow-xl shadow-black/5 sm:max-w-2xl sm:p-6',
+        'forja-app max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-border/70 bg-background/95 p-4 shadow-xl shadow-black/5 sm:max-h-[calc(100dvh-3rem)] sm:max-w-2xl sm:p-5',
         className,
       )}
       {...props}
@@ -18,5 +18,5 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
 }
 
 export function AdminDialogFooter({ className, ...props }: ComponentProps<typeof DialogFooter>) {
-  return <DialogFooter className={cn('mx-0 mb-0 rounded-none border-border/70 bg-transparent p-0 pt-4', className)} {...props} />;
+  return <DialogFooter className={cn('mx-0 mb-0 rounded-none border-border/70 bg-transparent p-0 pt-3', className)} {...props} />;
 }

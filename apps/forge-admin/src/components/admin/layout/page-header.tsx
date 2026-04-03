@@ -7,14 +7,14 @@ export function PageHeader(input: {
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4 pb-2 min-[480px]:flex-row min-[480px]:items-end min-[480px]:justify-between">
+    <div className="flex flex-row items-end justify-between gap-3 pb-2">
       <div className="min-w-0">
         {input.eyebrow ? (
           <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
             {input.eyebrow}
           </div>
         ) : null}
-        <h1 className="mt-1 text-4xl font-semibold tracking-[-0.06em]">{input.title}</h1>
+        <h1 className="mt-1 text-3xl font-semibold tracking-[-0.06em] sm:text-4xl">{input.title}</h1>
         {input.description ? (
           <p className="mt-3 max-w-3xl text-base text-muted-foreground">{input.description}</p>
         ) : null}

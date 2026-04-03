@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -87,7 +88,7 @@ function HomeLlmPricesRoute() {
                 <td className="px-4 py-3 text-right">
                   <AdminButton
                     variant="ghost"
-                    className="h-9 px-3"
+                    className="h-8 w-8 px-0"
                     onClick={() => {
                       setPriceForm({
                         modelKey: price.modelKey,
@@ -98,7 +99,8 @@ function HomeLlmPricesRoute() {
                       setDialogOpen(true);
                     }}
                   >
-                    Editar
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Editar</span>
                   </AdminButton>
                 </td>
               </tr>
@@ -116,12 +118,12 @@ function HomeLlmPricesRoute() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
-          <DialogHeader>
+          <DialogHeader className="gap-1">
             <DialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Adicionar preço'}</DialogTitle>
           </DialogHeader>
 
           <form
-            className="space-y-5"
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({

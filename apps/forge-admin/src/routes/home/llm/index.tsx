@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil, Power, PowerOff } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -105,11 +106,17 @@ function HomeLlmProfilesRoute() {
       />
 
       <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'active' | 'inactive')}>
-        <TabsList className="h-10 rounded-md bg-secondary/80 p-1">
-          <TabsTrigger value="active" className="rounded-md px-3">
+        <TabsList className="h-auto gap-3 rounded-none border-b border-border bg-transparent p-0">
+          <TabsTrigger
+            value="active"
+            className="rounded-none border-b-2 border-transparent px-0 py-2 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+          >
             Ativos
           </TabsTrigger>
-          <TabsTrigger value="inactive" className="rounded-md px-3">
+          <TabsTrigger
+            value="inactive"
+            className="rounded-none border-b-2 border-transparent px-0 py-2 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+          >
             Inativos
           </TabsTrigger>
         </TabsList>
@@ -137,17 +144,18 @@ function HomeLlmProfilesRoute() {
                   <div className="flex justify-end gap-2">
                     <AdminButton
                       variant="ghost"
-                      className="h-9 px-3"
+                      className="h-8 w-8 px-0"
                       onClick={() => {
                         setProfileForm(createProfileForm(profile));
                         setDialogOpen(true);
                       }}
                     >
-                      Editar
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Editar</span>
                     </AdminButton>
                     <AdminButton
                       variant="ghost"
-                      className="h-9 px-3"
+                      className="h-8 w-8 px-0"
                       disabled={statusMutation.isPending}
                       onClick={() =>
                         statusMutation.mutate({
@@ -156,7 +164,8 @@ function HomeLlmProfilesRoute() {
                         })
                       }
                     >
-                      {profile.isEnabled ? 'Inativar' : 'Ativar'}
+                      {profile.isEnabled ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                      <span className="sr-only">{profile.isEnabled ? 'Inativar' : 'Ativar'}</span>
                     </AdminButton>
                   </div>
                 </td>
@@ -175,12 +184,12 @@ function HomeLlmProfilesRoute() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
-          <DialogHeader>
+          <DialogHeader className="gap-1">
             <DialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Adicionar perfil'}</DialogTitle>
           </DialogHeader>
 
           <form
-            className="space-y-5"
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({
