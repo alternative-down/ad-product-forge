@@ -62,7 +62,7 @@ export function AdminTopbar(input: {
           </SheetContent>
         </Sheet>
 
-        <div className="text-xl font-semibold tracking-[-0.06em] sm:text-3xl">Forja</div>
+        <div className="text-2xl font-semibold tracking-[-0.06em] sm:text-3xl">Forja</div>
         <nav className="hidden items-center gap-4 md:flex">
           <Link
             to="/home"
