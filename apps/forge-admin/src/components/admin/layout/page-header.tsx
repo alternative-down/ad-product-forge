@@ -7,7 +7,7 @@ export function PageHeader(input: {
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4 pb-2 md:flex-row md:items-end md:justify-between">
+    <div className="flex flex-col gap-4 pb-2 min-[480px]:flex-row min-[480px]:items-end min-[480px]:justify-between">
       <div className="min-w-0">
         {input.eyebrow ? (
           <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
@@ -19,7 +19,7 @@ export function PageHeader(input: {
           <p className="mt-3 max-w-3xl text-base text-muted-foreground">{input.description}</p>
         ) : null}
       </div>
-      {input.actions ? <div className="flex items-center gap-2">{input.actions}</div> : null}
+      {input.actions ? <div className="flex shrink-0 items-center gap-2">{input.actions}</div> : null}
     </div>
   );
 }

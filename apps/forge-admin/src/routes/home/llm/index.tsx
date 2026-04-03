@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSystemLlm, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/llm/')({
@@ -58,6 +59,7 @@ function HomeLlmProfilesRoute() {
     queryFn: getSystemLlm,
   });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive'>('active');
   const [profileForm, setProfileForm] = useState<UpsertLlmProfileInput>(createEmptyProfileForm);
   const mutation = useMutation({
     mutationFn: upsertLlmProfile,
@@ -67,9 +69,19 @@ function HomeLlmProfilesRoute() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
     },
   });
+  const statusMutation = useMutation({
+    mutationFn: upsertLlmProfile,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
+    },
+  });
   const profiles = useMemo(
     () => [...(llmQuery.data?.profiles ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
     [llmQuery.data?.profiles],
+  );
+  const filteredProfiles = useMemo(
+    () => profiles.filter((profile) => profile.isEnabled === (statusFilter === 'active')),
+    [profiles, statusFilter],
   );
   const modelKeys = useMemo(
     () => [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort((left, right) => left.localeCompare(right)),
@@ -87,13 +99,24 @@ function HomeLlmProfilesRoute() {
               setDialogOpen(true);
             }}
           >
-            Adicionar
+            Novo
           </AdminButton>
         }
       />
 
-      <div className="overflow-hidden rounded-xl border border-border">
-        <table className="w-full text-sm">
+      <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'active' | 'inactive')}>
+        <TabsList className="h-10 rounded-md bg-secondary/80 p-1">
+          <TabsTrigger value="active" className="rounded-md px-3">
+            Ativos
+          </TabsTrigger>
+          <TabsTrigger value="inactive" className="rounded-md px-3">
+            Inativos
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="min-w-[760px] w-full text-sm">
           <thead className="bg-muted/50 text-left text-muted-foreground">
             <tr>
               <th className="px-4 py-3 font-medium">Nome</th>
@@ -104,30 +127,45 @@ function HomeLlmProfilesRoute() {
             </tr>
           </thead>
           <tbody>
-            {profiles.map((profile) => (
+            {filteredProfiles.map((profile) => (
               <tr key={profile.profileId} className="border-t border-border">
                 <td className="px-4 py-3">{profile.name}</td>
                 <td className="px-4 py-3">{profile.modelKey}</td>
                 <td className="px-4 py-3">{profile.baseUrl || '—'}</td>
                 <td className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</td>
                 <td className="px-4 py-3 text-right">
-                  <AdminButton
-                    variant="ghost"
-                    className="h-9 px-3"
-                    onClick={() => {
-                      setProfileForm(createProfileForm(profile));
-                      setDialogOpen(true);
-                    }}
-                  >
-                    Editar
-                  </AdminButton>
+                  <div className="flex justify-end gap-2">
+                    <AdminButton
+                      variant="ghost"
+                      className="h-9 px-3"
+                      onClick={() => {
+                        setProfileForm(createProfileForm(profile));
+                        setDialogOpen(true);
+                      }}
+                    >
+                      Editar
+                    </AdminButton>
+                    <AdminButton
+                      variant="ghost"
+                      className="h-9 px-3"
+                      disabled={statusMutation.isPending}
+                      onClick={() =>
+                        statusMutation.mutate({
+                          ...createProfileForm(profile),
+                          isEnabled: !profile.isEnabled,
+                        })
+                      }
+                    >
+                      {profile.isEnabled ? 'Inativar' : 'Ativar'}
+                    </AdminButton>
+                  </div>
                 </td>
               </tr>
             ))}
-            {profiles.length === 0 ? (
+            {filteredProfiles.length === 0 ? (
               <tr>
                 <td className="px-4 py-6 text-muted-foreground" colSpan={5}>
-                  Nenhum perfil ainda.
+                  {statusFilter === 'active' ? 'Nenhum perfil ativo.' : 'Nenhum perfil inativo.'}
                 </td>
               </tr>
             ) : null}
@@ -198,30 +236,30 @@ function HomeLlmProfilesRoute() {
                 </Combobox>
               </div>
             </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-base-url">
-                  Base URL
-                </label>
-                <AdminInput
-                  id="llm-base-url"
-                  value={profileForm.baseUrl ?? ''}
-                  onChange={(event) => setProfileForm((current) => ({ ...current, baseUrl: event.target.value }))}
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="llm-base-url">
+                Base URL
+              </label>
+              <AdminInput
+                id="llm-base-url"
+                value={profileForm.baseUrl ?? ''}
+                onChange={(event) => setProfileForm((current) => ({ ...current, baseUrl: event.target.value }))}
                 disabled={mutation.isPending}
               />
             </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-api-key">
-                  API key
-                </label>
-                <AdminInput
-                  id="llm-api-key"
-                  type="password"
-                  value={profileForm.apiKey}
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="llm-api-key">
+                API key
+              </label>
+              <AdminInput
+                id="llm-api-key"
+                type="password"
+                value={profileForm.apiKey}
                 onChange={(event) => setProfileForm((current) => ({ ...current, apiKey: event.target.value }))}
                 disabled={mutation.isPending}
               />
             </div>
-            <div className="grid gap-4 min-[560px]:grid-cols-[minmax(0,180px)_auto] min-[560px]:items-end">
+            <div className="grid gap-4 min-[560px]:grid-cols-[minmax(0,180px)]">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="llm-cost-multiplier">
                   Cost multiplier
@@ -240,20 +278,6 @@ function HomeLlmProfilesRoute() {
                   disabled={mutation.isPending}
                 />
               </div>
-              <label className="flex h-11 items-center gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={profileForm.isEnabled}
-                  onChange={(event) =>
-                    setProfileForm((current) => ({
-                      ...current,
-                      isEnabled: event.target.checked,
-                    }))
-                  }
-                  disabled={mutation.isPending}
-                />
-                Ativo
-              </label>
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
