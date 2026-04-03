@@ -7,6 +7,7 @@ export { LogBlock } from './system/log-block';
 export { PageHeader } from './layout/page-header';
 export { SectionHeader } from './system/section-header';
 export { SidebarNav } from './layout/sidebar-nav';
+export { ThemeToggleButton } from './theme-toggle-button';
 export { TopBar } from './layout/top-bar';
 export { DataTable } from './system/data-table';
 export { DetailPane } from './system/detail-pane';

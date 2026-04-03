@@ -59,6 +59,27 @@
   font-family: 'Instrument Sans', sans-serif;
 }
 
+.forja-app[data-theme='dark'] {
+  --background: #171514;
+  --foreground: #f2ede4;
+  --card: #201d1b;
+  --card-foreground: #f2ede4;
+  --popover: #201d1b;
+  --popover-foreground: #f2ede4;
+  --primary: #d39aaa;
+  --primary-foreground: #201d1b;
+  --secondary: #2b2724;
+  --secondary-foreground: #f2ede4;
+  --muted: #221f1c;
+  --muted-foreground: #bcb3a6;
+  --accent: #2b2724;
+  --accent-foreground: #f2ede4;
+  --destructive: #d57f7f;
+  --border: #3b3530;
+  --input: #3b3530;
+  --ring: #d39aaa;
+}
+
 .forja-app * {
   @apply border-border outline-ring/50;
 }

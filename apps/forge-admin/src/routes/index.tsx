@@ -1,10 +1,15 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import '../styles/app.css';
 import { AccessGate } from '@/components/admin/access-gate';
 import { validateAdminSecret } from '@/lib/admin-api';
-import { getStoredAdminSecret, setStoredAdminSecret } from '@/lib/admin-secret';
+import {
+  getStoredAdminSecret,
+  getStoredAdminTheme,
+  setStoredAdminSecret,
+  setStoredAdminTheme,
+} from '@/lib/admin-secret';
 
 export const Route = createFileRoute('/')({
   component: AdminSecretRoute,
@@ -12,14 +17,21 @@ export const Route = createFileRoute('/')({
 
 function AdminSecretRoute() {
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setStoredAdminTheme(theme);
+  }, [theme]);
 
   return (
     <AccessGate
       initialValue={getStoredAdminSecret()}
       warningMessage={warningMessage}
       submitting={submitting}
+      theme={theme}
+      onThemeToggle={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
       onSave={async (value) => {
         setSubmitting(true);
         setWarningMessage(null);

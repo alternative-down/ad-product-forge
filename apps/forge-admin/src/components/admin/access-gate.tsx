@@ -3,18 +3,24 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ThemeToggleButton } from '@/components/admin/theme-toggle-button';
 
 export function AccessGate(input: {
   initialValue: string;
   warningMessage?: string | null;
   submitting?: boolean;
+  theme: 'light' | 'dark';
+  onThemeToggle(): void;
   onSave(value: string): void | Promise<void>;
 }) {
   const [value, setValue] = useState(input.initialValue);
 
   return (
-    <div className="forja-app">
-      <div className="flex min-h-screen items-center justify-center px-6 animate-in fade-in duration-300">
+    <div className="forja-app" data-theme={input.theme}>
+      <div className="relative flex min-h-screen items-center justify-center px-6 animate-in fade-in duration-300">
+        <div className="absolute right-6 top-6">
+          <ThemeToggleButton theme={input.theme} onToggle={input.onThemeToggle} />
+        </div>
         <form
           className="flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200"
           data-loading={input.submitting ? 'true' : 'false'}
