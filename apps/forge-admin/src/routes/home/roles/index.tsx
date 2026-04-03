@@ -150,9 +150,6 @@ function HomeRolesIndexRoute() {
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
-                <TableHead className="px-4 py-3 font-medium">Descrição</TableHead>
-                <TableHead className="px-4 py-3 font-medium">Ferramentas</TableHead>
-                <TableHead className="px-4 py-3 font-medium">Agentes</TableHead>
                 <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -160,11 +157,6 @@ function HomeRolesIndexRoute() {
               {roles.map((role) => (
                 <TableRow key={role.roleId}>
                   <TableCell className="px-4 py-3">{role.name}</TableCell>
-                  <TableCell className="max-w-[28rem] px-4 py-3 text-muted-foreground">
-                    <div className="truncate">{role.description || '—'}</div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3">{role.toolIds.length}</TableCell>
-                  <TableCell className="px-4 py-3">{role.assignedAgentCount}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <AdminButton
@@ -195,7 +187,7 @@ function HomeRolesIndexRoute() {
               ))}
               {roles.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={5}>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
                     Nenhum papel cadastrado.
                   </TableCell>
                 </TableRow>
