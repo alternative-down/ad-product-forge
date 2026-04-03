@@ -23,16 +23,16 @@ export function AdminTopbar(input: {
             Home
           </Link>
           <Link
-            to="/integrations"
-            className={integrationsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
-          >
-            Integrações
-          </Link>
-          <Link
             to="/finance"
             className={financeActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
           >
             Financeiro
+          </Link>
+          <Link
+            to="/integrations"
+            className={integrationsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+          >
+            Integrações
           </Link>
         </nav>
       </div>
