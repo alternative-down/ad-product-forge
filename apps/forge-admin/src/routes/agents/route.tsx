@@ -104,16 +104,14 @@ function buildAgentSectionItems(input: {
   pathname: string;
   providerTypes: string[];
 }) {
-  const items = [{ value: '/agents', label: 'Lista' }];
-
   if (!input.agentId) {
-    return items;
+    return [{ value: '/agents', label: 'Lista' }];
   }
 
-  items.push(
+  const items = [
     { value: `/agents/${input.agentId}`, label: 'Perfil' },
     { value: `/agents/${input.agentId}/contract`, label: 'Contrato' },
-  );
+  ];
 
   for (const providerType of input.providerTypes) {
     items.push({
