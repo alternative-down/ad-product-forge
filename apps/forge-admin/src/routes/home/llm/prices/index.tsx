@@ -4,11 +4,15 @@ import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
+  AdminButton,
+  AdminDialogContent,
+  AdminDialogFooter,
+  AdminDialogHeader,
+  AdminDialogTitle,
+  AdminInput,
   PageHeader,
 } from '@/components/admin';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Dialog } from '@/components/ui/dialog';
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/llm/prices/')({
@@ -50,14 +54,14 @@ function HomeLlmPricesRoute() {
       <PageHeader
         title="Preços"
         actions={
-          <Button
+          <AdminButton
             onClick={() => {
               setPriceForm(createEmptyPriceForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </Button>
+          </AdminButton>
         }
       />
 
@@ -80,7 +84,7 @@ function HomeLlmPricesRoute() {
                 <td className="px-4 py-3">{price.inputCachePerMillionUsd}</td>
                 <td className="px-4 py-3">{price.outputPerMillionUsd}</td>
                 <td className="px-4 py-3 text-right">
-                  <Button
+                  <AdminButton
                     variant="ghost"
                     size="icon"
                     onClick={() => {
@@ -95,7 +99,7 @@ function HomeLlmPricesRoute() {
                   >
                     <Pencil className="h-4 w-4" />
                     <span className="sr-only">Editar</span>
-                  </Button>
+                  </AdminButton>
                 </td>
               </tr>
             ))}
@@ -111,10 +115,10 @@ function HomeLlmPricesRoute() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Novo preço'}</DialogTitle>
-          </DialogHeader>
+        <AdminDialogContent>
+          <AdminDialogHeader>
+            <AdminDialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Novo preço'}</AdminDialogTitle>
+          </AdminDialogHeader>
 
           <form
             className="space-y-4"
@@ -132,7 +136,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-price-model-key">
                   Model key
                 </label>
-              <Input
+              <AdminInput
                 id="llm-price-model-key"
                 value={priceForm.modelKey}
                 onChange={(event) => setPriceForm((current) => ({ ...current, modelKey: event.target.value }))}
@@ -144,7 +148,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-input-price">
                   Input / 1M
                 </label>
-                <Input
+                <AdminInput
                   id="llm-input-price"
                   type="number"
                   step="0.000001"
@@ -162,7 +166,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-cache-price">
                   Cache / 1M
                 </label>
-                <Input
+                <AdminInput
                   id="llm-cache-price"
                   type="number"
                   step="0.000001"
@@ -180,7 +184,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-output-price">
                   Output / 1M
                 </label>
-                <Input
+                <AdminInput
                   id="llm-output-price"
                   type="number"
                   step="0.000001"
@@ -197,13 +201,13 @@ function HomeLlmPricesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <DialogFooter>
-              <Button type="submit" disabled={mutation.isPending}>
+            <AdminDialogFooter>
+              <AdminButton type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </DialogFooter>
+              </AdminButton>
+            </AdminDialogFooter>
           </form>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
     </div>
   );

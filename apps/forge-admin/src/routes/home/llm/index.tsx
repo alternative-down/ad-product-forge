@@ -4,6 +4,12 @@ import { Pencil, Power, PowerOff } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
+  AdminButton,
+  AdminDialogContent,
+  AdminDialogFooter,
+  AdminDialogHeader,
+  AdminDialogTitle,
+  AdminInput,
   PageHeader,
 } from '@/components/admin';
 import {
@@ -13,11 +19,8 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-  useComboboxAnchor,
 } from '@/components/ui/combobox';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Dialog } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSystemLlm, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
 
@@ -47,11 +50,6 @@ function createProfileForm(profile: LlmProfile): UpsertLlmProfileInput {
     isEnabled: profile.isEnabled,
   };
 }
-
-type ModelKeyOption = {
-  label: string;
-  value: string;
-};
 
 function HomeLlmProfilesRoute() {
   const queryClient = useQueryClient();
@@ -84,21 +82,13 @@ function HomeLlmProfilesRoute() {
     () => profiles.filter((profile) => profile.isEnabled === (statusFilter === 'active')),
     [profiles, statusFilter],
   );
-  const modelKeyOptions = useMemo<ModelKeyOption[]>(
+  const modelKeys = useMemo(
     () =>
-      [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))]
-        .sort((left, right) => left.localeCompare(right))
-        .map((modelKey) => ({
-          label: modelKey,
-          value: modelKey,
-        })),
+      [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort((left, right) =>
+        left.localeCompare(right),
+      ),
     [llmQuery.data?.prices],
   );
-  const selectedModelKeyOption = useMemo(
-    () => modelKeyOptions.find((option) => option.value === profileForm.modelKey) ?? null,
-    [modelKeyOptions, profileForm.modelKey],
-  );
-  const modelKeyAnchor = useComboboxAnchor();
   const setProfileFilter = (value: string) => {
     setStatusFilter(value === 'inactive' ? 'inactive' : 'active');
   };
@@ -108,14 +98,14 @@ function HomeLlmProfilesRoute() {
       <PageHeader
         title="Perfis"
         actions={
-          <Button
+          <AdminButton
             onClick={() => {
               setProfileForm(createEmptyProfileForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </Button>
+          </AdminButton>
         }
       />
 
@@ -156,7 +146,7 @@ function HomeLlmProfilesRoute() {
                 <td className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
-                    <Button
+                    <AdminButton
                       variant="ghost"
                       size="icon"
                       onClick={() => {
@@ -166,8 +156,8 @@ function HomeLlmProfilesRoute() {
                     >
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Editar</span>
-                    </Button>
-                    <Button
+                    </AdminButton>
+                    <AdminButton
                       variant="ghost"
                       size="icon"
                       disabled={statusMutation.isPending}
@@ -180,7 +170,7 @@ function HomeLlmProfilesRoute() {
                     >
                       {profile.isEnabled ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                       <span className="sr-only">{profile.isEnabled ? 'Inativar' : 'Ativar'}</span>
-                    </Button>
+                    </AdminButton>
                   </div>
                 </td>
               </tr>
@@ -197,10 +187,10 @@ function HomeLlmProfilesRoute() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Novo perfil'}</DialogTitle>
-          </DialogHeader>
+        <AdminDialogContent>
+          <AdminDialogHeader>
+            <AdminDialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Novo perfil'}</AdminDialogTitle>
+          </AdminDialogHeader>
 
           <form
             className="space-y-4"
@@ -220,7 +210,7 @@ function HomeLlmProfilesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-profile-name">
                   Nome
                 </label>
-                <Input
+                <AdminInput
                   id="llm-profile-name"
                   value={profileForm.name}
                   onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))}
@@ -231,44 +221,38 @@ function HomeLlmProfilesRoute() {
                 <label className="text-sm font-medium">
                   Model key
                 </label>
-                <div ref={modelKeyAnchor} className="w-full">
-                  <Combobox<ModelKeyOption>
-                    items={modelKeyOptions}
-                    itemToStringLabel={(item) => item.label}
-                    itemToStringValue={(item) => item.value}
-                    isItemEqualToValue={(item, value) => item.value === value.value}
-                    value={selectedModelKeyOption}
+                <Combobox
+                    items={modelKeys}
+                    value={profileForm.modelKey || null}
                     onValueChange={(value) =>
                       setProfileForm((current) => ({
                         ...current,
-                        modelKey: value?.value ?? '',
+                        modelKey: value ?? '',
                       }))
                     }
                   >
                     <ComboboxInput
-                      placeholder={modelKeyOptions.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
-                      className="w-full"
-                      disabled={mutation.isPending || modelKeyOptions.length === 0}
+                      placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
+                      disabled={mutation.isPending || modelKeys.length === 0}
                     />
-                    <ComboboxContent anchor={modelKeyAnchor}>
+                    <ComboboxContent>
                       <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
                       <ComboboxList>
-                        {(modelKey: ModelKeyOption) => (
-                          <ComboboxItem key={modelKey.value} value={modelKey}>
-                            {modelKey.label}
+                        {(modelKey: string) => (
+                          <ComboboxItem key={modelKey} value={modelKey}>
+                            {modelKey}
                           </ComboboxItem>
                         )}
                       </ComboboxList>
                     </ComboboxContent>
                   </Combobox>
-                </div>
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="llm-base-url">
                 Base URL
               </label>
-              <Input
+              <AdminInput
                 id="llm-base-url"
                 value={profileForm.baseUrl ?? ''}
                 onChange={(event) => setProfileForm((current) => ({ ...current, baseUrl: event.target.value }))}
@@ -279,7 +263,7 @@ function HomeLlmProfilesRoute() {
               <label className="text-sm font-medium" htmlFor="llm-api-key">
                 API key
               </label>
-              <Input
+              <AdminInput
                 id="llm-api-key"
                 type="password"
                 value={profileForm.apiKey}
@@ -292,7 +276,7 @@ function HomeLlmProfilesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-cost-multiplier">
                   Cost multiplier
                 </label>
-                <Input
+                <AdminInput
                   id="llm-cost-multiplier"
                   type="number"
                   step="0.01"
@@ -309,13 +293,13 @@ function HomeLlmProfilesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <DialogFooter>
-              <Button type="submit" disabled={mutation.isPending}>
+            <AdminDialogFooter>
+              <AdminButton type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </DialogFooter>
+              </AdminButton>
+            </AdminDialogFooter>
           </form>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
     </div>
   );

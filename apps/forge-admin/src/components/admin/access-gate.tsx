@@ -1,9 +1,8 @@
 import { LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 
+import { AdminButton, AdminInput } from '@/components/admin';
 import { ThemeToggleButton } from '@/components/admin/theme-toggle-button';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 export function AccessGate(input: {
   initialValue: string;
@@ -34,7 +33,7 @@ export function AccessGate(input: {
           <div className="text-center text-base text-muted-foreground">
             Informe sua chave de acesso.
           </div>
-          <Input
+          <AdminInput
             type="password"
             value={value}
             onChange={(event) => setValue(event.target.value)}
@@ -44,10 +43,10 @@ export function AccessGate(input: {
             <div className="text-sm text-destructive">{input.warningMessage}</div>
           ) : null}
           <div className="flex justify-end">
-            <Button type="submit" className="gap-2" disabled={!value.trim() || input.submitting}>
+            <AdminButton type="submit" className="gap-2" disabled={!value.trim() || input.submitting}>
               {input.submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
               {input.submitting ? 'Entrando...' : 'Entrar'}
-            </Button>
+            </AdminButton>
           </div>
         </form>
       </div>
