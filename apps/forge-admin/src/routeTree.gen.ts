@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as V1RouteRouteImport } from './routes/v1/route'
 import { Route as IntegrationsRouteRouteImport } from './routes/integrations/route'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
+import { Route as FinanceRouteRouteImport } from './routes/finance/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as V1IndexRouteImport } from './routes/v1/index'
 import { Route as IntegrationsIndexRouteImport } from './routes/integrations/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
+import { Route as FinanceIndexRouteImport } from './routes/finance/index'
 import { Route as V1SystemRouteRouteImport } from './routes/v1/system/route'
 import { Route as V1RolesRouteRouteImport } from './routes/v1/roles/route'
 import { Route as V1FinanceRouteRouteImport } from './routes/v1/finance/route'
@@ -26,6 +28,8 @@ import { Route as IntegrationsMigaduRouteRouteImport } from './routes/integratio
 import { Route as IntegrationsGithubRouteRouteImport } from './routes/integrations/github/route'
 import { Route as IntegrationsCoolifyRouteRouteImport } from './routes/integrations/coolify/route'
 import { Route as HomeRolesRouteRouteImport } from './routes/home/roles/route'
+import { Route as FinanceContractsRouteRouteImport } from './routes/finance/contracts/route'
+import { Route as FinanceAccountsRouteRouteImport } from './routes/finance/accounts/route'
 import { Route as V1SystemIndexRouteImport } from './routes/v1/system/index'
 import { Route as V1RolesIndexRouteImport } from './routes/v1/roles/index'
 import { Route as V1FinanceIndexRouteImport } from './routes/v1/finance/index'
@@ -36,6 +40,8 @@ import { Route as IntegrationsMigaduIndexRouteImport } from './routes/integratio
 import { Route as IntegrationsGithubIndexRouteImport } from './routes/integrations/github/index'
 import { Route as IntegrationsCoolifyIndexRouteImport } from './routes/integrations/coolify/index'
 import { Route as HomeRolesIndexRouteImport } from './routes/home/roles/index'
+import { Route as FinanceContractsIndexRouteImport } from './routes/finance/contracts/index'
+import { Route as FinanceAccountsIndexRouteImport } from './routes/finance/accounts/index'
 import { Route as V1SystemOauthIndexRouteImport } from './routes/v1/system/oauth/index'
 import { Route as V1SystemMigrationsIndexRouteImport } from './routes/v1/system/migrations/index'
 import { Route as V1SystemCompanyIndexRouteImport } from './routes/v1/system/company/index'
@@ -72,6 +78,11 @@ const HomeRouteRoute = HomeRouteRouteImport.update({
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FinanceRouteRoute = FinanceRouteRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -91,6 +102,11 @@ const HomeIndexRoute = HomeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => HomeRouteRoute,
+} as any)
+const FinanceIndexRoute = FinanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FinanceRouteRoute,
 } as any)
 const V1SystemRouteRoute = V1SystemRouteRouteImport.update({
   id: '/system',
@@ -144,6 +160,16 @@ const HomeRolesRouteRoute = HomeRolesRouteRouteImport.update({
   path: '/roles',
   getParentRoute: () => HomeRouteRoute,
 } as any)
+const FinanceContractsRouteRoute = FinanceContractsRouteRouteImport.update({
+  id: '/contracts',
+  path: '/contracts',
+  getParentRoute: () => FinanceRouteRoute,
+} as any)
+const FinanceAccountsRouteRoute = FinanceAccountsRouteRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
+  getParentRoute: () => FinanceRouteRoute,
+} as any)
 const V1SystemIndexRoute = V1SystemIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -195,6 +221,16 @@ const HomeRolesIndexRoute = HomeRolesIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => HomeRolesRouteRoute,
+} as any)
+const FinanceContractsIndexRoute = FinanceContractsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FinanceContractsRouteRoute,
+} as any)
+const FinanceAccountsIndexRoute = FinanceAccountsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FinanceAccountsRouteRoute,
 } as any)
 const V1SystemOauthIndexRoute = V1SystemOauthIndexRouteImport.update({
   id: '/oauth/',
@@ -309,9 +345,12 @@ const V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/finance': typeof FinanceRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
+  '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
+  '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
   '/home/roles': typeof HomeRolesRouteRouteWithChildren
   '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
   '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
@@ -322,9 +361,12 @@ export interface FileRoutesByFullPath {
   '/v1/finance': typeof V1FinanceRouteRouteWithChildren
   '/v1/roles': typeof V1RolesRouteRouteWithChildren
   '/v1/system': typeof V1SystemRouteRouteWithChildren
+  '/finance/': typeof FinanceIndexRoute
   '/home/': typeof HomeIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
   '/v1/': typeof V1IndexRoute
+  '/finance/accounts/': typeof FinanceAccountsIndexRoute
+  '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/roles/': typeof HomeRolesIndexRoute
   '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github/': typeof IntegrationsGithubIndexRoute
@@ -358,9 +400,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/finance': typeof FinanceIndexRoute
   '/home': typeof HomeIndexRoute
   '/integrations': typeof IntegrationsIndexRoute
   '/v1': typeof V1IndexRoute
+  '/finance/accounts': typeof FinanceAccountsIndexRoute
+  '/finance/contracts': typeof FinanceContractsIndexRoute
   '/home/roles': typeof HomeRolesIndexRoute
   '/integrations/coolify': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github': typeof IntegrationsGithubIndexRoute
@@ -395,9 +440,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/finance': typeof FinanceRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
+  '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
+  '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
   '/home/roles': typeof HomeRolesRouteRouteWithChildren
   '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
   '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
@@ -408,9 +456,12 @@ export interface FileRoutesById {
   '/v1/finance': typeof V1FinanceRouteRouteWithChildren
   '/v1/roles': typeof V1RolesRouteRouteWithChildren
   '/v1/system': typeof V1SystemRouteRouteWithChildren
+  '/finance/': typeof FinanceIndexRoute
   '/home/': typeof HomeIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
   '/v1/': typeof V1IndexRoute
+  '/finance/accounts/': typeof FinanceAccountsIndexRoute
+  '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/roles/': typeof HomeRolesIndexRoute
   '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github/': typeof IntegrationsGithubIndexRoute
@@ -446,9 +497,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/finance'
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/finance/accounts'
+    | '/finance/contracts'
     | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
@@ -459,9 +513,12 @@ export interface FileRouteTypes {
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
+    | '/finance/'
     | '/home/'
     | '/integrations/'
     | '/v1/'
+    | '/finance/accounts/'
+    | '/finance/contracts/'
     | '/home/roles/'
     | '/integrations/coolify/'
     | '/integrations/github/'
@@ -495,9 +552,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/finance'
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/finance/accounts'
+    | '/finance/contracts'
     | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
@@ -531,9 +591,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/finance'
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/finance/accounts'
+    | '/finance/contracts'
     | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
@@ -544,9 +607,12 @@ export interface FileRouteTypes {
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
+    | '/finance/'
     | '/home/'
     | '/integrations/'
     | '/v1/'
+    | '/finance/accounts/'
+    | '/finance/contracts/'
     | '/home/roles/'
     | '/integrations/coolify/'
     | '/integrations/github/'
@@ -581,6 +647,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FinanceRouteRoute: typeof FinanceRouteRouteWithChildren
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
   IntegrationsRouteRoute: typeof IntegrationsRouteRouteWithChildren
   V1RouteRoute: typeof V1RouteRouteWithChildren
@@ -607,6 +674,13 @@ declare module '@tanstack/react-router' {
       path: '/home'
       fullPath: '/home'
       preLoaderRoute: typeof HomeRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance': {
+      id: '/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof FinanceRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -636,6 +710,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/home/'
       preLoaderRoute: typeof HomeIndexRouteImport
       parentRoute: typeof HomeRouteRoute
+    }
+    '/finance/': {
+      id: '/finance/'
+      path: '/'
+      fullPath: '/finance/'
+      preLoaderRoute: typeof FinanceIndexRouteImport
+      parentRoute: typeof FinanceRouteRoute
     }
     '/v1/system': {
       id: '/v1/system'
@@ -707,6 +788,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRolesRouteRouteImport
       parentRoute: typeof HomeRouteRoute
     }
+    '/finance/contracts': {
+      id: '/finance/contracts'
+      path: '/contracts'
+      fullPath: '/finance/contracts'
+      preLoaderRoute: typeof FinanceContractsRouteRouteImport
+      parentRoute: typeof FinanceRouteRoute
+    }
+    '/finance/accounts': {
+      id: '/finance/accounts'
+      path: '/accounts'
+      fullPath: '/finance/accounts'
+      preLoaderRoute: typeof FinanceAccountsRouteRouteImport
+      parentRoute: typeof FinanceRouteRoute
+    }
     '/v1/system/': {
       id: '/v1/system/'
       path: '/'
@@ -776,6 +871,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/home/roles/'
       preLoaderRoute: typeof HomeRolesIndexRouteImport
       parentRoute: typeof HomeRolesRouteRoute
+    }
+    '/finance/contracts/': {
+      id: '/finance/contracts/'
+      path: '/'
+      fullPath: '/finance/contracts/'
+      preLoaderRoute: typeof FinanceContractsIndexRouteImport
+      parentRoute: typeof FinanceContractsRouteRoute
+    }
+    '/finance/accounts/': {
+      id: '/finance/accounts/'
+      path: '/'
+      fullPath: '/finance/accounts/'
+      preLoaderRoute: typeof FinanceAccountsIndexRouteImport
+      parentRoute: typeof FinanceAccountsRouteRoute
     }
     '/v1/system/oauth/': {
       id: '/v1/system/oauth/'
@@ -919,6 +1028,46 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface FinanceAccountsRouteRouteChildren {
+  FinanceAccountsIndexRoute: typeof FinanceAccountsIndexRoute
+}
+
+const FinanceAccountsRouteRouteChildren: FinanceAccountsRouteRouteChildren = {
+  FinanceAccountsIndexRoute: FinanceAccountsIndexRoute,
+}
+
+const FinanceAccountsRouteRouteWithChildren =
+  FinanceAccountsRouteRoute._addFileChildren(FinanceAccountsRouteRouteChildren)
+
+interface FinanceContractsRouteRouteChildren {
+  FinanceContractsIndexRoute: typeof FinanceContractsIndexRoute
+}
+
+const FinanceContractsRouteRouteChildren: FinanceContractsRouteRouteChildren = {
+  FinanceContractsIndexRoute: FinanceContractsIndexRoute,
+}
+
+const FinanceContractsRouteRouteWithChildren =
+  FinanceContractsRouteRoute._addFileChildren(
+    FinanceContractsRouteRouteChildren,
+  )
+
+interface FinanceRouteRouteChildren {
+  FinanceAccountsRouteRoute: typeof FinanceAccountsRouteRouteWithChildren
+  FinanceContractsRouteRoute: typeof FinanceContractsRouteRouteWithChildren
+  FinanceIndexRoute: typeof FinanceIndexRoute
+}
+
+const FinanceRouteRouteChildren: FinanceRouteRouteChildren = {
+  FinanceAccountsRouteRoute: FinanceAccountsRouteRouteWithChildren,
+  FinanceContractsRouteRoute: FinanceContractsRouteRouteWithChildren,
+  FinanceIndexRoute: FinanceIndexRoute,
+}
+
+const FinanceRouteRouteWithChildren = FinanceRouteRoute._addFileChildren(
+  FinanceRouteRouteChildren,
+)
 
 interface HomeRolesRouteRouteChildren {
   HomeRolesIndexRoute: typeof HomeRolesIndexRoute
@@ -1148,6 +1297,7 @@ const V1RouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FinanceRouteRoute: FinanceRouteRouteWithChildren,
   HomeRouteRoute: HomeRouteRouteWithChildren,
   IntegrationsRouteRoute: IntegrationsRouteRouteWithChildren,
   V1RouteRoute: V1RouteRouteWithChildren,

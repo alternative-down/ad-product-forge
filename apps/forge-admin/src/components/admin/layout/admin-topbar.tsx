@@ -9,6 +9,7 @@ export function AdminTopbar(input: {
 }) {
   const homeActive = input.pathname === '/home';
   const integrationsActive = input.pathname.startsWith('/integrations');
+  const financeActive = input.pathname.startsWith('/finance');
 
   return (
     <div className="flex min-h-18 items-center justify-between gap-8 px-6 py-4">
@@ -26,6 +27,12 @@ export function AdminTopbar(input: {
             className={integrationsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
           >
             Integrações
+          </Link>
+          <Link
+            to="/finance"
+            className={financeActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+          >
+            Financeiro
           </Link>
         </nav>
       </div>
