@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 
-import { DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { DialogContent, DialogFooter, DialogHeader } from '@/components/ui/dialog';
 import { getStoredAdminTheme } from '@/lib/admin-secret';
 import { cn } from '@/lib/utils';
 
@@ -19,4 +19,8 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
 
 export function AdminDialogFooter({ className, ...props }: ComponentProps<typeof DialogFooter>) {
   return <DialogFooter className={cn('mx-0 mb-0 rounded-none border-border/70 bg-transparent p-0 pt-3', className)} {...props} />;
+}
+
+export function AdminDialogHeader({ className, ...props }: ComponentProps<typeof DialogHeader>) {
+  return <DialogHeader className={cn('gap-1 border-b border-border/70 pb-3', className)} {...props} />;
 }

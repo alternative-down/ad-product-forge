@@ -7,12 +7,12 @@ import {
   AdminButton,
   AdminDialogContent,
   AdminDialogFooter,
+  AdminDialogHeader,
   AdminInput,
   PageHeader,
 } from '@/components/admin';
 import {
   Dialog,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
@@ -118,9 +118,9 @@ function HomeLlmPricesRoute() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
-          <DialogHeader className="gap-1">
+          <AdminDialogHeader>
             <DialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Adicionar preço'}</DialogTitle>
-          </DialogHeader>
+          </AdminDialogHeader>
 
           <form
             className="space-y-4"

@@ -7,6 +7,7 @@ import {
   AdminButton,
   AdminDialogContent,
   AdminDialogFooter,
+  AdminDialogHeader,
   AdminInput,
   PageHeader,
 } from '@/components/admin';
@@ -20,7 +21,6 @@ import {
 } from '@/components/ui/combobox';
 import {
   Dialog,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -187,9 +187,9 @@ function HomeLlmProfilesRoute() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
-          <DialogHeader className="gap-1">
+          <AdminDialogHeader>
             <DialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Adicionar perfil'}</DialogTitle>
-          </DialogHeader>
+          </AdminDialogHeader>
 
           <form
             className="space-y-4"
