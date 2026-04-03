@@ -102,7 +102,7 @@ body.forja-theme-root textarea {
   font: inherit;
 }
 
-.forja-app :is(button, input, textarea, [data-slot="card"], [data-slot="dialog-content"], [data-slot="dialog-close"], [data-slot="select-trigger"], [data-slot="tabs-list"], [data-slot="tabs-trigger"]),
-body.forja-theme-root :is(button, input, textarea, [data-slot="card"], [data-slot="dialog-content"], [data-slot="dialog-close"], [data-slot="select-trigger"], [data-slot="tabs-list"], [data-slot="tabs-trigger"]) {
+.forja-app :is(button, input, textarea, [data-slot="card"], [data-slot="dialog-content"], [data-slot="select-trigger"], [data-slot="tabs-list"], [data-slot="tabs-trigger"]),
+body.forja-theme-root :is(button, input, textarea, [data-slot="card"], [data-slot="dialog-content"], [data-slot="select-trigger"], [data-slot="tabs-list"], [data-slot="tabs-trigger"]) {
   border-radius: calc(var(--radius) * 0.75);
 }
