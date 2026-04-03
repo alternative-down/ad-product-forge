@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAgent, type AgentDetail } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/')({
@@ -42,13 +43,16 @@ function AgentDetailIndexRoute() {
                   <div className="text-2xl font-semibold tracking-[-0.04em]">{agent.name}</div>
                   <div className="text-sm text-muted-foreground">{agent.role?.name ?? 'Sem papel'}</div>
                 </div>
-
-                {agent.description ? (
-                  <div className="max-w-3xl text-sm leading-6 text-muted-foreground">{agent.description}</div>
-                ) : null}
               </div>
             </div>
           </section>
+
+          {agent.description ? (
+            <section className="space-y-3">
+              <div className="text-lg font-semibold tracking-[-0.03em]">Descrição</div>
+              <div className="max-w-3xl text-sm leading-6 text-muted-foreground">{agent.description}</div>
+            </section>
+          ) : null}
 
           <section className="space-y-5">
             <div className="grid gap-4 min-[720px]:grid-cols-3">
@@ -69,9 +73,11 @@ function AgentDetailIndexRoute() {
 
           <section className="space-y-3">
             <div className="text-lg font-semibold tracking-[-0.03em]">Instruções</div>
-            <div className="whitespace-pre-wrap rounded-sm border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground">
-              {agent.instructions.trim() || 'Sem instruções.'}
-            </div>
+            <ScrollArea className="max-h-80 rounded-sm border border-border bg-background">
+              <div className="whitespace-pre-wrap px-4 py-3 text-sm leading-6 text-foreground">
+                {agent.instructions.trim() || 'Sem instruções.'}
+              </div>
+            </ScrollArea>
           </section>
         </>
       ) : null}
