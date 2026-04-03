@@ -116,10 +116,21 @@ function buildAgentSectionItems(input: {
   ];
 
   for (const providerType of input.providerTypes) {
-    items.push({
-      value: `/agents/${input.agentId}/providers/${providerType}`,
-      label: humanizeProviderType(providerType),
-    });
+    if (!items.some((item) => item.value === `/agents/${input.agentId}/providers/${providerType}`)) {
+      items.push({
+        value: `/agents/${input.agentId}/providers/${providerType}`,
+        label: humanizeProviderType(providerType),
+      });
+    }
+  }
+
+  for (const providerType of ['internal-chat', 'discord', 'email']) {
+    if (!items.some((item) => item.value === `/agents/${input.agentId}/providers/${providerType}`)) {
+      items.push({
+        value: `/agents/${input.agentId}/providers/${providerType}`,
+        label: humanizeProviderType(providerType),
+      });
+    }
   }
 
   if (input.hasGithubProvisioning) {

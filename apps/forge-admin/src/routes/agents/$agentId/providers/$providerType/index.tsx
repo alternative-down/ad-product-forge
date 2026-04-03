@@ -37,7 +37,7 @@ function AgentProviderIndexRoute() {
           </section>
         </>
       ) : (
-        <div className="text-sm text-muted-foreground">Provider não encontrado.</div>
+        <div className="text-sm text-muted-foreground">Nenhuma configuração para este provider.</div>
       )}
 
       {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
