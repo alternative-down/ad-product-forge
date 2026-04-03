@@ -88,6 +88,9 @@ function HomeLlmProfilesRoute() {
     () => [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort((left, right) => left.localeCompare(right)),
     [llmQuery.data?.prices],
   );
+  const setProfileFilter = (value: string) => {
+    setStatusFilter(value === 'inactive' ? 'inactive' : 'active');
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -105,17 +108,17 @@ function HomeLlmProfilesRoute() {
         }
       />
 
-      <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'active' | 'inactive')}>
+      <Tabs value={statusFilter} onValueChange={setProfileFilter}>
         <TabsList className="h-auto gap-3 rounded-none border-b border-border bg-transparent p-0">
           <TabsTrigger
             value="active"
-            className="rounded-none border-b-2 border-transparent px-0 py-2 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+            className="rounded-none border-b-2 border-transparent px-1 py-2 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
           >
             Ativos
           </TabsTrigger>
           <TabsTrigger
             value="inactive"
-            className="rounded-none border-b-2 border-transparent px-0 py-2 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+            className="rounded-none border-b-2 border-transparent px-1 py-2 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
           >
             Inativos
           </TabsTrigger>
