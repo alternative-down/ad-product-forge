@@ -26,21 +26,22 @@ function AgentsIndexRoute() {
           {agents.map((agent) => (
             <article key={agent.agentId} className="rounded-sm border border-border bg-background px-5 py-4">
               <div className="flex items-start gap-4">
-                <Avatar className="h-14 w-14 border border-border bg-muted">
-                  <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
-                    {getAgentInitials(agent.name)}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="flex flex-col items-center gap-2">
+                  <Avatar className="h-14 w-14 border border-border bg-muted">
+                    <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
+                      {getAgentInitials(agent.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Badge variant="outline" className="rounded-sm">
+                    {humanizeAgentStatus(agent)}
+                  </Badge>
+                </div>
 
                 <div className="min-w-0 space-y-2">
                   <div className="space-y-1">
                     <div className="truncate text-base font-semibold tracking-[-0.03em]">{agent.name}</div>
                     <div className="text-sm text-muted-foreground">{agent.roleName ?? 'Sem papel'}</div>
                   </div>
-
-                  <Badge variant="outline" className="rounded-sm">
-                    {humanizeAgentStatus(agent)}
-                  </Badge>
                 </div>
               </div>
             </article>
