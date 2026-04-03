@@ -225,8 +225,11 @@ function HomeLlmProfilesRoute() {
                   }
                   disabled={mutation.isPending || modelKeys.length === 0}
                 >
-                  <SelectTrigger id="llm-model-key" className="w-full">
-                    <SelectValue placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'} />
+                  <SelectTrigger id="llm-model-key" className="w-full min-w-0 max-w-full overflow-hidden">
+                    <SelectValue
+                      className="min-w-0 truncate"
+                      placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {modelKeys.map((modelKey) => (
