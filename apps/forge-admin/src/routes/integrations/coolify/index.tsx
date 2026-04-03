@@ -40,7 +40,7 @@ function IntegrationsCoolifyRoute() {
   const serverId = draft?.serverId ?? (integration?.config?.serverId ?? '');
   const destinationId = draft?.destinationId ?? (integration?.config?.destinationId ?? '');
   const applicationsBaseDomain = draft?.applicationsBaseDomain ?? (integration?.config?.applicationsBaseDomain ?? '');
-  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? true);
+  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? false);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">

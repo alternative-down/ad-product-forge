@@ -34,7 +34,7 @@ function IntegrationsGithubRoute() {
   });
   const organization = draft?.organization ?? (integration?.config?.organization ?? '');
   const appHomeUrl = draft?.appHomeUrl ?? (integration?.config?.appHomeUrl ?? '');
-  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? true);
+  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? false);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">

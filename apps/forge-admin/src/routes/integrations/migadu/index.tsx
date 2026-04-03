@@ -34,7 +34,7 @@ function IntegrationsMigaduRoute() {
   });
   const apiUser = draft?.apiUser ?? (integration?.config?.apiUser ?? '');
   const apiKey = draft?.apiKey ?? (integration?.config?.apiKey ?? '');
-  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? true);
+  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? false);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
