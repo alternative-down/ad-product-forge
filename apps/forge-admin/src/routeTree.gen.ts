@@ -10,21 +10,30 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as V1RouteRouteImport } from './routes/v1/route'
+import { Route as IntegrationsRouteRouteImport } from './routes/integrations/route'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as V1IndexRouteImport } from './routes/v1/index'
+import { Route as IntegrationsIndexRouteImport } from './routes/integrations/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as V1SystemRouteRouteImport } from './routes/v1/system/route'
 import { Route as V1RolesRouteRouteImport } from './routes/v1/roles/route'
 import { Route as V1FinanceRouteRouteImport } from './routes/v1/finance/route'
 import { Route as V1AgentsRouteRouteImport } from './routes/v1/agents/route'
-import { Route as HomeLlmRouteRouteImport } from './routes/home/llm/route'
+import { Route as IntegrationsPricesRouteRouteImport } from './routes/integrations/prices/route'
+import { Route as IntegrationsMinimaxRouteRouteImport } from './routes/integrations/minimax/route'
+import { Route as IntegrationsMigaduRouteRouteImport } from './routes/integrations/migadu/route'
+import { Route as IntegrationsGithubRouteRouteImport } from './routes/integrations/github/route'
+import { Route as IntegrationsCoolifyRouteRouteImport } from './routes/integrations/coolify/route'
 import { Route as V1SystemIndexRouteImport } from './routes/v1/system/index'
 import { Route as V1RolesIndexRouteImport } from './routes/v1/roles/index'
 import { Route as V1FinanceIndexRouteImport } from './routes/v1/finance/index'
 import { Route as V1AgentsIndexRouteImport } from './routes/v1/agents/index'
-import { Route as HomeLlmIndexRouteImport } from './routes/home/llm/index'
-import { Route as HomeLlmPricesRouteRouteImport } from './routes/home/llm/prices/route'
+import { Route as IntegrationsPricesIndexRouteImport } from './routes/integrations/prices/index'
+import { Route as IntegrationsMinimaxIndexRouteImport } from './routes/integrations/minimax/index'
+import { Route as IntegrationsMigaduIndexRouteImport } from './routes/integrations/migadu/index'
+import { Route as IntegrationsGithubIndexRouteImport } from './routes/integrations/github/index'
+import { Route as IntegrationsCoolifyIndexRouteImport } from './routes/integrations/coolify/index'
 import { Route as V1SystemOauthIndexRouteImport } from './routes/v1/system/oauth/index'
 import { Route as V1SystemMigrationsIndexRouteImport } from './routes/v1/system/migrations/index'
 import { Route as V1SystemCompanyIndexRouteImport } from './routes/v1/system/company/index'
@@ -33,7 +42,6 @@ import { Route as V1FinancePayablesIndexRouteImport } from './routes/v1/finance/
 import { Route as V1FinanceLedgerIndexRouteImport } from './routes/v1/finance/ledger/index'
 import { Route as V1FinanceCapitalIndexRouteImport } from './routes/v1/finance/capital/index'
 import { Route as V1AgentsHireIndexRouteImport } from './routes/v1/agents/hire/index'
-import { Route as HomeLlmPricesIndexRouteImport } from './routes/home/llm/prices/index'
 import { Route as V1SystemLlmProfilesIndexRouteImport } from './routes/v1/system/llm/profiles/index'
 import { Route as V1SystemLlmPricesIndexRouteImport } from './routes/v1/system/llm/prices/index'
 import { Route as V1SystemLlmDefaultsIndexRouteImport } from './routes/v1/system/llm/defaults/index'
@@ -52,6 +60,11 @@ const V1RouteRoute = V1RouteRouteImport.update({
   path: '/v1',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegrationsRouteRoute = IntegrationsRouteRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HomeRouteRoute = HomeRouteRouteImport.update({
   id: '/home',
   path: '/home',
@@ -66,6 +79,11 @@ const V1IndexRoute = V1IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => V1RouteRoute,
+} as any)
+const IntegrationsIndexRoute = IntegrationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => IntegrationsRouteRoute,
 } as any)
 const HomeIndexRoute = HomeIndexRouteImport.update({
   id: '/',
@@ -92,11 +110,33 @@ const V1AgentsRouteRoute = V1AgentsRouteRouteImport.update({
   path: '/agents',
   getParentRoute: () => V1RouteRoute,
 } as any)
-const HomeLlmRouteRoute = HomeLlmRouteRouteImport.update({
-  id: '/llm',
-  path: '/llm',
-  getParentRoute: () => HomeRouteRoute,
+const IntegrationsPricesRouteRoute = IntegrationsPricesRouteRouteImport.update({
+  id: '/prices',
+  path: '/prices',
+  getParentRoute: () => IntegrationsRouteRoute,
 } as any)
+const IntegrationsMinimaxRouteRoute =
+  IntegrationsMinimaxRouteRouteImport.update({
+    id: '/minimax',
+    path: '/minimax',
+    getParentRoute: () => IntegrationsRouteRoute,
+  } as any)
+const IntegrationsMigaduRouteRoute = IntegrationsMigaduRouteRouteImport.update({
+  id: '/migadu',
+  path: '/migadu',
+  getParentRoute: () => IntegrationsRouteRoute,
+} as any)
+const IntegrationsGithubRouteRoute = IntegrationsGithubRouteRouteImport.update({
+  id: '/github',
+  path: '/github',
+  getParentRoute: () => IntegrationsRouteRoute,
+} as any)
+const IntegrationsCoolifyRouteRoute =
+  IntegrationsCoolifyRouteRouteImport.update({
+    id: '/coolify',
+    path: '/coolify',
+    getParentRoute: () => IntegrationsRouteRoute,
+  } as any)
 const V1SystemIndexRoute = V1SystemIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -117,16 +157,33 @@ const V1AgentsIndexRoute = V1AgentsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => V1AgentsRouteRoute,
 } as any)
-const HomeLlmIndexRoute = HomeLlmIndexRouteImport.update({
+const IntegrationsPricesIndexRoute = IntegrationsPricesIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => HomeLlmRouteRoute,
+  getParentRoute: () => IntegrationsPricesRouteRoute,
 } as any)
-const HomeLlmPricesRouteRoute = HomeLlmPricesRouteRouteImport.update({
-  id: '/prices',
-  path: '/prices',
-  getParentRoute: () => HomeLlmRouteRoute,
+const IntegrationsMinimaxIndexRoute =
+  IntegrationsMinimaxIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => IntegrationsMinimaxRouteRoute,
+  } as any)
+const IntegrationsMigaduIndexRoute = IntegrationsMigaduIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => IntegrationsMigaduRouteRoute,
 } as any)
+const IntegrationsGithubIndexRoute = IntegrationsGithubIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => IntegrationsGithubRouteRoute,
+} as any)
+const IntegrationsCoolifyIndexRoute =
+  IntegrationsCoolifyIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => IntegrationsCoolifyRouteRoute,
+  } as any)
 const V1SystemOauthIndexRoute = V1SystemOauthIndexRouteImport.update({
   id: '/oauth/',
   path: '/oauth/',
@@ -166,11 +223,6 @@ const V1AgentsHireIndexRoute = V1AgentsHireIndexRouteImport.update({
   id: '/hire/',
   path: '/hire/',
   getParentRoute: () => V1AgentsRouteRoute,
-} as any)
-const HomeLlmPricesIndexRoute = HomeLlmPricesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => HomeLlmPricesRouteRoute,
 } as any)
 const V1SystemLlmProfilesIndexRoute =
   V1SystemLlmProfilesIndexRouteImport.update({
@@ -246,21 +298,29 @@ const V1AgentsAgentIdCommunicationsCommunicationViewIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/home': typeof HomeRouteRouteWithChildren
+  '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
-  '/home/llm': typeof HomeLlmRouteRouteWithChildren
+  '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
+  '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
+  '/integrations/migadu': typeof IntegrationsMigaduRouteRouteWithChildren
+  '/integrations/minimax': typeof IntegrationsMinimaxRouteRouteWithChildren
+  '/integrations/prices': typeof IntegrationsPricesRouteRouteWithChildren
   '/v1/agents': typeof V1AgentsRouteRouteWithChildren
   '/v1/finance': typeof V1FinanceRouteRouteWithChildren
   '/v1/roles': typeof V1RolesRouteRouteWithChildren
   '/v1/system': typeof V1SystemRouteRouteWithChildren
   '/home/': typeof HomeIndexRoute
+  '/integrations/': typeof IntegrationsIndexRoute
   '/v1/': typeof V1IndexRoute
-  '/home/llm/prices': typeof HomeLlmPricesRouteRouteWithChildren
-  '/home/llm/': typeof HomeLlmIndexRoute
+  '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
+  '/integrations/github/': typeof IntegrationsGithubIndexRoute
+  '/integrations/migadu/': typeof IntegrationsMigaduIndexRoute
+  '/integrations/minimax/': typeof IntegrationsMinimaxIndexRoute
+  '/integrations/prices/': typeof IntegrationsPricesIndexRoute
   '/v1/agents/': typeof V1AgentsIndexRoute
   '/v1/finance/': typeof V1FinanceIndexRoute
   '/v1/roles/': typeof V1RolesIndexRoute
   '/v1/system/': typeof V1SystemIndexRoute
-  '/home/llm/prices/': typeof HomeLlmPricesIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
   '/v1/finance/ledger/': typeof V1FinanceLedgerIndexRoute
@@ -285,13 +345,17 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/home': typeof HomeIndexRoute
+  '/integrations': typeof IntegrationsIndexRoute
   '/v1': typeof V1IndexRoute
-  '/home/llm': typeof HomeLlmIndexRoute
+  '/integrations/coolify': typeof IntegrationsCoolifyIndexRoute
+  '/integrations/github': typeof IntegrationsGithubIndexRoute
+  '/integrations/migadu': typeof IntegrationsMigaduIndexRoute
+  '/integrations/minimax': typeof IntegrationsMinimaxIndexRoute
+  '/integrations/prices': typeof IntegrationsPricesIndexRoute
   '/v1/agents': typeof V1AgentsIndexRoute
   '/v1/finance': typeof V1FinanceIndexRoute
   '/v1/roles': typeof V1RolesIndexRoute
   '/v1/system': typeof V1SystemIndexRoute
-  '/home/llm/prices': typeof HomeLlmPricesIndexRoute
   '/v1/agents/hire': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital': typeof V1FinanceCapitalIndexRoute
   '/v1/finance/ledger': typeof V1FinanceLedgerIndexRoute
@@ -317,21 +381,29 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/home': typeof HomeRouteRouteWithChildren
+  '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
-  '/home/llm': typeof HomeLlmRouteRouteWithChildren
+  '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
+  '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
+  '/integrations/migadu': typeof IntegrationsMigaduRouteRouteWithChildren
+  '/integrations/minimax': typeof IntegrationsMinimaxRouteRouteWithChildren
+  '/integrations/prices': typeof IntegrationsPricesRouteRouteWithChildren
   '/v1/agents': typeof V1AgentsRouteRouteWithChildren
   '/v1/finance': typeof V1FinanceRouteRouteWithChildren
   '/v1/roles': typeof V1RolesRouteRouteWithChildren
   '/v1/system': typeof V1SystemRouteRouteWithChildren
   '/home/': typeof HomeIndexRoute
+  '/integrations/': typeof IntegrationsIndexRoute
   '/v1/': typeof V1IndexRoute
-  '/home/llm/prices': typeof HomeLlmPricesRouteRouteWithChildren
-  '/home/llm/': typeof HomeLlmIndexRoute
+  '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
+  '/integrations/github/': typeof IntegrationsGithubIndexRoute
+  '/integrations/migadu/': typeof IntegrationsMigaduIndexRoute
+  '/integrations/minimax/': typeof IntegrationsMinimaxIndexRoute
+  '/integrations/prices/': typeof IntegrationsPricesIndexRoute
   '/v1/agents/': typeof V1AgentsIndexRoute
   '/v1/finance/': typeof V1FinanceIndexRoute
   '/v1/roles/': typeof V1RolesIndexRoute
   '/v1/system/': typeof V1SystemIndexRoute
-  '/home/llm/prices/': typeof HomeLlmPricesIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
   '/v1/finance/ledger/': typeof V1FinanceLedgerIndexRoute
@@ -358,21 +430,29 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/home'
+    | '/integrations'
     | '/v1'
-    | '/home/llm'
+    | '/integrations/coolify'
+    | '/integrations/github'
+    | '/integrations/migadu'
+    | '/integrations/minimax'
+    | '/integrations/prices'
     | '/v1/agents'
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
     | '/home/'
+    | '/integrations/'
     | '/v1/'
-    | '/home/llm/prices'
-    | '/home/llm/'
+    | '/integrations/coolify/'
+    | '/integrations/github/'
+    | '/integrations/migadu/'
+    | '/integrations/minimax/'
+    | '/integrations/prices/'
     | '/v1/agents/'
     | '/v1/finance/'
     | '/v1/roles/'
     | '/v1/system/'
-    | '/home/llm/prices/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
     | '/v1/finance/ledger/'
@@ -397,13 +477,17 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/home'
+    | '/integrations'
     | '/v1'
-    | '/home/llm'
+    | '/integrations/coolify'
+    | '/integrations/github'
+    | '/integrations/migadu'
+    | '/integrations/minimax'
+    | '/integrations/prices'
     | '/v1/agents'
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
-    | '/home/llm/prices'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
     | '/v1/finance/ledger'
@@ -428,21 +512,29 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/home'
+    | '/integrations'
     | '/v1'
-    | '/home/llm'
+    | '/integrations/coolify'
+    | '/integrations/github'
+    | '/integrations/migadu'
+    | '/integrations/minimax'
+    | '/integrations/prices'
     | '/v1/agents'
     | '/v1/finance'
     | '/v1/roles'
     | '/v1/system'
     | '/home/'
+    | '/integrations/'
     | '/v1/'
-    | '/home/llm/prices'
-    | '/home/llm/'
+    | '/integrations/coolify/'
+    | '/integrations/github/'
+    | '/integrations/migadu/'
+    | '/integrations/minimax/'
+    | '/integrations/prices/'
     | '/v1/agents/'
     | '/v1/finance/'
     | '/v1/roles/'
     | '/v1/system/'
-    | '/home/llm/prices/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
     | '/v1/finance/ledger/'
@@ -468,6 +560,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
+  IntegrationsRouteRoute: typeof IntegrationsRouteRouteWithChildren
   V1RouteRoute: typeof V1RouteRouteWithChildren
 }
 
@@ -478,6 +571,13 @@ declare module '@tanstack/react-router' {
       path: '/v1'
       fullPath: '/v1'
       preLoaderRoute: typeof V1RouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrations': {
+      id: '/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof IntegrationsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/home': {
@@ -500,6 +600,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/v1/'
       preLoaderRoute: typeof V1IndexRouteImport
       parentRoute: typeof V1RouteRoute
+    }
+    '/integrations/': {
+      id: '/integrations/'
+      path: '/'
+      fullPath: '/integrations/'
+      preLoaderRoute: typeof IntegrationsIndexRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
     }
     '/home/': {
       id: '/home/'
@@ -536,12 +643,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1AgentsRouteRouteImport
       parentRoute: typeof V1RouteRoute
     }
-    '/home/llm': {
-      id: '/home/llm'
-      path: '/llm'
-      fullPath: '/home/llm'
-      preLoaderRoute: typeof HomeLlmRouteRouteImport
-      parentRoute: typeof HomeRouteRoute
+    '/integrations/prices': {
+      id: '/integrations/prices'
+      path: '/prices'
+      fullPath: '/integrations/prices'
+      preLoaderRoute: typeof IntegrationsPricesRouteRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
+    }
+    '/integrations/minimax': {
+      id: '/integrations/minimax'
+      path: '/minimax'
+      fullPath: '/integrations/minimax'
+      preLoaderRoute: typeof IntegrationsMinimaxRouteRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
+    }
+    '/integrations/migadu': {
+      id: '/integrations/migadu'
+      path: '/migadu'
+      fullPath: '/integrations/migadu'
+      preLoaderRoute: typeof IntegrationsMigaduRouteRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
+    }
+    '/integrations/github': {
+      id: '/integrations/github'
+      path: '/github'
+      fullPath: '/integrations/github'
+      preLoaderRoute: typeof IntegrationsGithubRouteRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
+    }
+    '/integrations/coolify': {
+      id: '/integrations/coolify'
+      path: '/coolify'
+      fullPath: '/integrations/coolify'
+      preLoaderRoute: typeof IntegrationsCoolifyRouteRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
     }
     '/v1/system/': {
       id: '/v1/system/'
@@ -571,19 +706,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1AgentsIndexRouteImport
       parentRoute: typeof V1AgentsRouteRoute
     }
-    '/home/llm/': {
-      id: '/home/llm/'
+    '/integrations/prices/': {
+      id: '/integrations/prices/'
       path: '/'
-      fullPath: '/home/llm/'
-      preLoaderRoute: typeof HomeLlmIndexRouteImport
-      parentRoute: typeof HomeLlmRouteRoute
+      fullPath: '/integrations/prices/'
+      preLoaderRoute: typeof IntegrationsPricesIndexRouteImport
+      parentRoute: typeof IntegrationsPricesRouteRoute
     }
-    '/home/llm/prices': {
-      id: '/home/llm/prices'
-      path: '/prices'
-      fullPath: '/home/llm/prices'
-      preLoaderRoute: typeof HomeLlmPricesRouteRouteImport
-      parentRoute: typeof HomeLlmRouteRoute
+    '/integrations/minimax/': {
+      id: '/integrations/minimax/'
+      path: '/'
+      fullPath: '/integrations/minimax/'
+      preLoaderRoute: typeof IntegrationsMinimaxIndexRouteImport
+      parentRoute: typeof IntegrationsMinimaxRouteRoute
+    }
+    '/integrations/migadu/': {
+      id: '/integrations/migadu/'
+      path: '/'
+      fullPath: '/integrations/migadu/'
+      preLoaderRoute: typeof IntegrationsMigaduIndexRouteImport
+      parentRoute: typeof IntegrationsMigaduRouteRoute
+    }
+    '/integrations/github/': {
+      id: '/integrations/github/'
+      path: '/'
+      fullPath: '/integrations/github/'
+      preLoaderRoute: typeof IntegrationsGithubIndexRouteImport
+      parentRoute: typeof IntegrationsGithubRouteRoute
+    }
+    '/integrations/coolify/': {
+      id: '/integrations/coolify/'
+      path: '/'
+      fullPath: '/integrations/coolify/'
+      preLoaderRoute: typeof IntegrationsCoolifyIndexRouteImport
+      parentRoute: typeof IntegrationsCoolifyRouteRoute
     }
     '/v1/system/oauth/': {
       id: '/v1/system/oauth/'
@@ -640,13 +796,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/v1/agents/hire/'
       preLoaderRoute: typeof V1AgentsHireIndexRouteImport
       parentRoute: typeof V1AgentsRouteRoute
-    }
-    '/home/llm/prices/': {
-      id: '/home/llm/prices/'
-      path: '/'
-      fullPath: '/home/llm/prices/'
-      preLoaderRoute: typeof HomeLlmPricesIndexRouteImport
-      parentRoute: typeof HomeLlmPricesRouteRoute
     }
     '/v1/system/llm/profiles/': {
       id: '/v1/system/llm/profiles/'
@@ -735,44 +884,108 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface HomeLlmPricesRouteRouteChildren {
-  HomeLlmPricesIndexRoute: typeof HomeLlmPricesIndexRoute
-}
-
-const HomeLlmPricesRouteRouteChildren: HomeLlmPricesRouteRouteChildren = {
-  HomeLlmPricesIndexRoute: HomeLlmPricesIndexRoute,
-}
-
-const HomeLlmPricesRouteRouteWithChildren =
-  HomeLlmPricesRouteRoute._addFileChildren(HomeLlmPricesRouteRouteChildren)
-
-interface HomeLlmRouteRouteChildren {
-  HomeLlmPricesRouteRoute: typeof HomeLlmPricesRouteRouteWithChildren
-  HomeLlmIndexRoute: typeof HomeLlmIndexRoute
-}
-
-const HomeLlmRouteRouteChildren: HomeLlmRouteRouteChildren = {
-  HomeLlmPricesRouteRoute: HomeLlmPricesRouteRouteWithChildren,
-  HomeLlmIndexRoute: HomeLlmIndexRoute,
-}
-
-const HomeLlmRouteRouteWithChildren = HomeLlmRouteRoute._addFileChildren(
-  HomeLlmRouteRouteChildren,
-)
-
 interface HomeRouteRouteChildren {
-  HomeLlmRouteRoute: typeof HomeLlmRouteRouteWithChildren
   HomeIndexRoute: typeof HomeIndexRoute
 }
 
 const HomeRouteRouteChildren: HomeRouteRouteChildren = {
-  HomeLlmRouteRoute: HomeLlmRouteRouteWithChildren,
   HomeIndexRoute: HomeIndexRoute,
 }
 
 const HomeRouteRouteWithChildren = HomeRouteRoute._addFileChildren(
   HomeRouteRouteChildren,
 )
+
+interface IntegrationsCoolifyRouteRouteChildren {
+  IntegrationsCoolifyIndexRoute: typeof IntegrationsCoolifyIndexRoute
+}
+
+const IntegrationsCoolifyRouteRouteChildren: IntegrationsCoolifyRouteRouteChildren =
+  {
+    IntegrationsCoolifyIndexRoute: IntegrationsCoolifyIndexRoute,
+  }
+
+const IntegrationsCoolifyRouteRouteWithChildren =
+  IntegrationsCoolifyRouteRoute._addFileChildren(
+    IntegrationsCoolifyRouteRouteChildren,
+  )
+
+interface IntegrationsGithubRouteRouteChildren {
+  IntegrationsGithubIndexRoute: typeof IntegrationsGithubIndexRoute
+}
+
+const IntegrationsGithubRouteRouteChildren: IntegrationsGithubRouteRouteChildren =
+  {
+    IntegrationsGithubIndexRoute: IntegrationsGithubIndexRoute,
+  }
+
+const IntegrationsGithubRouteRouteWithChildren =
+  IntegrationsGithubRouteRoute._addFileChildren(
+    IntegrationsGithubRouteRouteChildren,
+  )
+
+interface IntegrationsMigaduRouteRouteChildren {
+  IntegrationsMigaduIndexRoute: typeof IntegrationsMigaduIndexRoute
+}
+
+const IntegrationsMigaduRouteRouteChildren: IntegrationsMigaduRouteRouteChildren =
+  {
+    IntegrationsMigaduIndexRoute: IntegrationsMigaduIndexRoute,
+  }
+
+const IntegrationsMigaduRouteRouteWithChildren =
+  IntegrationsMigaduRouteRoute._addFileChildren(
+    IntegrationsMigaduRouteRouteChildren,
+  )
+
+interface IntegrationsMinimaxRouteRouteChildren {
+  IntegrationsMinimaxIndexRoute: typeof IntegrationsMinimaxIndexRoute
+}
+
+const IntegrationsMinimaxRouteRouteChildren: IntegrationsMinimaxRouteRouteChildren =
+  {
+    IntegrationsMinimaxIndexRoute: IntegrationsMinimaxIndexRoute,
+  }
+
+const IntegrationsMinimaxRouteRouteWithChildren =
+  IntegrationsMinimaxRouteRoute._addFileChildren(
+    IntegrationsMinimaxRouteRouteChildren,
+  )
+
+interface IntegrationsPricesRouteRouteChildren {
+  IntegrationsPricesIndexRoute: typeof IntegrationsPricesIndexRoute
+}
+
+const IntegrationsPricesRouteRouteChildren: IntegrationsPricesRouteRouteChildren =
+  {
+    IntegrationsPricesIndexRoute: IntegrationsPricesIndexRoute,
+  }
+
+const IntegrationsPricesRouteRouteWithChildren =
+  IntegrationsPricesRouteRoute._addFileChildren(
+    IntegrationsPricesRouteRouteChildren,
+  )
+
+interface IntegrationsRouteRouteChildren {
+  IntegrationsCoolifyRouteRoute: typeof IntegrationsCoolifyRouteRouteWithChildren
+  IntegrationsGithubRouteRoute: typeof IntegrationsGithubRouteRouteWithChildren
+  IntegrationsMigaduRouteRoute: typeof IntegrationsMigaduRouteRouteWithChildren
+  IntegrationsMinimaxRouteRoute: typeof IntegrationsMinimaxRouteRouteWithChildren
+  IntegrationsPricesRouteRoute: typeof IntegrationsPricesRouteRouteWithChildren
+  IntegrationsIndexRoute: typeof IntegrationsIndexRoute
+}
+
+const IntegrationsRouteRouteChildren: IntegrationsRouteRouteChildren = {
+  IntegrationsCoolifyRouteRoute: IntegrationsCoolifyRouteRouteWithChildren,
+  IntegrationsGithubRouteRoute: IntegrationsGithubRouteRouteWithChildren,
+  IntegrationsMigaduRouteRoute: IntegrationsMigaduRouteRouteWithChildren,
+  IntegrationsMinimaxRouteRoute: IntegrationsMinimaxRouteRouteWithChildren,
+  IntegrationsPricesRouteRoute: IntegrationsPricesRouteRouteWithChildren,
+  IntegrationsIndexRoute: IntegrationsIndexRoute,
+}
+
+const IntegrationsRouteRouteWithChildren =
+  IntegrationsRouteRoute._addFileChildren(IntegrationsRouteRouteChildren)
 
 interface V1AgentsRouteRouteChildren {
   V1AgentsIndexRoute: typeof V1AgentsIndexRoute
@@ -886,6 +1099,7 @@ const V1RouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HomeRouteRoute: HomeRouteRouteWithChildren,
+  IntegrationsRouteRoute: IntegrationsRouteRouteWithChildren,
   V1RouteRoute: V1RouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
