@@ -240,11 +240,11 @@ function HomeLlmProfilesRoute() {
                     <ComboboxContent anchor={modelKeyAnchor} className="forja-theme" data-theme={getStoredAdminTheme()}>
                       <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
                       <ComboboxList>
-                        {modelKeys.map((modelKey) => (
+                        {(modelKey: string) => (
                           <ComboboxItem key={modelKey} value={modelKey}>
                             {modelKey}
                           </ComboboxItem>
-                        ))}
+                        )}
                       </ComboboxList>
                     </ComboboxContent>
                   </Combobox>
