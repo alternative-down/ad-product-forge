@@ -7,7 +7,7 @@ export function PageHeader(input: {
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-row items-end justify-between gap-3 pb-2">
+    <div className="flex max-w-full flex-row items-end justify-between gap-3 pb-2">
       <div className="min-w-0">
         {input.eyebrow ? (
           <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
