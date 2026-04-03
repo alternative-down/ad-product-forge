@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
 import { PageHeader } from '@/components/admin';
@@ -24,7 +24,12 @@ function AgentsIndexRoute() {
       <section className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {agents.map((agent) => (
-            <article key={agent.agentId} className="rounded-sm border border-border bg-background px-5 py-4">
+            <Link
+              key={agent.agentId}
+              to="/agents/$agentId"
+              params={{ agentId: agent.agentId }}
+              className="block rounded-sm border border-border bg-background px-5 py-4 transition-colors hover:bg-muted/30"
+            >
               <div className="flex items-start gap-4">
                 <div className="flex flex-col items-center gap-2">
                   <Avatar className="h-14 w-14 border border-border bg-muted">
@@ -42,9 +47,9 @@ function AgentsIndexRoute() {
                     <div className="truncate text-base font-semibold tracking-[-0.03em]">{agent.name}</div>
                     <div className="text-sm text-muted-foreground">{agent.roleName ?? 'Sem papel'}</div>
                   </div>
+                  </div>
                 </div>
-              </div>
-            </article>
+            </Link>
           ))}
         </div>
 

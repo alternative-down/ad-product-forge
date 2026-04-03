@@ -112,6 +112,45 @@ export type AgentListItem = {
   updatedAt: number;
 };
 
+export type AgentDetail = {
+  agentId: string;
+  name: string;
+  description?: string;
+  instructions: string;
+  executionState: 'idle' | 'running';
+  role: {
+    roleId: string;
+    name: string;
+    description?: string | null;
+  } | null;
+  activeContract: {
+    contractId: string;
+    agentId: string;
+    agentName: string;
+    startsAt: number;
+    endsAt: number;
+    weeklyValueUsd: number;
+    spentUsd: number;
+    spentPercent: number;
+    autoRenew: boolean;
+  } | null;
+  recentExecutionSteps: Array<{
+    stepId: string;
+    llmProfileId: string;
+    kind: string;
+    modelKey: string;
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+    inputPerMillionUsd: number;
+    inputCachePerMillionUsd: number;
+    outputPerMillionUsd: number;
+    contractCostMultiplier: number;
+    costUsd: number;
+    createdAt: number;
+  }>;
+};
+
 export type LlmProfile = {
   profileId: string;
   name: string;
@@ -319,6 +358,10 @@ export function getSystemSettings() {
 
 export function getAgents() {
   return request<AgentListItem[]>('/admin/agents');
+}
+
+export function getAgent(agentId: string) {
+  return request<AgentDetail>(`/admin/agent?agentId=${encodeURIComponent(agentId)}`);
 }
 
 export function getSystemIntegrations() {

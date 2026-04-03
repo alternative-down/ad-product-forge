@@ -32,6 +32,7 @@ import { Route as IntegrationsCoolifyRouteRouteImport } from './routes/integrati
 import { Route as HomeRolesRouteRouteImport } from './routes/home/roles/route'
 import { Route as FinanceContractsRouteRouteImport } from './routes/finance/contracts/route'
 import { Route as FinanceAccountsRouteRouteImport } from './routes/finance/accounts/route'
+import { Route as AgentsAgentIdRouteRouteImport } from './routes/agents/$agentId/route'
 import { Route as V1SystemIndexRouteImport } from './routes/v1/system/index'
 import { Route as V1RolesIndexRouteImport } from './routes/v1/roles/index'
 import { Route as V1FinanceIndexRouteImport } from './routes/v1/finance/index'
@@ -44,6 +45,7 @@ import { Route as IntegrationsCoolifyIndexRouteImport } from './routes/integrati
 import { Route as HomeRolesIndexRouteImport } from './routes/home/roles/index'
 import { Route as FinanceContractsIndexRouteImport } from './routes/finance/contracts/index'
 import { Route as FinanceAccountsIndexRouteImport } from './routes/finance/accounts/index'
+import { Route as AgentsAgentIdIndexRouteImport } from './routes/agents/$agentId/index'
 import { Route as V1SystemOauthIndexRouteImport } from './routes/v1/system/oauth/index'
 import { Route as V1SystemMigrationsIndexRouteImport } from './routes/v1/system/migrations/index'
 import { Route as V1SystemCompanyIndexRouteImport } from './routes/v1/system/company/index'
@@ -182,6 +184,11 @@ const FinanceAccountsRouteRoute = FinanceAccountsRouteRouteImport.update({
   path: '/accounts',
   getParentRoute: () => FinanceRouteRoute,
 } as any)
+const AgentsAgentIdRouteRoute = AgentsAgentIdRouteRouteImport.update({
+  id: '/$agentId',
+  path: '/$agentId',
+  getParentRoute: () => AgentsRouteRoute,
+} as any)
 const V1SystemIndexRoute = V1SystemIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -243,6 +250,11 @@ const FinanceAccountsIndexRoute = FinanceAccountsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => FinanceAccountsRouteRoute,
+} as any)
+const AgentsAgentIdIndexRoute = AgentsAgentIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentsAgentIdRouteRoute,
 } as any)
 const V1SystemOauthIndexRoute = V1SystemOauthIndexRouteImport.update({
   id: '/oauth/',
@@ -362,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRouteRouteWithChildren
   '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
+  '/agents/$agentId': typeof AgentsAgentIdRouteRouteWithChildren
   '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
   '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
   '/home/roles': typeof HomeRolesRouteRouteWithChildren
@@ -379,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/home/': typeof HomeIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
   '/v1/': typeof V1IndexRoute
+  '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/roles/': typeof HomeRolesIndexRoute
@@ -419,6 +433,7 @@ export interface FileRoutesByTo {
   '/home': typeof HomeIndexRoute
   '/integrations': typeof IntegrationsIndexRoute
   '/v1': typeof V1IndexRoute
+  '/agents/$agentId': typeof AgentsAgentIdIndexRoute
   '/finance/accounts': typeof FinanceAccountsIndexRoute
   '/finance/contracts': typeof FinanceContractsIndexRoute
   '/home/roles': typeof HomeRolesIndexRoute
@@ -460,6 +475,7 @@ export interface FileRoutesById {
   '/home': typeof HomeRouteRouteWithChildren
   '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
+  '/agents/$agentId': typeof AgentsAgentIdRouteRouteWithChildren
   '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
   '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
   '/home/roles': typeof HomeRolesRouteRouteWithChildren
@@ -477,6 +493,7 @@ export interface FileRoutesById {
   '/home/': typeof HomeIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
   '/v1/': typeof V1IndexRoute
+  '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/roles/': typeof HomeRolesIndexRoute
@@ -519,6 +536,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/agents/$agentId'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/roles'
@@ -536,6 +554,7 @@ export interface FileRouteTypes {
     | '/home/'
     | '/integrations/'
     | '/v1/'
+    | '/agents/$agentId/'
     | '/finance/accounts/'
     | '/finance/contracts/'
     | '/home/roles/'
@@ -576,6 +595,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/agents/$agentId'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/roles'
@@ -616,6 +636,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/agents/$agentId'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/roles'
@@ -633,6 +654,7 @@ export interface FileRouteTypes {
     | '/home/'
     | '/integrations/'
     | '/v1/'
+    | '/agents/$agentId/'
     | '/finance/accounts/'
     | '/finance/contracts/'
     | '/home/roles/'
@@ -839,6 +861,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceAccountsRouteRouteImport
       parentRoute: typeof FinanceRouteRoute
     }
+    '/agents/$agentId': {
+      id: '/agents/$agentId'
+      path: '/$agentId'
+      fullPath: '/agents/$agentId'
+      preLoaderRoute: typeof AgentsAgentIdRouteRouteImport
+      parentRoute: typeof AgentsRouteRoute
+    }
     '/v1/system/': {
       id: '/v1/system/'
       path: '/'
@@ -922,6 +951,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/finance/accounts/'
       preLoaderRoute: typeof FinanceAccountsIndexRouteImport
       parentRoute: typeof FinanceAccountsRouteRoute
+    }
+    '/agents/$agentId/': {
+      id: '/agents/$agentId/'
+      path: '/'
+      fullPath: '/agents/$agentId/'
+      preLoaderRoute: typeof AgentsAgentIdIndexRouteImport
+      parentRoute: typeof AgentsAgentIdRouteRoute
     }
     '/v1/system/oauth/': {
       id: '/v1/system/oauth/'
@@ -1066,11 +1102,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AgentsAgentIdRouteRouteChildren {
+  AgentsAgentIdIndexRoute: typeof AgentsAgentIdIndexRoute
+}
+
+const AgentsAgentIdRouteRouteChildren: AgentsAgentIdRouteRouteChildren = {
+  AgentsAgentIdIndexRoute: AgentsAgentIdIndexRoute,
+}
+
+const AgentsAgentIdRouteRouteWithChildren =
+  AgentsAgentIdRouteRoute._addFileChildren(AgentsAgentIdRouteRouteChildren)
+
 interface AgentsRouteRouteChildren {
+  AgentsAgentIdRouteRoute: typeof AgentsAgentIdRouteRouteWithChildren
   AgentsIndexRoute: typeof AgentsIndexRoute
 }
 
 const AgentsRouteRouteChildren: AgentsRouteRouteChildren = {
+  AgentsAgentIdRouteRoute: AgentsAgentIdRouteRouteWithChildren,
   AgentsIndexRoute: AgentsIndexRoute,
 }
 

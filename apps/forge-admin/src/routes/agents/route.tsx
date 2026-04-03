@@ -17,6 +17,9 @@ function AgentsLayoutRoute() {
     select: (state) => state.location.pathname,
   });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
+  const profileActive = pathname.startsWith('/agents/');
+  const currentSection = profileActive ? pathname : '/agents';
+  const currentSectionLabel = profileActive ? 'Perfil' : 'Lista';
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -46,12 +49,13 @@ function AgentsLayoutRoute() {
     >
       <div className="space-y-6 md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8 md:space-y-0">
         <div className="md:hidden">
-          <Select value="/agents" onValueChange={(value) => void navigate({ to: value })}>
+          <Select value={currentSection} onValueChange={(value) => void navigate({ to: value })}>
             <SelectTrigger className="w-full">
-              <SelectValue>Lista</SelectValue>
+              <SelectValue>{currentSectionLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="/agents">Lista</SelectItem>
+              {profileActive ? <SelectItem value={pathname}>Perfil</SelectItem> : null}
             </SelectContent>
           </Select>
         </div>
@@ -67,6 +71,11 @@ function AgentsLayoutRoute() {
             >
               Lista
             </Link>
+            {profileActive ? (
+              <div className="rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground">
+                Perfil
+              </div>
+            ) : null}
           </nav>
         </aside>
         <div className="min-w-0">
