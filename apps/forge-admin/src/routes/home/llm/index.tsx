@@ -24,7 +24,6 @@ import {
 import { Dialog } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSystemLlm, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
-import { getStoredAdminTheme } from '@/lib/admin-secret';
 
 export const Route = createFileRoute('/home/llm/')({
   component: HomeLlmProfilesRoute,
@@ -237,7 +236,7 @@ function HomeLlmProfilesRoute() {
                       className="h-10 w-full rounded-sm border-border/80 bg-background/80 shadow-none"
                       disabled={mutation.isPending || modelKeys.length === 0}
                     />
-                    <ComboboxContent anchor={modelKeyAnchor} className="forja-theme" data-theme={getStoredAdminTheme()}>
+                    <ComboboxContent anchor={modelKeyAnchor}>
                       <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
                       <ComboboxList>
                         {(modelKey: string) => (

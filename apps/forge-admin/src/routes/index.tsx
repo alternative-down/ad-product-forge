@@ -10,6 +10,7 @@ import {
   setStoredAdminSecret,
   setStoredAdminTheme,
 } from '@/lib/admin-secret';
+import { applyAdminThemeToDocument, clearAdminThemeFromDocument } from '@/lib/admin-theme';
 
 export const Route = createFileRoute('/')({
   component: AdminSecretRoute,
@@ -23,6 +24,14 @@ function AdminSecretRoute() {
 
   useEffect(() => {
     setStoredAdminTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    applyAdminThemeToDocument(theme);
+
+    return () => {
+      clearAdminThemeFromDocument();
+    };
   }, [theme]);
 
   return (

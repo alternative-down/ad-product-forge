@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import '../../styles/app.css';
 import { AppShell, ThemeToggleButton } from '@/components/admin';
 import { getStoredAdminSecret, getStoredAdminTheme, setStoredAdminTheme } from '@/lib/admin-secret';
+import { applyAdminThemeToDocument, clearAdminThemeFromDocument } from '@/lib/admin-theme';
 
 export const Route = createFileRoute('/home')({
   component: HomeLayoutRoute,
@@ -17,6 +18,14 @@ function HomeLayoutRoute() {
 
   useEffect(() => {
     setStoredAdminTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    applyAdminThemeToDocument(theme);
+
+    return () => {
+      clearAdminThemeFromDocument();
+    };
   }, [theme]);
 
   if (!getStoredAdminSecret()) {

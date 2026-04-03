@@ -34,7 +34,8 @@
 }
 
 .forja-app,
-.forja-theme {
+.forja-theme,
+body.forja-theme-root {
   --background: #f7f5ef;
   --foreground: #24211d;
   --card: #ffffff;
@@ -64,7 +65,8 @@
 }
 
 .forja-app[data-theme='dark'],
-.forja-theme[data-theme='dark'] {
+.forja-theme[data-theme='dark'],
+body.forja-theme-root[data-theme='dark'] {
   --background: #171514;
   --foreground: #f2ede4;
   --card: #201d1b;
@@ -86,7 +88,8 @@
 }
 
 .forja-app *,
-.forja-theme * {
+.forja-theme *,
+body.forja-theme-root * {
   @apply border-border outline-ring/50;
 }
 
@@ -97,7 +100,11 @@
 .forja-theme button,
 .forja-theme input,
 .forja-theme select,
-.forja-theme textarea {
+.forja-theme textarea,
+body.forja-theme-root button,
+body.forja-theme-root input,
+body.forja-theme-root select,
+body.forja-theme-root textarea {
   font: inherit;
 }
 

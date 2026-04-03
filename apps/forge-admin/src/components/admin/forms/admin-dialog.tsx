@@ -1,20 +1,10 @@
 import type { ComponentProps } from 'react';
 
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getStoredAdminTheme } from '@/lib/admin-secret';
 import { cn } from '@/lib/utils';
 
 export function AdminDialogContent({ className, ...props }: ComponentProps<typeof DialogContent>) {
-  return (
-    <DialogContent
-      data-theme={getStoredAdminTheme()}
-      className={cn(
-        'forja-theme max-w-[calc(100vw-2rem)] border-border/70 bg-background/95 shadow-xl shadow-black/5 sm:max-w-2xl',
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <DialogContent className={cn('max-w-[calc(100vw-2rem)] sm:max-w-2xl', className)} {...props} />;
 }
 
 export function AdminDialogFooter({ className, ...props }: ComponentProps<typeof DialogFooter>) {
