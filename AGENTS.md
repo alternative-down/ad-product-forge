@@ -29,6 +29,7 @@
 - Avoid hard corporate blues, heavy dark neutrals, aggressive contrast, neon, dramatic gradients, and generic enterprise dashboard styling.
 - Minimal should not become sterile. Preserve warmth, softness, and a little atmosphere.
 - Prefer buttons sized to their content. Do not stretch primary actions to full width unless the task clearly requires it.
+- Use modals sparingly in the admin UI. Prefer them for confirmations and for add/edit flows with list-based entities. Do not move simple inline settings forms into modals.
 - Admin routes must use directory-based file routing with `route.tsx` and `index.tsx` inside each route directory. Do not model routes with filename-based route modules when creating or refactoring admin routes.
 - Prefer using existing `shadcn/ui` components whenever possible.
 - Do not modify the generated `shadcn/ui` components in their own folder. If a variation is needed, create a separate wrapper/component and apply the variation there.

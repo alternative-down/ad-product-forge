@@ -67,7 +67,17 @@ function HomeLayoutRoute() {
                   : 'rounded-md px-3 py-2 text-sm text-muted-foreground'
               }
             >
-              LLM
+              Perfis
+            </Link>
+            <Link
+              to="/home/llm/prices"
+              className={
+                pathname === '/home/llm/prices'
+                  ? 'rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                  : 'rounded-md px-3 py-2 text-sm text-muted-foreground'
+              }
+            >
+              Preços
             </Link>
           </nav>
         </aside>
