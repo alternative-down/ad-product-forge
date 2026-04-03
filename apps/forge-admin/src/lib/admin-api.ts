@@ -73,12 +73,78 @@ export type SystemSettings = {
   stepDelayEnabled: boolean;
 };
 
+export type LlmProfile = {
+  profileId: string;
+  name: string;
+  modelKey: string;
+  baseUrl: string | null;
+  apiKey: string;
+  contractCostMultiplier: number;
+  isEnabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type SystemLlmResponse = {
+  defaults: {
+    primaryProfileId: string;
+    omProfileId: string;
+    hiringRhProfileId: string;
+    createdAt: number;
+    updatedAt: number;
+  } | null;
+  profiles: LlmProfile[];
+  prices: Array<{
+    modelKey: string;
+    inputPerMillionUsd: number;
+    inputCachePerMillionUsd: number;
+    outputPerMillionUsd: number;
+    createdAt: number;
+    updatedAt: number;
+  }>;
+};
+
+export type UpsertLlmProfileInput = {
+  profileId?: string;
+  name: string;
+  modelKey: string;
+  baseUrl?: string | null;
+  apiKey: string;
+  contractCostMultiplier: number;
+  isEnabled: boolean;
+};
+
+export type UpsertLlmModelPriceInput = {
+  modelKey: string;
+  inputPerMillionUsd: number;
+  inputCachePerMillionUsd: number;
+  outputPerMillionUsd: number;
+};
+
 export function getSystemSettings() {
   return request<SystemSettings>('/admin/system/settings');
 }
 
 export function upsertSystemSettings(input: SystemSettings) {
   return request<SystemSettings>('/admin/system/settings/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getSystemLlm() {
+  return request<SystemLlmResponse>('/admin/system/llm');
+}
+
+export function upsertLlmProfile(input: UpsertLlmProfileInput) {
+  return request<LlmProfile>('/admin/system/llm/profile/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function upsertLlmModelPrice(input: UpsertLlmModelPriceInput) {
+  return request<UpsertLlmModelPriceInput>('/admin/system/llm/price/upsert', {
     method: 'POST',
     body: JSON.stringify(input),
   });

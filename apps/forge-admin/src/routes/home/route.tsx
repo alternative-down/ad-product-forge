@@ -46,7 +46,35 @@ function HomeLayoutRoute() {
         </div>
       }
     >
-      <Outlet />
+      <div className="grid gap-8 md:grid-cols-[180px_minmax(0,1fr)]">
+        <aside>
+          <nav className="flex flex-col gap-1">
+            <Link
+              to="/home"
+              className={
+                pathname === '/home'
+                  ? 'rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                  : 'rounded-md px-3 py-2 text-sm text-muted-foreground'
+              }
+            >
+              Geral
+            </Link>
+            <Link
+              to="/home/llm"
+              className={
+                pathname === '/home/llm'
+                  ? 'rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                  : 'rounded-md px-3 py-2 text-sm text-muted-foreground'
+              }
+            >
+              LLM
+            </Link>
+          </nav>
+        </aside>
+        <div className="min-w-0">
+          <Outlet />
+        </div>
+      </div>
     </AppShell>
   );
 }
