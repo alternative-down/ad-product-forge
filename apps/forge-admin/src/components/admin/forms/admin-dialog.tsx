@@ -40,7 +40,7 @@ export function AdminDialogHeader({ className, children, ...props }: ComponentPr
           <AdminButton
             variant="ghost"
             size="icon-sm"
-            className="absolute top-4 right-4 rounded-full bg-destructive/10 text-foreground hover:bg-destructive/20 hover:text-foreground"
+            className="admin-dialog-close absolute top-4 right-4 rounded-full bg-destructive/10 text-foreground hover:bg-destructive/20 hover:text-foreground"
           />
         }
       >
