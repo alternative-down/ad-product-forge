@@ -34,7 +34,7 @@ function HomeIndexRoute() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader title="Empresa" />
-      <div className="grid gap-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+      <div className="grid gap-8 md:grid-cols-[180px_minmax(0,1fr)]">
         <aside>
           <div className="rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground">Geral</div>
         </aside>
