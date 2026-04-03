@@ -25,9 +25,20 @@ function IntegrationsLayoutRoute() {
         ? '/integrations/github'
         : pathname === '/integrations/coolify'
           ? '/integrations/coolify'
-          : pathname === '/integrations/migadu'
-            ? '/integrations/migadu'
-            : '/integrations/minimax';
+      : pathname === '/integrations/migadu'
+        ? '/integrations/migadu'
+        : '/integrations/minimax';
+  const currentSectionLabel = currentSection === '/integrations'
+    ? 'Perfis'
+    : currentSection === '/integrations/prices'
+      ? 'Preços'
+      : currentSection === '/integrations/github'
+        ? 'Github'
+        : currentSection === '/integrations/coolify'
+          ? 'Coolify'
+          : currentSection === '/integrations/migadu'
+            ? 'Migadu'
+            : 'MiniMax';
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -59,7 +70,7 @@ function IntegrationsLayoutRoute() {
         <div className="md:hidden">
           <Select value={currentSection} onValueChange={(value) => void navigate({ to: value })}>
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue>{currentSectionLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="/integrations">Perfis</SelectItem>

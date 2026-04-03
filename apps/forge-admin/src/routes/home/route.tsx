@@ -18,6 +18,7 @@ function HomeLayoutRoute() {
   });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
   const currentSection = pathname.startsWith('/home/roles') ? '/home/roles' : '/home';
+  const currentSectionLabel = currentSection === '/home/roles' ? 'Papéis & Ferramentas' : 'Geral';
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -49,7 +50,7 @@ function HomeLayoutRoute() {
         <div className="md:hidden">
           <Select value={currentSection} onValueChange={(value) => void navigate({ to: value })}>
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue>{currentSectionLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="/home">Geral</SelectItem>
