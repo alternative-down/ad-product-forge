@@ -265,7 +265,7 @@ function IntegrationsProfilesRoute() {
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
-          <Table className="min-w-[760px] text-sm">
+          <Table className="text-sm">
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>

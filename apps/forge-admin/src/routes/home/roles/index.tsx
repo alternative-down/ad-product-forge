@@ -15,6 +15,7 @@ import {
 } from '@/components/admin';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -146,7 +147,7 @@ function HomeRolesIndexRoute() {
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
-          <Table className="min-w-[760px] text-sm">
+          <Table className="text-sm">
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
@@ -213,79 +214,81 @@ function HomeRolesIndexRoute() {
               roleMutation.mutate(roleForm);
             }}
           >
-            <div className="min-h-0 space-y-5 overflow-y-auto overflow-x-hidden pr-1">
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="role-name">
-                  Nome
-                </label>
-                <AdminInput
-                  id="role-name"
-                  value={roleForm.name}
-                  onChange={(event) => setRoleForm((current) => ({ ...current, name: event.target.value }))}
-                  disabled={roleMutation.isPending}
-                />
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="space-y-5 pr-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="role-name">
+                    Nome
+                  </label>
+                  <AdminInput
+                    id="role-name"
+                    value={roleForm.name}
+                    onChange={(event) => setRoleForm((current) => ({ ...current, name: event.target.value }))}
+                    disabled={roleMutation.isPending}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="role-description">
+                    Descrição
+                  </label>
+                  <AdminTextarea
+                    id="role-description"
+                    rows={5}
+                    value={roleForm.description}
+                    onChange={(event) => setRoleForm((current) => ({ ...current, description: event.target.value }))}
+                    disabled={roleMutation.isPending}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="text-sm font-medium">Ferramentas</div>
+
+                  <Accordion className="space-y-3">
+                    {toolSections.map((section) => (
+                      <AccordionItem key={section.title} value={section.title} className="overflow-hidden rounded-sm border border-border">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span>{section.title}</span>
+                            <span className="text-xs text-muted-foreground">{section.toolIds.length}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-0">
+                          <div className="border-t border-border">
+                            {section.toolIds.map((toolId) => {
+                              const enabled = roleForm.toolIds.includes(toolId);
+
+                              return (
+                                <label
+                                  key={toolId}
+                                  className="flex items-center justify-between gap-4 px-4 py-3 not-last:border-b not-last:border-border"
+                                >
+                                  <span className="min-w-0 font-mono text-[13px] break-all">{toolId}</span>
+                                  <Switch
+                                    checked={enabled}
+                                    disabled={roleMutation.isPending}
+                                    onCheckedChange={(checked) =>
+                                      setRoleForm((current) => ({
+                                        ...current,
+                                        toolIds: checked
+                                          ? [...current.toolIds, toolId]
+                                          : current.toolIds.filter((currentToolId) => currentToolId !== toolId),
+                                      }))
+                                    }
+                                  />
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </div>
+
+                {roleMutation.error ? <div className="text-sm text-destructive">{roleMutation.error.message}</div> : null}
               </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="role-description">
-                  Descrição
-                </label>
-                <AdminTextarea
-                  id="role-description"
-                  rows={5}
-                  value={roleForm.description}
-                  onChange={(event) => setRoleForm((current) => ({ ...current, description: event.target.value }))}
-                  disabled={roleMutation.isPending}
-                />
-              </div>
-
-              <div className="space-y-3">
-                <div className="text-sm font-medium">Ferramentas</div>
-
-                <Accordion className="space-y-3">
-                  {toolSections.map((section) => (
-                    <AccordionItem key={section.title} value={section.title} className="overflow-hidden rounded-sm border border-border">
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex items-center gap-3">
-                          <span>{section.title}</span>
-                          <span className="text-xs text-muted-foreground">{section.toolIds.length}</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-0">
-                        <div className="border-t border-border">
-                          {section.toolIds.map((toolId) => {
-                            const enabled = roleForm.toolIds.includes(toolId);
-
-                            return (
-                              <label
-                                key={toolId}
-                                className="flex items-center justify-between gap-4 px-4 py-3 not-last:border-b not-last:border-border"
-                              >
-                                <span className="min-w-0 font-mono text-[13px] break-all">{toolId}</span>
-                                <Switch
-                                  checked={enabled}
-                                  disabled={roleMutation.isPending}
-                                  onCheckedChange={(checked) =>
-                                    setRoleForm((current) => ({
-                                      ...current,
-                                      toolIds: checked
-                                        ? [...current.toolIds, toolId]
-                                        : current.toolIds.filter((currentToolId) => currentToolId !== toolId),
-                                    }))
-                                  }
-                                />
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </div>
-
-              {roleMutation.error ? <div className="text-sm text-destructive">{roleMutation.error.message}</div> : null}
-            </div>
+            </ScrollArea>
 
             <AdminDialogFooter>
               <AdminButton type="submit" disabled={roleMutation.isPending || !roleForm.name.trim()}>
