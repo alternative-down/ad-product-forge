@@ -129,6 +129,12 @@ export type AgentDetail = {
     editable: boolean;
     credentials: unknown;
   }>;
+  githubProvisioning: {
+    agentId: string;
+    status: 'pending' | 'created' | 'active';
+    registrationUrl: string;
+    installUrl?: string;
+  } | null;
   activeContract: {
     contractId: string;
     agentId: string;

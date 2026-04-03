@@ -47,6 +47,7 @@ import { Route as FinanceContractsIndexRouteImport } from './routes/finance/cont
 import { Route as FinanceAccountsIndexRouteImport } from './routes/finance/accounts/index'
 import { Route as AgentsAgentIdIndexRouteImport } from './routes/agents/$agentId/index'
 import { Route as AgentsAgentIdLogRouteRouteImport } from './routes/agents/$agentId/log/route'
+import { Route as AgentsAgentIdGithubRouteRouteImport } from './routes/agents/$agentId/github/route'
 import { Route as AgentsAgentIdConversationsRouteRouteImport } from './routes/agents/$agentId/conversations/route'
 import { Route as AgentsAgentIdContractRouteRouteImport } from './routes/agents/$agentId/contract/route'
 import { Route as V1SystemOauthIndexRouteImport } from './routes/v1/system/oauth/index'
@@ -58,6 +59,7 @@ import { Route as V1FinanceLedgerIndexRouteImport } from './routes/v1/finance/le
 import { Route as V1FinanceCapitalIndexRouteImport } from './routes/v1/finance/capital/index'
 import { Route as V1AgentsHireIndexRouteImport } from './routes/v1/agents/hire/index'
 import { Route as AgentsAgentIdLogIndexRouteImport } from './routes/agents/$agentId/log/index'
+import { Route as AgentsAgentIdGithubIndexRouteImport } from './routes/agents/$agentId/github/index'
 import { Route as AgentsAgentIdConversationsIndexRouteImport } from './routes/agents/$agentId/conversations/index'
 import { Route as AgentsAgentIdContractIndexRouteImport } from './routes/agents/$agentId/contract/index'
 import { Route as AgentsAgentIdProvidersProviderTypeRouteRouteImport } from './routes/agents/$agentId/providers/$providerType/route'
@@ -269,6 +271,12 @@ const AgentsAgentIdLogRouteRoute = AgentsAgentIdLogRouteRouteImport.update({
   path: '/log',
   getParentRoute: () => AgentsAgentIdRouteRoute,
 } as any)
+const AgentsAgentIdGithubRouteRoute =
+  AgentsAgentIdGithubRouteRouteImport.update({
+    id: '/github',
+    path: '/github',
+    getParentRoute: () => AgentsAgentIdRouteRoute,
+  } as any)
 const AgentsAgentIdConversationsRouteRoute =
   AgentsAgentIdConversationsRouteRouteImport.update({
     id: '/conversations',
@@ -326,6 +334,12 @@ const AgentsAgentIdLogIndexRoute = AgentsAgentIdLogIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AgentsAgentIdLogRouteRoute,
 } as any)
+const AgentsAgentIdGithubIndexRoute =
+  AgentsAgentIdGithubIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AgentsAgentIdGithubRouteRoute,
+  } as any)
 const AgentsAgentIdConversationsIndexRoute =
   AgentsAgentIdConversationsIndexRouteImport.update({
     id: '/',
@@ -448,6 +462,7 @@ export interface FileRoutesByFullPath {
   '/v1/': typeof V1IndexRoute
   '/agents/$agentId/contract': typeof AgentsAgentIdContractRouteRouteWithChildren
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsRouteRouteWithChildren
+  '/agents/$agentId/github': typeof AgentsAgentIdGithubRouteRouteWithChildren
   '/agents/$agentId/log': typeof AgentsAgentIdLogRouteRouteWithChildren
   '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
@@ -465,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
   '/agents/$agentId/contract/': typeof AgentsAgentIdContractIndexRoute
   '/agents/$agentId/conversations/': typeof AgentsAgentIdConversationsIndexRoute
+  '/agents/$agentId/github/': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log/': typeof AgentsAgentIdLogIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
@@ -510,6 +526,7 @@ export interface FileRoutesByTo {
   '/v1/system': typeof V1SystemIndexRoute
   '/agents/$agentId/contract': typeof AgentsAgentIdContractIndexRoute
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsIndexRoute
+  '/agents/$agentId/github': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log': typeof AgentsAgentIdLogIndexRoute
   '/v1/agents/hire': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital': typeof V1FinanceCapitalIndexRoute
@@ -561,6 +578,7 @@ export interface FileRoutesById {
   '/v1/': typeof V1IndexRoute
   '/agents/$agentId/contract': typeof AgentsAgentIdContractRouteRouteWithChildren
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsRouteRouteWithChildren
+  '/agents/$agentId/github': typeof AgentsAgentIdGithubRouteRouteWithChildren
   '/agents/$agentId/log': typeof AgentsAgentIdLogRouteRouteWithChildren
   '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
@@ -578,6 +596,7 @@ export interface FileRoutesById {
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
   '/agents/$agentId/contract/': typeof AgentsAgentIdContractIndexRoute
   '/agents/$agentId/conversations/': typeof AgentsAgentIdConversationsIndexRoute
+  '/agents/$agentId/github/': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log/': typeof AgentsAgentIdLogIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
@@ -630,6 +649,7 @@ export interface FileRouteTypes {
     | '/v1/'
     | '/agents/$agentId/contract'
     | '/agents/$agentId/conversations'
+    | '/agents/$agentId/github'
     | '/agents/$agentId/log'
     | '/agents/$agentId/'
     | '/finance/accounts/'
@@ -647,6 +667,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/providers/$providerType'
     | '/agents/$agentId/contract/'
     | '/agents/$agentId/conversations/'
+    | '/agents/$agentId/github/'
     | '/agents/$agentId/log/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
@@ -692,6 +713,7 @@ export interface FileRouteTypes {
     | '/v1/system'
     | '/agents/$agentId/contract'
     | '/agents/$agentId/conversations'
+    | '/agents/$agentId/github'
     | '/agents/$agentId/log'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
@@ -742,6 +764,7 @@ export interface FileRouteTypes {
     | '/v1/'
     | '/agents/$agentId/contract'
     | '/agents/$agentId/conversations'
+    | '/agents/$agentId/github'
     | '/agents/$agentId/log'
     | '/agents/$agentId/'
     | '/finance/accounts/'
@@ -759,6 +782,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/providers/$providerType'
     | '/agents/$agentId/contract/'
     | '/agents/$agentId/conversations/'
+    | '/agents/$agentId/github/'
     | '/agents/$agentId/log/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
@@ -1060,6 +1084,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsAgentIdLogRouteRouteImport
       parentRoute: typeof AgentsAgentIdRouteRoute
     }
+    '/agents/$agentId/github': {
+      id: '/agents/$agentId/github'
+      path: '/github'
+      fullPath: '/agents/$agentId/github'
+      preLoaderRoute: typeof AgentsAgentIdGithubRouteRouteImport
+      parentRoute: typeof AgentsAgentIdRouteRoute
+    }
     '/agents/$agentId/conversations': {
       id: '/agents/$agentId/conversations'
       path: '/conversations'
@@ -1136,6 +1167,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$agentId/log/'
       preLoaderRoute: typeof AgentsAgentIdLogIndexRouteImport
       parentRoute: typeof AgentsAgentIdLogRouteRoute
+    }
+    '/agents/$agentId/github/': {
+      id: '/agents/$agentId/github/'
+      path: '/'
+      fullPath: '/agents/$agentId/github/'
+      preLoaderRoute: typeof AgentsAgentIdGithubIndexRouteImport
+      parentRoute: typeof AgentsAgentIdGithubRouteRoute
     }
     '/agents/$agentId/conversations/': {
       id: '/agents/$agentId/conversations/'
@@ -1280,6 +1318,20 @@ const AgentsAgentIdConversationsRouteRouteWithChildren =
     AgentsAgentIdConversationsRouteRouteChildren,
   )
 
+interface AgentsAgentIdGithubRouteRouteChildren {
+  AgentsAgentIdGithubIndexRoute: typeof AgentsAgentIdGithubIndexRoute
+}
+
+const AgentsAgentIdGithubRouteRouteChildren: AgentsAgentIdGithubRouteRouteChildren =
+  {
+    AgentsAgentIdGithubIndexRoute: AgentsAgentIdGithubIndexRoute,
+  }
+
+const AgentsAgentIdGithubRouteRouteWithChildren =
+  AgentsAgentIdGithubRouteRoute._addFileChildren(
+    AgentsAgentIdGithubRouteRouteChildren,
+  )
+
 interface AgentsAgentIdLogRouteRouteChildren {
   AgentsAgentIdLogIndexRoute: typeof AgentsAgentIdLogIndexRoute
 }
@@ -1311,6 +1363,7 @@ const AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren =
 interface AgentsAgentIdRouteRouteChildren {
   AgentsAgentIdContractRouteRoute: typeof AgentsAgentIdContractRouteRouteWithChildren
   AgentsAgentIdConversationsRouteRoute: typeof AgentsAgentIdConversationsRouteRouteWithChildren
+  AgentsAgentIdGithubRouteRoute: typeof AgentsAgentIdGithubRouteRouteWithChildren
   AgentsAgentIdLogRouteRoute: typeof AgentsAgentIdLogRouteRouteWithChildren
   AgentsAgentIdIndexRoute: typeof AgentsAgentIdIndexRoute
   AgentsAgentIdProvidersProviderTypeRouteRoute: typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
@@ -1320,6 +1373,7 @@ const AgentsAgentIdRouteRouteChildren: AgentsAgentIdRouteRouteChildren = {
   AgentsAgentIdContractRouteRoute: AgentsAgentIdContractRouteRouteWithChildren,
   AgentsAgentIdConversationsRouteRoute:
     AgentsAgentIdConversationsRouteRouteWithChildren,
+  AgentsAgentIdGithubRouteRoute: AgentsAgentIdGithubRouteRouteWithChildren,
   AgentsAgentIdLogRouteRoute: AgentsAgentIdLogRouteRouteWithChildren,
   AgentsAgentIdIndexRoute: AgentsAgentIdIndexRoute,
   AgentsAgentIdProvidersProviderTypeRouteRoute:

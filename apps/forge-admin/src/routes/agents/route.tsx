@@ -30,6 +30,7 @@ function AgentsLayoutRoute() {
     agentId,
     pathname,
     providerTypes: agentQuery.data?.providers.map((provider) => provider.providerType) ?? [],
+    hasGithubProvisioning: Boolean(agentQuery.data?.githubProvisioning),
   });
   const currentSection = sectionItems.find((item) => item.value === pathname) ?? sectionItems[0];
 
@@ -103,6 +104,7 @@ function buildAgentSectionItems(input: {
   agentId: string;
   pathname: string;
   providerTypes: string[];
+  hasGithubProvisioning: boolean;
 }) {
   if (!input.agentId) {
     return [{ value: '/agents', label: 'Lista' }];
@@ -117,6 +119,13 @@ function buildAgentSectionItems(input: {
     items.push({
       value: `/agents/${input.agentId}/providers/${providerType}`,
       label: humanizeProviderType(providerType),
+    });
+  }
+
+  if (input.hasGithubProvisioning) {
+    items.push({
+      value: `/agents/${input.agentId}/github`,
+      label: 'Github',
     });
   }
 
