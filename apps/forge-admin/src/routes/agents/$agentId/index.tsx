@@ -73,7 +73,7 @@ function AgentDetailIndexRoute() {
 
           <section className="space-y-3">
             <div className="text-lg font-semibold tracking-[-0.03em]">Instruções</div>
-            <ScrollArea className="max-h-80 rounded-sm border border-border bg-background">
+            <ScrollArea className="h-[min(20rem,calc(100dvh-18rem))] rounded-sm border border-border bg-background">
               <div className="whitespace-pre-wrap px-4 py-3 text-sm leading-6 text-foreground">
                 {agent.instructions.trim() || 'Sem instruções.'}
               </div>
