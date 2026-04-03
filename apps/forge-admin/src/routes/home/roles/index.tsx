@@ -214,7 +214,7 @@ function HomeRolesIndexRoute() {
               roleMutation.mutate(roleForm);
             }}
           >
-            <ScrollArea className="min-h-0 flex-1">
+            <ScrollArea className="h-[min(30rem,calc(100dvh-14rem))]">
               <div className="space-y-5 pr-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="role-name">
