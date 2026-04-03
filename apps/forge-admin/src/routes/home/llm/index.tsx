@@ -230,10 +230,9 @@ function HomeLlmProfilesRoute() {
                 >
                   <ComboboxInput
                     placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
-                    className="h-10 w-full rounded-sm border-border/80 bg-background/80 shadow-none"
                     disabled={mutation.isPending || modelKeys.length === 0}
                   />
-                  <ComboboxContent className="rounded-sm border border-border/70 bg-background/98 shadow-lg shadow-black/5">
+                  <ComboboxContent>
                     <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
                     <ComboboxList>
                       {modelKeys.map((modelKey) => (
