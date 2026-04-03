@@ -1,8 +1,9 @@
-import { Link, Navigate, Outlet, createFileRoute, useRouterState } from '@tanstack/react-router';
+import { Link, Navigate, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import '../../styles/app.css';
 import { AdminTopbar, AppShell } from '@/components/admin';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStoredAdminSecret, getStoredAdminTheme, setStoredAdminTheme } from '@/lib/admin-secret';
 import { applyAdminThemeToDocument, clearAdminThemeFromDocument } from '@/lib/admin-theme';
 
@@ -11,10 +12,22 @@ export const Route = createFileRoute('/integrations')({
 });
 
 function IntegrationsLayoutRoute() {
+  const navigate = useNavigate();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
+  const currentSection = pathname === '/integrations'
+    ? '/integrations'
+    : pathname === '/integrations/prices'
+      ? '/integrations/prices'
+      : pathname === '/integrations/github'
+        ? '/integrations/github'
+        : pathname === '/integrations/coolify'
+          ? '/integrations/coolify'
+          : pathname === '/integrations/migadu'
+            ? '/integrations/migadu'
+            : '/integrations/minimax';
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -42,8 +55,23 @@ function IntegrationsLayoutRoute() {
         />
       }
     >
-      <div className="grid gap-8 md:grid-cols-[180px_minmax(0,1fr)]">
-        <aside>
+      <div className="space-y-6 md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8 md:space-y-0">
+        <div className="md:hidden">
+          <Select value={currentSection} onValueChange={(value) => void navigate({ to: value })}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="/integrations">Perfis</SelectItem>
+              <SelectItem value="/integrations/prices">Preços</SelectItem>
+              <SelectItem value="/integrations/github">Github</SelectItem>
+              <SelectItem value="/integrations/coolify">Coolify</SelectItem>
+              <SelectItem value="/integrations/migadu">Migadu</SelectItem>
+              <SelectItem value="/integrations/minimax">MiniMax</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <aside className="hidden md:block">
           <nav className="flex flex-col gap-1">
             <Link
               to="/integrations"
