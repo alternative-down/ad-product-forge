@@ -39,7 +39,7 @@ export function AppShell() {
   });
 
   useEffect(() => {
-    document.body.dataset.theme = theme;
+    document.body.classList.toggle('dark', theme === 'dark');
     window.localStorage.setItem('forge-admin-theme', theme);
   }, [theme]);
 

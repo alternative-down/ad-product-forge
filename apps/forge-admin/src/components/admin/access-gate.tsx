@@ -15,14 +15,15 @@ export function AccessGate(input: {
   const [value, setValue] = useState(input.initialValue);
 
   return (
-    <div className="forja-app" data-theme={input.theme}>
+    <div className={input.theme === 'dark' ? 'forja-app dark' : 'forja-app'}>
       <div className="relative flex min-h-screen items-center justify-center px-6 animate-in fade-in duration-300">
         <div className="absolute right-6 top-6">
           <ThemeToggleButton theme={input.theme} onToggle={input.onThemeToggle} />
         </div>
         <form
-          className="flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200"
-          data-loading={input.submitting ? 'true' : 'false'}
+          className={input.submitting
+            ? 'flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200 opacity-72'
+            : 'flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200'}
           onSubmit={(event) => {
             event.preventDefault();
             input.onSave(value);

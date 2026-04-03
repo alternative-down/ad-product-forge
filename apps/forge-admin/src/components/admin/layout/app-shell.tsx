@@ -11,8 +11,7 @@ export function AppShell(input: {
 }) {
   return (
     <div
-      className={cn('forja-app min-h-screen bg-background text-foreground', input.className)}
-      data-theme={input.theme}
+      className={cn('forja-app min-h-screen bg-background text-foreground', input.theme === 'dark' ? 'dark' : '', input.className)}
     >
       <div className="flex min-h-screen min-w-0 flex-col">
         {input.topbar ? (

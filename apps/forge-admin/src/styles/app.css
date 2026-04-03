@@ -34,7 +34,6 @@
 }
 
 .forja-app,
-.forja-theme,
 body.forja-theme-root {
   --background: #f7f5ef;
   --foreground: #24211d;
@@ -64,9 +63,8 @@ body.forja-theme-root {
   min-height: 100vh;
 }
 
-.forja-app[data-theme='dark'],
-.forja-theme[data-theme='dark'],
-body.forja-theme-root[data-theme='dark'] {
+.forja-app.dark,
+body.forja-theme-root.dark {
   --background: #171514;
   --foreground: #f2ede4;
   --card: #201d1b;
@@ -88,7 +86,6 @@ body.forja-theme-root[data-theme='dark'] {
 }
 
 .forja-app *,
-.forja-theme *,
 body.forja-theme-root * {
   @apply border-border outline-ring/50;
 }
@@ -97,17 +94,9 @@ body.forja-theme-root * {
 .forja-app input,
 .forja-app select,
 .forja-app textarea,
-.forja-theme button,
-.forja-theme input,
-.forja-theme select,
-.forja-theme textarea,
 body.forja-theme-root button,
 body.forja-theme-root input,
 body.forja-theme-root select,
 body.forja-theme-root textarea {
   font: inherit;
-}
-
-.forja-app form[data-loading='true'] {
-  opacity: 0.72;
 }

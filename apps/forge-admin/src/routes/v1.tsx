@@ -10,11 +10,11 @@ export const Route = createFileRoute('/v1')({
 
 function V1Route() {
   useEffect(() => {
-    document.body.dataset.adminUi = 'v1';
+    document.body.classList.add('forge-admin-v1');
 
     return () => {
-      delete document.body.dataset.adminUi;
-      delete document.body.dataset.theme;
+      document.body.classList.remove('forge-admin-v1');
+      document.body.classList.remove('dark');
     };
   }, []);
 
