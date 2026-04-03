@@ -127,8 +127,58 @@ export type UpdateLlmDefaultsInput = {
   hiringRhProfileId: string;
 };
 
+export type SystemIntegrationProviderType = 'github' | 'coolify' | 'migadu' | 'minimax';
+
+export type SystemIntegration =
+  | {
+      providerType: 'github';
+      isEnabled: boolean;
+      createdAt: number;
+      updatedAt: number;
+      config: {
+        organization: string;
+        appHomeUrl: string;
+      } | null;
+    }
+  | {
+      providerType: 'coolify';
+      isEnabled: boolean;
+      createdAt: number;
+      updatedAt: number;
+      config: {
+        baseUrl: string;
+        adminToken: string;
+        serverId: string;
+        destinationId: string;
+        applicationsBaseDomain?: string;
+      } | null;
+    }
+  | {
+      providerType: 'migadu';
+      isEnabled: boolean;
+      createdAt: number;
+      updatedAt: number;
+      config: {
+        apiUser: string;
+        apiKey: string;
+      } | null;
+    }
+  | {
+      providerType: 'minimax';
+      isEnabled: boolean;
+      createdAt: number;
+      updatedAt: number;
+      config: {
+        apiKey: string;
+      } | null;
+    };
+
 export function getSystemSettings() {
   return request<SystemSettings>('/admin/system/settings');
+}
+
+export function getSystemIntegrations() {
+  return request<SystemIntegration[]>('/admin/system/integrations');
 }
 
 export function upsertSystemSettings(input: SystemSettings) {
@@ -158,6 +208,49 @@ export function upsertLlmModelPrice(input: UpsertLlmModelPriceInput) {
 
 export function updateLlmDefaults(input: UpdateLlmDefaultsInput) {
   return request<UpdateLlmDefaultsInput>('/admin/system/llm/defaults/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function upsertSystemIntegration(
+  input:
+    | {
+        providerType: 'github';
+        isEnabled: boolean;
+        config: {
+          organization: string;
+          appHomeUrl: string;
+        };
+      }
+    | {
+        providerType: 'coolify';
+        isEnabled: boolean;
+        config: {
+          baseUrl: string;
+          adminToken: string;
+          serverId: string;
+          destinationId: string;
+          applicationsBaseDomain?: string;
+        };
+      }
+    | {
+        providerType: 'migadu';
+        isEnabled: boolean;
+        config: {
+          apiUser: string;
+          apiKey: string;
+        };
+      }
+    | {
+        providerType: 'minimax';
+        isEnabled: boolean;
+        config: {
+          apiKey: string;
+        };
+      },
+) {
+  return request<SystemIntegration>('/admin/system/integration/upsert', {
     method: 'POST',
     body: JSON.stringify(input),
   });

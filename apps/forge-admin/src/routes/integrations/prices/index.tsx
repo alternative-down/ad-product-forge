@@ -16,8 +16,8 @@ import { Dialog } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
 
-export const Route = createFileRoute('/home/llm/prices/')({
-  component: HomeLlmPricesRoute,
+export const Route = createFileRoute('/integrations/prices/')({
+  component: IntegrationsPricesRoute,
 });
 
 function createEmptyPriceForm(): UpsertLlmModelPriceInput {
@@ -29,7 +29,7 @@ function createEmptyPriceForm(): UpsertLlmModelPriceInput {
   };
 }
 
-function HomeLlmPricesRoute() {
+function IntegrationsPricesRoute() {
   const queryClient = useQueryClient();
   const llmQuery = useQuery({
     queryKey: ['admin', 'system-llm'],
@@ -133,9 +133,9 @@ function HomeLlmPricesRoute() {
             }}
           >
             <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-price-model-key">
-                  Model key
-                </label>
+              <label className="text-sm font-medium" htmlFor="llm-price-model-key">
+                Model key
+              </label>
               <AdminInput
                 id="llm-price-model-key"
                 value={priceForm.modelKey}

@@ -18,8 +18,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSystemLlm, updateLlmDefaults, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
 
-export const Route = createFileRoute('/home/llm/')({
-  component: HomeLlmProfilesRoute,
+export const Route = createFileRoute('/integrations/')({
+  component: IntegrationsProfilesRoute,
 });
 
 function createEmptyProfileForm(): UpsertLlmProfileInput {
@@ -45,7 +45,7 @@ function createProfileForm(profile: LlmProfile): UpsertLlmProfileInput {
   };
 }
 
-function HomeLlmProfilesRoute() {
+function IntegrationsProfilesRoute() {
   const queryClient = useQueryClient();
   const llmQuery = useQuery({
     queryKey: ['admin', 'system-llm'],
@@ -105,9 +105,6 @@ function HomeLlmProfilesRoute() {
   const primaryProfileName = enabledProfiles.find((profile) => profile.profileId === primaryProfileId)?.name;
   const omProfileName = enabledProfiles.find((profile) => profile.profileId === omProfileId)?.name;
   const hiringRhProfileName = enabledProfiles.find((profile) => profile.profileId === hiringRhProfileId)?.name;
-  const setProfileFilter = (value: string) => {
-    setStatusFilter(value === 'inactive' ? 'inactive' : 'active');
-  };
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -122,7 +119,6 @@ function HomeLlmProfilesRoute() {
           className="space-y-5"
           onSubmit={(event) => {
             event.preventDefault();
-
             defaultsMutation.mutate({
               primaryProfileId,
               omProfileId,
@@ -236,7 +232,7 @@ function HomeLlmProfilesRoute() {
       </section>
 
       <div className="flex items-end justify-between gap-3">
-        <Tabs value={statusFilter} onValueChange={setProfileFilter}>
+        <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value === 'inactive' ? 'inactive' : 'active')}>
           <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
             <TabsTrigger
               value="active"
@@ -407,25 +403,24 @@ function HomeLlmProfilesRoute() {
                 disabled={mutation.isPending}
               />
             </div>
-            <div className="grid gap-4 min-[560px]:grid-cols-[minmax(0,180px)]">
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-cost-multiplier">
-                  Cost multiplier
-                </label>
-                <AdminInput
-                  id="llm-cost-multiplier"
-                  type="number"
-                  step="0.01"
-                  value={profileForm.contractCostMultiplier}
-                  onChange={(event) =>
-                    setProfileForm((current) => ({
-                      ...current,
-                      contractCostMultiplier: Number(event.target.value) || 0,
-                    }))
-                  }
-                  disabled={mutation.isPending}
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="llm-contract-multiplier">
+                Multiplicador de custo
+              </label>
+              <AdminInput
+                id="llm-contract-multiplier"
+                type="number"
+                min="0.000001"
+                step="0.01"
+                value={profileForm.contractCostMultiplier}
+                onChange={(event) =>
+                  setProfileForm((current) => ({
+                    ...current,
+                    contractCostMultiplier: Number(event.target.value) || 1,
+                  }))
+                }
+                disabled={mutation.isPending}
+              />
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
