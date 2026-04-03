@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Power, PowerOff, X } from 'lucide-react';
+import { Check, Pencil, Power, PowerOff, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -21,6 +21,7 @@ import {
   createInvestment,
   createPayable,
   getFinance,
+  getFinanceContracts,
   postPlannedLedgerEntry,
   setRecurringPayableActive,
   type CreatePayableInput,
@@ -53,10 +54,15 @@ function createEmptyMovementForm(): MovementForm {
 }
 
 function FinanceAccountsIndexRoute() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const financeQuery = useQuery({
     queryKey: ['admin', 'finance'],
     queryFn: getFinance,
+  });
+  const contractsQuery = useQuery({
+    queryKey: ['admin', 'finance-contracts'],
+    queryFn: getFinanceContracts,
   });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [movementForm, setMovementForm] = useState<MovementForm>(createEmptyMovementForm);
@@ -107,6 +113,34 @@ function FinanceAccountsIndexRoute() {
     () => financeQuery.data?.recurringPayables ?? [],
     [financeQuery.data?.recurringPayables],
   );
+  const recurringContracts = useMemo(
+    () => contractsQuery.data?.items ?? [],
+    [contractsQuery.data?.items],
+  );
+  const agendaRows = useMemo(
+    () => [
+      ...plannedMovements.map((movement) => ({
+        kind: 'planned' as const,
+        id: movement.id,
+        name: movement.description?.trim() || humanizeMovementType(movement.type),
+        detail: `${formatUsdSigned(movement.amountUsd, movement.direction)} · ${formatDateTime(movement.dueAt ?? movement.createdAt)}`,
+      })),
+      ...recurringPayables.map((payable) => ({
+        kind: 'recurring-payable' as const,
+        id: payable.payableId,
+        name: payable.name,
+        detail: `${formatUsd(payable.amountUsd)} · ${humanizeRecurrencePeriod(payable.recurrencePeriod)} · ${formatDateTime(payable.nextDueAt)}`,
+        isActive: payable.isActive,
+      })),
+      ...recurringContracts.map((contract) => ({
+        kind: 'contract' as const,
+        id: contract.contractId,
+        name: contract.agentName,
+        detail: `Contrato · ${formatUsd(contract.weeklyValueUsd)} por semana · até ${formatDate(contract.endsAt)}`,
+      })),
+    ],
+    [plannedMovements, recurringContracts, recurringPayables],
+  );
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -114,7 +148,7 @@ function FinanceAccountsIndexRoute() {
 
       <section className="space-y-5">
         <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-[-0.03em]">Cadastros</div>
+          <div className="text-lg font-semibold tracking-[-0.03em]">Movimentos</div>
         </div>
 
         <div className="flex justify-end">
@@ -145,50 +179,80 @@ function FinanceAccountsIndexRoute() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {plannedMovements.map((movement) => (
-                <TableRow key={movement.id}>
+              {agendaRows.map((item) => (
+                <TableRow key={`${item.kind}:${item.id}`}>
                   <TableCell className="px-4 py-3">
                     <div className="min-w-0">
-                      <div className="truncate font-medium">
-                        {movement.description?.trim() || humanizeMovementType(movement.type)}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {formatUsdSigned(movement.amountUsd, movement.direction)} · {formatDateTime(movement.dueAt ?? movement.createdAt)}
-                      </div>
+                      <div className="truncate font-medium">{item.name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{item.detail}</div>
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
-                        variant="ghost"
-                        size="icon"
-                        disabled={postMutation.isPending || cancelMutation.isPending}
-                        onClick={() => {
-                          postMutation.mutate({ entryId: movement.id });
-                        }}
-                      >
-                        <Check className="h-4 w-4" />
-                        <span className="sr-only">Postar</span>
-                      </AdminButton>
-                      <AdminButton
-                        variant="ghost"
-                        size="icon"
-                        disabled={postMutation.isPending || cancelMutation.isPending}
-                        onClick={() => {
-                          cancelMutation.mutate(movement.id);
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Cancelar</span>
-                      </AdminButton>
+                      {item.kind === 'planned' ? (
+                        <>
+                          <AdminButton
+                            variant="ghost"
+                            size="icon"
+                            disabled={postMutation.isPending || cancelMutation.isPending}
+                            onClick={() => {
+                              postMutation.mutate({ entryId: item.id });
+                            }}
+                          >
+                            <Check className="h-4 w-4" />
+                            <span className="sr-only">Postar</span>
+                          </AdminButton>
+                          <AdminButton
+                            variant="ghost"
+                            size="icon"
+                            disabled={postMutation.isPending || cancelMutation.isPending}
+                            onClick={() => {
+                              cancelMutation.mutate(item.id);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                            <span className="sr-only">Cancelar</span>
+                          </AdminButton>
+                        </>
+                      ) : null}
+
+                      {item.kind === 'recurring-payable' ? (
+                        <AdminButton
+                          variant="ghost"
+                          size="icon"
+                          disabled={recurringMutation.isPending}
+                          onClick={() => {
+                            recurringMutation.mutate({
+                              payableId: item.id,
+                              isActive: !item.isActive,
+                            });
+                          }}
+                        >
+                          {item.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                          <span className="sr-only">{item.isActive ? 'Inativar' : 'Ativar'}</span>
+                        </AdminButton>
+                      ) : null}
+
+                      {item.kind === 'contract' ? (
+                        <AdminButton
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            void navigate({ to: '/finance/contracts' });
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Editar contrato</span>
+                        </AdminButton>
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
-              {plannedMovements.length === 0 ? (
+              {agendaRows.length === 0 ? (
                 <TableRow>
                   <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
-                    Nenhum movimento previsto.
+                    Nenhum item na agenda.
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -197,66 +261,9 @@ function FinanceAccountsIndexRoute() {
         </div>
 
         {financeQuery.error ? <div className="text-sm text-destructive">{financeQuery.error.message}</div> : null}
+        {contractsQuery.error ? <div className="text-sm text-destructive">{contractsQuery.error.message}</div> : null}
         {postMutation.error ? <div className="text-sm text-destructive">{postMutation.error.message}</div> : null}
         {cancelMutation.error ? <div className="text-sm text-destructive">{cancelMutation.error.message}</div> : null}
-      </section>
-
-      <section className="space-y-5 border-t border-border pt-6">
-        <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-[-0.03em]">Contas recorrentes</div>
-        </div>
-
-        <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
-          <Table className="text-sm">
-            <TableHeader className="bg-muted/50 text-left text-muted-foreground">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
-                <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recurringPayables.map((payable) => (
-                <TableRow key={payable.payableId}>
-                  <TableCell className="px-4 py-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{payable.name}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {formatUsd(payable.amountUsd)} · {humanizeRecurrencePeriod(payable.recurrencePeriod)} ·{' '}
-                        {formatDateTime(payable.nextDueAt)}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <AdminButton
-                        variant="ghost"
-                        size="icon"
-                        disabled={recurringMutation.isPending}
-                        onClick={() => {
-                          recurringMutation.mutate({
-                            payableId: payable.payableId,
-                            isActive: !payable.isActive,
-                          });
-                        }}
-                      >
-                        {payable.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                        <span className="sr-only">{payable.isActive ? 'Inativar' : 'Ativar'}</span>
-                      </AdminButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {recurringPayables.length === 0 ? (
-                <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
-                    Nenhuma conta recorrente ainda.
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </div>
-
         {recurringMutation.error ? <div className="text-sm text-destructive">{recurringMutation.error.message}</div> : null}
       </section>
 
@@ -484,4 +491,10 @@ function humanizeRecurrencePeriod(value: 'weekly' | 'monthly' | 'yearly') {
   }
 
   return 'Anual';
+}
+
+function formatDate(value: number) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+  }).format(value);
 }
