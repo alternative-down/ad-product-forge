@@ -2,8 +2,13 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { PageHeader } from '@/components/admin';
-import { Button } from '@/components/ui/button';
+import {
+  AdminButton,
+  AdminDialogContent,
+  AdminDialogFooter,
+  AdminInput,
+  PageHeader,
+} from '@/components/admin';
 import {
   Combobox,
   ComboboxContent,
@@ -14,12 +19,9 @@ import {
 } from '@/components/ui/combobox';
 import {
   Dialog,
-  DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { getSystemLlm, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/llm/')({
@@ -79,15 +81,14 @@ function HomeLlmProfilesRoute() {
       <PageHeader
         title="Perfis"
         actions={
-          <Button
-            className="h-10 px-4"
+          <AdminButton
             onClick={() => {
               setProfileForm(createEmptyProfileForm());
               setDialogOpen(true);
             }}
           >
             Adicionar
-          </Button>
+          </AdminButton>
         }
       />
 
@@ -110,7 +111,7 @@ function HomeLlmProfilesRoute() {
                 <td className="px-4 py-3">{profile.baseUrl || '—'}</td>
                 <td className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</td>
                 <td className="px-4 py-3 text-right">
-                  <Button
+                  <AdminButton
                     variant="ghost"
                     className="h-9 px-3"
                     onClick={() => {
@@ -119,7 +120,7 @@ function HomeLlmProfilesRoute() {
                     }}
                   >
                     Editar
-                  </Button>
+                  </AdminButton>
                 </td>
               </tr>
             ))}
@@ -135,7 +136,7 @@ function HomeLlmProfilesRoute() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2.5rem)] rounded-2xl border border-border/70 bg-background/95 p-5 shadow-xl shadow-black/5 sm:max-w-2xl sm:p-6">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Adicionar perfil'}</DialogTitle>
           </DialogHeader>
@@ -158,7 +159,7 @@ function HomeLlmProfilesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-profile-name">
                   Nome
                 </label>
-                <Input
+                <AdminInput
                   id="llm-profile-name"
                   value={profileForm.name}
                   onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))}
@@ -181,7 +182,7 @@ function HomeLlmProfilesRoute() {
                 >
                   <ComboboxInput
                     placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
-                    className="w-full"
+                    className="h-10 w-full rounded-md border-border/80 bg-background/80 shadow-none"
                     disabled={mutation.isPending || modelKeys.length === 0}
                   />
                   <ComboboxContent className="rounded-xl border border-border/70 bg-background/98 shadow-lg shadow-black/5">
@@ -197,25 +198,25 @@ function HomeLlmProfilesRoute() {
                 </Combobox>
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="llm-base-url">
-                Base URL
-              </label>
-              <Input
-                id="llm-base-url"
-                value={profileForm.baseUrl ?? ''}
-                onChange={(event) => setProfileForm((current) => ({ ...current, baseUrl: event.target.value }))}
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="llm-base-url">
+                  Base URL
+                </label>
+                <AdminInput
+                  id="llm-base-url"
+                  value={profileForm.baseUrl ?? ''}
+                  onChange={(event) => setProfileForm((current) => ({ ...current, baseUrl: event.target.value }))}
                 disabled={mutation.isPending}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="llm-api-key">
-                API key
-              </label>
-              <Input
-                id="llm-api-key"
-                type="password"
-                value={profileForm.apiKey}
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="llm-api-key">
+                  API key
+                </label>
+                <AdminInput
+                  id="llm-api-key"
+                  type="password"
+                  value={profileForm.apiKey}
                 onChange={(event) => setProfileForm((current) => ({ ...current, apiKey: event.target.value }))}
                 disabled={mutation.isPending}
               />
@@ -225,7 +226,7 @@ function HomeLlmProfilesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-cost-multiplier">
                   Cost multiplier
                 </label>
-                <Input
+                <AdminInput
                   id="llm-cost-multiplier"
                   type="number"
                   step="0.01"
@@ -256,13 +257,13 @@ function HomeLlmProfilesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <DialogFooter className="mx-0 mb-0 rounded-none border-border/70 bg-transparent p-0 pt-4">
-              <Button type="submit" className="h-10 px-4" disabled={mutation.isPending}>
+            <AdminDialogFooter>
+              <AdminButton type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </DialogFooter>
+              </AdminButton>
+            </AdminDialogFooter>
           </form>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
     </div>
   );

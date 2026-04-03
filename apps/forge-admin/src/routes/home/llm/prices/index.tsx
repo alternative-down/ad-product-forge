@@ -2,16 +2,18 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { PageHeader } from '@/components/admin';
-import { Button } from '@/components/ui/button';
+import {
+  AdminButton,
+  AdminDialogContent,
+  AdminDialogFooter,
+  AdminInput,
+  PageHeader,
+} from '@/components/admin';
 import {
   Dialog,
-  DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/llm/prices/')({
@@ -53,15 +55,14 @@ function HomeLlmPricesRoute() {
       <PageHeader
         title="Preços"
         actions={
-          <Button
-            className="h-10 px-4"
+          <AdminButton
             onClick={() => {
               setPriceForm(createEmptyPriceForm());
               setDialogOpen(true);
             }}
           >
             Adicionar
-          </Button>
+          </AdminButton>
         }
       />
 
@@ -84,7 +85,7 @@ function HomeLlmPricesRoute() {
                 <td className="px-4 py-3">{price.inputCachePerMillionUsd}</td>
                 <td className="px-4 py-3">{price.outputPerMillionUsd}</td>
                 <td className="px-4 py-3 text-right">
-                  <Button
+                  <AdminButton
                     variant="ghost"
                     className="h-9 px-3"
                     onClick={() => {
@@ -98,7 +99,7 @@ function HomeLlmPricesRoute() {
                     }}
                   >
                     Editar
-                  </Button>
+                  </AdminButton>
                 </td>
               </tr>
             ))}
@@ -114,7 +115,7 @@ function HomeLlmPricesRoute() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2.5rem)] rounded-2xl border border-border/70 bg-background/95 p-5 shadow-xl shadow-black/5 sm:max-w-2xl sm:p-6">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Adicionar preço'}</DialogTitle>
           </DialogHeader>
@@ -135,7 +136,7 @@ function HomeLlmPricesRoute() {
               <label className="text-sm font-medium" htmlFor="llm-price-model-key">
                 Model key
               </label>
-              <Input
+              <AdminInput
                 id="llm-price-model-key"
                 value={priceForm.modelKey}
                 onChange={(event) => setPriceForm((current) => ({ ...current, modelKey: event.target.value }))}
@@ -147,7 +148,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-input-price">
                   Input / 1M
                 </label>
-                <Input
+                <AdminInput
                   id="llm-input-price"
                   type="number"
                   step="0.000001"
@@ -165,7 +166,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-cache-price">
                   Cache / 1M
                 </label>
-                <Input
+                <AdminInput
                   id="llm-cache-price"
                   type="number"
                   step="0.000001"
@@ -183,7 +184,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-output-price">
                   Output / 1M
                 </label>
-                <Input
+                <AdminInput
                   id="llm-output-price"
                   type="number"
                   step="0.000001"
@@ -200,13 +201,13 @@ function HomeLlmPricesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <DialogFooter className="mx-0 mb-0 rounded-none border-border/70 bg-transparent p-0 pt-4">
-              <Button type="submit" className="h-10 px-4" disabled={mutation.isPending}>
+            <AdminDialogFooter>
+              <AdminButton type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </DialogFooter>
+              </AdminButton>
+            </AdminDialogFooter>
           </form>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
     </div>
   );
