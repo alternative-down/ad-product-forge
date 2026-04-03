@@ -19,6 +19,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  useComboboxAnchor,
 } from '@/components/ui/combobox';
 import { Dialog } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -87,6 +88,7 @@ function HomeLlmProfilesRoute() {
     () => [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort((left, right) => left.localeCompare(right)),
     [llmQuery.data?.prices],
   );
+  const modelKeyAnchor = useComboboxAnchor();
   const setProfileFilter = (value: string) => {
     setStatusFilter(value === 'inactive' ? 'inactive' : 'active');
   };
@@ -219,32 +221,34 @@ function HomeLlmProfilesRoute() {
                 <label className="text-sm font-medium">
                   Model key
                 </label>
-                <Combobox
-                  items={modelKeys}
-                  value={profileForm.modelKey || null}
-                  onValueChange={(value) =>
-                    setProfileForm((current) => ({
-                      ...current,
-                      modelKey: value ?? '',
-                    }))
-                  }
-                >
-                  <ComboboxInput
-                    placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
-                    className="w-full"
-                    disabled={mutation.isPending || modelKeys.length === 0}
-                  />
-                  <ComboboxContent className="forja-theme" data-theme={getStoredAdminTheme()}>
-                    <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
-                    <ComboboxList>
-                      {modelKeys.map((modelKey) => (
-                        <ComboboxItem key={modelKey} value={modelKey}>
-                          {modelKey}
-                        </ComboboxItem>
-                      ))}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
+                <div ref={modelKeyAnchor} className="w-full">
+                  <Combobox
+                    items={modelKeys}
+                    value={profileForm.modelKey || null}
+                    onValueChange={(value) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        modelKey: value ?? '',
+                      }))
+                    }
+                  >
+                    <ComboboxInput
+                      placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
+                      className="h-10 w-full rounded-sm border-border/80 bg-background/80 shadow-none"
+                      disabled={mutation.isPending || modelKeys.length === 0}
+                    />
+                    <ComboboxContent anchor={modelKeyAnchor} className="forja-theme" data-theme={getStoredAdminTheme()}>
+                      <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
+                      <ComboboxList>
+                        {modelKeys.map((modelKey) => (
+                          <ComboboxItem key={modelKey} value={modelKey}>
+                            {modelKey}
+                          </ComboboxItem>
+                        ))}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                </div>
               </div>
             </div>
             <div className="space-y-2">
