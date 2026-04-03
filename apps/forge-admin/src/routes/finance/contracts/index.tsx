@@ -87,20 +87,22 @@ function FinanceContractsIndexRoute() {
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Valor semanal</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Início</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Fim</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Renovação</TableHead>
                 <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contracts.map((contract) => (
                 <TableRow key={contract.contractId}>
+                  <TableCell className="px-4 py-3">{contract.agentName}</TableCell>
+                  <TableCell className="px-4 py-3">{formatUsd(contract.weeklyValueUsd)}</TableCell>
+                  <TableCell className="px-4 py-3">{formatDate(contract.startsAt)}</TableCell>
+                  <TableCell className="px-4 py-3">{formatDate(contract.endsAt)}</TableCell>
                   <TableCell className="px-4 py-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{contract.agentName}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {formatUsd(contract.weeklyValueUsd)} por semana · {formatDate(contract.startsAt)} até {formatDate(contract.endsAt)} ·{' '}
-                        {contract.autoRenew ? 'Renovação automática' : 'Sem renovação automática'}
-                      </div>
-                    </div>
+                    {contract.autoRenew ? 'Automática' : 'Manual'}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
@@ -121,7 +123,7 @@ function FinanceContractsIndexRoute() {
               ))}
               {contracts.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={6}>
                     Nenhum contrato ativo agora.
                   </TableCell>
                 </TableRow>

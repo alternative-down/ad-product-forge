@@ -122,21 +122,30 @@ function FinanceAccountsIndexRoute() {
       ...plannedMovements.map((movement) => ({
         kind: 'planned' as const,
         id: movement.id,
-        name: movement.description?.trim() || humanizeMovementType(movement.type),
-        detail: `${formatUsdSigned(movement.amountUsd, movement.direction)} · ${formatDateTime(movement.dueAt ?? movement.createdAt)}`,
+        name: humanizeMovementType(movement.type),
+        amountLabel: formatUsdSigned(movement.amountUsd, movement.direction),
+        dateLabel: formatDateTime(movement.dueAt ?? movement.createdAt),
+        typeLabel: 'Previsto',
+        statusLabel: 'Pendente',
       })),
       ...recurringPayables.map((payable) => ({
         kind: 'recurring-payable' as const,
         id: payable.payableId,
         name: payable.name,
-        detail: `${formatUsd(payable.amountUsd)} · ${humanizeRecurrencePeriod(payable.recurrencePeriod)} · ${formatDateTime(payable.nextDueAt)}`,
+        amountLabel: formatUsd(payable.amountUsd),
+        dateLabel: formatDateTime(payable.nextDueAt),
+        typeLabel: humanizeRecurrencePeriod(payable.recurrencePeriod),
+        statusLabel: payable.isActive ? 'Ativo' : 'Inativo',
         isActive: payable.isActive,
       })),
       ...recurringContracts.map((contract) => ({
         kind: 'contract' as const,
         id: contract.contractId,
         name: contract.agentName,
-        detail: `Contrato · ${formatUsd(contract.weeklyValueUsd)} por semana · até ${formatDate(contract.endsAt)}`,
+        amountLabel: formatUsd(contract.weeklyValueUsd),
+        dateLabel: formatDate(contract.endsAt),
+        typeLabel: 'Contrato semanal',
+        statusLabel: contract.autoRenew ? 'Renova automaticamente' : 'Sem renovação',
       })),
     ],
     [plannedMovements, recurringContracts, recurringPayables],
@@ -175,18 +184,21 @@ function FinanceAccountsIndexRoute() {
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Valor</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Data</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Tipo</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Status</TableHead>
                 <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {agendaRows.map((item) => (
                 <TableRow key={`${item.kind}:${item.id}`}>
-                  <TableCell className="px-4 py-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{item.name}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{item.detail}</div>
-                    </div>
-                  </TableCell>
+                  <TableCell className="px-4 py-3">{item.name}</TableCell>
+                  <TableCell className="px-4 py-3">{item.amountLabel}</TableCell>
+                  <TableCell className="px-4 py-3">{item.dateLabel}</TableCell>
+                  <TableCell className="px-4 py-3">{item.typeLabel}</TableCell>
+                  <TableCell className="px-4 py-3">{item.statusLabel}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       {item.kind === 'planned' ? (
@@ -251,7 +263,7 @@ function FinanceAccountsIndexRoute() {
               ))}
               {agendaRows.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={6}>
                     Nenhum item na agenda.
                   </TableCell>
                 </TableRow>

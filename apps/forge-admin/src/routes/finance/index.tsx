@@ -1,15 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { AdminButton, PageHeader } from '@/components/admin';
+import { PageHeader } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  cancelPlannedLedgerEntry,
   getFinance,
   getFinanceContracts,
-  postPlannedLedgerEntry,
 } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/finance/')({
@@ -17,7 +14,6 @@ export const Route = createFileRoute('/finance/')({
 });
 
 function FinanceIndexRoute() {
-  const queryClient = useQueryClient();
   const financeQuery = useQuery({
     queryKey: ['admin', 'finance'],
     queryFn: getFinance,
@@ -25,19 +21,6 @@ function FinanceIndexRoute() {
   const contractsQuery = useQuery({
     queryKey: ['admin', 'finance-contracts'],
     queryFn: getFinanceContracts,
-  });
-  const postMutation = useMutation({
-    mutationFn: ({ entryId, effectiveAt }: { entryId: string; effectiveAt?: string }) =>
-      postPlannedLedgerEntry(entryId, effectiveAt),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
-    },
-  });
-  const cancelMutation = useMutation({
-    mutationFn: cancelPlannedLedgerEntry,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
-    },
   });
   const movements = useMemo(
     () => financeQuery.data?.movements.items ?? [],
@@ -93,59 +76,31 @@ function FinanceIndexRoute() {
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
-                <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Valor</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Data</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {movements.map((movement) => {
-                const canPost = movement.status === 'planned';
-                const canCancel = movement.status === 'planned';
-
-                return (
-                  <TableRow key={movement.id}>
-                    <TableCell className="px-4 py-3">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">
-                          {movement.description?.trim() || humanizeMovementType(movement.type)}
-                        </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {formatUsdSigned(movement.amountUsd, movement.direction)} · {humanizeMovementStatus(movement.status)} ·{' '}
-                          {formatDateTime(movement.effectiveAt ?? movement.dueAt ?? movement.createdAt)}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <AdminButton
-                          variant="ghost"
-                          size="icon"
-                          disabled={!canPost || postMutation.isPending || cancelMutation.isPending}
-                          onClick={() => {
-                            postMutation.mutate({ entryId: movement.id });
-                          }}
-                        >
-                          <Check className="h-4 w-4" />
-                          <span className="sr-only">Postar</span>
-                        </AdminButton>
-                        <AdminButton
-                          variant="ghost"
-                          size="icon"
-                          disabled={!canCancel || postMutation.isPending || cancelMutation.isPending}
-                          onClick={() => {
-                            cancelMutation.mutate(movement.id);
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                          <span className="sr-only">Cancelar</span>
-                        </AdminButton>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {movements.map((movement) => (
+                <TableRow key={movement.id}>
+                  <TableCell className="px-4 py-3">
+                    {humanizeMovementType(movement.type)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    {formatUsdSigned(movement.amountUsd, movement.direction)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    {formatDateTime(movement.effectiveAt ?? movement.dueAt ?? movement.createdAt)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    {humanizeMovementStatus(movement.status)}
+                  </TableCell>
+                </TableRow>
+              ))}
               {movements.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={4}>
                     Nenhum movimento ainda.
                   </TableCell>
                 </TableRow>
@@ -156,8 +111,6 @@ function FinanceIndexRoute() {
 
         {financeQuery.error ? <div className="pt-4 text-sm text-destructive">{financeQuery.error.message}</div> : null}
         {contractsQuery.error ? <div className="pt-4 text-sm text-destructive">{contractsQuery.error.message}</div> : null}
-        {postMutation.error ? <div className="pt-4 text-sm text-destructive">{postMutation.error.message}</div> : null}
-        {cancelMutation.error ? <div className="pt-4 text-sm text-destructive">{cancelMutation.error.message}</div> : null}
       </section>
     </div>
   );
