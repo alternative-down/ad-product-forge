@@ -2,7 +2,10 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { AdminButton, AdminInput, AdminTextarea, PageHeader } from '@/components/admin';
+import { PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { getSystemSettings, upsertSystemSettings } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/')({
@@ -58,7 +61,7 @@ function HomeIndexRoute() {
               <label className="text-sm font-medium" htmlFor="company-name">
                 Nome
               </label>
-              <AdminInput
+              <Input
                 id="company-name"
                 value={companyName}
                 onChange={(event) =>
@@ -74,7 +77,7 @@ function HomeIndexRoute() {
               <label className="text-sm font-medium" htmlFor="company-description">
                 Descrição
               </label>
-              <AdminTextarea
+              <Textarea
                 id="company-description"
                 rows={8}
                 value={companyContext}
@@ -90,9 +93,9 @@ function HomeIndexRoute() {
             {settingsQuery.error ? <div className="text-sm text-destructive">{settingsQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
             <div className="flex justify-end">
-              <AdminButton type="submit" disabled={settingsQuery.isLoading || mutation.isPending}>
+              <Button type="submit" disabled={settingsQuery.isLoading || mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
+              </Button>
             </div>
           </form>
         </section>

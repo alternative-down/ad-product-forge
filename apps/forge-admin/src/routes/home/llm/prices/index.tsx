@@ -4,15 +4,11 @@ import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
-  AdminButton,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
   PageHeader,
 } from '@/components/admin';
-import { Dialog } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/llm/prices/')({
@@ -54,14 +50,14 @@ function HomeLlmPricesRoute() {
       <PageHeader
         title="Preços"
         actions={
-          <AdminButton
+          <Button
             onClick={() => {
               setPriceForm(createEmptyPriceForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </AdminButton>
+          </Button>
         }
       />
 
@@ -84,9 +80,9 @@ function HomeLlmPricesRoute() {
                 <td className="px-4 py-3">{price.inputCachePerMillionUsd}</td>
                 <td className="px-4 py-3">{price.outputPerMillionUsd}</td>
                 <td className="px-4 py-3 text-right">
-                  <AdminButton
+                  <Button
                     variant="ghost"
-                    className="h-8 w-8 px-0"
+                    size="icon"
                     onClick={() => {
                       setPriceForm({
                         modelKey: price.modelKey,
@@ -99,7 +95,7 @@ function HomeLlmPricesRoute() {
                   >
                     <Pencil className="h-4 w-4" />
                     <span className="sr-only">Editar</span>
-                  </AdminButton>
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -115,13 +111,13 @@ function HomeLlmPricesRoute() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Novo preço'}</AdminDialogTitle>
-          </AdminDialogHeader>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Novo preço'}</DialogTitle>
+          </DialogHeader>
 
           <form
-            className="space-y-4 px-6 py-5"
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({
@@ -133,10 +129,10 @@ function HomeLlmPricesRoute() {
             }}
           >
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="llm-price-model-key">
-                Model key
-              </label>
-              <AdminInput
+                <label className="text-sm font-medium" htmlFor="llm-price-model-key">
+                  Model key
+                </label>
+              <Input
                 id="llm-price-model-key"
                 value={priceForm.modelKey}
                 onChange={(event) => setPriceForm((current) => ({ ...current, modelKey: event.target.value }))}
@@ -148,7 +144,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-input-price">
                   Input / 1M
                 </label>
-                <AdminInput
+                <Input
                   id="llm-input-price"
                   type="number"
                   step="0.000001"
@@ -166,7 +162,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-cache-price">
                   Cache / 1M
                 </label>
-                <AdminInput
+                <Input
                   id="llm-cache-price"
                   type="number"
                   step="0.000001"
@@ -184,7 +180,7 @@ function HomeLlmPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-output-price">
                   Output / 1M
                 </label>
-                <AdminInput
+                <Input
                   id="llm-output-price"
                   type="number"
                   step="0.000001"
@@ -201,13 +197,13 @@ function HomeLlmPricesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <AdminDialogFooter className="-mx-6 -mb-5 mt-6 px-6 py-4">
-              <AdminButton type="submit" disabled={mutation.isPending}>
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
-            </AdminDialogFooter>
+              </Button>
+            </DialogFooter>
           </form>
-        </AdminDialogContent>
+        </DialogContent>
       </Dialog>
     </div>
   );

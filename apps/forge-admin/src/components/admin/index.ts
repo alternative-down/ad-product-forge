@@ -1,11 +1,5 @@
 export { ActionBar } from './system/action-bar';
 export { AppShell } from './layout/app-shell';
-export { AdminButton } from './forms/admin-button';
-export { AdminDialogContent, AdminDialogFooter } from './forms/admin-dialog';
-export { AdminDialogHeader } from './forms/admin-dialog';
-export { AdminDialogTitle } from './forms/admin-dialog';
-export { AdminInput } from './forms/admin-input';
-export { AdminTextarea } from './forms/admin-textarea';
 export { FilterBar } from './system/filter-bar';
 export { InlineStat } from './system/inline-stat';
 export { KeyValueList } from './system/key-value-list';
