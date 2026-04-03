@@ -44,7 +44,10 @@ function IntegrationsCoolifyRoute() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader title="Coolify" />
+      <PageHeader
+        title="Coolify"
+        description="Conecta o sistema ao Coolify para criar e operar aplicações e ambientes."
+      />
 
       <div className="max-w-3xl space-y-5">
         <form
@@ -87,9 +90,8 @@ function IntegrationsCoolifyRoute() {
             <AdminInput id="coolify-applications-base-domain" value={applicationsBaseDomain} onChange={(event) => setDraft((current) => ({ baseUrl: current?.baseUrl ?? integration?.config?.baseUrl ?? '', adminToken: current?.adminToken ?? integration?.config?.adminToken ?? '', serverId: current?.serverId ?? integration?.config?.serverId ?? '', destinationId: current?.destinationId ?? integration?.config?.destinationId ?? '', applicationsBaseDomain: event.target.value, isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true }))} disabled={mutation.isPending} />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="coolify-status">Status</label>
-            <div className="flex min-h-9 items-center justify-between rounded-lg border border-border bg-background px-3">
-              <span className="text-sm text-muted-foreground">{isEnabled ? 'Ativa' : 'Inativa'}</span>
+            <label className="text-sm font-medium" htmlFor="coolify-status">Ativo</label>
+            <div className="flex min-h-9 items-center">
               <Switch id="coolify-status" checked={isEnabled} onCheckedChange={(checked) => setDraft((current) => ({ baseUrl: current?.baseUrl ?? integration?.config?.baseUrl ?? '', adminToken: current?.adminToken ?? integration?.config?.adminToken ?? '', serverId: current?.serverId ?? integration?.config?.serverId ?? '', destinationId: current?.destinationId ?? integration?.config?.destinationId ?? '', applicationsBaseDomain: current?.applicationsBaseDomain ?? integration?.config?.applicationsBaseDomain ?? '', isEnabled: checked }))} disabled={mutation.isPending} />
             </div>
           </div>

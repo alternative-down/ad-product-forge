@@ -38,7 +38,10 @@ function IntegrationsGithubRoute() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader title="Github" />
+      <PageHeader
+        title="Github"
+        description="Conecta o sistema ao GitHub para provisionar apps e operar os repositórios dos agentes."
+      />
 
       <div className="max-w-3xl space-y-5">
         <form
@@ -91,20 +94,19 @@ function IntegrationsGithubRoute() {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="github-status">
-              Status
+              Ativo
             </label>
-            <div className="flex min-h-9 items-center justify-between rounded-lg border border-border bg-background px-3">
-              <span className="text-sm text-muted-foreground">{isEnabled ? 'Ativa' : 'Inativa'}</span>
+            <div className="flex min-h-9 items-center">
               <Switch
                 id="github-status"
                 checked={isEnabled}
                 onCheckedChange={(checked) =>
-                setDraft((current) => ({
-                  organization: current?.organization ?? integration?.config?.organization ?? '',
-                  appHomeUrl: current?.appHomeUrl ?? integration?.config?.appHomeUrl ?? '',
-                  isEnabled: checked,
-                }))
-              }
+                  setDraft((current) => ({
+                    organization: current?.organization ?? integration?.config?.organization ?? '',
+                    appHomeUrl: current?.appHomeUrl ?? integration?.config?.appHomeUrl ?? '',
+                    isEnabled: checked,
+                  }))
+                }
                 disabled={mutation.isPending}
               />
             </div>

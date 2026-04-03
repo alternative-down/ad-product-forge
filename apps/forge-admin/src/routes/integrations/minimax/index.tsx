@@ -36,7 +36,10 @@ function IntegrationsMinimaxRoute() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader title="MiniMax" />
+      <PageHeader
+        title="MiniMax"
+        description="Conecta o sistema ao MiniMax para geração de texto, imagem e voz."
+      />
 
       <div className="max-w-3xl space-y-5">
         <form
@@ -57,9 +60,8 @@ function IntegrationsMinimaxRoute() {
             <AdminInput id="minimax-api-key" type="password" value={apiKey} onChange={(event) => setDraft((current) => ({ apiKey: event.target.value, isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true }))} disabled={mutation.isPending} />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="minimax-status">Status</label>
-            <div className="flex min-h-9 items-center justify-between rounded-lg border border-border bg-background px-3">
-              <span className="text-sm text-muted-foreground">{isEnabled ? 'Ativa' : 'Inativa'}</span>
+            <label className="text-sm font-medium" htmlFor="minimax-status">Ativo</label>
+            <div className="flex min-h-9 items-center">
               <Switch id="minimax-status" checked={isEnabled} onCheckedChange={(checked) => setDraft((current) => ({ apiKey: current?.apiKey ?? integration?.config?.apiKey ?? '', isEnabled: checked }))} disabled={mutation.isPending} />
             </div>
           </div>
