@@ -109,16 +109,16 @@ function HomeLlmProfilesRoute() {
       />
 
       <Tabs value={statusFilter} onValueChange={setProfileFilter}>
-        <TabsList className="h-9 gap-1 rounded-sm bg-secondary/80 p-1">
+        <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
           <TabsTrigger
             value="active"
-            className="rounded-sm px-3 text-sm text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground"
+            className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
           >
             Ativos
           </TabsTrigger>
           <TabsTrigger
             value="inactive"
-            className="rounded-sm px-3 text-sm text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground"
+            className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
           >
             Inativos
           </TabsTrigger>

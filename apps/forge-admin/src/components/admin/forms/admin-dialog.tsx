@@ -22,5 +22,13 @@ export function AdminDialogFooter({ className, ...props }: ComponentProps<typeof
 }
 
 export function AdminDialogHeader({ className, ...props }: ComponentProps<typeof DialogHeader>) {
-  return <DialogHeader className={cn('gap-1 border-b border-border/70 pb-3', className)} {...props} />;
+  return (
+    <DialogHeader
+      className={cn(
+        '-mx-4 -mt-4 gap-1 border-b border-border/70 bg-muted/35 px-4 py-3 sm:-mx-5 sm:-mt-5 sm:px-5 sm:py-4',
+        className,
+      )}
+      {...props}
+    />
+  );
 }
