@@ -129,6 +129,23 @@ export type UpdateLlmDefaultsInput = {
 
 export type SystemIntegrationProviderType = 'github' | 'coolify' | 'migadu' | 'minimax';
 
+export type RoleItem = {
+  roleId: string;
+  name: string;
+  description?: string | null;
+  assignedAgentCount: number;
+  toolIds: string[];
+  workflowIds: string[];
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type RolesResponse = {
+  availableToolIds: string[];
+  availableWorkflowIds: string[];
+  items: RoleItem[];
+};
+
 export type SystemIntegration =
   | {
       providerType: 'github';
@@ -251,6 +268,58 @@ export function upsertSystemIntegration(
       },
 ) {
   return request<SystemIntegration>('/admin/system/integration/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getRoles() {
+  return request<RolesResponse>('/admin/roles');
+}
+
+export function createRole(input: {
+  name: string;
+  description?: string;
+}) {
+  return request<RoleItem>('/admin/role/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateRole(input: {
+  roleId: string;
+  name?: string;
+  description?: string | null;
+}) {
+  return request<RoleItem>('/admin/role/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteRole(roleId: string) {
+  return request<{ success?: boolean; roleId?: string }>('/admin/role/delete', {
+    method: 'POST',
+    body: JSON.stringify({ roleId }),
+  });
+}
+
+export function addRoleToolPermission(input: {
+  roleId: string;
+  toolId: string;
+}) {
+  return request<{ success?: boolean }>('/admin/role-tool-permission/add', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function removeRoleToolPermission(input: {
+  roleId: string;
+  toolId: string;
+}) {
+  return request<{ success?: boolean }>('/admin/role-tool-permission/remove', {
     method: 'POST',
     body: JSON.stringify(input),
   });

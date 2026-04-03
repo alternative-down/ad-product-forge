@@ -25,6 +25,7 @@ import { Route as IntegrationsMinimaxRouteRouteImport } from './routes/integrati
 import { Route as IntegrationsMigaduRouteRouteImport } from './routes/integrations/migadu/route'
 import { Route as IntegrationsGithubRouteRouteImport } from './routes/integrations/github/route'
 import { Route as IntegrationsCoolifyRouteRouteImport } from './routes/integrations/coolify/route'
+import { Route as HomeRolesRouteRouteImport } from './routes/home/roles/route'
 import { Route as V1SystemIndexRouteImport } from './routes/v1/system/index'
 import { Route as V1RolesIndexRouteImport } from './routes/v1/roles/index'
 import { Route as V1FinanceIndexRouteImport } from './routes/v1/finance/index'
@@ -34,6 +35,7 @@ import { Route as IntegrationsMinimaxIndexRouteImport } from './routes/integrati
 import { Route as IntegrationsMigaduIndexRouteImport } from './routes/integrations/migadu/index'
 import { Route as IntegrationsGithubIndexRouteImport } from './routes/integrations/github/index'
 import { Route as IntegrationsCoolifyIndexRouteImport } from './routes/integrations/coolify/index'
+import { Route as HomeRolesIndexRouteImport } from './routes/home/roles/index'
 import { Route as V1SystemOauthIndexRouteImport } from './routes/v1/system/oauth/index'
 import { Route as V1SystemMigrationsIndexRouteImport } from './routes/v1/system/migrations/index'
 import { Route as V1SystemCompanyIndexRouteImport } from './routes/v1/system/company/index'
@@ -137,6 +139,11 @@ const IntegrationsCoolifyRouteRoute =
     path: '/coolify',
     getParentRoute: () => IntegrationsRouteRoute,
   } as any)
+const HomeRolesRouteRoute = HomeRolesRouteRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => HomeRouteRoute,
+} as any)
 const V1SystemIndexRoute = V1SystemIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -184,6 +191,11 @@ const IntegrationsCoolifyIndexRoute =
     path: '/',
     getParentRoute: () => IntegrationsCoolifyRouteRoute,
   } as any)
+const HomeRolesIndexRoute = HomeRolesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HomeRolesRouteRoute,
+} as any)
 const V1SystemOauthIndexRoute = V1SystemOauthIndexRouteImport.update({
   id: '/oauth/',
   path: '/oauth/',
@@ -300,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRouteRouteWithChildren
   '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
+  '/home/roles': typeof HomeRolesRouteRouteWithChildren
   '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
   '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
   '/integrations/migadu': typeof IntegrationsMigaduRouteRouteWithChildren
@@ -312,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/home/': typeof HomeIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
   '/v1/': typeof V1IndexRoute
+  '/home/roles/': typeof HomeRolesIndexRoute
   '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github/': typeof IntegrationsGithubIndexRoute
   '/integrations/migadu/': typeof IntegrationsMigaduIndexRoute
@@ -347,6 +361,7 @@ export interface FileRoutesByTo {
   '/home': typeof HomeIndexRoute
   '/integrations': typeof IntegrationsIndexRoute
   '/v1': typeof V1IndexRoute
+  '/home/roles': typeof HomeRolesIndexRoute
   '/integrations/coolify': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github': typeof IntegrationsGithubIndexRoute
   '/integrations/migadu': typeof IntegrationsMigaduIndexRoute
@@ -383,6 +398,7 @@ export interface FileRoutesById {
   '/home': typeof HomeRouteRouteWithChildren
   '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
+  '/home/roles': typeof HomeRolesRouteRouteWithChildren
   '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
   '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
   '/integrations/migadu': typeof IntegrationsMigaduRouteRouteWithChildren
@@ -395,6 +411,7 @@ export interface FileRoutesById {
   '/home/': typeof HomeIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
   '/v1/': typeof V1IndexRoute
+  '/home/roles/': typeof HomeRolesIndexRoute
   '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github/': typeof IntegrationsGithubIndexRoute
   '/integrations/migadu/': typeof IntegrationsMigaduIndexRoute
@@ -432,6 +449,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
     | '/integrations/migadu'
@@ -444,6 +462,7 @@ export interface FileRouteTypes {
     | '/home/'
     | '/integrations/'
     | '/v1/'
+    | '/home/roles/'
     | '/integrations/coolify/'
     | '/integrations/github/'
     | '/integrations/migadu/'
@@ -479,6 +498,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
     | '/integrations/migadu'
@@ -514,6 +534,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/integrations'
     | '/v1'
+    | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
     | '/integrations/migadu'
@@ -526,6 +547,7 @@ export interface FileRouteTypes {
     | '/home/'
     | '/integrations/'
     | '/v1/'
+    | '/home/roles/'
     | '/integrations/coolify/'
     | '/integrations/github/'
     | '/integrations/migadu/'
@@ -678,6 +700,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsCoolifyRouteRouteImport
       parentRoute: typeof IntegrationsRouteRoute
     }
+    '/home/roles': {
+      id: '/home/roles'
+      path: '/roles'
+      fullPath: '/home/roles'
+      preLoaderRoute: typeof HomeRolesRouteRouteImport
+      parentRoute: typeof HomeRouteRoute
+    }
     '/v1/system/': {
       id: '/v1/system/'
       path: '/'
@@ -740,6 +769,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/integrations/coolify/'
       preLoaderRoute: typeof IntegrationsCoolifyIndexRouteImport
       parentRoute: typeof IntegrationsCoolifyRouteRoute
+    }
+    '/home/roles/': {
+      id: '/home/roles/'
+      path: '/'
+      fullPath: '/home/roles/'
+      preLoaderRoute: typeof HomeRolesIndexRouteImport
+      parentRoute: typeof HomeRolesRouteRoute
     }
     '/v1/system/oauth/': {
       id: '/v1/system/oauth/'
@@ -884,11 +920,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface HomeRolesRouteRouteChildren {
+  HomeRolesIndexRoute: typeof HomeRolesIndexRoute
+}
+
+const HomeRolesRouteRouteChildren: HomeRolesRouteRouteChildren = {
+  HomeRolesIndexRoute: HomeRolesIndexRoute,
+}
+
+const HomeRolesRouteRouteWithChildren = HomeRolesRouteRoute._addFileChildren(
+  HomeRolesRouteRouteChildren,
+)
+
 interface HomeRouteRouteChildren {
+  HomeRolesRouteRoute: typeof HomeRolesRouteRouteWithChildren
   HomeIndexRoute: typeof HomeIndexRoute
 }
 
 const HomeRouteRouteChildren: HomeRouteRouteChildren = {
+  HomeRolesRouteRoute: HomeRolesRouteRouteWithChildren,
   HomeIndexRoute: HomeIndexRoute,
 }
 
