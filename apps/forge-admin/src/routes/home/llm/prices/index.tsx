@@ -52,19 +52,18 @@ function HomeLlmPricesRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader
-        title="Preços"
-        actions={
-          <AdminButton
-            onClick={() => {
-              setPriceForm(createEmptyPriceForm());
-              setDialogOpen(true);
-            }}
-          >
-            Novo
-          </AdminButton>
-        }
-      />
+      <PageHeader title="Preços" />
+
+      <div className="flex justify-end">
+        <AdminButton
+          onClick={() => {
+            setPriceForm(createEmptyPriceForm());
+            setDialogOpen(true);
+          }}
+        >
+          Novo
+        </AdminButton>
+      </div>
 
       <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
         <Table className="min-w-[760px] text-sm">

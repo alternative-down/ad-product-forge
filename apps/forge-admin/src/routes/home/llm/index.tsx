@@ -89,36 +89,35 @@ function HomeLlmProfilesRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader
-        title="Perfis"
-        actions={
-          <AdminButton
-            onClick={() => {
-              setProfileForm(createEmptyProfileForm());
-              setDialogOpen(true);
-            }}
-          >
-            Novo
-          </AdminButton>
-        }
-      />
+      <PageHeader title="Perfis" />
 
-      <Tabs value={statusFilter} onValueChange={setProfileFilter}>
-        <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
-          <TabsTrigger
-            value="active"
-            className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
-          >
-            Ativos
-          </TabsTrigger>
-          <TabsTrigger
-            value="inactive"
-            className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
-          >
-            Inativos
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex items-end justify-between gap-3">
+        <Tabs value={statusFilter} onValueChange={setProfileFilter}>
+          <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
+            <TabsTrigger
+              value="active"
+              className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
+            >
+              Ativos
+            </TabsTrigger>
+            <TabsTrigger
+              value="inactive"
+              className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
+            >
+              Inativos
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <AdminButton
+          onClick={() => {
+            setProfileForm(createEmptyProfileForm());
+            setDialogOpen(true);
+          }}
+        >
+          Novo
+        </AdminButton>
+      </div>
 
       <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
         <Table className="min-w-[760px] text-sm">
@@ -211,7 +210,7 @@ function HomeLlmProfilesRoute() {
                   disabled={mutation.isPending}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <label className="text-sm font-medium" htmlFor="llm-model-key">
                   Model key
                 </label>
@@ -227,7 +226,7 @@ function HomeLlmProfilesRoute() {
                 >
                   <SelectTrigger id="llm-model-key" className="w-full min-w-0 max-w-full overflow-hidden">
                     <SelectValue
-                      className="min-w-0 truncate"
+                      className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
                       placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
                     />
                   </SelectTrigger>
