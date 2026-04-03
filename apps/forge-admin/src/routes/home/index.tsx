@@ -33,7 +33,7 @@ function HomeIndexRoute() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader title="Empresa" />
+      <PageHeader title="Geral" />
       <form
         className="max-w-3xl space-y-5"
         onSubmit={(event) => {
@@ -50,6 +50,9 @@ function HomeIndexRoute() {
           });
         }}
       >
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Empresa</div>
+        </div>
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="company-name">
             Nome

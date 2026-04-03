@@ -18,10 +18,12 @@ import { Route as V1SystemRouteImport } from './routes/v1.system'
 import { Route as V1RolesRouteImport } from './routes/v1.roles'
 import { Route as V1FinanceRouteImport } from './routes/v1.finance'
 import { Route as V1AgentsRouteImport } from './routes/v1.agents'
+import { Route as HomeLlmRouteRouteImport } from './routes/home/llm/route'
 import { Route as V1SystemIndexRouteImport } from './routes/v1.system.index'
 import { Route as V1RolesIndexRouteImport } from './routes/v1.roles.index'
 import { Route as V1FinanceIndexRouteImport } from './routes/v1.finance.index'
 import { Route as V1AgentsIndexRouteImport } from './routes/v1.agents.index'
+import { Route as HomeLlmIndexRouteImport } from './routes/home/llm/index'
 import { Route as V1SystemOauthRouteImport } from './routes/v1.system.oauth'
 import { Route as V1SystemMigrationsRouteImport } from './routes/v1.system.migrations'
 import { Route as V1SystemCompanyRouteImport } from './routes/v1.system.company'
@@ -88,6 +90,11 @@ const V1AgentsRoute = V1AgentsRouteImport.update({
   path: '/agents',
   getParentRoute: () => V1Route,
 } as any)
+const HomeLlmRouteRoute = HomeLlmRouteRouteImport.update({
+  id: '/llm',
+  path: '/llm',
+  getParentRoute: () => HomeRouteRoute,
+} as any)
 const V1SystemIndexRoute = V1SystemIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -107,6 +114,11 @@ const V1AgentsIndexRoute = V1AgentsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => V1AgentsRoute,
+} as any)
+const HomeLlmIndexRoute = HomeLlmIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HomeLlmRouteRoute,
 } as any)
 const V1SystemOauthRoute = V1SystemOauthRouteImport.update({
   id: '/oauth',
@@ -220,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/home': typeof HomeRouteRouteWithChildren
   '/v1': typeof V1RouteWithChildren
+  '/home/llm': typeof HomeLlmRouteRouteWithChildren
   '/v1/agents': typeof V1AgentsRouteWithChildren
   '/v1/finance': typeof V1FinanceRouteWithChildren
   '/v1/roles': typeof V1RolesRouteWithChildren
@@ -234,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/v1/system/company': typeof V1SystemCompanyRoute
   '/v1/system/migrations': typeof V1SystemMigrationsRoute
   '/v1/system/oauth': typeof V1SystemOauthRoute
+  '/home/llm/': typeof HomeLlmIndexRoute
   '/v1/agents/': typeof V1AgentsIndexRoute
   '/v1/finance/': typeof V1FinanceIndexRoute
   '/v1/roles/': typeof V1RolesIndexRoute
@@ -263,6 +277,7 @@ export interface FileRoutesByTo {
   '/v1/system/company': typeof V1SystemCompanyRoute
   '/v1/system/migrations': typeof V1SystemMigrationsRoute
   '/v1/system/oauth': typeof V1SystemOauthRoute
+  '/home/llm': typeof HomeLlmIndexRoute
   '/v1/agents': typeof V1AgentsIndexRoute
   '/v1/finance': typeof V1FinanceIndexRoute
   '/v1/roles': typeof V1RolesIndexRoute
@@ -285,6 +300,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/home': typeof HomeRouteRouteWithChildren
   '/v1': typeof V1RouteWithChildren
+  '/home/llm': typeof HomeLlmRouteRouteWithChildren
   '/v1/agents': typeof V1AgentsRouteWithChildren
   '/v1/finance': typeof V1FinanceRouteWithChildren
   '/v1/roles': typeof V1RolesRouteWithChildren
@@ -299,6 +315,7 @@ export interface FileRoutesById {
   '/v1/system/company': typeof V1SystemCompanyRoute
   '/v1/system/migrations': typeof V1SystemMigrationsRoute
   '/v1/system/oauth': typeof V1SystemOauthRoute
+  '/home/llm/': typeof HomeLlmIndexRoute
   '/v1/agents/': typeof V1AgentsIndexRoute
   '/v1/finance/': typeof V1FinanceIndexRoute
   '/v1/roles/': typeof V1RolesIndexRoute
@@ -322,6 +339,7 @@ export interface FileRouteTypes {
     | '/'
     | '/home'
     | '/v1'
+    | '/home/llm'
     | '/v1/agents'
     | '/v1/finance'
     | '/v1/roles'
@@ -336,6 +354,7 @@ export interface FileRouteTypes {
     | '/v1/system/company'
     | '/v1/system/migrations'
     | '/v1/system/oauth'
+    | '/home/llm/'
     | '/v1/agents/'
     | '/v1/finance/'
     | '/v1/roles/'
@@ -365,6 +384,7 @@ export interface FileRouteTypes {
     | '/v1/system/company'
     | '/v1/system/migrations'
     | '/v1/system/oauth'
+    | '/home/llm'
     | '/v1/agents'
     | '/v1/finance'
     | '/v1/roles'
@@ -386,6 +406,7 @@ export interface FileRouteTypes {
     | '/'
     | '/home'
     | '/v1'
+    | '/home/llm'
     | '/v1/agents'
     | '/v1/finance'
     | '/v1/roles'
@@ -400,6 +421,7 @@ export interface FileRouteTypes {
     | '/v1/system/company'
     | '/v1/system/migrations'
     | '/v1/system/oauth'
+    | '/home/llm/'
     | '/v1/agents/'
     | '/v1/finance/'
     | '/v1/roles/'
@@ -489,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1AgentsRouteImport
       parentRoute: typeof V1Route
     }
+    '/home/llm': {
+      id: '/home/llm'
+      path: '/llm'
+      fullPath: '/home/llm'
+      preLoaderRoute: typeof HomeLlmRouteRouteImport
+      parentRoute: typeof HomeRouteRoute
+    }
     '/v1/system/': {
       id: '/v1/system/'
       path: '/'
@@ -516,6 +545,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/v1/agents/'
       preLoaderRoute: typeof V1AgentsIndexRouteImport
       parentRoute: typeof V1AgentsRoute
+    }
+    '/home/llm/': {
+      id: '/home/llm/'
+      path: '/'
+      fullPath: '/home/llm/'
+      preLoaderRoute: typeof HomeLlmIndexRouteImport
+      parentRoute: typeof HomeLlmRouteRoute
     }
     '/v1/system/oauth': {
       id: '/v1/system/oauth'
@@ -660,11 +696,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface HomeLlmRouteRouteChildren {
+  HomeLlmIndexRoute: typeof HomeLlmIndexRoute
+}
+
+const HomeLlmRouteRouteChildren: HomeLlmRouteRouteChildren = {
+  HomeLlmIndexRoute: HomeLlmIndexRoute,
+}
+
+const HomeLlmRouteRouteWithChildren = HomeLlmRouteRoute._addFileChildren(
+  HomeLlmRouteRouteChildren,
+)
+
 interface HomeRouteRouteChildren {
+  HomeLlmRouteRoute: typeof HomeLlmRouteRouteWithChildren
   HomeIndexRoute: typeof HomeIndexRoute
 }
 
 const HomeRouteRouteChildren: HomeRouteRouteChildren = {
+  HomeLlmRouteRoute: HomeLlmRouteRouteWithChildren,
   HomeIndexRoute: HomeIndexRoute,
 }
 
