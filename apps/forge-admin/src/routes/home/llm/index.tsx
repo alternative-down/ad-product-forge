@@ -12,15 +12,8 @@ import {
   AdminInput,
   PageHeader,
 } from '@/components/admin';
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from '@/components/ui/combobox';
 import { Dialog } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSystemLlm, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
 
@@ -218,34 +211,30 @@ function HomeLlmProfilesRoute() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <label className="text-sm font-medium" htmlFor="llm-model-key">
                   Model key
                 </label>
-                <Combobox
-                    items={modelKeys}
-                    value={profileForm.modelKey || null}
-                    onValueChange={(value) =>
-                      setProfileForm((current) => ({
-                        ...current,
-                        modelKey: value ?? '',
-                      }))
-                    }
-                  >
-                    <ComboboxInput
-                      placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
-                      disabled={mutation.isPending || modelKeys.length === 0}
-                    />
-                    <ComboboxContent>
-                      <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
-                      <ComboboxList>
-                        {(modelKey: string) => (
-                          <ComboboxItem key={modelKey} value={modelKey}>
-                            {modelKey}
-                          </ComboboxItem>
-                        )}
-                      </ComboboxList>
-                    </ComboboxContent>
-                  </Combobox>
+                <Select
+                  value={profileForm.modelKey}
+                  onValueChange={(value) =>
+                    setProfileForm((current) => ({
+                      ...current,
+                      modelKey: value,
+                    }))
+                  }
+                  disabled={mutation.isPending || modelKeys.length === 0}
+                >
+                  <SelectTrigger id="llm-model-key" className="w-full">
+                    <SelectValue placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {modelKeys.map((modelKey) => (
+                      <SelectItem key={modelKey} value={modelKey}>
+                        {modelKey}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
