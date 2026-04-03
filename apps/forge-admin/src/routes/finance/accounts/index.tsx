@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Pencil, Power, PowerOff, X } from 'lucide-react';
+import { Check, Power, PowerOff, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -54,7 +54,6 @@ function createEmptyMovementForm(): MovementForm {
 }
 
 function FinanceAccountsIndexRoute() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const financeQuery = useQuery({
     queryKey: ['admin', 'finance'],
@@ -117,6 +116,10 @@ function FinanceAccountsIndexRoute() {
     () => contractsQuery.data?.items ?? [],
     [contractsQuery.data?.items],
   );
+  const movements = useMemo(
+    () => financeQuery.data?.movements.items ?? [],
+    [financeQuery.data?.movements.items],
+  );
   const agendaRows = useMemo(
     () => [
       ...plannedMovements.map((movement) => ({
@@ -172,6 +175,38 @@ function FinanceAccountsIndexRoute() {
         </div>
 
         {createMutation.error ? <div className="text-sm text-destructive">{createMutation.error.message}</div> : null}
+
+        <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
+          <Table className="text-sm">
+            <TableHeader className="bg-muted/50 text-left text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Valor</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Data</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {movements.map((movement) => (
+                <TableRow key={movement.id}>
+                  <TableCell className="px-4 py-3">{humanizeMovementType(movement.type)}</TableCell>
+                  <TableCell className="px-4 py-3">{formatUsdSigned(movement.amountUsd, movement.direction)}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {formatDateTime(movement.effectiveAt ?? movement.dueAt ?? movement.createdAt)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">{humanizeMovementStatus(movement.status)}</TableCell>
+                </TableRow>
+              ))}
+              {movements.length === 0 ? (
+                <TableRow>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={4}>
+                    Nenhum movimento ainda.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </div>
       </section>
 
       <section className="space-y-5">
@@ -242,19 +277,6 @@ function FinanceAccountsIndexRoute() {
                         >
                           {item.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                           <span className="sr-only">{item.isActive ? 'Inativar' : 'Ativar'}</span>
-                        </AdminButton>
-                      ) : null}
-
-                      {item.kind === 'contract' ? (
-                        <AdminButton
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            void navigate({ to: '/finance/contracts' });
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Editar contrato</span>
                         </AdminButton>
                       ) : null}
                     </div>
@@ -483,7 +505,7 @@ function formatDateTime(value: number) {
 
 function humanizeMovementType(type: string) {
   if (type === 'owner-investment') {
-    return 'Movimento manual';
+    return 'Aporte';
   }
 
   if (type === 'manual-payable') {
@@ -491,6 +513,22 @@ function humanizeMovementType(type: string) {
   }
 
   return type;
+}
+
+function humanizeMovementStatus(status: string) {
+  if (status === 'planned') {
+    return 'Previsto';
+  }
+
+  if (status === 'posted') {
+    return 'Postado';
+  }
+
+  if (status === 'canceled') {
+    return 'Cancelado';
+  }
+
+  return status;
 }
 
 function humanizeRecurrencePeriod(value: 'weekly' | 'monthly' | 'yearly') {
