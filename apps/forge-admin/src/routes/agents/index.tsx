@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { PageHeader } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { getAgents } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/')({
@@ -25,7 +26,7 @@ function AgentsIndexRoute() {
           {agents.map((agent) => (
             <article key={agent.agentId} className="rounded-sm border border-border bg-background px-5 py-4">
               <div className="flex items-start gap-4">
-                <Avatar className="h-14 w-14 rounded-sm border border-border bg-muted">
+                <Avatar className="h-14 w-14 rounded-sm border border-border bg-muted [&::after]:rounded-sm">
                   <AvatarFallback className="rounded-sm bg-muted text-sm font-medium text-foreground">
                     {getAgentInitials(agent.name)}
                   </AvatarFallback>
@@ -37,9 +38,9 @@ function AgentsIndexRoute() {
                     <div className="text-sm text-muted-foreground">{agent.roleName ?? 'Sem papel'}</div>
                   </div>
 
-                  <div className="inline-flex rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-foreground">
+                  <Badge variant="outline" className="rounded-sm">
                     {humanizeAgentStatus(agent)}
-                  </div>
+                  </Badge>
                 </div>
               </div>
             </article>
@@ -70,15 +71,10 @@ function getAgentInitials(name: string) {
 
 function humanizeAgentStatus(agent: {
   executionState: 'idle' | 'running';
-  loaded: boolean;
 }) {
   if (agent.executionState === 'running') {
-    return 'Executando';
+    return 'Trabalhando';
   }
 
-  if (agent.loaded) {
-    return 'Pronto';
-  }
-
-  return 'Parado';
+  return 'Ocioso';
 }
