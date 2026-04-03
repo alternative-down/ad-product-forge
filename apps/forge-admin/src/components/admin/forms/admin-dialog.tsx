@@ -1,15 +1,19 @@
 import type { ComponentProps } from 'react';
 
-import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { XIcon } from 'lucide-react';
+
+import { AdminButton } from '@/components/admin/forms/admin-button';
+import { DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 export function AdminDialogContent({ className, ...props }: ComponentProps<typeof DialogContent>) {
   return (
     <DialogContent
       className={cn(
-        'rounded-sm [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-destructive/10 [&_[data-slot=dialog-close]]:text-foreground [&_[data-slot=dialog-close]]:hover:bg-destructive/20 [&_[data-slot=dialog-close]]:hover:text-foreground',
+        'rounded-sm',
         className,
       )}
+      showCloseButton={false}
       {...props}
     />
   );
@@ -24,12 +28,26 @@ export function AdminDialogFooter({ className, ...props }: ComponentProps<typeof
   );
 }
 
-export function AdminDialogHeader({ className, ...props }: ComponentProps<typeof DialogHeader>) {
+export function AdminDialogHeader({ className, children, ...props }: ComponentProps<typeof DialogHeader>) {
   return (
     <DialogHeader
-      className={cn('-mx-4 -mt-4 items-center rounded-t-sm border-b bg-muted/60 px-4 py-4 text-center', className)}
+      className={cn('relative -mx-4 -mt-4 items-center rounded-t-sm border-b bg-muted/60 px-4 py-4 text-center', className)}
       {...props}
-    />
+    >
+      {children}
+      <DialogClose
+        render={
+          <AdminButton
+            variant="ghost"
+            size="icon-sm"
+            className="absolute top-4 right-4 rounded-full bg-destructive/10 text-foreground hover:bg-destructive/20 hover:text-foreground"
+          />
+        }
+      >
+        <XIcon />
+        <span className="sr-only">Fechar</span>
+      </DialogClose>
+    </DialogHeader>
   );
 }
 
