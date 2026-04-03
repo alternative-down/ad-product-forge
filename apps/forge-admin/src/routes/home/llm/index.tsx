@@ -1,15 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
+import { PageHeader } from '@/components/admin';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PageHeader } from '@/components/admin';
 import {
   getSystemLlm,
   upsertLlmModelPrice,
   upsertLlmProfile,
+  type LlmProfile,
   type UpsertLlmModelPriceInput,
   type UpsertLlmProfileInput,
 } from '@/lib/admin-api';
@@ -18,70 +26,229 @@ export const Route = createFileRoute('/home/llm/')({
   component: HomeLlmIndexRoute,
 });
 
-function HomeLlmIndexRoute() {
-  const queryClient = useQueryClient();
-  const llmQuery = useQuery({
-    queryKey: ['admin', 'system-llm'],
-    queryFn: getSystemLlm,
-  });
-  const [profileForm, setProfileForm] = useState<UpsertLlmProfileInput>({
+function createEmptyProfileForm(): UpsertLlmProfileInput {
+  return {
     name: '',
     modelKey: '',
     baseUrl: '',
     apiKey: '',
     contractCostMultiplier: 1,
     isEnabled: true,
-  });
-  const [priceForm, setPriceForm] = useState<UpsertLlmModelPriceInput>({
+  };
+}
+
+function createProfileForm(profile: LlmProfile): UpsertLlmProfileInput {
+  return {
+    profileId: profile.profileId,
+    name: profile.name,
+    modelKey: profile.modelKey,
+    baseUrl: profile.baseUrl ?? '',
+    apiKey: profile.apiKey,
+    contractCostMultiplier: profile.contractCostMultiplier,
+    isEnabled: profile.isEnabled,
+  };
+}
+
+function createEmptyPriceForm(): UpsertLlmModelPriceInput {
+  return {
     modelKey: '',
     inputPerMillionUsd: 0,
     inputCachePerMillionUsd: 0,
     outputPerMillionUsd: 0,
+  };
+}
+
+function HomeLlmIndexRoute() {
+  const queryClient = useQueryClient();
+  const llmQuery = useQuery({
+    queryKey: ['admin', 'system-llm'],
+    queryFn: getSystemLlm,
   });
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState<UpsertLlmProfileInput>(createEmptyProfileForm);
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [priceForm, setPriceForm] = useState<UpsertLlmModelPriceInput>(createEmptyPriceForm);
   const profileMutation = useMutation({
     mutationFn: upsertLlmProfile,
     onSuccess: async () => {
+      setProfileDialogOpen(false);
+      setProfileForm(createEmptyProfileForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
-      setProfileForm({
-        name: '',
-        modelKey: '',
-        baseUrl: '',
-        apiKey: '',
-        contractCostMultiplier: 1,
-        isEnabled: true,
-      });
     },
   });
   const priceMutation = useMutation({
     mutationFn: upsertLlmModelPrice,
     onSuccess: async () => {
+      setPriceDialogOpen(false);
+      setPriceForm(createEmptyPriceForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
-      setPriceForm({
-        modelKey: '',
-        inputPerMillionUsd: 0,
-        inputCachePerMillionUsd: 0,
-        outputPerMillionUsd: 0,
-      });
     },
   });
+  const sortedProfiles = useMemo(
+    () => [...(llmQuery.data?.profiles ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
+    [llmQuery.data?.profiles],
+  );
+  const sortedPrices = useMemo(
+    () => [...(llmQuery.data?.prices ?? [])].sort((left, right) => left.modelKey.localeCompare(right.modelKey)),
+    [llmQuery.data?.prices],
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader title="LLM" />
+
       <Tabs defaultValue="profiles" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="profiles">Perfil</TabsTrigger>
-          <TabsTrigger value="prices">Preços</TabsTrigger>
+        <TabsList className="h-auto gap-2 rounded-xl bg-secondary/80 p-1.5">
+          <TabsTrigger
+            value="profiles"
+            className="rounded-lg px-4 py-2.5 text-sm text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground"
+          >
+            Perfil
+          </TabsTrigger>
+          <TabsTrigger
+            value="prices"
+            className="rounded-lg px-4 py-2.5 text-sm text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground"
+          >
+            Preços
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profiles" className="space-y-6">
+          <div className="flex justify-end">
+            <Button
+              className="h-12 px-5"
+              onClick={() => {
+                setProfileForm(createEmptyProfileForm());
+                setProfileDialogOpen(true);
+              }}
+            >
+              Adicionar
+            </Button>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Nome</th>
+                  <th className="px-4 py-3 font-medium">Model key</th>
+                  <th className="px-4 py-3 font-medium">Base URL</th>
+                  <th className="px-4 py-3 font-medium">Ativo</th>
+                  <th className="px-4 py-3 text-right font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedProfiles.map((profile) => (
+                  <tr key={profile.profileId} className="border-t border-border">
+                    <td className="px-4 py-3">{profile.name}</td>
+                    <td className="px-4 py-3">{profile.modelKey}</td>
+                    <td className="px-4 py-3">{profile.baseUrl || '—'}</td>
+                    <td className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        className="h-10 px-3"
+                        onClick={() => {
+                          setProfileForm(createProfileForm(profile));
+                          setProfileDialogOpen(true);
+                        }}
+                      >
+                        Editar
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {sortedProfiles.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-6 text-muted-foreground" colSpan={5}>
+                      Nenhum perfil ainda.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="prices" className="space-y-6">
+          <div className="flex justify-end">
+            <Button
+              className="h-12 px-5"
+              onClick={() => {
+                setPriceForm(createEmptyPriceForm());
+                setPriceDialogOpen(true);
+              }}
+            >
+              Adicionar
+            </Button>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Model key</th>
+                  <th className="px-4 py-3 font-medium">Input</th>
+                  <th className="px-4 py-3 font-medium">Cache</th>
+                  <th className="px-4 py-3 font-medium">Output</th>
+                  <th className="px-4 py-3 text-right font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedPrices.map((price) => (
+                  <tr key={price.modelKey} className="border-t border-border">
+                    <td className="px-4 py-3">{price.modelKey}</td>
+                    <td className="px-4 py-3">{price.inputPerMillionUsd}</td>
+                    <td className="px-4 py-3">{price.inputCachePerMillionUsd}</td>
+                    <td className="px-4 py-3">{price.outputPerMillionUsd}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        className="h-10 px-3"
+                        onClick={() => {
+                          setPriceForm({
+                            modelKey: price.modelKey,
+                            inputPerMillionUsd: price.inputPerMillionUsd,
+                            inputCachePerMillionUsd: price.inputCachePerMillionUsd,
+                            outputPerMillionUsd: price.outputPerMillionUsd,
+                          });
+                          setPriceDialogOpen(true);
+                        }}
+                      >
+                        Editar
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {sortedPrices.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-6 text-muted-foreground" colSpan={5}>
+                      Nenhum preço ainda.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Adicionar perfil'}</DialogTitle>
+          </DialogHeader>
+
           <form
-            className="max-w-3xl space-y-5"
+            className="space-y-5"
             onSubmit={(event) => {
               event.preventDefault();
               profileMutation.mutate({
                 ...profileForm,
+                name: profileForm.name.trim(),
+                modelKey: profileForm.modelKey.trim(),
                 baseUrl: profileForm.baseUrl?.trim() || null,
+                apiKey: profileForm.apiKey.trim(),
               });
             }}
           >
@@ -94,6 +261,7 @@ function HomeLlmIndexRoute() {
                   id="llm-profile-name"
                   value={profileForm.name}
                   onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))}
+                  disabled={profileMutation.isPending}
                 />
               </div>
               <div className="space-y-2">
@@ -104,6 +272,7 @@ function HomeLlmIndexRoute() {
                   id="llm-model-key"
                   value={profileForm.modelKey}
                   onChange={(event) => setProfileForm((current) => ({ ...current, modelKey: event.target.value }))}
+                  disabled={profileMutation.isPending}
                 />
               </div>
             </div>
@@ -115,6 +284,7 @@ function HomeLlmIndexRoute() {
                 id="llm-base-url"
                 value={profileForm.baseUrl ?? ''}
                 onChange={(event) => setProfileForm((current) => ({ ...current, baseUrl: event.target.value }))}
+                disabled={profileMutation.isPending}
               />
             </div>
             <div className="space-y-2">
@@ -126,6 +296,7 @@ function HomeLlmIndexRoute() {
                 type="password"
                 value={profileForm.apiKey}
                 onChange={(event) => setProfileForm((current) => ({ ...current, apiKey: event.target.value }))}
+                disabled={profileMutation.isPending}
               />
             </div>
             <div className="grid gap-5 md:grid-cols-[180px_auto] md:items-end">
@@ -144,6 +315,7 @@ function HomeLlmIndexRoute() {
                       contractCostMultiplier: Number(event.target.value) || 0,
                     }))
                   }
+                  disabled={profileMutation.isPending}
                 />
               </div>
               <label className="flex h-11 items-center gap-3 text-sm">
@@ -156,50 +328,40 @@ function HomeLlmIndexRoute() {
                       isEnabled: event.target.checked,
                     }))
                   }
+                  disabled={profileMutation.isPending}
                 />
                 Ativo
               </label>
             </div>
+            {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {profileMutation.error ? (
               <div className="text-sm text-destructive">{profileMutation.error.message}</div>
             ) : null}
-            <div className="flex justify-end">
+            <DialogFooter>
               <Button type="submit" className="h-12 px-5" disabled={profileMutation.isPending}>
-                {profileMutation.isPending ? 'Salvando...' : 'Salvar perfil'}
+                {profileMutation.isPending ? 'Salvando...' : 'Salvar'}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
 
-          <div className="overflow-hidden rounded-xl border border-border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Nome</th>
-                  <th className="px-4 py-3 font-medium">Model key</th>
-                  <th className="px-4 py-3 font-medium">Base URL</th>
-                  <th className="px-4 py-3 font-medium">Ativo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {llmQuery.data?.profiles.map((profile) => (
-                  <tr key={profile.profileId} className="border-t border-border">
-                    <td className="px-4 py-3">{profile.name}</td>
-                    <td className="px-4 py-3">{profile.modelKey}</td>
-                    <td className="px-4 py-3">{profile.baseUrl || '—'}</td>
-                    <td className="px-4 py-3">{profile.isEnabled ? 'Sim' : 'Não'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </TabsContent>
+      <Dialog open={priceDialogOpen} onOpenChange={setPriceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{sortedPrices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Adicionar preço'}</DialogTitle>
+          </DialogHeader>
 
-        <TabsContent value="prices" className="space-y-6">
           <form
-            className="max-w-3xl space-y-5"
+            className="space-y-5"
             onSubmit={(event) => {
               event.preventDefault();
-              priceMutation.mutate(priceForm);
+              priceMutation.mutate({
+                modelKey: priceForm.modelKey.trim(),
+                inputPerMillionUsd: priceForm.inputPerMillionUsd,
+                inputCachePerMillionUsd: priceForm.inputCachePerMillionUsd,
+                outputPerMillionUsd: priceForm.outputPerMillionUsd,
+              });
             }}
           >
             <div className="space-y-2">
@@ -210,6 +372,7 @@ function HomeLlmIndexRoute() {
                 id="llm-price-model-key"
                 value={priceForm.modelKey}
                 onChange={(event) => setPriceForm((current) => ({ ...current, modelKey: event.target.value }))}
+                disabled={priceMutation.isPending}
               />
             </div>
             <div className="grid gap-5 md:grid-cols-3">
@@ -228,6 +391,7 @@ function HomeLlmIndexRoute() {
                       inputPerMillionUsd: Number(event.target.value) || 0,
                     }))
                   }
+                  disabled={priceMutation.isPending}
                 />
               </div>
               <div className="space-y-2">
@@ -245,6 +409,7 @@ function HomeLlmIndexRoute() {
                       inputCachePerMillionUsd: Number(event.target.value) || 0,
                     }))
                   }
+                  disabled={priceMutation.isPending}
                 />
               </div>
               <div className="space-y-2">
@@ -262,43 +427,20 @@ function HomeLlmIndexRoute() {
                       outputPerMillionUsd: Number(event.target.value) || 0,
                     }))
                   }
+                  disabled={priceMutation.isPending}
                 />
               </div>
             </div>
-            {priceMutation.error ? (
-              <div className="text-sm text-destructive">{priceMutation.error.message}</div>
-            ) : null}
-            <div className="flex justify-end">
+            {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
+            {priceMutation.error ? <div className="text-sm text-destructive">{priceMutation.error.message}</div> : null}
+            <DialogFooter>
               <Button type="submit" className="h-12 px-5" disabled={priceMutation.isPending}>
-                {priceMutation.isPending ? 'Salvando...' : 'Salvar preço'}
+                {priceMutation.isPending ? 'Salvando...' : 'Salvar'}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-
-          <div className="overflow-hidden rounded-xl border border-border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Model key</th>
-                  <th className="px-4 py-3 font-medium">Input</th>
-                  <th className="px-4 py-3 font-medium">Cache</th>
-                  <th className="px-4 py-3 font-medium">Output</th>
-                </tr>
-              </thead>
-              <tbody>
-                {llmQuery.data?.prices.map((price) => (
-                  <tr key={price.modelKey} className="border-t border-border">
-                    <td className="px-4 py-3">{price.modelKey}</td>
-                    <td className="px-4 py-3">{price.inputPerMillionUsd}</td>
-                    <td className="px-4 py-3">{price.inputCachePerMillionUsd}</td>
-                    <td className="px-4 py-3">{price.outputPerMillionUsd}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </TabsContent>
-      </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
