@@ -87,7 +87,7 @@ function HomeLlmProfilesRoute() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
         title="Perfis"
         actions={
@@ -119,7 +119,7 @@ function HomeLlmProfilesRoute() {
         </TabsList>
       </Tabs>
 
-      <div className="max-w-full overflow-x-auto rounded-sm border border-border">
+      <div className="w-full min-w-0 overflow-x-auto rounded-sm border border-border">
         <table className="min-w-[760px] w-full text-sm">
           <thead className="bg-muted/50 text-left text-muted-foreground">
             <tr>
