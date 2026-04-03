@@ -114,7 +114,7 @@ function HomeLlmPricesRoute() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-2.5rem)] rounded-2xl border border-border/70 bg-background/95 p-5 shadow-xl shadow-black/5 sm:max-w-2xl sm:p-6">
           <DialogHeader>
             <DialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Adicionar preço'}</DialogTitle>
           </DialogHeader>
@@ -142,7 +142,7 @@ function HomeLlmPricesRoute() {
                 disabled={mutation.isPending}
               />
             </div>
-            <div className="grid gap-5 md:grid-cols-3">
+            <div className="grid gap-4 min-[560px]:grid-cols-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="llm-input-price">
                   Input / 1M
@@ -200,7 +200,7 @@ function HomeLlmPricesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <DialogFooter>
+            <DialogFooter className="mx-0 mb-0 rounded-none border-border/70 bg-transparent p-0 pt-4">
               <Button type="submit" className="h-10 px-4" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
               </Button>

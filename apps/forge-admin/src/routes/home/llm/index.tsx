@@ -5,6 +5,14 @@ import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -60,6 +68,10 @@ function HomeLlmProfilesRoute() {
   const profiles = useMemo(
     () => [...(llmQuery.data?.profiles ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
     [llmQuery.data?.profiles],
+  );
+  const modelKeys = useMemo(
+    () => [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort((left, right) => left.localeCompare(right)),
+    [llmQuery.data?.prices],
   );
 
   return (
@@ -123,7 +135,7 @@ function HomeLlmProfilesRoute() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-2.5rem)] rounded-2xl border border-border/70 bg-background/95 p-5 shadow-xl shadow-black/5 sm:max-w-2xl sm:p-6">
           <DialogHeader>
             <DialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Adicionar perfil'}</DialogTitle>
           </DialogHeader>
@@ -141,7 +153,7 @@ function HomeLlmProfilesRoute() {
               });
             }}
           >
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-4 min-[560px]:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="llm-profile-name">
                   Nome
@@ -154,15 +166,35 @@ function HomeLlmProfilesRoute() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-model-key">
+                <label className="text-sm font-medium">
                   Model key
                 </label>
-                <Input
-                  id="llm-model-key"
-                  value={profileForm.modelKey}
-                  onChange={(event) => setProfileForm((current) => ({ ...current, modelKey: event.target.value }))}
-                  disabled={mutation.isPending}
-                />
+                <Combobox
+                  items={modelKeys}
+                  value={profileForm.modelKey || null}
+                  onValueChange={(value) =>
+                    setProfileForm((current) => ({
+                      ...current,
+                      modelKey: value ?? '',
+                    }))
+                  }
+                >
+                  <ComboboxInput
+                    placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
+                    className="w-full"
+                    disabled={mutation.isPending || modelKeys.length === 0}
+                  />
+                  <ComboboxContent className="rounded-xl border border-border/70 bg-background/98 shadow-lg shadow-black/5">
+                    <ComboboxEmpty>Nenhum model key disponível.</ComboboxEmpty>
+                    <ComboboxList>
+                      {modelKeys.map((modelKey) => (
+                        <ComboboxItem key={modelKey} value={modelKey}>
+                          {modelKey}
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               </div>
             </div>
             <div className="space-y-2">
@@ -188,7 +220,7 @@ function HomeLlmProfilesRoute() {
                 disabled={mutation.isPending}
               />
             </div>
-            <div className="grid gap-5 md:grid-cols-[180px_auto] md:items-end">
+            <div className="grid gap-4 min-[560px]:grid-cols-[minmax(0,180px)_auto] min-[560px]:items-end">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="llm-cost-multiplier">
                   Cost multiplier
@@ -224,7 +256,7 @@ function HomeLlmProfilesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            <DialogFooter>
+            <DialogFooter className="mx-0 mb-0 rounded-none border-border/70 bg-transparent p-0 pt-4">
               <Button type="submit" className="h-10 px-4" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
               </Button>
