@@ -456,6 +456,15 @@ function toDiscordCredentials(credentials: unknown): DiscordProviderCredentials 
             },
           ];
         })
+      : Array.isArray(credentials.allowedChannelIds)
+        ? credentials.allowedChannelIds.flatMap((value) =>
+            typeof value === 'string'
+              ? [{
+                  channelId: value,
+                  respondToMentionsOnly: credentials.respondToMentionsOnly === true,
+                }]
+              : [],
+          )
       : [],
   };
 }

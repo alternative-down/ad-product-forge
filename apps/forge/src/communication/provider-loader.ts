@@ -12,7 +12,7 @@ export const internalChatCredentialsSchema = z.object({
   description: z.string().nullish(),
 });
 
-export const discordCredentialsSchema = z.object({
+const discordChannelCredentialsSchema = z.object({
   token: z.string(),
   channels: z.array(
     z.object({
@@ -21,6 +21,33 @@ export const discordCredentialsSchema = z.object({
     }),
   ).nullish(),
 });
+
+const discordLegacyCredentialsSchema = z.object({
+  token: z.string(),
+  allowedChannelIds: z.array(z.string()).nullish(),
+  respondToMentionsOnly: z.boolean().nullish(),
+});
+
+export const discordCredentialsSchema = z
+  .union([discordChannelCredentialsSchema, discordLegacyCredentialsSchema])
+  .transform((credentials) => {
+    if ('allowedChannelIds' in credentials || 'respondToMentionsOnly' in credentials) {
+      return {
+        token: credentials.token,
+        channels: (credentials.allowedChannelIds ?? []).map((channelId) => ({
+          channelId,
+          respondToMentionsOnly: credentials.respondToMentionsOnly ?? false,
+        })),
+      };
+    }
+
+    const channelCredentials = discordChannelCredentialsSchema.parse(credentials);
+
+    return {
+      token: channelCredentials.token,
+      channels: channelCredentials.channels ?? [],
+    };
+  });
 
 export const emailCredentialsSchema = z.object({
   imap: z.object({
