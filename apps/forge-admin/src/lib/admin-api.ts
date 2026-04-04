@@ -221,6 +221,41 @@ export type AgentConversationMessagesResponse = {
   hasMore: boolean;
 };
 
+export type DiscordProviderCredentials = {
+  token: string;
+  allowedChannelIds: string[];
+  respondToMentionsOnly: boolean;
+};
+
+export type EmailProviderCredentials = {
+  imap: {
+    host: string;
+    port: number;
+    secure: boolean;
+    user: string;
+    password: string;
+  };
+  smtp: {
+    host: string;
+    port: number;
+    secure: boolean;
+    user: string;
+    password: string;
+  };
+};
+
+export type UpsertAgentProviderInput =
+  | {
+      agentId: string;
+      providerType: 'discord';
+      credentials: DiscordProviderCredentials;
+    }
+  | {
+      agentId: string;
+      providerType: 'email';
+      credentials: EmailProviderCredentials;
+    };
+
 export type LlmProfile = {
   profileId: string;
   name: string;
@@ -455,6 +490,26 @@ export function getAgentConversationMessages(
 ) {
   return request<AgentConversationMessagesResponse>(
     `/admin/agent/conversation-messages?agentId=${encodeURIComponent(agentId)}&provider=${encodeURIComponent(provider)}&targetKey=${encodeURIComponent(targetKey)}&limit=${limit}&offset=${offset}`,
+  );
+}
+
+export function upsertAgentProvider(input: UpsertAgentProviderInput) {
+  return request<{ success: true; agentId: string; providerType: string }>(
+    '/admin/agent-provider/upsert',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function deleteAgentProvider(agentId: string, providerType: 'discord' | 'email') {
+  return request<{ success: true; agentId: string; providerType: string }>(
+    '/admin/agent-provider/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify({ agentId, providerType }),
+    },
   );
 }
 
