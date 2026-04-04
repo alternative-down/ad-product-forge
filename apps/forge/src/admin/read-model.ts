@@ -632,6 +632,7 @@ async function listRecentInternalChatConversations(
     const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
 
     return Promise.all(rows.map(async (conversation) => {
+      const internalConversation = await internalChat.getConversationForAgent(agentId, conversation.targetKey);
       const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, conversation.targetKey);
       const participants = collectConversationParticipants({
         name: conversation.name,
@@ -645,7 +646,7 @@ async function listRecentInternalChatConversations(
         conversationId: conversation.targetKey,
         conversationKey: conversation.targetKey,
         provider: conversation.provider,
-        type: participants.length > 2 ? 'group' : 'dm',
+        type: internalConversation?.type === 'group' ? 'group' : 'dm',
         name: conversation.name ?? undefined,
         participants,
         updatedAt: Date.parse(conversation.latestMessageAt) || 0,

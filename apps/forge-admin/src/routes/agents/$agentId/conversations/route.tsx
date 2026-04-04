@@ -34,7 +34,7 @@ function AgentConversationsLayoutRoute() {
               <div className="space-y-2 pr-3">
                 {conversations.map((conversation) => {
                   const selected = conversation.conversationId === selectedConversation?.conversationId;
-                  const latestMessage = conversation.messages[0] ?? null;
+                  const latestMessage = conversation.messages.at(-1) ?? null;
                   const conversationPath = buildConversationPath(agentId, conversation.conversationId);
 
                   return (
@@ -54,7 +54,7 @@ function AgentConversationsLayoutRoute() {
                           </div>
                           <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
                         </div>
-                        {conversation.participants.length > 2 ? (
+                        {conversation.type === 'group' && conversation.participants.length > 0 ? (
                           <div className="line-clamp-2 text-sm text-muted-foreground">
                             {conversation.participants.join(', ')}
                           </div>
