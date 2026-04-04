@@ -12,12 +12,12 @@ import {
   AdminDialogTitle,
   AdminInput,
   AdminTextarea,
+  AdminScrollArea,
   PageHeader,
 } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { changeAgentRole, getAgent, getRoles, getSystemLlm, updateAgentConfig, type AgentDetail } from '@/lib/admin-api';
 
@@ -146,11 +146,11 @@ function AgentDetailIndexRoute() {
 
           <section className="space-y-3">
             <div className="text-lg font-semibold tracking-[-0.03em]">Instruções</div>
-            <ScrollArea className="h-[min(20rem,calc(100dvh-18rem))] rounded-sm border border-border bg-background">
-              <div className="whitespace-pre-wrap px-4 py-3 text-sm leading-6 text-foreground">
+            <AdminScrollArea className="h-[min(20rem,calc(100dvh-18rem))] rounded-sm border border-border bg-background" contentClassName="px-4 py-3">
+              <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
                 {agent.instructions.trim() || 'Sem instruções.'}
               </div>
-            </ScrollArea>
+            </AdminScrollArea>
           </section>
         </>
       ) : null}

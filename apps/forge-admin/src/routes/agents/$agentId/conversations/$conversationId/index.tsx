@@ -3,8 +3,8 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 
+import { AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAgent, getAgentConversationMessages } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/conversations/$conversationId/')({
@@ -138,8 +138,7 @@ function AgentConversationDetailIndexRoute() {
       </div>
 
       <div ref={scrollAreaRef} className="h-full min-h-0">
-        <ScrollArea className="-mr-2 h-full min-h-0 [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
-          <div className="space-y-3 pr-3">
+        <AdminScrollArea className="h-full min-h-0" contentClassName="space-y-3">
             <div ref={topSentinelRef} className="h-4" />
             {isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
             {messages.map((message) => (
@@ -158,8 +157,7 @@ function AgentConversationDetailIndexRoute() {
                 </div>
               </article>
             ))}
-          </div>
-        </ScrollArea>
+        </AdminScrollArea>
       </div>
       {messagesQuery.error ? <div className="text-sm text-destructive">{messagesQuery.error.message}</div> : null}
     </div>

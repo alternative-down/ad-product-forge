@@ -3,8 +3,8 @@ import type { ComponentProps } from 'react';
 import { XIcon } from 'lucide-react';
 
 import { AdminButton } from '@/components/admin/forms/admin-button';
+import { AdminScrollArea } from '@/components/admin/system/admin-scroll-area';
 import { DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 export function AdminDialogContent({ className, ...props }: ComponentProps<typeof DialogContent>) {
@@ -58,10 +58,10 @@ export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof 
 
 export function AdminDialogBody({ className, children, ...props }: ComponentProps<'div'>) {
   return (
-    <ScrollArea className="h-[min(30rem,calc(100dvh-14rem))] px-4">
-      <div className={cn('space-y-4 py-4', className)} {...props}>
+    <AdminScrollArea className="h-[min(30rem,calc(100dvh-14rem))]" contentClassName={cn('space-y-4 px-4 py-4', className)}>
+      <div {...props}>
         {children}
       </div>
-    </ScrollArea>
+    </AdminScrollArea>
   );
 }

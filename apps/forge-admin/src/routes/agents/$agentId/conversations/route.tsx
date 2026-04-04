@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { AdminScrollArea } from '@/components/admin';
 import { getAgent } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/conversations')({
@@ -30,8 +30,7 @@ function AgentConversationsLayoutRoute() {
       {conversations.length > 0 ? (
         <div className="flex h-[calc(100dvh-12rem)] min-h-0 flex-col md:grid md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
           <div className={selectedConversation ? 'hidden min-h-0 md:block' : 'min-h-0'}>
-            <ScrollArea className="-mr-2 h-full [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
-              <div className="space-y-1 pr-3">
+            <AdminScrollArea className="h-full" contentClassName="space-y-1">
                 {conversations.map((conversation) => {
                   const selected = conversation.conversationId === selectedConversation?.conversationId;
                   const latestMessage = conversation.messages.at(-1) ?? null;
@@ -83,8 +82,7 @@ function AgentConversationsLayoutRoute() {
                     </Link>
                   );
                 })}
-              </div>
-            </ScrollArea>
+            </AdminScrollArea>
           </div>
 
           <div className={selectedConversation ? 'min-h-0 block' : 'hidden min-h-0 md:block'}>

@@ -1,4 +1,5 @@
 export { ActionBar } from './system/action-bar';
+export { AdminScrollArea } from './system/admin-scroll-area';
 export { AdminTopbar } from './layout/admin-topbar';
 export { AppShell } from './layout/app-shell';
 export { AdminButton } from './forms/admin-button';
