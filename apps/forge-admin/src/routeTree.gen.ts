@@ -63,6 +63,7 @@ import { Route as AgentsAgentIdGithubIndexRouteImport } from './routes/agents/$a
 import { Route as AgentsAgentIdConversationsIndexRouteImport } from './routes/agents/$agentId/conversations/index'
 import { Route as AgentsAgentIdContractIndexRouteImport } from './routes/agents/$agentId/contract/index'
 import { Route as AgentsAgentIdProvidersProviderTypeRouteRouteImport } from './routes/agents/$agentId/providers/$providerType/route'
+import { Route as AgentsAgentIdConversationsConversationIdRouteRouteImport } from './routes/agents/$agentId/conversations/$conversationId/route'
 import { Route as V1SystemLlmProfilesIndexRouteImport } from './routes/v1/system/llm/profiles/index'
 import { Route as V1SystemLlmPricesIndexRouteImport } from './routes/v1/system/llm/prices/index'
 import { Route as V1SystemLlmDefaultsIndexRouteImport } from './routes/v1/system/llm/defaults/index'
@@ -74,6 +75,7 @@ import { Route as V1RolesRolesRoleIdIndexRouteImport } from './routes/v1/roles/r
 import { Route as V1AgentsAgentIdSchedulesIndexRouteImport } from './routes/v1/agents/$agentId/schedules/index'
 import { Route as V1AgentsAgentIdHistoryIndexRouteImport } from './routes/v1/agents/$agentId/history/index'
 import { Route as AgentsAgentIdProvidersProviderTypeIndexRouteImport } from './routes/agents/$agentId/providers/$providerType/index'
+import { Route as AgentsAgentIdConversationsConversationIdIndexRouteImport } from './routes/agents/$agentId/conversations/$conversationId/index'
 import { Route as V1AgentsAgentIdRuntimeRuntimeViewIndexRouteImport } from './routes/v1/agents/$agentId/runtime/$runtimeView/index'
 import { Route as V1AgentsAgentIdCommunicationsCommunicationViewIndexRouteImport } from './routes/v1/agents/$agentId/communications/$communicationView/index'
 
@@ -358,6 +360,12 @@ const AgentsAgentIdProvidersProviderTypeRouteRoute =
     path: '/providers/$providerType',
     getParentRoute: () => AgentsAgentIdRouteRoute,
   } as any)
+const AgentsAgentIdConversationsConversationIdRouteRoute =
+  AgentsAgentIdConversationsConversationIdRouteRouteImport.update({
+    id: '/$conversationId',
+    path: '/$conversationId',
+    getParentRoute: () => AgentsAgentIdConversationsRouteRoute,
+  } as any)
 const V1SystemLlmProfilesIndexRoute =
   V1SystemLlmProfilesIndexRouteImport.update({
     id: '/llm/profiles/',
@@ -422,6 +430,12 @@ const AgentsAgentIdProvidersProviderTypeIndexRoute =
     path: '/',
     getParentRoute: () => AgentsAgentIdProvidersProviderTypeRouteRoute,
   } as any)
+const AgentsAgentIdConversationsConversationIdIndexRoute =
+  AgentsAgentIdConversationsConversationIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AgentsAgentIdConversationsConversationIdRouteRoute,
+  } as any)
 const V1AgentsAgentIdRuntimeRuntimeViewIndexRoute =
   V1AgentsAgentIdRuntimeRuntimeViewIndexRouteImport.update({
     id: '/$agentId/runtime/$runtimeView/',
@@ -477,6 +491,7 @@ export interface FileRoutesByFullPath {
   '/v1/finance/': typeof V1FinanceIndexRoute
   '/v1/roles/': typeof V1RolesIndexRoute
   '/v1/system/': typeof V1SystemIndexRoute
+  '/agents/$agentId/conversations/$conversationId': typeof AgentsAgentIdConversationsConversationIdRouteRouteWithChildren
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
   '/agents/$agentId/contract/': typeof AgentsAgentIdContractIndexRoute
   '/agents/$agentId/conversations/': typeof AgentsAgentIdConversationsIndexRoute
@@ -490,6 +505,7 @@ export interface FileRoutesByFullPath {
   '/v1/system/company/': typeof V1SystemCompanyIndexRoute
   '/v1/system/migrations/': typeof V1SystemMigrationsIndexRoute
   '/v1/system/oauth/': typeof V1SystemOauthIndexRoute
+  '/agents/$agentId/conversations/$conversationId/': typeof AgentsAgentIdConversationsConversationIdIndexRoute
   '/agents/$agentId/providers/$providerType/': typeof AgentsAgentIdProvidersProviderTypeIndexRoute
   '/v1/agents/$agentId/history/': typeof V1AgentsAgentIdHistoryIndexRoute
   '/v1/agents/$agentId/schedules/': typeof V1AgentsAgentIdSchedulesIndexRoute
@@ -536,6 +552,7 @@ export interface FileRoutesByTo {
   '/v1/system/company': typeof V1SystemCompanyIndexRoute
   '/v1/system/migrations': typeof V1SystemMigrationsIndexRoute
   '/v1/system/oauth': typeof V1SystemOauthIndexRoute
+  '/agents/$agentId/conversations/$conversationId': typeof AgentsAgentIdConversationsConversationIdIndexRoute
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeIndexRoute
   '/v1/agents/$agentId/history': typeof V1AgentsAgentIdHistoryIndexRoute
   '/v1/agents/$agentId/schedules': typeof V1AgentsAgentIdSchedulesIndexRoute
@@ -593,6 +610,7 @@ export interface FileRoutesById {
   '/v1/finance/': typeof V1FinanceIndexRoute
   '/v1/roles/': typeof V1RolesIndexRoute
   '/v1/system/': typeof V1SystemIndexRoute
+  '/agents/$agentId/conversations/$conversationId': typeof AgentsAgentIdConversationsConversationIdRouteRouteWithChildren
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
   '/agents/$agentId/contract/': typeof AgentsAgentIdContractIndexRoute
   '/agents/$agentId/conversations/': typeof AgentsAgentIdConversationsIndexRoute
@@ -606,6 +624,7 @@ export interface FileRoutesById {
   '/v1/system/company/': typeof V1SystemCompanyIndexRoute
   '/v1/system/migrations/': typeof V1SystemMigrationsIndexRoute
   '/v1/system/oauth/': typeof V1SystemOauthIndexRoute
+  '/agents/$agentId/conversations/$conversationId/': typeof AgentsAgentIdConversationsConversationIdIndexRoute
   '/agents/$agentId/providers/$providerType/': typeof AgentsAgentIdProvidersProviderTypeIndexRoute
   '/v1/agents/$agentId/history/': typeof V1AgentsAgentIdHistoryIndexRoute
   '/v1/agents/$agentId/schedules/': typeof V1AgentsAgentIdSchedulesIndexRoute
@@ -664,6 +683,7 @@ export interface FileRouteTypes {
     | '/v1/finance/'
     | '/v1/roles/'
     | '/v1/system/'
+    | '/agents/$agentId/conversations/$conversationId'
     | '/agents/$agentId/providers/$providerType'
     | '/agents/$agentId/contract/'
     | '/agents/$agentId/conversations/'
@@ -677,6 +697,7 @@ export interface FileRouteTypes {
     | '/v1/system/company/'
     | '/v1/system/migrations/'
     | '/v1/system/oauth/'
+    | '/agents/$agentId/conversations/$conversationId/'
     | '/agents/$agentId/providers/$providerType/'
     | '/v1/agents/$agentId/history/'
     | '/v1/agents/$agentId/schedules/'
@@ -723,6 +744,7 @@ export interface FileRouteTypes {
     | '/v1/system/company'
     | '/v1/system/migrations'
     | '/v1/system/oauth'
+    | '/agents/$agentId/conversations/$conversationId'
     | '/agents/$agentId/providers/$providerType'
     | '/v1/agents/$agentId/history'
     | '/v1/agents/$agentId/schedules'
@@ -779,6 +801,7 @@ export interface FileRouteTypes {
     | '/v1/finance/'
     | '/v1/roles/'
     | '/v1/system/'
+    | '/agents/$agentId/conversations/$conversationId'
     | '/agents/$agentId/providers/$providerType'
     | '/agents/$agentId/contract/'
     | '/agents/$agentId/conversations/'
@@ -792,6 +815,7 @@ export interface FileRouteTypes {
     | '/v1/system/company/'
     | '/v1/system/migrations/'
     | '/v1/system/oauth/'
+    | '/agents/$agentId/conversations/$conversationId/'
     | '/agents/$agentId/providers/$providerType/'
     | '/v1/agents/$agentId/history/'
     | '/v1/agents/$agentId/schedules/'
@@ -1196,6 +1220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsAgentIdProvidersProviderTypeRouteRouteImport
       parentRoute: typeof AgentsAgentIdRouteRoute
     }
+    '/agents/$agentId/conversations/$conversationId': {
+      id: '/agents/$agentId/conversations/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/agents/$agentId/conversations/$conversationId'
+      preLoaderRoute: typeof AgentsAgentIdConversationsConversationIdRouteRouteImport
+      parentRoute: typeof AgentsAgentIdConversationsRouteRoute
+    }
     '/v1/system/llm/profiles/': {
       id: '/v1/system/llm/profiles/'
       path: '/llm/profiles'
@@ -1273,6 +1304,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsAgentIdProvidersProviderTypeIndexRouteImport
       parentRoute: typeof AgentsAgentIdProvidersProviderTypeRouteRoute
     }
+    '/agents/$agentId/conversations/$conversationId/': {
+      id: '/agents/$agentId/conversations/$conversationId/'
+      path: '/'
+      fullPath: '/agents/$agentId/conversations/$conversationId/'
+      preLoaderRoute: typeof AgentsAgentIdConversationsConversationIdIndexRouteImport
+      parentRoute: typeof AgentsAgentIdConversationsConversationIdRouteRoute
+    }
     '/v1/agents/$agentId/runtime/$runtimeView/': {
       id: '/v1/agents/$agentId/runtime/$runtimeView/'
       path: '/$agentId/runtime/$runtimeView'
@@ -1304,12 +1342,30 @@ const AgentsAgentIdContractRouteRouteWithChildren =
     AgentsAgentIdContractRouteRouteChildren,
   )
 
+interface AgentsAgentIdConversationsConversationIdRouteRouteChildren {
+  AgentsAgentIdConversationsConversationIdIndexRoute: typeof AgentsAgentIdConversationsConversationIdIndexRoute
+}
+
+const AgentsAgentIdConversationsConversationIdRouteRouteChildren: AgentsAgentIdConversationsConversationIdRouteRouteChildren =
+  {
+    AgentsAgentIdConversationsConversationIdIndexRoute:
+      AgentsAgentIdConversationsConversationIdIndexRoute,
+  }
+
+const AgentsAgentIdConversationsConversationIdRouteRouteWithChildren =
+  AgentsAgentIdConversationsConversationIdRouteRoute._addFileChildren(
+    AgentsAgentIdConversationsConversationIdRouteRouteChildren,
+  )
+
 interface AgentsAgentIdConversationsRouteRouteChildren {
+  AgentsAgentIdConversationsConversationIdRouteRoute: typeof AgentsAgentIdConversationsConversationIdRouteRouteWithChildren
   AgentsAgentIdConversationsIndexRoute: typeof AgentsAgentIdConversationsIndexRoute
 }
 
 const AgentsAgentIdConversationsRouteRouteChildren: AgentsAgentIdConversationsRouteRouteChildren =
   {
+    AgentsAgentIdConversationsConversationIdRouteRoute:
+      AgentsAgentIdConversationsConversationIdRouteRouteWithChildren,
     AgentsAgentIdConversationsIndexRoute: AgentsAgentIdConversationsIndexRoute,
   }
 

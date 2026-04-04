@@ -32,7 +32,8 @@ function AgentsLayoutRoute() {
     providerTypes: agentQuery.data?.providers.map((provider) => provider.providerType) ?? [],
     hasGithubProvisioning: Boolean(agentQuery.data?.githubProvisioning),
   });
-  const currentSection = sectionItems.find((item) => item.value === pathname) ?? sectionItems[0];
+  const currentSection =
+    sectionItems.find((item) => pathname === item.value || pathname.startsWith(`${item.value}/`)) ?? sectionItems[0];
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -82,7 +83,7 @@ function AgentsLayoutRoute() {
                 key={item.value}
                 to={item.value}
                 className={
-                  pathname === item.value
+                  pathname === item.value || pathname.startsWith(`${item.value}/`)
                     ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
                     : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
                 }
