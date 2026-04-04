@@ -18,10 +18,12 @@ import { Dialog } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
+  addRoleWorkflowPermission,
   addRoleToolPermission,
   createRole,
   deleteRole,
   getRoles,
+  removeRoleWorkflowPermission,
   removeRoleToolPermission,
   updateRole,
   type RoleItem,
@@ -32,6 +34,7 @@ type RoleForm = {
   name: string;
   description: string;
   toolIds: string[];
+  workflowIds: string[];
 };
 
 function createEmptyRoleForm(): RoleForm {
@@ -39,6 +42,7 @@ function createEmptyRoleForm(): RoleForm {
     name: '',
     description: '',
     toolIds: [],
+    workflowIds: [],
   };
 }
 
@@ -48,6 +52,7 @@ function createRoleForm(role: RoleItem): RoleForm {
     name: role.name,
     description: role.description ?? '',
     toolIds: role.toolIds,
+    workflowIds: role.workflowIds,
   };
 }
 
@@ -66,6 +71,10 @@ export function RolesPage() {
   const toolSections = useMemo(
     () => groupToolIds(rolesQuery.data?.availableToolIds ?? []),
     [rolesQuery.data?.availableToolIds],
+  );
+  const workflowIds = useMemo(
+    () => [...(rolesQuery.data?.availableWorkflowIds ?? [])].sort((left, right) => left.localeCompare(right)),
+    [rolesQuery.data?.availableWorkflowIds],
   );
 
   const roleMutation = useMutation({
@@ -87,6 +96,12 @@ export function RolesPage() {
       const nextToolIds = [...new Set(input.toolIds)].sort((left, right) => left.localeCompare(right));
       const toolIdsToAdd = nextToolIds.filter((toolId) => !currentToolIds.includes(toolId));
       const toolIdsToRemove = currentToolIds.filter((toolId) => !nextToolIds.includes(toolId));
+      const currentWorkflowIds = input.roleId
+        ? (roles.find((role) => role.roleId === input.roleId)?.workflowIds ?? [])
+        : [];
+      const nextWorkflowIds = [...new Set(input.workflowIds)].sort((left, right) => left.localeCompare(right));
+      const workflowIdsToAdd = nextWorkflowIds.filter((workflowId) => !currentWorkflowIds.includes(workflowId));
+      const workflowIdsToRemove = currentWorkflowIds.filter((workflowId) => !nextWorkflowIds.includes(workflowId));
 
       for (const toolId of toolIdsToAdd) {
         await addRoleToolPermission({
@@ -99,6 +114,20 @@ export function RolesPage() {
         await removeRoleToolPermission({
           roleId: savedRole.roleId,
           toolId,
+        });
+      }
+
+      for (const workflowId of workflowIdsToAdd) {
+        await addRoleWorkflowPermission({
+          roleId: savedRole.roleId,
+          workflowId,
+        });
+      }
+
+      for (const workflowId of workflowIdsToRemove) {
+        await removeRoleWorkflowPermission({
+          roleId: savedRole.roleId,
+          workflowId,
         });
       }
 
@@ -279,6 +308,41 @@ export function RolesPage() {
                       </AccordionItem>
                     ))}
                   </Accordion>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="text-sm font-medium">Workflows</div>
+
+                  <div className="overflow-hidden rounded-sm border border-border">
+                    {workflowIds.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-muted-foreground">Nenhum workflow disponível.</div>
+                    ) : (
+                      workflowIds.map((workflowId) => {
+                        const enabled = roleForm.workflowIds.includes(workflowId);
+
+                        return (
+                          <label
+                            key={workflowId}
+                            className="flex items-center justify-between gap-4 px-4 py-3 not-last:border-b not-last:border-border"
+                          >
+                            <span className="min-w-0 font-mono text-[13px] break-all">{workflowId}</span>
+                            <Switch
+                              checked={enabled}
+                              disabled={roleMutation.isPending}
+                              onCheckedChange={(checked) =>
+                                setRoleForm((current) => ({
+                                  ...current,
+                                  workflowIds: checked
+                                    ? [...current.workflowIds, workflowId]
+                                    : current.workflowIds.filter((currentWorkflowId) => currentWorkflowId !== workflowId),
+                                }))
+                              }
+                            />
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
 
                 {roleMutation.error ? <div className="text-sm text-destructive">{roleMutation.error.message}</div> : null}

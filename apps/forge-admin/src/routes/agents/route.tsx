@@ -124,8 +124,10 @@ function buildAgentSectionItems(input: {
   const items = [
     { value: `/agents/${input.agentId}`, label: 'Perfil' },
     { value: `/agents/${input.agentId}/contract`, label: 'Contrato' },
+    { value: `/agents/${input.agentId}/schedules`, label: 'Agendamentos' },
     { value: `/agents/${input.agentId}/conversations`, label: 'Conversas' },
     { value: `/agents/${input.agentId}/notifications`, label: 'Notificações' },
+    { value: `/agents/${input.agentId}/workspace`, label: 'MCP & Skills' },
   ];
 
   for (const providerType of input.providerTypes) {

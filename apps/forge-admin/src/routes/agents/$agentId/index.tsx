@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil } from 'lucide-react';
+import { Pencil, RotateCw } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { changeAgentRole, getAgent, getRoles, getSystemLlm, updateAgentConfig, type AgentDetail } from '@/lib/admin-api';
+import { changeAgentRole, getAgent, getRoles, getSystemLlm, reloadAgent, updateAgentConfig, type AgentDetail } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/')({
   component: AgentDetailIndexRoute,
@@ -40,6 +40,13 @@ function AgentDetailIndexRoute() {
   const llmQuery = useQuery({
     queryKey: ['admin', 'system-llm'],
     queryFn: getSystemLlm,
+  });
+  const reloadMutation = useMutation({
+    mutationFn: () => reloadAgent(agentId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+    },
   });
   const mutation = useMutation({
     mutationFn: async (input: AgentProfileForm) => {
@@ -100,6 +107,15 @@ function AgentDetailIndexRoute() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="text-2xl font-semibold tracking-[-0.04em]">{agent.name}</div>
+                    <AdminButton
+                      variant="ghost"
+                      size="icon"
+                      disabled={reloadMutation.isPending}
+                      onClick={() => reloadMutation.mutate()}
+                    >
+                      <RotateCw className="h-4 w-4" />
+                      <span className="sr-only">Recarregar agente</span>
+                    </AdminButton>
                     <AdminButton
                       variant="ghost"
                       size="icon"
@@ -167,6 +183,7 @@ function AgentDetailIndexRoute() {
       ) : null}
 
       {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
+      {reloadMutation.error ? <div className="text-sm text-destructive">{reloadMutation.error.message}</div> : null}
 
       <Dialog
         open={dialogOpen}

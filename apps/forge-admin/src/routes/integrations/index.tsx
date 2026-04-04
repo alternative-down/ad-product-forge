@@ -17,7 +17,15 @@ import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getSystemLlm, updateLlmDefaults, upsertLlmProfile, type LlmProfile, type UpsertLlmProfileInput } from '@/lib/admin-api';
+import {
+  getSystemLlm,
+  getSystemOauth,
+  syncSystemOauth,
+  updateLlmDefaults,
+  upsertLlmProfile,
+  type LlmProfile,
+  type UpsertLlmProfileInput,
+} from '@/lib/admin-api';
 
 export const Route = createFileRoute('/integrations/')({
   component: IntegrationsProfilesRoute,
@@ -52,6 +60,10 @@ function IntegrationsProfilesRoute() {
     queryKey: ['admin', 'system-llm'],
     queryFn: getSystemLlm,
   });
+  const oauthQuery = useQuery({
+    queryKey: ['admin', 'system-oauth'],
+    queryFn: getSystemOauth,
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive'>('active');
   const [profileForm, setProfileForm] = useState<UpsertLlmProfileInput>(createEmptyProfileForm);
@@ -79,6 +91,12 @@ function IntegrationsProfilesRoute() {
     onSuccess: async () => {
       setDefaultsDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
+    },
+  });
+  const oauthMutation = useMutation({
+    mutationFn: syncSystemOauth,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'system-oauth'] });
     },
   });
   const profiles = useMemo(
@@ -230,6 +248,39 @@ function IntegrationsProfilesRoute() {
             </AdminButton>
           </div>
         </form>
+      </section>
+
+      <section className="space-y-5 border-t border-border pt-6">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">OAuth</div>
+          <div className="text-sm text-muted-foreground">
+            Sincronize as credenciais locais usadas pelos providers LLM.
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {(oauthQuery.data?.providers ?? []).map((provider) => (
+            <div key={provider.providerId} className="flex items-center justify-between gap-4 rounded-sm border border-border px-4 py-3">
+              <div className="min-w-0 space-y-1">
+                <div className="font-medium">{provider.providerId}</div>
+                <div className="text-sm text-muted-foreground">
+                  {provider.synced ? (provider.accountId ? `Sincronizado · ${provider.accountId}` : 'Sincronizado') : 'Ainda não sincronizado'}
+                </div>
+              </div>
+
+              <AdminButton
+                variant="outline"
+                disabled={oauthMutation.isPending}
+                onClick={() => oauthMutation.mutate(provider.providerId)}
+              >
+                Sincronizar
+              </AdminButton>
+            </div>
+          ))}
+        </div>
+
+        {oauthQuery.error ? <div className="text-sm text-destructive">{oauthQuery.error.message}</div> : null}
+        {oauthMutation.error ? <div className="text-sm text-destructive">{oauthMutation.error.message}</div> : null}
       </section>
 
       <section className="space-y-5 border-t border-border pt-6">

@@ -166,11 +166,34 @@ export type AgentDetail = {
     filesystem: string | null;
     sandbox: string | null;
   };
+  loaded: boolean;
+  runner: AgentListItem['runner'];
   providers: Array<{
     providerType: string;
     createdAt: number;
     editable: boolean;
     credentials: unknown;
+  }>;
+  mcpServers: Array<{
+    configId: string;
+    serverId: string;
+    name: string;
+    description?: string;
+    transport: 'stdio' | 'http_streamable';
+    command: string;
+    argsText: string;
+    envVarsText: string;
+    url: string;
+    headersText: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  skills: Array<{
+    skillName: string;
+    description?: string;
+    fileCount: number;
+    updatedAt: number;
   }>;
   githubProvisioning: {
     agentId: string;
@@ -204,6 +227,8 @@ export type AgentDetail = {
     costUsd: number;
     createdAt: number;
   }>;
+  schedules: AgentSchedule[];
+  heartbeat: AgentSchedule | null;
   recentNotifications: Array<{
     notificationId: string;
     content: string;
@@ -238,6 +263,105 @@ export type HireAgentResult = {
   agentId: string;
   emailAddress: string | null;
   githubAppRegistrationUrl: string | null;
+};
+
+export type AgentSchedule = {
+  scheduleId: string;
+  kind: 'agent' | 'heartbeat';
+  name: string;
+  description?: string;
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string;
+  scheduledDate?: number;
+  timezone: string;
+  content: string;
+  isActive: boolean;
+  lastTriggeredAt?: number;
+  nextTriggerAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
+};
+
+export type AgentMcpServerInput =
+  | {
+      agentId: string;
+      name: string;
+      description?: string;
+      transport: 'stdio';
+      command: string;
+      argsText?: string;
+      envVarsText?: string;
+      isActive: boolean;
+    }
+  | {
+      agentId: string;
+      name: string;
+      description?: string;
+      transport: 'http_streamable';
+      url: string;
+      headersText?: string;
+      isActive: boolean;
+    };
+
+export type UpdateAgentMcpServerInput = {
+  configId: string;
+  serverId: string;
+} & AgentMcpServerInput;
+
+export type UploadAgentSkillsInput = {
+  agentId: string;
+  archiveBase64: string;
+};
+
+export type DeleteAgentSkillInput = {
+  agentId: string;
+  skillName: string;
+};
+
+export type SystemOauthState = {
+  storePath: string;
+  providers: Array<{
+    providerId: 'openai-codex' | 'anthropic';
+    sourcePath: string;
+    sourcePresent: boolean;
+    synced: boolean;
+    hasRefresh: boolean;
+    expiresAt: number | null;
+    accountId: string | null;
+  }>;
+};
+
+export type SyncOauthResult = {
+  state: SystemOauthState;
+  results: Array<{
+    providerId: 'openai-codex' | 'anthropic';
+    synced: boolean;
+    error?: string;
+  }>;
+};
+
+export type CreateScheduleInput = {
+  agentId: string;
+  name: string;
+  description?: string;
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string;
+  scheduledDate?: string;
+  timezone: string;
+  content: string;
+};
+
+export type UpdateScheduleInput = {
+  agentId: string;
+  scheduleId: string;
+  name?: string;
+  description?: string | null;
+  scheduleType?: 'cron' | 'date';
+  cronExpression?: string | null;
+  scheduledDate?: string | null;
+  timezone?: string;
+  content?: string;
+  isActive?: boolean;
 };
 
 export type AgentExecutionStepsResponse = {
@@ -595,6 +719,13 @@ export function getAgent(agentId: string) {
   return request<AgentDetail>(`/admin/agent?agentId=${encodeURIComponent(agentId)}`);
 }
 
+export function reloadAgent(agentId: string) {
+  return request<{ success: true; agentId: string }>('/admin/agent/reload', {
+    method: 'POST',
+    body: JSON.stringify({ agentId }),
+  });
+}
+
 export function getAgentExecutionSteps(agentId: string, limit: number, offset: number) {
   return request<AgentExecutionStepsResponse>(
     `/admin/agent/execution-steps?agentId=${encodeURIComponent(agentId)}&limit=${limit}&offset=${offset}`,
@@ -820,6 +951,10 @@ export function upsertSystemSettings(input: SystemSettings) {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export function getSystemOauth() {
+  return request<SystemOauthState>('/admin/system/oauth');
 }
 
 export function getSystemLlm() {
@@ -1059,6 +1194,108 @@ export function removeRoleToolPermission(input: {
   return request<{ success?: boolean }>('/admin/role-tool-permission/remove', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export function addRoleWorkflowPermission(input: {
+  roleId: string;
+  workflowId: string;
+}) {
+  return request<{ success?: boolean }>('/admin/role-workflow-permission/add', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function removeRoleWorkflowPermission(input: {
+  roleId: string;
+  workflowId: string;
+}) {
+  return request<{ success?: boolean }>('/admin/role-workflow-permission/remove', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function createAgentMcpServer(input: AgentMcpServerInput) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>(
+    '/admin/agent-mcp/create',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function updateAgentMcpServer(input: UpdateAgentMcpServerInput) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>(
+    '/admin/agent-mcp/update',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function deleteAgentMcpServer(input: {
+  agentId: string;
+  configId: string;
+  serverId: string;
+}) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>(
+    '/admin/agent-mcp/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function uploadAgentSkills(input: UploadAgentSkillsInput) {
+  return request<{ success: true; agentId: string; installedSkillNames: string[] }>(
+    '/admin/agent-skills/upload',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function deleteAgentSkill(input: DeleteAgentSkillInput) {
+  return request<{ success: true; agentId: string; skillName: string }>(
+    '/admin/agent-skills/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function createSchedule(input: CreateScheduleInput) {
+  return request<AgentSchedule>('/admin/agent-schedule/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateSchedule(input: UpdateScheduleInput) {
+  return request<AgentSchedule>('/admin/agent-schedule/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteSchedule(agentId: string, scheduleId: string) {
+  return request<{ success: boolean }>('/admin/agent-schedule/delete', {
+    method: 'POST',
+    body: JSON.stringify({ agentId, scheduleId }),
+  });
+}
+
+export function syncSystemOauth(providerId: 'openai-codex' | 'anthropic' | 'all') {
+  return request<SyncOauthResult>('/admin/system/oauth/sync', {
+    method: 'POST',
+    body: JSON.stringify({ providerId }),
   });
 }
 

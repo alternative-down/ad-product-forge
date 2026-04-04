@@ -48,6 +48,8 @@ import { Route as FinanceContractsIndexRouteImport } from './routes/finance/cont
 import { Route as FinanceAccountsIndexRouteImport } from './routes/finance/accounts/index'
 import { Route as AgentsRolesIndexRouteImport } from './routes/agents/roles/index'
 import { Route as AgentsAgentIdIndexRouteImport } from './routes/agents/$agentId/index'
+import { Route as AgentsAgentIdWorkspaceRouteRouteImport } from './routes/agents/$agentId/workspace/route'
+import { Route as AgentsAgentIdSchedulesRouteRouteImport } from './routes/agents/$agentId/schedules/route'
 import { Route as AgentsAgentIdNotificationsRouteRouteImport } from './routes/agents/$agentId/notifications/route'
 import { Route as AgentsAgentIdLogRouteRouteImport } from './routes/agents/$agentId/log/route'
 import { Route as AgentsAgentIdGithubRouteRouteImport } from './routes/agents/$agentId/github/route'
@@ -62,6 +64,8 @@ import { Route as V1FinanceLedgerIndexRouteImport } from './routes/v1/finance/le
 import { Route as V1FinanceCapitalIndexRouteImport } from './routes/v1/finance/capital/index'
 import { Route as V1AgentsHireIndexRouteImport } from './routes/v1/agents/hire/index'
 import { Route as HomeConversationsConversationIdIndexRouteImport } from './routes/home/conversations/$conversationId/index'
+import { Route as AgentsAgentIdWorkspaceIndexRouteImport } from './routes/agents/$agentId/workspace/index'
+import { Route as AgentsAgentIdSchedulesIndexRouteImport } from './routes/agents/$agentId/schedules/index'
 import { Route as AgentsAgentIdNotificationsIndexRouteImport } from './routes/agents/$agentId/notifications/index'
 import { Route as AgentsAgentIdLogIndexRouteImport } from './routes/agents/$agentId/log/index'
 import { Route as AgentsAgentIdGithubIndexRouteImport } from './routes/agents/$agentId/github/index'
@@ -283,6 +287,18 @@ const AgentsAgentIdIndexRoute = AgentsAgentIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AgentsAgentIdRouteRoute,
 } as any)
+const AgentsAgentIdWorkspaceRouteRoute =
+  AgentsAgentIdWorkspaceRouteRouteImport.update({
+    id: '/workspace',
+    path: '/workspace',
+    getParentRoute: () => AgentsAgentIdRouteRoute,
+  } as any)
+const AgentsAgentIdSchedulesRouteRoute =
+  AgentsAgentIdSchedulesRouteRouteImport.update({
+    id: '/schedules',
+    path: '/schedules',
+    getParentRoute: () => AgentsAgentIdRouteRoute,
+  } as any)
 const AgentsAgentIdNotificationsRouteRoute =
   AgentsAgentIdNotificationsRouteRouteImport.update({
     id: '/notifications',
@@ -357,6 +373,18 @@ const HomeConversationsConversationIdIndexRoute =
     id: '/$conversationId/',
     path: '/$conversationId/',
     getParentRoute: () => HomeConversationsRouteRoute,
+  } as any)
+const AgentsAgentIdWorkspaceIndexRoute =
+  AgentsAgentIdWorkspaceIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AgentsAgentIdWorkspaceRouteRoute,
+  } as any)
+const AgentsAgentIdSchedulesIndexRoute =
+  AgentsAgentIdSchedulesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AgentsAgentIdSchedulesRouteRoute,
   } as any)
 const AgentsAgentIdNotificationsIndexRoute =
   AgentsAgentIdNotificationsIndexRouteImport.update({
@@ -513,6 +541,8 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId/github': typeof AgentsAgentIdGithubRouteRouteWithChildren
   '/agents/$agentId/log': typeof AgentsAgentIdLogRouteRouteWithChildren
   '/agents/$agentId/notifications': typeof AgentsAgentIdNotificationsRouteRouteWithChildren
+  '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRouteRouteWithChildren
+  '/agents/$agentId/workspace': typeof AgentsAgentIdWorkspaceRouteRouteWithChildren
   '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
   '/agents/roles/': typeof AgentsRolesIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
@@ -534,6 +564,8 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId/github/': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log/': typeof AgentsAgentIdLogIndexRoute
   '/agents/$agentId/notifications/': typeof AgentsAgentIdNotificationsIndexRoute
+  '/agents/$agentId/schedules/': typeof AgentsAgentIdSchedulesIndexRoute
+  '/agents/$agentId/workspace/': typeof AgentsAgentIdWorkspaceIndexRoute
   '/home/conversations/$conversationId/': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
@@ -584,6 +616,8 @@ export interface FileRoutesByTo {
   '/agents/$agentId/github': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log': typeof AgentsAgentIdLogIndexRoute
   '/agents/$agentId/notifications': typeof AgentsAgentIdNotificationsIndexRoute
+  '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesIndexRoute
+  '/agents/$agentId/workspace': typeof AgentsAgentIdWorkspaceIndexRoute
   '/home/conversations/$conversationId': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital': typeof V1FinanceCapitalIndexRoute
@@ -640,6 +674,8 @@ export interface FileRoutesById {
   '/agents/$agentId/github': typeof AgentsAgentIdGithubRouteRouteWithChildren
   '/agents/$agentId/log': typeof AgentsAgentIdLogRouteRouteWithChildren
   '/agents/$agentId/notifications': typeof AgentsAgentIdNotificationsRouteRouteWithChildren
+  '/agents/$agentId/schedules': typeof AgentsAgentIdSchedulesRouteRouteWithChildren
+  '/agents/$agentId/workspace': typeof AgentsAgentIdWorkspaceRouteRouteWithChildren
   '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
   '/agents/roles/': typeof AgentsRolesIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
@@ -661,6 +697,8 @@ export interface FileRoutesById {
   '/agents/$agentId/github/': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log/': typeof AgentsAgentIdLogIndexRoute
   '/agents/$agentId/notifications/': typeof AgentsAgentIdNotificationsIndexRoute
+  '/agents/$agentId/schedules/': typeof AgentsAgentIdSchedulesIndexRoute
+  '/agents/$agentId/workspace/': typeof AgentsAgentIdWorkspaceIndexRoute
   '/home/conversations/$conversationId/': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
@@ -718,6 +756,8 @@ export interface FileRouteTypes {
     | '/agents/$agentId/github'
     | '/agents/$agentId/log'
     | '/agents/$agentId/notifications'
+    | '/agents/$agentId/schedules'
+    | '/agents/$agentId/workspace'
     | '/agents/$agentId/'
     | '/agents/roles/'
     | '/finance/accounts/'
@@ -739,6 +779,8 @@ export interface FileRouteTypes {
     | '/agents/$agentId/github/'
     | '/agents/$agentId/log/'
     | '/agents/$agentId/notifications/'
+    | '/agents/$agentId/schedules/'
+    | '/agents/$agentId/workspace/'
     | '/home/conversations/$conversationId/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
@@ -789,6 +831,8 @@ export interface FileRouteTypes {
     | '/agents/$agentId/github'
     | '/agents/$agentId/log'
     | '/agents/$agentId/notifications'
+    | '/agents/$agentId/schedules'
+    | '/agents/$agentId/workspace'
     | '/home/conversations/$conversationId'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
@@ -844,6 +888,8 @@ export interface FileRouteTypes {
     | '/agents/$agentId/github'
     | '/agents/$agentId/log'
     | '/agents/$agentId/notifications'
+    | '/agents/$agentId/schedules'
+    | '/agents/$agentId/workspace'
     | '/agents/$agentId/'
     | '/agents/roles/'
     | '/finance/accounts/'
@@ -865,6 +911,8 @@ export interface FileRouteTypes {
     | '/agents/$agentId/github/'
     | '/agents/$agentId/log/'
     | '/agents/$agentId/notifications/'
+    | '/agents/$agentId/schedules/'
+    | '/agents/$agentId/workspace/'
     | '/home/conversations/$conversationId/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
@@ -1174,6 +1222,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsAgentIdIndexRouteImport
       parentRoute: typeof AgentsAgentIdRouteRoute
     }
+    '/agents/$agentId/workspace': {
+      id: '/agents/$agentId/workspace'
+      path: '/workspace'
+      fullPath: '/agents/$agentId/workspace'
+      preLoaderRoute: typeof AgentsAgentIdWorkspaceRouteRouteImport
+      parentRoute: typeof AgentsAgentIdRouteRoute
+    }
+    '/agents/$agentId/schedules': {
+      id: '/agents/$agentId/schedules'
+      path: '/schedules'
+      fullPath: '/agents/$agentId/schedules'
+      preLoaderRoute: typeof AgentsAgentIdSchedulesRouteRouteImport
+      parentRoute: typeof AgentsAgentIdRouteRoute
+    }
     '/agents/$agentId/notifications': {
       id: '/agents/$agentId/notifications'
       path: '/notifications'
@@ -1271,6 +1333,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/home/conversations/$conversationId/'
       preLoaderRoute: typeof HomeConversationsConversationIdIndexRouteImport
       parentRoute: typeof HomeConversationsRouteRoute
+    }
+    '/agents/$agentId/workspace/': {
+      id: '/agents/$agentId/workspace/'
+      path: '/'
+      fullPath: '/agents/$agentId/workspace/'
+      preLoaderRoute: typeof AgentsAgentIdWorkspaceIndexRouteImport
+      parentRoute: typeof AgentsAgentIdWorkspaceRouteRoute
+    }
+    '/agents/$agentId/schedules/': {
+      id: '/agents/$agentId/schedules/'
+      path: '/'
+      fullPath: '/agents/$agentId/schedules/'
+      preLoaderRoute: typeof AgentsAgentIdSchedulesIndexRouteImport
+      parentRoute: typeof AgentsAgentIdSchedulesRouteRoute
     }
     '/agents/$agentId/notifications/': {
       id: '/agents/$agentId/notifications/'
@@ -1509,6 +1585,34 @@ const AgentsAgentIdNotificationsRouteRouteWithChildren =
     AgentsAgentIdNotificationsRouteRouteChildren,
   )
 
+interface AgentsAgentIdSchedulesRouteRouteChildren {
+  AgentsAgentIdSchedulesIndexRoute: typeof AgentsAgentIdSchedulesIndexRoute
+}
+
+const AgentsAgentIdSchedulesRouteRouteChildren: AgentsAgentIdSchedulesRouteRouteChildren =
+  {
+    AgentsAgentIdSchedulesIndexRoute: AgentsAgentIdSchedulesIndexRoute,
+  }
+
+const AgentsAgentIdSchedulesRouteRouteWithChildren =
+  AgentsAgentIdSchedulesRouteRoute._addFileChildren(
+    AgentsAgentIdSchedulesRouteRouteChildren,
+  )
+
+interface AgentsAgentIdWorkspaceRouteRouteChildren {
+  AgentsAgentIdWorkspaceIndexRoute: typeof AgentsAgentIdWorkspaceIndexRoute
+}
+
+const AgentsAgentIdWorkspaceRouteRouteChildren: AgentsAgentIdWorkspaceRouteRouteChildren =
+  {
+    AgentsAgentIdWorkspaceIndexRoute: AgentsAgentIdWorkspaceIndexRoute,
+  }
+
+const AgentsAgentIdWorkspaceRouteRouteWithChildren =
+  AgentsAgentIdWorkspaceRouteRoute._addFileChildren(
+    AgentsAgentIdWorkspaceRouteRouteChildren,
+  )
+
 interface AgentsAgentIdProvidersProviderTypeRouteRouteChildren {
   AgentsAgentIdProvidersProviderTypeIndexRoute: typeof AgentsAgentIdProvidersProviderTypeIndexRoute
 }
@@ -1530,6 +1634,8 @@ interface AgentsAgentIdRouteRouteChildren {
   AgentsAgentIdGithubRouteRoute: typeof AgentsAgentIdGithubRouteRouteWithChildren
   AgentsAgentIdLogRouteRoute: typeof AgentsAgentIdLogRouteRouteWithChildren
   AgentsAgentIdNotificationsRouteRoute: typeof AgentsAgentIdNotificationsRouteRouteWithChildren
+  AgentsAgentIdSchedulesRouteRoute: typeof AgentsAgentIdSchedulesRouteRouteWithChildren
+  AgentsAgentIdWorkspaceRouteRoute: typeof AgentsAgentIdWorkspaceRouteRouteWithChildren
   AgentsAgentIdIndexRoute: typeof AgentsAgentIdIndexRoute
   AgentsAgentIdProvidersProviderTypeRouteRoute: typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
 }
@@ -1542,6 +1648,10 @@ const AgentsAgentIdRouteRouteChildren: AgentsAgentIdRouteRouteChildren = {
   AgentsAgentIdLogRouteRoute: AgentsAgentIdLogRouteRouteWithChildren,
   AgentsAgentIdNotificationsRouteRoute:
     AgentsAgentIdNotificationsRouteRouteWithChildren,
+  AgentsAgentIdSchedulesRouteRoute:
+    AgentsAgentIdSchedulesRouteRouteWithChildren,
+  AgentsAgentIdWorkspaceRouteRoute:
+    AgentsAgentIdWorkspaceRouteRouteWithChildren,
   AgentsAgentIdIndexRoute: AgentsAgentIdIndexRoute,
   AgentsAgentIdProvidersProviderTypeRouteRoute:
     AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren,
