@@ -47,7 +47,7 @@ function AgentConversationsLayoutRoute() {
                           : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
                       }
                     >
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 text-sm font-medium text-foreground">
                             {conversation.name ?? conversation.provider}
