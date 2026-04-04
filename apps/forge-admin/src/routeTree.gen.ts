@@ -60,6 +60,7 @@ import { Route as V1FinancePayablesIndexRouteImport } from './routes/v1/finance/
 import { Route as V1FinanceLedgerIndexRouteImport } from './routes/v1/finance/ledger/index'
 import { Route as V1FinanceCapitalIndexRouteImport } from './routes/v1/finance/capital/index'
 import { Route as V1AgentsHireIndexRouteImport } from './routes/v1/agents/hire/index'
+import { Route as HomeConversationsConversationIdIndexRouteImport } from './routes/home/conversations/$conversationId/index'
 import { Route as AgentsAgentIdLogIndexRouteImport } from './routes/agents/$agentId/log/index'
 import { Route as AgentsAgentIdGithubIndexRouteImport } from './routes/agents/$agentId/github/index'
 import { Route as AgentsAgentIdConversationsIndexRouteImport } from './routes/agents/$agentId/conversations/index'
@@ -343,6 +344,12 @@ const V1AgentsHireIndexRoute = V1AgentsHireIndexRouteImport.update({
   path: '/hire/',
   getParentRoute: () => V1AgentsRouteRoute,
 } as any)
+const HomeConversationsConversationIdIndexRoute =
+  HomeConversationsConversationIdIndexRouteImport.update({
+    id: '/$conversationId/',
+    path: '/$conversationId/',
+    getParentRoute: () => HomeConversationsRouteRoute,
+  } as any)
 const AgentsAgentIdLogIndexRoute = AgentsAgentIdLogIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -511,6 +518,7 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId/conversations/': typeof AgentsAgentIdConversationsIndexRoute
   '/agents/$agentId/github/': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log/': typeof AgentsAgentIdLogIndexRoute
+  '/home/conversations/$conversationId/': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
   '/v1/finance/ledger/': typeof V1FinanceLedgerIndexRoute
@@ -559,6 +567,7 @@ export interface FileRoutesByTo {
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsIndexRoute
   '/agents/$agentId/github': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log': typeof AgentsAgentIdLogIndexRoute
+  '/home/conversations/$conversationId': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital': typeof V1FinanceCapitalIndexRoute
   '/v1/finance/ledger': typeof V1FinanceLedgerIndexRoute
@@ -633,6 +642,7 @@ export interface FileRoutesById {
   '/agents/$agentId/conversations/': typeof AgentsAgentIdConversationsIndexRoute
   '/agents/$agentId/github/': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log/': typeof AgentsAgentIdLogIndexRoute
+  '/home/conversations/$conversationId/': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
   '/v1/finance/ledger/': typeof V1FinanceLedgerIndexRoute
@@ -708,6 +718,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/conversations/'
     | '/agents/$agentId/github/'
     | '/agents/$agentId/log/'
+    | '/home/conversations/$conversationId/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
     | '/v1/finance/ledger/'
@@ -756,6 +767,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/conversations'
     | '/agents/$agentId/github'
     | '/agents/$agentId/log'
+    | '/home/conversations/$conversationId'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
     | '/v1/finance/ledger'
@@ -829,6 +841,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/conversations/'
     | '/agents/$agentId/github/'
     | '/agents/$agentId/log/'
+    | '/home/conversations/$conversationId/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
     | '/v1/finance/ledger/'
@@ -1221,6 +1234,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1AgentsHireIndexRouteImport
       parentRoute: typeof V1AgentsRouteRoute
     }
+    '/home/conversations/$conversationId/': {
+      id: '/home/conversations/$conversationId/'
+      path: '/$conversationId'
+      fullPath: '/home/conversations/$conversationId/'
+      preLoaderRoute: typeof HomeConversationsConversationIdIndexRouteImport
+      parentRoute: typeof HomeConversationsRouteRoute
+    }
     '/agents/$agentId/log/': {
       id: '/agents/$agentId/log/'
       path: '/'
@@ -1531,11 +1551,14 @@ const FinanceRouteRouteWithChildren = FinanceRouteRoute._addFileChildren(
 
 interface HomeConversationsRouteRouteChildren {
   HomeConversationsIndexRoute: typeof HomeConversationsIndexRoute
+  HomeConversationsConversationIdIndexRoute: typeof HomeConversationsConversationIdIndexRoute
 }
 
 const HomeConversationsRouteRouteChildren: HomeConversationsRouteRouteChildren =
   {
     HomeConversationsIndexRoute: HomeConversationsIndexRoute,
+    HomeConversationsConversationIdIndexRoute:
+      HomeConversationsConversationIdIndexRoute,
   }
 
 const HomeConversationsRouteRouteWithChildren =
