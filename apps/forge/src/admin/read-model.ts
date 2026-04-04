@@ -369,14 +369,28 @@ export function createAdminReadModel(input: {
     };
   }
 
-  async function listAgentConversationMessages(input: {
+  async function listAgentConversationMessages(params: {
     agentId: string;
     provider: string;
     targetKey: string;
     limit: number;
     offset: number;
   }) {
-    const runtime = getInternalAgentRegistry().get(input.agentId)?.runtime;
+    if (params.provider === 'internal-chat') {
+      const messages = await input.internalChat.getMessages({
+        agentId: params.agentId,
+        conversationKey: params.targetKey,
+        limit: params.limit,
+        offset: params.offset,
+      });
+
+      return {
+        items: messages,
+        hasMore: messages.length === params.limit,
+      };
+    }
+
+    const runtime = getInternalAgentRegistry().get(params.agentId)?.runtime;
 
     if (!runtime) {
       return {
@@ -386,15 +400,15 @@ export function createAdminReadModel(input: {
     }
 
     const messages = await runtime.communication.getMessages({
-      provider: input.provider,
-      targetKey: input.targetKey,
-      limit: input.limit,
-      offset: input.offset,
+      provider: params.provider,
+      targetKey: params.targetKey,
+      limit: params.limit,
+      offset: params.offset,
     });
 
     return {
       items: messages,
-      hasMore: messages.length === input.limit,
+      hasMore: messages.length === params.limit,
     };
   }
 
@@ -617,10 +631,11 @@ async function listRecentInternalChatConversations(
   try {
     const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
 
-    return rows.map((conversation) => {
+    return Promise.all(rows.map(async (conversation) => {
+      const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, conversation.targetKey);
       const participants = collectConversationParticipants({
         name: conversation.name,
-        participants: conversation.participants,
+        participants: groupParticipants.length > 0 ? groupParticipants : conversation.participants,
         messages: conversation.messages.map((message) => ({
           authorDisplayName: message.authorDisplayName ?? agentName,
         })),
@@ -642,7 +657,7 @@ async function listRecentInternalChatConversations(
           createdAt: Date.parse(message.createdAt) || 0,
         })),
       };
-    });
+    }));
   } catch (error) {
     console.error(`[AdminReadModel] Failed to load internal-chat conversations for agent ${agentId}:`, error);
     return [];
@@ -671,6 +686,28 @@ function collectConversationParticipants(input: {
   }
 
   return [...participants];
+}
+
+async function listInternalChatGroupParticipants(
+  internalChat: InternalChatService,
+  agentId: string,
+  conversationKey: string,
+) {
+  try {
+    const conversation = await internalChat.getConversationForAgent(agentId, conversationKey);
+
+    if (!conversation || conversation.type !== 'group') {
+      return [];
+    }
+
+    const members = await internalChat.listGroupMembers({
+      agentId,
+      groupId: conversationKey,
+    });
+    return members.map((member) => member.participantName);
+  } catch {
+    return [];
+  }
 }
 
 async function listRecentThreadMessages(workspaceBasePath: string, agentId: string) {
