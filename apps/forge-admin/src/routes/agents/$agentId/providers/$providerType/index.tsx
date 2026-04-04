@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AdminButton, AdminInput, AdminTextarea, PageHeader } from '@/components/admin';
+import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
 import {
   deleteAgentProvider,
   getAgent,
@@ -49,6 +49,7 @@ function DiscordProviderForm(input: {
 }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<DiscordProviderCredentials | null>(null);
+  const [newChannelId, setNewChannelId] = useState('');
   const saveMutation = useMutation({
     mutationFn: upsertAgentProvider,
     onSuccess: async () => {
@@ -83,7 +84,7 @@ function DiscordProviderForm(input: {
               providerType: 'discord',
               credentials: {
                 token: credentials.token.trim(),
-                allowedChannelIds: normalizeLineList(credentials.allowedChannelIds.join('\n')),
+                allowedChannelIds: credentials.allowedChannelIds,
                 respondToMentionsOnly: credentials.respondToMentionsOnly,
               },
             });
@@ -108,21 +109,77 @@ function DiscordProviderForm(input: {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="discord-channel-ids">
+            <label className="text-sm font-medium" htmlFor="discord-channel-id">
               Canais permitidos
             </label>
-            <AdminTextarea
-              id="discord-channel-ids"
-              rows={6}
-              value={credentials.allowedChannelIds.join('\n')}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...(current ?? toDiscordCredentials(input.credentials)),
-                  allowedChannelIds: normalizeLineList(event.target.value),
-                }))
-              }
-              disabled={pending}
-            />
+            <div className="space-y-3">
+              {credentials.allowedChannelIds.length > 0 ? (
+                <div className="space-y-2">
+                  {credentials.allowedChannelIds.map((channelId) => (
+                    <div key={channelId} className="flex items-center justify-between gap-3 border-b border-border pb-2">
+                      <div className="min-w-0 truncate text-sm text-foreground">{channelId}</div>
+                      <AdminButton
+                        type="button"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() =>
+                          setDraft((current) => ({
+                            ...(current ?? toDiscordCredentials(input.credentials)),
+                            allowedChannelIds: (current ?? toDiscordCredentials(input.credentials)).allowedChannelIds
+                              .filter((value) => value !== channelId),
+                          }))
+                        }
+                      >
+                        Remover
+                      </AdminButton>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Nenhum canal permitido.</div>
+              )}
+
+              <div className="flex items-end gap-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <label className="text-sm font-medium" htmlFor="discord-channel-id">
+                    Código do canal
+                  </label>
+                  <AdminInput
+                    id="discord-channel-id"
+                    value={newChannelId}
+                    onChange={(event) => setNewChannelId(event.target.value)}
+                    disabled={pending}
+                  />
+                </div>
+                <AdminButton
+                  type="button"
+                  disabled={pending || !newChannelId.trim()}
+                  onClick={() => {
+                    const channelId = newChannelId.trim();
+
+                    if (!channelId) {
+                      return;
+                    }
+
+                    setDraft((current) => {
+                      const next = current ?? toDiscordCredentials(input.credentials);
+
+                      if (next.allowedChannelIds.includes(channelId)) {
+                        return next;
+                      }
+
+                      return {
+                        ...next,
+                        allowedChannelIds: [...next.allowedChannelIds, channelId],
+                      };
+                    });
+                    setNewChannelId('');
+                  }}
+                >
+                  Adicionar
+                </AdminButton>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -340,13 +397,6 @@ function ProviderSectionTitle(input: {
   title: string;
 }) {
   return <div className="text-sm font-medium text-foreground">{input.title}</div>;
-}
-
-function normalizeLineList(value: string) {
-  return value
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function toDiscordCredentials(credentials: unknown): DiscordProviderCredentials {
