@@ -206,6 +206,17 @@ const sendInternalChatConversationMessageSchema = z.object({
   },
 );
 
+const updateInternalChatConversationSchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  name: z.string().trim().min(1),
+});
+
+const archiveInternalChatConversationSchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+});
+
 const internalChatGroupMembersQuerySchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
@@ -728,6 +739,7 @@ export function registerAdminRoutes(input: {
       return jsonResponse(
         accounts.map((account) => ({
           accountId: account.id,
+          agentId: account.agentId,
           slug: account.slug,
           displayName: account.displayName,
           description: account.description ?? '',
@@ -898,6 +910,28 @@ export function registerAdminRoutes(input: {
           data: Uint8Array.from(Buffer.from(attachment.dataBase64, 'base64')),
         })),
       }));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateInternalChatConversationSchema);
+      return jsonResponse(await input.internalChat.updateGroupByAccount({
+        accountId: body.accountId,
+        groupId: body.conversationId,
+        name: body.name,
+      }));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/archive',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
+      return jsonResponse(await input.internalChat.archiveConversationByAccount(body));
     },
   });
 

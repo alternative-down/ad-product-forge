@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
@@ -143,11 +143,25 @@ function AgentConversationDetailIndexRoute() {
             {isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
             {messages.map((message) => (
               <article key={message.messageId} className="flex items-start gap-3 py-1">
-                <Avatar className="h-9 w-9 border border-border bg-muted">
-                  <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                    {getInitials(message.authorDisplayName)}
-                  </AvatarFallback>
-                </Avatar>
+                {message.authorAgentId ? (
+                  <Link
+                    to="/agents/$agentId"
+                    params={{ agentId: message.authorAgentId }}
+                    className="shrink-0"
+                  >
+                    <Avatar className="h-9 w-9 border border-border bg-muted">
+                      <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                        {getInitials(message.authorDisplayName)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                ) : (
+                  <Avatar className="h-9 w-9 border border-border bg-muted">
+                    <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                      {getInitials(message.authorDisplayName)}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span className="font-medium text-foreground">{message.authorDisplayName}</span>

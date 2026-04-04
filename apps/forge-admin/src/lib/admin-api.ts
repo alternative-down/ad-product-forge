@@ -225,6 +225,7 @@ export type AgentConversationMessage = {
   messageId: string;
   provider: string;
   authorId: string;
+  authorAgentId?: string | null;
   targetKey: string;
   content: string;
   attachments?: unknown[];
@@ -247,6 +248,7 @@ export type InternalChatExternalAccount = {
 
 export type InternalChatContact = {
   accountId: string;
+  agentId?: string | null;
   slug: string;
   displayName: string;
   description: string;
@@ -273,6 +275,7 @@ export type HomeInternalChatConversation = {
 export type HomeInternalChatConversationMessage = {
   messageId: string;
   authorAccountId: string;
+  authorAgentId?: string | null;
   authorDisplayName: string;
   content: string;
   createdAt: number;
@@ -648,6 +651,17 @@ export function createHomeInternalChatConversation(input: {
   });
 }
 
+export function updateHomeInternalChatConversation(input: {
+  accountId: string;
+  conversationId: string;
+  name: string;
+}) {
+  return request<{ id: string; name: string }>('/admin/internal-chat/conversation/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function sendHomeInternalChatMessage(input: {
   accountId: string;
   conversationId: string;
@@ -668,6 +682,16 @@ export function sendHomeInternalChatMessage(input: {
       }),
     },
   );
+}
+
+export function archiveHomeInternalChatConversation(input: {
+  accountId: string;
+  conversationId: string;
+}) {
+  return request<{ conversationId: string; archived: true }>('/admin/internal-chat/conversation/archive', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function getHomeInternalChatGroupMembers(accountId: string, conversationId: string) {

@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Settings2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
+import { ArrowLeft, Archive, Check, Settings2, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   AdminButton,
@@ -16,21 +16,20 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   addHomeInternalChatGroupMember,
+  archiveHomeInternalChatConversation,
   getHomeInternalChatGroupMembers,
   getHomeInternalChatMessages,
   removeHomeInternalChatGroupMember,
   sendHomeInternalChatMessage,
+  updateHomeInternalChatConversation,
   updateHomeInternalChatGroupMemberRole,
   type HomeInternalChatConversationMessage,
   type HomeInternalChatGroupMember,
 } from '@/lib/admin-api';
-import {
-  formatRecentMessageTime,
-  getInitials,
-  useHomeConversations,
-} from '../-context';
+import { formatRecentMessageTime, getInitials, useHomeConversations } from '../-context';
 
 export const Route = createFileRoute('/home/conversations/$conversationId/')({
   component: HomeConversationDetailIndexRoute,
@@ -52,7 +51,10 @@ function HomeConversationDetailIndexRoute() {
   const navigate = useNavigate();
   const { conversationId } = Route.useParams();
   const { contacts, conversations, selectedAccount, reloadConversations } = useHomeConversations();
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  const initialScrollDoneRef = useRef(false);
   const [participantsDialogOpen, setParticipantsDialogOpen] = useState(false);
+  const [groupNameDraft, setGroupNameDraft] = useState('');
   const [availableParticipantId, setAvailableParticipantId] = useState('');
   const [availableParticipantRole, setAvailableParticipantRole] = useState<'admin' | 'normal'>('normal');
   const [messageDraft, setMessageDraft] = useState('');
@@ -60,6 +62,10 @@ function HomeConversationDetailIndexRoute() {
   const [messages, setMessages] = useState<HomeInternalChatConversationMessage[]>([]);
   const [members, setMembers] = useState<HomeInternalChatGroupMember[]>([]);
   const selectedConversation = conversations.find((conversation) => conversation.id === decodeURIComponent(conversationId)) ?? null;
+  const contactByAccountId = useMemo(
+    () => new Map(contacts.map((contact) => [contact.accountId, contact])),
+    [contacts],
+  );
   const availableParticipants = useMemo(() => {
     const memberIds = new Set(members.map((member) => member.participantId));
 
@@ -70,6 +76,8 @@ function HomeConversationDetailIndexRoute() {
     if (!selectedAccount || !selectedConversation) {
       return;
     }
+
+    initialScrollDoneRef.current = false;
 
     let cancelled = false;
 
@@ -84,6 +92,7 @@ function HomeConversationDetailIndexRoute() {
       if (!cancelled) {
         setMessages(messageResult.items);
         setMembers(memberResult);
+        setGroupNameDraft(selectedConversation.name);
       }
     }
 
@@ -94,6 +103,17 @@ function HomeConversationDetailIndexRoute() {
     };
   }, [selectedAccount, selectedConversation]);
 
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+
+    if (!(viewport instanceof HTMLDivElement) || initialScrollDoneRef.current || messages.length === 0) {
+      return;
+    }
+
+    viewport.scrollTop = viewport.scrollHeight;
+    initialScrollDoneRef.current = true;
+  }, [messages]);
+
   if (!selectedConversation) {
     return <div className="text-sm text-muted-foreground">Conversa não encontrada.</div>;
   }
@@ -102,16 +122,39 @@ function HomeConversationDetailIndexRoute() {
     <>
       <div className="flex h-full min-h-0 flex-col gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void navigate({ to: '/home/conversations' })}
-              className="text-muted-foreground md:hidden"
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void navigate({ to: '/home/conversations' })}
+                className="text-muted-foreground md:hidden"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">Voltar</span>
+              </button>
+              <div className="text-base font-semibold tracking-[-0.03em]">{selectedConversation.name}</div>
+            </div>
+            <AdminButton
+              variant="outline"
+              size="icon-sm"
+              onClick={() => {
+                if (!selectedAccount) {
+                  return;
+                }
+
+                void (async () => {
+                  await archiveHomeInternalChatConversation({
+                    accountId: selectedAccount.accountId,
+                    conversationId: selectedConversation.id,
+                  });
+                  await reloadConversations();
+                  await navigate({ to: '/home/conversations' });
+                })();
+              }}
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Voltar</span>
-            </button>
-            <div className="text-base font-semibold tracking-[-0.03em]">{selectedConversation.name}</div>
+              <Archive className="h-4 w-4" />
+              <span className="sr-only">Arquivar conversa</span>
+            </AdminButton>
           </div>
           {selectedConversation.type === 'group' ? (
             <div className="flex items-start justify-between gap-3">
@@ -132,44 +175,57 @@ function HomeConversationDetailIndexRoute() {
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1">
+        <div ref={scrollAreaRef} className="min-h-0 flex-1">
           <AdminScrollArea className="h-full" contentClassName="space-y-3">
-            {messages.map((message) => (
-              <article key={message.messageId} className="flex items-start gap-3 py-1">
-                <Avatar className="h-9 w-9 border border-border bg-muted">
-                  <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                    {getInitials(message.authorDisplayName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="font-medium text-foreground">{message.authorDisplayName}</span>
-                    <span className="text-xs text-muted-foreground">{formatRecentMessageTime(message.createdAt)}</span>
-                  </div>
-                  <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{message.content}</div>
-                  {message.attachments.length > 0 ? (
-                    <div className="text-xs text-muted-foreground">
-                      {message.attachments.map((attachment) => attachment.name).join(', ')}
+            {messages.map((message) => {
+              const authorContact = contactByAccountId.get(message.authorAccountId);
+
+              return (
+                <article key={message.messageId} className="flex items-start gap-3 py-1">
+                  {authorContact?.agentId ? (
+                    <Link
+                      to="/agents/$agentId"
+                      params={{ agentId: authorContact.agentId }}
+                      className="shrink-0"
+                    >
+                      <Avatar className="h-9 w-9 border border-border bg-muted">
+                        <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                          {getInitials(message.authorDisplayName)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                  ) : (
+                    <Avatar className="h-9 w-9 border border-border bg-muted">
+                      <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                        {getInitials(message.authorDisplayName)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="font-medium text-foreground">{message.authorDisplayName}</span>
+                      <span className="text-xs text-muted-foreground">{formatRecentMessageTime(message.createdAt)}</span>
                     </div>
-                  ) : null}
-                </div>
-              </article>
-            ))}
+                    <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{message.content}</div>
+                    {message.attachments.length > 0 ? (
+                      <div className="text-xs text-muted-foreground">
+                        {message.attachments.map((attachment) => attachment.name).join(', ')}
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
           </AdminScrollArea>
         </div>
 
         <section className="space-y-3 border-t border-border pt-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="home-conversations-message">
-              Mensagem
-            </label>
-            <AdminTextarea
-              id="home-conversations-message"
-              rows={4}
-              value={messageDraft}
-              onChange={(event) => setMessageDraft(event.target.value)}
-            />
-          </div>
+          <AdminTextarea
+            id="home-conversations-message"
+            rows={4}
+            value={messageDraft}
+            onChange={(event) => setMessageDraft(event.target.value)}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="text-sm text-muted-foreground">
@@ -203,6 +259,7 @@ function HomeConversationDetailIndexRoute() {
                     content: messageDraft.trim(),
                     attachments,
                   });
+
                   const messageResult = await getHomeInternalChatMessages(
                     selectedAccount.accountId,
                     selectedConversation.id,
@@ -213,6 +270,7 @@ function HomeConversationDetailIndexRoute() {
                   setMessages(messageResult.items);
                   setMessageDraft('');
                   setAttachmentDrafts([]);
+                  initialScrollDoneRef.current = false;
                   await reloadConversations();
                 })();
               }}
@@ -239,6 +297,7 @@ function HomeConversationDetailIndexRoute() {
             className="flex flex-col"
             onSubmit={(event) => {
               event.preventDefault();
+
               if (!selectedAccount || !availableParticipantId) {
                 return;
               }
@@ -259,14 +318,54 @@ function HomeConversationDetailIndexRoute() {
             }}
           >
             <AdminDialogBody>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="internal-chat-group-name">
+                  Nome do grupo
+                </label>
+                <div className="flex items-center gap-3">
+                  <AdminInput
+                    id="internal-chat-group-name"
+                    value={groupNameDraft}
+                    onChange={(event) => setGroupNameDraft(event.target.value)}
+                  />
+                  <AdminButton
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() => {
+                      if (!selectedAccount || !groupNameDraft.trim()) {
+                        return;
+                      }
+
+                      void (async () => {
+                        await updateHomeInternalChatConversation({
+                          accountId: selectedAccount.accountId,
+                          conversationId: selectedConversation.id,
+                          name: groupNameDraft.trim(),
+                        });
+                        await reloadConversations();
+                      })();
+                    }}
+                  >
+                    <Check className="h-4 w-4" />
+                    <span className="sr-only">Salvar nome do grupo</span>
+                  </AdminButton>
+                </div>
+              </div>
+
               <div className="flex items-end gap-3">
                 <div className="min-w-0 flex-1 space-y-2">
                   <label className="text-sm font-medium" htmlFor="internal-chat-manage-participant">
                     Participante
                   </label>
-                  <Select value={availableParticipantId || '__none__'} onValueChange={(value) => setAvailableParticipantId(value === '__none__' ? '' : value)}>
+                  <Select
+                    value={availableParticipantId || '__none__'}
+                    onValueChange={(value) => setAvailableParticipantId(value === '__none__' ? '' : value)}
+                  >
                     <SelectTrigger id="internal-chat-manage-participant" className="w-full">
-                      <SelectValue>{availableParticipants.find((participant) => participant.accountId === availableParticipantId)?.displayName ?? 'Selecione um participante'}</SelectValue>
+                      <SelectValue>
+                        {availableParticipants.find((participant) => participant.accountId === availableParticipantId)?.displayName ?? 'Selecione um participante'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">Selecione um participante</SelectItem>
@@ -278,21 +377,22 @@ function HomeConversationDetailIndexRoute() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="w-32 space-y-2">
+                <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="internal-chat-manage-participant-role">
-                    Papel
+                    Admin
                   </label>
-                  <Select value={availableParticipantRole} onValueChange={(value: 'admin' | 'normal') => setAvailableParticipantRole(value)}>
-                    <SelectTrigger id="internal-chat-manage-participant-role" className="w-full">
-                      <SelectValue>{availableParticipantRole === 'admin' ? 'Admin' : 'Normal'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex h-9 items-center">
+                    <Switch
+                      id="internal-chat-manage-participant-role"
+                      checked={availableParticipantRole === 'admin'}
+                      onCheckedChange={(checked) => setAvailableParticipantRole(checked ? 'admin' : 'normal')}
+                    />
+                  </div>
                 </div>
-                <AdminButton type="submit">Incluir</AdminButton>
+                <AdminButton type="submit" variant="outline" size="icon-sm">
+                  <Check className="h-4 w-4" />
+                  <span className="sr-only">Incluir participante</span>
+                </AdminButton>
               </div>
 
               <div className="space-y-2">
@@ -300,55 +400,54 @@ function HomeConversationDetailIndexRoute() {
                   members.map((participant) => (
                     <div key={participant.participantId} className="flex items-center justify-between gap-3 border-b border-border pb-2">
                       <AdminInput value={participant.participantName} disabled />
-                      <Select
-                        value={participant.role === 'admin' ? 'admin' : 'normal'}
-                        onValueChange={(value: 'admin' | 'normal') => {
-                          if (!selectedAccount) {
-                            return;
-                          }
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>Admin</span>
+                          <Switch
+                            checked={participant.role === 'admin'}
+                            onCheckedChange={(checked) => {
+                              if (!selectedAccount) {
+                                return;
+                              }
 
-                          void (async () => {
-                            const nextMembers = await updateHomeInternalChatGroupMemberRole({
-                              accountId: selectedAccount.accountId,
-                              conversationId: selectedConversation.id,
-                              participantAccountId: participant.participantId,
-                              role: value,
-                            });
+                              void (async () => {
+                                const nextMembers = await updateHomeInternalChatGroupMemberRole({
+                                  accountId: selectedAccount.accountId,
+                                  conversationId: selectedConversation.id,
+                                  participantAccountId: participant.participantId,
+                                  role: checked ? 'admin' : 'normal',
+                                });
 
-                            setMembers(nextMembers);
-                          })();
-                        }}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue>{participant.role === 'admin' ? 'Admin' : 'Normal'}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <AdminButton
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          if (!selectedAccount) {
-                            return;
-                          }
+                                setMembers(nextMembers);
+                              })();
+                            }}
+                          />
+                        </div>
+                        <AdminButton
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={() => {
+                            if (!selectedAccount) {
+                              return;
+                            }
 
-                          void (async () => {
-                            const nextMembers = await removeHomeInternalChatGroupMember({
-                              accountId: selectedAccount.accountId,
-                              conversationId: selectedConversation.id,
-                              participantAccountId: participant.participantId,
-                            });
+                            void (async () => {
+                              const nextMembers = await removeHomeInternalChatGroupMember({
+                                accountId: selectedAccount.accountId,
+                                conversationId: selectedConversation.id,
+                                participantAccountId: participant.participantId,
+                              });
 
-                            setMembers(nextMembers);
-                            await reloadConversations();
-                          })();
-                        }}
-                      >
-                        Remover
-                      </AdminButton>
+                              setMembers(nextMembers);
+                              await reloadConversations();
+                            })();
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Remover participante</span>
+                        </AdminButton>
+                      </div>
                     </div>
                   ))
                 ) : (

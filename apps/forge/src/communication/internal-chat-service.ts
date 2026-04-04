@@ -1094,6 +1094,66 @@ export function createInternalChatService(
     });
   }
 
+  async function updateGroupByAccount(input: {
+    accountId: string;
+    groupId: string;
+    name: string;
+  }) {
+    await getRequiredGroupForAccount(input.accountId, input.groupId);
+    const membership = await db.query.internalChatConversationMembers.findFirst({
+      where: and(
+        eq(internalChatConversationMembers.conversationId, input.groupId),
+        eq(internalChatConversationMembers.accountId, input.accountId),
+      ),
+    });
+
+    if (!membership || membership.role !== 'admin') {
+      throw new Error('Only admins can update the group.');
+    }
+
+    const now = Date.now();
+
+    await db
+      .update(internalChatConversations)
+      .set({
+        name: input.name,
+        updatedAt: now,
+      })
+      .where(eq(internalChatConversations.id, input.groupId));
+
+    return getRequiredGroupForAccount(input.accountId, input.groupId);
+  }
+
+  async function archiveConversationByAccount(input: {
+    accountId: string;
+    conversationId: string;
+  }) {
+    await getRequiredConversationForAccount(input.accountId, input.conversationId);
+
+    await db
+      .delete(internalChatConversationMembers)
+      .where(and(
+        eq(internalChatConversationMembers.conversationId, input.conversationId),
+        eq(internalChatConversationMembers.accountId, input.accountId),
+      ));
+
+    const remainingMembers = await db.query.internalChatConversationMembers.findMany({
+      where: eq(internalChatConversationMembers.conversationId, input.conversationId),
+      limit: 1,
+    });
+
+    if (remainingMembers.length === 0) {
+      await db
+        .delete(internalChatConversations)
+        .where(eq(internalChatConversations.id, input.conversationId));
+    }
+
+    return {
+      conversationId: input.conversationId,
+      archived: true,
+    };
+  }
+
   async function sendMessage(input: {
     accountId: string;
     targetKey: string;
@@ -1388,6 +1448,8 @@ export function createInternalChatService(
     addMemberToGroupByAccount,
     updateMemberRoleByAccount,
     removeMemberFromGroupByAccount,
+    updateGroupByAccount,
+    archiveConversationByAccount,
     getUnreadSummary,
     listRecentConversations,
   };

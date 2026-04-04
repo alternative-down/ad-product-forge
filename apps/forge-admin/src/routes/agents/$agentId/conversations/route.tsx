@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { AdminScrollArea } from '@/components/admin';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getAgent } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/conversations')({
@@ -46,40 +47,47 @@ function AgentConversationsLayoutRoute() {
                           : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
                       }
                     >
-                      <div className="space-y-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 text-sm font-medium text-foreground">
-                            {conversation.name ?? conversation.provider}
-                          </div>
-                          {latestMessage ? (
-                            <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
-                              {formatRecentMessageTime(latestMessage.createdAt)}
-                            </span>
-                          ) : null}
-                          <div className="flex shrink-0 items-center gap-2 md:hidden">
-                            {latestMessage ? (
-                              <span className="text-xs text-muted-foreground">
-                                {formatRecentMessageTime(latestMessage.createdAt)}
-                              </span>
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-9 w-9 border border-border bg-muted">
+                            <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                              {getInitials(conversation.name ?? conversation.provider)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 text-sm font-medium text-foreground">
+                                {conversation.name ?? conversation.provider}
+                              </div>
+                              {latestMessage ? (
+                                <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
+                                  {formatRecentMessageTime(latestMessage.createdAt)}
+                                </span>
+                              ) : null}
+                              <div className="flex shrink-0 items-center gap-2 md:hidden">
+                                {latestMessage ? (
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatRecentMessageTime(latestMessage.createdAt)}
+                                  </span>
+                                ) : null}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </div>
+                            {conversation.type === 'group' && conversation.participants.length > 1 ? (
+                              <div className="line-clamp-2 text-sm text-muted-foreground">
+                                {conversation.participants.join(', ')}
+                              </div>
                             ) : null}
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            {latestMessage ? (
+                              <div className="space-y-1 pt-2">
+                                <div className="truncate text-sm text-foreground">
+                                  <span className="text-muted-foreground">{latestMessage.authorDisplayName}: </span>
+                                  <span>{latestMessage.content}</span>
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
-                        {conversation.type === 'group' && conversation.participants.length > 1 ? (
-                          <div className="line-clamp-2 text-sm text-muted-foreground">
-                            {conversation.participants.join(', ')}
-                          </div>
-                        ) : null}
-                        {latestMessage ? (
-                          <div className="space-y-1 pt-2">
-                            <div className="truncate text-sm text-foreground">
-                              <span className="text-muted-foreground">{latestMessage.authorDisplayName}: </span>
-                              <span>{latestMessage.content}</span>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </Link>
+                      </Link>
                   );
                 })}
             </AdminScrollArea>
@@ -95,6 +103,19 @@ function AgentConversationsLayoutRoute() {
       {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
     </div>
   );
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return '??';
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }
 
 function buildConversationPath(agentId: string, conversationId: string) {

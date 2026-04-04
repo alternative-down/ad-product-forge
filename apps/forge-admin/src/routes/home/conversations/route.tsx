@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
-import { Check, Pencil, Plus } from 'lucide-react';
+import { Check, ChevronRight, Pencil, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
@@ -185,7 +185,7 @@ function HomeConversationsLayoutRoute() {
     <HomeConversationsProvider value={contextValue}>
       <div className="flex h-[calc(100dvh-16rem)] min-h-0 flex-col md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
         <div className={mobileDetailOpen ? 'hidden min-h-0 flex-col gap-3 md:flex' : 'flex min-h-0 flex-col gap-3'}>
-          <section className="space-y-3">
+          <section className="space-y-2">
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="home-conversations-account">
                 Conta
@@ -207,6 +207,25 @@ function HomeConversationsLayoutRoute() {
                     ))}
                   </SelectContent>
                 </Select>
+                <AdminButton
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={() => {
+                    setAccountDialogMode('create');
+                    setAccountFormError('');
+                    setAccountForm({
+                      accountId: undefined,
+                      slug: '',
+                      displayName: '',
+                      description: '',
+                      slugDirty: false,
+                    });
+                    setAccountDialogOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="sr-only">Nova conta</span>
+                </AdminButton>
                 <AdminButton
                   variant="outline"
                   size="icon-sm"
@@ -233,29 +252,12 @@ function HomeConversationsLayoutRoute() {
                 </AdminButton>
               </div>
             </div>
-
-            <AdminButton
-              variant="outline"
-              onClick={() => {
-                setAccountDialogMode('create');
-                setAccountFormError('');
-                setAccountForm({
-                  accountId: undefined,
-                  slug: '',
-                  displayName: '',
-                  description: '',
-                  slugDirty: false,
-                });
-                setAccountDialogOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Nova conta
-            </AdminButton>
           </section>
 
           <div className="space-y-3 min-h-0 flex-1">
             <AdminButton
+              variant="outline"
+              className="w-full justify-center"
               disabled={!selectedAccount}
               onClick={() => {
                 setConversationForm({
@@ -277,6 +279,9 @@ function HomeConversationsLayoutRoute() {
                   conversations.map((conversation) => {
                     const itemLatestMessage = conversation.messages.at(-1) ?? null;
                     const selected = conversation.id === selectedConversationId;
+                    const avatarLabel = conversation.type === 'dm'
+                      ? conversation.name
+                      : conversation.name;
 
                     return (
                       <Link
@@ -289,23 +294,45 @@ function HomeConversationsLayoutRoute() {
                             : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
                         }
                       >
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium text-foreground">{conversation.name}</div>
-                          {conversation.type === 'group' && conversation.participants.length > 1 ? (
-                            <div className="line-clamp-2 text-sm text-muted-foreground">
-                              {conversation.participants.join(', ')}
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-9 w-9 border border-border bg-muted">
+                            <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                              {getInitials(avatarLabel)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 text-sm font-medium text-foreground">
+                                {conversation.name}
+                              </div>
+                              {itemLatestMessage ? (
+                                <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
+                                  {formatRecentMessageTime(itemLatestMessage.createdAt)}
+                                </span>
+                              ) : null}
+                              <div className="flex shrink-0 items-center gap-2 md:hidden">
+                                {itemLatestMessage ? (
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatRecentMessageTime(itemLatestMessage.createdAt)}
+                                  </span>
+                                ) : null}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              </div>
                             </div>
-                          ) : null}
-                          {itemLatestMessage ? (
-                            <div className="truncate text-sm text-muted-foreground">
-                              {itemLatestMessage.authorDisplayName}: {itemLatestMessage.content}
-                            </div>
-                          ) : null}
-                          {itemLatestMessage ? (
-                            <div className="text-xs text-muted-foreground">
-                              {formatRecentMessageTime(itemLatestMessage.createdAt)}
-                            </div>
-                          ) : null}
+                            {conversation.type === 'group' && conversation.participants.length > 1 ? (
+                              <div className="line-clamp-2 text-sm text-muted-foreground">
+                                {conversation.participants.join(', ')}
+                              </div>
+                            ) : null}
+                            {itemLatestMessage ? (
+                              <div className="space-y-1 pt-2">
+                                <div className="truncate text-sm text-foreground">
+                                  <span className="text-muted-foreground">{itemLatestMessage.authorDisplayName}: </span>
+                                  <span>{itemLatestMessage.content}</span>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </Link>
                     );

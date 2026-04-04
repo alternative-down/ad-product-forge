@@ -401,9 +401,14 @@ export function createAdminReadModel(input: {
         limit: params.limit,
         offset: params.offset,
       });
+      const accounts = await input.internalChat.listAccounts();
+      const agentIdByAccountId = new Map(accounts.map((account) => [account.id, account.agentId ?? null]));
 
       return {
-        items: messages,
+        items: messages.map((message) => ({
+          ...message,
+          authorAgentId: message.authorId ? (agentIdByAccountId.get(message.authorId) ?? null) : null,
+        })),
         hasMore: messages.length === params.limit,
       };
     }
@@ -425,7 +430,10 @@ export function createAdminReadModel(input: {
     });
 
     return {
-      items: messages,
+      items: messages.map((message) => ({
+        ...message,
+        authorAgentId: null,
+      })),
       hasMore: messages.length === params.limit,
     };
   }
