@@ -4,6 +4,7 @@ import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
+  AdminDialogBody,
   AdminButton,
   AdminDialogContent,
   AdminDialogFooter,
@@ -115,7 +116,7 @@ function IntegrationsPricesRoute() {
           </AdminDialogHeader>
 
           <form
-            className="space-y-4"
+            className="flex flex-col"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({
@@ -126,6 +127,7 @@ function IntegrationsPricesRoute() {
               });
             }}
           >
+            <AdminDialogBody>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="llm-price-model-key">
                 Model key
@@ -195,6 +197,7 @@ function IntegrationsPricesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+            </AdminDialogBody>
             <AdminDialogFooter>
               <AdminButton type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}

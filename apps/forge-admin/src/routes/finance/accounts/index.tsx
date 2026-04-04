@@ -4,6 +4,7 @@ import { Check, Power, PowerOff, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
+  AdminDialogBody,
   AdminButton,
   AdminDialogContent,
   AdminDialogFooter,
@@ -308,12 +309,13 @@ function FinanceAccountsIndexRoute() {
           </AdminDialogHeader>
 
           <form
-            className="space-y-4"
+            className="flex flex-col"
             onSubmit={(event) => {
               event.preventDefault();
               createMutation.mutate(movementForm);
             }}
           >
+            <AdminDialogBody>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="finance-entry-kind">
                 Tipo
@@ -448,6 +450,7 @@ function FinanceAccountsIndexRoute() {
                 disabled={createMutation.isPending}
               />
             </div>
+            </AdminDialogBody>
 
             <AdminDialogFooter>
               <AdminButton type="submit" disabled={createMutation.isPending}>

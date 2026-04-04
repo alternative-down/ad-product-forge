@@ -4,6 +4,7 @@ import { XIcon } from 'lucide-react';
 
 import { AdminButton } from '@/components/admin/forms/admin-button';
 import { DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 export function AdminDialogContent({ className, ...props }: ComponentProps<typeof DialogContent>) {
@@ -53,4 +54,14 @@ export function AdminDialogHeader({ className, children, ...props }: ComponentPr
 
 export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof DialogTitle>) {
   return <DialogTitle className={cn('text-xl', className)} {...props} />;
+}
+
+export function AdminDialogBody({ className, children, ...props }: ComponentProps<'div'>) {
+  return (
+    <ScrollArea className={cn('max-h-[min(30rem,calc(100dvh-14rem))] px-4', className)}>
+      <div className={cn('space-y-4 py-4', className)} {...props}>
+        {children}
+      </div>
+    </ScrollArea>
+  );
 }

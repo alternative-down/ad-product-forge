@@ -4,6 +4,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
+  AdminDialogBody,
   AdminButton,
   AdminDialogContent,
   AdminDialogFooter,
@@ -15,7 +16,6 @@ import {
 } from '@/components/admin';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -214,8 +214,8 @@ function HomeRolesIndexRoute() {
               roleMutation.mutate(roleForm);
             }}
           >
-            <ScrollArea className="-mr-2 h-[min(30rem,calc(100dvh-14rem))] [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
-              <div className="space-y-5 pr-3">
+            <AdminDialogBody>
+              <div className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="role-name">
                     Nome
@@ -288,7 +288,7 @@ function HomeRolesIndexRoute() {
 
                 {roleMutation.error ? <div className="text-sm text-destructive">{roleMutation.error.message}</div> : null}
               </div>
-            </ScrollArea>
+            </AdminDialogBody>
 
             <AdminDialogFooter>
               <AdminButton type="submit" disabled={roleMutation.isPending || !roleForm.name.trim()}>

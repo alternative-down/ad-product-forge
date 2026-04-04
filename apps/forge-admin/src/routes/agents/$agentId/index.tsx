@@ -4,6 +4,7 @@ import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
 import {
+  AdminDialogBody,
   AdminButton,
   AdminDialogContent,
   AdminDialogFooter,
@@ -72,6 +73,12 @@ function AgentDetailIndexRoute() {
   });
   const agent = agentQuery.data;
   const profiles = llmQuery.data?.profiles.filter((profile) => profile.isEnabled) ?? [];
+  const selectedRoleName =
+    rolesQuery.data?.items.find((role) => role.roleId === form?.roleId)?.name ?? 'Sem papel';
+  const selectedModelProfileName =
+    profiles.find((profile) => profile.profileId === form?.modelProfileId)?.name ?? 'Selecione um perfil';
+  const selectedOmProfileName =
+    profiles.find((profile) => profile.profileId === form?.omModelProfileId)?.name ?? 'Selecione um perfil';
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -167,81 +174,44 @@ function AgentDetailIndexRoute() {
 
           {form ? (
             <form
-              className="space-y-4"
+              className="flex flex-col"
               onSubmit={(event) => {
                 event.preventDefault();
                 mutation.mutate(form);
               }}
             >
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="agent-name">
-                  Nome
-                </label>
-                <AdminInput
-                  id="agent-name"
-                  value={form.name}
-                  onChange={(event) => setForm((current) => current ? { ...current, name: event.target.value } : current)}
-                  disabled={mutation.isPending}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="agent-role">
-                  Papel
-                </label>
-                <Select
-                  value={form.roleId || '__none__'}
-                  onValueChange={(value) =>
-                    setForm((current) => current ? { ...current, roleId: value === '__none__' ? '' : value } : current)
-                  }
-                  disabled={mutation.isPending}
-                >
-                  <SelectTrigger id="agent-role" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Sem papel</SelectItem>
-                    {(rolesQuery.data?.items ?? []).map((role) => (
-                      <SelectItem key={role.roleId} value={role.roleId}>
-                        {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="agent-description">
-                  Descrição
-                </label>
-                <AdminTextarea
-                  id="agent-description"
-                  value={form.description}
-                  onChange={(event) => setForm((current) => current ? { ...current, description: event.target.value } : current)}
-                  disabled={mutation.isPending}
-                  rows={4}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <AdminDialogBody>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="agent-model-profile">
-                    Perfil principal
+                  <label className="text-sm font-medium" htmlFor="agent-name">
+                    Nome
+                  </label>
+                  <AdminInput
+                    id="agent-name"
+                    value={form.name}
+                    onChange={(event) => setForm((current) => current ? { ...current, name: event.target.value } : current)}
+                    disabled={mutation.isPending}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="agent-role">
+                    Papel
                   </label>
                   <Select
-                    value={form.modelProfileId}
+                    value={form.roleId || '__none__'}
                     onValueChange={(value) =>
-                      setForm((current) => current ? { ...current, modelProfileId: value } : current)
+                      setForm((current) => current ? { ...current, roleId: value === '__none__' ? '' : value } : current)
                     }
                     disabled={mutation.isPending}
                   >
-                    <SelectTrigger id="agent-model-profile" className="w-full">
-                      <SelectValue />
+                    <SelectTrigger id="agent-role" className="w-full">
+                      <SelectValue>{selectedRoleName}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {profiles.map((profile) => (
-                        <SelectItem key={profile.profileId} value={profile.profileId}>
-                          {profile.name}
+                      <SelectItem value="__none__">Sem papel</SelectItem>
+                      {(rolesQuery.data?.items ?? []).map((role) => (
+                        <SelectItem key={role.roleId} value={role.roleId}>
+                          {role.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -249,44 +219,83 @@ function AgentDetailIndexRoute() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="agent-om-profile">
-                    Perfil OM
+                  <label className="text-sm font-medium" htmlFor="agent-description">
+                    Descrição
                   </label>
-                  <Select
-                    value={form.omModelProfileId}
-                    onValueChange={(value) =>
-                      setForm((current) => current ? { ...current, omModelProfileId: value } : current)
-                    }
+                  <AdminTextarea
+                    id="agent-description"
+                    value={form.description}
+                    onChange={(event) => setForm((current) => current ? { ...current, description: event.target.value } : current)}
                     disabled={mutation.isPending}
-                  >
-                    <SelectTrigger id="agent-om-profile" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {profiles.map((profile) => (
-                        <SelectItem key={profile.profileId} value={profile.profileId}>
-                          {profile.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    rows={4}
+                  />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="agent-instructions">
-                  Instruções
-                </label>
-                <AdminTextarea
-                  id="agent-instructions"
-                  value={form.instructions}
-                  onChange={(event) => setForm((current) => current ? { ...current, instructions: event.target.value } : current)}
-                  disabled={mutation.isPending}
-                  rows={10}
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="agent-model-profile">
+                      Perfil principal
+                    </label>
+                    <Select
+                      value={form.modelProfileId}
+                      onValueChange={(value) =>
+                        setForm((current) => current ? { ...current, modelProfileId: value } : current)
+                      }
+                      disabled={mutation.isPending}
+                    >
+                      <SelectTrigger id="agent-model-profile" className="w-full">
+                        <SelectValue>{selectedModelProfileName}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.profileId} value={profile.profileId}>
+                            {profile.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="agent-om-profile">
+                      Perfil OM
+                    </label>
+                    <Select
+                      value={form.omModelProfileId}
+                      onValueChange={(value) =>
+                        setForm((current) => current ? { ...current, omModelProfileId: value } : current)
+                      }
+                      disabled={mutation.isPending}
+                    >
+                      <SelectTrigger id="agent-om-profile" className="w-full">
+                        <SelectValue>{selectedOmProfileName}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.profileId} value={profile.profileId}>
+                            {profile.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="agent-instructions">
+                    Instruções
+                  </label>
+                  <AdminTextarea
+                    id="agent-instructions"
+                    value={form.instructions}
+                    onChange={(event) => setForm((current) => current ? { ...current, instructions: event.target.value } : current)}
+                    disabled={mutation.isPending}
+                    rows={10}
+                  />
+                </div>
+
+                {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+              </AdminDialogBody>
 
               <AdminDialogFooter>
                 <AdminButton

@@ -4,6 +4,7 @@ import { Pencil, Power, PowerOff } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
+  AdminDialogBody,
   AdminButton,
   AdminDialogContent,
   AdminDialogFooter,
@@ -326,7 +327,7 @@ function IntegrationsProfilesRoute() {
           </AdminDialogHeader>
 
           <form
-            className="space-y-4"
+            className="flex flex-col"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({
@@ -338,6 +339,7 @@ function IntegrationsProfilesRoute() {
               });
             }}
           >
+            <AdminDialogBody>
             <div className="grid gap-4 min-[560px]:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="llm-profile-name">
@@ -424,6 +426,7 @@ function IntegrationsProfilesRoute() {
             </div>
             {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
             {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+            </AdminDialogBody>
             <AdminDialogFooter>
               <AdminButton type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}

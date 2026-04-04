@@ -9,6 +9,7 @@ import {
   topUpAgentContract,
 } from '@/lib/admin-api';
 import {
+  AdminDialogBody,
   AdminButton,
   AdminDialogContent,
   AdminDialogFooter,
@@ -201,55 +202,59 @@ function AgentContractIndexRoute() {
 
           {contractForm ? (
             <form
-              className="space-y-4"
+              className="flex flex-col"
               onSubmit={(event) => {
                 event.preventDefault();
                 mutation.mutate(contractForm);
               }}
             >
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="agent-contract-action">
-                  Ação
-                </label>
-                <Select
-                  value={contractForm.action}
-                  onValueChange={(value: ContractForm['action']) =>
-                    setContractForm((current) => (current ? { ...current, action: value } : current))
-                  }
-                  disabled={mutation.isPending}
-                >
-                  <SelectTrigger id="agent-contract-action" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="adjust-budget">Ajustar orçamento</SelectItem>
-                    <SelectItem value="top-up">Adicionar saldo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <AdminDialogBody>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="agent-contract-action">
+                    Ação
+                  </label>
+                  <Select
+                    value={contractForm.action}
+                    onValueChange={(value: ContractForm['action']) =>
+                      setContractForm((current) => (current ? { ...current, action: value } : current))
+                    }
+                    disabled={mutation.isPending}
+                  >
+                    <SelectTrigger id="agent-contract-action" className="w-full">
+                      <SelectValue>
+                        {contractForm.action === 'top-up' ? 'Adicionar saldo' : 'Ajustar orçamento'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="adjust-budget">Ajustar orçamento</SelectItem>
+                      <SelectItem value="top-up">Adicionar saldo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="agent-contract-amount">
-                  {contractForm.action === 'top-up' ? 'Valor adicional' : 'Novo valor semanal'}
-                </label>
-                <AdminInput
-                  id="agent-contract-amount"
-                  type="number"
-                  step="0.01"
-                  value={contractForm.amountUsd}
-                  onChange={(event) =>
-                    setContractForm((current) =>
-                      current
-                        ? {
-                            ...current,
-                            amountUsd: Number(event.target.value) || 0,
-                          }
-                        : current,
-                    )
-                  }
-                  disabled={mutation.isPending}
-                />
-              </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="agent-contract-amount">
+                    {contractForm.action === 'top-up' ? 'Valor adicional' : 'Novo valor semanal'}
+                  </label>
+                  <AdminInput
+                    id="agent-contract-amount"
+                    type="number"
+                    step="0.01"
+                    value={contractForm.amountUsd}
+                    onChange={(event) =>
+                      setContractForm((current) =>
+                        current
+                          ? {
+                              ...current,
+                              amountUsd: Number(event.target.value) || 0,
+                            }
+                          : current,
+                      )
+                    }
+                    disabled={mutation.isPending}
+                  />
+                </div>
+              </AdminDialogBody>
 
               <AdminDialogFooter>
                 <AdminButton type="submit" disabled={mutation.isPending}>
