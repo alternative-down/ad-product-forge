@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -50,8 +50,11 @@ function AgentConversationsIndexRoute() {
                   >
                     <div className="space-y-1">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="text-sm font-medium text-foreground">
-                          {conversation.name ?? conversation.provider}
+                        <div className="flex min-w-0 items-start gap-2">
+                          <div className="min-w-0 text-sm font-medium text-foreground">
+                            {conversation.name ?? conversation.provider}
+                          </div>
+                          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
                         </div>
                         <div className="shrink-0 text-xs text-muted-foreground">
                           {latestMessage ? formatRecentMessageTime(latestMessage.createdAt) : ''}
