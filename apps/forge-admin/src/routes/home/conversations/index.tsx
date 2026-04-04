@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Pencil, Plus, Settings2 } from 'lucide-react';
+import { ArrowLeft, Check, Pencil, Plus, Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
@@ -157,7 +157,6 @@ export function HomeConversationsIndexRoute() {
 
   const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedConversation = conversations.find((conversation) => conversation.id === selectedConversationId) ?? null;
-  const accountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
   const availableContacts = contacts.filter((contact) => contact.isAgent && contact.accountId !== selectedAccountId);
   const filteredContacts = availableContacts.filter((contact) => {
     const query = conversationForm.participantQuery.trim().toLowerCase();
@@ -188,7 +187,7 @@ export function HomeConversationsIndexRoute() {
                 onValueChange={(value) => setSelectedAccountId(value === '__none__' ? '' : value)}
               >
                 <SelectTrigger id="home-conversations-account" className="w-full">
-                  <SelectValue>{accountLabel}</SelectValue>
+                  <SelectValue placeholder="Selecione uma conta" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Selecione uma conta</SelectItem>
@@ -250,7 +249,7 @@ export function HomeConversationsIndexRoute() {
       </section>
 
       <div className="flex h-[calc(100dvh-16rem)] min-h-0 flex-col md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
-        <div className="flex min-h-0 flex-col gap-3">
+        <div className={selectedConversation ? 'hidden min-h-0 flex-col gap-3 md:flex' : 'flex min-h-0 flex-col gap-3'}>
           <AdminButton
             disabled={!selectedAccount}
             onClick={() => {
@@ -315,11 +314,21 @@ export function HomeConversationsIndexRoute() {
           </AdminScrollArea>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-4">
+        <div className={selectedConversation ? 'flex min-h-0 flex-col gap-4' : 'hidden min-h-0 flex-col gap-4 md:flex'}>
           {selectedConversation ? (
             <>
               <div className="space-y-1">
-                <div className="text-base font-semibold tracking-[-0.03em]">{selectedConversation.name}</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConversationId('')}
+                    className="text-muted-foreground md:hidden"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="sr-only">Voltar</span>
+                  </button>
+                  <div className="text-base font-semibold tracking-[-0.03em]">{selectedConversation.name}</div>
+                </div>
                 {selectedConversation.type === 'group' ? (
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-sm text-muted-foreground">
@@ -661,9 +670,9 @@ export function HomeConversationsIndexRoute() {
                     filteredContacts.map((contact) => {
                       const selected = conversationForm.selectedParticipantIds.includes(contact.accountId);
 
-                      return (
-                        <button
-                          key={contact.accountId}
+                        return (
+                          <button
+                            key={contact.accountId}
                           type="button"
                           onClick={() =>
                             setConversationForm((current) => ({
@@ -681,19 +690,22 @@ export function HomeConversationsIndexRoute() {
                               ? 'flex w-full items-center gap-3 rounded-sm border border-border bg-muted px-3 py-3 text-left'
                               : 'flex w-full items-center gap-3 rounded-sm border border-border bg-background px-3 py-3 text-left'
                           }
-                        >
-                          <Avatar className="h-9 w-9 border border-border bg-muted">
-                            <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                              {getInitials(contact.displayName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 space-y-0.5">
-                            <div className="truncate text-sm font-medium text-foreground">{contact.displayName}</div>
-                            <div className="truncate text-xs text-muted-foreground">@{contact.slug}</div>
-                          </div>
-                        </button>
-                      );
-                    })
+                          >
+                            <Avatar className="h-9 w-9 border border-border bg-muted">
+                              <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                                {getInitials(contact.displayName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 space-y-0.5">
+                              <div className="truncate text-sm font-medium text-foreground">{contact.displayName}</div>
+                              <div className="truncate text-xs text-muted-foreground">@{contact.slug}</div>
+                            </div>
+                            <div className="ml-auto text-muted-foreground">
+                              {selected ? <Check className="h-4 w-4" /> : null}
+                            </div>
+                          </button>
+                        );
+                      })
                   ) : (
                     <div className="text-sm text-muted-foreground">Nenhum participante encontrado.</div>
                   )}
