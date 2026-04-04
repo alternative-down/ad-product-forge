@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 
 import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
 import {
@@ -50,6 +50,7 @@ function DiscordProviderForm(input: {
 }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<DiscordProviderCredentials | null>(null);
+  const [newChannelName, setNewChannelName] = useState('');
   const [newChannelId, setNewChannelId] = useState('');
   const saveMutation = useMutation({
     mutationFn: upsertAgentProvider,
@@ -114,22 +115,40 @@ function DiscordProviderForm(input: {
             </label>
             <div className="space-y-3">
               <div className="flex items-end gap-3">
-                <div className="min-w-0 flex-1 space-y-2">
-                  <label className="text-sm font-medium" htmlFor="discord-channel-id">
-                    Código do canal
-                  </label>
-                  <AdminInput
-                    id="discord-channel-id"
-                    value={newChannelId}
-                    onChange={(event) => setNewChannelId(event.target.value)}
-                    disabled={pending}
-                  />
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium" htmlFor="discord-channel-name">
+                        Nome do canal
+                      </label>
+                      <AdminInput
+                        id="discord-channel-name"
+                        value={newChannelName}
+                        onChange={(event) => setNewChannelName(event.target.value)}
+                        disabled={pending}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium" htmlFor="discord-channel-id">
+                        Código do canal
+                      </label>
+                      <AdminInput
+                        id="discord-channel-id"
+                        value={newChannelId}
+                        onChange={(event) => setNewChannelId(event.target.value)}
+                        disabled={pending}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <AdminButton
                   type="button"
+                  size="icon-sm"
                   disabled={pending || !newChannelId.trim()}
                   onClick={() => {
                     const channelId = newChannelId.trim();
+                    const channelName = newChannelName.trim();
 
                     if (!channelId) {
                       return;
@@ -148,16 +167,18 @@ function DiscordProviderForm(input: {
                           ...next.channels,
                           {
                             channelId,
-                            channelName: '',
+                            channelName,
                             respondToMentionsOnly: false,
                           },
                         ],
                       };
                     });
+                    setNewChannelName('');
                     setNewChannelId('');
                   }}
                 >
-                  Adicionar
+                  <Check className="h-4 w-4" />
+                  <span className="sr-only">Adicionar</span>
                 </AdminButton>
               </div>
 
