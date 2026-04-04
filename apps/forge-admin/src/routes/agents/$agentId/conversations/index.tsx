@@ -35,6 +35,7 @@ function AgentConversationsIndexRoute() {
             <div className="space-y-2">
               {conversations.map((conversation) => {
                 const selected = conversation.conversationId === selectedConversation?.conversationId;
+                const latestMessage = conversation.messages[0] ?? null;
 
                 return (
                   <button
@@ -48,12 +49,27 @@ function AgentConversationsIndexRoute() {
                     }
                   >
                     <div className="space-y-1">
-                      <div className="text-sm font-medium text-foreground">
-                        {conversation.name ?? conversation.provider}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="text-sm font-medium text-foreground">
+                          {conversation.name ?? conversation.provider}
+                        </div>
+                        <div className="shrink-0 text-xs text-muted-foreground">
+                          {latestMessage ? formatRecentMessageTime(latestMessage.createdAt) : ''}
+                        </div>
                       </div>
                       <div className="line-clamp-2 text-sm text-muted-foreground">
                         {conversation.participants.join(', ')}
                       </div>
+                      {latestMessage ? (
+                        <>
+                          <div className="text-xs text-muted-foreground">
+                            {latestMessage.authorDisplayName}
+                          </div>
+                          <div className="truncate text-sm text-foreground">
+                            {latestMessage.content}
+                          </div>
+                        </>
+                      ) : null}
                     </div>
                   </button>
                 );
@@ -107,4 +123,29 @@ function formatDateTime(value: number) {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(value);
+}
+
+function formatRecentMessageTime(value: number) {
+  const diffMs = Date.now() - value;
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  if (diffDays >= 3) {
+    return new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'short',
+    }).format(value);
+  }
+
+  if (diffMs < 60 * 1000) {
+    return 'agora';
+  }
+
+  if (diffMs < 60 * 60 * 1000) {
+    return `${Math.max(1, Math.floor(diffMs / (60 * 1000)))} min`;
+  }
+
+  if (diffMs < 24 * 60 * 60 * 1000) {
+    return `${Math.floor(diffMs / (60 * 60 * 1000))} h`;
+  }
+
+  return `${Math.floor(diffDays)} d`;
 }
