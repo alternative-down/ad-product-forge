@@ -577,22 +577,32 @@ async function listRecentExternalConversations(_workspaceBasePath: string, _agen
 
     return rows
       .filter((conversation) => conversation.provider !== 'internal-chat')
-      .map((conversation) => ({
-        conversationId: `${conversation.provider}:${conversation.targetKey}`,
-        conversationKey: conversation.targetKey,
-        provider: conversation.provider,
-        type: 'conversation',
-        name: conversation.name ?? undefined,
-        participants: [...(conversation.participants ?? [])],
-        updatedAt: Date.parse(conversation.latestMessageAt) || 0,
-        messages: conversation.messages.map((message) => ({
-          messageId: message.messageId,
-          content: message.content,
-          unread: message.unread,
-          authorDisplayName: message.authorDisplayName ?? 'Unknown author',
-          createdAt: Date.parse(message.createdAt) || 0,
-        })),
-      }));
+      .map((conversation) => {
+        const participants = collectConversationParticipants({
+          name: conversation.name,
+          participants: conversation.participants,
+          messages: conversation.messages.map((message) => ({
+            authorDisplayName: message.authorDisplayName,
+          })),
+        });
+
+        return {
+          conversationId: `${conversation.provider}:${conversation.targetKey}`,
+          conversationKey: conversation.targetKey,
+          provider: conversation.provider,
+          type: participants.length > 2 ? 'group' : 'dm',
+          name: conversation.name ?? undefined,
+          participants,
+          updatedAt: Date.parse(conversation.latestMessageAt) || 0,
+          messages: conversation.messages.map((message) => ({
+            messageId: message.messageId,
+            content: message.content,
+            unread: message.unread,
+            authorDisplayName: message.authorDisplayName ?? 'Unknown author',
+            createdAt: Date.parse(message.createdAt) || 0,
+          })),
+        };
+      });
   } catch (error) {
     console.error(`[AdminReadModel] Failed to load external conversations for agent ${_agentId}:`, error);
     return [];
@@ -608,27 +618,21 @@ async function listRecentInternalChatConversations(
     const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
 
     return rows.map((conversation) => {
-      const participants = new Set<string>();
-      const conversationName = conversation.name ?? 'Conversation';
-
-      participants.add(agentName);
-      if (conversationName !== 'Conversation') {
-        participants.add(conversationName);
-      }
-
-      for (const message of conversation.messages) {
-        if (message.authorDisplayName) {
-          participants.add(message.authorDisplayName);
-        }
-      }
+      const participants = collectConversationParticipants({
+        name: conversation.name,
+        participants: conversation.participants,
+        messages: conversation.messages.map((message) => ({
+          authorDisplayName: message.authorDisplayName ?? agentName,
+        })),
+      });
 
       return {
         conversationId: conversation.targetKey,
         conversationKey: conversation.targetKey,
         provider: conversation.provider,
-        type: participants.size > 2 ? 'group' : 'dm',
+        type: participants.length > 2 ? 'group' : 'dm',
         name: conversation.name ?? undefined,
-        participants: [...participants],
+        participants,
         updatedAt: Date.parse(conversation.latestMessageAt) || 0,
         messages: conversation.messages.map((message) => ({
           messageId: message.messageId,
@@ -643,6 +647,30 @@ async function listRecentInternalChatConversations(
     console.error(`[AdminReadModel] Failed to load internal-chat conversations for agent ${agentId}:`, error);
     return [];
   }
+}
+
+function collectConversationParticipants(input: {
+  name?: string;
+  participants?: string[];
+  messages: Array<{
+    authorDisplayName?: string;
+  }>;
+}) {
+  const participants = new Set<string>();
+
+  for (const participant of input.participants ?? []) {
+    if (participant && participant !== input.name) {
+      participants.add(participant);
+    }
+  }
+
+  for (const message of input.messages) {
+    if (message.authorDisplayName && message.authorDisplayName !== input.name) {
+      participants.add(message.authorDisplayName);
+    }
+  }
+
+  return [...participants];
 }
 
 async function listRecentThreadMessages(workspaceBasePath: string, agentId: string) {

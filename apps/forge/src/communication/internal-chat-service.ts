@@ -633,7 +633,7 @@ export function createInternalChatService(
           latestMessageAt: new Date(conversation.updatedAt).toISOString(),
           unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
           name: conversationName,
-          participants: participants.map((participant) => participant.accountId),
+          participants: participants.map((participant) => participant.displayName),
           messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
         };
       }),

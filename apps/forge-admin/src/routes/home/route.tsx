@@ -17,8 +17,14 @@ function HomeLayoutRoute() {
     select: (state) => state.location.pathname,
   });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
-  const currentSection = pathname.startsWith('/home/roles') ? '/home/roles' : '/home';
-  const currentSectionLabel = currentSection === '/home/roles' ? 'Papéis & Ferramentas' : 'Geral';
+  const sectionItems = [
+    { value: '/home', label: 'Geral' },
+    { value: '/home/roles', label: 'Papéis & Ferramentas' },
+  ];
+  const currentSection = [...sectionItems]
+    .sort((left, right) => right.value.length - left.value.length)
+    .find((item) => pathname === item.value || pathname.startsWith(`${item.value}/`))
+    ?? sectionItems[0];
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -48,38 +54,38 @@ function HomeLayoutRoute() {
     >
       <div className="space-y-6 md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8 md:space-y-0">
         <div className="md:hidden">
-          <Select value={currentSection} onValueChange={(value) => void navigate({ to: value })}>
+          <Select
+            key={pathname}
+            value={currentSection.value}
+            onValueChange={(value) => void navigate({ to: value })}
+          >
             <SelectTrigger className="w-full">
-              <SelectValue>{currentSectionLabel}</SelectValue>
+              <SelectValue>{currentSection.label}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="/home">Geral</SelectItem>
-              <SelectItem value="/home/roles">Papéis & Ferramentas</SelectItem>
+              {sectionItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <aside className="hidden md:block">
           <nav className="flex flex-col gap-1">
-            <Link
-              to="/home"
-              className={
-                pathname === '/home'
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              Geral
-            </Link>
-            <Link
-              to="/home/roles"
-              className={
-                pathname.startsWith('/home/roles')
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              Papéis & Ferramentas
-            </Link>
+            {sectionItems.map((item) => (
+              <Link
+                key={item.value}
+                to={item.value}
+                className={
+                  currentSection.value === item.value
+                    ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                    : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
+                }
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </aside>
         <div className="min-w-0">

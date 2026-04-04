@@ -17,28 +17,18 @@ function IntegrationsLayoutRoute() {
     select: (state) => state.location.pathname,
   });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
-  const currentSection = pathname === '/integrations'
-    ? '/integrations'
-    : pathname === '/integrations/prices'
-      ? '/integrations/prices'
-      : pathname === '/integrations/github'
-        ? '/integrations/github'
-        : pathname === '/integrations/coolify'
-          ? '/integrations/coolify'
-      : pathname === '/integrations/migadu'
-        ? '/integrations/migadu'
-        : '/integrations/minimax';
-  const currentSectionLabel = currentSection === '/integrations'
-    ? 'Perfis'
-    : currentSection === '/integrations/prices'
-      ? 'Preços'
-      : currentSection === '/integrations/github'
-        ? 'Github'
-        : currentSection === '/integrations/coolify'
-          ? 'Coolify'
-          : currentSection === '/integrations/migadu'
-            ? 'Migadu'
-            : 'MiniMax';
+  const sectionItems = [
+    { value: '/integrations', label: 'Perfis' },
+    { value: '/integrations/prices', label: 'Preços' },
+    { value: '/integrations/github', label: 'Github' },
+    { value: '/integrations/coolify', label: 'Coolify' },
+    { value: '/integrations/migadu', label: 'Migadu' },
+    { value: '/integrations/minimax', label: 'MiniMax' },
+  ];
+  const currentSection = [...sectionItems]
+    .sort((left, right) => right.value.length - left.value.length)
+    .find((item) => pathname === item.value || pathname.startsWith(`${item.value}/`))
+    ?? sectionItems[0];
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -68,82 +58,38 @@ function IntegrationsLayoutRoute() {
     >
       <div className="space-y-6 md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8 md:space-y-0">
         <div className="md:hidden">
-          <Select value={currentSection} onValueChange={(value) => void navigate({ to: value })}>
+          <Select
+            key={pathname}
+            value={currentSection.value}
+            onValueChange={(value) => void navigate({ to: value })}
+          >
             <SelectTrigger className="w-full">
-              <SelectValue>{currentSectionLabel}</SelectValue>
+              <SelectValue>{currentSection.label}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="/integrations">Perfis</SelectItem>
-              <SelectItem value="/integrations/prices">Preços</SelectItem>
-              <SelectItem value="/integrations/github">Github</SelectItem>
-              <SelectItem value="/integrations/coolify">Coolify</SelectItem>
-              <SelectItem value="/integrations/migadu">Migadu</SelectItem>
-              <SelectItem value="/integrations/minimax">MiniMax</SelectItem>
+              {sectionItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <aside className="hidden md:block">
           <nav className="flex flex-col gap-1">
-            <Link
-              to="/integrations"
-              className={
-                pathname === '/integrations'
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              Perfis
-            </Link>
-            <Link
-              to="/integrations/prices"
-              className={
-                pathname === '/integrations/prices'
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              Preços
-            </Link>
-            <Link
-              to="/integrations/github"
-              className={
-                pathname === '/integrations/github'
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              Github
-            </Link>
-            <Link
-              to="/integrations/coolify"
-              className={
-                pathname === '/integrations/coolify'
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              Coolify
-            </Link>
-            <Link
-              to="/integrations/migadu"
-              className={
-                pathname === '/integrations/migadu'
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              Migadu
-            </Link>
-            <Link
-              to="/integrations/minimax"
-              className={
-                pathname === '/integrations/minimax'
-                  ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
-                  : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
-              }
-            >
-              MiniMax
-            </Link>
+            {sectionItems.map((item) => (
+              <Link
+                key={item.value}
+                to={item.value}
+                className={
+                  currentSection.value === item.value
+                    ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                    : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
+                }
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </aside>
         <div className="min-w-0">

@@ -399,7 +399,6 @@ export function createDiscordProvider(config: {
     }
 
     const sortedMessages = Array.from(collected.values())
-      .filter((message) => !message.author.bot || message.author.id === client.user?.id)
       .filter(matchesMessage)
       .sort((left, right) => left.createdTimestamp - right.createdTimestamp);
     const filteredMessages = sortedMessages.slice(
@@ -446,7 +445,7 @@ export function createDiscordProvider(config: {
           latestMessageAt: latestMessage.createdAt,
           unreadCount: 0,
           name: getDiscordConversationName(channel, latestMessage.authorDisplayName),
-          participants: getDiscordConversationParticipants(channel),
+          participants: getDiscordConversationParticipants(channel, messages),
           messages,
         });
       }
@@ -532,31 +531,36 @@ function getDiscordConversationName(
   return 'unknown-channel';
 }
 
-function getDiscordConversationParticipants(channel: unknown) {
-  if (
-    typeof channel !== 'object' ||
-    channel === null ||
-    !('recipients' in channel) ||
-    !Array.isArray(channel.recipients)
-  ) {
-    return [];
-  }
+function getDiscordConversationParticipants(channel: unknown, messages: Array<{ authorDisplayName?: string }>) {
+  const participants = new Set<string>();
 
-  return channel.recipients
-    .map((recipient) => {
+  if (
+    typeof channel === 'object' &&
+    channel !== null &&
+    'recipients' in channel &&
+    Array.isArray(channel.recipients)
+  ) {
+    for (const recipient of channel.recipients) {
       if (typeof recipient !== 'object' || recipient === null) {
-        return null;
+        continue;
       }
 
       if ('globalName' in recipient && typeof recipient.globalName === 'string') {
-        return recipient.globalName;
+        participants.add(recipient.globalName);
+        continue;
       }
 
       if ('username' in recipient && typeof recipient.username === 'string') {
-        return recipient.username;
+        participants.add(recipient.username);
       }
+    }
+  }
 
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
+  for (const message of messages) {
+    if (message.authorDisplayName) {
+      participants.add(message.authorDisplayName);
+    }
+  }
+
+  return [...participants];
 }
