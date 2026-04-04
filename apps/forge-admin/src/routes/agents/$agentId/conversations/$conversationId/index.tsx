@@ -141,6 +141,7 @@ function AgentConversationDetailIndexRoute() {
         <ScrollArea className="-mr-2 h-full min-h-0 [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
           <div className="space-y-3 pr-3">
             <div ref={topSentinelRef} className="h-4" />
+            {isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
             {messages.map((message) => (
               <article key={message.messageId} className="flex items-start gap-3 py-1">
                 <Avatar className="h-9 w-9 border border-border bg-muted">
@@ -160,7 +161,6 @@ function AgentConversationDetailIndexRoute() {
           </div>
         </ScrollArea>
       </div>
-      {messagesQuery.isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
       {messagesQuery.error ? <div className="text-sm text-destructive">{messagesQuery.error.message}</div> : null}
     </div>
   );
