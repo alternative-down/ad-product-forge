@@ -31,7 +31,7 @@ function AgentConversationsLayoutRoute() {
         <div className="flex h-[calc(100dvh-12rem)] min-h-0 flex-col md:grid md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
           <div className={selectedConversation ? 'hidden min-h-0 md:block' : 'min-h-0'}>
             <ScrollArea className="-mr-2 h-full [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
-              <div className="space-y-2 pr-3">
+              <div className="space-y-1 pr-3">
                 {conversations.map((conversation) => {
                   const selected = conversation.conversationId === selectedConversation?.conversationId;
                   const latestMessage = conversation.messages.at(-1) ?? null;
