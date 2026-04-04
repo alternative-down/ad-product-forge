@@ -84,7 +84,7 @@ function AgentConversationDetailIndexRoute() {
             {selectedConversation.name ?? selectedConversation.provider}
           </div>
         </div>
-        {selectedConversation.type === 'group' && selectedConversation.participants.length > 0 ? (
+        {selectedConversation.type === 'group' && selectedConversation.participants.length > 1 ? (
           <div className="text-sm text-muted-foreground">
             {selectedConversation.participants.join(', ')}
           </div>
