@@ -30,6 +30,7 @@ import { Route as IntegrationsMigaduRouteRouteImport } from './routes/integratio
 import { Route as IntegrationsGithubRouteRouteImport } from './routes/integrations/github/route'
 import { Route as IntegrationsCoolifyRouteRouteImport } from './routes/integrations/coolify/route'
 import { Route as HomeRolesRouteRouteImport } from './routes/home/roles/route'
+import { Route as HomeConversationsRouteRouteImport } from './routes/home/conversations/route'
 import { Route as FinanceContractsRouteRouteImport } from './routes/finance/contracts/route'
 import { Route as FinanceAccountsRouteRouteImport } from './routes/finance/accounts/route'
 import { Route as AgentsAgentIdRouteRouteImport } from './routes/agents/$agentId/route'
@@ -43,6 +44,7 @@ import { Route as IntegrationsMigaduIndexRouteImport } from './routes/integratio
 import { Route as IntegrationsGithubIndexRouteImport } from './routes/integrations/github/index'
 import { Route as IntegrationsCoolifyIndexRouteImport } from './routes/integrations/coolify/index'
 import { Route as HomeRolesIndexRouteImport } from './routes/home/roles/index'
+import { Route as HomeConversationsIndexRouteImport } from './routes/home/conversations/index'
 import { Route as FinanceContractsIndexRouteImport } from './routes/finance/contracts/index'
 import { Route as FinanceAccountsIndexRouteImport } from './routes/finance/accounts/index'
 import { Route as AgentsAgentIdIndexRouteImport } from './routes/agents/$agentId/index'
@@ -186,6 +188,11 @@ const HomeRolesRouteRoute = HomeRolesRouteRouteImport.update({
   path: '/roles',
   getParentRoute: () => HomeRouteRoute,
 } as any)
+const HomeConversationsRouteRoute = HomeConversationsRouteRouteImport.update({
+  id: '/conversations',
+  path: '/conversations',
+  getParentRoute: () => HomeRouteRoute,
+} as any)
 const FinanceContractsRouteRoute = FinanceContractsRouteRouteImport.update({
   id: '/contracts',
   path: '/contracts',
@@ -252,6 +259,11 @@ const HomeRolesIndexRoute = HomeRolesIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => HomeRolesRouteRoute,
+} as any)
+const HomeConversationsIndexRoute = HomeConversationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HomeConversationsRouteRoute,
 } as any)
 const FinanceContractsIndexRoute = FinanceContractsIndexRouteImport.update({
   id: '/',
@@ -459,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId': typeof AgentsAgentIdRouteRouteWithChildren
   '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
   '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
+  '/home/conversations': typeof HomeConversationsRouteRouteWithChildren
   '/home/roles': typeof HomeRolesRouteRouteWithChildren
   '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
   '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
@@ -481,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
+  '/home/conversations/': typeof HomeConversationsIndexRoute
   '/home/roles/': typeof HomeRolesIndexRoute
   '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github/': typeof IntegrationsGithubIndexRoute
@@ -530,6 +544,7 @@ export interface FileRoutesByTo {
   '/agents/$agentId': typeof AgentsAgentIdIndexRoute
   '/finance/accounts': typeof FinanceAccountsIndexRoute
   '/finance/contracts': typeof FinanceContractsIndexRoute
+  '/home/conversations': typeof HomeConversationsIndexRoute
   '/home/roles': typeof HomeRolesIndexRoute
   '/integrations/coolify': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github': typeof IntegrationsGithubIndexRoute
@@ -578,6 +593,7 @@ export interface FileRoutesById {
   '/agents/$agentId': typeof AgentsAgentIdRouteRouteWithChildren
   '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
   '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
+  '/home/conversations': typeof HomeConversationsRouteRouteWithChildren
   '/home/roles': typeof HomeRolesRouteRouteWithChildren
   '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
   '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
@@ -600,6 +616,7 @@ export interface FileRoutesById {
   '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
+  '/home/conversations/': typeof HomeConversationsIndexRoute
   '/home/roles/': typeof HomeRolesIndexRoute
   '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github/': typeof IntegrationsGithubIndexRoute
@@ -651,6 +668,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId'
     | '/finance/accounts'
     | '/finance/contracts'
+    | '/home/conversations'
     | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
@@ -673,6 +691,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/'
     | '/finance/accounts/'
     | '/finance/contracts/'
+    | '/home/conversations/'
     | '/home/roles/'
     | '/integrations/coolify/'
     | '/integrations/github/'
@@ -722,6 +741,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId'
     | '/finance/accounts'
     | '/finance/contracts'
+    | '/home/conversations'
     | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
@@ -769,6 +789,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId'
     | '/finance/accounts'
     | '/finance/contracts'
+    | '/home/conversations'
     | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
@@ -791,6 +812,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/'
     | '/finance/accounts/'
     | '/finance/contracts/'
+    | '/home/conversations/'
     | '/home/roles/'
     | '/integrations/coolify/'
     | '/integrations/github/'
@@ -989,6 +1011,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRolesRouteRouteImport
       parentRoute: typeof HomeRouteRoute
     }
+    '/home/conversations': {
+      id: '/home/conversations'
+      path: '/conversations'
+      fullPath: '/home/conversations'
+      preLoaderRoute: typeof HomeConversationsRouteRouteImport
+      parentRoute: typeof HomeRouteRoute
+    }
     '/finance/contracts': {
       id: '/finance/contracts'
       path: '/contracts'
@@ -1079,6 +1108,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/home/roles/'
       preLoaderRoute: typeof HomeRolesIndexRouteImport
       parentRoute: typeof HomeRolesRouteRoute
+    }
+    '/home/conversations/': {
+      id: '/home/conversations/'
+      path: '/'
+      fullPath: '/home/conversations/'
+      preLoaderRoute: typeof HomeConversationsIndexRouteImport
+      parentRoute: typeof HomeConversationsRouteRoute
     }
     '/finance/contracts/': {
       id: '/finance/contracts/'
@@ -1493,6 +1529,20 @@ const FinanceRouteRouteWithChildren = FinanceRouteRoute._addFileChildren(
   FinanceRouteRouteChildren,
 )
 
+interface HomeConversationsRouteRouteChildren {
+  HomeConversationsIndexRoute: typeof HomeConversationsIndexRoute
+}
+
+const HomeConversationsRouteRouteChildren: HomeConversationsRouteRouteChildren =
+  {
+    HomeConversationsIndexRoute: HomeConversationsIndexRoute,
+  }
+
+const HomeConversationsRouteRouteWithChildren =
+  HomeConversationsRouteRoute._addFileChildren(
+    HomeConversationsRouteRouteChildren,
+  )
+
 interface HomeRolesRouteRouteChildren {
   HomeRolesIndexRoute: typeof HomeRolesIndexRoute
 }
@@ -1506,11 +1556,13 @@ const HomeRolesRouteRouteWithChildren = HomeRolesRouteRoute._addFileChildren(
 )
 
 interface HomeRouteRouteChildren {
+  HomeConversationsRouteRoute: typeof HomeConversationsRouteRouteWithChildren
   HomeRolesRouteRoute: typeof HomeRolesRouteRouteWithChildren
   HomeIndexRoute: typeof HomeIndexRoute
 }
 
 const HomeRouteRouteChildren: HomeRouteRouteChildren = {
+  HomeConversationsRouteRoute: HomeConversationsRouteRouteWithChildren,
   HomeRolesRouteRoute: HomeRolesRouteRouteWithChildren,
   HomeIndexRoute: HomeIndexRoute,
 }

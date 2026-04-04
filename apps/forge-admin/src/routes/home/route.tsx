@@ -19,6 +19,7 @@ function HomeLayoutRoute() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
   const sectionItems = [
     { value: '/home', label: 'Geral' },
+    { value: '/home/conversations', label: 'Conversas' },
     { value: '/home/roles', label: 'Papéis & Ferramentas' },
   ];
   const currentSection = [...sectionItems]
