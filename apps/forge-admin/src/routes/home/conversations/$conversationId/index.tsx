@@ -36,6 +36,18 @@ export const Route = createFileRoute('/home/conversations/$conversationId/')({
   component: HomeConversationDetailIndexRoute,
 });
 
+function encodeArrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    const chunk = bytes.subarray(index, index + 0x8000);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+}
+
 function HomeConversationDetailIndexRoute() {
   const navigate = useNavigate();
   const { conversationId } = Route.useParams();
@@ -170,17 +182,26 @@ function HomeConversationDetailIndexRoute() {
               <span className="cursor-pointer">Adicionar anexos</span>
             </label>
             <AdminButton
-              disabled={!selectedAccount || !messageDraft.trim()}
+              disabled={!selectedAccount || (!messageDraft.trim() && attachmentDrafts.length === 0)}
               onClick={() => {
-                if (!selectedAccount || !messageDraft.trim()) {
+                if (!selectedAccount || (!messageDraft.trim() && attachmentDrafts.length === 0)) {
                   return;
                 }
 
                 void (async () => {
+                  const attachments = await Promise.all(
+                    attachmentDrafts.map(async (file) => ({
+                      name: file.name,
+                      contentType: file.type || undefined,
+                      dataBase64: encodeArrayBufferToBase64(await file.arrayBuffer()),
+                    })),
+                  );
+
                   await sendHomeInternalChatMessage({
                     accountId: selectedAccount.accountId,
                     conversationId: selectedConversation.id,
                     content: messageDraft.trim(),
+                    attachments,
                   });
                   const messageResult = await getHomeInternalChatMessages(
                     selectedAccount.accountId,

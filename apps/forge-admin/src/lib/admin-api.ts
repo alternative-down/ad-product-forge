@@ -652,12 +652,20 @@ export function sendHomeInternalChatMessage(input: {
   accountId: string;
   conversationId: string;
   content: string;
+  attachments?: Array<{
+    name: string;
+    contentType?: string;
+    dataBase64: string;
+  }>;
 }) {
   return request<{ success: true; messageId: string; conversationKey: string }>(
     '/admin/internal-chat/conversation/send',
     {
       method: 'POST',
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        ...input,
+        attachments: input.attachments ?? [],
+      }),
     },
   );
 }

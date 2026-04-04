@@ -193,8 +193,18 @@ const createInternalChatConversationSchema = z.object({
 const sendInternalChatConversationMessageSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
-  content: z.string().trim().min(1),
-});
+  content: z.string().trim().default(''),
+  attachments: z.array(z.object({
+    name: z.string().min(1),
+    contentType: z.string().optional(),
+    dataBase64: z.string().min(1),
+  })).default([]),
+}).refine(
+  (value) => value.content.length > 0 || value.attachments.length > 0,
+  {
+    message: 'Message content or attachments are required.',
+  },
+);
 
 const internalChatGroupMembersQuerySchema = z.object({
   accountId: z.string().min(1),
@@ -882,7 +892,11 @@ export function registerAdminRoutes(input: {
         accountId: body.accountId,
         targetKey: body.conversationId,
         content: body.content,
-        attachments: [],
+        attachments: body.attachments.map((attachment) => ({
+          name: attachment.name,
+          contentType: attachment.contentType,
+          data: Uint8Array.from(Buffer.from(attachment.dataBase64, 'base64')),
+        })),
       }));
     },
   });
