@@ -3,6 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
+import { PageHeader } from '@/components/admin';
 import { Badge } from '@/components/ui/badge';
 import { getAgentThreadMessages, type AgentThreadMessage } from '@/lib/admin-api';
 
@@ -42,7 +43,9 @@ function AgentLogIndexRoute() {
   }, [messagesQuery]);
 
   return (
-    <div className="min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <PageHeader title="Log" />
+
       {messages.length === 0 ? <div className="text-sm text-muted-foreground">Nenhum log ainda.</div> : null}
 
       {messages.map((message, index) => (

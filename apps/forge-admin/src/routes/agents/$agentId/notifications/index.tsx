@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Bell } from 'lucide-react';
 
+import { PageHeader } from '@/components/admin';
 import { Badge } from '@/components/ui/badge';
 import { getAgent } from '@/lib/admin-api';
 
@@ -18,17 +18,15 @@ function AgentNotificationsIndexRoute() {
   const notifications = agentQuery.data?.recentNotifications ?? [];
 
   return (
-    <div className="min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <PageHeader title="Notificações" />
+
       {notifications.length === 0 ? <div className="text-sm text-muted-foreground">Nenhuma notificação ainda.</div> : null}
 
       {notifications.map((notification, index) => (
         <article key={notification.notificationId} className={index > 0 ? 'border-t border-border pt-5' : ''}>
           <div className="space-y-3 pb-5">
             <header className="flex flex-wrap items-center gap-3">
-              <Badge variant="outline">
-                <Bell className="h-3.5 w-3.5" />
-                Notificação
-              </Badge>
               <Badge variant="outline">{notification.read ? 'Lida' : 'Nova'}</Badge>
               <div className="text-xs text-muted-foreground">{formatDateTime(notification.timestamp)}</div>
             </header>

@@ -116,17 +116,22 @@ function AgentContractIndexRoute() {
           title="Contrato"
           actions={
             activeContract ? (
-              <AdminButton
-                onClick={() => {
-                  setContractForm({
-                    action: 'adjust-budget',
-                    amountUsd: activeContract.weeklyValueUsd,
-                  });
-                  setDialogOpen(true);
-                }}
-              >
-                Editar
-              </AdminButton>
+              <>
+                <AdminButton
+                  onClick={() => {
+                    setContractForm({
+                      action: 'adjust-budget',
+                      amountUsd: activeContract.weeklyValueUsd,
+                    });
+                    setDialogOpen(true);
+                  }}
+                >
+                  Editar
+                </AdminButton>
+                <AdminButton variant="destructive" onClick={() => setTerminateDialogOpen(true)}>
+                  Demitir
+                </AdminButton>
+              </>
             ) : undefined
           }
         />
@@ -201,23 +206,7 @@ function AgentContractIndexRoute() {
         {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
       </section>
 
-      {activeContract ? (
-        <section className="space-y-5 border-t border-border pt-6">
-          <div className="space-y-1">
-            <div className="text-lg font-semibold tracking-[-0.03em]">Demissão</div>
-            <div className="max-w-3xl text-sm text-muted-foreground">
-              Ao demitir este agente, o saldo restante do contrato atual volta para o caixa da empresa como entrada.
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <AdminButton variant="destructive" onClick={() => setTerminateDialogOpen(true)}>
-              Demitir
-            </AdminButton>
-          </div>
-          {terminateMutation.error ? <div className="text-sm text-destructive">{terminateMutation.error.message}</div> : null}
-        </section>
-      ) : null}
+      {terminateMutation.error ? <div className="text-sm text-destructive">{terminateMutation.error.message}</div> : null}
 
       <Dialog
         open={dialogOpen}

@@ -79,6 +79,10 @@ function HomeIndexRoute() {
       </section>
 
       <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Agentes</div>
+        </div>
+
         <div className="flex justify-end">
           <AdminButton onClick={() => setHireOpen(true)}>
             Contratar
