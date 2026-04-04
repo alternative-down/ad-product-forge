@@ -22,6 +22,7 @@ export function createDiscordProvider(config: {
   token: string;
   channels?: Array<{
     channelId: string;
+    channelName?: string;
     respondToMentionsOnly: boolean;
   }>;
 }): CommunicationProvider {

@@ -17,6 +17,7 @@ const discordChannelCredentialsSchema = z.object({
   channels: z.array(
     z.object({
       channelId: z.string(),
+      channelName: z.string().nullish(),
       respondToMentionsOnly: z.boolean(),
     }),
   ).nullish(),
@@ -36,6 +37,7 @@ export const discordCredentialsSchema = z
         token: credentials.token,
         channels: (credentials.allowedChannelIds ?? []).map((channelId) => ({
           channelId,
+          channelName: '',
           respondToMentionsOnly: credentials.respondToMentionsOnly ?? false,
         })),
       };
@@ -45,7 +47,11 @@ export const discordCredentialsSchema = z
 
     return {
       token: channelCredentials.token,
-      channels: channelCredentials.channels ?? [],
+      channels: (channelCredentials.channels ?? []).map((channel) => ({
+        channelId: channel.channelId,
+        channelName: channel.channelName ?? undefined,
+        respondToMentionsOnly: channel.respondToMentionsOnly,
+      })),
     };
   });
 
@@ -73,6 +79,7 @@ export type ProviderCredentialsMap = {
     token: string;
     channels?: Array<{
       channelId: string;
+      channelName?: string;
       respondToMentionsOnly: boolean;
     }>;
   };

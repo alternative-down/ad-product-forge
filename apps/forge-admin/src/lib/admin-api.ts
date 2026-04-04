@@ -225,6 +225,7 @@ export type DiscordProviderCredentials = {
   token: string;
   channels: Array<{
     channelId: string;
+    channelName?: string;
     respondToMentionsOnly: boolean;
   }>;
 };

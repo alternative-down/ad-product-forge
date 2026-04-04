@@ -148,6 +148,7 @@ function DiscordProviderForm(input: {
                           ...next.channels,
                           {
                             channelId,
+                            channelName: '',
                             respondToMentionsOnly: false,
                           },
                         ],
@@ -218,6 +219,27 @@ function DiscordProviderForm(input: {
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Remover</span>
                         </AdminButton>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium" htmlFor={`discord-channel-name-${index}`}>
+                          Nome do canal
+                        </label>
+                        <AdminInput
+                          id={`discord-channel-name-${index}`}
+                          value={channel.channelName ?? ''}
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...(current ?? toDiscordCredentials(input.credentials)),
+                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                valueIndex === index
+                                  ? { ...value, channelName: event.target.value }
+                                  : value,
+                              ),
+                            }))
+                          }
+                          disabled={pending}
+                        />
                       </div>
                     </div>
                   ))}
@@ -442,18 +464,20 @@ function toDiscordCredentials(credentials: unknown): DiscordProviderCredentials 
             return [];
           }
 
-          return [
-            {
-              channelId: value.channelId,
-              respondToMentionsOnly: value.respondToMentionsOnly === true,
-            },
-          ];
+              return [
+                {
+                  channelId: value.channelId,
+                  channelName: typeof value.channelName === 'string' ? value.channelName : '',
+                  respondToMentionsOnly: value.respondToMentionsOnly === true,
+                },
+              ];
         })
       : Array.isArray(credentials.allowedChannelIds)
         ? credentials.allowedChannelIds.flatMap((value) =>
             typeof value === 'string'
               ? [{
                   channelId: value,
+                  channelName: '',
                   respondToMentionsOnly: credentials.respondToMentionsOnly === true,
                 }]
               : [],
