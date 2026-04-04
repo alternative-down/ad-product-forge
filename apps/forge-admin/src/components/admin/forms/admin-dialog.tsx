@@ -11,7 +11,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
   return (
     <DialogContent
       className={cn(
-        'flex max-h-[calc(100dvh-2rem)] flex-col rounded-lg',
+        'flex max-h-[calc(50dvh-2rem)] flex-col rounded-lg',
         className,
       )}
       showCloseButton={false}
