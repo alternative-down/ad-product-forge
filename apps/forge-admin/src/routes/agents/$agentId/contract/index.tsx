@@ -124,7 +124,7 @@ function AgentContractIndexRoute() {
             value={activeContract ? `${formatPercent(activeContract.spentPercent)}%` : '0%'}
           />
           <MetricItem
-            label="Gasto acumulado"
+            label="Usado"
             value={activeContract ? formatUsd(activeContract.spentUsd) : '$0.00'}
           />
           <MetricItem
