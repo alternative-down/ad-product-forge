@@ -12,6 +12,7 @@ import {
   type EmailProviderCredentials,
 } from '@/lib/admin-api';
 import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 
 export const Route = createFileRoute('/agents/$agentId/providers/$providerType/')({
   component: AgentProviderIndexRoute,
@@ -114,7 +115,7 @@ function DiscordProviderForm(input: {
               Canais
             </label>
             <div className="space-y-3">
-              <div className="space-y-3 border-b border-border pb-3">
+              <div className="space-y-3 pb-3">
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
                   <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="discord-channel-name">
@@ -181,10 +182,12 @@ function DiscordProviderForm(input: {
                 </div>
               </div>
 
+              <Separator />
+
               {credentials.channels.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {credentials.channels.map((channel, index) => (
-                    <div key={`${channel.channelId}-${index}`} className="space-y-3 border-b border-border pb-3">
+                    <div key={`${channel.channelId}-${index}`} className="space-y-3">
                       <div className="space-y-3">
                         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
                           <div className="space-y-2">
@@ -275,6 +278,8 @@ function DiscordProviderForm(input: {
                           </div>
                         </div>
                       </div>
+
+                      {index < credentials.channels.length - 1 ? <Separator /> : null}
                     </div>
                   ))}
                 </div>
