@@ -53,6 +53,7 @@ function DiscordProviderForm(input: {
   const [draft, setDraft] = useState<DiscordProviderCredentials | null>(null);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelId, setNewChannelId] = useState('');
+  const [newChannelMentionsOnly, setNewChannelMentionsOnly] = useState(false);
   const saveMutation = useMutation({
     mutationFn: upsertAgentProvider,
     onSuccess: async () => {
@@ -142,7 +143,21 @@ function DiscordProviderForm(input: {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="discord-new-channel-mentions-only">
+                      Responder só a menções
+                    </label>
+                    <div className="flex min-h-9 items-center">
+                      <Switch
+                        id="discord-new-channel-mentions-only"
+                        checked={newChannelMentionsOnly}
+                        onCheckedChange={setNewChannelMentionsOnly}
+                        disabled={pending}
+                      />
+                    </div>
+                  </div>
+
                   <AdminButton
                     type="button"
                     disabled={pending || !newChannelId.trim()}
@@ -164,20 +179,21 @@ function DiscordProviderForm(input: {
                         return {
                           ...next,
                           channels: [
-                            ...next.channels,
-                            {
-                              channelId,
-                              channelName,
-                              respondToMentionsOnly: false,
-                            },
-                          ],
-                        };
-                      });
-                      setNewChannelName('');
-                      setNewChannelId('');
-                    }}
-                  >
-                    Incluir
+                          ...next.channels,
+                          {
+                            channelId,
+                            channelName,
+                            respondToMentionsOnly: newChannelMentionsOnly,
+                          },
+                        ],
+                      };
+                    });
+                    setNewChannelName('');
+                    setNewChannelId('');
+                    setNewChannelMentionsOnly(false);
+                  }}
+                >
+                  Incluir
                   </AdminButton>
                 </div>
               </div>
