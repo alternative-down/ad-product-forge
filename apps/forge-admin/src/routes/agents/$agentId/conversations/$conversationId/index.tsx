@@ -17,7 +17,13 @@ function AgentConversationDetailIndexRoute() {
   const navigate = useNavigate();
   const { agentId, conversationId } = Route.useParams();
   const decodedConversationId = decodeURIComponent(conversationId);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  const topSentinelRef = useRef<HTMLDivElement | null>(null);
+  const initialScrollDoneRef = useRef(false);
+  const pendingPrependScrollRef = useRef<{
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
   const agentQuery = useQuery({
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
@@ -45,24 +51,64 @@ function AgentConversationDetailIndexRoute() {
       lastPage.hasMore ? lastPageParam + PAGE_SIZE : undefined,
     enabled: Boolean(selectedConversation),
   });
-  const messages = messagesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const messages = useMemo(
+    () => [...(messagesQuery.data?.pages ?? [])].reverse().flatMap((page) => page.items),
+    [messagesQuery.data?.pages],
+  );
+  const hasNextPage = messagesQuery.hasNextPage;
+  const isFetchingNextPage = messagesQuery.isFetchingNextPage;
+  const fetchNextPage = messagesQuery.fetchNextPage;
 
   useEffect(() => {
-    const target = sentinelRef.current;
+    initialScrollDoneRef.current = false;
+    pendingPrependScrollRef.current = null;
+  }, [decodedConversationId]);
 
-    if (!target) {
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+
+    if (!(viewport instanceof HTMLDivElement)) {
+      return;
+    }
+
+    if (!initialScrollDoneRef.current && messages.length > 0) {
+      viewport.scrollTop = viewport.scrollHeight;
+      initialScrollDoneRef.current = true;
+      return;
+    }
+
+    if (!pendingPrependScrollRef.current) {
+      return;
+    }
+
+    const previous = pendingPrependScrollRef.current;
+    pendingPrependScrollRef.current = null;
+    viewport.scrollTop = viewport.scrollHeight - previous.scrollHeight + previous.scrollTop;
+  }, [messages]);
+
+  useEffect(() => {
+    const target = topSentinelRef.current;
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+
+    if (!target || !(viewport instanceof HTMLDivElement)) {
       return;
     }
 
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage) {
-        void messagesQuery.fetchNextPage();
+      if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        pendingPrependScrollRef.current = {
+          scrollHeight: viewport.scrollHeight,
+          scrollTop: viewport.scrollTop,
+        };
+        void fetchNextPage();
       }
+    }, {
+      root: viewport,
     });
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [messagesQuery]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   if (!selectedConversation) {
     return <div className="text-sm text-muted-foreground">Conversa não encontrada.</div>;
@@ -91,27 +137,29 @@ function AgentConversationDetailIndexRoute() {
         ) : null}
       </div>
 
-      <ScrollArea className="-mr-2 h-full min-h-0 [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
-        <div className="space-y-3 pr-3">
-          {messages.map((message) => (
-            <article key={message.messageId} className="flex items-start gap-3 py-1">
-              <Avatar className="h-9 w-9 border border-border bg-muted">
-                <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                  {getInitials(message.authorDisplayName)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 space-y-1">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium text-foreground">{message.authorDisplayName}</span>
-                  <span className="text-xs text-muted-foreground">{formatRecentMessageTime(Date.parse(message.createdAt))}</span>
+      <div ref={scrollAreaRef} className="h-full min-h-0">
+        <ScrollArea className="-mr-2 h-full min-h-0 [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
+          <div className="space-y-3 pr-3">
+            <div ref={topSentinelRef} className="h-4" />
+            {messages.map((message) => (
+              <article key={message.messageId} className="flex items-start gap-3 py-1">
+                <Avatar className="h-9 w-9 border border-border bg-muted">
+                  <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                    {getInitials(message.authorDisplayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-medium text-foreground">{message.authorDisplayName}</span>
+                    <span className="text-xs text-muted-foreground">{formatRecentMessageTime(Date.parse(message.createdAt))}</span>
+                  </div>
+                  <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{message.content}</div>
                 </div>
-                <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{message.content}</div>
-              </div>
-            </article>
-          ))}
-          <div ref={sentinelRef} className="h-4" />
-        </div>
-      </ScrollArea>
+              </article>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
       {messagesQuery.isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
       {messagesQuery.error ? <div className="text-sm text-destructive">{messagesQuery.error.message}</div> : null}
     </div>
