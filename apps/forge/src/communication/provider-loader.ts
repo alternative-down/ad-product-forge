@@ -14,8 +14,12 @@ export const internalChatCredentialsSchema = z.object({
 
 export const discordCredentialsSchema = z.object({
   token: z.string(),
-  allowedChannelIds: z.array(z.string()).nullish(),
-  respondToMentionsOnly: z.boolean().nullish(),
+  channels: z.array(
+    z.object({
+      channelId: z.string(),
+      respondToMentionsOnly: z.boolean(),
+    }),
+  ).nullish(),
 });
 
 export const emailCredentialsSchema = z.object({
@@ -40,8 +44,10 @@ export type ProviderCredentialsMap = {
   'internal-chat'?: { agentId: string; displayName?: string; description?: string };
   discord?: {
     token: string;
-    allowedChannelIds?: string[];
-    respondToMentionsOnly?: boolean;
+    channels?: Array<{
+      channelId: string;
+      respondToMentionsOnly: boolean;
+    }>;
   };
   email?: {
     imap: { host: string; port: number; secure: boolean; user: string; password: string };
@@ -79,8 +85,7 @@ export function loadCommunicationProviders(
     providers.push(
       createDiscordProvider({
         token: discord.token,
-        allowedChannelIds: discord.allowedChannelIds ?? undefined,
-        respondToMentionsOnly: discord.respondToMentionsOnly ?? undefined,
+        channels: discord.channels ?? undefined,
       })
     );
   }

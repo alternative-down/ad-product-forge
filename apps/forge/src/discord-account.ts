@@ -20,8 +20,10 @@ type DiscordOutboundFile = {
 
 export function createDiscordProvider(config: {
   token: string;
-  allowedChannelIds?: string[];
-  respondToMentionsOnly?: boolean;
+  channels?: Array<{
+    channelId: string;
+    respondToMentionsOnly: boolean;
+  }>;
 }): CommunicationProvider {
   const OUTBOUND_ECHO_TTL_MS = 2 * 60_000;
   const client = new Client({
@@ -33,8 +35,9 @@ export function createDiscordProvider(config: {
     ],
     partials: [Partials.Channel],
   });
-  const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
-  const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
+  const configuredChannels = new Map(
+    (config.channels ?? []).map((channel) => [channel.channelId, channel.respondToMentionsOnly]),
+  );
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
   const recentOutboundMessages = new Map<string, Array<{ content: string; createdAt: number }>>();
@@ -210,13 +213,13 @@ export function createDiscordProvider(config: {
       return null;
     }
 
-    if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
+    if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
       return null;
     }
 
     if (
       message.channel.type !== ChannelType.DM &&
-      respondToMentionsOnly &&
+      configuredChannels.get(message.channelId) === true &&
       !message.mentions.users.has(botUserId)
     ) {
       return null;
@@ -334,7 +337,7 @@ export function createDiscordProvider(config: {
 
   async function listCandidateChannels() {
     await getReadyClient();
-    const channelIds = new Set<string>(allowedChannelIds);
+    const channelIds = new Set<string>(configuredChannels.keys());
 
     for (const channel of client.channels.cache.values()) {
       if (channel.type === ChannelType.DM || channel.type === ChannelType.GroupDM) {

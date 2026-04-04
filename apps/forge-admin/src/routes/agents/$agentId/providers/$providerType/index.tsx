@@ -84,8 +84,7 @@ function DiscordProviderForm(input: {
               providerType: 'discord',
               credentials: {
                 token: credentials.token.trim(),
-                allowedChannelIds: credentials.allowedChannelIds,
-                respondToMentionsOnly: credentials.respondToMentionsOnly,
+                channels: credentials.channels,
               },
             });
           }}
@@ -110,33 +109,59 @@ function DiscordProviderForm(input: {
 
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="discord-channel-id">
-              Canais permitidos
+              Canais
             </label>
             <div className="space-y-3">
-              {credentials.allowedChannelIds.length > 0 ? (
+              {credentials.channels.length > 0 ? (
                 <div className="space-y-2">
-                  {credentials.allowedChannelIds.map((channelId) => (
-                    <div key={channelId} className="flex items-center justify-between gap-3 border-b border-border pb-2">
-                      <div className="min-w-0 truncate text-sm text-foreground">{channelId}</div>
-                      <AdminButton
-                        type="button"
-                        variant="outline"
-                        disabled={pending}
-                        onClick={() =>
-                          setDraft((current) => ({
-                            ...(current ?? toDiscordCredentials(input.credentials)),
-                            allowedChannelIds: (current ?? toDiscordCredentials(input.credentials)).allowedChannelIds
-                              .filter((value) => value !== channelId),
-                          }))
-                        }
-                      >
-                        Remover
-                      </AdminButton>
+                  {credentials.channels.map((channel) => (
+                    <div key={channel.channelId} className="space-y-3 border-b border-border pb-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 truncate text-sm text-foreground">{channel.channelId}</div>
+                        <AdminButton
+                          type="button"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() =>
+                            setDraft((current) => ({
+                              ...(current ?? toDiscordCredentials(input.credentials)),
+                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.filter(
+                                (value) => value.channelId !== channel.channelId,
+                              ),
+                            }))
+                          }
+                        >
+                          Remover
+                        </AdminButton>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium" htmlFor={`discord-mentions-only-${channel.channelId}`}>
+                          Responder só a menções
+                        </label>
+                        <div className="flex min-h-9 items-center">
+                          <Switch
+                            id={`discord-mentions-only-${channel.channelId}`}
+                            checked={channel.respondToMentionsOnly}
+                            onCheckedChange={(checked) =>
+                              setDraft((current) => ({
+                                ...(current ?? toDiscordCredentials(input.credentials)),
+                                channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value) =>
+                                  value.channelId === channel.channelId
+                                    ? { ...value, respondToMentionsOnly: checked }
+                                    : value,
+                                ),
+                              }))
+                            }
+                            disabled={pending}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground">Nenhum canal permitido.</div>
+                <div className="text-sm text-muted-foreground">Nenhum canal configurado.</div>
               )}
 
               <div className="flex items-end gap-3">
@@ -164,13 +189,19 @@ function DiscordProviderForm(input: {
                     setDraft((current) => {
                       const next = current ?? toDiscordCredentials(input.credentials);
 
-                      if (next.allowedChannelIds.includes(channelId)) {
+                      if (next.channels.some((value) => value.channelId === channelId)) {
                         return next;
                       }
 
                       return {
                         ...next,
-                        allowedChannelIds: [...next.allowedChannelIds, channelId],
+                        channels: [
+                          ...next.channels,
+                          {
+                            channelId,
+                            respondToMentionsOnly: false,
+                          },
+                        ],
                       };
                     });
                     setNewChannelId('');
@@ -179,25 +210,6 @@ function DiscordProviderForm(input: {
                   Adicionar
                 </AdminButton>
               </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="discord-mentions-only">
-              Responder só a menções
-            </label>
-            <div className="flex min-h-9 items-center">
-              <Switch
-                id="discord-mentions-only"
-                checked={credentials.respondToMentionsOnly}
-                onCheckedChange={(checked) =>
-                  setDraft((current) => ({
-                    ...(current ?? toDiscordCredentials(input.credentials)),
-                    respondToMentionsOnly: checked,
-                  }))
-                }
-                disabled={pending}
-              />
             </div>
           </div>
 
@@ -403,17 +415,26 @@ function toDiscordCredentials(credentials: unknown): DiscordProviderCredentials 
   if (!isRecord(credentials)) {
     return {
       token: '',
-      allowedChannelIds: [],
-      respondToMentionsOnly: false,
+      channels: [],
     };
   }
 
   return {
     token: typeof credentials.token === 'string' ? credentials.token : '',
-    allowedChannelIds: Array.isArray(credentials.allowedChannelIds)
-      ? credentials.allowedChannelIds.filter((value): value is string => typeof value === 'string')
+    channels: Array.isArray(credentials.channels)
+      ? credentials.channels.flatMap((value) => {
+          if (!isRecord(value) || typeof value.channelId !== 'string') {
+            return [];
+          }
+
+          return [
+            {
+              channelId: value.channelId,
+              respondToMentionsOnly: value.respondToMentionsOnly === true,
+            },
+          ];
+        })
       : [],
-    respondToMentionsOnly: credentials.respondToMentionsOnly === true,
   };
 }
 

@@ -223,8 +223,10 @@ export type AgentConversationMessagesResponse = {
 
 export type DiscordProviderCredentials = {
   token: string;
-  allowedChannelIds: string[];
-  respondToMentionsOnly: boolean;
+  channels: Array<{
+    channelId: string;
+    respondToMentionsOnly: boolean;
+  }>;
 };
 
 export type EmailProviderCredentials = {
