@@ -112,58 +112,6 @@ function DiscordProviderForm(input: {
               Canais
             </label>
             <div className="space-y-3">
-              {credentials.channels.length > 0 ? (
-                <div className="space-y-2">
-                  {credentials.channels.map((channel) => (
-                    <div key={channel.channelId} className="space-y-3 border-b border-border pb-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0 truncate text-sm text-foreground">{channel.channelId}</div>
-                        <AdminButton
-                          type="button"
-                          variant="outline"
-                          disabled={pending}
-                          onClick={() =>
-                            setDraft((current) => ({
-                              ...(current ?? toDiscordCredentials(input.credentials)),
-                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.filter(
-                                (value) => value.channelId !== channel.channelId,
-                              ),
-                            }))
-                          }
-                        >
-                          Remover
-                        </AdminButton>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium" htmlFor={`discord-mentions-only-${channel.channelId}`}>
-                          Responder só a menções
-                        </label>
-                        <div className="flex min-h-9 items-center">
-                          <Switch
-                            id={`discord-mentions-only-${channel.channelId}`}
-                            checked={channel.respondToMentionsOnly}
-                            onCheckedChange={(checked) =>
-                              setDraft((current) => ({
-                                ...(current ?? toDiscordCredentials(input.credentials)),
-                                channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value) =>
-                                  value.channelId === channel.channelId
-                                    ? { ...value, respondToMentionsOnly: checked }
-                                    : value,
-                                ),
-                              }))
-                            }
-                            disabled={pending}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">Nenhum canal configurado.</div>
-              )}
-
               <div className="flex items-end gap-3">
                 <div className="min-w-0 flex-1 space-y-2">
                   <label className="text-sm font-medium" htmlFor="discord-channel-id">
@@ -210,6 +158,80 @@ function DiscordProviderForm(input: {
                   Adicionar
                 </AdminButton>
               </div>
+
+              {credentials.channels.length > 0 ? (
+                <div className="space-y-2">
+                  {credentials.channels.map((channel, index) => (
+                    <div key={`${channel.channelId}-${index}`} className="space-y-3 border-b border-border pb-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <label
+                            className="text-sm font-medium"
+                            htmlFor={`discord-channel-id-${index}`}
+                          >
+                            Código do canal
+                          </label>
+                          <AdminInput
+                            id={`discord-channel-id-${index}`}
+                            value={channel.channelId}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...(current ?? toDiscordCredentials(input.credentials)),
+                                channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                  valueIndex === index
+                                    ? { ...value, channelId: event.target.value }
+                                    : value,
+                                ),
+                              }))
+                            }
+                            disabled={pending}
+                          />
+                        </div>
+                        <AdminButton
+                          type="button"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() =>
+                            setDraft((current) => ({
+                              ...(current ?? toDiscordCredentials(input.credentials)),
+                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.filter(
+                                (_, valueIndex) => valueIndex !== index,
+                              ),
+                            }))
+                          }
+                        >
+                          Remover
+                        </AdminButton>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium" htmlFor={`discord-mentions-only-${channel.channelId}`}>
+                          Responder só a menções
+                        </label>
+                        <div className="flex min-h-9 items-center">
+                          <Switch
+                            id={`discord-mentions-only-${channel.channelId}`}
+                            checked={channel.respondToMentionsOnly}
+                            onCheckedChange={(checked) =>
+                              setDraft((current) => ({
+                                ...(current ?? toDiscordCredentials(input.credentials)),
+                                channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value) =>
+                                  value.channelId === channel.channelId
+                                    ? { ...value, respondToMentionsOnly: checked }
+                                    : value,
+                                ),
+                              }))
+                            }
+                            disabled={pending}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Nenhum canal configurado.</div>
+              )}
             </div>
           </div>
 
