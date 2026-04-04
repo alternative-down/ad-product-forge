@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
-import { Archive, Check, ChevronRight, Pencil, Plus } from 'lucide-react';
+import { Check, ChevronRight, Pencil, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
@@ -17,7 +17,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  archiveHomeInternalChatConversation,
   createHomeInternalChatConversation,
   createInternalChatAccount,
   deleteInternalChatAccount,
@@ -184,8 +183,8 @@ function HomeConversationsLayoutRoute() {
 
   return (
     <HomeConversationsProvider value={contextValue}>
-      <div className="flex h-[calc(100dvh-16rem)] min-h-0 flex-col md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
-        <div className={mobileDetailOpen ? 'hidden min-h-0 flex-col gap-3 md:flex' : 'flex min-h-0 flex-col gap-3'}>
+      <div className="flex h-[calc(100dvh-12rem)] min-h-0 flex-col md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
+        <div className={mobileDetailOpen ? 'hidden h-full min-h-0 flex-col gap-3 md:flex' : 'flex h-full min-h-0 flex-col gap-3'}>
           <section className="space-y-2">
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="home-conversations-account">
@@ -255,7 +254,7 @@ function HomeConversationsLayoutRoute() {
             </div>
           </section>
 
-          <div className="space-y-3 min-h-0 flex-1">
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
             <AdminButton
               variant="outline"
               className="w-full justify-center"
@@ -285,17 +284,17 @@ function HomeConversationsLayoutRoute() {
                       : conversation.name;
 
                     return (
-                      <div key={conversation.id} className="flex items-start gap-2">
-                        <Link
-                          to="/home/conversations/$conversationId"
-                          params={{ conversationId: conversation.id }}
-                          className={
-                            selected
-                              ? 'block min-w-0 flex-1 rounded-sm border border-border bg-muted px-4 py-3 text-left'
-                              : 'block min-w-0 flex-1 rounded-sm border border-border bg-background px-4 py-3 text-left'
-                          }
-                        >
-                          <div className="flex items-start gap-3">
+                      <Link
+                        key={conversation.id}
+                        to="/home/conversations/$conversationId"
+                        params={{ conversationId: conversation.id }}
+                        className={
+                          selected
+                            ? 'block min-w-0 rounded-sm border border-border bg-muted px-4 py-3 text-left'
+                            : 'block min-w-0 rounded-sm border border-border bg-background px-4 py-3 text-left'
+                        }
+                      >
+                        <div className="flex items-start gap-3">
                           <Avatar className="h-9 w-9 border border-border bg-muted">
                             <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
                               {getInitials(avatarLabel)}
@@ -334,35 +333,8 @@ function HomeConversationsLayoutRoute() {
                               </div>
                             ) : null}
                           </div>
-                          </div>
-                        </Link>
-                        <AdminButton
-                          variant="outline"
-                          size="icon-sm"
-                          className="mt-1 shrink-0"
-                          onClick={() => {
-                            if (!selectedAccount) {
-                              return;
-                            }
-
-                            void (async () => {
-                              await archiveHomeInternalChatConversation({
-                                accountId: selectedAccount.accountId,
-                                conversationId: conversation.id,
-                              });
-
-                              if (selected) {
-                                await navigate({ to: '/home/conversations' });
-                              }
-
-                              await reloadConversations();
-                            })();
-                          }}
-                        >
-                          <Archive className="h-4 w-4" />
-                          <span className="sr-only">Arquivar conversa</span>
-                        </AdminButton>
-                      </div>
+                        </div>
+                      </Link>
                     );
                   })
                 ) : (

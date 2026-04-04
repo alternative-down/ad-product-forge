@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Check, Pencil, SendHorizontal, Settings2, Trash2 } from 'lucide-react';
+import { Archive, ArrowLeft, Check, Pencil, SendHorizontal, Settings2, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import {
   addHomeInternalChatGroupMember,
+  archiveHomeInternalChatConversation,
   getHomeInternalChatAttachmentBlob,
   getHomeInternalChatGroupMembers,
   getHomeInternalChatMessages,
@@ -183,6 +184,27 @@ function HomeConversationDetailIndexRoute() {
                 <span className="sr-only">Editar nome da conversa</span>
               </AdminButton>
             ) : null}
+            <AdminButton
+              variant="outline"
+              size="icon-sm"
+              onClick={() => {
+                if (!selectedAccount) {
+                  return;
+                }
+
+                void (async () => {
+                  await archiveHomeInternalChatConversation({
+                    accountId: selectedAccount.accountId,
+                    conversationId: selectedConversation.id,
+                  });
+                  await reloadConversations();
+                  await navigate({ to: '/home/conversations' });
+                })();
+              }}
+            >
+              <Archive className="h-4 w-4" />
+              <span className="sr-only">Arquivar conversa</span>
+            </AdminButton>
           </div>
           {selectedConversation.type === 'group' ? (
             <div className="flex items-start justify-between gap-3">
