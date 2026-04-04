@@ -4,7 +4,6 @@ import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAgent } from '@/lib/admin-api';
 
@@ -84,16 +83,19 @@ function AgentConversationsIndexRoute() {
           <div className={selectedConversation ? 'min-h-0 block' : 'hidden min-h-0 md:block'}>
             {selectedConversation ? (
               <div className="flex h-full min-h-0 flex-col gap-4">
-                <div className="flex items-center justify-between gap-3 md:hidden">
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedConversationId(null)}>
-                    <ArrowLeft className="h-4 w-4" />
-                    Voltar
-                  </Button>
-                </div>
-
                 <div className="space-y-1">
-                  <div className="text-base font-semibold tracking-[-0.03em]">
-                    {selectedConversation.name ?? selectedConversation.provider}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedConversationId(null)}
+                      className="text-muted-foreground md:hidden"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      <span className="sr-only">Voltar</span>
+                    </button>
+                    <div className="text-base font-semibold tracking-[-0.03em]">
+                      {selectedConversation.name ?? selectedConversation.provider}
+                    </div>
                   </div>
                   {selectedConversation.type === 'group' ? (
                     <div className="text-sm text-muted-foreground">
