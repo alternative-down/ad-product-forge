@@ -57,9 +57,11 @@ function AgentConversationsIndexRoute() {
                           </div>
                           <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
                         </div>
-                        <div className="line-clamp-2 text-sm text-muted-foreground">
-                          {conversation.participants.join(', ')}
-                        </div>
+                        {conversation.type === 'group' ? (
+                          <div className="line-clamp-2 text-sm text-muted-foreground">
+                            {conversation.participants.join(', ')}
+                          </div>
+                        ) : null}
                         {latestMessage ? (
                           <>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -93,9 +95,11 @@ function AgentConversationsIndexRoute() {
                   <div className="text-base font-semibold tracking-[-0.03em]">
                     {selectedConversation.name ?? selectedConversation.provider}
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedConversation.participants.join(', ')}
-                  </div>
+                  {selectedConversation.type === 'group' ? (
+                    <div className="text-sm text-muted-foreground">
+                      {selectedConversation.participants.join(', ')}
+                    </div>
+                  ) : null}
                 </div>
 
                 <ScrollArea className="-mr-2 h-full min-h-0 [&_[data-slot=scroll-area-scrollbar]]:border-l-0">

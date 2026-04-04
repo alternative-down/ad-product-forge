@@ -261,8 +261,7 @@ export function createDiscordProvider(config: {
     return {
       targetKey: message.channelId,
       messageId: message.id,
-      conversationName:
-        message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
+      conversationName: getDiscordConversationName(message.channel, authorDisplayName),
       authorId: message.author.id,
       authorDisplayName,
       authorUsername: message.author.username,
@@ -446,7 +445,7 @@ export function createDiscordProvider(config: {
           targetKey: channel.id,
           latestMessageAt: latestMessage.createdAt,
           unreadCount: 0,
-          name: 'name' in channel ? channel.name ?? undefined : 'direct-message',
+          name: getDiscordConversationName(channel, latestMessage.authorDisplayName),
           participants: [],
           messages,
         });
@@ -501,4 +500,34 @@ export function createDiscordProvider(config: {
       });
     },
   };
+}
+
+function getDiscordConversationName(
+  channel: unknown,
+  fallbackName?: string,
+) {
+  if (
+    typeof channel === 'object' &&
+    channel !== null &&
+    'type' in channel &&
+    channel.type === ChannelType.DM
+  ) {
+    const recipient =
+      'recipient' in channel && typeof channel.recipient === 'object' && channel.recipient !== null
+        ? channel.recipient
+        : null;
+
+    return (
+      (recipient && 'globalName' in recipient && typeof recipient.globalName === 'string' ? recipient.globalName : null)
+      ?? (recipient && 'username' in recipient && typeof recipient.username === 'string' ? recipient.username : null)
+      ?? fallbackName
+      ?? 'direct-message'
+    );
+  }
+
+  if (typeof channel === 'object' && channel !== null && 'name' in channel && typeof channel.name === 'string') {
+    return channel.name;
+  }
+
+  return 'unknown-channel';
 }
