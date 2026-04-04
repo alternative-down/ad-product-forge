@@ -52,6 +52,11 @@ function AgentConversationsLayoutRoute() {
                           <div className="min-w-0 text-sm font-medium text-foreground">
                             {conversation.name ?? conversation.provider}
                           </div>
+                          {latestMessage ? (
+                            <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
+                              {formatRecentMessageTime(latestMessage.createdAt)}
+                            </span>
+                          ) : null}
                           <div className="flex shrink-0 items-center gap-2 md:hidden">
                             {latestMessage ? (
                               <span className="text-xs text-muted-foreground">
