@@ -204,6 +204,23 @@ export type AgentThreadMessagesResponse = {
   hasMore: boolean;
 };
 
+export type AgentConversationMessage = {
+  messageId: string;
+  provider: string;
+  authorId: string;
+  targetKey: string;
+  content: string;
+  attachments?: unknown[];
+  unread: boolean;
+  createdAt: string;
+  authorDisplayName: string;
+};
+
+export type AgentConversationMessagesResponse = {
+  items: AgentConversationMessage[];
+  hasMore: boolean;
+};
+
 export type LlmProfile = {
   profileId: string;
   name: string;
@@ -426,6 +443,18 @@ export function getAgentExecutionSteps(agentId: string, limit: number, offset: n
 export function getAgentThreadMessages(agentId: string, page: number, perPage: number) {
   return request<AgentThreadMessagesResponse>(
     `/admin/agent/thread-messages?agentId=${encodeURIComponent(agentId)}&page=${page}&perPage=${perPage}`,
+  );
+}
+
+export function getAgentConversationMessages(
+  agentId: string,
+  provider: string,
+  targetKey: string,
+  limit: number,
+  offset: number,
+) {
+  return request<AgentConversationMessagesResponse>(
+    `/admin/agent/conversation-messages?agentId=${encodeURIComponent(agentId)}&provider=${encodeURIComponent(provider)}&targetKey=${encodeURIComponent(targetKey)}&limit=${limit}&offset=${offset}`,
   );
 }
 

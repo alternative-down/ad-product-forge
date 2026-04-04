@@ -446,7 +446,7 @@ export function createDiscordProvider(config: {
           latestMessageAt: latestMessage.createdAt,
           unreadCount: 0,
           name: getDiscordConversationName(channel, latestMessage.authorDisplayName),
-          participants: [],
+          participants: getDiscordConversationParticipants(channel),
           messages,
         });
       }
@@ -530,4 +530,33 @@ function getDiscordConversationName(
   }
 
   return 'unknown-channel';
+}
+
+function getDiscordConversationParticipants(channel: unknown) {
+  if (
+    typeof channel !== 'object' ||
+    channel === null ||
+    !('recipients' in channel) ||
+    !Array.isArray(channel.recipients)
+  ) {
+    return [];
+  }
+
+  return channel.recipients
+    .map((recipient) => {
+      if (typeof recipient !== 'object' || recipient === null) {
+        return null;
+      }
+
+      if ('globalName' in recipient && typeof recipient.globalName === 'string') {
+        return recipient.globalName;
+      }
+
+      if ('username' in recipient && typeof recipient.username === 'string') {
+        return recipient.username;
+      }
+
+      return null;
+    })
+    .filter((value): value is string => Boolean(value));
 }

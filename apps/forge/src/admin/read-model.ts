@@ -369,6 +369,35 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function listAgentConversationMessages(input: {
+    agentId: string;
+    provider: string;
+    targetKey: string;
+    limit: number;
+    offset: number;
+  }) {
+    const runtime = getInternalAgentRegistry().get(input.agentId)?.runtime;
+
+    if (!runtime) {
+      return {
+        items: [],
+        hasMore: false,
+      };
+    }
+
+    const messages = await runtime.communication.getMessages({
+      provider: input.provider,
+      targetKey: input.targetKey,
+      limit: input.limit,
+      offset: input.offset,
+    });
+
+    return {
+      items: messages,
+      hasMore: messages.length === input.limit,
+    };
+  }
+
   async function listRoles() {
     const [roles, agentCounts] = await Promise.all([
       capabilities.listRoles(),
@@ -507,6 +536,7 @@ export function createAdminReadModel(input: {
     getAgent,
     listAgentExecutionSteps,
     listAgentThreadMessages,
+    listAgentConversationMessages,
     listRoles,
     listSystemIntegrations,
     getSystemSettings,

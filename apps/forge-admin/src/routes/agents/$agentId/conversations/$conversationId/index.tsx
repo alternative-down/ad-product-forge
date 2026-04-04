@@ -1,20 +1,23 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getAgent } from '@/lib/admin-api';
+import { getAgent, getAgentConversationMessages } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/conversations/$conversationId/')({
   component: AgentConversationDetailIndexRoute,
 });
 
+const PAGE_SIZE = 30;
+
 function AgentConversationDetailIndexRoute() {
   const navigate = useNavigate();
   const { agentId, conversationId } = Route.useParams();
   const decodedConversationId = decodeURIComponent(conversationId);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const agentQuery = useQuery({
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
@@ -22,6 +25,44 @@ function AgentConversationDetailIndexRoute() {
   const conversations = useMemo(() => agentQuery.data?.recentConversations ?? [], [agentQuery.data?.recentConversations]);
   const selectedConversation =
     conversations.find((conversation) => conversation.conversationId === decodedConversationId) ?? null;
+  const messagesQuery = useInfiniteQuery({
+    queryKey: ['admin', 'agent', agentId, 'conversation', decodedConversationId],
+    queryFn: ({ pageParam }) => {
+      if (!selectedConversation) {
+        throw new Error('Conversa não encontrada.');
+      }
+
+      return getAgentConversationMessages(
+        agentId,
+        selectedConversation.provider,
+        selectedConversation.conversationKey,
+        PAGE_SIZE,
+        pageParam,
+      );
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      lastPage.hasMore ? lastPageParam + PAGE_SIZE : undefined,
+    enabled: Boolean(selectedConversation),
+  });
+  const messages = messagesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+
+  useEffect(() => {
+    const target = sentinelRef.current;
+
+    if (!target) {
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage) {
+        void messagesQuery.fetchNextPage();
+      }
+    });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [messagesQuery]);
 
   if (!selectedConversation) {
     return <div className="text-sm text-muted-foreground">Conversa não encontrada.</div>;
@@ -52,7 +93,7 @@ function AgentConversationDetailIndexRoute() {
 
       <ScrollArea className="-mr-2 h-full min-h-0 [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
         <div className="space-y-3 pr-3">
-          {selectedConversation.messages.map((message) => (
+          {messages.map((message) => (
             <article key={message.messageId} className="flex items-start gap-3 py-1">
               <Avatar className="h-9 w-9 border border-border bg-muted">
                 <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
@@ -62,14 +103,17 @@ function AgentConversationDetailIndexRoute() {
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="font-medium text-foreground">{message.authorDisplayName}</span>
-                  <span className="text-xs text-muted-foreground">{formatRecentMessageTime(message.createdAt)}</span>
+                  <span className="text-xs text-muted-foreground">{formatRecentMessageTime(Date.parse(message.createdAt))}</span>
                 </div>
                 <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{message.content}</div>
               </div>
             </article>
           ))}
+          <div ref={sentinelRef} className="h-4" />
         </div>
       </ScrollArea>
+      {messagesQuery.isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
+      {messagesQuery.error ? <div className="text-sm text-destructive">{messagesQuery.error.message}</div> : null}
     </div>
   );
 }

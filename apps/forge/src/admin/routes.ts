@@ -81,6 +81,14 @@ const agentThreadMessagesQuerySchema = z.object({
   perPage: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+const agentConversationMessagesQuerySchema = z.object({
+  agentId: z.string().min(1),
+  provider: z.string().min(1),
+  targetKey: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 const roleToolPermissionSchema = z.object({
   roleId: z.string().min(1),
   toolId: z.string().min(1),
@@ -464,6 +472,22 @@ export function registerAdminRoutes(input: {
       });
 
       return jsonResponse(await readModel.listAgentThreadMessages(query));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agent/conversation-messages',
+    handler: async (request) => {
+      const query = agentConversationMessagesQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        provider: request.query.get('provider'),
+        targetKey: request.query.get('targetKey'),
+        limit: request.query.get('limit') ?? undefined,
+        offset: request.query.get('offset') ?? undefined,
+      });
+
+      return jsonResponse(await readModel.listAgentConversationMessages(query));
     },
   });
 
