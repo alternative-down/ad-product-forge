@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibSQLStore } from '@mastra/libsql';
 import type { MastraDBMessage } from '@mastra/core/agent';
@@ -10,6 +10,7 @@ import { toMastraSafeIdentifier } from '@mastra-engine/core';
 import type { Database } from '../database/index';
 import {
   agents,
+  agentExecutionContracts,
   agentExecutionSteps,
   agentMcpConfigs,
   agentProviders,
@@ -333,8 +334,25 @@ export function createAdminReadModel(input: {
     limit: number;
     offset: number;
   }) {
+    const now = Date.now();
+    const activeContract = await db.query.agentExecutionContracts.findFirst({
+      where: and(
+        eq(agentExecutionContracts.agentId, input.agentId),
+        lte(agentExecutionContracts.startsAt, now),
+        gte(agentExecutionContracts.endsAt, now),
+      ),
+      orderBy: [desc(agentExecutionContracts.endsAt)],
+    });
+
+    if (!activeContract) {
+      return {
+        items: [],
+        hasMore: false,
+      };
+    }
+
     const rows = await db.query.agentExecutionSteps.findMany({
-      where: eq(agentExecutionSteps.agentId, input.agentId),
+      where: eq(agentExecutionSteps.contractId, activeContract.id),
       orderBy: [desc(agentExecutionSteps.createdAt)],
       limit: input.limit,
       offset: input.offset,
