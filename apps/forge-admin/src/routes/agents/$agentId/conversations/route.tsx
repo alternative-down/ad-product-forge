@@ -52,7 +52,14 @@ function AgentConversationsLayoutRoute() {
                           <div className="min-w-0 text-sm font-medium text-foreground">
                             {conversation.name ?? conversation.provider}
                           </div>
-                          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
+                          <div className="flex shrink-0 items-center gap-2 md:hidden">
+                            {latestMessage ? (
+                              <span className="text-xs text-muted-foreground">
+                                {formatRecentMessageTime(latestMessage.createdAt)}
+                              </span>
+                            ) : null}
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
                         </div>
                         {conversation.type === 'group' && conversation.participants.length > 1 ? (
                           <div className="line-clamp-2 text-sm text-muted-foreground">
@@ -61,12 +68,9 @@ function AgentConversationsLayoutRoute() {
                         ) : null}
                         {latestMessage ? (
                           <div className="space-y-1 pt-2">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="truncate">{latestMessage.authorDisplayName}</span>
-                              <span className="shrink-0">{formatRecentMessageTime(latestMessage.createdAt)}</span>
-                            </div>
                             <div className="truncate text-sm text-foreground">
-                              {latestMessage.content}
+                              <span className="text-muted-foreground">{latestMessage.authorDisplayName}: </span>
+                              <span>{latestMessage.content}</span>
                             </div>
                           </div>
                         ) : null}
