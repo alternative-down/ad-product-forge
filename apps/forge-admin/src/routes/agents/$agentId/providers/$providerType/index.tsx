@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 
 import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
 import {
@@ -163,52 +164,27 @@ function DiscordProviderForm(input: {
                 <div className="space-y-2">
                   {credentials.channels.map((channel, index) => (
                     <div key={`${channel.channelId}-${index}`} className="space-y-3 border-b border-border pb-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0 flex-1 space-y-2">
-                          <label
-                            className="text-sm font-medium"
-                            htmlFor={`discord-channel-id-${index}`}
-                          >
-                            Código do canal
-                          </label>
-                          <AdminInput
-                            id={`discord-channel-id-${index}`}
-                            value={channel.channelId}
-                            onChange={(event) =>
-                              setDraft((current) => ({
-                                ...(current ?? toDiscordCredentials(input.credentials)),
-                                channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
-                                  valueIndex === index
-                                    ? { ...value, channelId: event.target.value }
-                                    : value,
-                                ),
-                              }))
-                            }
-                            disabled={pending}
-                          />
-                        </div>
-                        <AdminButton
-                          type="button"
-                          variant="outline"
-                          disabled={pending}
-                          onClick={() =>
+                      <div className="flex items-center gap-3">
+                        <AdminInput
+                          id={`discord-channel-id-${index}`}
+                          className="min-w-0 flex-1"
+                          value={channel.channelId}
+                          onChange={(event) =>
                             setDraft((current) => ({
                               ...(current ?? toDiscordCredentials(input.credentials)),
-                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.filter(
-                                (_, valueIndex) => valueIndex !== index,
+                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                valueIndex === index
+                                  ? { ...value, channelId: event.target.value }
+                                  : value,
                               ),
                             }))
                           }
-                        >
-                          Remover
-                        </AdminButton>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium" htmlFor={`discord-mentions-only-${channel.channelId}`}>
-                          Responder só a menções
-                        </label>
-                        <div className="flex min-h-9 items-center">
+                          disabled={pending}
+                        />
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <label className="text-sm font-medium" htmlFor={`discord-mentions-only-${channel.channelId}`}>
+                            Menção
+                          </label>
                           <Switch
                             id={`discord-mentions-only-${channel.channelId}`}
                             checked={channel.respondToMentionsOnly}
@@ -225,6 +201,23 @@ function DiscordProviderForm(input: {
                             disabled={pending}
                           />
                         </div>
+                        <AdminButton
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          disabled={pending}
+                          onClick={() =>
+                            setDraft((current) => ({
+                              ...(current ?? toDiscordCredentials(input.credentials)),
+                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.filter(
+                                (_, valueIndex) => valueIndex !== index,
+                              ),
+                            }))
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Remover</span>
+                        </AdminButton>
                       </div>
                     </div>
                   ))}
