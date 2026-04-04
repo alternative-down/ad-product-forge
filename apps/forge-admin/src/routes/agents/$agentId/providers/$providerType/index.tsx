@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Check, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
 import {
@@ -114,72 +114,71 @@ function DiscordProviderForm(input: {
               Canais
             </label>
             <div className="space-y-3">
-              <div className="flex items-end gap-3">
-                <div className="min-w-0 flex-1 space-y-3">
-                  <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="discord-channel-name">
-                        Nome do canal
-                      </label>
-                      <AdminInput
-                        id="discord-channel-name"
-                        value={newChannelName}
-                        onChange={(event) => setNewChannelName(event.target.value)}
-                        disabled={pending}
-                      />
-                    </div>
+              <div className="space-y-3 border-b border-border pb-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="discord-channel-name">
+                      Nome do canal
+                    </label>
+                    <AdminInput
+                      id="discord-channel-name"
+                      value={newChannelName}
+                      onChange={(event) => setNewChannelName(event.target.value)}
+                      disabled={pending}
+                    />
+                  </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="discord-channel-id">
-                        Código do canal
-                      </label>
-                      <AdminInput
-                        id="discord-channel-id"
-                        value={newChannelId}
-                        onChange={(event) => setNewChannelId(event.target.value)}
-                        disabled={pending}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="discord-channel-id">
+                      Código do canal
+                    </label>
+                    <AdminInput
+                      id="discord-channel-id"
+                      value={newChannelId}
+                      onChange={(event) => setNewChannelId(event.target.value)}
+                      disabled={pending}
+                    />
                   </div>
                 </div>
-                <AdminButton
-                  type="button"
-                  size="icon-sm"
-                  disabled={pending || !newChannelId.trim()}
-                  onClick={() => {
-                    const channelId = newChannelId.trim();
-                    const channelName = newChannelName.trim();
 
-                    if (!channelId) {
-                      return;
-                    }
+                <div className="flex justify-end">
+                  <AdminButton
+                    type="button"
+                    disabled={pending || !newChannelId.trim()}
+                    onClick={() => {
+                      const channelId = newChannelId.trim();
+                      const channelName = newChannelName.trim();
 
-                    setDraft((current) => {
-                      const next = current ?? toDiscordCredentials(input.credentials);
-
-                      if (next.channels.some((value) => value.channelId === channelId)) {
-                        return next;
+                      if (!channelId) {
+                        return;
                       }
 
-                      return {
-                        ...next,
-                        channels: [
-                          ...next.channels,
-                          {
-                            channelId,
-                            channelName,
-                            respondToMentionsOnly: false,
-                          },
-                        ],
-                      };
-                    });
-                    setNewChannelName('');
-                    setNewChannelId('');
-                  }}
-                >
-                  <Check className="h-4 w-4" />
-                  <span className="sr-only">Adicionar</span>
-                </AdminButton>
+                      setDraft((current) => {
+                        const next = current ?? toDiscordCredentials(input.credentials);
+
+                        if (next.channels.some((value) => value.channelId === channelId)) {
+                          return next;
+                        }
+
+                        return {
+                          ...next,
+                          channels: [
+                            ...next.channels,
+                            {
+                              channelId,
+                              channelName,
+                              respondToMentionsOnly: false,
+                            },
+                          ],
+                        };
+                      });
+                      setNewChannelName('');
+                      setNewChannelId('');
+                    }}
+                  >
+                    Incluir
+                  </AdminButton>
+                </div>
               </div>
 
               {credentials.channels.length > 0 ? (
