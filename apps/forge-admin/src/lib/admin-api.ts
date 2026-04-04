@@ -204,6 +204,12 @@ export type AgentDetail = {
     costUsd: number;
     createdAt: number;
   }>;
+  recentNotifications: Array<{
+    notificationId: string;
+    content: string;
+    timestamp: number;
+    read: boolean;
+  }>;
   recentConversations: Array<{
     conversationId: string;
     conversationKey: string;
@@ -220,6 +226,18 @@ export type AgentDetail = {
       createdAt: number;
     }>;
   }>;
+};
+
+export type HireAgentInput = {
+  hiringRequest: string;
+  additionalContext?: string;
+  weeklyBudgetUsd: number;
+};
+
+export type HireAgentResult = {
+  agentId: string;
+  emailAddress: string | null;
+  githubAppRegistrationUrl: string | null;
 };
 
 export type AgentExecutionStepsResponse = {
@@ -979,6 +997,20 @@ export function adjustAgentContractBudget(input: AdjustAgentContractBudgetInput)
   }>('/admin/agent/contract/adjust-budget', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export function hireAgent(input: HireAgentInput) {
+  return request<HireAgentResult>('/admin/agent/hire', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function terminateAgent(agentId: string) {
+  return request<{ agentId: string }>('/admin/agent/terminate', {
+    method: 'POST',
+    body: JSON.stringify({ agentId }),
   });
 }
 

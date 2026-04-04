@@ -19,8 +19,9 @@ function AgentsLayoutRoute() {
     select: (state) => state.location.pathname,
   });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
-  const profileActive = pathname.startsWith('/agents/');
-  const agentId = profileActive ? pathname.split('/')[2] ?? '' : '';
+  const routeKey = pathname.split('/')[2] ?? '';
+  const profileActive = pathname.startsWith('/agents/') && routeKey !== 'roles';
+  const agentId = profileActive ? routeKey : '';
   const agentQuery = useQuery({
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
@@ -114,12 +115,17 @@ function buildAgentSectionItems(input: {
   hasGithubProvisioning: boolean;
 }) {
   if (!input.agentId) {
-    return [{ value: '/agents', label: 'Lista' }];
+    return [
+      { value: '/agents', label: 'Lista' },
+      { value: '/agents/roles', label: 'Papéis & Ferramentas' },
+    ];
   }
 
   const items = [
     { value: `/agents/${input.agentId}`, label: 'Perfil' },
     { value: `/agents/${input.agentId}/contract`, label: 'Contrato' },
+    { value: `/agents/${input.agentId}/conversations`, label: 'Conversas' },
+    { value: `/agents/${input.agentId}/notifications`, label: 'Notificações' },
   ];
 
   for (const providerType of input.providerTypes) {
@@ -151,10 +157,7 @@ function buildAgentSectionItems(input: {
     });
   }
 
-  items.push(
-    { value: `/agents/${input.agentId}/log`, label: 'Log' },
-    { value: `/agents/${input.agentId}/conversations`, label: 'Conversas' },
-  );
+  items.push({ value: `/agents/${input.agentId}/log`, label: 'Log' });
 
   return items;
 }

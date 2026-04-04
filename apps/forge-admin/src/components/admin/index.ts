@@ -1,4 +1,5 @@
 export { ActionBar } from './system/action-bar';
+export { HireAgentDialog } from './agents/hire-agent-dialog';
 export { AdminScrollArea } from './system/admin-scroll-area';
 export { AdminTopbar } from './layout/admin-topbar';
 export { AppShell } from './layout/app-shell';
@@ -14,6 +15,7 @@ export { InlineStat } from './system/inline-stat';
 export { KeyValueList } from './system/key-value-list';
 export { LogBlock } from './system/log-block';
 export { PageHeader } from './layout/page-header';
+export { RolesPage } from './pages/roles-page';
 export { SectionHeader } from './system/section-header';
 export { SidebarNav } from './layout/sidebar-nav';
 export { ThemeToggleButton } from './theme-toggle-button';

@@ -1,9 +1,10 @@
-import { Link, createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
+import { useState } from 'react';
 
-import { PageHeader } from '@/components/admin';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { AdminButton, HireAgentDialog, PageHeader } from '@/components/admin';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getAgents } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/')({
@@ -11,6 +12,7 @@ export const Route = createFileRoute('/agents/')({
 });
 
 function AgentsIndexRoute() {
+  const [hireOpen, setHireOpen] = useState(false);
   const agentsQuery = useQuery({
     queryKey: ['admin', 'agents'],
     queryFn: getAgents,
@@ -19,68 +21,63 @@ function AgentsIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader title="Agentes" />
+      <PageHeader
+        title="Agentes"
+        actions={
+          <AdminButton onClick={() => setHireOpen(true)}>
+            Contratar
+          </AdminButton>
+        }
+      />
 
       <section className="space-y-5">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {agents.map((agent) => (
-            <Link
-              key={agent.agentId}
-              to="/agents/$agentId"
-              params={{ agentId: agent.agentId }}
-              className="block rounded-sm border border-border bg-background px-5 py-4 transition-colors hover:bg-muted/30"
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex flex-col items-center gap-2">
-                  <Avatar className="h-14 w-14 border border-border bg-muted">
-                    <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
-                      {getAgentInitials(agent.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Badge variant="outline" className="rounded-sm">
-                    {humanizeAgentStatus(agent)}
-                  </Badge>
-                </div>
-
-                <div className="min-w-0 space-y-2">
-                  <div className="space-y-1">
-                    <div className="truncate text-base font-semibold tracking-[-0.03em]">{agent.name}</div>
-                    <div className="text-sm text-muted-foreground">{agent.roleName ?? 'Sem papel'}</div>
-                  </div>
-                  </div>
-                </div>
-            </Link>
-          ))}
+        <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
+          <Table className="text-sm">
+            <TableHeader className="bg-muted/50 text-left text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Papel</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+                <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {agents.map((agent) => (
+                <TableRow key={agent.agentId}>
+                  <TableCell className="px-4 py-3">{agent.name}</TableCell>
+                  <TableCell className="px-4 py-3">{agent.roleName ?? 'Sem papel'}</TableCell>
+                  <TableCell className="px-4 py-3">{agent.executionState === 'running' ? 'Trabalhando' : 'Ocioso'}</TableCell>
+                  <TableCell className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-2">
+                      <AdminButton
+                        asChild
+                        variant="ghost"
+                        size="icon"
+                      >
+                        <Link to="/agents/$agentId" params={{ agentId: agent.agentId }}>
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Abrir agente</span>
+                        </Link>
+                      </AdminButton>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {agents.length === 0 ? (
+                <TableRow>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={4}>
+                    Nenhum agente ainda.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
         </div>
 
-        {agents.length === 0 ? (
-          <div className="text-sm text-muted-foreground">Nenhum agente ainda.</div>
-        ) : null}
         {agentsQuery.error ? <div className="text-sm text-destructive">{agentsQuery.error.message}</div> : null}
       </section>
+
+      <HireAgentDialog open={hireOpen} onOpenChange={setHireOpen} />
     </div>
   );
-}
-
-function getAgentInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-
-  if (parts.length === 0) {
-    return 'AG';
-  }
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
-function humanizeAgentStatus(agent: {
-  executionState: 'idle' | 'running';
-}) {
-  if (agent.executionState === 'running') {
-    return 'Trabalhando';
-  }
-
-  return 'Ocioso';
 }

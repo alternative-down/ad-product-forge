@@ -1,8 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { TriangleAlert } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import {
+  terminateAgent,
   adjustAgentContractBudget,
   getAgent,
   getAgentExecutionSteps,
@@ -35,9 +37,11 @@ type ContractForm = {
 
 function AgentContractIndexRoute() {
   const { agentId } = Route.useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
   const agentQuery = useQuery({
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
@@ -71,6 +75,18 @@ function AgentContractIndexRoute() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'execution-steps'] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] });
+    },
+  });
+  const terminateMutation = useMutation({
+    mutationFn: async () => terminateAgent(agentId),
+    onSuccess: async () => {
+      setTerminateDialogOpen(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] }),
+      ]);
+      await navigate({ to: '/agents' });
     },
   });
   const steps = stepsQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -185,6 +201,24 @@ function AgentContractIndexRoute() {
         {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
       </section>
 
+      {activeContract ? (
+        <section className="space-y-5 border-t border-border pt-6">
+          <div className="space-y-1">
+            <div className="text-lg font-semibold tracking-[-0.03em]">Demissão</div>
+            <div className="max-w-3xl text-sm text-muted-foreground">
+              Ao demitir este agente, o saldo restante do contrato atual volta para o caixa da empresa como entrada.
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <AdminButton variant="destructive" onClick={() => setTerminateDialogOpen(true)}>
+              Demitir
+            </AdminButton>
+          </div>
+          {terminateMutation.error ? <div className="text-sm text-destructive">{terminateMutation.error.message}</div> : null}
+        </section>
+      ) : null}
+
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => {
@@ -263,6 +297,35 @@ function AgentContractIndexRoute() {
               </AdminDialogFooter>
             </form>
           ) : null}
+        </AdminDialogContent>
+      </Dialog>
+
+      <Dialog open={terminateDialogOpen} onOpenChange={setTerminateDialogOpen}>
+        <AdminDialogContent>
+          <AdminDialogHeader>
+            <AdminDialogTitle>Demitir agente</AdminDialogTitle>
+          </AdminDialogHeader>
+
+          <div className="flex min-h-0 flex-1 flex-col">
+            <AdminDialogBody>
+              <div className="flex items-start gap-3 rounded-sm border border-border bg-muted/30 px-4 py-4">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <div className="space-y-2 text-sm text-foreground">
+                  <div>Esta ação encerra o agente agora.</div>
+                  <div>O saldo restante do contrato atual será estornado como entrada no caixa da empresa.</div>
+                </div>
+              </div>
+            </AdminDialogBody>
+
+            <AdminDialogFooter>
+              <AdminButton variant="ghost" onClick={() => setTerminateDialogOpen(false)} disabled={terminateMutation.isPending}>
+                Cancelar
+              </AdminButton>
+              <AdminButton variant="destructive" onClick={() => terminateMutation.mutate()} disabled={terminateMutation.isPending}>
+                {terminateMutation.isPending ? 'Demitindo...' : 'Confirmar'}
+              </AdminButton>
+            </AdminDialogFooter>
+          </div>
         </AdminDialogContent>
       </Dialog>
     </div>

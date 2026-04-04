@@ -1,11 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
 
 import {
-  AdminDialogBody,
   AdminButton,
+  AdminDialogBody,
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
@@ -27,10 +26,6 @@ import {
   updateRole,
   type RoleItem,
 } from '@/lib/admin-api';
-
-export const Route = createFileRoute('/home/roles/')({
-  component: HomeRolesIndexRoute,
-});
 
 type RoleForm = {
   roleId?: string;
@@ -56,7 +51,7 @@ function createRoleForm(role: RoleItem): RoleForm {
   };
 }
 
-function HomeRolesIndexRoute() {
+export function RolesPage() {
   const queryClient = useQueryClient();
   const rolesQuery = useQuery({
     queryKey: ['admin', 'roles'],
@@ -318,30 +313,25 @@ function groupToolIds(toolIds: string[]) {
 
   for (const toolId of [...toolIds].sort((left, right) => left.localeCompare(right))) {
     const title = getToolSectionTitle(toolId);
-    const current = sections.get(title) ?? [];
-    current.push(toolId);
-    sections.set(title, current);
+    const items = sections.get(title) ?? [];
+    items.push(toolId);
+    sections.set(title, items);
   }
 
-  return [...sections.entries()]
-    .sort((left, right) => orderedSectionTitles.indexOf(left[0]) - orderedSectionTitles.indexOf(right[0]))
-    .map(([title, groupedToolIds]) => ({
+  return orderedSectionTitles
+    .map((title) => ({
       title,
-      toolIds: groupedToolIds,
-    }));
+      toolIds: sections.get(title) ?? [],
+    }))
+    .filter((section) => section.toolIds.length > 0);
 }
 
 function getToolSectionTitle(toolId: string) {
-  if (toolId === 'search_web') {
+  if (toolId.includes('search') || toolId.includes('memory')) {
     return 'Pesquisa';
   }
 
-  if (
-    toolId.includes('contact') ||
-    toolId.includes('conversation') ||
-    toolId.includes('message') ||
-    toolId.includes('group')
-  ) {
+  if (toolId.includes('message') || toolId.includes('conversation') || toolId.includes('notification')) {
     return 'Comunicação';
   }
 
@@ -353,15 +343,15 @@ function getToolSectionTitle(toolId: string) {
     return 'Coolify';
   }
 
-  if (toolId.includes('schedule') || toolId.includes('task')) {
+  if (toolId.includes('schedule') || toolId.includes('calendar') || toolId.includes('task')) {
     return 'Agenda & Tarefas';
   }
 
-  if (toolId.includes('contract') || toolId.includes('cash') || toolId.includes('notification')) {
+  if (toolId.includes('finance') || toolId.includes('contract') || toolId.includes('invoice')) {
     return 'Financeiro & Contratos';
   }
 
-  if (toolId.includes('role') || toolId.includes('capabilities')) {
+  if (toolId.includes('role') || toolId.includes('agent') || toolId.includes('team')) {
     return 'Equipe & Papéis';
   }
 

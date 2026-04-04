@@ -13,7 +13,6 @@ import {
   AdminInput,
   AdminTextarea,
   AdminScrollArea,
-  PageHeader,
 } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -85,20 +84,6 @@ function AgentDetailIndexRoute() {
       {agent ? (
         <>
           <section className="space-y-5">
-            <PageHeader
-              actions={
-                <AdminButton
-                  onClick={() => {
-                    setForm(createAgentProfileForm(agent));
-                    setDialogOpen(true);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                  Editar
-                </AdminButton>
-              }
-            />
-
             <div className="flex items-start gap-5">
               <div className="flex flex-col items-center gap-2">
                 <Avatar className="h-20 w-20 border border-border bg-muted">
@@ -113,7 +98,20 @@ function AgentDetailIndexRoute() {
 
               <div className="min-w-0 space-y-3">
                 <div className="space-y-1">
-                  <div className="text-2xl font-semibold tracking-[-0.04em]">{agent.name}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-2xl font-semibold tracking-[-0.04em]">{agent.name}</div>
+                    <AdminButton
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setForm(createAgentProfileForm(agent));
+                        setDialogOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Editar perfil</span>
+                    </AdminButton>
+                  </div>
                   <div className="text-sm text-muted-foreground">{agent.role?.name ?? 'Sem papel'}</div>
                 </div>
               </div>
@@ -148,11 +146,11 @@ function AgentDetailIndexRoute() {
             <div className="grid grid-cols-2 gap-4">
               <MetricItem
                 label="Perfil principal"
-                value={agent.modelProfile ? `${agent.modelProfile.name} · ${agent.modelProfile.modelKey}` : 'Sem perfil'}
+                value={agent.modelProfile ? agent.modelProfile.name : 'Sem perfil'}
               />
               <MetricItem
                 label="Perfil OM"
-                value={agent.omModelProfile ? `${agent.omModelProfile.name} · ${agent.omModelProfile.modelKey}` : 'Sem perfil'}
+                value={agent.omModelProfile ? agent.omModelProfile.name : 'Sem perfil'}
               />
             </div>
           </section>

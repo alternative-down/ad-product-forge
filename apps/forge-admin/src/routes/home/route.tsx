@@ -1,9 +1,11 @@
 import { Link, Navigate, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import '../../styles/app.css';
 import { AdminTopbar, AppShell } from '@/components/admin';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getSystemSettings } from '@/lib/admin-api';
 import { getStoredAdminSecret, getStoredAdminTheme, setStoredAdminTheme } from '@/lib/admin-secret';
 import { applyAdminThemeToDocument, clearAdminThemeFromDocument } from '@/lib/admin-theme';
 
@@ -16,11 +18,14 @@ function HomeLayoutRoute() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const settingsQuery = useQuery({
+    queryKey: ['admin', 'system-settings'],
+    queryFn: getSystemSettings,
+  });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getStoredAdminTheme());
   const sectionItems = [
-    { value: '/home', label: 'Geral' },
+    { value: '/home', label: settingsQuery.data?.companyName?.trim() || 'Empresa' },
     { value: '/home/conversations', label: 'Conversas' },
-    { value: '/home/roles', label: 'Papéis & Ferramentas' },
   ];
   const currentSection = [...sectionItems]
     .sort((left, right) => right.value.length - left.value.length)

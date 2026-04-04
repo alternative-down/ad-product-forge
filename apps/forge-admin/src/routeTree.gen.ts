@@ -29,10 +29,10 @@ import { Route as IntegrationsMinimaxRouteRouteImport } from './routes/integrati
 import { Route as IntegrationsMigaduRouteRouteImport } from './routes/integrations/migadu/route'
 import { Route as IntegrationsGithubRouteRouteImport } from './routes/integrations/github/route'
 import { Route as IntegrationsCoolifyRouteRouteImport } from './routes/integrations/coolify/route'
-import { Route as HomeRolesRouteRouteImport } from './routes/home/roles/route'
 import { Route as HomeConversationsRouteRouteImport } from './routes/home/conversations/route'
 import { Route as FinanceContractsRouteRouteImport } from './routes/finance/contracts/route'
 import { Route as FinanceAccountsRouteRouteImport } from './routes/finance/accounts/route'
+import { Route as AgentsRolesRouteRouteImport } from './routes/agents/roles/route'
 import { Route as AgentsAgentIdRouteRouteImport } from './routes/agents/$agentId/route'
 import { Route as V1SystemIndexRouteImport } from './routes/v1/system/index'
 import { Route as V1RolesIndexRouteImport } from './routes/v1/roles/index'
@@ -43,11 +43,12 @@ import { Route as IntegrationsMinimaxIndexRouteImport } from './routes/integrati
 import { Route as IntegrationsMigaduIndexRouteImport } from './routes/integrations/migadu/index'
 import { Route as IntegrationsGithubIndexRouteImport } from './routes/integrations/github/index'
 import { Route as IntegrationsCoolifyIndexRouteImport } from './routes/integrations/coolify/index'
-import { Route as HomeRolesIndexRouteImport } from './routes/home/roles/index'
 import { Route as HomeConversationsIndexRouteImport } from './routes/home/conversations/index'
 import { Route as FinanceContractsIndexRouteImport } from './routes/finance/contracts/index'
 import { Route as FinanceAccountsIndexRouteImport } from './routes/finance/accounts/index'
+import { Route as AgentsRolesIndexRouteImport } from './routes/agents/roles/index'
 import { Route as AgentsAgentIdIndexRouteImport } from './routes/agents/$agentId/index'
+import { Route as AgentsAgentIdNotificationsRouteRouteImport } from './routes/agents/$agentId/notifications/route'
 import { Route as AgentsAgentIdLogRouteRouteImport } from './routes/agents/$agentId/log/route'
 import { Route as AgentsAgentIdGithubRouteRouteImport } from './routes/agents/$agentId/github/route'
 import { Route as AgentsAgentIdConversationsRouteRouteImport } from './routes/agents/$agentId/conversations/route'
@@ -61,6 +62,7 @@ import { Route as V1FinanceLedgerIndexRouteImport } from './routes/v1/finance/le
 import { Route as V1FinanceCapitalIndexRouteImport } from './routes/v1/finance/capital/index'
 import { Route as V1AgentsHireIndexRouteImport } from './routes/v1/agents/hire/index'
 import { Route as HomeConversationsConversationIdIndexRouteImport } from './routes/home/conversations/$conversationId/index'
+import { Route as AgentsAgentIdNotificationsIndexRouteImport } from './routes/agents/$agentId/notifications/index'
 import { Route as AgentsAgentIdLogIndexRouteImport } from './routes/agents/$agentId/log/index'
 import { Route as AgentsAgentIdGithubIndexRouteImport } from './routes/agents/$agentId/github/index'
 import { Route as AgentsAgentIdConversationsIndexRouteImport } from './routes/agents/$agentId/conversations/index'
@@ -184,11 +186,6 @@ const IntegrationsCoolifyRouteRoute =
     path: '/coolify',
     getParentRoute: () => IntegrationsRouteRoute,
   } as any)
-const HomeRolesRouteRoute = HomeRolesRouteRouteImport.update({
-  id: '/roles',
-  path: '/roles',
-  getParentRoute: () => HomeRouteRoute,
-} as any)
 const HomeConversationsRouteRoute = HomeConversationsRouteRouteImport.update({
   id: '/conversations',
   path: '/conversations',
@@ -203,6 +200,11 @@ const FinanceAccountsRouteRoute = FinanceAccountsRouteRouteImport.update({
   id: '/accounts',
   path: '/accounts',
   getParentRoute: () => FinanceRouteRoute,
+} as any)
+const AgentsRolesRouteRoute = AgentsRolesRouteRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => AgentsRouteRoute,
 } as any)
 const AgentsAgentIdRouteRoute = AgentsAgentIdRouteRouteImport.update({
   id: '/$agentId',
@@ -256,11 +258,6 @@ const IntegrationsCoolifyIndexRoute =
     path: '/',
     getParentRoute: () => IntegrationsCoolifyRouteRoute,
   } as any)
-const HomeRolesIndexRoute = HomeRolesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => HomeRolesRouteRoute,
-} as any)
 const HomeConversationsIndexRoute = HomeConversationsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -276,11 +273,22 @@ const FinanceAccountsIndexRoute = FinanceAccountsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => FinanceAccountsRouteRoute,
 } as any)
+const AgentsRolesIndexRoute = AgentsRolesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentsRolesRouteRoute,
+} as any)
 const AgentsAgentIdIndexRoute = AgentsAgentIdIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AgentsAgentIdRouteRoute,
 } as any)
+const AgentsAgentIdNotificationsRouteRoute =
+  AgentsAgentIdNotificationsRouteRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AgentsAgentIdRouteRoute,
+  } as any)
 const AgentsAgentIdLogRouteRoute = AgentsAgentIdLogRouteRouteImport.update({
   id: '/log',
   path: '/log',
@@ -349,6 +357,12 @@ const HomeConversationsConversationIdIndexRoute =
     id: '/$conversationId/',
     path: '/$conversationId/',
     getParentRoute: () => HomeConversationsRouteRoute,
+  } as any)
+const AgentsAgentIdNotificationsIndexRoute =
+  AgentsAgentIdNotificationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AgentsAgentIdNotificationsRouteRoute,
   } as any)
 const AgentsAgentIdLogIndexRoute = AgentsAgentIdLogIndexRouteImport.update({
   id: '/',
@@ -476,10 +490,10 @@ export interface FileRoutesByFullPath {
   '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
   '/agents/$agentId': typeof AgentsAgentIdRouteRouteWithChildren
+  '/agents/roles': typeof AgentsRolesRouteRouteWithChildren
   '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
   '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
   '/home/conversations': typeof HomeConversationsRouteRouteWithChildren
-  '/home/roles': typeof HomeRolesRouteRouteWithChildren
   '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
   '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
   '/integrations/migadu': typeof IntegrationsMigaduRouteRouteWithChildren
@@ -498,11 +512,12 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsRouteRouteWithChildren
   '/agents/$agentId/github': typeof AgentsAgentIdGithubRouteRouteWithChildren
   '/agents/$agentId/log': typeof AgentsAgentIdLogRouteRouteWithChildren
+  '/agents/$agentId/notifications': typeof AgentsAgentIdNotificationsRouteRouteWithChildren
   '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
+  '/agents/roles/': typeof AgentsRolesIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/conversations/': typeof HomeConversationsIndexRoute
-  '/home/roles/': typeof HomeRolesIndexRoute
   '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github/': typeof IntegrationsGithubIndexRoute
   '/integrations/migadu/': typeof IntegrationsMigaduIndexRoute
@@ -518,6 +533,7 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId/conversations/': typeof AgentsAgentIdConversationsIndexRoute
   '/agents/$agentId/github/': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log/': typeof AgentsAgentIdLogIndexRoute
+  '/agents/$agentId/notifications/': typeof AgentsAgentIdNotificationsIndexRoute
   '/home/conversations/$conversationId/': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
@@ -550,10 +566,10 @@ export interface FileRoutesByTo {
   '/integrations': typeof IntegrationsIndexRoute
   '/v1': typeof V1IndexRoute
   '/agents/$agentId': typeof AgentsAgentIdIndexRoute
+  '/agents/roles': typeof AgentsRolesIndexRoute
   '/finance/accounts': typeof FinanceAccountsIndexRoute
   '/finance/contracts': typeof FinanceContractsIndexRoute
   '/home/conversations': typeof HomeConversationsIndexRoute
-  '/home/roles': typeof HomeRolesIndexRoute
   '/integrations/coolify': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github': typeof IntegrationsGithubIndexRoute
   '/integrations/migadu': typeof IntegrationsMigaduIndexRoute
@@ -567,6 +583,7 @@ export interface FileRoutesByTo {
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsIndexRoute
   '/agents/$agentId/github': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log': typeof AgentsAgentIdLogIndexRoute
+  '/agents/$agentId/notifications': typeof AgentsAgentIdNotificationsIndexRoute
   '/home/conversations/$conversationId': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital': typeof V1FinanceCapitalIndexRoute
@@ -600,10 +617,10 @@ export interface FileRoutesById {
   '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/v1': typeof V1RouteRouteWithChildren
   '/agents/$agentId': typeof AgentsAgentIdRouteRouteWithChildren
+  '/agents/roles': typeof AgentsRolesRouteRouteWithChildren
   '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
   '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
   '/home/conversations': typeof HomeConversationsRouteRouteWithChildren
-  '/home/roles': typeof HomeRolesRouteRouteWithChildren
   '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
   '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
   '/integrations/migadu': typeof IntegrationsMigaduRouteRouteWithChildren
@@ -622,11 +639,12 @@ export interface FileRoutesById {
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsRouteRouteWithChildren
   '/agents/$agentId/github': typeof AgentsAgentIdGithubRouteRouteWithChildren
   '/agents/$agentId/log': typeof AgentsAgentIdLogRouteRouteWithChildren
+  '/agents/$agentId/notifications': typeof AgentsAgentIdNotificationsRouteRouteWithChildren
   '/agents/$agentId/': typeof AgentsAgentIdIndexRoute
+  '/agents/roles/': typeof AgentsRolesIndexRoute
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/conversations/': typeof HomeConversationsIndexRoute
-  '/home/roles/': typeof HomeRolesIndexRoute
   '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
   '/integrations/github/': typeof IntegrationsGithubIndexRoute
   '/integrations/migadu/': typeof IntegrationsMigaduIndexRoute
@@ -642,6 +660,7 @@ export interface FileRoutesById {
   '/agents/$agentId/conversations/': typeof AgentsAgentIdConversationsIndexRoute
   '/agents/$agentId/github/': typeof AgentsAgentIdGithubIndexRoute
   '/agents/$agentId/log/': typeof AgentsAgentIdLogIndexRoute
+  '/agents/$agentId/notifications/': typeof AgentsAgentIdNotificationsIndexRoute
   '/home/conversations/$conversationId/': typeof HomeConversationsConversationIdIndexRoute
   '/v1/agents/hire/': typeof V1AgentsHireIndexRoute
   '/v1/finance/capital/': typeof V1FinanceCapitalIndexRoute
@@ -676,10 +695,10 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/v1'
     | '/agents/$agentId'
+    | '/agents/roles'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/conversations'
-    | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
     | '/integrations/migadu'
@@ -698,11 +717,12 @@ export interface FileRouteTypes {
     | '/agents/$agentId/conversations'
     | '/agents/$agentId/github'
     | '/agents/$agentId/log'
+    | '/agents/$agentId/notifications'
     | '/agents/$agentId/'
+    | '/agents/roles/'
     | '/finance/accounts/'
     | '/finance/contracts/'
     | '/home/conversations/'
-    | '/home/roles/'
     | '/integrations/coolify/'
     | '/integrations/github/'
     | '/integrations/migadu/'
@@ -718,6 +738,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/conversations/'
     | '/agents/$agentId/github/'
     | '/agents/$agentId/log/'
+    | '/agents/$agentId/notifications/'
     | '/home/conversations/$conversationId/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
@@ -750,10 +771,10 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/v1'
     | '/agents/$agentId'
+    | '/agents/roles'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/conversations'
-    | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
     | '/integrations/migadu'
@@ -767,6 +788,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/conversations'
     | '/agents/$agentId/github'
     | '/agents/$agentId/log'
+    | '/agents/$agentId/notifications'
     | '/home/conversations/$conversationId'
     | '/v1/agents/hire'
     | '/v1/finance/capital'
@@ -799,10 +821,10 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/v1'
     | '/agents/$agentId'
+    | '/agents/roles'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/conversations'
-    | '/home/roles'
     | '/integrations/coolify'
     | '/integrations/github'
     | '/integrations/migadu'
@@ -821,11 +843,12 @@ export interface FileRouteTypes {
     | '/agents/$agentId/conversations'
     | '/agents/$agentId/github'
     | '/agents/$agentId/log'
+    | '/agents/$agentId/notifications'
     | '/agents/$agentId/'
+    | '/agents/roles/'
     | '/finance/accounts/'
     | '/finance/contracts/'
     | '/home/conversations/'
-    | '/home/roles/'
     | '/integrations/coolify/'
     | '/integrations/github/'
     | '/integrations/migadu/'
@@ -841,6 +864,7 @@ export interface FileRouteTypes {
     | '/agents/$agentId/conversations/'
     | '/agents/$agentId/github/'
     | '/agents/$agentId/log/'
+    | '/agents/$agentId/notifications/'
     | '/home/conversations/$conversationId/'
     | '/v1/agents/hire/'
     | '/v1/finance/capital/'
@@ -1017,13 +1041,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsCoolifyRouteRouteImport
       parentRoute: typeof IntegrationsRouteRoute
     }
-    '/home/roles': {
-      id: '/home/roles'
-      path: '/roles'
-      fullPath: '/home/roles'
-      preLoaderRoute: typeof HomeRolesRouteRouteImport
-      parentRoute: typeof HomeRouteRoute
-    }
     '/home/conversations': {
       id: '/home/conversations'
       path: '/conversations'
@@ -1044,6 +1061,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/finance/accounts'
       preLoaderRoute: typeof FinanceAccountsRouteRouteImport
       parentRoute: typeof FinanceRouteRoute
+    }
+    '/agents/roles': {
+      id: '/agents/roles'
+      path: '/roles'
+      fullPath: '/agents/roles'
+      preLoaderRoute: typeof AgentsRolesRouteRouteImport
+      parentRoute: typeof AgentsRouteRoute
     }
     '/agents/$agentId': {
       id: '/agents/$agentId'
@@ -1115,13 +1139,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsCoolifyIndexRouteImport
       parentRoute: typeof IntegrationsCoolifyRouteRoute
     }
-    '/home/roles/': {
-      id: '/home/roles/'
-      path: '/'
-      fullPath: '/home/roles/'
-      preLoaderRoute: typeof HomeRolesIndexRouteImport
-      parentRoute: typeof HomeRolesRouteRoute
-    }
     '/home/conversations/': {
       id: '/home/conversations/'
       path: '/'
@@ -1143,11 +1160,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceAccountsIndexRouteImport
       parentRoute: typeof FinanceAccountsRouteRoute
     }
+    '/agents/roles/': {
+      id: '/agents/roles/'
+      path: '/'
+      fullPath: '/agents/roles/'
+      preLoaderRoute: typeof AgentsRolesIndexRouteImport
+      parentRoute: typeof AgentsRolesRouteRoute
+    }
     '/agents/$agentId/': {
       id: '/agents/$agentId/'
       path: '/'
       fullPath: '/agents/$agentId/'
       preLoaderRoute: typeof AgentsAgentIdIndexRouteImport
+      parentRoute: typeof AgentsAgentIdRouteRoute
+    }
+    '/agents/$agentId/notifications': {
+      id: '/agents/$agentId/notifications'
+      path: '/notifications'
+      fullPath: '/agents/$agentId/notifications'
+      preLoaderRoute: typeof AgentsAgentIdNotificationsRouteRouteImport
       parentRoute: typeof AgentsAgentIdRouteRoute
     }
     '/agents/$agentId/log': {
@@ -1240,6 +1271,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/home/conversations/$conversationId/'
       preLoaderRoute: typeof HomeConversationsConversationIdIndexRouteImport
       parentRoute: typeof HomeConversationsRouteRoute
+    }
+    '/agents/$agentId/notifications/': {
+      id: '/agents/$agentId/notifications/'
+      path: '/'
+      fullPath: '/agents/$agentId/notifications/'
+      preLoaderRoute: typeof AgentsAgentIdNotificationsIndexRouteImport
+      parentRoute: typeof AgentsAgentIdNotificationsRouteRoute
     }
     '/agents/$agentId/log/': {
       id: '/agents/$agentId/log/'
@@ -1457,6 +1495,20 @@ const AgentsAgentIdLogRouteRouteWithChildren =
     AgentsAgentIdLogRouteRouteChildren,
   )
 
+interface AgentsAgentIdNotificationsRouteRouteChildren {
+  AgentsAgentIdNotificationsIndexRoute: typeof AgentsAgentIdNotificationsIndexRoute
+}
+
+const AgentsAgentIdNotificationsRouteRouteChildren: AgentsAgentIdNotificationsRouteRouteChildren =
+  {
+    AgentsAgentIdNotificationsIndexRoute: AgentsAgentIdNotificationsIndexRoute,
+  }
+
+const AgentsAgentIdNotificationsRouteRouteWithChildren =
+  AgentsAgentIdNotificationsRouteRoute._addFileChildren(
+    AgentsAgentIdNotificationsRouteRouteChildren,
+  )
+
 interface AgentsAgentIdProvidersProviderTypeRouteRouteChildren {
   AgentsAgentIdProvidersProviderTypeIndexRoute: typeof AgentsAgentIdProvidersProviderTypeIndexRoute
 }
@@ -1477,6 +1529,7 @@ interface AgentsAgentIdRouteRouteChildren {
   AgentsAgentIdConversationsRouteRoute: typeof AgentsAgentIdConversationsRouteRouteWithChildren
   AgentsAgentIdGithubRouteRoute: typeof AgentsAgentIdGithubRouteRouteWithChildren
   AgentsAgentIdLogRouteRoute: typeof AgentsAgentIdLogRouteRouteWithChildren
+  AgentsAgentIdNotificationsRouteRoute: typeof AgentsAgentIdNotificationsRouteRouteWithChildren
   AgentsAgentIdIndexRoute: typeof AgentsAgentIdIndexRoute
   AgentsAgentIdProvidersProviderTypeRouteRoute: typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
 }
@@ -1487,6 +1540,8 @@ const AgentsAgentIdRouteRouteChildren: AgentsAgentIdRouteRouteChildren = {
     AgentsAgentIdConversationsRouteRouteWithChildren,
   AgentsAgentIdGithubRouteRoute: AgentsAgentIdGithubRouteRouteWithChildren,
   AgentsAgentIdLogRouteRoute: AgentsAgentIdLogRouteRouteWithChildren,
+  AgentsAgentIdNotificationsRouteRoute:
+    AgentsAgentIdNotificationsRouteRouteWithChildren,
   AgentsAgentIdIndexRoute: AgentsAgentIdIndexRoute,
   AgentsAgentIdProvidersProviderTypeRouteRoute:
     AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren,
@@ -1495,13 +1550,26 @@ const AgentsAgentIdRouteRouteChildren: AgentsAgentIdRouteRouteChildren = {
 const AgentsAgentIdRouteRouteWithChildren =
   AgentsAgentIdRouteRoute._addFileChildren(AgentsAgentIdRouteRouteChildren)
 
+interface AgentsRolesRouteRouteChildren {
+  AgentsRolesIndexRoute: typeof AgentsRolesIndexRoute
+}
+
+const AgentsRolesRouteRouteChildren: AgentsRolesRouteRouteChildren = {
+  AgentsRolesIndexRoute: AgentsRolesIndexRoute,
+}
+
+const AgentsRolesRouteRouteWithChildren =
+  AgentsRolesRouteRoute._addFileChildren(AgentsRolesRouteRouteChildren)
+
 interface AgentsRouteRouteChildren {
   AgentsAgentIdRouteRoute: typeof AgentsAgentIdRouteRouteWithChildren
+  AgentsRolesRouteRoute: typeof AgentsRolesRouteRouteWithChildren
   AgentsIndexRoute: typeof AgentsIndexRoute
 }
 
 const AgentsRouteRouteChildren: AgentsRouteRouteChildren = {
   AgentsAgentIdRouteRoute: AgentsAgentIdRouteRouteWithChildren,
+  AgentsRolesRouteRoute: AgentsRolesRouteRouteWithChildren,
   AgentsIndexRoute: AgentsIndexRoute,
 }
 
@@ -1566,27 +1634,13 @@ const HomeConversationsRouteRouteWithChildren =
     HomeConversationsRouteRouteChildren,
   )
 
-interface HomeRolesRouteRouteChildren {
-  HomeRolesIndexRoute: typeof HomeRolesIndexRoute
-}
-
-const HomeRolesRouteRouteChildren: HomeRolesRouteRouteChildren = {
-  HomeRolesIndexRoute: HomeRolesIndexRoute,
-}
-
-const HomeRolesRouteRouteWithChildren = HomeRolesRouteRoute._addFileChildren(
-  HomeRolesRouteRouteChildren,
-)
-
 interface HomeRouteRouteChildren {
   HomeConversationsRouteRoute: typeof HomeConversationsRouteRouteWithChildren
-  HomeRolesRouteRoute: typeof HomeRolesRouteRouteWithChildren
   HomeIndexRoute: typeof HomeIndexRoute
 }
 
 const HomeRouteRouteChildren: HomeRouteRouteChildren = {
   HomeConversationsRouteRoute: HomeConversationsRouteRouteWithChildren,
-  HomeRolesRouteRoute: HomeRolesRouteRouteWithChildren,
   HomeIndexRoute: HomeIndexRoute,
 }
 
