@@ -60,7 +60,7 @@ function AgentConversationsLayoutRoute() {
                           </div>
                         ) : null}
                         {latestMessage ? (
-                          <div className="space-y-1 pt-1">
+                          <div className="space-y-1 pt-2">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span className="truncate">{latestMessage.authorDisplayName}</span>
                               <span className="shrink-0">{formatRecentMessageTime(latestMessage.createdAt)}</span>
