@@ -118,11 +118,28 @@ export type AgentDetail = {
   description?: string;
   instructions: string;
   executionState: 'idle' | 'running';
+  modelProfile: {
+    profileId: string;
+    name: string;
+    modelKey: string;
+  } | null;
+  omModelProfile: {
+    profileId: string;
+    name: string;
+    modelKey: string;
+  } | null;
   role: {
     roleId: string;
     name: string;
     description?: string | null;
   } | null;
+  workspace: {
+    autoSync: boolean;
+    bm25: boolean;
+    embedder: string | null;
+    filesystem: string | null;
+    sandbox: string | null;
+  };
   providers: Array<{
     providerType: string;
     createdAt: number;
@@ -597,6 +614,32 @@ export function upsertSystemIntegration(
 
 export function getRoles() {
   return request<RolesResponse>('/admin/roles');
+}
+
+export function updateAgentConfig(input: {
+  agentId: string;
+  name: string;
+  description?: string | null;
+  instructions: string;
+  workspaceAutoSync: boolean;
+  workspaceBm25: boolean;
+  modelProfileId: string;
+  omModelProfileId: string;
+}) {
+  return request<{ success: true; agentId: string }>('/admin/agent/update-config', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function changeAgentRole(input: {
+  agentId: string;
+  roleId: string;
+}) {
+  return request<{ success: true; agentId: string; roleId: string }>('/admin/agent/change-role', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function getFinance() {

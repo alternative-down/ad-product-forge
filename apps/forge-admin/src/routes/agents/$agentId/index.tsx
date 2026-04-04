@@ -1,10 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
+import { useState } from 'react';
 
+import {
+  AdminButton,
+  AdminDialogContent,
+  AdminDialogFooter,
+  AdminDialogHeader,
+  AdminDialogTitle,
+  AdminInput,
+  AdminTextarea,
+  PageHeader,
+} from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Dialog } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getAgent, type AgentDetail } from '@/lib/admin-api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { changeAgentRole, getAgent, getRoles, getSystemLlm, updateAgentConfig, type AgentDetail } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/')({
   component: AgentDetailIndexRoute,
@@ -12,17 +26,72 @@ export const Route = createFileRoute('/agents/$agentId/')({
 
 function AgentDetailIndexRoute() {
   const { agentId } = Route.useParams();
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState<AgentProfileForm | null>(null);
   const agentQuery = useQuery({
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
   });
+  const rolesQuery = useQuery({
+    queryKey: ['admin', 'roles'],
+    queryFn: getRoles,
+  });
+  const llmQuery = useQuery({
+    queryKey: ['admin', 'system-llm'],
+    queryFn: getSystemLlm,
+  });
+  const mutation = useMutation({
+    mutationFn: async (input: AgentProfileForm) => {
+      await updateAgentConfig({
+        agentId,
+        name: input.name.trim(),
+        description: input.description.trim() || null,
+        instructions: input.instructions.trim(),
+        workspaceAutoSync: input.workspaceAutoSync,
+        workspaceBm25: input.workspaceBm25,
+        modelProfileId: input.modelProfileId,
+        omModelProfileId: input.omModelProfileId,
+      });
+
+      const currentRoleId = agentQuery.data?.role?.roleId ?? null;
+
+      if (input.roleId && input.roleId !== currentRoleId) {
+        await changeAgentRole({
+          agentId,
+          roleId: input.roleId,
+        });
+      }
+    },
+    onSuccess: async () => {
+      setDialogOpen(false);
+      setForm(null);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+    },
+  });
   const agent = agentQuery.data;
+  const profiles = llmQuery.data?.profiles.filter((profile) => profile.isEnabled) ?? [];
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {agent ? (
         <>
           <section className="space-y-5">
+            <PageHeader
+              actions={
+                <AdminButton
+                  onClick={() => {
+                    setForm(createAgentProfileForm(agent));
+                    setDialogOpen(true);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Editar
+                </AdminButton>
+              }
+            />
+
             <div className="flex items-start gap-5">
               <div className="flex flex-col items-center gap-2">
                 <Avatar className="h-20 w-20 border border-border bg-muted">
@@ -80,8 +149,189 @@ function AgentDetailIndexRoute() {
       ) : null}
 
       {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+
+          if (!open) {
+            setForm(null);
+          }
+        }}
+      >
+        <AdminDialogContent>
+          <AdminDialogHeader>
+            <AdminDialogTitle>Editar agente</AdminDialogTitle>
+          </AdminDialogHeader>
+
+          {form ? (
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                mutation.mutate(form);
+              }}
+            >
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="agent-name">
+                  Nome
+                </label>
+                <AdminInput
+                  id="agent-name"
+                  value={form.name}
+                  onChange={(event) => setForm((current) => current ? { ...current, name: event.target.value } : current)}
+                  disabled={mutation.isPending}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="agent-role">
+                  Papel
+                </label>
+                <Select
+                  value={form.roleId || '__none__'}
+                  onValueChange={(value) =>
+                    setForm((current) => current ? { ...current, roleId: value === '__none__' ? '' : value } : current)
+                  }
+                  disabled={mutation.isPending}
+                >
+                  <SelectTrigger id="agent-role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sem papel</SelectItem>
+                    {(rolesQuery.data?.items ?? []).map((role) => (
+                      <SelectItem key={role.roleId} value={role.roleId}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="agent-description">
+                  Descrição
+                </label>
+                <AdminTextarea
+                  id="agent-description"
+                  value={form.description}
+                  onChange={(event) => setForm((current) => current ? { ...current, description: event.target.value } : current)}
+                  disabled={mutation.isPending}
+                  rows={4}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="agent-model-profile">
+                    Perfil principal
+                  </label>
+                  <Select
+                    value={form.modelProfileId}
+                    onValueChange={(value) =>
+                      setForm((current) => current ? { ...current, modelProfileId: value } : current)
+                    }
+                    disabled={mutation.isPending}
+                  >
+                    <SelectTrigger id="agent-model-profile" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.profileId} value={profile.profileId}>
+                          {profile.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="agent-om-profile">
+                    Perfil OM
+                  </label>
+                  <Select
+                    value={form.omModelProfileId}
+                    onValueChange={(value) =>
+                      setForm((current) => current ? { ...current, omModelProfileId: value } : current)
+                    }
+                    disabled={mutation.isPending}
+                  >
+                    <SelectTrigger id="agent-om-profile" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.profileId} value={profile.profileId}>
+                          {profile.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="agent-instructions">
+                  Instruções
+                </label>
+                <AdminTextarea
+                  id="agent-instructions"
+                  value={form.instructions}
+                  onChange={(event) => setForm((current) => current ? { ...current, instructions: event.target.value } : current)}
+                  disabled={mutation.isPending}
+                  rows={10}
+                />
+              </div>
+
+              {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+
+              <AdminDialogFooter>
+                <AdminButton
+                  type="submit"
+                  disabled={
+                    mutation.isPending ||
+                    !form.name.trim() ||
+                    !form.instructions.trim() ||
+                    !form.modelProfileId ||
+                    !form.omModelProfileId
+                  }
+                >
+                  {mutation.isPending ? 'Salvando...' : 'Salvar'}
+                </AdminButton>
+              </AdminDialogFooter>
+            </form>
+          ) : null}
+        </AdminDialogContent>
+      </Dialog>
     </div>
   );
+}
+
+type AgentProfileForm = {
+  name: string;
+  roleId: string;
+  description: string;
+  instructions: string;
+  modelProfileId: string;
+  omModelProfileId: string;
+  workspaceAutoSync: boolean;
+  workspaceBm25: boolean;
+};
+
+function createAgentProfileForm(agent: AgentDetail): AgentProfileForm {
+  return {
+    name: agent.name,
+    roleId: agent.role?.roleId ?? '',
+    description: agent.description ?? '',
+    instructions: agent.instructions,
+    modelProfileId: agent.modelProfile?.profileId ?? '',
+    omModelProfileId: agent.omModelProfile?.profileId ?? '',
+    workspaceAutoSync: agent.workspace.autoSync,
+    workspaceBm25: agent.workspace.bm25,
+  };
 }
 
 function MetricItem(input: {
