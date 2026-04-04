@@ -33,8 +33,8 @@ function AgentConversationsIndexRoute() {
       {conversations.length > 0 ? (
         <div className="flex h-[calc(100dvh-12rem)] min-h-0 flex-col md:grid md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
           <div className={selectedConversation ? 'hidden min-h-0 md:block' : 'min-h-0'}>
-            <ScrollArea className="h-full rounded-sm border border-border bg-background">
-              <div className="space-y-2 p-2">
+            <ScrollArea className="-mr-2 h-full [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
+              <div className="space-y-2 pr-3">
                 {conversations.map((conversation) => {
                   const selected = conversation.conversationId === selectedConversation?.conversationId;
                   const latestMessage = conversation.messages[0] ?? null;
@@ -98,8 +98,8 @@ function AgentConversationsIndexRoute() {
                   </div>
                 </div>
 
-                <ScrollArea className="h-full min-h-0 rounded-sm border border-border bg-background">
-                  <div className="space-y-3 p-3">
+                <ScrollArea className="-mr-2 h-full min-h-0 [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
+                  <div className="space-y-3 pr-3">
                     {selectedConversation.messages.map((message) => (
                       <article key={message.messageId} className="space-y-1 rounded-sm border border-border bg-background px-4 py-3">
                         <div className="text-xs text-muted-foreground">
