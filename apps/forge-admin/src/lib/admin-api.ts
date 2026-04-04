@@ -238,6 +238,13 @@ export type AgentConversationMessagesResponse = {
   hasMore: boolean;
 };
 
+export type InternalChatExternalAccount = {
+  accountId: string;
+  slug: string;
+  displayName: string;
+  description: string;
+};
+
 export type DiscordProviderCredentials = {
   token: string;
   channels: Array<{
@@ -511,6 +518,43 @@ export function getAgentConversationMessages(
   return request<AgentConversationMessagesResponse>(
     `/admin/agent/conversation-messages?agentId=${encodeURIComponent(agentId)}&provider=${encodeURIComponent(provider)}&targetKey=${encodeURIComponent(targetKey)}&limit=${limit}&offset=${offset}`,
   );
+}
+
+export function getInternalChatAccounts() {
+  return request<InternalChatExternalAccount[]>('/admin/internal-chat/accounts');
+}
+
+export function createInternalChatAccount(input: {
+  slug: string;
+  displayName: string;
+  description?: string;
+}) {
+  return request<{
+    accountId: string;
+    slug: string;
+    displayName: string;
+    description?: string;
+  }>('/admin/internal-chat/account/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateInternalChatAccount(input: {
+  accountId: string;
+  slug: string;
+  displayName: string;
+  description?: string;
+}) {
+  return request<{
+    accountId: string;
+    slug: string;
+    displayName: string;
+    description?: string;
+  }>('/admin/internal-chat/account/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function upsertAgentProvider(input: UpsertAgentProviderInput) {

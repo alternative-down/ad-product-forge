@@ -244,6 +244,48 @@ export function createInternalChatService(
     };
   }
 
+  async function updateExternalAccount(input: {
+    accountId: string;
+    slug: string;
+    displayName: string;
+    description?: string;
+  }) {
+    const account = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.id, input.accountId),
+    });
+
+    if (!account || account.agentId) {
+      throw new Error(`External account not found: ${input.accountId}`);
+    }
+
+    const existingWithSlug = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.slug, input.slug),
+    });
+
+    if (existingWithSlug && existingWithSlug.id !== input.accountId) {
+      throw new Error(`Internal chat account slug already exists: ${input.slug}`);
+    }
+
+    const now = Date.now();
+
+    await db
+      .update(internalChatAccounts)
+      .set({
+        slug: input.slug,
+        displayName: input.displayName,
+        description: input.description ?? null,
+        updatedAt: now,
+      })
+      .where(eq(internalChatAccounts.id, input.accountId));
+
+    return {
+      accountId: input.accountId,
+      slug: input.slug,
+      displayName: input.displayName,
+      description: input.description,
+    };
+  }
+
   function onReceiveMessage(agentId: string, handler: InternalChatHandler) {
     handlers.set(agentId, handler);
   }
@@ -968,6 +1010,7 @@ export function createInternalChatService(
   return {
     registerAgentAccount,
     registerExternalAccount,
+    updateExternalAccount,
     onReceiveMessage,
     clearHandler,
     listAccounts,

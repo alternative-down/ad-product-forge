@@ -13,6 +13,12 @@ import {
   AdminScrollArea,
   AdminTextarea,
 } from '@/components/admin';
+import {
+  createInternalChatAccount,
+  getInternalChatAccounts,
+  type InternalChatExternalAccount,
+  updateInternalChatAccount,
+} from '@/lib/admin-api';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,13 +26,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export const Route = createFileRoute('/home/conversations/')({
   component: HomeConversationsIndexRoute,
 });
-
-type LocalChatAccount = {
-  id: string;
-  slug: string;
-  displayName: string;
-  description: string;
-};
 
 type LocalConversationMessage = {
   id: string;
@@ -66,27 +65,10 @@ type ConversationForm = {
 
 type AccountDialogMode = 'create' | 'edit';
 
-const ACCOUNTS_STORAGE_KEY = 'forja.home.internal-chat.accounts';
 const SELECTED_ACCOUNT_STORAGE_KEY = 'forja.home.internal-chat.selected-account-id';
 
 export function HomeConversationsIndexRoute() {
-  const [accounts, setAccounts] = useState<LocalChatAccount[]>(() => {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-
-    const storedAccounts = window.localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-
-    if (!storedAccounts) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(storedAccounts) as LocalChatAccount[];
-    } catch {
-      return [];
-    }
-  });
+  const [accounts, setAccounts] = useState<InternalChatExternalAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState(() => {
     if (typeof window === 'undefined') {
       return '';
@@ -100,6 +82,8 @@ export function HomeConversationsIndexRoute() {
   const [accountDialogMode, setAccountDialogMode] = useState<AccountDialogMode>('create');
   const [conversationDialogOpen, setConversationDialogOpen] = useState(false);
   const [participantsDialogOpen, setParticipantsDialogOpen] = useState(false);
+  const [accountFormError, setAccountFormError] = useState('');
+  const [accountSaving, setAccountSaving] = useState(false);
   const [accountForm, setAccountForm] = useState<AccountForm>({
     accountId: undefined,
     slug: '',
@@ -118,12 +102,26 @@ export function HomeConversationsIndexRoute() {
   const [attachmentDrafts, setAttachmentDrafts] = useState<File[]>([]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
+    let cancelled = false;
+
+    async function loadAccounts() {
+      try {
+        const items = await getInternalChatAccounts();
+
+        if (!cancelled) {
+          setAccounts(items);
+        }
+      } catch (error) {
+        console.error('[HomeConversations] Failed to load internal chat accounts:', error);
+      }
     }
 
-    window.localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
-  }, [accounts]);
+    void loadAccounts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -138,7 +136,19 @@ export function HomeConversationsIndexRoute() {
     window.localStorage.setItem(SELECTED_ACCOUNT_STORAGE_KEY, selectedAccountId);
   }, [selectedAccountId]);
 
-  const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? null;
+  useEffect(() => {
+    if (!selectedAccountId) {
+      return;
+    }
+
+    if (accounts.some((account) => account.accountId === selectedAccountId)) {
+      return;
+    }
+
+    setSelectedAccountId('');
+  }, [accounts, selectedAccountId]);
+
+  const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedConversation = conversations.find((conversation) => conversation.id === selectedConversationId) ?? null;
   const accountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
 
@@ -179,8 +189,9 @@ export function HomeConversationsIndexRoute() {
                   }
 
                   setAccountDialogMode('edit');
+                  setAccountFormError('');
                   setAccountForm({
-                    accountId: selectedAccount.id,
+                    accountId: selectedAccount.accountId,
                     slug: selectedAccount.slug,
                     displayName: selectedAccount.displayName,
                     description: selectedAccount.description,
@@ -200,6 +211,7 @@ export function HomeConversationsIndexRoute() {
               variant="outline"
               onClick={() => {
                 setAccountDialogMode('create');
+                setAccountFormError('');
                 setAccountForm({
                   accountId: undefined,
                   slug: '',
@@ -418,30 +430,52 @@ export function HomeConversationsIndexRoute() {
 
           <form
             className="flex flex-col"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
 
-              const account: LocalChatAccount = {
-                id: accountForm.accountId ?? createLocalId('acct'),
+              const payload = {
                 slug: accountForm.slug.trim(),
                 displayName: accountForm.displayName.trim(),
-                description: accountForm.description.trim(),
+                description: accountForm.description.trim() || undefined,
               };
 
-              setAccounts((current) =>
-                accountForm.accountId
-                  ? current.map((item) => (item.id === account.id ? account : item))
-                  : [...current, account],
-              );
-              setSelectedAccountId(account.id);
-              setAccountDialogOpen(false);
-              setAccountForm({
-                accountId: undefined,
-                slug: '',
-                displayName: '',
-                description: '',
-                slugDirty: false,
-              });
+              setAccountFormError('');
+              setAccountSaving(true);
+
+              try {
+                const account = accountForm.accountId
+                  ? await updateInternalChatAccount({
+                      accountId: accountForm.accountId,
+                      ...payload,
+                    })
+                  : await createInternalChatAccount(payload);
+
+                const normalizedAccount: InternalChatExternalAccount = {
+                  accountId: account.accountId,
+                  slug: account.slug,
+                  displayName: account.displayName,
+                  description: account.description ?? '',
+                };
+
+                setAccounts((current) =>
+                  accountForm.accountId
+                    ? current.map((item) => (item.accountId === normalizedAccount.accountId ? normalizedAccount : item))
+                    : [...current, normalizedAccount].sort((left, right) => left.displayName.localeCompare(right.displayName)),
+                );
+                setSelectedAccountId(normalizedAccount.accountId);
+                setAccountDialogOpen(false);
+                setAccountForm({
+                  accountId: undefined,
+                  slug: '',
+                  displayName: '',
+                  description: '',
+                  slugDirty: false,
+                });
+              } catch (error) {
+                setAccountFormError(error instanceof Error ? error.message : 'Não foi possível salvar a conta.');
+              } finally {
+                setAccountSaving(false);
+              }
             }}
           >
             <AdminDialogBody>
@@ -488,13 +522,16 @@ export function HomeConversationsIndexRoute() {
                   onChange={(event) => setAccountForm((current) => ({ ...current, description: event.target.value }))}
                 />
               </div>
+              {accountFormError ? (
+                <div className="text-sm text-destructive">{accountFormError}</div>
+              ) : null}
             </AdminDialogBody>
             <AdminDialogFooter>
               <AdminButton
                 type="submit"
-                disabled={!accountForm.slug.trim() || !accountForm.displayName.trim()}
+                disabled={!accountForm.slug.trim() || !accountForm.displayName.trim() || accountSaving}
               >
-                Salvar
+                {accountSaving ? 'Salvando...' : 'Salvar'}
               </AdminButton>
             </AdminDialogFooter>
           </form>

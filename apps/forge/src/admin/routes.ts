@@ -155,6 +155,19 @@ const adminInternalChatSendSchema = z.object({
   content: z.string().trim().min(1),
 });
 
+const createExternalInternalChatAccountSchema = z.object({
+  slug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  displayName: z.string().trim().min(1),
+  description: z.string().trim().optional(),
+});
+
+const updateExternalInternalChatAccountSchema = z.object({
+  accountId: z.string().min(1),
+  slug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  displayName: z.string().trim().min(1),
+  description: z.string().trim().optional(),
+});
+
 const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
   amountUsd: z.coerce.number().positive(),
@@ -621,6 +634,56 @@ export function registerAdminRoutes(input: {
         conversationKey: sent.conversationKey,
         messageId: sent.messageId,
       });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/accounts',
+    handler: async () => {
+      const accounts = await input.internalChat.listAccounts();
+
+      return jsonResponse(
+        accounts
+          .filter((account) => account.agentId === null)
+          .map((account) => ({
+            accountId: account.id,
+            slug: account.slug,
+            displayName: account.displayName,
+            description: account.description ?? '',
+          })),
+      );
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
+      return jsonResponse(
+        await input.internalChat.registerExternalAccount({
+          slug: body.slug,
+          displayName: body.displayName,
+          description: body.description,
+        }),
+      );
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateExternalInternalChatAccountSchema);
+      return jsonResponse(
+        await input.internalChat.updateExternalAccount({
+          accountId: body.accountId,
+          slug: body.slug,
+          displayName: body.displayName,
+          description: body.description,
+        }),
+      );
     },
   });
 
