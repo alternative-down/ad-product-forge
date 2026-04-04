@@ -54,7 +54,7 @@ function AgentConversationsLayoutRoute() {
                           </div>
                           <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
                         </div>
-                        {conversation.type !== 'dm' && conversation.participants.length > 0 ? (
+                        {conversation.participants.length > 2 ? (
                           <div className="line-clamp-2 text-sm text-muted-foreground">
                             {conversation.participants.join(', ')}
                           </div>
