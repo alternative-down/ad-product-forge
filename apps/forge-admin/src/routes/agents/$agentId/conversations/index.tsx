@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAgent } from '@/lib/admin-api';
 
@@ -107,11 +108,23 @@ function AgentConversationsIndexRoute() {
                 <ScrollArea className="-mr-2 h-full min-h-0 [&_[data-slot=scroll-area-scrollbar]]:border-l-0">
                   <div className="space-y-3 pr-3">
                     {selectedConversation.messages.map((message) => (
-                      <article key={message.messageId} className="space-y-1 rounded-sm border border-border bg-background px-4 py-3">
-                        <div className="text-xs text-muted-foreground">
-                          {message.authorDisplayName} · {formatDateTime(message.createdAt)}
+                      <article key={message.messageId} className="flex items-start gap-3 py-1">
+                        <Avatar className="h-9 w-9 border border-border bg-muted">
+                          <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                            {getInitials(message.authorDisplayName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="font-medium text-foreground">{message.authorDisplayName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatRecentMessageTime(message.createdAt)}
+                            </span>
+                          </div>
+                          <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
+                            {message.content}
+                          </div>
                         </div>
-                        <div className="text-sm leading-6 text-foreground">{message.content}</div>
                       </article>
                     ))}
                   </div>
@@ -126,13 +139,6 @@ function AgentConversationsIndexRoute() {
       {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
     </div>
   );
-}
-
-function formatDateTime(value: number) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(value);
 }
 
 function formatRecentMessageTime(value: number) {
@@ -158,4 +164,17 @@ function formatRecentMessageTime(value: number) {
   }
 
   return `${Math.floor(diffDays)} d`;
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return '??';
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }
