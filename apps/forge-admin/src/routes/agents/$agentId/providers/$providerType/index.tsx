@@ -14,6 +14,11 @@ function AgentProviderIndexRoute() {
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
   });
+
+  if (providerType === 'internal-chat') {
+    return <div className="text-sm text-muted-foreground">Provider não disponível nesta área.</div>;
+  }
+
   const provider = agentQuery.data?.providers.find((item) => item.providerType === providerType) ?? null;
 
   return (

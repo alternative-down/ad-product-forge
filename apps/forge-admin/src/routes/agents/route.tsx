@@ -116,6 +116,10 @@ function buildAgentSectionItems(input: {
   ];
 
   for (const providerType of input.providerTypes) {
+    if (providerType === 'internal-chat') {
+      continue;
+    }
+
     if (!items.some((item) => item.value === `/agents/${input.agentId}/providers/${providerType}`)) {
       items.push({
         value: `/agents/${input.agentId}/providers/${providerType}`,
@@ -124,7 +128,7 @@ function buildAgentSectionItems(input: {
     }
   }
 
-  for (const providerType of ['internal-chat', 'discord', 'email']) {
+  for (const providerType of ['discord', 'email']) {
     if (!items.some((item) => item.value === `/agents/${input.agentId}/providers/${providerType}`)) {
       items.push({
         value: `/agents/${input.agentId}/providers/${providerType}`,
