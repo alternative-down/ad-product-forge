@@ -145,6 +145,11 @@ export function createInternalChatService(
     }
   }
 
+  async function readMessageAttachment(messageId: string, attachmentName: string): Promise<CommunicationFile | null> {
+    const attachments = await readMessageAttachments(messageId);
+    return attachments.find((attachment) => attachment.name === attachmentName) ?? null;
+  }
+
   async function registerAgentAccount(input: {
     agentId: string;
     displayName: string;
@@ -1258,6 +1263,34 @@ export function createInternalChatService(
     };
   }
 
+  async function getMessageAttachmentByAccount(input: {
+    accountId: string;
+    conversationId: string;
+    messageId: string;
+    attachmentName: string;
+  }) {
+    await getRequiredConversationForAccount(input.accountId, input.conversationId);
+
+    const message = await db.query.internalChatMessages.findFirst({
+      where: and(
+        eq(internalChatMessages.id, input.messageId),
+        eq(internalChatMessages.conversationId, input.conversationId),
+      ),
+    });
+
+    if (!message) {
+      throw new Error(`Message not found: ${input.messageId}`);
+    }
+
+    const attachment = await readMessageAttachment(input.messageId, input.attachmentName);
+
+    if (!attachment) {
+      throw new Error(`Attachment not found: ${input.attachmentName}`);
+    }
+
+    return attachment;
+  }
+
   async function getUnreadSummary(agentId: string) {
     const rows = await db
       .select({
@@ -1443,6 +1476,7 @@ export function createInternalChatService(
     getMessages,
     getMessagesByAccount,
     sendMessage,
+    getMessageAttachmentByAccount,
     createExternalChatGroup,
     ensureDirectConversationByAccount,
     addMemberToGroupByAccount,

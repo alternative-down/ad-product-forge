@@ -144,6 +144,19 @@ function AgentDetailIndexRoute() {
             </div>
           </section>
 
+          <section className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <MetricItem
+                label="Perfil principal"
+                value={agent.modelProfile ? `${agent.modelProfile.name} · ${agent.modelProfile.modelKey}` : 'Sem perfil'}
+              />
+              <MetricItem
+                label="Perfil OM"
+                value={agent.omModelProfile ? `${agent.omModelProfile.name} · ${agent.omModelProfile.modelKey}` : 'Sem perfil'}
+              />
+            </div>
+          </section>
+
           <section className="space-y-3">
             <div className="text-lg font-semibold tracking-[-0.03em]">Instruções</div>
             <AdminScrollArea className="h-[min(20rem,calc(100dvh-18rem))] rounded-sm border border-border bg-background" contentClassName="px-4 py-3">

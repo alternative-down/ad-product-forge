@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
-import { Check, ChevronRight, Pencil, Plus } from 'lucide-react';
+import { Archive, Check, ChevronRight, Pencil, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+  archiveHomeInternalChatConversation,
   createHomeInternalChatConversation,
   createInternalChatAccount,
   deleteInternalChatAccount,
@@ -119,7 +120,7 @@ function HomeConversationsLayoutRoute() {
 
   const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedAccountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
-  const availableContacts = contacts.filter((contact) => contact.isAgent && contact.accountId !== selectedAccountId);
+  const availableContacts = contacts.filter((contact) => contact.accountId !== selectedAccountId);
   const filteredContacts = availableContacts.filter((contact) => {
     const query = conversationForm.participantQuery.trim().toLowerCase();
 
@@ -210,25 +211,6 @@ function HomeConversationsLayoutRoute() {
                 <AdminButton
                   variant="outline"
                   size="icon-sm"
-                  onClick={() => {
-                    setAccountDialogMode('create');
-                    setAccountFormError('');
-                    setAccountForm({
-                      accountId: undefined,
-                      slug: '',
-                      displayName: '',
-                      description: '',
-                      slugDirty: false,
-                    });
-                    setAccountDialogOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="sr-only">Nova conta</span>
-                </AdminButton>
-                <AdminButton
-                  variant="outline"
-                  size="icon-sm"
                   disabled={!selectedAccount}
                   onClick={() => {
                     if (!selectedAccount) {
@@ -249,6 +231,25 @@ function HomeConversationsLayoutRoute() {
                 >
                   <Pencil className="h-4 w-4" />
                   <span className="sr-only">Editar conta</span>
+                </AdminButton>
+                <AdminButton
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={() => {
+                    setAccountDialogMode('create');
+                    setAccountFormError('');
+                    setAccountForm({
+                      accountId: undefined,
+                      slug: '',
+                      displayName: '',
+                      description: '',
+                      slugDirty: false,
+                    });
+                    setAccountDialogOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="sr-only">Nova conta</span>
                 </AdminButton>
               </div>
             </div>
@@ -284,17 +285,17 @@ function HomeConversationsLayoutRoute() {
                       : conversation.name;
 
                     return (
-                      <Link
-                        key={conversation.id}
-                        to="/home/conversations/$conversationId"
-                        params={{ conversationId: conversation.id }}
-                        className={
-                          selected
-                            ? 'block w-full rounded-sm border border-border bg-muted px-4 py-3 text-left'
-                            : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
-                        }
-                      >
-                        <div className="flex items-start gap-3">
+                      <div key={conversation.id} className="flex items-start gap-2">
+                        <Link
+                          to="/home/conversations/$conversationId"
+                          params={{ conversationId: conversation.id }}
+                          className={
+                            selected
+                              ? 'block min-w-0 flex-1 rounded-sm border border-border bg-muted px-4 py-3 text-left'
+                              : 'block min-w-0 flex-1 rounded-sm border border-border bg-background px-4 py-3 text-left'
+                          }
+                        >
+                          <div className="flex items-start gap-3">
                           <Avatar className="h-9 w-9 border border-border bg-muted">
                             <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
                               {getInitials(avatarLabel)}
@@ -333,8 +334,35 @@ function HomeConversationsLayoutRoute() {
                               </div>
                             ) : null}
                           </div>
-                        </div>
-                      </Link>
+                          </div>
+                        </Link>
+                        <AdminButton
+                          variant="outline"
+                          size="icon-sm"
+                          className="mt-1 shrink-0"
+                          onClick={() => {
+                            if (!selectedAccount) {
+                              return;
+                            }
+
+                            void (async () => {
+                              await archiveHomeInternalChatConversation({
+                                accountId: selectedAccount.accountId,
+                                conversationId: conversation.id,
+                              });
+
+                              if (selected) {
+                                await navigate({ to: '/home/conversations' });
+                              }
+
+                              await reloadConversations();
+                            })();
+                          }}
+                        >
+                          <Archive className="h-4 w-4" />
+                          <span className="sr-only">Arquivar conversa</span>
+                        </AdminButton>
+                      </div>
                     );
                   })
                 ) : (
@@ -351,7 +379,7 @@ function HomeConversationsLayoutRoute() {
           </div>
         </div>
 
-        <div className={mobileDetailOpen ? 'flex min-h-0 flex-col' : 'hidden min-h-0 flex-col md:flex'}>
+        <div className={mobileDetailOpen ? 'flex h-full min-h-0 flex-col' : 'hidden h-full min-h-0 flex-col md:flex'}>
           <Outlet />
         </div>
       </div>

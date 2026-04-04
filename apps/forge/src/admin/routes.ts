@@ -183,6 +183,13 @@ const internalChatMessagesQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+const internalChatMessageAttachmentQuerySchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  messageId: z.string().min(1),
+  attachmentName: z.string().min(1),
+});
+
 const createInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
   type: z.enum(['dm', 'group']),
@@ -846,11 +853,41 @@ export function registerAdminRoutes(input: {
           createdAt: Date.parse(message.createdAt),
           attachments: message.attachments?.map((attachment) => ({
             name: attachment.name,
+            contentType: attachment.contentType,
             sizeBytes: attachment.sizeBytes,
           })) ?? [],
         })),
         hasMore: items.length === query.limit,
       });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/message-attachment',
+    handler: async (request) => {
+      const query = internalChatMessageAttachmentQuerySchema.parse({
+        accountId: request.query.get('accountId'),
+        conversationId: request.query.get('conversationId'),
+        messageId: request.query.get('messageId'),
+        attachmentName: request.query.get('attachmentName'),
+      });
+      const attachment = await input.internalChat.getMessageAttachmentByAccount({
+        accountId: query.accountId,
+        conversationId: query.conversationId,
+        messageId: query.messageId,
+        attachmentName: query.attachmentName,
+      });
+
+      return {
+        status: 200,
+        headers: {
+          'content-type': attachment.contentType ?? 'application/octet-stream',
+          'content-disposition': `inline; filename="${encodeURIComponent(attachment.name)}"`,
+          'cache-control': 'no-store',
+        },
+        body: Buffer.from(attachment.data),
+      };
     },
   });
 

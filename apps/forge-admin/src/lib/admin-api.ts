@@ -67,6 +67,32 @@ async function request<TResponse>(path: string, init?: RequestInit) {
   return response.json() as Promise<TResponse>;
 }
 
+async function requestBlob(path: string, init?: RequestInit) {
+  const secret = getStoredAdminSecret();
+  const response = await fetch(buildApiUrl(path), {
+    ...init,
+    headers: {
+      ...(secret ? { [ADMIN_API_KEY_HEADER]: secret } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    let message = 'Não foi possível concluir a operação.';
+
+    try {
+      const payload = (await response.json()) as { error?: string };
+      message = payload.error ?? message;
+    } catch {
+      // Keep default message.
+    }
+
+    throw new Error(message);
+  }
+
+  return response.blob();
+}
+
 export type SystemSettings = {
   companyName: string;
   companyContext: string;
@@ -281,6 +307,7 @@ export type HomeInternalChatConversationMessage = {
   createdAt: number;
   attachments: Array<{
     name: string;
+    contentType?: string;
     sizeBytes?: number;
   }>;
 };
@@ -636,6 +663,17 @@ export function getHomeInternalChatMessages(
 ) {
   return request<HomeInternalChatConversationMessagesResponse>(
     `/admin/internal-chat/messages?accountId=${encodeURIComponent(accountId)}&conversationId=${encodeURIComponent(conversationId)}&limit=${limit}&offset=${offset}`,
+  );
+}
+
+export function getHomeInternalChatAttachmentBlob(input: {
+  accountId: string;
+  conversationId: string;
+  messageId: string;
+  attachmentName: string;
+}) {
+  return requestBlob(
+    `/admin/internal-chat/message-attachment?accountId=${encodeURIComponent(input.accountId)}&conversationId=${encodeURIComponent(input.conversationId)}&messageId=${encodeURIComponent(input.messageId)}&attachmentName=${encodeURIComponent(input.attachmentName)}`,
   );
 }
 
