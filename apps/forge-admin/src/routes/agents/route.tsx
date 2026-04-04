@@ -32,8 +32,10 @@ function AgentsLayoutRoute() {
     providerTypes: agentQuery.data?.providers.map((provider) => provider.providerType) ?? [],
     hasGithubProvisioning: Boolean(agentQuery.data?.githubProvisioning),
   });
-  const currentSection =
-    sectionItems.find((item) => pathname === item.value || pathname.startsWith(`${item.value}/`)) ?? sectionItems[0];
+  const currentSection = [...sectionItems]
+    .sort((left, right) => right.value.length - left.value.length)
+    .find((item) => pathname === item.value || pathname.startsWith(`${item.value}/`))
+    ?? sectionItems[0];
 
   useEffect(() => {
     setStoredAdminTheme(theme);
@@ -63,7 +65,11 @@ function AgentsLayoutRoute() {
     >
       <div className="space-y-6 md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8 md:space-y-0">
         <div className="md:hidden">
-          <Select value={currentSection?.value ?? '/agents'} onValueChange={(value) => void navigate({ to: value })}>
+          <Select
+            key={pathname}
+            value={currentSection?.value ?? '/agents'}
+            onValueChange={(value) => void navigate({ to: value })}
+          >
             <SelectTrigger className="w-full">
               <SelectValue>{currentSection?.label ?? 'Lista'}</SelectValue>
             </SelectTrigger>
@@ -83,7 +89,7 @@ function AgentsLayoutRoute() {
                 key={item.value}
                 to={item.value}
                 className={
-                  pathname === item.value || pathname.startsWith(`${item.value}/`)
+                  currentSection?.value === item.value
                     ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
                     : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
                 }
