@@ -47,7 +47,7 @@ function AgentConversationsLayoutRoute() {
                           : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
                       }
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 text-sm font-medium text-foreground">
                             {conversation.name ?? conversation.provider}
@@ -60,7 +60,7 @@ function AgentConversationsLayoutRoute() {
                           </div>
                         ) : null}
                         {latestMessage ? (
-                          <>
+                          <div className="space-y-1 pt-1">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span className="truncate">{latestMessage.authorDisplayName}</span>
                               <span className="shrink-0">{formatRecentMessageTime(latestMessage.createdAt)}</span>
@@ -68,7 +68,7 @@ function AgentConversationsLayoutRoute() {
                             <div className="truncate text-sm text-foreground">
                               {latestMessage.content}
                             </div>
-                          </>
+                          </div>
                         ) : null}
                       </div>
                     </Link>
