@@ -437,7 +437,7 @@ function EmailConnectionFields(input: {
 
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor={`${input.prefix}-user`}>
-          Usuário
+          Nome
         </label>
         <AdminInput
           id={`${input.prefix}-user`}
