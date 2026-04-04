@@ -68,6 +68,10 @@ function HomeConversationDetailIndexRoute() {
   const [messages, setMessages] = useState<HomeInternalChatConversationMessage[]>([]);
   const [members, setMembers] = useState<HomeInternalChatGroupMember[]>([]);
   const selectedConversation = conversations.find((conversation) => conversation.id === decodeURIComponent(conversationId)) ?? null;
+  const selectedAccountId = selectedAccount?.accountId ?? '';
+  const selectedConversationId = selectedConversation?.id ?? '';
+  const selectedConversationType = selectedConversation?.type ?? 'dm';
+  const selectedConversationName = selectedConversation?.name ?? '';
   const contactByAccountId = useMemo(
     () => new Map(contacts.map((contact) => [contact.accountId, contact])),
     [contacts],
@@ -79,26 +83,24 @@ function HomeConversationDetailIndexRoute() {
   }, [contacts, members]);
 
   useEffect(() => {
-    if (!selectedAccount || !selectedConversation) {
+    if (!selectedAccountId || !selectedConversationId) {
       return;
     }
-
-    initialScrollDoneRef.current = false;
 
     let cancelled = false;
 
     async function loadConversationState() {
       const [messageResult, memberResult] = await Promise.all([
-        getHomeInternalChatMessages(selectedAccount.accountId, selectedConversation.id, 100, 0),
-        selectedConversation.type === 'group'
-          ? getHomeInternalChatGroupMembers(selectedAccount.accountId, selectedConversation.id)
+        getHomeInternalChatMessages(selectedAccountId, selectedConversationId, 100, 0),
+        selectedConversationType === 'group'
+          ? getHomeInternalChatGroupMembers(selectedAccountId, selectedConversationId)
           : Promise.resolve([]),
       ]);
 
       if (!cancelled) {
         setMessages(messageResult.items);
         setMembers(memberResult);
-        setGroupNameDraft(selectedConversation.name);
+        setGroupNameDraft(selectedConversationName);
       }
     }
 
@@ -107,10 +109,19 @@ function HomeConversationDetailIndexRoute() {
     return () => {
       cancelled = true;
     };
-  }, [selectedAccount, selectedConversation]);
+  }, [
+    selectedAccountId,
+    selectedConversationId,
+    selectedConversationName,
+    selectedConversationType,
+  ]);
 
   useEffect(() => {
-    if (!selectedAccount || !selectedConversation) {
+    initialScrollDoneRef.current = false;
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    if (!selectedAccountId || !selectedConversationId) {
       return;
     }
 
@@ -123,8 +134,8 @@ function HomeConversationDetailIndexRoute() {
 
       void (async () => {
         const messageResult = await getHomeInternalChatMessages(
-          selectedAccount.accountId,
-          selectedConversation.id,
+          selectedAccountId,
+          selectedConversationId,
           100,
           0,
         );
@@ -147,7 +158,7 @@ function HomeConversationDetailIndexRoute() {
     return () => {
       window.clearInterval(interval);
     };
-  }, [reloadConversations, selectedAccount, selectedConversation]);
+  }, [reloadConversations, selectedAccountId, selectedConversationId]);
 
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
