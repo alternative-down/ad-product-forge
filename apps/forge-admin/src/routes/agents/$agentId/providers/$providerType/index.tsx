@@ -413,7 +413,7 @@ function EmailConnectionFields(input: {
   onChange(value: EmailProviderCredentials['imap']): void;
 }) {
   return (
-    <div className="grid gap-5 md:grid-cols-2">
+    <div className="grid grid-cols-2 gap-5">
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor={`${input.prefix}-host`}>
           Host
@@ -464,7 +464,7 @@ function EmailConnectionFields(input: {
         />
       </div>
 
-      <div className="space-y-2 md:col-span-2">
+      <div className="col-span-2 space-y-2">
         <label className="text-sm font-medium" htmlFor={`${input.prefix}-secure`}>
           Seguro
         </label>
