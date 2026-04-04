@@ -157,6 +157,7 @@ export function HomeConversationsIndexRoute() {
 
   const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedConversation = conversations.find((conversation) => conversation.id === selectedConversationId) ?? null;
+  const selectedAccountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
   const availableContacts = contacts.filter((contact) => contact.isAgent && contact.accountId !== selectedAccountId);
   const filteredContacts = availableContacts.filter((contact) => {
     const query = conversationForm.participantQuery.trim().toLowerCase();
@@ -187,7 +188,7 @@ export function HomeConversationsIndexRoute() {
                 onValueChange={(value) => setSelectedAccountId(value === '__none__' ? '' : value)}
               >
                 <SelectTrigger id="home-conversations-account" className="w-full">
-                  <SelectValue placeholder="Selecione uma conta" />
+                  <SelectValue>{selectedAccountLabel}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Selecione uma conta</SelectItem>
