@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus, Settings2 } from 'lucide-react';
+import { Pencil, Plus, Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
@@ -50,9 +50,11 @@ type LocalConversation = {
 };
 
 type AccountForm = {
+  accountId?: string;
   slug: string;
   displayName: string;
   description: string;
+  slugDirty: boolean;
 };
 
 type ConversationForm = {
@@ -61,6 +63,8 @@ type ConversationForm = {
   participantName: string;
   participants: string[];
 };
+
+type AccountDialogMode = 'create' | 'edit';
 
 const ACCOUNTS_STORAGE_KEY = 'forja.home.internal-chat.accounts';
 const SELECTED_ACCOUNT_STORAGE_KEY = 'forja.home.internal-chat.selected-account-id';
@@ -93,12 +97,15 @@ export function HomeConversationsIndexRoute() {
   const [conversations, setConversations] = useState<LocalConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState('');
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [accountDialogMode, setAccountDialogMode] = useState<AccountDialogMode>('create');
   const [conversationDialogOpen, setConversationDialogOpen] = useState(false);
   const [participantsDialogOpen, setParticipantsDialogOpen] = useState(false);
   const [accountForm, setAccountForm] = useState<AccountForm>({
+    accountId: undefined,
     slug: '',
     displayName: '',
     description: '',
+    slugDirty: false,
   });
   const [conversationForm, setConversationForm] = useState<ConversationForm>({
     type: 'dm',
@@ -136,7 +143,6 @@ export function HomeConversationsIndexRoute() {
   const accountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
 
   const selectedConversationMessages = selectedConversation?.messages ?? [];
-  const latestMessage = selectedConversationMessages.at(-1) ?? null;
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -146,29 +152,61 @@ export function HomeConversationsIndexRoute() {
             <label className="text-sm font-medium" htmlFor="home-conversations-account">
               Conta
             </label>
-            <Select
-              value={selectedAccountId || '__none__'}
-              onValueChange={(value) => setSelectedAccountId(value === '__none__' ? '' : value)}
-            >
-              <SelectTrigger id="home-conversations-account" className="w-full">
-                <SelectValue>{accountLabel}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Selecione uma conta</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedAccountId || '__none__'}
+                onValueChange={(value) => setSelectedAccountId(value === '__none__' ? '' : value)}
+              >
+                <SelectTrigger id="home-conversations-account" className="w-full">
+                  <SelectValue>{accountLabel}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Selecione uma conta</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <AdminButton
+                variant="outline"
+                size="icon-sm"
+                disabled={!selectedAccount}
+                onClick={() => {
+                  if (!selectedAccount) {
+                    return;
+                  }
+
+                  setAccountDialogMode('edit');
+                  setAccountForm({
+                    accountId: selectedAccount.id,
+                    slug: selectedAccount.slug,
+                    displayName: selectedAccount.displayName,
+                    description: selectedAccount.description,
+                    slugDirty: true,
+                  });
+                  setAccountDialogOpen(true);
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Editar conta</span>
+              </AdminButton>
+            </div>
           </div>
 
           <div className="flex flex-wrap justify-end gap-2">
             <AdminButton
               variant="outline"
               onClick={() => {
-                setAccountForm({ slug: '', displayName: '', description: '' });
+                setAccountDialogMode('create');
+                setAccountForm({
+                  accountId: undefined,
+                  slug: '',
+                  displayName: '',
+                  description: '',
+                  slugDirty: false,
+                });
                 setAccountDialogOpen(true);
               }}
             >
@@ -189,14 +227,6 @@ export function HomeConversationsIndexRoute() {
             >
               <Plus className="h-4 w-4" />
               Nova conversa
-            </AdminButton>
-            <AdminButton
-              variant="outline"
-              disabled={!selectedConversation || selectedConversation.type !== 'group'}
-              onClick={() => setParticipantsDialogOpen(true)}
-            >
-              <Settings2 className="h-4 w-4" />
-              Participantes
             </AdminButton>
           </div>
         </div>
@@ -258,8 +288,22 @@ export function HomeConversationsIndexRoute() {
             <>
               <div className="space-y-1">
                 <div className="text-base font-semibold tracking-[-0.03em]">{selectedConversation.name}</div>
-                {selectedConversation.type === 'group' && selectedConversation.participants.length > 0 ? (
-                  <div className="text-sm text-muted-foreground">{selectedConversation.participants.join(', ')}</div>
+                {selectedConversation.type === 'group' ? (
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-sm text-muted-foreground">
+                      {selectedConversation.participants.length > 0
+                        ? selectedConversation.participants.join(', ')
+                        : 'Sem participantes.'}
+                    </div>
+                    <AdminButton
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() => setParticipantsDialogOpen(true)}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      <span className="sr-only">Participantes</span>
+                    </AdminButton>
+                  </div>
                 ) : null}
               </div>
 
@@ -369,7 +413,7 @@ export function HomeConversationsIndexRoute() {
       <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
         <AdminDialogContent>
           <AdminDialogHeader>
-            <AdminDialogTitle>Nova conta</AdminDialogTitle>
+            <AdminDialogTitle>{accountDialogMode === 'edit' ? 'Editar conta' : 'Nova conta'}</AdminDialogTitle>
           </AdminDialogHeader>
 
           <form
@@ -378,29 +422,29 @@ export function HomeConversationsIndexRoute() {
               event.preventDefault();
 
               const account: LocalChatAccount = {
-                id: createLocalId('acct'),
+                id: accountForm.accountId ?? createLocalId('acct'),
                 slug: accountForm.slug.trim(),
                 displayName: accountForm.displayName.trim(),
                 description: accountForm.description.trim(),
               };
 
-              setAccounts((current) => [...current, account]);
+              setAccounts((current) =>
+                accountForm.accountId
+                  ? current.map((item) => (item.id === account.id ? account : item))
+                  : [...current, account],
+              );
               setSelectedAccountId(account.id);
               setAccountDialogOpen(false);
-              setAccountForm({ slug: '', displayName: '', description: '' });
+              setAccountForm({
+                accountId: undefined,
+                slug: '',
+                displayName: '',
+                description: '',
+                slugDirty: false,
+              });
             }}
           >
             <AdminDialogBody>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="internal-chat-account-slug">
-                  Código
-                </label>
-                <AdminInput
-                  id="internal-chat-account-slug"
-                  value={accountForm.slug}
-                  onChange={(event) => setAccountForm((current) => ({ ...current, slug: event.target.value }))}
-                />
-              </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="internal-chat-account-name">
                   Nome
@@ -408,7 +452,29 @@ export function HomeConversationsIndexRoute() {
                 <AdminInput
                   id="internal-chat-account-name"
                   value={accountForm.displayName}
-                  onChange={(event) => setAccountForm((current) => ({ ...current, displayName: event.target.value }))}
+                  onChange={(event) =>
+                    setAccountForm((current) => ({
+                      ...current,
+                      displayName: event.target.value,
+                      slug: current.slugDirty ? current.slug : slugify(event.target.value),
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="internal-chat-account-slug">
+                  Usuário
+                </label>
+                <AdminInput
+                  id="internal-chat-account-slug"
+                  value={accountForm.slug}
+                  onChange={(event) =>
+                    setAccountForm((current) => ({
+                      ...current,
+                      slug: event.target.value,
+                      slugDirty: true,
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -705,13 +771,21 @@ export function HomeConversationsIndexRoute() {
         </AdminDialogContent>
       </Dialog>
 
-      {latestMessage && !selectedConversation ? null : null}
     </div>
   );
 }
 
 function createLocalId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function slugify(value: string) {
+  return value
+    .normalize('NFD')
+    .replaceAll(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '');
 }
 
 function getInitials(name: string) {
