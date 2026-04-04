@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -216,8 +217,9 @@ function ThreadDisclosure(input: {
 }) {
   return (
     <details className="group">
-      <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground">
-        {input.summary}
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
+        <span>{input.summary}</span>
+        <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="space-y-1 pt-3">
         <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
@@ -234,8 +236,9 @@ function ThreadJsonDisclosure(input: {
 }) {
   return (
     <details className="group">
-      <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground">
-        {input.summary}
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
+        <span>{input.summary}</span>
+        <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="space-y-1 pt-3">
         <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
