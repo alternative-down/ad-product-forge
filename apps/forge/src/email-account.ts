@@ -375,6 +375,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       void flushPendingMessages();
     },
     async listConversations() {
+      // TODO: Resolve email conversations by real thread metadata (message-id, in-reply-to, references)
+      // instead of grouping only by participant address.
       const inboxEmails = await listRecentInboxEmails(50);
       const grouped = new Map<string, typeof inboxEmails>();
 
@@ -421,6 +423,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt));
     },
     async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
+      // TODO: Read email history by thread instead of only by the normalized target address.
       const parsedDateFrom = parseFilterDate(dateFrom, 'dateFrom');
       const parsedDateTo = parseFilterDate(dateTo, 'dateTo');
       const inboxEmails = await listRecentInboxEmails(Math.max((limit + offset) * 4, 50));
