@@ -286,6 +286,25 @@ export function createInternalChatService(
     };
   }
 
+  async function deleteExternalAccount(input: { accountId: string }) {
+    const account = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.id, input.accountId),
+    });
+
+    if (!account || account.agentId) {
+      throw new Error(`External account not found: ${input.accountId}`);
+    }
+
+    await db
+      .delete(internalChatAccounts)
+      .where(eq(internalChatAccounts.id, input.accountId));
+
+    return {
+      accountId: input.accountId,
+      deleted: true,
+    };
+  }
+
   function onReceiveMessage(agentId: string, handler: InternalChatHandler) {
     handlers.set(agentId, handler);
   }
@@ -561,6 +580,34 @@ export function createInternalChatService(
     }));
   }
 
+  async function listGroupMembersByAccount(input: {
+    accountId: string;
+    groupId: string;
+  }): Promise<InternalChatGroupMember[]> {
+    await getRequiredGroupForAccount(input.accountId, input.groupId);
+
+    const rows = await db
+      .select({
+        groupId: internalChatConversationMembers.conversationId,
+        participantId: internalChatAccounts.id,
+        participantSlug: internalChatAccounts.slug,
+        participantName: internalChatAccounts.displayName,
+        role: internalChatConversationMembers.role,
+        createdAt: internalChatConversationMembers.createdAt,
+      })
+      .from(internalChatConversationMembers)
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
+      )
+      .where(eq(internalChatConversationMembers.conversationId, input.groupId));
+
+    return rows.map((row) => ({
+      ...row,
+      createdAt: new Date(row.createdAt).toISOString(),
+    }));
+  }
+
   async function listConversations(input: {
     agentId: string;
     unread?: boolean;
@@ -688,6 +735,95 @@ export function createInternalChatService(
     return views.filter((view) => view.unreadCount > 0);
   }
 
+  async function listConversationsByAccount(input: {
+    accountId: string;
+    limit: number;
+  }): Promise<CommunicationProviderConversation[]> {
+    await getRequiredExternalAccount(input.accountId);
+
+    const conversationRows = await db
+      .select({
+        id: internalChatConversations.id,
+        name: internalChatConversations.name,
+        type: internalChatConversations.type,
+        updatedAt: internalChatConversations.updatedAt,
+      })
+      .from(internalChatConversations)
+      .innerJoin(
+        internalChatConversationMembers,
+        eq(internalChatConversationMembers.conversationId, internalChatConversations.id),
+      )
+      .where(eq(internalChatConversationMembers.accountId, input.accountId))
+      .orderBy(desc(internalChatConversations.updatedAt))
+      .limit(input.limit);
+
+    const conversationIds = conversationRows.map((row) => row.id);
+
+    if (conversationIds.length === 0) {
+      return [];
+    }
+
+    const messageRows = await db
+      .select({
+        conversationId: internalChatMessages.conversationId,
+        messageId: internalChatMessages.id,
+        content: internalChatMessages.content,
+        createdAt: internalChatMessages.createdAt,
+        authorAccountId: internalChatMessages.authorAccountId,
+        authorDisplayName: internalChatAccounts.displayName,
+      })
+      .from(internalChatMessages)
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+      )
+      .where(inArray(internalChatMessages.conversationId, conversationIds))
+      .orderBy(desc(internalChatMessages.createdAt));
+
+    const messagesByConversationId = new Map<string, CommunicationProviderMessage[]>();
+
+    for (const row of messageRows) {
+      const existing = messagesByConversationId.get(row.conversationId) ?? [];
+
+      if (existing.length < 5) {
+        existing.push({
+          messageId: row.messageId,
+          provider: 'internal-chat',
+          authorId: row.authorAccountId,
+          targetKey: row.conversationId,
+          content: row.content,
+          attachments: await readMessageAttachments(row.messageId),
+          unread: false,
+          createdAt: new Date(row.createdAt).toISOString(),
+          authorDisplayName: row.authorDisplayName,
+        });
+      }
+
+      messagesByConversationId.set(row.conversationId, existing);
+    }
+
+    return Promise.all(
+      conversationRows.map(async (conversation) => {
+        const participants = await listGroupMembersOrDmPeersByAccount(input.accountId, conversation.id);
+        const conversationName = conversation.name
+          ?? (
+            participants.find((participant) => participant.accountId !== input.accountId)?.displayName
+            ?? participants[0]?.displayName
+          );
+
+        return {
+          targetKey: conversation.id,
+          provider: 'internal-chat',
+          latestMessageAt: new Date(conversation.updatedAt).toISOString(),
+          unreadCount: 0,
+          name: conversationName,
+          participants: participants.map((participant) => participant.displayName),
+          messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
+        };
+      }),
+    );
+  }
+
   async function getMessages(input: {
     agentId: string;
     conversationKey: string;
@@ -758,6 +894,204 @@ export function createInternalChatService(
         authorDisplayName: row.authorDisplayName,
       })),
     );
+  }
+
+  async function getMessagesByAccount(input: {
+    accountId: string;
+    conversationKey: string;
+    limit: number;
+    offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<CommunicationProviderMessage[]> {
+    await requireConversationMembershipByAccount(input.accountId, input.conversationKey);
+    const dateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
+    const dateTo = parseFilterDate(input.dateTo, 'dateTo');
+    const filters = [
+      eq(internalChatMessages.conversationId, input.conversationKey),
+      ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
+      ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
+      ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
+    ];
+
+    const rows = await db
+      .select({
+        messageId: internalChatMessages.id,
+        content: internalChatMessages.content,
+        createdAt: internalChatMessages.createdAt,
+        authorAccountId: internalChatMessages.authorAccountId,
+        authorDisplayName: internalChatAccounts.displayName,
+      })
+      .from(internalChatMessages)
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+      )
+      .where(and(...filters))
+      .orderBy(desc(internalChatMessages.createdAt))
+      .offset(input.offset)
+      .limit(input.limit);
+
+    return Promise.all(
+      rows.reverse().map(async (row) => ({
+        messageId: row.messageId,
+        provider: 'internal-chat',
+        authorId: row.authorAccountId,
+        targetKey: input.conversationKey,
+        content: row.content,
+        attachments: await readMessageAttachments(row.messageId),
+        unread: false,
+        createdAt: new Date(row.createdAt).toISOString(),
+        authorDisplayName: row.authorDisplayName,
+      })),
+    );
+  }
+
+  async function createExternalChatGroup(input: {
+    accountId: string;
+    conversationKey: string;
+    name: string;
+  }) {
+    const existing = await db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, input.conversationKey),
+    });
+
+    if (existing) {
+      throw new Error(`Chat group already exists: ${input.conversationKey}`);
+    }
+
+    const creatorAccount = await getRequiredExternalAccount(input.accountId);
+    const now = Date.now();
+
+    await db.insert(internalChatConversations).values({
+      id: input.conversationKey,
+      type: 'group',
+      name: input.name,
+      createdByAccountId: creatorAccount.id,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db.insert(internalChatConversationMembers).values({
+      conversationId: input.conversationKey,
+      accountId: creatorAccount.id,
+      role: 'admin',
+      createdAt: now,
+    });
+
+    return {
+      groupId: input.conversationKey,
+      name: input.name,
+      provider: 'internal-chat',
+      conversationKey: input.conversationKey,
+      creatorMember: {
+        participantId: creatorAccount.id,
+        participantName: creatorAccount.displayName,
+        role: 'admin',
+      },
+      createdAt: new Date(now).toISOString(),
+    };
+  }
+
+  async function ensureDirectConversationByAccount(input: {
+    accountId: string;
+    participantAccountId: string;
+  }) {
+    await getRequiredExternalAccount(input.accountId);
+    await getRequiredAccount(input.participantAccountId);
+
+    const conversation = await ensureDirectConversation(input.accountId, input.participantAccountId);
+
+    if (!conversation) {
+      throw new Error('Failed to create direct conversation.');
+    }
+
+    return {
+      conversationId: conversation.id,
+      conversationKey: conversation.id,
+    };
+  }
+
+  async function addMemberToGroupByAccount(input: {
+    accountId: string;
+    groupId: string;
+    participantAccountId: string;
+    role?: string;
+  }) {
+    const group = await getRequiredGroupForAccount(input.accountId, input.groupId);
+    const participant = await getRequiredAccount(input.participantAccountId);
+    const now = Date.now();
+
+    const existing = await db.query.internalChatConversationMembers.findFirst({
+      where: and(
+        eq(internalChatConversationMembers.conversationId, group.id),
+        eq(internalChatConversationMembers.accountId, participant.id),
+      ),
+    });
+
+    if (existing) {
+      return listGroupMembersByAccount({
+        accountId: input.accountId,
+        groupId: input.groupId,
+      });
+    }
+
+    await db.insert(internalChatConversationMembers).values({
+      conversationId: group.id,
+      accountId: participant.id,
+      role: input.role ?? 'normal',
+      createdAt: now,
+    });
+
+    return listGroupMembersByAccount({
+      accountId: input.accountId,
+      groupId: input.groupId,
+    });
+  }
+
+  async function updateMemberRoleByAccount(input: {
+    accountId: string;
+    groupId: string;
+    participantAccountId: string;
+    role: string;
+  }) {
+    await getRequiredGroupForAccount(input.accountId, input.groupId);
+
+    await db
+      .update(internalChatConversationMembers)
+      .set({
+        role: input.role,
+      })
+      .where(and(
+        eq(internalChatConversationMembers.conversationId, input.groupId),
+        eq(internalChatConversationMembers.accountId, input.participantAccountId),
+      ));
+
+    return listGroupMembersByAccount({
+      accountId: input.accountId,
+      groupId: input.groupId,
+    });
+  }
+
+  async function removeMemberFromGroupByAccount(input: {
+    accountId: string;
+    groupId: string;
+    participantAccountId: string;
+  }) {
+    await getRequiredGroupForAccount(input.accountId, input.groupId);
+
+    await db
+      .delete(internalChatConversationMembers)
+      .where(and(
+        eq(internalChatConversationMembers.conversationId, input.groupId),
+        eq(internalChatConversationMembers.accountId, input.participantAccountId),
+      ));
+
+    return listGroupMembersByAccount({
+      accountId: input.accountId,
+      groupId: input.groupId,
+    });
   }
 
   async function sendMessage(input: {
@@ -950,6 +1284,16 @@ export function createInternalChatService(
     return account;
   }
 
+  async function getRequiredExternalAccount(accountId: string) {
+    const account = await getRequiredAccount(accountId);
+
+    if (account.agentId) {
+      throw new Error(`External internal chat account not found: ${accountId}`);
+    }
+
+    return account;
+  }
+
   async function getRequiredAccountBySlug(slug: string) {
     const account = await getAccountBySlug(slug);
 
@@ -1007,10 +1351,21 @@ export function createInternalChatService(
     return group;
   }
 
+  async function getRequiredGroupForAccount(accountId: string, groupId: string) {
+    const group = await getRequiredConversationForAccount(accountId, groupId);
+
+    if (group.type !== 'group') {
+      throw new Error(`Chat group not found: ${groupId}`);
+    }
+
+    return group;
+  }
+
   return {
     registerAgentAccount,
     registerExternalAccount,
     updateExternalAccount,
+    deleteExternalAccount,
     onReceiveMessage,
     clearHandler,
     listAccounts,
@@ -1022,9 +1377,17 @@ export function createInternalChatService(
     removeMemberFromGroup,
     listChatGroups,
     listGroupMembers,
+    listGroupMembersByAccount,
     listConversations,
+    listConversationsByAccount,
     getMessages,
+    getMessagesByAccount,
     sendMessage,
+    createExternalChatGroup,
+    ensureDirectConversationByAccount,
+    addMemberToGroupByAccount,
+    updateMemberRoleByAccount,
+    removeMemberFromGroupByAccount,
     getUnreadSummary,
     listRecentConversations,
   };

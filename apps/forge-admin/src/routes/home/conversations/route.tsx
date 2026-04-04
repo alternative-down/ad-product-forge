@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Check, Pencil, Plus } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   AdminButton,
@@ -17,7 +17,10 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+  createHomeInternalChatConversation,
   createInternalChatAccount,
+  deleteInternalChatAccount,
+  getHomeInternalChatConversations,
   getInternalChatAccounts,
   getInternalChatContacts,
   type InternalChatContact,
@@ -25,7 +28,6 @@ import {
   updateInternalChatAccount,
 } from '@/lib/admin-api';
 import {
-  createLocalId,
   formatRecentMessageTime,
   getInitials,
   HomeConversationsProvider,
@@ -49,7 +51,6 @@ function HomeConversationsLayoutRoute() {
   });
   const [accounts, setAccounts] = useState<InternalChatExternalAccount[]>([]);
   const [contacts, setContacts] = useState<InternalChatContact[]>([]);
-  const [accountsLoaded, setAccountsLoaded] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState(() => {
     if (typeof window === 'undefined') {
       return '';
@@ -90,14 +91,9 @@ function HomeConversationsLayoutRoute() {
         if (!cancelled) {
           setAccounts(accountItems);
           setContacts(contactItems);
-          setAccountsLoaded(true);
         }
       } catch (error) {
         console.error('[HomeConversations] Failed to load internal chat accounts:', error);
-
-        if (!cancelled) {
-          setAccountsLoaded(true);
-        }
       }
     }
 
@@ -121,18 +117,6 @@ function HomeConversationsLayoutRoute() {
     window.localStorage.setItem(SELECTED_ACCOUNT_STORAGE_KEY, selectedAccountId);
   }, [selectedAccountId]);
 
-  useEffect(() => {
-    if (!accountsLoaded || !selectedAccountId) {
-      return;
-    }
-
-    if (accounts.some((account) => account.accountId === selectedAccountId)) {
-      return;
-    }
-
-    setSelectedAccountId('');
-  }, [accounts, accountsLoaded, selectedAccountId]);
-
   const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedAccountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
   const availableContacts = contacts.filter((contact) => contact.isAgent && contact.accountId !== selectedAccountId);
@@ -153,6 +137,39 @@ function HomeConversationsLayoutRoute() {
     : '';
   const mobileDetailOpen = Boolean(selectedConversationId);
 
+  const reloadConversations = useCallback(async () => {
+    if (!selectedAccountId) {
+      setConversations([]);
+      return;
+    }
+
+    try {
+      const items = await getHomeInternalChatConversations(selectedAccountId);
+
+      setConversations(items.map((conversation) => ({
+        id: conversation.conversationId,
+        type: conversation.type,
+        name: conversation.name,
+        participants: conversation.participants,
+        updatedAt: conversation.updatedAt,
+        messages: conversation.messages.map((message) => ({
+          id: message.messageId,
+          authorDisplayName: message.authorDisplayName,
+          content: message.content,
+          createdAt: message.createdAt,
+          attachments: [],
+        })),
+      })));
+    } catch (error) {
+      console.error('[HomeConversations] Failed to load conversations:', error);
+      setConversations([]);
+    }
+  }, [selectedAccountId]);
+
+  useEffect(() => {
+    void reloadConversations();
+  }, [reloadConversations]);
+
   const contextValue = useMemo(() => ({
     accounts,
     contacts,
@@ -161,7 +178,8 @@ function HomeConversationsLayoutRoute() {
     selectedAccount,
     conversations,
     setConversations,
-  }), [accounts, contacts, conversations, selectedAccount, selectedAccountId]);
+    reloadConversations,
+  }), [accounts, contacts, conversations, reloadConversations, selectedAccount, selectedAccountId]);
 
   return (
     <HomeConversationsProvider value={contextValue}>
@@ -401,6 +419,7 @@ function HomeConversationsLayoutRoute() {
                 <AdminInput
                   id="internal-chat-account-slug"
                   value={accountForm.slug}
+                  disabled={accountDialogMode === 'edit'}
                   onChange={(event) =>
                     setAccountForm((current) => ({
                       ...current,
@@ -426,6 +445,22 @@ function HomeConversationsLayoutRoute() {
               ) : null}
             </AdminDialogBody>
             <AdminDialogFooter>
+              {accountDialogMode === 'edit' && accountForm.accountId ? (
+                <AdminButton
+                  type="button"
+                  variant="outline"
+                  className="mr-auto"
+                  onClick={async () => {
+                    await deleteInternalChatAccount(accountForm.accountId as string);
+                    setAccounts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
+                    setContacts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
+                    setSelectedAccountId('');
+                    setAccountDialogOpen(false);
+                  }}
+                >
+                  Excluir
+                </AdminButton>
+              ) : null}
               <AdminButton
                 type="submit"
                 disabled={!accountForm.slug.trim() || !accountForm.displayName.trim() || accountSaving}
@@ -448,36 +483,34 @@ function HomeConversationsLayoutRoute() {
             onSubmit={(event) => {
               event.preventDefault();
 
-              const participants = availableContacts
-                .filter((contact) => conversationForm.selectedParticipantIds.includes(contact.accountId))
-                .map((contact) => contact.displayName);
+              void (async () => {
+                const participants = availableContacts
+                  .filter((contact) => conversationForm.selectedParticipantIds.includes(contact.accountId))
+                  .map((contact) => contact.displayName);
+                const conversationName =
+                  conversationForm.type === 'dm'
+                    ? participants[0] ?? 'Nova conversa'
+                    : conversationForm.name.trim() || 'Novo grupo';
+                const created = await createHomeInternalChatConversation({
+                  accountId: selectedAccountId,
+                  type: conversationForm.type,
+                  name: conversationForm.type === 'group' ? conversationName : undefined,
+                  participantAccountIds: conversationForm.selectedParticipantIds,
+                });
 
-              const conversationName =
-                conversationForm.type === 'dm'
-                  ? participants[0] ?? 'Nova conversa'
-                  : conversationForm.name.trim() || 'Novo grupo';
-
-              const conversation: LocalConversation = {
-                id: createLocalId('conv'),
-                type: conversationForm.type,
-                name: conversationName,
-                participants,
-                updatedAt: Date.now(),
-                messages: [],
-              };
-
-              setConversations((current) => [conversation, ...current]);
-              setConversationDialogOpen(false);
-              setConversationForm({
-                type: 'dm',
-                name: '',
-                participantQuery: '',
-                selectedParticipantIds: [],
-              });
-              void navigate({
-                to: '/home/conversations/$conversationId',
-                params: { conversationId: conversation.id },
-              });
+                await reloadConversations();
+                setConversationDialogOpen(false);
+                setConversationForm({
+                  type: 'dm',
+                  name: '',
+                  participantQuery: '',
+                  selectedParticipantIds: [],
+                });
+                await navigate({
+                  to: '/home/conversations/$conversationId',
+                  params: { conversationId: created.conversationId },
+                });
+              })();
             }}
           >
             <AdminDialogBody>

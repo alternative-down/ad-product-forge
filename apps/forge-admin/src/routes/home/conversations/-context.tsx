@@ -48,6 +48,7 @@ export type HomeConversationsContextValue = {
   selectedAccount: InternalChatExternalAccount | null;
   conversations: LocalConversation[];
   setConversations: React.Dispatch<React.SetStateAction<LocalConversation[]>>;
+  reloadConversations: () => Promise<void>;
 };
 
 const HomeConversationsContext = createContext<HomeConversationsContextValue | null>(null);

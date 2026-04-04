@@ -253,6 +253,49 @@ export type InternalChatContact = {
   isAgent: boolean;
 };
 
+export type HomeInternalChatConversation = {
+  conversationId: string;
+  conversationKey: string;
+  provider: 'internal-chat';
+  type: 'dm' | 'group';
+  name: string;
+  participants: string[];
+  updatedAt: number;
+  messages: Array<{
+    messageId: string;
+    content: string;
+    unread: boolean;
+    authorDisplayName: string;
+    createdAt: number;
+  }>;
+};
+
+export type HomeInternalChatConversationMessage = {
+  messageId: string;
+  authorAccountId: string;
+  authorDisplayName: string;
+  content: string;
+  createdAt: number;
+  attachments: Array<{
+    name: string;
+    sizeBytes?: number;
+  }>;
+};
+
+export type HomeInternalChatConversationMessagesResponse = {
+  items: HomeInternalChatConversationMessage[];
+  hasMore: boolean;
+};
+
+export type HomeInternalChatGroupMember = {
+  groupId: string;
+  participantId: string;
+  participantSlug: string;
+  participantName: string;
+  role: string;
+  createdAt: string;
+};
+
 export type DiscordProviderCredentials = {
   token: string;
   channels: Array<{
@@ -564,6 +607,97 @@ export function updateInternalChatAccount(input: {
     displayName: string;
     description?: string;
   }>('/admin/internal-chat/account/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteInternalChatAccount(accountId: string) {
+  return request<{ accountId: string; deleted: true }>('/admin/internal-chat/account/delete', {
+    method: 'POST',
+    body: JSON.stringify({ accountId }),
+  });
+}
+
+export function getHomeInternalChatConversations(accountId: string) {
+  return request<HomeInternalChatConversation[]>(
+    `/admin/internal-chat/conversations?accountId=${encodeURIComponent(accountId)}`,
+  );
+}
+
+export function getHomeInternalChatMessages(
+  accountId: string,
+  conversationId: string,
+  limit: number,
+  offset: number,
+) {
+  return request<HomeInternalChatConversationMessagesResponse>(
+    `/admin/internal-chat/messages?accountId=${encodeURIComponent(accountId)}&conversationId=${encodeURIComponent(conversationId)}&limit=${limit}&offset=${offset}`,
+  );
+}
+
+export function createHomeInternalChatConversation(input: {
+  accountId: string;
+  type: 'dm' | 'group';
+  name?: string;
+  participantAccountIds: string[];
+}) {
+  return request<{ conversationId: string; conversationKey: string }>('/admin/internal-chat/conversation/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function sendHomeInternalChatMessage(input: {
+  accountId: string;
+  conversationId: string;
+  content: string;
+}) {
+  return request<{ success: true; messageId: string; conversationKey: string }>(
+    '/admin/internal-chat/conversation/send',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function getHomeInternalChatGroupMembers(accountId: string, conversationId: string) {
+  return request<HomeInternalChatGroupMember[]>(
+    `/admin/internal-chat/group-members?accountId=${encodeURIComponent(accountId)}&conversationId=${encodeURIComponent(conversationId)}`,
+  );
+}
+
+export function addHomeInternalChatGroupMember(input: {
+  accountId: string;
+  conversationId: string;
+  participantAccountId: string;
+  role?: 'admin' | 'normal';
+}) {
+  return request<HomeInternalChatGroupMember[]>('/admin/internal-chat/group-member/add', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateHomeInternalChatGroupMemberRole(input: {
+  accountId: string;
+  conversationId: string;
+  participantAccountId: string;
+  role: 'admin' | 'normal';
+}) {
+  return request<HomeInternalChatGroupMember[]>('/admin/internal-chat/group-member/update-role', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function removeHomeInternalChatGroupMember(input: {
+  accountId: string;
+  conversationId: string;
+  participantAccountId: string;
+}) {
+  return request<HomeInternalChatGroupMember[]>('/admin/internal-chat/group-member/remove', {
     method: 'POST',
     body: JSON.stringify(input),
   });
