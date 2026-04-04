@@ -1,10 +1,9 @@
-import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
+import { Link, Outlet, createFileRoute, useRouterState } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getAgent } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/conversations')({
@@ -12,7 +11,6 @@ export const Route = createFileRoute('/agents/$agentId/conversations')({
 });
 
 function AgentConversationsLayoutRoute() {
-  const navigate = useNavigate();
   const { agentId } = Route.useParams();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -81,23 +79,6 @@ function AgentConversationsLayoutRoute() {
           </div>
 
           <div className={selectedConversation ? 'min-h-0 block' : 'hidden min-h-0 md:block'}>
-            <div className="md:hidden">
-              <Select
-                value={selectedConversation ? buildConversationPath(agentId, selectedConversation.conversationId) : ''}
-                onValueChange={(value) => void navigate({ to: value })}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>{selectedConversation?.name ?? selectedConversation?.provider ?? 'Conversas'}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {conversations.map((conversation) => (
-                    <SelectItem key={conversation.conversationId} value={buildConversationPath(agentId, conversation.conversationId)}>
-                      {conversation.name ?? conversation.provider}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <Outlet />
           </div>
         </div>
