@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Archive, ArrowLeft, Check, Pencil, SendHorizontal, Settings2, Trash2 } from 'lucide-react';
+import { Archive, ArrowDown, ArrowLeft, Check, Pencil, SendHorizontal, Settings2, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -58,6 +58,7 @@ function HomeConversationDetailIndexRoute() {
   const { contacts, conversations, selectedAccount, reloadConversations } = useHomeConversations();
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const initialScrollDoneRef = useRef(false);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const [participantsDialogOpen, setParticipantsDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
@@ -101,6 +102,7 @@ function HomeConversationDetailIndexRoute() {
         setMessages(messageResult.items);
         setMembers(memberResult);
         setGroupNameDraft(selectedConversationName);
+        setAutoScrollEnabled(true);
       }
     }
 
@@ -126,12 +128,6 @@ function HomeConversationDetailIndexRoute() {
     }
 
     const interval = window.setInterval(() => {
-      const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
-      const keepBottom =
-        viewport instanceof HTMLDivElement
-          ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 32
-          : false;
-
       void (async () => {
         const messageResult = await getHomeInternalChatMessages(
           selectedAccountId,
@@ -143,7 +139,7 @@ function HomeConversationDetailIndexRoute() {
         setMessages(messageResult.items);
         await reloadConversations();
 
-        if (keepBottom) {
+        if (autoScrollEnabled) {
           requestAnimationFrame(() => {
             const nextViewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
 
@@ -158,7 +154,27 @@ function HomeConversationDetailIndexRoute() {
     return () => {
       window.clearInterval(interval);
     };
-  }, [reloadConversations, selectedAccountId, selectedConversationId]);
+  }, [autoScrollEnabled, reloadConversations, selectedAccountId, selectedConversationId]);
+
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+
+    if (!(viewport instanceof HTMLDivElement)) {
+      return;
+    }
+
+    function handleScroll() {
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      setAutoScrollEnabled(distanceFromBottom <= 8);
+    }
+
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+    };
+  }, [selectedConversationId, messages.length]);
 
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
@@ -236,7 +252,7 @@ function HomeConversationDetailIndexRoute() {
           ) : null}
         </div>
 
-        <div ref={scrollAreaRef} className="min-h-0 flex-1">
+        <div ref={scrollAreaRef} className="relative min-h-0 flex-1">
           <AdminScrollArea className="h-full" contentClassName="space-y-3">
             {messages.map((message) => {
               const authorContact = contactByAccountId.get(message.authorAccountId);
@@ -286,6 +302,26 @@ function HomeConversationDetailIndexRoute() {
               );
             })}
           </AdminScrollArea>
+          {!autoScrollEnabled ? (
+            <AdminButton
+              variant="outline"
+              size="icon-sm"
+              className="absolute bottom-3 right-1"
+              onClick={() => {
+                const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+
+                if (!(viewport instanceof HTMLDivElement)) {
+                  return;
+                }
+
+                viewport.scrollTop = viewport.scrollHeight;
+                setAutoScrollEnabled(true);
+              }}
+            >
+              <ArrowDown className="h-4 w-4" />
+              <span className="sr-only">Ir para o final</span>
+            </AdminButton>
+          ) : null}
         </div>
 
         <section className="space-y-3 border-t border-border pt-4">
@@ -340,6 +376,7 @@ function HomeConversationDetailIndexRoute() {
                   setMessages(messageResult.items);
                   setMessageDraft('');
                   setAttachmentDrafts([]);
+                  setAutoScrollEnabled(true);
                   requestAnimationFrame(() => {
                     const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
 
