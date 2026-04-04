@@ -40,7 +40,7 @@ function FinanceIndexRoute() {
           <div className="text-lg font-semibold tracking-[-0.03em]">Resumo</div>
         </div>
 
-        <dl className="grid gap-4 min-[720px]:grid-cols-2 xl:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           <MetricItem label="Saldo" value={formatUsd(financeQuery.data?.balanceUsd ?? 0)} />
           <MetricItem label="Entradas" value={formatUsd(financeQuery.data?.summary.totalInUsd ?? 0)} />
           <MetricItem label="Saídas" value={formatUsd(financeQuery.data?.summary.totalOutUsd ?? 0)} />
@@ -53,7 +53,7 @@ function FinanceIndexRoute() {
           <div className="text-lg font-semibold tracking-[-0.03em]">Contratos</div>
         </div>
 
-        <dl className="grid gap-4 min-[720px]:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-4 xl:grid-cols-3">
           <MetricItem label="Ativos" value={String(contracts.length)} />
           <MetricItem
             label="Valor semanal"

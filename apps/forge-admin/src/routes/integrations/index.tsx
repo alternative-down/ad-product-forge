@@ -126,7 +126,7 @@ function IntegrationsProfilesRoute() {
             });
           }}
         >
-          <div className="grid gap-4 min-[720px]:grid-cols-3">
+          <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="default-primary-profile">
                 Principal

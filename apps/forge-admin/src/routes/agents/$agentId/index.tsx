@@ -52,7 +52,7 @@ function AgentDetailIndexRoute() {
           ) : null}
 
           <section className="space-y-5">
-            <div className="grid gap-4 min-[720px]:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
               <MetricItem
                 label="Valor do contrato"
                 value={agent.activeContract ? formatUsd(agent.activeContract.weeklyValueUsd) : 'Sem contrato'}

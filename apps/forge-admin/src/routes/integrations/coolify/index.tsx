@@ -75,7 +75,7 @@ function IntegrationsCoolifyRoute() {
             <label className="text-sm font-medium" htmlFor="coolify-admin-token">Admin token</label>
             <AdminInput id="coolify-admin-token" type="password" value={adminToken} onChange={(event) => setDraft((current) => ({ baseUrl: current?.baseUrl ?? integration?.config?.baseUrl ?? '', adminToken: event.target.value, serverId: current?.serverId ?? integration?.config?.serverId ?? '', destinationId: current?.destinationId ?? integration?.config?.destinationId ?? '', applicationsBaseDomain: current?.applicationsBaseDomain ?? integration?.config?.applicationsBaseDomain ?? '', isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true }))} disabled={mutation.isPending} />
           </div>
-          <div className="grid gap-4 min-[720px]:grid-cols-2">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="coolify-server-id">Server ID</label>
               <AdminInput id="coolify-server-id" value={serverId} onChange={(event) => setDraft((current) => ({ baseUrl: current?.baseUrl ?? integration?.config?.baseUrl ?? '', adminToken: current?.adminToken ?? integration?.config?.adminToken ?? '', serverId: event.target.value, destinationId: current?.destinationId ?? integration?.config?.destinationId ?? '', applicationsBaseDomain: current?.applicationsBaseDomain ?? integration?.config?.applicationsBaseDomain ?? '', isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true }))} disabled={mutation.isPending} />
