@@ -52,23 +52,19 @@ function AgentConversationsIndexRoute() {
                     >
                       <div className="space-y-1">
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-start gap-2">
-                            <div className="min-w-0 text-sm font-medium text-foreground">
-                              {conversation.name ?? conversation.provider}
-                            </div>
-                            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
+                          <div className="min-w-0 text-sm font-medium text-foreground">
+                            {conversation.name ?? conversation.provider}
                           </div>
-                          <div className="shrink-0 text-xs text-muted-foreground">
-                            {latestMessage ? formatRecentMessageTime(latestMessage.createdAt) : ''}
-                          </div>
+                          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
                         </div>
                         <div className="line-clamp-2 text-sm text-muted-foreground">
                           {conversation.participants.join(', ')}
                         </div>
                         {latestMessage ? (
                           <>
-                            <div className="text-xs text-muted-foreground">
-                              {latestMessage.authorDisplayName}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="truncate">{latestMessage.authorDisplayName}</span>
+                              <span className="shrink-0">{formatRecentMessageTime(latestMessage.createdAt)}</span>
                             </div>
                             <div className="truncate text-sm text-foreground">
                               {latestMessage.content}
