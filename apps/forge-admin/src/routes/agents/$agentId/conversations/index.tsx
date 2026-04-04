@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAgent } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/conversations/')({
@@ -28,61 +29,63 @@ function AgentConversationsIndexRoute() {
   );
 
   return (
-    <div className="min-w-0 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {conversations.length > 0 ? (
-        <div className="space-y-5 md:grid md:grid-cols-[260px_minmax(0,1fr)] md:gap-6 md:space-y-0">
-          <div className={selectedConversation ? 'hidden md:block' : ''}>
-            <div className="space-y-2">
-              {conversations.map((conversation) => {
-                const selected = conversation.conversationId === selectedConversation?.conversationId;
-                const latestMessage = conversation.messages[0] ?? null;
+        <div className="flex h-[calc(100dvh-12rem)] min-h-0 flex-col md:grid md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
+          <div className={selectedConversation ? 'hidden min-h-0 md:block' : 'min-h-0'}>
+            <ScrollArea className="h-full rounded-sm border border-border bg-background">
+              <div className="space-y-2 p-2">
+                {conversations.map((conversation) => {
+                  const selected = conversation.conversationId === selectedConversation?.conversationId;
+                  const latestMessage = conversation.messages[0] ?? null;
 
-                return (
-                  <button
-                    key={conversation.conversationId}
-                    type="button"
-                    onClick={() => setSelectedConversationId(conversation.conversationId)}
-                    className={
-                      selected
-                        ? 'block w-full rounded-sm border border-border bg-muted px-4 py-3 text-left'
-                        : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
-                    }
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-2">
-                          <div className="min-w-0 text-sm font-medium text-foreground">
-                            {conversation.name ?? conversation.provider}
+                  return (
+                    <button
+                      key={conversation.conversationId}
+                      type="button"
+                      onClick={() => setSelectedConversationId(conversation.conversationId)}
+                      className={
+                        selected
+                          ? 'block w-full rounded-sm border border-border bg-muted px-4 py-3 text-left'
+                          : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
+                      }
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-start gap-2">
+                            <div className="min-w-0 text-sm font-medium text-foreground">
+                              {conversation.name ?? conversation.provider}
+                            </div>
+                            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
                           </div>
-                          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground md:hidden" />
+                          <div className="shrink-0 text-xs text-muted-foreground">
+                            {latestMessage ? formatRecentMessageTime(latestMessage.createdAt) : ''}
+                          </div>
                         </div>
-                        <div className="shrink-0 text-xs text-muted-foreground">
-                          {latestMessage ? formatRecentMessageTime(latestMessage.createdAt) : ''}
+                        <div className="line-clamp-2 text-sm text-muted-foreground">
+                          {conversation.participants.join(', ')}
                         </div>
+                        {latestMessage ? (
+                          <>
+                            <div className="text-xs text-muted-foreground">
+                              {latestMessage.authorDisplayName}
+                            </div>
+                            <div className="truncate text-sm text-foreground">
+                              {latestMessage.content}
+                            </div>
+                          </>
+                        ) : null}
                       </div>
-                      <div className="line-clamp-2 text-sm text-muted-foreground">
-                        {conversation.participants.join(', ')}
-                      </div>
-                      {latestMessage ? (
-                        <>
-                          <div className="text-xs text-muted-foreground">
-                            {latestMessage.authorDisplayName}
-                          </div>
-                          <div className="truncate text-sm text-foreground">
-                            {latestMessage.content}
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
           </div>
 
-          <div className={selectedConversation ? 'block' : 'hidden md:block'}>
+          <div className={selectedConversation ? 'min-h-0 block' : 'hidden min-h-0 md:block'}>
             {selectedConversation ? (
-              <div className="space-y-4">
+              <div className="flex h-full min-h-0 flex-col gap-4">
                 <div className="flex items-center justify-between gap-3 md:hidden">
                   <Button variant="ghost" size="sm" onClick={() => setSelectedConversationId(null)}>
                     <ArrowLeft className="h-4 w-4" />
@@ -99,16 +102,18 @@ function AgentConversationsIndexRoute() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {selectedConversation.messages.map((message) => (
-                    <article key={message.messageId} className="space-y-1 rounded-sm border border-border bg-background px-4 py-3">
-                      <div className="text-xs text-muted-foreground">
-                        {message.authorDisplayName} · {formatDateTime(message.createdAt)}
-                      </div>
-                      <div className="text-sm leading-6 text-foreground">{message.content}</div>
-                    </article>
-                  ))}
-                </div>
+                <ScrollArea className="h-full min-h-0 rounded-sm border border-border bg-background">
+                  <div className="space-y-3 p-3">
+                    {selectedConversation.messages.map((message) => (
+                      <article key={message.messageId} className="space-y-1 rounded-sm border border-border bg-background px-4 py-3">
+                        <div className="text-xs text-muted-foreground">
+                          {message.authorDisplayName} · {formatDateTime(message.createdAt)}
+                        </div>
+                        <div className="text-sm leading-6 text-foreground">{message.content}</div>
+                      </article>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             ) : null}
           </div>
