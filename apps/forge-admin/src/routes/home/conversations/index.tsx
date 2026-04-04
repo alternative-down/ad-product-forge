@@ -16,6 +16,8 @@ import {
 import {
   createInternalChatAccount,
   getInternalChatAccounts,
+  getInternalChatContacts,
+  type InternalChatContact,
   type InternalChatExternalAccount,
   updateInternalChatAccount,
 } from '@/lib/admin-api';
@@ -59,8 +61,8 @@ type AccountForm = {
 type ConversationForm = {
   type: 'dm' | 'group';
   name: string;
-  participantName: string;
-  participants: string[];
+  participantQuery: string;
+  selectedParticipantIds: string[];
 };
 
 type AccountDialogMode = 'create' | 'edit';
@@ -69,6 +71,7 @@ const SELECTED_ACCOUNT_STORAGE_KEY = 'forja.home.internal-chat.selected-account-
 
 export function HomeConversationsIndexRoute() {
   const [accounts, setAccounts] = useState<InternalChatExternalAccount[]>([]);
+  const [contacts, setContacts] = useState<InternalChatContact[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState(() => {
     if (typeof window === 'undefined') {
       return '';
@@ -94,8 +97,8 @@ export function HomeConversationsIndexRoute() {
   const [conversationForm, setConversationForm] = useState<ConversationForm>({
     type: 'dm',
     name: '',
-    participantName: '',
-    participants: [],
+    participantQuery: '',
+    selectedParticipantIds: [],
   });
   const [participantDraft, setParticipantDraft] = useState('');
   const [messageDraft, setMessageDraft] = useState('');
@@ -106,10 +109,14 @@ export function HomeConversationsIndexRoute() {
 
     async function loadAccounts() {
       try {
-        const items = await getInternalChatAccounts();
+        const [accountItems, contactItems] = await Promise.all([
+          getInternalChatAccounts(),
+          getInternalChatContacts(),
+        ]);
 
         if (!cancelled) {
-          setAccounts(items);
+          setAccounts(accountItems);
+          setContacts(contactItems);
         }
       } catch (error) {
         console.error('[HomeConversations] Failed to load internal chat accounts:', error);
@@ -151,6 +158,19 @@ export function HomeConversationsIndexRoute() {
   const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedConversation = conversations.find((conversation) => conversation.id === selectedConversationId) ?? null;
   const accountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
+  const availableContacts = contacts.filter((contact) => contact.isAgent && contact.accountId !== selectedAccountId);
+  const filteredContacts = availableContacts.filter((contact) => {
+    const query = conversationForm.participantQuery.trim().toLowerCase();
+
+    if (!query) {
+      return true;
+    }
+
+    return (
+      contact.displayName.toLowerCase().includes(query) ||
+      contact.slug.toLowerCase().includes(query)
+    );
+  });
 
   const selectedConversationMessages = selectedConversation?.messages ?? [];
 
@@ -173,7 +193,7 @@ export function HomeConversationsIndexRoute() {
                 <SelectContent>
                   <SelectItem value="__none__">Selecione uma conta</SelectItem>
                   {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
+                    <SelectItem key={account.accountId} value={account.accountId}>
                       {account.displayName}
                     </SelectItem>
                   ))}
@@ -225,27 +245,27 @@ export function HomeConversationsIndexRoute() {
               <Plus className="h-4 w-4" />
               Nova conta
             </AdminButton>
-            <AdminButton
-              disabled={!selectedAccount}
-              onClick={() => {
-                setConversationForm({
-                  type: 'dm',
-                  name: '',
-                  participantName: '',
-                  participants: [],
-                });
-                setConversationDialogOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Nova conversa
-            </AdminButton>
           </div>
         </div>
       </section>
 
       <div className="flex h-[calc(100dvh-16rem)] min-h-0 flex-col md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
-        <div className="min-h-0">
+        <div className="flex min-h-0 flex-col gap-3">
+          <AdminButton
+            disabled={!selectedAccount}
+            onClick={() => {
+              setConversationForm({
+                type: 'dm',
+                name: '',
+                participantQuery: '',
+                selectedParticipantIds: [],
+              });
+              setConversationDialogOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Nova conversa
+          </AdminButton>
           <AdminScrollArea className="h-full" contentClassName="space-y-2">
             {selectedAccount ? (
               conversations.length > 0 ? (
@@ -462,6 +482,16 @@ export function HomeConversationsIndexRoute() {
                     ? current.map((item) => (item.accountId === normalizedAccount.accountId ? normalizedAccount : item))
                     : [...current, normalizedAccount].sort((left, right) => left.displayName.localeCompare(right.displayName)),
                 );
+                setContacts((current) => {
+                  const nextContact: InternalChatContact = {
+                    ...normalizedAccount,
+                    isAgent: false,
+                  };
+
+                  return accountForm.accountId
+                    ? current.map((item) => (item.accountId === nextContact.accountId ? nextContact : item))
+                    : [...current, nextContact].sort((left, right) => left.displayName.localeCompare(right.displayName));
+                });
                 setSelectedAccountId(normalizedAccount.accountId);
                 setAccountDialogOpen(false);
                 setAccountForm({
@@ -549,9 +579,9 @@ export function HomeConversationsIndexRoute() {
             onSubmit={(event) => {
               event.preventDefault();
 
-              const participants = conversationForm.type === 'dm'
-                ? [conversationForm.participantName.trim()].filter(Boolean)
-                : conversationForm.participants;
+              const participants = availableContacts
+                .filter((contact) => conversationForm.selectedParticipantIds.includes(contact.accountId))
+                .map((contact) => contact.displayName);
 
               const conversationName =
                 conversationForm.type === 'dm'
@@ -573,8 +603,8 @@ export function HomeConversationsIndexRoute() {
               setConversationForm({
                 type: 'dm',
                 name: '',
-                participantName: '',
-                participants: [],
+                participantQuery: '',
+                selectedParticipantIds: [],
               });
             }}
           >
@@ -612,81 +642,63 @@ export function HomeConversationsIndexRoute() {
                 </div>
               ) : null}
 
-              {conversationForm.type === 'dm' ? (
+              <div className="space-y-3">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="internal-chat-conversation-participant">
-                    Participante
+                  <label className="text-sm font-medium" htmlFor="internal-chat-conversation-participant-filter">
+                    Participantes
                   </label>
                   <AdminInput
-                    id="internal-chat-conversation-participant"
-                    value={conversationForm.participantName}
+                    id="internal-chat-conversation-participant-filter"
+                    value={conversationForm.participantQuery}
                     onChange={(event) =>
-                      setConversationForm((current) => ({ ...current, participantName: event.target.value }))
+                      setConversationForm((current) => ({ ...current, participantQuery: event.target.value }))
                     }
                   />
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="internal-chat-group-participant">
-                      Participantes
-                    </label>
-                    <div className="flex items-end gap-3">
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <AdminInput
-                          id="internal-chat-group-participant"
-                          value={conversationForm.participantName}
-                          onChange={(event) =>
-                            setConversationForm((current) => ({ ...current, participantName: event.target.value }))
+
+                <div className="space-y-2">
+                  {filteredContacts.length > 0 ? (
+                    filteredContacts.map((contact) => {
+                      const selected = conversationForm.selectedParticipantIds.includes(contact.accountId);
+
+                      return (
+                        <button
+                          key={contact.accountId}
+                          type="button"
+                          onClick={() =>
+                            setConversationForm((current) => ({
+                              ...current,
+                              selectedParticipantIds:
+                                current.type === 'dm'
+                                  ? [contact.accountId]
+                                  : selected
+                                    ? current.selectedParticipantIds.filter((value) => value !== contact.accountId)
+                                    : [...current.selectedParticipantIds, contact.accountId],
+                            }))
                           }
-                        />
-                      </div>
-                      <AdminButton
-                        type="button"
-                        onClick={() => {
-                          const value = conversationForm.participantName.trim();
-
-                          if (!value || conversationForm.participants.includes(value)) {
-                            return;
+                          className={
+                            selected
+                              ? 'flex w-full items-center gap-3 rounded-sm border border-border bg-muted px-3 py-3 text-left'
+                              : 'flex w-full items-center gap-3 rounded-sm border border-border bg-background px-3 py-3 text-left'
                           }
-
-                          setConversationForm((current) => ({
-                            ...current,
-                            participantName: '',
-                            participants: [...current.participants, value],
-                          }));
-                        }}
-                      >
-                        Incluir
-                      </AdminButton>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {conversationForm.participants.length > 0 ? (
-                      conversationForm.participants.map((participant) => (
-                        <div key={participant} className="flex items-center justify-between gap-3 border-b border-border pb-2">
-                          <div className="text-sm text-foreground">{participant}</div>
-                          <AdminButton
-                            type="button"
-                            variant="outline"
-                            onClick={() =>
-                              setConversationForm((current) => ({
-                                ...current,
-                                participants: current.participants.filter((value) => value !== participant),
-                              }))
-                            }
-                          >
-                            Remover
-                          </AdminButton>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-sm text-muted-foreground">Nenhum participante.</div>
-                    )}
-                  </div>
+                        >
+                          <Avatar className="h-9 w-9 border border-border bg-muted">
+                            <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                              {getInitials(contact.displayName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 space-y-0.5">
+                            <div className="truncate text-sm font-medium text-foreground">{contact.displayName}</div>
+                            <div className="truncate text-xs text-muted-foreground">@{contact.slug}</div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="text-sm text-muted-foreground">Nenhum participante encontrado.</div>
+                  )}
                 </div>
-              )}
+              </div>
             </AdminDialogBody>
 
             <AdminDialogFooter>
@@ -695,8 +707,8 @@ export function HomeConversationsIndexRoute() {
                 disabled={
                   !selectedAccount ||
                   (conversationForm.type === 'dm'
-                    ? !conversationForm.participantName.trim()
-                    : conversationForm.participants.length === 0)
+                    ? conversationForm.selectedParticipantIds.length !== 1
+                    : conversationForm.selectedParticipantIds.length === 0)
                 }
               >
                 Criar

@@ -58,7 +58,7 @@ export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof 
 
 export function AdminDialogBody({ className, children, ...props }: ComponentProps<'div'>) {
   return (
-    <AdminScrollArea className="h-[min(30rem,calc(100dvh-14rem))]" contentClassName={cn('space-y-4 py-4 pr-4', className)}>
+    <AdminScrollArea className="h-[min(30rem,calc(100dvh-14rem))]" contentClassName={cn('space-y-4 py-4 pl-px pr-4', className)}>
       <div {...props}>
         {children}
       </div>

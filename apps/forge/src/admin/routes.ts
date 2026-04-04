@@ -657,6 +657,24 @@ export function registerAdminRoutes(input: {
   });
 
   input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/contacts',
+    handler: async () => {
+      const accounts = await input.internalChat.listAccounts();
+
+      return jsonResponse(
+        accounts.map((account) => ({
+          accountId: account.id,
+          slug: account.slug,
+          displayName: account.displayName,
+          description: account.description ?? '',
+          isAgent: Boolean(account.agentId),
+        })),
+      );
+    },
+  });
+
+  input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/account/create',
     handler: async (request) => {

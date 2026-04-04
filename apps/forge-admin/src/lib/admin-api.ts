@@ -245,6 +245,14 @@ export type InternalChatExternalAccount = {
   description: string;
 };
 
+export type InternalChatContact = {
+  accountId: string;
+  slug: string;
+  displayName: string;
+  description: string;
+  isAgent: boolean;
+};
+
 export type DiscordProviderCredentials = {
   token: string;
   channels: Array<{
@@ -522,6 +530,10 @@ export function getAgentConversationMessages(
 
 export function getInternalChatAccounts() {
   return request<InternalChatExternalAccount[]>('/admin/internal-chat/accounts');
+}
+
+export function getInternalChatContacts() {
+  return request<InternalChatContact[]>('/admin/internal-chat/contacts');
 }
 
 export function createInternalChatAccount(input: {
