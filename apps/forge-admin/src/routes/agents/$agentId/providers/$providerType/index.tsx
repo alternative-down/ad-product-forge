@@ -165,43 +165,76 @@ function DiscordProviderForm(input: {
                 <div className="space-y-2">
                   {credentials.channels.map((channel, index) => (
                     <div key={`${channel.channelId}-${index}`} className="space-y-3 border-b border-border pb-3">
-                      <div className="flex items-center gap-3">
-                        <AdminInput
-                          id={`discord-channel-id-${index}`}
-                          className="min-w-0 flex-1"
-                          value={channel.channelId}
-                          onChange={(event) =>
-                            setDraft((current) => ({
-                              ...(current ?? toDiscordCredentials(input.credentials)),
-                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
-                                valueIndex === index
-                                  ? { ...value, channelId: event.target.value }
-                                  : value,
-                              ),
-                            }))
-                          }
-                          disabled={pending}
-                        />
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                          <label className="text-sm font-medium" htmlFor={`discord-mentions-only-${channel.channelId}`}>
-                            Menção
-                          </label>
-                          <Switch
-                            id={`discord-mentions-only-${channel.channelId}`}
-                            checked={channel.respondToMentionsOnly}
-                            onCheckedChange={(checked) =>
-                              setDraft((current) => ({
-                                ...(current ?? toDiscordCredentials(input.credentials)),
-                                channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value) =>
-                                  value.channelId === channel.channelId
-                                    ? { ...value, respondToMentionsOnly: checked }
-                                    : value,
-                                ),
-                              }))
-                            }
-                            disabled={pending}
-                          />
+                      <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium" htmlFor={`discord-channel-name-${index}`}>
+                                Nome do canal
+                              </label>
+                              <AdminInput
+                                id={`discord-channel-name-${index}`}
+                                value={channel.channelName ?? ''}
+                                onChange={(event) =>
+                                  setDraft((current) => ({
+                                    ...(current ?? toDiscordCredentials(input.credentials)),
+                                    channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                      valueIndex === index
+                                        ? { ...value, channelName: event.target.value }
+                                        : value,
+                                    ),
+                                  }))
+                                }
+                                disabled={pending}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium" htmlFor={`discord-channel-id-${index}`}>
+                                Código do canal
+                              </label>
+                              <AdminInput
+                                id={`discord-channel-id-${index}`}
+                                value={channel.channelId}
+                                onChange={(event) =>
+                                  setDraft((current) => ({
+                                    ...(current ?? toDiscordCredentials(input.credentials)),
+                                    channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                      valueIndex === index
+                                        ? { ...value, channelId: event.target.value }
+                                        : value,
+                                    ),
+                                  }))
+                                }
+                                disabled={pending}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium" htmlFor={`discord-mentions-only-${index}`}>
+                              Responder só a menções
+                            </label>
+                            <div className="flex min-h-9 items-center">
+                              <Switch
+                                id={`discord-mentions-only-${index}`}
+                                checked={channel.respondToMentionsOnly}
+                                onCheckedChange={(checked) =>
+                                  setDraft((current) => ({
+                                    ...(current ?? toDiscordCredentials(input.credentials)),
+                                    channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                      valueIndex === index
+                                        ? { ...value, respondToMentionsOnly: checked }
+                                        : value,
+                                    ),
+                                  }))
+                                }
+                                disabled={pending}
+                              />
+                            </div>
+                          </div>
                         </div>
+
                         <AdminButton
                           type="button"
                           variant="outline"
@@ -219,27 +252,6 @@ function DiscordProviderForm(input: {
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Remover</span>
                         </AdminButton>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium" htmlFor={`discord-channel-name-${index}`}>
-                          Nome do canal
-                        </label>
-                        <AdminInput
-                          id={`discord-channel-name-${index}`}
-                          value={channel.channelName ?? ''}
-                          onChange={(event) =>
-                            setDraft((current) => ({
-                              ...(current ?? toDiscordCredentials(input.credentials)),
-                              channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
-                                valueIndex === index
-                                  ? { ...value, channelName: event.target.value }
-                                  : value,
-                              ),
-                            }))
-                          }
-                          disabled={pending}
-                        />
                       </div>
                     </div>
                   ))}
