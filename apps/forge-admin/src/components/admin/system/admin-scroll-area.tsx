@@ -14,7 +14,7 @@ export function AdminScrollArea({
 }) {
   return (
     <ScrollArea
-      className={cn('-mr-2 [&_[data-slot=scroll-area-scrollbar]]:border-l-0', className)}
+      className={cn('min-h-0 overflow-hidden -mr-2 [&_[data-slot=scroll-area-scrollbar]]:border-l-0', className)}
       {...props}
     >
       <div className={cn('pr-3', contentClassName)}>

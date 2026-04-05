@@ -1,4 +1,5 @@
 import type { ComponentProps } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { XIcon } from 'lucide-react';
 
@@ -11,7 +12,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
   return (
     <DialogContent
       className={cn(
-        'flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-lg sm:max-h-[80dvh] [&>form]:flex [&>form]:flex-1 [&>form]:flex-col',
+        'flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-lg sm:max-h-[80dvh] [&>form]:min-h-0 [&>form]:flex [&>form]:flex-1 [&>form]:flex-col',
         className,
       )}
       showCloseButton={false}
@@ -57,12 +58,51 @@ export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof 
 }
 
 export function AdminDialogBody({ className, children, ...props }: ComponentProps<'div'>) {
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [bodyHeight, setBodyHeight] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined' || !contentRef.current) {
+      return;
+    }
+
+    const updateHeight = () => {
+      if (!contentRef.current) {
+        return;
+      }
+
+      const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+      const viewportHeight = window.innerHeight;
+      const maxBodyHeight = window.matchMedia('(min-width: 640px)').matches
+        ? viewportHeight * 0.8 - rootFontSize * 11
+        : viewportHeight - rootFontSize * 11;
+      const nextHeight = Math.min(contentRef.current.scrollHeight + rootFontSize * 2, maxBodyHeight);
+
+      setBodyHeight(Math.max(nextHeight, 0));
+    };
+
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    resizeObserver.observe(contentRef.current);
+    window.addEventListener('resize', updateHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [children]);
+
   return (
     <AdminScrollArea
-      className="h-full flex-1"
+      className="overflow-hidden"
       contentClassName={cn('space-y-4 pb-4 pl-px pr-4', className)}
+      style={bodyHeight ? { height: `${bodyHeight}px` } : undefined}
     >
-      <div {...props}>
+      <div ref={contentRef} {...props}>
         {children}
       </div>
     </AdminScrollArea>
