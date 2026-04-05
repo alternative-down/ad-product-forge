@@ -5,77 +5,25 @@ import { useState } from 'react';
 
 import {
   AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
   AdminLoadingState,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
   PageHeader,
 } from '@/components/admin';
-import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   createAgentMcpServer,
   deleteAgentMcpServer,
   getAgent,
   updateAgentMcpServer,
-  type AgentDetail,
   type AgentMcpServerInput,
 } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
+import { McpDialog } from './-mcp-dialog';
+import { createEmptyMcpForm, createMcpForm, type McpForm } from './-mcp-helpers';
+
 export const Route = createFileRoute('/agents/$agentId/mcp/')({
   component: AgentMcpIndexRoute,
 });
-
-type McpForm = {
-  configId?: string;
-  serverId?: string;
-  name: string;
-  description: string;
-  transport: 'stdio' | 'http_streamable';
-  command: string;
-  argsText: string;
-  envVarsText: string;
-  url: string;
-  headersText: string;
-  isActive: boolean;
-};
-
-function createEmptyMcpForm(): McpForm {
-  return {
-    name: '',
-    description: '',
-    transport: 'stdio',
-    command: '',
-    argsText: '',
-    envVarsText: '',
-    url: '',
-    headersText: '',
-    isActive: true,
-  };
-}
-
-function createMcpForm(server: AgentDetail['mcpServers'][number]): McpForm {
-  return {
-    configId: server.configId,
-    serverId: server.serverId,
-    name: server.name,
-    description: server.description ?? '',
-    transport: server.transport,
-    command: server.command,
-    argsText: server.argsText,
-    envVarsText: server.envVarsText,
-    url: server.url,
-    headersText: server.headersText,
-    isActive: server.isActive,
-  };
-}
 
 function AgentMcpIndexRoute() {
   const { agentId } = Route.useParams();
@@ -226,113 +174,14 @@ function AgentMcpIndexRoute() {
         {deleteMcpMutation.error ? <div className="text-sm text-destructive">{deleteMcpMutation.error.message}</div> : null}
       </section>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>{mcpForm.configId ? 'Editar servidor MCP' : 'Novo servidor MCP'}</AdminDialogTitle>
-          </AdminDialogHeader>
-
-          <form
-            className="flex min-h-0 flex-1 flex-col"
-            onSubmit={(event) => {
-              event.preventDefault();
-              mcpMutation.mutate(mcpForm);
-            }}
-          >
-            <AdminDialogBody>
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="mcp-name">
-                    Nome
-                  </label>
-                  <AdminInput id="mcp-name" value={mcpForm.name} onChange={(event) => setMcpForm((current) => ({ ...current, name: event.target.value }))} disabled={mcpMutation.isPending} />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="mcp-description">
-                    Descrição
-                  </label>
-                  <AdminTextarea id="mcp-description" rows={4} value={mcpForm.description} onChange={(event) => setMcpForm((current) => ({ ...current, description: event.target.value }))} disabled={mcpMutation.isPending} />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="mcp-transport">
-                    Transporte
-                  </label>
-                  <Select value={mcpForm.transport} onValueChange={(value: 'stdio' | 'http_streamable') => setMcpForm((current) => ({ ...current, transport: value }))} disabled={mcpMutation.isPending}>
-                    <SelectTrigger id="mcp-transport" className="w-full">
-                      <SelectValue>{mcpForm.transport === 'stdio' ? 'stdio' : 'http_streamable'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="stdio">stdio</SelectItem>
-                      <SelectItem value="http_streamable">http_streamable</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {mcpForm.transport === 'stdio' ? (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="mcp-command">
-                        Command
-                      </label>
-                      <AdminInput id="mcp-command" value={mcpForm.command} onChange={(event) => setMcpForm((current) => ({ ...current, command: event.target.value }))} disabled={mcpMutation.isPending} />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="mcp-args">
-                        Args JSON
-                      </label>
-                      <AdminTextarea id="mcp-args" rows={4} value={mcpForm.argsText} onChange={(event) => setMcpForm((current) => ({ ...current, argsText: event.target.value }))} disabled={mcpMutation.isPending} />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="mcp-env">
-                        Env vars JSON
-                      </label>
-                      <AdminTextarea id="mcp-env" rows={4} value={mcpForm.envVarsText} onChange={(event) => setMcpForm((current) => ({ ...current, envVarsText: event.target.value }))} disabled={mcpMutation.isPending} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="mcp-url">
-                        URL
-                      </label>
-                      <AdminInput id="mcp-url" value={mcpForm.url} onChange={(event) => setMcpForm((current) => ({ ...current, url: event.target.value }))} disabled={mcpMutation.isPending} />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="mcp-headers">
-                        Headers JSON
-                      </label>
-                      <AdminTextarea id="mcp-headers" rows={4} value={mcpForm.headersText} onChange={(event) => setMcpForm((current) => ({ ...current, headersText: event.target.value }))} disabled={mcpMutation.isPending} />
-                    </div>
-                  </>
-                )}
-
-                <label className="flex items-center justify-between gap-4 rounded-sm border border-border px-4 py-3">
-                  <span className="text-sm font-medium">Ativo</span>
-                  <Switch checked={mcpForm.isActive} onCheckedChange={(checked) => setMcpForm((current) => ({ ...current, isActive: checked }))} disabled={mcpMutation.isPending} />
-                </label>
-              </div>
-            </AdminDialogBody>
-
-            <AdminDialogFooter>
-              <AdminButton
-                type="submit"
-                disabled={
-                  mcpMutation.isPending ||
-                  !mcpForm.name.trim() ||
-                  (mcpForm.transport === 'stdio' ? !mcpForm.command.trim() : !mcpForm.url.trim())
-                }
-              >
-                {mcpMutation.isPending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
-            </AdminDialogFooter>
-          </form>
-        </AdminDialogContent>
-      </Dialog>
+      <McpDialog
+        open={dialogOpen}
+        pending={mcpMutation.isPending}
+        form={mcpForm}
+        onOpenChange={setDialogOpen}
+        onFormChange={setMcpForm}
+        onSubmit={() => mcpMutation.mutate(mcpForm)}
+      />
     </div>
   );
 }

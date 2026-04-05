@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { TriangleAlert } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import {
@@ -11,31 +10,21 @@ import {
   topUpAgentContract,
 } from '@/lib/admin-api';
 import {
-  AdminDialogBody,
   AdminButton,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
   AdminLoadingState,
   PageHeader,
 } from '@/components/admin';
-import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
+
+import { ContractAdjustDialog, ContractForm, ContractTerminateDialog } from './-contract-dialogs';
+import { formatDate, formatDateTime, formatInteger, formatPercent, formatUsd } from './-contract-format';
 
 export const Route = createFileRoute('/agents/$agentId/contract/')({
   component: AgentContractIndexRoute,
 });
 
 const PAGE_SIZE = 20;
-
-type ContractForm = {
-  action: 'adjust-budget' | 'top-up';
-  amountUsd: number;
-};
 
 function AgentContractIndexRoute() {
   const { agentId } = Route.useParams();
@@ -223,10 +212,10 @@ function AgentContractIndexRoute() {
         {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
       </section>
 
-      {terminateMutation.error ? <div className="text-sm text-destructive">{terminateMutation.error.message}</div> : null}
-
-      <Dialog
+      <ContractAdjustDialog
         open={dialogOpen}
+        pending={mutation.isPending}
+        form={contractForm}
         onOpenChange={(open) => {
           setDialogOpen(open);
 
@@ -234,106 +223,21 @@ function AgentContractIndexRoute() {
             setContractForm(null);
           }
         }}
-      >
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>Alterar contrato</AdminDialogTitle>
-          </AdminDialogHeader>
+        onFormChange={setContractForm}
+        onSubmit={() => {
+          if (contractForm) {
+            mutation.mutate(contractForm);
+          }
+        }}
+      />
 
-          {contractForm ? (
-            <form
-              className="flex flex-col"
-              onSubmit={(event) => {
-                event.preventDefault();
-                mutation.mutate(contractForm);
-              }}
-            >
-              <AdminDialogBody>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="agent-contract-action">
-                    Ação
-                  </label>
-                  <Select
-                    value={contractForm.action}
-                    onValueChange={(value: ContractForm['action']) =>
-                      setContractForm((current) => (current ? { ...current, action: value } : current))
-                    }
-                    disabled={mutation.isPending}
-                  >
-                    <SelectTrigger id="agent-contract-action" className="w-full">
-                      <SelectValue>
-                        {contractForm.action === 'top-up' ? 'Adicionar saldo' : 'Ajustar orçamento'}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="adjust-budget">Ajustar orçamento</SelectItem>
-                      <SelectItem value="top-up">Adicionar saldo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="agent-contract-amount">
-                    {contractForm.action === 'top-up' ? 'Valor adicional' : 'Novo valor semanal'}
-                  </label>
-                  <AdminInput
-                    id="agent-contract-amount"
-                    type="number"
-                    step="0.01"
-                    value={contractForm.amountUsd}
-                    onChange={(event) =>
-                      setContractForm((current) =>
-                        current
-                          ? {
-                              ...current,
-                              amountUsd: Number(event.target.value) || 0,
-                            }
-                          : current,
-                      )
-                    }
-                    disabled={mutation.isPending}
-                  />
-                </div>
-              </AdminDialogBody>
-
-              <AdminDialogFooter>
-                <AdminButton type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? 'Salvando...' : 'Salvar'}
-                </AdminButton>
-              </AdminDialogFooter>
-            </form>
-          ) : null}
-        </AdminDialogContent>
-      </Dialog>
-
-      <Dialog open={terminateDialogOpen} onOpenChange={setTerminateDialogOpen}>
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>Demitir agente</AdminDialogTitle>
-          </AdminDialogHeader>
-
-          <div className="flex min-h-0 flex-1 flex-col">
-            <AdminDialogBody>
-              <div className="flex items-start gap-3 rounded-sm border border-border bg-muted/30 px-4 py-4">
-                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                <div className="space-y-2 text-sm text-foreground">
-                  <div>Esta ação encerra o agente agora.</div>
-                  <div>O saldo restante do contrato atual será estornado como entrada no caixa da empresa.</div>
-                </div>
-              </div>
-            </AdminDialogBody>
-
-            <AdminDialogFooter>
-              <AdminButton variant="ghost" onClick={() => setTerminateDialogOpen(false)} disabled={terminateMutation.isPending}>
-                Cancelar
-              </AdminButton>
-              <AdminButton variant="destructive" onClick={() => terminateMutation.mutate()} disabled={terminateMutation.isPending}>
-                {terminateMutation.isPending ? 'Demitindo...' : 'Confirmar'}
-              </AdminButton>
-            </AdminDialogFooter>
-          </div>
-        </AdminDialogContent>
-      </Dialog>
+      <ContractTerminateDialog
+        open={terminateDialogOpen}
+        pending={terminateMutation.isPending}
+        errorMessage={terminateMutation.error?.message}
+        onOpenChange={setTerminateDialogOpen}
+        onConfirm={() => terminateMutation.mutate()}
+      />
     </div>
   );
 }
@@ -345,36 +249,4 @@ function MetricItem(input: { label: string; value: string }) {
       <div className="text-xl font-semibold tracking-[-0.03em]">{input.value}</div>
     </div>
   );
-}
-
-function formatUsd(value: number, fractionDigits = 2) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(value);
-}
-
-function formatPercent(value: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    maximumFractionDigits: 1,
-  }).format(value);
-}
-
-function formatDateTime(value: number) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(value);
-}
-
-function formatDate(value: number) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-  }).format(value);
-}
-
-function formatInteger(value: number) {
-  return new Intl.NumberFormat('pt-BR').format(value);
 }

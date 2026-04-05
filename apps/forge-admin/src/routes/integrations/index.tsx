@@ -1,16 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Power, PowerOff } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
-  AdminButton,
   AdminLoadingState,
   PageHeader,
 } from '@/components/admin';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   getSystemLlm,
   getSystemOauth,
@@ -23,6 +18,9 @@ import {
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { LlmProfileDialog } from './-llm-profile-form';
+import { OauthSection } from './-oauth-section';
+import { ProfileDefaultsSection } from './-profile-defaults-section';
+import { ProfilesSection } from './-profiles-section';
 
 export const Route = createFileRoute('/integrations/')({
   component: IntegrationsProfilesRoute,
@@ -147,247 +145,75 @@ function IntegrationsProfilesRoute() {
       {llmQuery.isLoading && !llmQuery.data ? <AdminLoadingState label="Carregando perfis..." /> : null}
       <PageHeader title="Perfis" />
 
-      <section className="space-y-5">
-        <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-[-0.03em]">Perfis padrão</div>
-        </div>
+      <ProfileDefaultsSection
+        enabledProfiles={enabledProfiles}
+        primaryProfileId={primaryProfileId}
+        omProfileId={omProfileId}
+        hiringRhProfileId={hiringRhProfileId}
+        primaryProfileName={primaryProfileName}
+        omProfileName={omProfileName}
+        hiringRhProfileName={hiringRhProfileName}
+        loading={llmQuery.isLoading}
+        pending={defaultsMutation.isPending}
+        errorMessage={defaultsMutation.error?.message ?? llmQuery.error?.message}
+        onPrimaryProfileChange={(value) =>
+          setDefaultsDraft((current) => ({
+            primaryProfileId: value,
+            omProfileId: current?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '',
+            hiringRhProfileId: current?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '',
+          }))
+        }
+        onOmProfileChange={(value) =>
+          setDefaultsDraft((current) => ({
+            primaryProfileId: current?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '',
+            omProfileId: value,
+            hiringRhProfileId: current?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '',
+          }))
+        }
+        onHiringRhProfileChange={(value) =>
+          setDefaultsDraft((current) => ({
+            primaryProfileId: current?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '',
+            omProfileId: current?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '',
+            hiringRhProfileId: value,
+          }))
+        }
+        onSubmit={() =>
+          defaultsMutation.mutate({
+            primaryProfileId,
+            omProfileId,
+            hiringRhProfileId,
+          })
+        }
+      />
 
-        <form
-          className="space-y-5"
-          onSubmit={(event) => {
-            event.preventDefault();
-            defaultsMutation.mutate({
-              primaryProfileId,
-              omProfileId,
-              hiringRhProfileId,
-            });
-          }}
-        >
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="default-primary-profile">
-                Principal
-              </label>
-              <Select
-                value={primaryProfileId}
-                onValueChange={(value) =>
-                  setDefaultsDraft((current) => ({
-                    primaryProfileId: value,
-                    omProfileId: current?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '',
-                    hiringRhProfileId: current?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '',
-                  }))
-                }
-                disabled={llmQuery.isLoading || defaultsMutation.isPending || enabledProfiles.length === 0}
-              >
-                <SelectTrigger id="default-primary-profile" className="w-full">
-                  <SelectValue placeholder="Selecione um perfil">{primaryProfileName}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {enabledProfiles.map((profile) => (
-                    <SelectItem key={profile.profileId} value={profile.profileId}>
-                      {profile.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <OauthSection
+        providers={oauthQuery.data?.providers ?? []}
+        pending={oauthMutation.isPending}
+        errorMessage={oauthMutation.error?.message ?? oauthQuery.error?.message}
+        onSync={(providerId) => oauthMutation.mutate(providerId)}
+      />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="default-om-profile">
-                OM
-              </label>
-              <Select
-                value={omProfileId}
-                onValueChange={(value) =>
-                  setDefaultsDraft((current) => ({
-                    primaryProfileId: current?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '',
-                    omProfileId: value,
-                    hiringRhProfileId: current?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '',
-                  }))
-                }
-                disabled={llmQuery.isLoading || defaultsMutation.isPending || enabledProfiles.length === 0}
-              >
-                <SelectTrigger id="default-om-profile" className="w-full">
-                  <SelectValue placeholder="Selecione um perfil">{omProfileName}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {enabledProfiles.map((profile) => (
-                    <SelectItem key={profile.profileId} value={profile.profileId}>
-                      {profile.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="default-hiring-rh-profile">
-                Hiring RH
-              </label>
-              <Select
-                value={hiringRhProfileId}
-                onValueChange={(value) =>
-                  setDefaultsDraft((current) => ({
-                    primaryProfileId: current?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '',
-                    omProfileId: current?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '',
-                    hiringRhProfileId: value,
-                  }))
-                }
-                disabled={llmQuery.isLoading || defaultsMutation.isPending || enabledProfiles.length === 0}
-              >
-                <SelectTrigger id="default-hiring-rh-profile" className="w-full">
-                  <SelectValue placeholder="Selecione um perfil">{hiringRhProfileName}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {enabledProfiles.map((profile) => (
-                    <SelectItem key={profile.profileId} value={profile.profileId}>
-                      {profile.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
-          {defaultsMutation.error ? <div className="text-sm text-destructive">{defaultsMutation.error.message}</div> : null}
-          <div className="flex justify-end">
-            <AdminButton
-              type="submit"
-              disabled={
-                llmQuery.isLoading ||
-                defaultsMutation.isPending ||
-                enabledProfiles.length === 0 ||
-                !primaryProfileId ||
-                !omProfileId ||
-                !hiringRhProfileId
-              }
-            >
-              {defaultsMutation.isPending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
-          </div>
-        </form>
-      </section>
-
-      <section className="space-y-5 border-t border-border pt-6">
-        <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-[-0.03em]">OAuth</div>
-          <div className="text-sm text-muted-foreground">
-            Sincronize as credenciais locais usadas pelos providers LLM.
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {(oauthQuery.data?.providers ?? []).map((provider) => (
-            <div key={provider.providerId} className="flex items-center justify-between gap-4 rounded-sm border border-border px-4 py-3">
-              <div className="min-w-0 space-y-1">
-                <div className="font-medium">{provider.providerId}</div>
-                <div className="text-sm text-muted-foreground">
-                  {provider.synced ? (provider.accountId ? `Sincronizado · ${provider.accountId}` : 'Sincronizado') : 'Ainda não sincronizado'}
-                </div>
-              </div>
-
-              <AdminButton
-                variant="outline"
-                disabled={oauthMutation.isPending}
-                onClick={() => oauthMutation.mutate(provider.providerId)}
-              >
-                Sincronizar
-              </AdminButton>
-            </div>
-          ))}
-        </div>
-
-        {oauthQuery.error ? <div className="text-sm text-destructive">{oauthQuery.error.message}</div> : null}
-        {oauthMutation.error ? <div className="text-sm text-destructive">{oauthMutation.error.message}</div> : null}
-      </section>
-
-      <section className="space-y-5 border-t border-border pt-6">
-        <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-[-0.03em]">Perfis cadastrados</div>
-        </div>
-
-        <div className="flex items-end justify-between gap-3">
-          <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value === 'inactive' ? 'inactive' : 'active')}>
-            <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
-              <TabsTrigger
-                value="active"
-                className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
-              >
-                Ativos
-              </TabsTrigger>
-              <TabsTrigger
-                value="inactive"
-                className="h-9 rounded-sm px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground"
-              >
-                Inativos
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <AdminButton
-            onClick={() => {
-              setProfileForm(createEmptyProfileForm());
-              setDialogOpen(true);
-            }}
-          >
-            Novo
-          </AdminButton>
-        </div>
-
-        <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
-          <Table className="text-sm">
-            <TableHeader className="bg-muted/50 text-left text-muted-foreground">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
-                <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProfiles.map((profile) => (
-                <TableRow key={profile.profileId}>
-                  <TableCell className="px-4 py-3">{profile.name}</TableCell>
-                  <TableCell className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <AdminButton
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setProfileForm(createProfileForm(profile));
-                          setDialogOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
-                      </AdminButton>
-                      <AdminButton
-                        variant="ghost"
-                        size="icon"
-                        disabled={statusMutation.isPending}
-                        onClick={() =>
-                          statusMutation.mutate({
-                            ...createProfileForm(profile),
-                            isEnabled: !profile.isEnabled,
-                          })
-                        }
-                      >
-                        {profile.isEnabled ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                        <span className="sr-only">{profile.isEnabled ? 'Inativar' : 'Ativar'}</span>
-                      </AdminButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredProfiles.length === 0 ? (
-                <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
-                    {statusFilter === 'active' ? 'Nenhum perfil ativo.' : 'Nenhum perfil inativo.'}
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </div>
-      </section>
+      <ProfilesSection
+        statusFilter={statusFilter}
+        profiles={filteredProfiles}
+        pending={statusMutation.isPending}
+        createProfileForm={createProfileForm}
+        onStatusFilterChange={setStatusFilter}
+        onCreate={() => {
+          setProfileForm(createEmptyProfileForm());
+          setDialogOpen(true);
+        }}
+        onEdit={(profile) => {
+          setProfileForm(createProfileForm(profile));
+          setDialogOpen(true);
+        }}
+        onToggle={(profile) =>
+          statusMutation.mutate({
+            ...createProfileForm(profile),
+            isEnabled: !profile.isEnabled,
+          })
+        }
+      />
 
       <LlmProfileDialog
         open={dialogOpen}
