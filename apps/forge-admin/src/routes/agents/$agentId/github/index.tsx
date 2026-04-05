@@ -15,7 +15,7 @@ function AgentGithubIndexRoute() {
     queryFn: () => getAgent(agentId),
   });
   const provisioning = agentQuery.data?.githubProvisioning ?? null;
-  const registrationUrl = provisioning?.registrationUrl ?? buildGithubRegisterUrl(agentId);
+  const registrationUrl = provisioning?.registrationUrl ?? null;
   const installUrl = provisioning?.installUrl ?? null;
 
   return (
@@ -24,16 +24,28 @@ function AgentGithubIndexRoute() {
         title="Github"
         actions={
           <>
-            <AdminButton asChild>
-              <a href={registrationUrl} target="_blank" rel="noreferrer">
+            {registrationUrl ? (
+              <AdminButton asChild>
+                <a href={registrationUrl} target="_blank" rel="noreferrer">
+                  Criar app
+                </a>
+              </AdminButton>
+            ) : (
+              <AdminButton disabled>
                 Criar app
-              </a>
-            </AdminButton>
-            <AdminButton asChild variant="outline" disabled={!installUrl}>
-              <a href={installUrl ?? '#'} target="_blank" rel="noreferrer" aria-disabled={!installUrl}>
+              </AdminButton>
+            )}
+            {installUrl ? (
+              <AdminButton asChild variant="outline">
+                <a href={installUrl} target="_blank" rel="noreferrer">
+                  Instalar app
+                </a>
+              </AdminButton>
+            ) : (
+              <AdminButton variant="outline" disabled>
                 Instalar app
-              </a>
-            </AdminButton>
+              </AdminButton>
+            )}
           </>
         }
       />
@@ -41,9 +53,9 @@ function AgentGithubIndexRoute() {
       {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando Github..." /> : null}
 
       <section className="space-y-4">
-        <ReadOnlyItem label="Status" value={provisioning ? humanizeGithubStatus(provisioning.status) : 'Pendente'} />
-        <ReadOnlyItem label="Link de criação" value={registrationUrl} />
-        <ReadOnlyItem label="Link de instalação" value={installUrl ?? 'Disponível após criar o app.'} />
+        <ReadOnlyItem label="Status" value={provisioning ? humanizeGithubStatus(provisioning.status) : '—'} />
+        <ReadOnlyItem label="Link de criação" value={registrationUrl ?? '—'} />
+        <ReadOnlyItem label="Link de instalação" value={installUrl ?? '—'} />
       </section>
 
       {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
@@ -73,33 +85,4 @@ function humanizeGithubStatus(status: 'pending' | 'created' | 'active') {
   }
 
   return 'Ativo';
-}
-
-function buildGithubRegisterUrl(agentId: string) {
-  const baseUrl = getConfiguredApiBaseUrl();
-  return `${baseUrl}/github/apps/${encodeURIComponent(agentId)}/register`;
-}
-
-function getConfiguredApiBaseUrl() {
-  const configuredBaseUrl = import.meta.env.VITE_FORGE_API_BASE_URL?.trim();
-
-  if (configuredBaseUrl) {
-    return configuredBaseUrl.endsWith('/') ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
-  }
-
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  const { protocol, hostname, port } = window.location;
-
-  if (hostname.startsWith('forge-admin.')) {
-    return `${protocol}//forge.${hostname.slice('forge-admin.'.length)}`;
-  }
-
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${protocol}//${hostname}:${port || '3011'}`;
-  }
-
-  return '';
 }
