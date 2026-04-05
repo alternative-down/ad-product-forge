@@ -11,7 +11,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
   return (
     <DialogContent
       className={cn(
-        'flex max-h-[calc(50dvh-2rem)] flex-col rounded-lg',
+        'flex flex-col rounded-lg',
         className,
       )}
       showCloseButton={false}
@@ -58,7 +58,7 @@ export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof 
 
 export function AdminDialogBody({ className, children, ...props }: ComponentProps<'div'>) {
   return (
-    <AdminScrollArea className="flex-1" contentClassName={cn('space-y-4 py-4 pl-px pr-4', className)}>
+    <AdminScrollArea className="flex-1 max-h-[calc(50dvh-2rem)] h-[1dvh]" contentClassName={cn('space-y-4 py-4 pl-px pr-4', className)}>
       <div {...props}>
         {children}
       </div>
