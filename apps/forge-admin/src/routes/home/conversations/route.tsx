@@ -1,21 +1,6 @@
-import { Link, Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
-import { Check, ChevronRight, Pencil, Plus } from 'lucide-react';
+import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  AdminScrollArea,
-  AdminTextarea,
-} from '@/components/admin';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   createHomeInternalChatConversation,
   createInternalChatAccount,
@@ -23,13 +8,10 @@ import {
   getHomeInternalChatConversations,
   getInternalChatAccounts,
   getInternalChatContacts,
-  type InternalChatContact,
   type InternalChatExternalAccount,
   updateInternalChatAccount,
 } from '@/lib/admin-api';
 import {
-  formatRecentMessageTime,
-  getInitials,
   HomeConversationsProvider,
   slugify,
   type AccountDialogMode,
@@ -37,6 +19,9 @@ import {
   type ConversationForm,
   type LocalConversation,
 } from './-context';
+import { AccountDialog } from './-account-dialog';
+import { ConversationListPane } from './-conversation-list-pane';
+import { NewConversationDialog } from './-new-conversation-dialog';
 
 export const Route = createFileRoute('/home/conversations')({
   component: HomeConversationsLayoutRoute,
@@ -120,18 +105,6 @@ function HomeConversationsLayoutRoute() {
   const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedAccountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
   const availableContacts = contacts.filter((contact) => contact.accountId !== selectedAccountId);
-  const filteredContacts = availableContacts.filter((contact) => {
-    const query = conversationForm.participantQuery.trim().toLowerCase();
-
-    if (!query) {
-      return true;
-    }
-
-    return (
-      contact.displayName.toLowerCase().includes(query) ||
-      contact.slug.toLowerCase().includes(query)
-    );
-  });
   const selectedConversationId = pathname.startsWith('/home/conversations/')
     ? decodeURIComponent(pathname.slice('/home/conversations/'.length))
     : '';
@@ -184,478 +157,180 @@ function HomeConversationsLayoutRoute() {
   return (
     <HomeConversationsProvider value={contextValue}>
       <div className="flex h-[calc(100dvh-12rem)] min-h-0 flex-col md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
-        <div className={mobileDetailOpen ? 'hidden h-full min-h-0 flex-col gap-3 md:flex' : 'flex h-full min-h-0 flex-col gap-3'}>
-          <section className="space-y-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="home-conversations-account">
-                Conta
-              </label>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={selectedAccountId || '__none__'}
-                  onValueChange={(value) => setSelectedAccountId(value === '__none__' ? '' : value)}
-                >
-                  <SelectTrigger id="home-conversations-account" className="w-full">
-                    <SelectValue>{selectedAccountLabel}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Selecione uma conta</SelectItem>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.accountId} value={account.accountId}>
-                        {account.displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <AdminButton
-                  variant="outline"
-                  size="icon-sm"
-                  disabled={!selectedAccount}
-                  onClick={() => {
-                    if (!selectedAccount) {
-                      return;
-                    }
+        <ConversationListPane
+          accounts={accounts}
+          selectedAccountId={selectedAccountId}
+          selectedAccountLabel={selectedAccountLabel}
+          selectedConversationId={selectedConversationId}
+          mobileDetailOpen={mobileDetailOpen}
+          conversations={conversations}
+          onSelectAccount={setSelectedAccountId}
+          onEditAccount={() => {
+            if (!selectedAccount) {
+              return;
+            }
 
-                    setAccountDialogMode('edit');
-                    setAccountFormError('');
-                    setAccountForm({
-                      accountId: selectedAccount.accountId,
-                      slug: selectedAccount.slug,
-                      displayName: selectedAccount.displayName,
-                      description: selectedAccount.description,
-                      slugDirty: true,
-                    });
-                    setAccountDialogOpen(true);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                  <span className="sr-only">Editar conta</span>
-                </AdminButton>
-                <AdminButton
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={() => {
-                    setAccountDialogMode('create');
-                    setAccountFormError('');
-                    setAccountForm({
-                      accountId: undefined,
-                      slug: '',
-                      displayName: '',
-                      description: '',
-                      slugDirty: false,
-                    });
-                    setAccountDialogOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="sr-only">Nova conta</span>
-                </AdminButton>
-              </div>
-            </div>
-          </section>
-
-          <div className="flex min-h-0 flex-1 flex-col gap-3">
-            <AdminButton
-              variant="outline"
-              className="w-full justify-center"
-              disabled={!selectedAccount}
-              onClick={() => {
-                setConversationForm({
-                  type: 'dm',
-                  name: '',
-                  participantQuery: '',
-                  selectedParticipantIds: [],
-                });
-                setConversationDialogOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Nova conversa
-            </AdminButton>
-
-            <AdminScrollArea className="h-full" contentClassName="space-y-2">
-              {selectedAccount ? (
-                conversations.length > 0 ? (
-                  conversations.map((conversation) => {
-                    const itemLatestMessage = conversation.messages.at(-1) ?? null;
-                    const selected = conversation.id === selectedConversationId;
-                    const avatarLabel = conversation.type === 'dm'
-                      ? conversation.name
-                      : conversation.name;
-
-                    return (
-                      <Link
-                        key={conversation.id}
-                        to="/home/conversations/$conversationId"
-                        params={{ conversationId: conversation.id }}
-                        className={
-                          selected
-                            ? 'block min-w-0 rounded-sm border border-border bg-muted px-4 py-3 text-left'
-                            : 'block min-w-0 rounded-sm border border-border bg-background px-4 py-3 text-left'
-                        }
-                      >
-                        <div className="flex items-start gap-3">
-                          <Avatar className="h-9 w-9 border border-border bg-muted">
-                            <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                              {getInitials(avatarLabel)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 text-sm font-medium text-foreground">
-                                {conversation.name}
-                              </div>
-                              {itemLatestMessage ? (
-                                <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
-                                  {formatRecentMessageTime(itemLatestMessage.createdAt)}
-                                </span>
-                              ) : null}
-                              <div className="flex shrink-0 items-center gap-2 md:hidden">
-                                {itemLatestMessage ? (
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatRecentMessageTime(itemLatestMessage.createdAt)}
-                                  </span>
-                                ) : null}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            </div>
-                            {conversation.type === 'group' && conversation.participants.length > 1 ? (
-                              <div className="line-clamp-2 text-sm text-muted-foreground">
-                                {conversation.participants.join(', ')}
-                              </div>
-                            ) : null}
-                            {itemLatestMessage ? (
-                              <div className="space-y-1 pt-2">
-                                <div className="truncate text-sm text-foreground">
-                                  <span className="text-muted-foreground">{itemLatestMessage.authorDisplayName}: </span>
-                                  <span>{itemLatestMessage.content}</span>
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })
-                ) : (
-                  <div className="rounded-sm border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-                    Nenhuma conversa ainda.
-                  </div>
-                )
-              ) : (
-                <div className="rounded-sm border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-                  Selecione uma conta para abrir as conversas.
-                </div>
-              )}
-            </AdminScrollArea>
-          </div>
-        </div>
+            setAccountDialogMode('edit');
+            setAccountFormError('');
+            setAccountForm({
+              accountId: selectedAccount.accountId,
+              slug: selectedAccount.slug,
+              displayName: selectedAccount.displayName,
+              description: selectedAccount.description,
+              slugDirty: true,
+            });
+            setAccountDialogOpen(true);
+          }}
+          onCreateAccount={() => {
+            setAccountDialogMode('create');
+            setAccountFormError('');
+            setAccountForm({
+              accountId: undefined,
+              slug: '',
+              displayName: '',
+              description: '',
+              slugDirty: false,
+            });
+            setAccountDialogOpen(true);
+          }}
+          onCreateConversation={() => {
+            setConversationForm({
+              type: 'dm',
+              name: '',
+              participantQuery: '',
+              selectedParticipantIds: [],
+            });
+            setConversationDialogOpen(true);
+          }}
+        />
 
         <div className={mobileDetailOpen ? 'flex h-full min-h-0 flex-col' : 'hidden h-full min-h-0 flex-col md:flex'}>
           <Outlet />
         </div>
       </div>
 
-      <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>{accountDialogMode === 'edit' ? 'Editar conta' : 'Nova conta'}</AdminDialogTitle>
-          </AdminDialogHeader>
+      <AccountDialog
+        open={accountDialogOpen}
+        mode={accountDialogMode}
+        saving={accountSaving}
+        form={accountForm}
+        errorMessage={accountFormError}
+        onOpenChange={setAccountDialogOpen}
+        onFormChange={(nextForm) =>
+          setAccountForm((current) => ({
+            ...nextForm,
+            slug: nextForm.slugDirty ? nextForm.slug : slugify(nextForm.displayName),
+            accountId: nextForm.accountId ?? current.accountId,
+          }))
+        }
+        onDelete={async () => {
+          if (!accountForm.accountId) {
+            return;
+          }
 
-          <form
-            className="flex flex-col"
-            onSubmit={async (event) => {
-              event.preventDefault();
+          await deleteInternalChatAccount(accountForm.accountId);
+          setAccounts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
+          setContacts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
+          setSelectedAccountId('');
+          setAccountDialogOpen(false);
+        }}
+        onSubmit={() => {
+          void (async () => {
+            const payload = {
+              slug: accountForm.slug.trim(),
+              displayName: accountForm.displayName.trim(),
+              description: accountForm.description.trim() || undefined,
+            };
 
-              const payload = {
-                slug: accountForm.slug.trim(),
-                displayName: accountForm.displayName.trim(),
-                description: accountForm.description.trim() || undefined,
+            setAccountFormError('');
+            setAccountSaving(true);
+
+            try {
+              const account = accountForm.accountId
+                ? await updateInternalChatAccount({
+                    accountId: accountForm.accountId,
+                    ...payload,
+                  })
+                : await createInternalChatAccount(payload);
+
+              const normalizedAccount: InternalChatExternalAccount = {
+                accountId: account.accountId,
+                slug: account.slug,
+                displayName: account.displayName,
+                description: account.description ?? '',
               };
 
-              setAccountFormError('');
-              setAccountSaving(true);
-
-              try {
-                const account = accountForm.accountId
-                  ? await updateInternalChatAccount({
-                      accountId: accountForm.accountId,
-                      ...payload,
-                    })
-                  : await createInternalChatAccount(payload);
-
-                const normalizedAccount: InternalChatExternalAccount = {
-                  accountId: account.accountId,
-                  slug: account.slug,
-                  displayName: account.displayName,
-                  description: account.description ?? '',
+              setAccounts((current) =>
+                accountForm.accountId
+                  ? current.map((item) => (item.accountId === normalizedAccount.accountId ? normalizedAccount : item))
+                  : [...current, normalizedAccount].sort((left, right) => left.displayName.localeCompare(right.displayName)),
+              );
+              setContacts((current) => {
+                const nextContact = {
+                  ...normalizedAccount,
+                  isAgent: false,
                 };
 
-                setAccounts((current) =>
-                  accountForm.accountId
-                    ? current.map((item) => (item.accountId === normalizedAccount.accountId ? normalizedAccount : item))
-                    : [...current, normalizedAccount].sort((left, right) => left.displayName.localeCompare(right.displayName)),
-                );
-                setContacts((current) => {
-                  const nextContact: InternalChatContact = {
-                    ...normalizedAccount,
-                    isAgent: false,
-                  };
+                return accountForm.accountId
+                  ? current.map((item) => (item.accountId === nextContact.accountId ? nextContact : item))
+                  : [...current, nextContact].sort((left, right) => left.displayName.localeCompare(right.displayName));
+              });
+              setSelectedAccountId(normalizedAccount.accountId);
+              setAccountDialogOpen(false);
+              setAccountForm({
+                accountId: undefined,
+                slug: '',
+                displayName: '',
+                description: '',
+                slugDirty: false,
+              });
+            } catch (error) {
+              setAccountFormError(error instanceof Error ? error.message : 'Não foi possível salvar a conta.');
+            } finally {
+              setAccountSaving(false);
+            }
+          })();
+        }}
+      />
 
-                  return accountForm.accountId
-                    ? current.map((item) => (item.accountId === nextContact.accountId ? nextContact : item))
-                    : [...current, nextContact].sort((left, right) => left.displayName.localeCompare(right.displayName));
-                });
-                setSelectedAccountId(normalizedAccount.accountId);
-                setAccountDialogOpen(false);
-                setAccountForm({
-                  accountId: undefined,
-                  slug: '',
-                  displayName: '',
-                  description: '',
-                  slugDirty: false,
-                });
-              } catch (error) {
-                setAccountFormError(error instanceof Error ? error.message : 'Não foi possível salvar a conta.');
-              } finally {
-                setAccountSaving(false);
-              }
-            }}
-          >
-            <AdminDialogBody>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="internal-chat-account-name">
-                  Nome
-                </label>
-                <AdminInput
-                  id="internal-chat-account-name"
-                  value={accountForm.displayName}
-                  onChange={(event) =>
-                    setAccountForm((current) => ({
-                      ...current,
-                      displayName: event.target.value,
-                      slug: current.slugDirty ? current.slug : slugify(event.target.value),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="internal-chat-account-slug">
-                  Usuário
-                </label>
-                <AdminInput
-                  id="internal-chat-account-slug"
-                  value={accountForm.slug}
-                  disabled={accountDialogMode === 'edit'}
-                  onChange={(event) =>
-                    setAccountForm((current) => ({
-                      ...current,
-                      slug: event.target.value,
-                      slugDirty: true,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="internal-chat-account-description">
-                  Descrição
-                </label>
-                <AdminTextarea
-                  id="internal-chat-account-description"
-                  rows={4}
-                  value={accountForm.description}
-                  onChange={(event) => setAccountForm((current) => ({ ...current, description: event.target.value }))}
-                />
-              </div>
-              {accountFormError ? (
-                <div className="text-sm text-destructive">{accountFormError}</div>
-              ) : null}
-            </AdminDialogBody>
-            <AdminDialogFooter>
-              {accountDialogMode === 'edit' && accountForm.accountId ? (
-                <AdminButton
-                  type="button"
-                  variant="outline"
-                  className="mr-auto"
-                  onClick={async () => {
-                    await deleteInternalChatAccount(accountForm.accountId as string);
-                    setAccounts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
-                    setContacts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
-                    setSelectedAccountId('');
-                    setAccountDialogOpen(false);
-                  }}
-                >
-                  Excluir
-                </AdminButton>
-              ) : null}
-              <AdminButton
-                type="submit"
-                disabled={!accountForm.slug.trim() || !accountForm.displayName.trim() || accountSaving}
-              >
-                {accountSaving ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
-            </AdminDialogFooter>
-          </form>
-        </AdminDialogContent>
-      </Dialog>
+      <NewConversationDialog
+        open={conversationDialogOpen}
+        selectedAccount={Boolean(selectedAccount)}
+        form={conversationForm}
+        contacts={availableContacts}
+        onOpenChange={setConversationDialogOpen}
+        onFormChange={setConversationForm}
+        onSubmit={() => {
+          void (async () => {
+            const participants = availableContacts
+              .filter((contact) => conversationForm.selectedParticipantIds.includes(contact.accountId))
+              .map((contact) => contact.displayName);
+            const conversationName =
+              conversationForm.type === 'dm'
+                ? participants[0] ?? 'Nova conversa'
+                : conversationForm.name.trim() || 'Novo grupo';
+            const created = await createHomeInternalChatConversation({
+              accountId: selectedAccountId,
+              type: conversationForm.type,
+              name: conversationForm.type === 'group' ? conversationName : undefined,
+              participantAccountIds: conversationForm.selectedParticipantIds,
+            });
 
-      <Dialog open={conversationDialogOpen} onOpenChange={setConversationDialogOpen}>
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>Nova conversa</AdminDialogTitle>
-          </AdminDialogHeader>
-
-          <form
-            className="flex flex-col"
-            onSubmit={(event) => {
-              event.preventDefault();
-
-              void (async () => {
-                const participants = availableContacts
-                  .filter((contact) => conversationForm.selectedParticipantIds.includes(contact.accountId))
-                  .map((contact) => contact.displayName);
-                const conversationName =
-                  conversationForm.type === 'dm'
-                    ? participants[0] ?? 'Nova conversa'
-                    : conversationForm.name.trim() || 'Novo grupo';
-                const created = await createHomeInternalChatConversation({
-                  accountId: selectedAccountId,
-                  type: conversationForm.type,
-                  name: conversationForm.type === 'group' ? conversationName : undefined,
-                  participantAccountIds: conversationForm.selectedParticipantIds,
-                });
-
-                await reloadConversations();
-                setConversationDialogOpen(false);
-                setConversationForm({
-                  type: 'dm',
-                  name: '',
-                  participantQuery: '',
-                  selectedParticipantIds: [],
-                });
-                await navigate({
-                  to: '/home/conversations/$conversationId',
-                  params: { conversationId: created.conversationId },
-                });
-              })();
-            }}
-          >
-            <AdminDialogBody>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="internal-chat-conversation-type">
-                  Tipo
-                </label>
-                <Select
-                  value={conversationForm.type}
-                  onValueChange={(value: 'dm' | 'group') =>
-                    setConversationForm((current) => ({
-                      ...current,
-                      type: value,
-                      selectedParticipantIds: [],
-                    }))
-                  }
-                >
-                  <SelectTrigger id="internal-chat-conversation-type" className="w-full">
-                    <SelectValue>{conversationForm.type === 'dm' ? 'DM' : 'Grupo'}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dm">DM</SelectItem>
-                    <SelectItem value="group">Grupo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {conversationForm.type === 'group' ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="internal-chat-conversation-name">
-                    Nome do grupo
-                  </label>
-                  <AdminInput
-                    id="internal-chat-conversation-name"
-                    value={conversationForm.name}
-                    onChange={(event) => setConversationForm((current) => ({ ...current, name: event.target.value }))}
-                  />
-                </div>
-              ) : null}
-
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="internal-chat-conversation-participant-filter">
-                    Participantes
-                  </label>
-                  <AdminInput
-                    id="internal-chat-conversation-participant-filter"
-                    value={conversationForm.participantQuery}
-                    onChange={(event) =>
-                      setConversationForm((current) => ({ ...current, participantQuery: event.target.value }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  {filteredContacts.length > 0 ? (
-                    filteredContacts.map((contact) => {
-                      const selected = conversationForm.selectedParticipantIds.includes(contact.accountId);
-
-                      return (
-                        <button
-                          key={contact.accountId}
-                          type="button"
-                          onClick={() =>
-                            setConversationForm((current) => ({
-                              ...current,
-                              selectedParticipantIds:
-                                current.type === 'dm'
-                                  ? [contact.accountId]
-                                  : selected
-                                    ? current.selectedParticipantIds.filter((value) => value !== contact.accountId)
-                                    : [...current.selectedParticipantIds, contact.accountId],
-                            }))
-                          }
-                          className={
-                            selected
-                              ? 'flex w-full items-center gap-3 rounded-sm border border-border bg-muted px-3 py-3 text-left'
-                              : 'flex w-full items-center gap-3 rounded-sm border border-border bg-background px-3 py-3 text-left'
-                          }
-                        >
-                          <Avatar className="h-9 w-9 border border-border bg-muted">
-                            <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                              {getInitials(contact.displayName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 space-y-0.5">
-                            <div className="truncate text-sm font-medium text-foreground">{contact.displayName}</div>
-                            <div className="truncate text-xs text-muted-foreground">@{contact.slug}</div>
-                          </div>
-                          <div className="ml-auto text-muted-foreground">
-                            {selected ? <Check className="h-4 w-4" /> : null}
-                          </div>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="text-sm text-muted-foreground">Nenhum participante encontrado.</div>
-                  )}
-                </div>
-              </div>
-            </AdminDialogBody>
-
-            <AdminDialogFooter>
-              <AdminButton
-                type="submit"
-                disabled={
-                  !selectedAccount ||
-                  (conversationForm.type === 'dm'
-                    ? conversationForm.selectedParticipantIds.length !== 1
-                    : conversationForm.selectedParticipantIds.length === 0)
-                }
-              >
-                Criar
-              </AdminButton>
-            </AdminDialogFooter>
-          </form>
-        </AdminDialogContent>
-      </Dialog>
+            await reloadConversations();
+            setConversationDialogOpen(false);
+            setConversationForm({
+              type: 'dm',
+              name: '',
+              participantQuery: '',
+              selectedParticipantIds: [],
+            });
+            await navigate({
+              to: '/home/conversations/$conversationId',
+              params: { conversationId: created.conversationId },
+            });
+          })();
+        }}
+      />
     </HomeConversationsProvider>
   );
 }
