@@ -99,7 +99,7 @@ export function AdminDialogBody({ className, children, ...props }: ComponentProp
   return (
     <AdminScrollArea
       className="overflow-hidden"
-      contentClassName={cn('space-y-4 py-4 pl-px pr-4', className)}
+      contentClassName={cn('space-y-4 pb-4 pl-px pr-4', className)}
       style={bodyHeight ? { height: `${bodyHeight}px` } : undefined}
     >
       <div ref={contentRef} {...props}>
