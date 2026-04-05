@@ -21,16 +21,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   createAgentMcpServer,
   deleteAgentMcpServer,
-  deleteAgentSkill,
   getAgent,
   updateAgentMcpServer,
-  uploadAgentSkills,
   type AgentDetail,
   type AgentMcpServerInput,
 } from '@/lib/admin-api';
 
-export const Route = createFileRoute('/agents/$agentId/workspace/')({
-  component: AgentWorkspaceIndexRoute,
+export const Route = createFileRoute('/agents/$agentId/mcp/')({
+  component: AgentMcpIndexRoute,
 });
 
 type McpForm = {
@@ -77,7 +75,7 @@ function createMcpForm(server: AgentDetail['mcpServers'][number]): McpForm {
   };
 }
 
-function AgentWorkspaceIndexRoute() {
+function AgentMcpIndexRoute() {
   const { agentId } = Route.useParams();
   const queryClient = useQueryClient();
   const agentQuery = useQuery({
@@ -86,7 +84,6 @@ function AgentWorkspaceIndexRoute() {
   });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mcpForm, setMcpForm] = useState<McpForm>(createEmptyMcpForm);
-  const [skillFile, setSkillFile] = useState<File | null>(null);
   const mcpMutation = useMutation({
     mutationFn: async (form: McpForm) => {
       const baseInput = form.transport === 'stdio'
@@ -137,43 +134,11 @@ function AgentWorkspaceIndexRoute() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
     },
   });
-  const uploadSkillMutation = useMutation({
-    mutationFn: async () => {
-      if (!skillFile) {
-        throw new Error('Selecione um arquivo zip.');
-      }
-
-      const buffer = await skillFile.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const chunkSize = 0x8000;
-      let binary = '';
-
-      for (let index = 0; index < bytes.length; index += chunkSize) {
-        binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
-      }
-
-      return uploadAgentSkills({
-        agentId,
-        archiveBase64: btoa(binary),
-      });
-    },
-    onSuccess: async () => {
-      setSkillFile(null);
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
-    },
-  });
-  const deleteSkillMutation = useMutation({
-    mutationFn: (skillName: string) => deleteAgentSkill({ agentId, skillName }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
-    },
-  });
   const mcpServers = agentQuery.data?.mcpServers ?? [];
-  const skills = agentQuery.data?.skills ?? [];
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader title="MCP & Skills" />
+      <PageHeader title="MCP" />
 
       <section className="space-y-5">
         <div className="flex items-center justify-between gap-3">
@@ -241,75 +206,10 @@ function AgentWorkspaceIndexRoute() {
             </TableBody>
           </Table>
         </div>
-      </section>
-
-      <section className="space-y-5 border-t border-border pt-6">
-        <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-[-0.03em]">Skills</div>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="skill-archive">
-              Arquivo zip
-            </label>
-            <AdminInput
-              id="skill-archive"
-              type="file"
-              accept=".zip,application/zip"
-              onChange={(event) => setSkillFile(event.target.files?.[0] ?? null)}
-              disabled={uploadSkillMutation.isPending}
-            />
-          </div>
-
-          <AdminButton disabled={!skillFile || uploadSkillMutation.isPending} onClick={() => uploadSkillMutation.mutate()}>
-            {uploadSkillMutation.isPending ? 'Enviando...' : 'Incluir'}
-          </AdminButton>
-        </div>
-
-        <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
-          <Table className="text-sm">
-            <TableHeader className="bg-muted/50 text-left text-muted-foreground">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
-                <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {skills.map((skill) => (
-                <TableRow key={skill.skillName}>
-                  <TableCell className="px-4 py-3">{skill.skillName}</TableCell>
-                  <TableCell className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <AdminButton
-                        variant="ghost"
-                        size="icon"
-                        disabled={deleteSkillMutation.isPending}
-                        onClick={() => deleteSkillMutation.mutate(skill.skillName)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Excluir</span>
-                      </AdminButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {skills.length === 0 ? (
-                <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={2}>
-                    Nenhuma skill instalada.
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </div>
 
         {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
         {mcpMutation.error ? <div className="text-sm text-destructive">{mcpMutation.error.message}</div> : null}
         {deleteMcpMutation.error ? <div className="text-sm text-destructive">{deleteMcpMutation.error.message}</div> : null}
-        {uploadSkillMutation.error ? <div className="text-sm text-destructive">{uploadSkillMutation.error.message}</div> : null}
-        {deleteSkillMutation.error ? <div className="text-sm text-destructive">{deleteSkillMutation.error.message}</div> : null}
       </section>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
