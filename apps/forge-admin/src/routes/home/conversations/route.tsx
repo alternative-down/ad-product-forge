@@ -22,12 +22,18 @@ import {
 import { AccountDialog } from './-account-dialog';
 import { ConversationListPane } from './-conversation-list-pane';
 import { NewConversationDialog } from './-new-conversation-dialog';
+import {
+  createAccountForm,
+  createConversationForm,
+  createEmptyAccountForm,
+  normalizeAccount,
+  normalizeConversations,
+  SELECTED_ACCOUNT_STORAGE_KEY,
+} from './-route-helpers';
 
 export const Route = createFileRoute('/home/conversations')({
   component: HomeConversationsLayoutRoute,
 });
-
-const SELECTED_ACCOUNT_STORAGE_KEY = 'forja.home.internal-chat.selected-account-id';
 
 function HomeConversationsLayoutRoute() {
   const navigate = useNavigate();
@@ -50,18 +56,9 @@ function HomeConversationsLayoutRoute() {
   const [accountFormError, setAccountFormError] = useState('');
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountForm, setAccountForm] = useState<AccountForm>({
-    accountId: undefined,
-    slug: '',
-    displayName: '',
-    description: '',
-    slugDirty: false,
+    ...createEmptyAccountForm(),
   });
-  const [conversationForm, setConversationForm] = useState<ConversationForm>({
-    type: 'dm',
-    name: '',
-    participantQuery: '',
-    selectedParticipantIds: [],
-  });
+  const [conversationForm, setConversationForm] = useState<ConversationForm>(createConversationForm);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,20 +116,7 @@ function HomeConversationsLayoutRoute() {
     try {
       const items = await getHomeInternalChatConversations(selectedAccountId);
 
-      setConversations(items.map((conversation) => ({
-        id: conversation.conversationId,
-        type: conversation.type,
-        name: conversation.name,
-        participants: conversation.participants,
-        updatedAt: conversation.updatedAt,
-        messages: conversation.messages.map((message) => ({
-          id: message.messageId,
-          authorDisplayName: message.authorDisplayName,
-          content: message.content,
-          createdAt: message.createdAt,
-          attachments: [],
-        })),
-      })));
+      setConversations(normalizeConversations(items));
     } catch (error) {
       console.error('[HomeConversations] Failed to load conversations:', error);
       setConversations([]);
@@ -172,34 +156,17 @@ function HomeConversationsLayoutRoute() {
 
             setAccountDialogMode('edit');
             setAccountFormError('');
-            setAccountForm({
-              accountId: selectedAccount.accountId,
-              slug: selectedAccount.slug,
-              displayName: selectedAccount.displayName,
-              description: selectedAccount.description,
-              slugDirty: true,
-            });
+            setAccountForm(createAccountForm(selectedAccount));
             setAccountDialogOpen(true);
           }}
           onCreateAccount={() => {
             setAccountDialogMode('create');
             setAccountFormError('');
-            setAccountForm({
-              accountId: undefined,
-              slug: '',
-              displayName: '',
-              description: '',
-              slugDirty: false,
-            });
+            setAccountForm(createEmptyAccountForm());
             setAccountDialogOpen(true);
           }}
           onCreateConversation={() => {
-            setConversationForm({
-              type: 'dm',
-              name: '',
-              participantQuery: '',
-              selectedParticipantIds: [],
-            });
+            setConversationForm(createConversationForm());
             setConversationDialogOpen(true);
           }}
         />
@@ -253,12 +220,7 @@ function HomeConversationsLayoutRoute() {
                   })
                 : await createInternalChatAccount(payload);
 
-              const normalizedAccount: InternalChatExternalAccount = {
-                accountId: account.accountId,
-                slug: account.slug,
-                displayName: account.displayName,
-                description: account.description ?? '',
-              };
+              const normalizedAccount = normalizeAccount(account);
 
               setAccounts((current) =>
                 accountForm.accountId
@@ -277,13 +239,7 @@ function HomeConversationsLayoutRoute() {
               });
               setSelectedAccountId(normalizedAccount.accountId);
               setAccountDialogOpen(false);
-              setAccountForm({
-                accountId: undefined,
-                slug: '',
-                displayName: '',
-                description: '',
-                slugDirty: false,
-              });
+              setAccountForm(createEmptyAccountForm());
             } catch (error) {
               setAccountFormError(error instanceof Error ? error.message : 'Não foi possível salvar a conta.');
             } finally {
@@ -318,12 +274,7 @@ function HomeConversationsLayoutRoute() {
 
             await reloadConversations();
             setConversationDialogOpen(false);
-            setConversationForm({
-              type: 'dm',
-              name: '',
-              participantQuery: '',
-              selectedParticipantIds: [],
-            });
+            setConversationForm(createConversationForm());
             await navigate({
               to: '/home/conversations/$conversationId',
               params: { conversationId: created.conversationId },
