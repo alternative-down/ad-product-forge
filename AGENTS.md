@@ -22,6 +22,7 @@
 
 ## Forge Admin Frontend
 - Follow [docs/design-system/forge-admin-ui-system.md](./docs/design-system/forge-admin-ui-system.md) as the design source of truth for the new Forge Admin UI.
+- Follow [docs/design-system/forge-admin-implementation.md](./docs/design-system/forge-admin-implementation.md) for route structure, shared primitives, and cleanup rules in the new Forge Admin UI.
 - Avoid cards and technical explanatory text in the admin UI unless they are truly necessary for the task.
 - Admin UI should be light, friendly, and clear. Avoid enterprise, industrial, and cinematic aesthetics.
 - The target aesthetic is friendly minimal UI with subtle anime influence: light, human, calm, and quietly expressive.

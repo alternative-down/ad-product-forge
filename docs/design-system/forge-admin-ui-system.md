@@ -51,10 +51,9 @@ It should not feel like:
 The system shell should be simple and predictable.
 
 Structure:
-- fixed left sidebar
-- light top bar
+- light top bar with primary product areas
+- local page submenu for each area
 - continuous main content area
-- optional right detail pane when needed
 
 The shell should prioritize:
 - orientation
@@ -64,12 +63,9 @@ The shell should prioritize:
 
 Primary shell pieces:
 - `AppShell`
-- `SidebarNav`
-- `TopBar`
+- `AdminTopbar`
+- `AdminAreaLayout`
 - `PageHeader`
-- `ContentFrame`
-- `SectionBlock`
-- `DetailPane`
 
 ## Layout Rules
 - Prefer one continuous page flow over many isolated modules.
@@ -206,25 +202,14 @@ If a variation is needed:
 ## Planned Custom Components
 These are the primary wrapper/system components for the new admin UI:
 - `AppShell`
-- `SidebarNav`
-- `TopBar`
+- `AdminTopbar`
+- `AdminAreaLayout`
 - `PageHeader`
-- `SectionBlock`
-- `SectionHeader`
-- `Toolbar`
-- `FilterBar`
-- `ActionBar`
-- `FieldRow`
-- `FormSection`
-- `DataTable`
-- `InlineStat`
-- `StatusBadge`
-- `EmptyState`
-- `DetailPane`
-- `TimelineList`
-- `LogBlock`
-- `KeyValueList`
-- `DangerZone`
+- `AdminDialogContent`
+- `AdminDialogBody`
+- `AdminDialogFooter`
+- `AdminScrollArea`
+- `AdminLoadingState`
 
 ## Routing Rules
 Admin routes must use directory-based TanStack file routing:

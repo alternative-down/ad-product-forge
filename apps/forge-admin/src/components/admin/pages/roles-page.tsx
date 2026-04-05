@@ -4,19 +4,9 @@ import { Pencil, Trash2 } from 'lucide-react';
 
 import {
   AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
   AdminLoadingState,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
   PageHeader,
 } from '@/components/admin';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Dialog } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   addRoleWorkflowPermission,
@@ -27,36 +17,11 @@ import {
   removeRoleWorkflowPermission,
   removeRoleToolPermission,
   updateRole,
-  type RoleItem,
 } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-type RoleForm = {
-  roleId?: string;
-  name: string;
-  description: string;
-  toolIds: string[];
-  workflowIds: string[];
-};
-
-function createEmptyRoleForm(): RoleForm {
-  return {
-    name: '',
-    description: '',
-    toolIds: [],
-    workflowIds: [],
-  };
-}
-
-function createRoleForm(role: RoleItem): RoleForm {
-  return {
-    roleId: role.roleId,
-    name: role.name,
-    description: role.description ?? '',
-    toolIds: role.toolIds,
-    workflowIds: role.workflowIds,
-  };
-}
+import { RoleDialog } from './role-dialog';
+import { createEmptyRoleForm, createRoleForm, groupToolIds, type RoleForm } from './roles-page.helpers';
 
 export function RolesPage() {
   const queryClient = useQueryClient();
@@ -238,203 +203,17 @@ export function RolesPage() {
         {deleteMutation.error ? <div className="text-sm text-destructive">{deleteMutation.error.message}</div> : null}
       </section>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>{roleForm.roleId ? 'Editar papel' : 'Novo papel'}</AdminDialogTitle>
-          </AdminDialogHeader>
-
-          <form
-            className="flex min-h-0 flex-1 flex-col"
-            onSubmit={(event) => {
-              event.preventDefault();
-              roleMutation.mutate(roleForm);
-            }}
-          >
-            <AdminDialogBody>
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="role-name">
-                    Nome
-                  </label>
-                  <AdminInput
-                    id="role-name"
-                    value={roleForm.name}
-                    onChange={(event) => setRoleForm((current) => ({ ...current, name: event.target.value }))}
-                    disabled={roleMutation.isPending}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="role-description">
-                    Descrição
-                  </label>
-                  <AdminTextarea
-                    id="role-description"
-                    rows={5}
-                    value={roleForm.description}
-                    onChange={(event) => setRoleForm((current) => ({ ...current, description: event.target.value }))}
-                    disabled={roleMutation.isPending}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <div className="text-sm font-medium">Ferramentas</div>
-
-                  <Accordion className="space-y-3">
-                    {toolSections.map((section) => (
-                      <AccordionItem key={section.title} value={section.title} className="overflow-hidden rounded-sm border border-border">
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                          <div className="flex items-center gap-3">
-                            <span>{section.title}</span>
-                            <span className="text-xs text-muted-foreground">{section.toolIds.length}</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-0">
-                          <div className="border-t border-border">
-                            {section.toolIds.map((toolId) => {
-                              const enabled = roleForm.toolIds.includes(toolId);
-
-                              return (
-                                <label
-                                  key={toolId}
-                                  className="flex items-center justify-between gap-4 px-4 py-3 not-last:border-b not-last:border-border"
-                                >
-                                  <span className="min-w-0 font-mono text-[13px] break-all">{toolId}</span>
-                                  <Switch
-                                    checked={enabled}
-                                    disabled={roleMutation.isPending}
-                                    onCheckedChange={(checked) =>
-                                      setRoleForm((current) => ({
-                                        ...current,
-                                        toolIds: checked
-                                          ? [...current.toolIds, toolId]
-                                          : current.toolIds.filter((currentToolId) => currentToolId !== toolId),
-                                      }))
-                                    }
-                                  />
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="text-sm font-medium">Workflows</div>
-
-                  <div className="overflow-hidden rounded-sm border border-border">
-                    {workflowIds.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-muted-foreground">Nenhum workflow disponível.</div>
-                    ) : (
-                      workflowIds.map((workflowId) => {
-                        const enabled = roleForm.workflowIds.includes(workflowId);
-
-                        return (
-                          <label
-                            key={workflowId}
-                            className="flex items-center justify-between gap-4 px-4 py-3 not-last:border-b not-last:border-border"
-                          >
-                            <span className="min-w-0 font-mono text-[13px] break-all">{workflowId}</span>
-                            <Switch
-                              checked={enabled}
-                              disabled={roleMutation.isPending}
-                              onCheckedChange={(checked) =>
-                                setRoleForm((current) => ({
-                                  ...current,
-                                  workflowIds: checked
-                                    ? [...current.workflowIds, workflowId]
-                                    : current.workflowIds.filter((currentWorkflowId) => currentWorkflowId !== workflowId),
-                                }))
-                              }
-                            />
-                          </label>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-                {roleMutation.error ? <div className="text-sm text-destructive">{roleMutation.error.message}</div> : null}
-              </div>
-            </AdminDialogBody>
-
-            <AdminDialogFooter>
-              <AdminButton type="submit" disabled={roleMutation.isPending || !roleForm.name.trim()}>
-                {roleMutation.isPending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
-            </AdminDialogFooter>
-          </form>
-        </AdminDialogContent>
-      </Dialog>
+      <RoleDialog
+        open={dialogOpen}
+        pending={roleMutation.isPending}
+        form={roleForm}
+        workflowIds={workflowIds}
+        toolSections={toolSections}
+        errorMessage={roleMutation.error?.message}
+        onOpenChange={setDialogOpen}
+        onFormChange={setRoleForm}
+        onSubmit={() => roleMutation.mutate(roleForm)}
+      />
     </div>
   );
-}
-
-function groupToolIds(toolIds: string[]) {
-  const sections = new Map<string, string[]>();
-  const orderedSectionTitles = [
-    'Pesquisa',
-    'Comunicação',
-    'Github',
-    'Coolify',
-    'Agenda & Tarefas',
-    'Financeiro & Contratos',
-    'Equipe & Papéis',
-    'MiniMax',
-    'Outras',
-  ];
-
-  for (const toolId of [...toolIds].sort((left, right) => left.localeCompare(right))) {
-    const title = getToolSectionTitle(toolId);
-    const items = sections.get(title) ?? [];
-    items.push(toolId);
-    sections.set(title, items);
-  }
-
-  return orderedSectionTitles
-    .map((title) => ({
-      title,
-      toolIds: sections.get(title) ?? [],
-    }))
-    .filter((section) => section.toolIds.length > 0);
-}
-
-function getToolSectionTitle(toolId: string) {
-  if (toolId.includes('search') || toolId.includes('memory')) {
-    return 'Pesquisa';
-  }
-
-  if (toolId.includes('message') || toolId.includes('conversation') || toolId.includes('notification')) {
-    return 'Comunicação';
-  }
-
-  if (toolId.includes('github')) {
-    return 'Github';
-  }
-
-  if (toolId.includes('coolify')) {
-    return 'Coolify';
-  }
-
-  if (toolId.includes('schedule') || toolId.includes('calendar') || toolId.includes('task')) {
-    return 'Agenda & Tarefas';
-  }
-
-  if (toolId.includes('finance') || toolId.includes('contract') || toolId.includes('invoice')) {
-    return 'Financeiro & Contratos';
-  }
-
-  if (toolId.includes('role') || toolId.includes('agent') || toolId.includes('team')) {
-    return 'Equipe & Papéis';
-  }
-
-  if (toolId.includes('minimax')) {
-    return 'MiniMax';
-  }
-
-  return 'Outras';
 }
