@@ -31,7 +31,6 @@ function AgentsLayoutRoute() {
     agentId,
     pathname,
     providerTypes: agentQuery.data?.providers.map((provider) => provider.providerType) ?? [],
-    hasGithubProvisioning: Boolean(agentQuery.data?.githubProvisioning),
   });
   const currentSection = [...sectionItems]
     .sort((left, right) => right.value.length - left.value.length)
@@ -112,7 +111,6 @@ function buildAgentSectionItems(input: {
   agentId: string;
   pathname: string;
   providerTypes: string[];
-  hasGithubProvisioning: boolean;
 }) {
   if (!input.agentId) {
     return [
@@ -153,12 +151,10 @@ function buildAgentSectionItems(input: {
     }
   }
 
-  if (input.hasGithubProvisioning) {
-    items.push({
-      value: `/agents/${input.agentId}/github`,
-      label: 'Github',
-    });
-  }
+  items.push({
+    value: `/agents/${input.agentId}/github`,
+    label: 'Github',
+  });
 
   items.push({ value: `/agents/${input.agentId}/log`, label: 'Log' });
 
