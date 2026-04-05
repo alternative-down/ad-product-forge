@@ -1,13 +1,6 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Archive, ArrowDown, ArrowLeft, Pencil, SendHorizontal, Settings2 } from 'lucide-react';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import {
-  AdminButton,
-  AdminScrollArea,
-  AdminTextarea,
-} from '@/components/admin';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   addHomeInternalChatGroupMember,
   archiveHomeInternalChatConversation,
@@ -19,8 +12,10 @@ import {
   updateHomeInternalChatGroupMemberRole,
   type HomeInternalChatConversationMessage,
 } from '@/lib/admin-api';
-import { formatRecentMessageTime, getInitials, useHomeConversations } from '../-context';
-import { ConversationAttachment } from './-conversation-attachment';
+import { formatRecentMessageTime, useHomeConversations } from '../-context';
+import { ConversationComposer } from './-conversation-composer';
+import { ConversationHeader } from './-conversation-header';
+import { ConversationMessagesPane } from './-conversation-messages-pane';
 import { ParticipantsDialog } from './-participants-dialog';
 import { RenameConversationDialog } from './-rename-conversation-dialog';
 
@@ -182,211 +177,97 @@ function HomeConversationDetailIndexRoute() {
   return (
     <>
       <div className="flex h-full min-h-0 flex-col gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void navigate({ to: '/home/conversations' })}
-              className="text-muted-foreground md:hidden"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Voltar</span>
-            </button>
-            <div className="text-base font-semibold tracking-[-0.03em]">{selectedConversation.name}</div>
-            {selectedConversation.type === 'group' ? (
-              <AdminButton variant="outline" size="icon-sm" onClick={() => setRenameDialogOpen(true)}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Editar nome da conversa</span>
-              </AdminButton>
-            ) : null}
-            <AdminButton
-              variant="outline"
-              size="icon-sm"
-              onClick={() => {
-                if (!selectedAccount) {
-                  return;
-                }
+        <ConversationHeader
+          conversation={selectedConversation}
+          members={members}
+          onBack={() => void navigate({ to: '/home/conversations' })}
+          onRenameOpen={() => setRenameDialogOpen(true)}
+          onParticipantsOpen={() => setParticipantsDialogOpen(true)}
+          onArchive={() => {
+            if (!selectedAccount) {
+              return;
+            }
 
-                void (async () => {
-                  await archiveHomeInternalChatConversation({
-                    accountId: selectedAccount.accountId,
-                    conversationId: selectedConversation.id,
-                  });
-                  await reloadConversations();
-                  await navigate({ to: '/home/conversations' });
-                })();
-              }}
-            >
-              <Archive className="h-4 w-4" />
-              <span className="sr-only">Arquivar conversa</span>
-            </AdminButton>
-          </div>
-          {selectedConversation.type === 'group' ? (
-            <div className="flex items-start justify-between gap-3">
-              <div className="text-sm text-muted-foreground">
-                {members.length > 0
-                  ? members.map((member) => member.participantName).join(', ')
-                  : 'Sem participantes.'}
-              </div>
-              <AdminButton
-                variant="outline"
-                size="icon-sm"
-                onClick={() => setParticipantsDialogOpen(true)}
-              >
-                <Settings2 className="h-4 w-4" />
-                <span className="sr-only">Participantes</span>
-              </AdminButton>
-            </div>
-          ) : null}
-        </div>
+            void (async () => {
+              await archiveHomeInternalChatConversation({
+                accountId: selectedAccount.accountId,
+                conversationId: selectedConversation.id,
+              });
+              await reloadConversations();
+              await navigate({ to: '/home/conversations' });
+            })();
+          }}
+        />
 
-        <div ref={scrollAreaRef} className="relative min-h-0 flex-1">
-          <AdminScrollArea className="h-full" contentClassName="space-y-3">
-            {messages.map((message) => {
-              const authorContact = contactByAccountId.get(message.authorAccountId);
+        <ConversationMessagesPane
+          containerRef={scrollAreaRef}
+          accountId={selectedAccount?.accountId ?? ''}
+          conversationId={selectedConversation.id}
+          messages={messages}
+          contactByAccountId={contactByAccountId}
+          formatRecentMessageTime={formatRecentMessageTime}
+          autoScrollEnabled={autoScrollEnabled}
+          onScrollToBottom={() => {
+            const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
 
-              return (
-                <article key={message.messageId} className="flex items-start gap-3 py-1">
-                  {authorContact?.agentId ? (
-                    <Link
-                      to="/agents/$agentId"
-                      params={{ agentId: authorContact.agentId }}
-                      className="shrink-0"
-                    >
-                      <Avatar className="h-9 w-9 border border-border bg-muted">
-                        <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                          {getInitials(message.authorDisplayName)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Link>
-                  ) : (
-                    <Avatar className="h-9 w-9 border border-border bg-muted">
-                      <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                        {getInitials(message.authorDisplayName)}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className="font-medium text-foreground">{message.authorDisplayName}</span>
-                      <span className="text-xs text-muted-foreground">{formatRecentMessageTime(message.createdAt)}</span>
-                    </div>
-                    <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{message.content}</div>
-                    {message.attachments.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {message.attachments.map((attachment) => (
-                          <ConversationAttachment
-                            key={`${message.messageId}:${attachment.name}`}
-                            accountId={selectedAccount?.accountId ?? ''}
-                            conversationId={selectedConversation.id}
-                            messageId={message.messageId}
-                            attachment={attachment}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </article>
+            if (!(viewport instanceof HTMLDivElement)) {
+              return;
+            }
+
+            viewport.scrollTop = viewport.scrollHeight;
+            setAutoScrollEnabled(true);
+          }}
+        />
+
+        <ConversationComposer
+          messageDraft={messageDraft}
+          attachmentDrafts={attachmentDrafts}
+          disabled={!selectedAccount || (!messageDraft.trim() && attachmentDrafts.length === 0)}
+          onMessageDraftChange={setMessageDraft}
+          onAttachmentDraftsChange={setAttachmentDrafts}
+          onSend={() => {
+            if (!selectedAccount || (!messageDraft.trim() && attachmentDrafts.length === 0)) {
+              return;
+            }
+
+            void (async () => {
+              const attachments = await Promise.all(
+                attachmentDrafts.map(async (file) => ({
+                  name: file.name,
+                  contentType: file.type || undefined,
+                  dataBase64: encodeArrayBufferToBase64(await file.arrayBuffer()),
+                })),
               );
-            })}
-          </AdminScrollArea>
-          {!autoScrollEnabled ? (
-            <AdminButton
-              variant="outline"
-              size="icon-sm"
-              className="absolute bottom-3 right-1"
-              onClick={() => {
+
+              await sendHomeInternalChatMessage({
+                accountId: selectedAccount.accountId,
+                conversationId: selectedConversation.id,
+                content: messageDraft.trim(),
+                attachments,
+              });
+
+              const messageResult = await getHomeInternalChatMessages(
+                selectedAccount.accountId,
+                selectedConversation.id,
+                100,
+                0,
+              );
+
+              setMessages(messageResult.items);
+              setMessageDraft('');
+              setAttachmentDrafts([]);
+              setAutoScrollEnabled(true);
+              requestAnimationFrame(() => {
                 const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
 
-                if (!(viewport instanceof HTMLDivElement)) {
-                  return;
+                if (viewport instanceof HTMLDivElement) {
+                  viewport.scrollTop = viewport.scrollHeight;
                 }
-
-                viewport.scrollTop = viewport.scrollHeight;
-                setAutoScrollEnabled(true);
-              }}
-            >
-              <ArrowDown className="h-4 w-4" />
-              <span className="sr-only">Ir para o final</span>
-            </AdminButton>
-          ) : null}
-        </div>
-
-        <section className="space-y-3 border-t border-border pt-4">
-          <AdminTextarea
-            id="home-conversations-message"
-            rows={4}
-            value={messageDraft}
-            onChange={(event) => setMessageDraft(event.target.value)}
-          />
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="text-sm text-muted-foreground">
-              <input
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(event) => setAttachmentDrafts(Array.from(event.target.files ?? []))}
-              />
-              <span className="cursor-pointer">Adicionar anexos</span>
-            </label>
-            <AdminButton
-              size="icon-sm"
-              disabled={!selectedAccount || (!messageDraft.trim() && attachmentDrafts.length === 0)}
-              onClick={() => {
-                if (!selectedAccount || (!messageDraft.trim() && attachmentDrafts.length === 0)) {
-                  return;
-                }
-
-                void (async () => {
-                  const attachments = await Promise.all(
-                    attachmentDrafts.map(async (file) => ({
-                      name: file.name,
-                      contentType: file.type || undefined,
-                      dataBase64: encodeArrayBufferToBase64(await file.arrayBuffer()),
-                    })),
-                  );
-
-                  await sendHomeInternalChatMessage({
-                    accountId: selectedAccount.accountId,
-                    conversationId: selectedConversation.id,
-                    content: messageDraft.trim(),
-                    attachments,
-                  });
-
-                  const messageResult = await getHomeInternalChatMessages(
-                    selectedAccount.accountId,
-                    selectedConversation.id,
-                    100,
-                    0,
-                  );
-
-                  setMessages(messageResult.items);
-                  setMessageDraft('');
-                  setAttachmentDrafts([]);
-                  setAutoScrollEnabled(true);
-                  requestAnimationFrame(() => {
-                    const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
-
-                    if (viewport instanceof HTMLDivElement) {
-                      viewport.scrollTop = viewport.scrollHeight;
-                    }
-                  });
-                  await reloadConversations();
-                })();
-              }}
-            >
-              <SendHorizontal className="h-4 w-4" />
-              <span className="sr-only">Enviar</span>
-            </AdminButton>
-          </div>
-
-          {attachmentDrafts.length > 0 ? (
-            <div className="text-xs text-muted-foreground">
-              {attachmentDrafts.map((file) => file.name).join(', ')}
-            </div>
-          ) : null}
-        </section>
+              });
+              await reloadConversations();
+            })();
+          }}
+        />
       </div>
 
       <RenameConversationDialog
