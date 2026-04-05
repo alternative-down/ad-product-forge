@@ -4,17 +4,10 @@ import { Pencil, Power, PowerOff } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
-  AdminDialogBody,
   AdminButton,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
   AdminLoadingState,
-  AdminDialogTitle,
-  AdminInput,
   PageHeader,
 } from '@/components/admin';
-import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +21,8 @@ import {
   type UpsertLlmProfileInput,
 } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
+
+import { LlmProfileDialog } from './-llm-profile-form';
 
 export const Route = createFileRoute('/integrations/')({
   component: IntegrationsProfilesRoute,
@@ -394,121 +389,24 @@ function IntegrationsProfilesRoute() {
         </div>
       </section>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AdminDialogContent>
-          <AdminDialogHeader>
-            <AdminDialogTitle>{profileForm.profileId ? 'Editar perfil' : 'Novo perfil'}</AdminDialogTitle>
-          </AdminDialogHeader>
-
-          <form
-            className="flex flex-col"
-            onSubmit={(event) => {
-              event.preventDefault();
-              mutation.mutate({
-                ...profileForm,
-                name: profileForm.name.trim(),
-                modelKey: profileForm.modelKey.trim(),
-                baseUrl: profileForm.baseUrl?.trim() || null,
-                apiKey: profileForm.apiKey.trim(),
-              });
-            }}
-          >
-            <AdminDialogBody>
-            <div className="grid gap-4 min-[560px]:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-profile-name">
-                  Nome
-                </label>
-                <AdminInput
-                  id="llm-profile-name"
-                  value={profileForm.name}
-                  onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))}
-                  disabled={mutation.isPending}
-                />
-              </div>
-              <div className="min-w-0 space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-model-key">
-                  Model key
-                </label>
-                <Select
-                  value={profileForm.modelKey}
-                  onValueChange={(value) =>
-                    setProfileForm((current) => ({
-                      ...current,
-                      modelKey: value,
-                    }))
-                  }
-                  disabled={mutation.isPending || modelKeys.length === 0}
-                >
-                  <SelectTrigger id="llm-model-key" className="w-full min-w-0 max-w-full overflow-hidden">
-                    <SelectValue
-                      className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
-                      placeholder={modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {modelKeys.map((modelKey) => (
-                      <SelectItem key={modelKey} value={modelKey}>
-                        {modelKey}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="llm-base-url">
-                Base URL
-              </label>
-              <AdminInput
-                id="llm-base-url"
-                value={profileForm.baseUrl ?? ''}
-                onChange={(event) => setProfileForm((current) => ({ ...current, baseUrl: event.target.value }))}
-                disabled={mutation.isPending}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="llm-api-key">
-                API key
-              </label>
-              <AdminInput
-                id="llm-api-key"
-                type="password"
-                value={profileForm.apiKey}
-                onChange={(event) => setProfileForm((current) => ({ ...current, apiKey: event.target.value }))}
-                disabled={mutation.isPending}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="llm-contract-multiplier">
-                Multiplicador de custo
-              </label>
-              <AdminInput
-                id="llm-contract-multiplier"
-                type="number"
-                min="0.000001"
-                step="0.01"
-                value={profileForm.contractCostMultiplier}
-                onChange={(event) =>
-                  setProfileForm((current) => ({
-                    ...current,
-                    contractCostMultiplier: Number(event.target.value) || 1,
-                  }))
-                }
-                disabled={mutation.isPending}
-              />
-            </div>
-            {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
-            {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-            </AdminDialogBody>
-            <AdminDialogFooter>
-              <AdminButton type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
-            </AdminDialogFooter>
-          </form>
-        </AdminDialogContent>
-      </Dialog>
+      <LlmProfileDialog
+        open={dialogOpen}
+        pending={mutation.isPending}
+        profileForm={profileForm}
+        modelKeys={modelKeys}
+        errorMessage={mutation.error?.message ?? llmQuery.error?.message}
+        onOpenChange={setDialogOpen}
+        onProfileFormChange={setProfileForm}
+        onSubmit={() =>
+          mutation.mutate({
+            ...profileForm,
+            name: profileForm.name.trim(),
+            modelKey: profileForm.modelKey.trim(),
+            baseUrl: profileForm.baseUrl?.trim() || null,
+            apiKey: profileForm.apiKey.trim(),
+          })
+        }
+      />
     </div>
   );
 }
