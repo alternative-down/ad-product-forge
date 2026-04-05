@@ -17,6 +17,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { getAgents, getSystemSettings, upsertSystemSettings } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/home/')({
@@ -44,6 +45,22 @@ function HomeIndexRoute() {
     onSuccess: async () => {
       setEditOpen(false);
       setDraft(null);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] });
+    },
+  });
+  const stepDelayMutation = useMutation({
+    mutationFn: (stepDelayEnabled: boolean) => {
+      if (!settingsQuery.data) {
+        throw new Error('Configuração indisponível.');
+      }
+
+      return upsertSystemSettings({
+        companyName: settingsQuery.data.companyName,
+        companyContext: settingsQuery.data.companyContext,
+        stepDelayEnabled,
+      });
+    },
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] });
     },
   });
@@ -76,6 +93,23 @@ function HomeIndexRoute() {
         {settingsQuery.data?.companyContext?.trim() ? (
           <p className="max-w-3xl text-base text-muted-foreground">{settingsQuery.data.companyContext.trim()}</p>
         ) : null}
+      </section>
+
+      <section className="space-y-3 border-t border-border pt-6">
+        <div className="flex items-center justify-between gap-4 rounded-sm border border-border px-4 py-3">
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Delay entre steps</div>
+            <div className="text-sm text-muted-foreground">
+              Ativa o intervalo padrão entre execuções.
+            </div>
+          </div>
+          <Switch
+            checked={settingsQuery.data?.stepDelayEnabled ?? true}
+            disabled={settingsQuery.isLoading || stepDelayMutation.isPending}
+            onCheckedChange={(checked) => stepDelayMutation.mutate(checked)}
+          />
+        </div>
+        {stepDelayMutation.error ? <div className="text-sm text-destructive">{stepDelayMutation.error.message}</div> : null}
       </section>
 
       <section className="space-y-5">
