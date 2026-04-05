@@ -9,6 +9,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminLoadingState,
   AdminDialogTitle,
   AdminInput,
   PageHeader,
@@ -26,6 +27,7 @@ import {
   type LlmProfile,
   type UpsertLlmProfileInput,
 } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/integrations/')({
   component: IntegrationsProfilesRoute,
@@ -74,29 +76,49 @@ function IntegrationsProfilesRoute() {
   } | null>(null);
   const mutation = useMutation({
     mutationFn: upsertLlmProfile,
-    onSuccess: async () => {
+    onMutate: (input) => startAdminAction(input.profileId ? 'Salvando perfil...' : 'Criando perfil...'),
+    onSuccess: async (_data, input, context) => {
+      succeedAdminAction(context, input.profileId ? 'Perfil atualizado.' : 'Perfil criado.');
       setDialogOpen(false);
       setProfileForm(createEmptyProfileForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
     },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
+    },
   });
   const statusMutation = useMutation({
     mutationFn: upsertLlmProfile,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Atualizando status do perfil...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Status do perfil atualizado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const defaultsMutation = useMutation({
     mutationFn: updateLlmDefaults,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando perfis padrão...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Perfis padrão atualizados.');
       setDefaultsDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const oauthMutation = useMutation({
     mutationFn: syncSystemOauth,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Sincronizando OAuth...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'OAuth sincronizado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-oauth'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const profiles = useMemo(
@@ -127,6 +149,7 @@ function IntegrationsProfilesRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {llmQuery.isLoading && !llmQuery.data ? <AdminLoadingState label="Carregando perfis..." /> : null}
       <PageHeader title="Perfis" />
 
       <section className="space-y-5">

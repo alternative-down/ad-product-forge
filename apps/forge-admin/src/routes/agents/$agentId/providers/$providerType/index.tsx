@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
-import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
+import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
 import {
   deleteAgentProvider,
   getAgent,
@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin-api';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/providers/$providerType/')({
   component: AgentProviderIndexRoute,
@@ -28,6 +29,10 @@ function AgentProviderIndexRoute() {
     () => agentQuery.data?.providers.find((item) => item.providerType === providerType) ?? null,
     [agentQuery.data?.providers, providerType],
   );
+
+  if (agentQuery.isLoading && !agentQuery.data) {
+    return <AdminLoadingState label="Carregando provider..." />;
+  }
 
   if (providerType === 'internal-chat') {
     return <div className="text-sm text-muted-foreground">Provider não disponível nesta área.</div>;
@@ -56,16 +61,26 @@ function DiscordProviderForm(input: {
   const [newChannelMentionsOnly, setNewChannelMentionsOnly] = useState(false);
   const saveMutation = useMutation({
     mutationFn: upsertAgentProvider,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando Discord...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Discord atualizado.');
       setDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const deleteMutation = useMutation({
     mutationFn: () => deleteAgentProvider(input.agentId, 'discord'),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Removendo Discord...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Discord removido.');
       setDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const credentials = draft ?? toDiscordCredentials(input.credentials);
@@ -338,16 +353,26 @@ function EmailProviderForm(input: {
   const [draft, setDraft] = useState<EmailProviderCredentials | null>(null);
   const saveMutation = useMutation({
     mutationFn: upsertAgentProvider,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando email...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Email atualizado.');
       setDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const deleteMutation = useMutation({
     mutationFn: () => deleteAgentProvider(input.agentId, 'email'),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Removendo email...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Email removido.');
       setDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', input.agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const credentials = draft ?? toEmailCredentials(input.credentials);

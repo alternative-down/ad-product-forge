@@ -9,6 +9,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminLoadingState,
   AdminDialogTitle,
   AdminInput,
   PageHeader,
@@ -16,6 +17,7 @@ import {
 import { Dialog } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/integrations/prices/')({
   component: IntegrationsPricesRoute,
@@ -40,10 +42,15 @@ function IntegrationsPricesRoute() {
   const [priceForm, setPriceForm] = useState<UpsertLlmModelPriceInput>(createEmptyPriceForm);
   const mutation = useMutation({
     mutationFn: upsertLlmModelPrice,
-    onSuccess: async () => {
+    onMutate: (input) => startAdminAction(input.priceId ? 'Salvando preço...' : 'Criando preço...'),
+    onSuccess: async (_data, input, context) => {
+      succeedAdminAction(context, input.priceId ? 'Preço atualizado.' : 'Preço criado.');
       setDialogOpen(false);
       setPriceForm(createEmptyPriceForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-llm'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const prices = useMemo(
@@ -53,6 +60,7 @@ function IntegrationsPricesRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {llmQuery.isLoading && !llmQuery.data ? <AdminLoadingState label="Carregando preços..." /> : null}
       <PageHeader title="Preços" />
 
       <div className="flex justify-end">

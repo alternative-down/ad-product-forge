@@ -2,9 +2,10 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
+import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
 import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/integrations/migadu/')({
   component: IntegrationsMigaduRoute,
@@ -27,9 +28,14 @@ function IntegrationsMigaduRoute() {
   } | null>(null);
   const mutation = useMutation({
     mutationFn: upsertSystemIntegration,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando Migadu...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Migadu atualizado.');
       setDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-integrations'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const apiUser = draft?.apiUser ?? (integration?.config?.apiUser ?? '');
@@ -38,6 +44,7 @@ function IntegrationsMigaduRoute() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {integrationsQuery.isLoading && !integrationsQuery.data ? <AdminLoadingState label="Carregando Migadu..." /> : null}
       <PageHeader
         title="Migadu"
         description="Conecta o sistema ao Migadu para provisionar e administrar caixas de e-mail."

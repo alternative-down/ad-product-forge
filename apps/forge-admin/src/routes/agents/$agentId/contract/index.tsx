@@ -18,11 +18,13 @@ import {
   AdminDialogHeader,
   AdminDialogTitle,
   AdminInput,
+  AdminLoadingState,
   PageHeader,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/contract/')({
   component: AgentContractIndexRoute,
@@ -68,7 +70,13 @@ function AgentContractIndexRoute() {
         newBudgetUsd: input.amountUsd,
       });
     },
-    onSuccess: async () => {
+    onMutate: ({ action }) =>
+      startAdminAction(action === 'top-up' ? 'Adicionando saldo...' : 'Ajustando contrato...'),
+    onSuccess: async (_data, variables, context) => {
+      succeedAdminAction(
+        context,
+        variables.action === 'top-up' ? 'Saldo adicionado ao contrato.' : 'Contrato atualizado.',
+      );
       setDialogOpen(false);
       setContractForm(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
@@ -76,10 +84,15 @@ function AgentContractIndexRoute() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] });
     },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
+    },
   });
   const terminateMutation = useMutation({
     mutationFn: async () => terminateAgent(agentId),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Demitindo agente...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Agente demitido.');
       setTerminateDialogOpen(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
@@ -87,6 +100,9 @@ function AgentContractIndexRoute() {
         queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] }),
       ]);
       await navigate({ to: '/agents' });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const steps = stepsQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -111,6 +127,7 @@ function AgentContractIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando contrato..." /> : null}
       <section className="space-y-5">
         <PageHeader
           title="Contrato"

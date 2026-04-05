@@ -9,6 +9,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminLoadingState,
   AdminDialogTitle,
   AdminInput,
   AdminTextarea,
@@ -27,6 +28,7 @@ import {
   setRecurringPayableActive,
   type CreatePayableInput,
 } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/finance/accounts/')({
   component: FinanceAccountsIndexRoute,
@@ -78,31 +80,51 @@ function FinanceAccountsIndexRoute() {
 
       return createPayable(toPayableInput(input));
     },
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando movimento...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Movimento salvo.');
       setDialogOpen(false);
       setMovementForm(createEmptyMovementForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] });
     },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
+    },
   });
   const postMutation = useMutation({
     mutationFn: ({ entryId, effectiveAt }: { entryId: string; effectiveAt?: string }) =>
       postPlannedLedgerEntry(entryId, effectiveAt),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Postando movimento...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Movimento postado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const cancelMutation = useMutation({
     mutationFn: cancelPlannedLedgerEntry,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Cancelando movimento...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Movimento cancelado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const recurringMutation = useMutation({
     mutationFn: ({ payableId, isActive }: { payableId: string; isActive: boolean }) =>
       setRecurringPayableActive(payableId, isActive),
-    onSuccess: async () => {
+    onMutate: ({ isActive }) => startAdminAction(isActive ? 'Ativando recorrência...' : 'Inativando recorrência...'),
+    onSuccess: async (_data, variables, context) => {
+      succeedAdminAction(context, variables.isActive ? 'Recorrência ativada.' : 'Recorrência inativada.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const plannedMovements = useMemo(
@@ -157,6 +179,7 @@ function FinanceAccountsIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {financeQuery.isLoading && !financeQuery.data ? <AdminLoadingState label="Carregando contas..." /> : null}
       <PageHeader title="Contas a pagar/receber" />
 
       <section className="space-y-5">

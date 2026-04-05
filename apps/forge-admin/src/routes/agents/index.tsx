@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdminButton, HireAgentDialog, PageHeader } from '@/components/admin';
+import { AdminButton, AdminLoadingState, HireAgentDialog, PageHeader } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getAgents } from '@/lib/admin-api';
 
@@ -31,6 +31,7 @@ function AgentsIndexRoute() {
       />
 
       <section className="space-y-5">
+        {agentsQuery.isLoading && agents.length === 0 ? <AdminLoadingState label="Carregando agentes..." /> : null}
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
           <Table className="text-sm">
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">

@@ -9,6 +9,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminLoadingState,
   AdminDialogTitle,
   AdminInput,
   PageHeader,
@@ -22,6 +23,7 @@ import {
   topUpAgentContract,
   type FinanceContractsResponse,
 } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/finance/contracts/')({
   component: FinanceContractsIndexRoute,
@@ -65,17 +67,23 @@ function FinanceContractsIndexRoute() {
         newBudgetUsd: input.amountUsd,
       });
     },
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando contrato...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Contrato atualizado.');
       setDialogOpen(false);
       setContractForm(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const contracts = contractsQuery.data?.items ?? [];
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {contractsQuery.isLoading && !contractsQuery.data ? <AdminLoadingState label="Carregando contratos..." /> : null}
       <PageHeader title="Contratos" />
 
       <section className="space-y-5">

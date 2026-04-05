@@ -9,6 +9,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminLoadingState,
   AdminDialogTitle,
   AdminInput,
   AdminTextarea,
@@ -19,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { createSchedule, deleteSchedule, getAgent, updateSchedule, type AgentSchedule } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/schedules/')({
   component: AgentSchedulesIndexRoute,
@@ -100,16 +102,27 @@ function AgentSchedulesIndexRoute() {
         content: current.content.trim(),
       });
     },
-    onSuccess: async () => {
+    onMutate: (current) =>
+      startAdminAction(current.scheduleId ? 'Salvando agendamento...' : 'Criando agendamento...'),
+    onSuccess: async (_data, current, context) => {
+      succeedAdminAction(context, current.scheduleId ? 'Agendamento atualizado.' : 'Agendamento criado.');
       setDialogOpen(false);
       setForm(createEmptyScheduleForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
     },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: (scheduleId: string) => deleteSchedule(agentId, scheduleId),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Excluindo agendamento...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Agendamento excluído.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const schedules = agentQuery.data?.schedules ?? [];
@@ -117,15 +130,46 @@ function AgentSchedulesIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando agendamentos..." /> : null}
       <PageHeader title="Agendamentos" />
 
       {heartbeat ? (
-        <section className="space-y-2">
-          <div className="text-lg font-semibold tracking-[-0.03em]">Heartbeat</div>
-          <div className="text-sm text-muted-foreground">
-            {heartbeat.name} · {heartbeat.isActive ? 'Ativo' : 'Inativo'}
-            {heartbeat.nextTriggerAt ? ` · Próximo: ${formatDateTime(heartbeat.nextTriggerAt)}` : ''}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-lg font-semibold tracking-[-0.03em]">Heartbeat</div>
+            <AdminButton
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setForm(createScheduleForm(heartbeat));
+                setDialogOpen(true);
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+              <span className="sr-only">Editar heartbeat</span>
+            </AdminButton>
           </div>
+
+          <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+            <div>
+              <div className="font-medium text-foreground">Status</div>
+              <div>{heartbeat.isActive ? 'Ativo' : 'Inativo'}</div>
+            </div>
+            <div>
+              <div className="font-medium text-foreground">Próximo</div>
+              <div>{heartbeat.nextTriggerAt ? formatDateTime(heartbeat.nextTriggerAt) : '—'}</div>
+            </div>
+            <div>
+              <div className="font-medium text-foreground">Cron</div>
+              <div>{heartbeat.cronExpression ?? '—'}</div>
+            </div>
+            <div>
+              <div className="font-medium text-foreground">Timezone</div>
+              <div>{heartbeat.timezone}</div>
+            </div>
+          </div>
+
+          <div className="text-sm text-muted-foreground">{heartbeat.content || 'Sem conteúdo configurado.'}</div>
         </section>
       ) : null}
 

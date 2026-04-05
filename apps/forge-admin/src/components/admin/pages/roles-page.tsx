@@ -8,6 +8,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminLoadingState,
   AdminDialogTitle,
   AdminInput,
   AdminTextarea,
@@ -28,6 +29,7 @@ import {
   updateRole,
   type RoleItem,
 } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 type RoleForm = {
   roleId?: string;
@@ -133,17 +135,27 @@ export function RolesPage() {
 
       return savedRole;
     },
-    onSuccess: async () => {
+    onMutate: (input) => startAdminAction(input.roleId ? 'Salvando papel...' : 'Criando papel...'),
+    onSuccess: async (_data, input, context) => {
+      succeedAdminAction(context, input.roleId ? 'Papel atualizado.' : 'Papel criado.');
       setDialogOpen(false);
       setRoleForm(createEmptyRoleForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteRole,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Excluindo papel...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Papel excluído.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'roles'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
 
@@ -155,6 +167,7 @@ export function RolesPage() {
       />
 
       <section className="space-y-5">
+        {rolesQuery.isLoading && roles.length === 0 ? <AdminLoadingState label="Carregando papéis..." /> : null}
         <div className="space-y-1">
           <div className="text-lg font-semibold tracking-[-0.03em]">Papéis cadastrados</div>
         </div>

@@ -2,9 +2,10 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
+import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
 import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/integrations/coolify/')({
   component: IntegrationsCoolifyRoute,
@@ -30,9 +31,14 @@ function IntegrationsCoolifyRoute() {
   } | null>(null);
   const mutation = useMutation({
     mutationFn: upsertSystemIntegration,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando Coolify...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Coolify atualizado.');
       setDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-integrations'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const baseUrl = draft?.baseUrl ?? (integration?.config?.baseUrl ?? '');
@@ -44,6 +50,7 @@ function IntegrationsCoolifyRoute() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {integrationsQuery.isLoading && !integrationsQuery.data ? <AdminLoadingState label="Carregando Coolify..." /> : null}
       <PageHeader
         title="Coolify"
         description="Conecta o sistema ao Coolify para criar e operar aplicações e ambientes."

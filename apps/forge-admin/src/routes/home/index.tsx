@@ -9,6 +9,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminLoadingState,
   AdminDialogTitle,
   AdminInput,
   AdminTextarea,
@@ -19,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { getAgents, getSystemSettings, upsertSystemSettings } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/home/')({
   component: HomeIndexRoute,
@@ -42,10 +44,15 @@ function HomeIndexRoute() {
   } | null>(null);
   const mutation = useMutation({
     mutationFn: upsertSystemSettings,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando empresa...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Empresa atualizada.');
       setEditOpen(false);
       setDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const stepDelayMutation = useMutation({
@@ -60,8 +67,13 @@ function HomeIndexRoute() {
         stepDelayEnabled,
       });
     },
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando delay entre steps...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Delay entre steps atualizado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const companyName = draft?.companyName ?? settingsQuery.data?.companyName ?? '';
@@ -93,6 +105,7 @@ function HomeIndexRoute() {
         {settingsQuery.data?.companyContext?.trim() ? (
           <p className="max-w-3xl text-base text-muted-foreground">{settingsQuery.data.companyContext.trim()}</p>
         ) : null}
+        {settingsQuery.isLoading && !settingsQuery.data ? <AdminLoadingState label="Carregando empresa..." /> : null}
       </section>
 
       <section className="space-y-3 border-t border-border pt-6">
@@ -152,6 +165,7 @@ function HomeIndexRoute() {
           ))}
         </div>
 
+        {agentsQuery.isLoading && agents.length === 0 ? <AdminLoadingState label="Carregando agentes..." /> : null}
         {agents.length === 0 ? <div className="text-sm text-muted-foreground">Nenhum agente ainda.</div> : null}
         {agentsQuery.error ? <div className="text-sm text-destructive">{agentsQuery.error.message}</div> : null}
       </section>

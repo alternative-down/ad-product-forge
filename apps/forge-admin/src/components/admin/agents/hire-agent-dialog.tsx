@@ -13,6 +13,7 @@ import {
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import { hireAgent } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 type HireAgentDialogProps = {
   open: boolean;
@@ -41,7 +42,9 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
         additionalContext: form.additionalContext.trim() || undefined,
         weeklyBudgetUsd: Number(form.weeklyBudgetUsd),
       }),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Contratando agente...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Agente contratado.');
       input.onOpenChange(false);
       setForm(EMPTY_FORM);
       await Promise.all([
@@ -49,6 +52,9 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
         queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] }),
       ]);
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const validBudget = Number(form.weeklyBudgetUsd) > 0;

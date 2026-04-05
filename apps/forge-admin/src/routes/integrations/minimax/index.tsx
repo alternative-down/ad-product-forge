@@ -2,9 +2,10 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
+import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
 import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/integrations/minimax/')({
   component: IntegrationsMinimaxRoute,
@@ -26,9 +27,14 @@ function IntegrationsMinimaxRoute() {
   } | null>(null);
   const mutation = useMutation({
     mutationFn: upsertSystemIntegration,
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando MiniMax...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'MiniMax atualizado.');
       setDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-integrations'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const apiKey = draft?.apiKey ?? (integration?.config?.apiKey ?? '');
@@ -36,6 +42,7 @@ function IntegrationsMinimaxRoute() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {integrationsQuery.isLoading && !integrationsQuery.data ? <AdminLoadingState label="Carregando MiniMax..." /> : null}
       <PageHeader
         title="MiniMax"
         description="Conecta o sistema ao MiniMax para geração de voz, imagem e vídeo usada pelas tools dos agentes."

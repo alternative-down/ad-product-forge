@@ -11,6 +11,7 @@ import {
   AdminDialogHeader,
   AdminDialogTitle,
   AdminInput,
+  AdminLoadingState,
   AdminTextarea,
   AdminScrollArea,
 } from '@/components/admin';
@@ -19,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { changeAgentRole, getAgent, getRoles, getSystemLlm, reloadAgent, updateAgentConfig, type AgentDetail } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/')({
   component: AgentDetailIndexRoute,
@@ -43,9 +45,14 @@ function AgentDetailIndexRoute() {
   });
   const reloadMutation = useMutation({
     mutationFn: () => reloadAgent(agentId),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Recarregando agente...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Agente recarregado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const mutation = useMutation({
@@ -70,11 +77,16 @@ function AgentDetailIndexRoute() {
         });
       }
     },
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Salvando agente...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Agente atualizado.');
       setDialogOpen(false);
       setForm(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const agent = agentQuery.data;
@@ -88,6 +100,7 @@ function AgentDetailIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {agentQuery.isLoading && !agent ? <AdminLoadingState label="Carregando agente..." /> : null}
       {agent ? (
         <>
           <section className="space-y-5">

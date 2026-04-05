@@ -3,9 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
+import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { deleteAgentSkill, getAgent, uploadAgentSkills } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/skills/')({
   component: AgentSkillsIndexRoute,
@@ -39,21 +40,32 @@ function AgentSkillsIndexRoute() {
         archiveBase64: btoa(binary),
       });
     },
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Enviando skill...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Skill enviada.');
       setSkillFile(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const deleteSkillMutation = useMutation({
     mutationFn: (skillName: string) => deleteAgentSkill({ agentId, skillName }),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Excluindo skill...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Skill excluída.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const skills = agentQuery.data?.skills ?? [];
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando skills..." /> : null}
       <PageHeader title="Skills" />
 
       <section className="space-y-5">

@@ -9,6 +9,7 @@ import {
   AdminDialogContent,
   AdminDialogFooter,
   AdminDialogHeader,
+  AdminLoadingState,
   AdminDialogTitle,
   AdminInput,
   AdminTextarea,
@@ -26,6 +27,7 @@ import {
   type AgentDetail,
   type AgentMcpServerInput,
 } from '@/lib/admin-api';
+import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/mcp/')({
   component: AgentMcpIndexRoute,
@@ -117,10 +119,16 @@ function AgentMcpIndexRoute() {
 
       return createAgentMcpServer(baseInput satisfies AgentMcpServerInput);
     },
-    onSuccess: async () => {
+    onMutate: (form) =>
+      startAdminAction(form.configId ? 'Salvando servidor MCP...' : 'Criando servidor MCP...'),
+    onSuccess: async (_data, form, context) => {
+      succeedAdminAction(context, form.configId ? 'Servidor MCP atualizado.' : 'Servidor MCP criado.');
       setDialogOpen(false);
       setMcpForm(createEmptyMcpForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const deleteMcpMutation = useMutation({
@@ -130,14 +138,20 @@ function AgentMcpIndexRoute() {
         configId: server.configId,
         serverId: server.serverId,
       }),
-    onSuccess: async () => {
+    onMutate: () => startAdminAction('Excluindo servidor MCP...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Servidor MCP excluído.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
     },
   });
   const mcpServers = agentQuery.data?.mcpServers ?? [];
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando MCP..." /> : null}
       <PageHeader title="MCP" />
 
       <section className="space-y-5">
