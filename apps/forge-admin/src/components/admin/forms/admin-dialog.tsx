@@ -11,7 +11,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
   return (
     <DialogContent
       className={cn(
-        'flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-lg sm:h-[80dvh] sm:max-h-[80dvh]',
+        'flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-lg sm:h-[80dvh] sm:max-h-[80dvh] [&>form]:min-h-0 [&>form]:flex [&>form]:flex-1 [&>form]:flex-col',
         className,
       )}
       showCloseButton={false}
@@ -23,7 +23,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
 export function AdminDialogFooter({ className, ...props }: ComponentProps<typeof DialogFooter>) {
   return (
     <DialogFooter
-      className={cn('flex-row justify-end gap-2 rounded-b-lg bg-muted/50 px-4 py-3', className)}
+      className={cn('shrink-0 flex-row justify-end gap-2 rounded-b-lg bg-muted/50 px-4 py-3', className)}
       {...props}
     />
   );
@@ -32,7 +32,7 @@ export function AdminDialogFooter({ className, ...props }: ComponentProps<typeof
 export function AdminDialogHeader({ className, children, ...props }: ComponentProps<typeof DialogHeader>) {
   return (
     <DialogHeader
-      className={cn('relative -mx-4 -mt-4 items-center rounded-t-lg border-b bg-muted/60 px-4 py-4 text-center', className)}
+      className={cn('relative -mx-4 -mt-4 shrink-0 items-center rounded-t-lg border-b bg-muted/60 px-4 py-4 text-center', className)}
       {...props}
     >
       {children}
@@ -59,7 +59,7 @@ export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof 
 export function AdminDialogBody({ className, children, ...props }: ComponentProps<'div'>) {
   return (
     <AdminScrollArea
-      className="h-0 flex-1"
+      className="min-h-0 flex-1"
       contentClassName={cn('space-y-4 py-4 pl-px pr-4', className)}
     >
       <div {...props}>
