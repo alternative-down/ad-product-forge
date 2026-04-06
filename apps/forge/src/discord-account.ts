@@ -228,32 +228,7 @@ export function createDiscordProvider(config: {
     }
 
     const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
-    const textContent = message.content
-      .replaceAll(`<@${botUserId}>`, '')
-      .replaceAll(`<@!${botUserId}>`, '')
-      .trim();
-
-    const embedContent = message.embeds
-      .map((embed) =>
-        [
-          embed.title?.trim(),
-          embed.description?.trim(),
-          embed.fields
-            .map((field) => `${field.name}: ${field.value}`.trim())
-            .filter(Boolean)
-            .join('\n'),
-          embed.footer?.text?.trim(),
-          embed.url?.trim(),
-        ]
-          .filter((value) => value && value.length > 0)
-          .join('\n'),
-      )
-      .filter((value) => value.length > 0)
-      .join('\n\n');
-
-    const content = [textContent, embedContent]
-      .filter((value) => value.length > 0)
-      .join('\n\n');
+    const content = extractDiscordMessageContent(message, botUserId);
 
     if (!content && message.attachments.size === 0) {
       return null;
@@ -488,7 +463,7 @@ export function createDiscordProvider(config: {
         provider: 'discord',
         authorId: message.author.id,
         targetKey: input.channel.id,
-        content: message.content.trim() || '[attachment only]',
+        content: extractDiscordMessageContent(message) || '[attachment only]',
         attachments: await downloadDiscordAttachments(message),
         unread: false,
         createdAt: new Date(message.createdTimestamp).toISOString(),
@@ -578,6 +553,37 @@ export function createDiscordProvider(config: {
       });
     },
   };
+}
+
+function extractDiscordMessageContent(message: Message, botUserId?: string) {
+  const textContent = (botUserId
+    ? message.content
+      .replaceAll(`<@${botUserId}>`, '')
+      .replaceAll(`<@!${botUserId}>`, '')
+    : message.content)
+    .trim();
+
+  const embedContent = message.embeds
+    .map((embed) =>
+      [
+        embed.title?.trim(),
+        embed.description?.trim(),
+        embed.fields
+          .map((field) => `${field.name}: ${field.value}`.trim())
+          .filter(Boolean)
+          .join('\n'),
+        embed.footer?.text?.trim(),
+        embed.url?.trim(),
+      ]
+        .filter((value) => value && value.length > 0)
+        .join('\n'),
+    )
+    .filter((value) => value.length > 0)
+    .join('\n\n');
+
+  return [textContent, embedContent]
+    .filter((value) => value.length > 0)
+    .join('\n\n');
 }
 
 function getDiscordConversationName(
