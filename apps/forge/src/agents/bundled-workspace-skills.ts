@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const AGENT_SKILLS_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'skills');
+const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const BUNDLED_SKILL_DIRECTORY_NAMES = ['github-api', 'coolify-api'] as const;
 
 function parseSkillName(skillContent: string) {
@@ -54,7 +54,7 @@ async function copyDirectoryContents(sourceDirectory: string, targetDirectory: s
 }
 
 async function installBundledSkill(agentWorkspaceDirectory: string, sourceDirectoryName: string) {
-  const sourceSkillRoot = path.resolve(AGENT_SKILLS_ROOT, sourceDirectoryName);
+  const sourceSkillRoot = await resolveBundledSkillRoot(sourceDirectoryName);
   const skillFilePath = path.resolve(sourceSkillRoot, 'SKILL.md');
   const skillContent = await fs.readFile(skillFilePath, 'utf8');
   const skillName = parseSkillName(skillContent);
@@ -67,4 +67,25 @@ export async function ensureBundledWorkspaceSkills(agentWorkspaceDirectory: stri
   for (const sourceDirectoryName of BUNDLED_SKILL_DIRECTORY_NAMES) {
     await installBundledSkill(agentWorkspaceDirectory, sourceDirectoryName);
   }
+}
+
+async function resolveBundledSkillRoot(sourceDirectoryName: string) {
+  const candidateRoots = [
+    path.resolve(MODULE_DIRECTORY, 'skills'),
+    path.resolve(MODULE_DIRECTORY, '../src/agents/skills'),
+    path.resolve(process.cwd(), 'src/agents/skills'),
+  ];
+
+  for (const candidateRoot of candidateRoots) {
+    const skillFilePath = path.resolve(candidateRoot, sourceDirectoryName, 'SKILL.md');
+
+    try {
+      await fs.access(skillFilePath);
+      return path.resolve(candidateRoot, sourceDirectoryName);
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error(`Bundled skill source not found for ${sourceDirectoryName}`);
 }

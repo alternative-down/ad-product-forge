@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "build": "npm run -w @mastra-engine/core build && tsup",
+    "build": "npm run -w @mastra-engine/core build && tsup && mkdir -p dist/skills && cp -R src/agents/skills/. dist/skills/",
     "typecheck": "npm run -w @mastra-engine/core build && tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "init-registry": "tsx src/scripts/init-agent-registry.ts",
