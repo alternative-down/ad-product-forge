@@ -1,24 +1,27 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 
-import { desc, eq, inArray, sql } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/libsql';
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibSQLStore } from '@mastra/libsql';
-import {
-  chatGroupMembers,
-  communicationConversations,
-  communicationMessages,
-  communicationSchema,
-} from '@mastra-engine/core';
+import type { MastraDBMessage } from '@mastra/core/agent';
+import { toMastraSafeIdentifier } from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
-import { agents, agentExecutionSteps, agentProviders, agentSchedules } from '../database/schema';
+import {
+  agents,
+  agentExecutionContracts,
+  agentExecutionSteps,
+  agentMcpConfigs,
+  agentProviders,
+  agentSchedules,
+  mcpServerConfigs,
+} from '../database/schema';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createCapabilityStore } from '../capabilities/store';
-import { forgeCustomToolIds, forgeWorkflowIds } from '../capabilities/catalog';
+import { forgeCapabilityIds } from '../capabilities/catalog';
 import { decryptSecret } from '../encryption/crypto';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createSystemIntegrationStore } from '../system-integrations/store';
@@ -26,17 +29,32 @@ import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import type { GitHubAppManager } from '../github/manager';
 import { createSystemSettingsStore } from '../system-settings/store';
+import type { InternalChatService } from '../communication/internal-chat-service';
+import { listAgentWorkspaceSkills } from '../agents/workspace-skills';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
 const RECENT_CONVERSATION_LIMIT = 10;
-const RECENT_CONVERSATION_MESSAGE_LIMIT = 5;
+
+interface MastraMemoryStore {
+  createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
+}
+
+function hasCreateThread(store: unknown): store is MastraMemoryStore {
+  return (
+    typeof store === 'object' &&
+    store !== null &&
+    'createThread' in store &&
+    typeof (store as MastraMemoryStore).createThread === 'function'
+  );
+}
 
 export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
   githubApps: GitHubAppManager;
+  internalChat: InternalChatService;
 }) {
   const db = input.db;
   const finance = createMicroErpReadModel(db);
@@ -49,7 +67,7 @@ export function createAdminReadModel(input: {
   const systemSettings = createSystemSettingsStore(db);
 
   async function getDashboard() {
-    const [agentRows, balance, summary, activeContracts, cashMovements, functions, roles] =
+    const [agentRows, balance, summary, activeContracts, cashMovements, roles] =
       await Promise.all([
         db.query.agents.findMany(),
         finance.getCompanyCashBalance(),
@@ -58,7 +76,6 @@ export function createAdminReadModel(input: {
         finance.listCompanyCashMovements({
           limit: RECENT_CASH_MOVEMENT_LIMIT,
         }),
-        capabilities.listFunctions(),
         capabilities.listRoles(),
       ]);
     const registry = getInternalAgentRegistry();
@@ -70,7 +87,6 @@ export function createAdminReadModel(input: {
         loadedAgents: loadedAgentIds.size,
         idleAgents: agentRows.filter((agent) => agent.executionState === 'idle').length,
         runningAgents: agentRows.filter((agent) => agent.executionState === 'running').length,
-        functions: functions.length,
         roles: roles.length,
         activeContracts: activeContracts.items.length,
       },
@@ -83,16 +99,16 @@ export function createAdminReadModel(input: {
   }
 
   async function listAgents() {
-    const [agentRows, functionRows, providerRows, llmProfiles] = await Promise.all([
+    const [agentRows, roleRows, providerRows, llmProfiles] = await Promise.all([
       db.query.agents.findMany({
         orderBy: (fields, { asc }) => [asc(fields.name)],
       }),
-      capabilities.listFunctions(),
+      capabilities.listRoles(),
       db.query.agentProviders.findMany(),
       llmSettings.listProfiles(),
     ]);
     const registry = getInternalAgentRegistry();
-    const functionMap = new Map(functionRows.map((row) => [row.functionId, row]));
+    const roleMap = new Map(roleRows.map((row) => [row.roleId, row]));
     const llmProfileMap = new Map(
       llmProfiles.map((row) => [
         row.profileId,
@@ -114,7 +130,7 @@ export function createAdminReadModel(input: {
     return agentRows.map((agent) => {
       const loadedAgent = registry.get(agent.id);
       const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
-      const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
+      const role = agent.roleId ? (roleMap.get(agent.roleId) ?? null) : null;
       const modelProfile = llmProfileMap.get(agent.modelProfileId);
       const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
       const executionState =
@@ -127,8 +143,8 @@ export function createAdminReadModel(input: {
         name: agent.name,
         description: agent.description ?? undefined,
         executionState,
-        functionId: agent.functionId,
-        functionName: agentFunction?.name ?? null,
+        roleId: agent.roleId,
+        roleName: role?.name ?? null,
         modelProfile: modelProfile ?? null,
         omModelProfile: omModelProfile ?? null,
         loaded: Boolean(loadedAgent),
@@ -150,9 +166,10 @@ export function createAdminReadModel(input: {
     }
 
     const [
-      functions,
+      roles,
       llmProfiles,
       providerRows,
+      agentMcpRows,
       recentSteps,
       agentScheduleRows,
       activeContract,
@@ -161,11 +178,30 @@ export function createAdminReadModel(input: {
       githubProvisioning,
     ] =
       await Promise.all([
-        capabilities.listFunctions(),
+        capabilities.listRoles(),
         llmSettings.listProfiles(),
         db.query.agentProviders.findMany({
           where: eq(agentProviders.agentId, agentId),
         }),
+        db
+          .select({
+            configId: agentMcpConfigs.id,
+            isActive: agentMcpConfigs.isActive,
+            serverId: mcpServerConfigs.id,
+            name: mcpServerConfigs.name,
+            description: mcpServerConfigs.description,
+            transport: mcpServerConfigs.transport,
+            command: mcpServerConfigs.command,
+            args: mcpServerConfigs.args,
+            envVars: mcpServerConfigs.envVars,
+            url: mcpServerConfigs.url,
+            headers: mcpServerConfigs.headers,
+            createdAt: mcpServerConfigs.createdAt,
+            updatedAt: mcpServerConfigs.updatedAt,
+          })
+          .from(agentMcpConfigs)
+          .innerJoin(mcpServerConfigs, eq(agentMcpConfigs.serverId, mcpServerConfigs.id))
+          .where(eq(agentMcpConfigs.agentId, agentId)),
         db.query.agentExecutionSteps.findMany({
           where: eq(agentExecutionSteps.agentId, agentId),
           orderBy: [desc(agentExecutionSteps.createdAt)],
@@ -180,12 +216,12 @@ export function createAdminReadModel(input: {
           agentId,
           limit: RECENT_NOTIFICATION_LIMIT,
         }),
-        listRecentConversations(input.workspaceBasePath, agentId, agent.name),
+        listRecentConversations(input.workspaceBasePath, input.internalChat, agentId, agent.name),
         input.githubApps.getAgentProvisioning(agentId),
       ]);
     const registry = getInternalAgentRegistry();
     const loadedAgent = registry.get(agentId);
-    const functionMap = new Map(functions.map((row) => [row.functionId, row]));
+    const roleMap = new Map(roles.map((row) => [row.roleId, row]));
     const llmProfileMap = new Map(
       llmProfiles.map((row) => [
         row.profileId,
@@ -196,7 +232,7 @@ export function createAdminReadModel(input: {
         },
       ]),
     );
-    const agentFunction = agent.functionId ? (functionMap.get(agent.functionId) ?? null) : null;
+    const role = agent.roleId ? (roleMap.get(agent.roleId) ?? null) : null;
     const modelProfile = llmProfileMap.get(agent.modelProfileId);
     const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
     const heartbeat = agentScheduleRows.find((schedule) => schedule.kind === 'heartbeat') ?? null;
@@ -223,9 +259,9 @@ export function createAdminReadModel(input: {
       executionState,
       modelProfile: modelProfile ?? null,
       omModelProfile: omModelProfile ?? null,
-      function: agentFunction && {
-        ...agentFunction,
-        description: agentFunction.description ?? null,
+      role: role && {
+        ...role,
+        description: role.description ?? null,
       },
       loaded: Boolean(loadedAgent),
       runner: runnerSnapshot,
@@ -247,7 +283,25 @@ export function createAdminReadModel(input: {
               : parseProviderCredentials(provider.encryptedCredentials),
         }))
         .sort((left, right) => left.providerType.localeCompare(right.providerType)),
+      mcpServers: agentMcpRows
+        .map((server) => ({
+          configId: server.configId,
+          serverId: server.serverId,
+          name: server.name,
+          description: server.description ?? undefined,
+          transport: server.transport as 'stdio' | 'http_streamable',
+          command: server.command ?? '',
+          argsText: server.args ?? '',
+          envVarsText: server.envVars ?? '',
+          url: server.url ?? '',
+          headersText: server.headers ?? '',
+          isActive: server.isActive === 1,
+          createdAt: server.createdAt,
+          updatedAt: server.updatedAt,
+        }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
       githubProvisioning,
+      skills: await listAgentWorkspaceSkills(input.workspaceBasePath, agent),
       activeContract: activeContract && {
         ...activeContract,
         spentUsd,
@@ -275,72 +329,148 @@ export function createAdminReadModel(input: {
     };
   }
 
-  async function listFunctions() {
-    const [functions, agentCounts] = await Promise.all([
-      capabilities.listFunctions(),
-      db
-        .select({
-          functionId: agents.functionId,
-          count: sql<number>`count(*)`,
-        })
-        .from(agents)
-        .groupBy(agents.functionId),
-    ]);
-    const countMap = new Map(
-      agentCounts
-        .filter((row) => row.functionId)
-        .map((row) => [row.functionId as string, row.count]),
-    );
+  async function listAgentExecutionSteps(input: {
+    agentId: string;
+    limit: number;
+    offset: number;
+  }) {
+    const now = Date.now();
+    const activeContract = await db.query.agentExecutionContracts.findFirst({
+      where: and(
+        eq(agentExecutionContracts.agentId, input.agentId),
+        lte(agentExecutionContracts.startsAt, now),
+        gte(agentExecutionContracts.endsAt, now),
+      ),
+      orderBy: [desc(agentExecutionContracts.endsAt)],
+    });
 
-    return functions.map((agentFunction) => ({
-      ...agentFunction,
-      assignedAgentCount: countMap.get(agentFunction.functionId) ?? 0,
-    }));
+    if (!activeContract) {
+      return {
+        items: [],
+        hasMore: false,
+      };
+    }
+
+    const rows = await db.query.agentExecutionSteps.findMany({
+      where: eq(agentExecutionSteps.contractId, activeContract.id),
+      orderBy: [desc(agentExecutionSteps.createdAt)],
+      limit: input.limit,
+      offset: input.offset,
+    });
+
+    return {
+      items: rows.map((step) => {
+        const { id, ...rest } = step;
+
+        return {
+          ...rest,
+          stepId: id,
+        };
+      }),
+      hasMore: rows.length === input.limit,
+    };
+  }
+
+  async function listAgentThreadMessages(params: {
+    agentId: string;
+    page: number;
+    perPage: number;
+  }) {
+    const items = await listThreadMessages(input.workspaceBasePath, params.agentId, {
+      page: params.page,
+      perPage: params.perPage,
+    });
+
+    return {
+      items,
+      hasMore: items.length === params.perPage,
+    };
+  }
+
+  async function listAgentConversationMessages(params: {
+    agentId: string;
+    provider: string;
+    targetKey: string;
+    limit: number;
+    offset: number;
+  }) {
+    if (params.provider === 'internal-chat') {
+      const messages = await input.internalChat.getMessages({
+        agentId: params.agentId,
+        conversationKey: params.targetKey,
+        limit: params.limit,
+        offset: params.offset,
+      });
+      const accounts = await input.internalChat.listAccounts();
+      const agentIdByAccountId = new Map(accounts.map((account) => [account.id, account.agentId ?? null]));
+
+      return {
+        items: messages.map((message) => ({
+          ...message,
+          authorAgentId: message.authorId ? (agentIdByAccountId.get(message.authorId) ?? null) : null,
+        })),
+        hasMore: messages.length === params.limit,
+      };
+    }
+
+    const runtime = getInternalAgentRegistry().get(params.agentId)?.runtime;
+
+    if (!runtime) {
+      return {
+        items: [],
+        hasMore: false,
+      };
+    }
+
+    const messages = await runtime.communication.getMessages({
+      provider: params.provider,
+      targetKey: params.targetKey,
+      limit: params.limit,
+      offset: params.offset,
+    });
+
+    return {
+      items: messages.map((message) => ({
+        ...message,
+        authorAgentId: null,
+      })),
+      hasMore: messages.length === params.limit,
+    };
   }
 
   async function listRoles() {
-    const [roles, functions] = await Promise.all([
+    const [roles, agentCounts] = await Promise.all([
       capabilities.listRoles(),
-      capabilities.listFunctions(),
+      db
+        .select({
+          roleId: agents.roleId,
+          count: sql<number>`count(*)`,
+        })
+        .from(agents)
+        .groupBy(agents.roleId),
     ]);
-    const [toolPermissions, workflowPermissions] = await Promise.all([
-      Promise.all(
-        roles.map(async (role) => ({
-          roleId: role.roleId,
-          toolIds: await capabilities.listRoleToolPermissions(role.roleId),
-        })),
-      ),
-      Promise.all(
-        roles.map(async (role) => ({
-          roleId: role.roleId,
-          workflowIds: await capabilities.listRoleWorkflowPermissions(role.roleId),
-        })),
-      ),
-    ]);
-    const functionCountByRoleId = new Map<string, number>();
+    const capabilityPermissions = await Promise.all(
+      roles.map(async (role) => ({
+        roleId: role.roleId,
+        capabilityIds: await capabilities.listGrantedRoleCapabilities(role.roleId),
+      })),
+    );
+    const assignedAgentCountByRoleId = new Map(
+      agentCounts
+        .filter((row) => row.roleId)
+        .map((row) => [row.roleId as string, row.count]),
+    );
 
-    for (const agentFunction of functions) {
-      for (const roleId of agentFunction.roleIds) {
-        functionCountByRoleId.set(
-          roleId,
-          (functionCountByRoleId.get(roleId) ?? 0) + 1,
-        );
-      }
-    }
-
-    const toolMap = new Map(toolPermissions.map((row) => [row.roleId, row.toolIds]));
-    const workflowMap = new Map(workflowPermissions.map((row) => [row.roleId, row.workflowIds]));
+    const capabilityMap = new Map(capabilityPermissions.map((row) => [row.roleId, row.capabilityIds]));
 
     return {
-      availableToolIds: forgeCustomToolIds,
-      availableWorkflowIds: forgeWorkflowIds,
+      availableCapabilityIds: forgeCapabilityIds,
       items: roles.map((role) => ({
         roleId: role.roleId,
         name: role.name,
         description: role.description,
-        assignedFunctionCount: functionCountByRoleId.get(role.roleId) ?? 0,
-        toolIds: toolMap.get(role.roleId) ?? [],
-        workflowIds: workflowMap.get(role.roleId) ?? [],
+        assignedAgentCount: assignedAgentCountByRoleId.get(role.roleId) ?? 0,
+        capabilityIds: capabilityMap.get(role.roleId) ?? [],
         createdAt: role.createdAt,
         updatedAt: role.updatedAt,
       })),
@@ -365,6 +495,10 @@ export function createAdminReadModel(input: {
       movements,
       recurringPayables,
     };
+  }
+
+  async function getFinanceContracts() {
+    return finance.listActiveInternalAgentContracts();
   }
 
   async function getSystemLlm() {
@@ -429,161 +563,230 @@ export function createAdminReadModel(input: {
     getDashboard,
     listAgents,
     getAgent,
-    listFunctions,
+    listAgentExecutionSteps,
+    listAgentThreadMessages,
+    listAgentConversationMessages,
     listRoles,
     listSystemIntegrations,
     getSystemSettings,
     getSystemLlm,
     getApplicationMigrations,
     getFinance,
+    getFinanceContracts,
   };
 }
 
-async function listRecentConversations(workspaceBasePath: string, agentId: string, agentName: string) {
+async function listRecentConversations(
+  workspaceBasePath: string,
+  internalChat: InternalChatService,
+  agentId: string,
+  agentName: string,
+) {
+  const [externalConversations, internalConversations] = await Promise.all([
+    listRecentExternalConversations(workspaceBasePath, agentId, agentName),
+    listRecentInternalChatConversations(internalChat, agentId, agentName),
+  ]);
+
+  return [...internalConversations, ...externalConversations]
+    .sort((left, right) => Number(right.updatedAt) - Number(left.updatedAt))
+    .slice(0, RECENT_CONVERSATION_LIMIT);
+}
+
+async function listRecentExternalConversations(_workspaceBasePath: string, _agentId: string, _agentName: string) {
+  const runtime = getInternalAgentRegistry().get(_agentId)?.runtime;
+
+  if (!runtime) {
+    return [];
+  }
+
   try {
-    const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
-    const client = createClient({
-      url: `file:${agentDatabasePath}`,
-    });
-    const db = drizzle(client, { schema: communicationSchema });
-    const rows = await db.query.communicationConversations.findMany({
-      orderBy: [desc(communicationConversations.updatedAt)],
+    const rows = await runtime.communication.listConversations({
       limit: RECENT_CONVERSATION_LIMIT,
-      with: {
-        contact: true,
-        messages: {
-          orderBy: [desc(communicationMessages.createdAt)],
-          limit: RECENT_CONVERSATION_MESSAGE_LIMIT,
-        },
-      },
     });
-    const groupConversationIds = rows
-      .filter((conversation) => conversation.type === 'group')
-      .map((conversation) => conversation.conversationId);
-    const groupMembers = groupConversationIds.length > 0
-      ? await db.query.chatGroupMembers.findMany({
-          where: inArray(chatGroupMembers.groupId, groupConversationIds),
-          orderBy: [chatGroupMembers.createdAt],
-        })
-      : [];
-    const groupParticipantsByConversationId = new Map<string, string[]>();
 
-    for (const member of groupMembers) {
-      const participants = groupParticipantsByConversationId.get(member.groupId) ?? [];
-      participants.push(member.participantName);
-      groupParticipantsByConversationId.set(member.groupId, participants);
-    }
+    return rows
+      .filter((conversation) => conversation.provider !== 'internal-chat')
+      .map((conversation) => {
+        const participants = collectConversationParticipants({
+          name: conversation.name,
+          participants: conversation.participants,
+          messages: conversation.messages.map((message) => ({
+            authorDisplayName: message.authorDisplayName,
+          })),
+        });
 
-    return rows.map((conversation) => {
-      const participants = new Set<string>();
-
-      if (conversation.type === 'group') {
-        for (const participantName of groupParticipantsByConversationId.get(conversation.conversationId) ?? []) {
-          participants.add(participantName);
-        }
-      } else {
-        if (conversation.contact?.displayName) {
-          participants.add(conversation.contact.displayName);
-        }
-
-        participants.add(agentName);
-
-        for (const message of conversation.messages) {
-          if (message.authorDisplayName) {
-            participants.add(message.authorDisplayName);
-          }
-        }
-      }
-
-      return {
-        conversationId: conversation.conversationId,
-        conversationKey: conversation.providerConversationKey,
-        provider: conversation.provider,
-        type: conversation.type,
-        name: conversation.name ?? undefined,
-        contactId: conversation.contactId ?? undefined,
-        contactDisplayName: conversation.contact?.displayName ?? undefined,
-        participants: [...participants],
-        updatedAt: conversation.updatedAt,
-        messages: [...conversation.messages]
-          .reverse()
-          .map((message) => ({
+        return {
+          conversationId: `${conversation.provider}:${conversation.targetKey}`,
+          conversationKey: conversation.targetKey,
+          provider: conversation.provider,
+          type: participants.length > 2 ? 'group' : 'dm',
+          name: conversation.name ?? undefined,
+          participants,
+          updatedAt: Date.parse(conversation.latestMessageAt) || 0,
+          messages: conversation.messages.map((message) => ({
             messageId: message.messageId,
             content: message.content,
-            unread: message.unread === 1,
-            authorDisplayName: message.authorDisplayName ?? agentName,
-            createdAt: message.createdAt,
+            unread: message.unread,
+            authorDisplayName: message.authorDisplayName ?? 'Unknown author',
+            createdAt: Date.parse(message.createdAt) || 0,
           })),
-      };
-    });
+        };
+      });
   } catch (error) {
-    console.error(`[AdminReadModel] Failed to load recent conversations for agent ${agentId}:`, error);
+    console.error(`[AdminReadModel] Failed to load external conversations for agent ${_agentId}:`, error);
+    return [];
+  }
+}
+
+async function listRecentInternalChatConversations(
+  internalChat: InternalChatService,
+  agentId: string,
+  agentName: string,
+) {
+  try {
+    const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
+
+    return Promise.all(rows.map(async (conversation) => {
+      const internalConversation = await internalChat.getConversationForAgent(agentId, conversation.targetKey);
+      const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, conversation.targetKey);
+      const participants = collectConversationParticipants({
+        name: conversation.name,
+        participants: groupParticipants.length > 0 ? groupParticipants : conversation.participants,
+        messages: conversation.messages.map((message) => ({
+          authorDisplayName: message.authorDisplayName ?? agentName,
+        })),
+      });
+
+      return {
+        conversationId: conversation.targetKey,
+        conversationKey: conversation.targetKey,
+        provider: conversation.provider,
+        type: internalConversation?.type === 'group' ? 'group' : 'dm',
+        name: conversation.name ?? undefined,
+        participants,
+        updatedAt: Date.parse(conversation.latestMessageAt) || 0,
+        messages: conversation.messages.map((message) => ({
+          messageId: message.messageId,
+          content: message.content,
+          unread: message.unread,
+          authorDisplayName: message.authorDisplayName ?? agentName,
+          createdAt: Date.parse(message.createdAt) || 0,
+        })),
+      };
+    }));
+  } catch (error) {
+    console.error(`[AdminReadModel] Failed to load internal-chat conversations for agent ${agentId}:`, error);
+    return [];
+  }
+}
+
+function collectConversationParticipants(input: {
+  name?: string;
+  participants?: string[];
+  messages: Array<{
+    authorDisplayName?: string;
+  }>;
+}) {
+  const participants = new Set<string>();
+
+  for (const participant of input.participants ?? []) {
+    if (participant && participant !== input.name) {
+      participants.add(participant);
+    }
+  }
+
+  for (const message of input.messages) {
+    if (message.authorDisplayName && message.authorDisplayName !== input.name) {
+      participants.add(message.authorDisplayName);
+    }
+  }
+
+  return [...participants];
+}
+
+async function listInternalChatGroupParticipants(
+  internalChat: InternalChatService,
+  agentId: string,
+  conversationKey: string,
+) {
+  try {
+    const conversation = await internalChat.getConversationForAgent(agentId, conversationKey);
+
+    if (!conversation || conversation.type !== 'group') {
+      return [];
+    }
+
+    const members = await internalChat.listGroupMembers({
+      agentId,
+      groupId: conversationKey,
+    });
+    return members.map((member) => member.participantName);
+  } catch {
     return [];
   }
 }
 
 async function listRecentThreadMessages(workspaceBasePath: string, agentId: string) {
+  return listThreadMessages(workspaceBasePath, agentId, {
+    page: 0,
+    perPage: 20,
+  });
+}
+
+async function listThreadMessages(
+  workspaceBasePath: string,
+  agentId: string,
+  input: {
+    page: number;
+    perPage: number;
+  },
+) {
   try {
+    const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
     const client = createClient({
       url: `file:${agentDatabasePath}`,
     });
     const storage = new LibSQLStore({
-      id: `${agentId}-storage`,
+      id: `${mastraAgentId}_storage`,
       client,
-      disableInit: true,
     });
-    const memory = await storage.getStore('memory');
+    const memory = storage.stores.memory;
 
     if (!memory) {
       return [];
     }
 
+    if (hasCreateThread(memory)) {
+      await memory.createThread({
+        resourceId: mastraAgentId,
+        threadId: mastraAgentId,
+      });
+    }
+
     const result = await memory.listMessages({
-      threadId: agentId,
-      resourceId: agentId,
-      page: 0,
-      perPage: 20,
+      threadId: mastraAgentId,
+      resourceId: mastraAgentId,
+      page: input.page,
+      perPage: input.perPage,
       orderBy: {
         field: 'createdAt',
         direction: 'DESC',
       },
     });
-
-    return result.messages.map((message) => ({
-      messageId: message.id,
+    return result.messages.map((message: MastraDBMessage) => ({
+      id: message.id,
       role: message.role,
-      type: message.type ?? null,
-      content: extractMessageText(message.content),
       createdAt: message.createdAt.getTime(),
+      threadId: message.threadId ?? null,
+      resourceId: message.resourceId ?? null,
+      type: message.type ?? null,
+      content: message.content,
     }));
   } catch (error) {
     console.error(`[AdminReadModel] Failed to load recent thread messages for agent ${agentId}:`, error);
     return [];
   }
-}
-
-function extractMessageText(content: {
-  content?: unknown;
-  parts?: Array<unknown>;
-}) {
-  if (typeof content.content === 'string' && content.content.trim()) {
-    return content.content;
-  }
-
-  const parts = (content.parts ?? []).flatMap((part) => {
-    if (!part || typeof part !== 'object' || !('type' in part)) {
-      return [];
-    }
-
-    if (part.type !== 'text' || !('text' in part) || typeof part.text !== 'string') {
-      return [];
-    }
-
-    return [part.text];
-  });
-
-  return parts.join('\n').trim();
 }
 
 function parseProviderCredentials(encryptedCredentials: string) {

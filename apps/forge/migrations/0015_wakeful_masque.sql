@@ -1,1 +1,0 @@
-ALTER TABLE `llm_profiles` ADD `encrypted_api_key` text;

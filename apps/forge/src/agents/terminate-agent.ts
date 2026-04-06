@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import type { Database } from '../database/index';
 import { agents } from '../database/schema';
 import { getInternalAgentRegistry } from './internal-agent-registry';
+import { createAgentContractStore } from './agent-contract-store';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
@@ -26,6 +27,9 @@ export async function terminateInternalAgent(db: Database, input: {
   if (!agent) {
     throw new Error(`Agent not found: ${input.agentId}`);
   }
+
+  const contractStore = createAgentContractStore(db);
+  await contractStore.refundActiveContractBalance(input.agentId);
 
   getInternalAgentRegistry().remove(input.agentId);
   await input.schedules.removeAgent(input.agentId);

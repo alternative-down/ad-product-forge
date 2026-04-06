@@ -5,19 +5,19 @@ import { ConsoleLogger } from '@mastra/core/logger';
 import { createOAuthGateway } from '@mastra-engine/core';
 import { z } from 'zod';
 
-import { getDatabase, runMigrations, seedModelPrices } from './database/index';
+import { getDatabase, runMigrations } from './database/index';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry';
 import { createInternalAgentWorkflows } from './workflows/internal-agents';
 import { createForgeHttpServer } from './http/server';
 import { createGitHubAppManager } from './github/manager';
 import { createAgentEmailManager } from './email/migadu-manager';
 import { createCoolifyManager } from './coolify/manager';
+import { createMiniMaxManager } from './minimax/manager';
 import { createAgentScheduleManager } from './schedules/manager';
 import { createAgentPendingSummaryReader } from './agents/pending-summary';
 import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
-import { createPropagateMessageFn } from './fanout/client';
-import { registerFanOutRoutes } from './fanout/routes';
+import { createInternalChatService } from './communication/internal-chat-service';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -26,7 +26,6 @@ const envSchema = z.object({
   FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
   FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
-  FORGE_INSTANCE_ID: z.string().default('default'),
 });
 
 export async function main() {
@@ -35,7 +34,6 @@ export async function main() {
   // Load database and agents from registry
   const db = getDatabase();
   await runMigrations(db);
-  await seedModelPrices(db);
   const registry = getInternalAgentRegistry();
   const httpServer = createForgeHttpServer({
     port: env.FORGE_HTTP_PORT,
@@ -43,6 +41,9 @@ export async function main() {
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   const integrations = createSystemIntegrationStore(db);
+  const internalChat = createInternalChatService(db, {
+    dataRoot: env.FORGE_DATA_PATH,
+  });
 
   const emailMailboxes = createAgentEmailManager({
     db,
@@ -51,6 +52,7 @@ export async function main() {
   const getAgentPendingSummary = createAgentPendingSummaryReader({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    internalChat,
   });
   const schedules = createAgentScheduleManager({
     db,
@@ -66,8 +68,15 @@ export async function main() {
       console.log(`[Forge] Schedule wake requested for agent ${input.agentId}`);
       entry.runner.notifyExternalEvent({
         type: 'schedule',
-        id: `schedule:${input.scheduleId}:${input.timestamp}`,
-        content: input.content,
+        groupKey: `schedule:${input.scheduleId}`,
+        groupMetadata: {
+          Source: 'scheduler',
+          ScheduleId: input.scheduleId,
+          ScheduleKind: input.scheduleKind,
+          ScheduleName: input.scheduleName,
+        },
+        idempotencyKey: `schedule:${input.scheduleId}:${input.timestamp}`,
+        text: input.content,
         timestamp: input.timestamp,
       });
     },
@@ -88,13 +97,21 @@ export async function main() {
       console.log(`[Forge] GitHub wake requested for agent ${input.agentId}`);
       entry.runner.notifyExternalEvent({
         type: input.type,
-        id: input.id,
-        content: input.content,
+        groupKey: `github:${input.type}`,
+        groupMetadata: {
+          Source: 'github',
+          EventType: input.type,
+        },
+        idempotencyKey: input.id,
+        text: input.content,
         timestamp: input.timestamp,
       });
     },
   });
   const coolify = createCoolifyManager({
+    integrations,
+  });
+  const minimax = createMiniMaxManager({
     integrations,
   });
   const workflows = createInternalAgentWorkflows({
@@ -104,14 +121,16 @@ export async function main() {
     emailMailboxes,
     coolify,
     schedules,
+    internalChat,
   });
   const loaderConfig = {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     workflows,
     githubApps,
     coolify,
+    minimax,
     schedules,
-    propagateMessage: createPropagateMessageFn(db, env.FORGE_INSTANCE_ID) as (instanceId: string, message: unknown) => Promise<{ success: boolean; error?: string }>,
+    internalChat,
   };
   registerAdminRoutes({
     db,
@@ -123,60 +142,11 @@ export async function main() {
     emailMailboxes,
     coolify,
     integrations,
+    internalChat,
   });
   const agents = await registry.loadAll(db, loaderConfig);
   await githubApps.loadAllAgents();
   await schedules.loadAll();
-
-  // Register fan-out routes for cross-instance message propagation
-  registerFanOutRoutes(
-    (route) => httpServer.registerRoute(route),
-    {
-      getInstances: async () => {
-        const instances = await db.query.mastraInstances.findMany();
-        return instances.map((i) => ({
-          id: i.instanceId,
-          url: i.baseUrl,
-          isHealthy: true, // TODO: implement health checks
-        }));
-      },
-      getParticipantsForConversation: async (conversationId: string) => {
-        // Query all agent workspaces for group members
-        const allAgents = await db.query.agents.findMany();
-        const participants: { participantId: string; participantName: string; instanceId: string | null }[] = [];
-
-        for (const agent of allAgents) {
-          const { getGroupMembersFromWorkspace } = await import('./fanout/group-members');
-          const members = await getGroupMembersFromWorkspace(
-            agent.id,
-            env.WORKSPACE_BASE_PATH,
-            conversationId
-          );
-          participants.push(...members);
-        }
-
-        return participants;
-      },
-      deliverMessageToParticipant: async (participantId: string, instanceId: string, message: unknown) => {
-        const entry = registry.get(participantId);
-        if (!entry) {
-          return { success: false, error: `Agent ${participantId} not found` };
-        }
-
-        try {
-          entry.runner.notifyExternalEvent({
-            type: 'message',
-            id: `fanout:${Date.now()}`,
-            content: typeof message === 'string' ? message : JSON.stringify(message),
-            timestamp: Date.now(),
-          });
-          return { success: true };
-        } catch (error) {
-          return { success: false, error: String(error) };
-        }
-      },
-    }
-  );
 
   await httpServer.start();
   console.log(`[Forge] HTTP server listening on ${publicBaseUrl}`);

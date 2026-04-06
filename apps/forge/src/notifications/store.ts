@@ -1,5 +1,5 @@
-import { createId } from '@paralleldrive/cuid2';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { createId } from '../utils/id';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
 import { agentNotifications } from '../database/schema';
@@ -37,11 +37,20 @@ export function createAgentNotificationStore(db: Database) {
       limit: input.limit,
     });
 
+    const unreadNotificationIds = rows.filter((row) => row.readAt === null).map((row) => row.id);
+
+    if (unreadNotificationIds.length > 0) {
+      await db
+        .update(agentNotifications)
+        .set({ readAt: Date.now() })
+        .where(and(eq(agentNotifications.agentId, input.agentId), inArray(agentNotifications.id, unreadNotificationIds)));
+    }
+
     return rows.map((row) => ({
       notificationId: row.id,
       content: row.content,
       timestamp: row.createdAt,
-      read: row.readAt !== null,
+      read: true,
     }));
   }
 
@@ -62,28 +71,9 @@ export function createAgentNotificationStore(db: Database) {
     };
   }
 
-  async function markNotificationRead(agentId: string, notificationId: string) {
-    const now = Date.now();
-    const existing = await db.query.agentNotifications.findFirst({
-      where: and(eq(agentNotifications.agentId, agentId), eq(agentNotifications.id, notificationId)),
-    });
-
-    if (!existing) {
-      return false;
-    }
-
-    await db
-      .update(agentNotifications)
-      .set({ readAt: existing.readAt ?? now })
-      .where(and(eq(agentNotifications.agentId, agentId), eq(agentNotifications.id, notificationId)));
-
-    return true;
-  }
-
   return {
     createNotification,
     listNotifications,
     getNotification,
-    markNotificationRead,
   };
 }

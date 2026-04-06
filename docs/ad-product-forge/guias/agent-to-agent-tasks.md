@@ -12,29 +12,30 @@ O sistema de tarefas entre agentes permite que um agente-coordenador delegue tra
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│              COORDENAÇÃO DE TAREFAS ENTRE AGENTES                │
+│               COORDENAÇÃO DE CRONS ENTRE AGENTES                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │   COORDINATOR                                                 │
 │   ┌─────────────────────────────────────────────────────────┐  │
-│   │  create_task_for_agent({                               │  │
+│   │  manage_crons({                                        │  │
+│   │    action: 'create',                                   │  │
 │   │    targetAgentId: 'agent-backend',                     │  │
-│   │    task: 'Review PR #123',                            │  │
-│   │    priority: 'high'                                    │  │
+│   │    name: 'Review PR #123',                             │  │
+│   │    scheduleType: 'date'                                │  │
 │   │  })                                                    │  │
 │   └─────────────────────────────────────────────────────────┘  │
 │                           │                                     │
 │                           ▼                                     │
 │   ┌─────────────────────────────────────────────────────────┐  │
-│   │            SCHEDULED TASK CREATED                       │  │
-│   │  id: task_xxx, status: pending                          │  │
+│   │              SCHEDULED CRON CREATED                     │  │
+│   │  id: cron_xxx, active: true                            │  │
 │   └─────────────────────────────────────────────────────────┘  │
 │                           │                                     │
 │                           ▼                                     │
 │   AGENT (backend)                                              │
 │   ┌─────────────────────────────────────────────────────────┐  │
-│   │  list_agent_tasks() → [task_xxx]                        │  │
-│   │  execute_task(task_xxx)                                │  │
+│   │  list_crons() → [cron_xxx]                             │  │
+│   │  execute cron_xxx                                      │  │
 │   └─────────────────────────────────────────────────────────┘  │
 │                           │                                     │
 │                           ▼                                     │
@@ -127,76 +128,60 @@ interface UpdateTaskInput {
 
 ## Ferramentas Disponíveis
 
-### create_task_for_agent
+### manage_crons
 
-Cria uma nova tarefa para outro agente.
+Cria, atualiza ou deleta um cron para outro agente.
 
 ```typescript
-const result = await create_task_for_agent({
+const result = await manage_crons({
+  action: 'create',
   targetAgentId: 'agent-id',
-  taskDescription: 'Revisar PR #123',
-  taskType: 'code_review',
-  priority: 'high'
+  name: 'Revisar PR #123',
+  scheduleType: 'date',
+  scheduledDate: '2026-04-06T15:00:00.000Z',
+  timezone: 'UTC',
+  content: 'Revisar PR #123'
 });
 
 // Response
 {
-  taskId: 'task_abc123',
+  cronId: 'cron_abc123',
   targetAgentId: 'agent-id',
-  status: 'pending',
-  createdAt: 1711500000000
+  scheduleType: 'date'
 }
 ```
 
-### list_agent_tasks
+### list_crons
 
-Lista tarefas do agente.
+Lista crons criados para outros agentes.
 
 ```typescript
-const tasks = await list_agent_tasks({
-  status: 'pending',  // optional filter
-  includeHistory: true
+const crons = await list_crons({
+  targetAgentId: 'agent-id'
 });
 
 // Response
-{
-  tasks: [
-    {
-      taskId: 'task_abc123',
-      description: 'Revisar PR #123',
-      type: 'code_review',
-      status: 'pending',
-      priority: 'high',
-      createdAt: 1711500000000,
-      schedule: null
-    }
-  ]
-}
+[{ cronId: 'cron_abc123', targetAgentId: 'agent-id' }]
 ```
 
-### cancel_agent_task
+### manage_self_crons
 
-Cancela uma tarefa pendente.
+Cria, atualiza ou deleta um cron próprio.
 
 ```typescript
-await cancel_agent_task({
-  taskId: 'task_abc123',
-  reason: 'PR fechado prematuramente'
+await manage_self_crons({
+  action: 'update',
+  cronId: 'cron_abc123',
+  isActive: false
 });
 ```
 
-### update_agent_task
+### list_self_crons
 
-Atualiza status ou resultado de uma tarefa.
+Lista crons próprios.
 
 ```typescript
-await update_agent_task({
-  taskId: 'task_abc123',
-  updates: {
-    status: 'completed',
-    result: 'Revisão concluída: 2 comentários adicionados'
-  }
-});
+const crons = await list_self_crons({});
 ```
 
 ## Modelo de Dados

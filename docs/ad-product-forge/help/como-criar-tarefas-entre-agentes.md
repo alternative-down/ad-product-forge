@@ -96,63 +96,57 @@ Para agendamentos complexos usando expressão cron.
 4. **Agende**: Escolha quando a tarefa deve ser executada
 5. **Configure prioridade**: Opcional, para organizar a fila
 
-### Exemplo: Criar Tarefa de Revisão
+### Exemplo: Criar Cron de Revisão
 
 ```javascript
-// Exemplo de chamada da ferramenta create_task_for_agent
+// Exemplo de chamada da ferramenta manage_crons
 {
-  tool: "create_task_for_agent",
+  tool: "manage_crons",
   parameters: {
+    action: "create",
     targetAgentId: "agent-code-reviewer",
-    task: {
-      description: "Revisar código do PR #257 e verificar testes",
-      instructions: "Verificar: 1) Nomenclatura, 2) Testes, 3) Performance",
-      scheduleType: "once",
-      scheduledDate: "2026-03-28T15:00:00Z"
-    },
-    metadata: {
-      sourcePr: "257",
-      repository: "ad-product-forge"
-    }
+    name: "Revisão do PR #257",
+    description: "Verificar nomenclatura, testes e performance",
+    scheduleType: "date",
+    scheduledDate: "2026-03-28T15:00:00Z",
+    timezone: "UTC",
+    content: "Revisar código do PR #257 e verificar testes"
   }
 }
 ```
 
 ---
 
-## Como Listar Tarefas
+## Como Listar Crons
 
-### Listar Todas as Tarefas (COORDINATOR)
+### Listar Crons Criados para Outros Agentes
 
 ```javascript
 {
-  tool: "list_agent_tasks",
+  tool: "list_crons",
   parameters: {
-    agentId: "all" // Lista de todos os agentes
+    // sem filtro lista todos os crons criados por este agente
   }
 }
 ```
 
-### Listar Próprias Tarefas (Qualquer Agente)
+### Filtrar por Agente de Destino
 
 ```javascript
 {
-  tool: "list_agent_tasks",
+  tool: "list_crons",
   parameters: {
-    agentId: "me" // Lista apenas tarefas do agente atual
+    targetAgentId: "agent-123"
   }
 }
 ```
 
-### Filtrar por Status
+### Listar Próprios Crons
 
 ```javascript
 {
-  tool: "list_agent_tasks",
-  parameters: {
-    agentId: "agent-123",
-    status: "pending" // pending | in_progress | completed | cancelled
-  }
+  tool: "list_self_crons",
+  parameters: {}
 }
 ```
 
@@ -160,81 +154,69 @@ Para agendamentos complexos usando expressão cron.
 
 ```json
 {
-  "tasks": [
+  "crons": [
     {
-      "id": "task-001",
-      "agentId": "agent-123",
-      "description": "Revisar PR #257",
-      "status": "pending",
+      "cronId": "cron-001",
+      "targetAgentId": "agent-123",
+      "name": "Revisão do PR #257",
+      "scheduleType": "date",
       "scheduledDate": "2026-03-28T15:00:00Z",
-      "createdBy": "coordinator-agent",
-      "createdAt": "2026-03-27T10:00:00Z"
+      "isActive": true
     }
-  ],
-  "total": 1
+  ]
 }
 ```
 
 ---
 
-## Como Atualizar uma Tarefa
+## Como Atualizar um Cron
 
-### Atualizar Status
+### Pausar um Cron
 
 ```javascript
 {
-  tool: "update_agent_task",
+  tool: "manage_crons",
   parameters: {
-    taskId: "task-001",
-    updates: {
-      status: "in_progress",
-      progress: 50 // Percentual de conclusão (opcional)
-    }
+    action: "update",
+    cronId: "cron-001",
+    isActive: false
   }
 }
 ```
 
-### Atualizar Descrição ou Agendamento
+### Atualizar Conteúdo ou Agendamento
 
 ```javascript
 {
-  tool: "update_agent_task",
+  tool: "manage_crons",
   parameters: {
-    taskId: "task-001",
-    updates: {
-      description: "Revisar PR #257 - URGENTE",
-      scheduledDate: "2026-03-28T12:00:00Z" // Antecipado
-    }
+    action: "update",
+    cronId: "cron-001",
+    description: "Revisar PR #257 - URGENTE",
+    scheduledDate: "2026-03-28T12:00:00Z"
   }
 }
 ```
 
 ---
 
-## Como Cancelar uma Tarefa
+## Como Deletar um Cron
 
-### Cancelamento Simples
+### Deleção Simples
 
 ```javascript
 {
-  tool: "cancel_agent_task",
+  tool: "manage_crons",
   parameters: {
-    taskId: "task-001"
+    action: "delete",
+    cronId: "cron-001"
   }
 }
 ```
 
-### Cancelamento com Motivo
+### Próprio Cron
 
-```javascript
-{
-  tool: "cancel_agent_task",
-  parameters: {
-    taskId: "task-001",
-    reason: "PR foi mesclado, não precisa mais de revisão"
-  }
-}
-```
+Use `manage_self_crons` com a mesma estrutura quando o cron for do próprio agente.
 
 ### Regras de Cancelamento
 

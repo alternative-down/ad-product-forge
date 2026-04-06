@@ -1,11 +1,14 @@
-const WAKE_DEBOUNCE_MS = 5000;
+const WAKE_DEBOUNCE_MS = 10000;
 const WAKE_MAX_ACCUMULATION_MS = 30000;
 
 export type AgentWakeEvent = {
   type: string;
-  id: string;
-  content: string;
+  groupKey: string;
+  idempotencyKey: string;
   timestamp: number;
+  text: string;
+  groupMetadata?: Record<string, string>;
+  itemMetadata?: Record<string, string>;
 };
 
 export type AgentWakeQueue = {
@@ -23,7 +26,7 @@ export type AgentWakeQueue = {
 
 export function createAgentWakeQueue(config: {
   label?: string;
-  execute(content: string): Promise<void>;
+  execute(events: AgentWakeEvent[]): Promise<void>;
 }): AgentWakeQueue {
   let timer: NodeJS.Timeout | null = null;
   let pending = false;
@@ -56,14 +59,14 @@ export function createAgentWakeQueue(config: {
       return;
     }
 
-    const content = formatWakeEvents(Array.from(events.values()));
+    const queuedEvents = Array.from(events.values()).sort((left, right) => left.timestamp - right.timestamp);
 
     pending = false;
     firstPendingAt = null;
     events.clear();
 
     try {
-      await config.execute(content);
+      await config.execute(queuedEvents);
     } catch (error) {
       console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to execute:`, error);
     }
@@ -73,13 +76,13 @@ export function createAgentWakeQueue(config: {
     notifyExternalEvent(event: AgentWakeEvent) {
       const now = Date.now();
 
-      if (events.has(event.id)) {
+      if (events.has(event.idempotencyKey)) {
         return;
       }
 
       pending = true;
       firstPendingAt ??= now;
-      events.set(event.id, event);
+      events.set(event.idempotencyKey, event);
 
       const accumulatedMs = now - firstPendingAt;
       if (accumulatedMs >= WAKE_MAX_ACCUMULATION_MS) {
@@ -109,19 +112,4 @@ export function createAgentWakeQueue(config: {
       };
     },
   };
-}
-
-function formatWakeEvents(events: AgentWakeEvent[]) {
-  return events
-    .sort((left, right) => left.timestamp - right.timestamp)
-    .map((event) =>
-      [
-        `Type: ${event.type}`,
-        `Id: ${event.id}`,
-        `At: ${new Date(event.timestamp).toISOString()}`,
-        `Content:`,
-        event.content.trim(),
-      ].join('\n'),
-    )
-    .join('\n\n---\n\n');
 }

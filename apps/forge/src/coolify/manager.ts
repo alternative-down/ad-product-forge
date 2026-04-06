@@ -84,6 +84,18 @@ export type CoolifyManager = ReturnType<typeof createCoolifyManager>;
 export function createCoolifyManager(config: {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
+  async function getCredentials() {
+    const providerConfig = await getProviderConfig();
+
+    return {
+      baseUrl: providerConfig.baseUrl,
+      apiToken: providerConfig.adminToken,
+      serverId: providerConfig.serverId,
+      destinationId: providerConfig.destinationId,
+      applicationsBaseDomain: providerConfig.applicationsBaseDomain ?? null,
+    };
+  }
+
   async function listGitHubApps() {
     const data = await requestJson('GET', '/github-apps');
     const apps = extractCollection(data, GitHubAppSchema);
@@ -401,6 +413,7 @@ export function createCoolifyManager(config: {
   }
 
   return {
+    getCredentials,
     listGitHubApps,
     createGitHubApp,
     listGitHubAppRepositories,
@@ -425,14 +438,14 @@ export function createCoolifyManager(config: {
     const project = await getOrCreateDefaultProject();
     const environment = await getOrCreateDefaultEnvironment(project.uuid);
     const server = await getDefaultServer();
-    const destinationUuid = await getServerDestinationUuid(server.uuid, server);
+    const providerConfig = await getProviderConfig();
 
     return {
       projectUuid: project.uuid,
       environmentUuid: environment.uuid,
       environmentName: environment.name ?? 'production',
       serverUuid: server.uuid,
-      destinationUuid,
+      destinationUuid: providerConfig.destinationId,
     };
   }
 
@@ -473,63 +486,11 @@ export function createCoolifyManager(config: {
   }
 
   async function getDefaultServer() {
-    const data = await requestJson('GET', '/servers');
-    const servers = extractCollection(data, ServerSchema);
-
-    if (servers.length === 0) {
-      throw new Error('Coolify has no server configured');
-    }
-
-    return servers[0];
-  }
-
-  async function getServerDestinationUuid(serverUuid: string, cachedServer?: z.infer<typeof ServerSchema>) {
-    // First try: direct fields on server (legacy compatibility)
-    const server = cachedServer ?? extractItem(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`), ServerSchema);
-    const directDestination = server.proxy?.uuid ?? server.proxy_uuid;
-
-    if (directDestination) {
-      return directDestination;
-    }
-
-    // Second try: get destination from an existing application on this server
-    // This is the correct approach for Coolify v4 where destinations are stored per-application
-    const applications = extractCollection(await requestJson('GET', '/applications'), ApplicationSchema);
-    const appWithDestination = applications.find((app) => app.destination?.uuid);
-
-    if (appWithDestination?.destination?.uuid) {
-      console.log(`[Coolify] Found destination ${appWithDestination.destination.uuid} from application ${appWithDestination.name} (${appWithDestination.uuid})`);
-      return appWithDestination.destination.uuid;
-    }
-
-    // Third try: find destination from server resources (legacy compatibility)
-    const resources = await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}/resources`);
-    const resource = extractFirstMatchingCollectionItem(resources, z.object({
-      uuid: z.string(),
-      type: z.string().optional(),
-      name: z.string().optional(),
-    }).passthrough(), (item) => {
-      const haystack = `${item.type ?? ''} ${item.name ?? ''}`.toLowerCase();
-      return haystack.includes('proxy') || haystack.includes('destination');
-    });
-
-    if (resource) {
-      return resource.uuid;
-    }
-
-    // Fourth try: search all servers for destinations
-    const servers = extractCollection(await requestJson('GET', '/servers'), ServerSchema);
-    for (const s of servers) {
-      if (s.proxy?.uuid || s.proxy_uuid) {
-        const dest = s.proxy?.uuid ?? s.proxy_uuid;
-        console.log(`[Coolify] Found destination ${dest} on server ${s.uuid} (searched for ${serverUuid})`);
-        return dest;
-      }
-    }
-
-    // Destination is optional in Coolify v4 - Coolify will use the default server destination
-    console.log(`[Coolify] No destination found for server ${serverUuid}. This is optional in Coolify v4.`);
-    return null;
+    const providerConfig = await getProviderConfig();
+    return extractItem(
+      await requestJson('GET', `/servers/${encodeURIComponent(providerConfig.serverId)}`),
+      ServerSchema,
+    );
   }
 
   async function findApplicationEnv(applicationUuid: string, key: string) {
@@ -590,7 +551,9 @@ export function createCoolifyManager(config: {
     return {
       baseUrl: `${integration.baseUrl.replace(/\/$/, '')}/api/v1`,
       adminToken: integration.adminToken,
-      applicationsBaseDomain: integration.applicationsBaseDomain?.replace(/^\./, '').trim() || null,
+      serverId: integration.serverId,
+      destinationId: integration.destinationId,
+      applicationsBaseDomain: normalizeDomainHost(integration.applicationsBaseDomain) || null,
     };
   }
 
@@ -598,7 +561,7 @@ export function createCoolifyManager(config: {
     const server = serverUuid
       ? extractItem(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`), ServerSchema)
       : await getDefaultServer();
-    const wildcardDomain = server.wildcard_domain?.replace(/^\./, '').trim();
+    const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
 
     if (!wildcardDomain) {
       throw new Error(
@@ -608,6 +571,24 @@ export function createCoolifyManager(config: {
 
     return wildcardDomain;
   }
+}
+
+function normalizeDomainHost(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  const normalized = /^[a-z]+:\/\//i.test(trimmed)
+    ? new URL(trimmed).host
+    : trimmed.replace(/^\./, '').replace(/\/+$/, '');
+
+  return normalized || null;
 }
 
 function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>) {
@@ -648,11 +629,6 @@ function extractItem<T>(data: unknown, schema: z.ZodSchema<T>) {
   }
 
   return schema.parse(data);
-}
-
-function extractFirstMatchingCollectionItem<T>(data: unknown, schema: z.ZodSchema<T>, predicate: (item: T) => boolean) {
-  const items = extractCollection(data, schema);
-  return items.find(predicate) ?? null;
 }
 
 function extractLogs(data: unknown) {

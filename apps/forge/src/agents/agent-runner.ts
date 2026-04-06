@@ -1,18 +1,33 @@
 import { createAgentWakeQueue } from '@mastra-engine/core';
+import type { AgentWakeEvent } from '@mastra-engine/core';
 
 import type { InternalAgentRuntime } from './create-forge-agent';
 import { createAgentContractStore } from './agent-contract-store';
 import type { Database } from '../database/index';
+import { createSystemSettingsStore } from '../system-settings/store';
 
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const RECENT_STEP_LIMIT = 10;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const RUN_STOP_REMINDER = [
-  'System reminder:',
-  '- The current run will continue looping until you explicitly respond with NO_ACTION_NEEDED.',
-  '- NO_ACTION_NEEDED signals the task is complete and no further tools are needed.',
-  '- If you still need to inspect, decide, or act, call the appropriate tool.',
+  'System Message:',
+  'A response without tool calls was detected.',
+  '',
+  'If you want to take any action, use your tools.',
+  'Plain text responses without tool calls are ignored by the system.',
+  '',
+  'Respond with NO_ACTION_NEEDED only when you have finished everything you intend to do in this run.',
+  '',
+  'If you answer NO_ACTION_NEEDED:',
+  '- this run stops immediately',
+  '- you will not inspect, message, or act further now',
+  '- your execution will stay idle until a future wake event happens',
+  '',
+  'Do not use NO_ACTION_NEEDED to skip, postpone, or ignore pending work from the current wake.',
+  'If there is anything to investigate or act on now, use tools instead of answering NO_ACTION_NEEDED.',
+  '',
+  'This is an automatic system message. You do not need to reply to this message itself.',
 ].join('\n');
 type AgentUsage = {
   inputTokens?: number;
@@ -36,6 +51,7 @@ type OmObservationEndPart = {
 
 export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
+  const systemSettings = createSystemSettingsStore(db);
   const wakeQueue = createAgentWakeQueue({
     label: runtime.id,
     execute,
@@ -47,7 +63,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let backoffMs = ONE_MINUTE_MS;
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
-  let pendingRunMessages: string[] = [];
+  const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
 
@@ -89,15 +105,14 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await queueNextStep();
   }
 
-  async function execute(content: string) {
+  async function execute(events: AgentWakeEvent[]) {
     if (stopped) {
       return;
     }
 
-    const nextContent = content.trim();
     const executionState = await store.getExecutionState(runtime.id);
 
-    appendPendingRunMessage(nextContent);
+    appendPendingRunMessages(events);
 
     if (executionState === 'running') {
       return;
@@ -110,24 +125,31 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await queueNextStep();
   }
 
-  function appendPendingRunMessage(content: string) {
-    const nextContent = content.trim();
+  function appendPendingRunMessages(events: AgentWakeEvent[]) {
+    for (const event of events) {
+      if (!event.text.trim()) {
+        continue;
+      }
 
-    if (!nextContent) {
-      return;
+      pendingRunMessages.set(event.idempotencyKey, event);
     }
-
-    pendingRunMessages.push(nextContent);
   }
 
   function flushPendingRunMessages() {
-    if (pendingRunMessages.length === 0) {
+    if (pendingRunMessages.size === 0) {
       return null;
     }
 
-    const content = pendingRunMessages.join('\n\n---\n\n').trim();
-    pendingRunMessages = [];
-    return content || null;
+    const events = Array.from(pendingRunMessages.values()).sort(
+      (left, right) => left.timestamp - right.timestamp,
+    );
+    pendingRunMessages.clear();
+
+    if (events.length === 0) {
+      return null;
+    }
+
+    return formatPendingRunEvents(events);
   }
 
   function stop() {
@@ -204,8 +226,8 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         maxSteps: 1,
         // toolChoice: 'required', removio para não requerer tool call obrigatoriamente
         memory: {
-          thread: runtime.id,
-          resource: runtime.id,
+          thread: runtime.mastraId,
+          resource: runtime.mastraId,
         },
         providerOptions: {
           anthropic: {
@@ -235,7 +257,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       await recordObservationalMemorySteps(contractId, result.steps);
 
-      const stopRequested = result.text.trimStart().includes(NO_ACTION_NEEDED_PREFIX);
+      const stopRequested = result.text.trim() === NO_ACTION_NEEDED_PREFIX;
 
       if (result.toolCalls.length === 0 && stopRequested) {
         nextStepAt = null;
@@ -245,7 +267,21 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       }
 
       if (result.toolCalls.length === 0) {
-        appendPendingRunMessage(RUN_STOP_REMINDER);
+        appendPendingRunMessages([
+          {
+            type: 'runner-reminder',
+            groupKey: `runner-reminder:${runtime.id}`,
+            groupMetadata: {
+              Source: 'runner',
+            },
+            idempotencyKey: `runner-reminder:${runtime.id}:${Date.now()}`,
+            itemMetadata: {
+              Kind: 'run-stop-reminder',
+            },
+            text: RUN_STOP_REMINDER,
+            timestamp: Date.now(),
+          },
+        ]);
       }
 
       backoffMs = ONE_MINUTE_MS;
@@ -284,11 +320,13 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     backoffMs = ONE_MINUTE_MS;
+    const settings = await systemSettings.getSettings();
 
     return {
       execute: true as const,
       contractId: contract.id,
       delayMs: instant
+        || !settings.stepDelayEnabled
         ? 0
         : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
     };
@@ -480,6 +518,143 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     getSnapshot,
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
+}
+
+function formatPendingRunEvents(events: AgentWakeEvent[]) {
+  const groups = new Map<string, AgentWakeEvent[]>();
+  const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
+
+  for (const event of orderedEvents) {
+    const existingGroup = groups.get(event.groupKey);
+
+    if (existingGroup) {
+      existingGroup.push(event);
+      continue;
+    }
+
+    groups.set(event.groupKey, [event]);
+  }
+
+  return Array.from(groups.values())
+    .map((groupEvents) => formatPendingRunEventGroup(groupEvents))
+    .join('\n\n');
+}
+
+function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
+  const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
+  const firstEvent = orderedEvents[0];
+  const header = describeWakeGroup(firstEvent);
+  const itemLines = orderedEvents.map((event) => formatPendingRunEventItem(event));
+
+  return [header, '', ...itemLines].join('\n');
+}
+
+function formatPendingRunEventItem(event: AgentWakeEvent) {
+  const timeLabel = formatWakeTime(event.timestamp);
+  const messageId = normalizeProviderCode(event.itemMetadata?.MessageId);
+  const actor = event.itemMetadata?.Author ?? describeWakeActor(event);
+  const actorKey = event.itemMetadata?.AuthorKey;
+  const attachments = event.itemMetadata?.Attachments;
+  const text = event.text.trim();
+
+  const label = [
+    `[${timeLabel}]`,
+    messageId ? `[messageId: ${messageId}]` : '',
+    actor
+      ? actorKey
+        ? `${actor} (${actorKey})`
+        : actor
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  const suffix = attachments ? ` (attachments: ${attachments})` : '';
+
+  if (text.includes('\n')) {
+    return actor
+      ? `${label}:\n${text}${suffix}`
+      : `${[label, `${text}${suffix}`.trim()].filter(Boolean).join('\n')}`.trim();
+  }
+
+  return actor
+    ? `${label}: ${text}${suffix}`
+    : `${[label, `${text}${suffix}`.trim()].filter(Boolean).join(' ')}`.trim();
+}
+
+function describeWakeGroup(event: AgentWakeEvent) {
+  if (event.type.startsWith('message:')) {
+    const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
+    return `targetKey: ${targetKey}`;
+  }
+
+  if (event.type === 'schedule') {
+    if (event.groupMetadata?.ScheduleKind === 'heartbeat') {
+      return 'scheduler';
+    }
+
+    return event.groupMetadata?.ScheduleId
+      ? `scheduler: ${event.groupMetadata.ScheduleId}`
+      : 'scheduler';
+  }
+
+  if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
+    return `GitHub: ${event.groupMetadata?.EventType ?? event.groupKey}`;
+  }
+
+  if (event.type === 'role-change') {
+    return `Role change: ${event.groupMetadata?.TargetAgentId ?? event.groupKey}`;
+  }
+
+  if (event.type === 'runner-reminder') {
+    return 'System: runner-reminder';
+  }
+
+  return `${formatWakeLabel(event.type)}: ${event.groupKey}`;
+}
+
+function formatWakeLabel(value: string) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[-_:]+/g, ' ')
+    .toLowerCase();
+}
+
+function normalizeProviderCode(value?: string) {
+  if (!value) {
+    return value;
+  }
+
+  return value
+    .replace(/^conv_/, '')
+    .replace(/^msg_/, '');
+}
+
+function describeWakeActor(event: AgentWakeEvent) {
+  if (event.type === 'schedule') {
+    return '';
+  }
+
+  if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
+    return 'GitHub';
+  }
+
+  if (event.type === 'role-change') {
+    return 'System';
+  }
+
+  if (event.type === 'runner-reminder') {
+    return 'System';
+  }
+
+  return '';
+}
+
+function formatWakeTime(timestamp: number) {
+  const date = new Date(timestamp);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

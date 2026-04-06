@@ -1,5 +1,8 @@
 import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
-import type { InputProcessorOrWorkflow, OutputProcessorOrWorkflow } from '@mastra/core/processors';
+import {
+  type InputProcessorOrWorkflow,
+  type OutputProcessorOrWorkflow,
+} from '@mastra/core/processors';
 import type { Tool } from '@mastra/core/tools';
 import {
   LocalFilesystem,
@@ -29,6 +32,7 @@ function hasCreateThread(store: unknown): store is MastraMemoryStore {
 }
 import {
   createCommunicationModule,
+  type CommunicationModule,
   type CommunicationProvider,
   createExternalAccountTools,
   LongTermMemory,
@@ -36,8 +40,10 @@ import {
   createAgentMemory,
   createObservationalMemory,
   appendWorkingMemoryInstructions,
+  toMastraSafeIdentifier,
 } from '@mastra-engine/core';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig, WorkspaceSkillsConfig } from '../database/schema';
+import { ensureBundledWorkspaceSkills } from './bundled-workspace-skills';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -53,8 +59,10 @@ export type CreateForgeAgentConfig<
   companyName?: string;
   companyContext?: string;
   providers?: CommunicationProvider[];
+  communication?: CommunicationModule;
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
+  workspaceSkills?: WorkspaceSkillsConfig;
 };
 
 export type CreateAgentOptions = {
@@ -68,11 +76,13 @@ export type InternalAgentRuntime<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = {
   id: TAgentId;
+  mastraId: string;
   pricingModelKey: string;
   modelProfileId?: string;
   omPricingModelKey: string;
   omModelProfileId?: string;
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
+  communication: CommunicationModule;
   onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
 };
 
@@ -99,8 +109,10 @@ export interface CreateAgentConfig<
   | 'companyName'
   | 'companyContext'
   | 'providers'
+  | 'communication'
   | 'workspaceFilesystem'
   | 'workspaceSandbox'
+  | 'workspaceSkills'
 > {
   workspaceBasePath: string;
 }
@@ -183,6 +195,7 @@ export async function createInternalAgentRuntime<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<InternalAgentRuntime<TAgentId, TTools, TOutput, TRequestContext>> {
+  const mastraId = toMastraSafeIdentifier(config.id);
   const agentWorkspacePath = path.resolve(config.workspaceBasePath, config.id);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
   const agentWorkspaceDir = config.workspaceFilesystem?.basePath
@@ -199,32 +212,40 @@ export async function createInternalAgentRuntime<
 
   const dbUrl = `file:${agentDatabasePath}`;
   const client = createClient({ url: dbUrl });
-  const storage = new LibSQLStore({ id: `${config.id}-storage`, client });
-  const vector = new LibSQLVector({ id: `${config.id}-vector`, url: dbUrl });
+  const storage = new LibSQLStore({ id: `${mastraId}_storage`, client });
+  const vector = new LibSQLVector({ id: `${mastraId}_vector`, url: dbUrl });
   const workspace = new WorkspaceRuntime({
     autoSync: true,
     bm25: true,
     filesystem: new LocalFilesystem({
       basePath: agentWorkspaceDir,
     }),
+    lsp: false,
     sandbox: new LocalSandbox({
       isolation: 'none',
       workingDirectory: sandboxWorkingDirectory,
     }),
+    skills: config.workspaceSkills ?? ['**/skills'],
   });
 
   await workspace.init();
+  await ensureBundledWorkspaceSkills(agentWorkspaceDir);
   // Initialize memory store by creating a thread (Issue #212)
   // This ensures mastra_messages and mastra_threads tables exist
   if (hasCreateThread(storage.stores.memory)) {
-    await storage.stores.memory.createThread({ threadId: config.id });
+    await storage.stores.memory.createThread({
+      resourceId: mastraId,
+      threadId: mastraId,
+    });
   }
 
-  const communication = await createCommunicationModule({
+  const communication = config.communication ?? await createCommunicationModule({
     client,
     providers: config.providers ?? [],
+    workspace,
+    workspaceRoot: agentWorkspaceDir,
   });
-  const searchableTools = {
+  const allAgentTools = {
     ...createExternalAccountTools(communication),
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
@@ -244,6 +265,7 @@ export async function createInternalAgentRuntime<
     const longTermMemory = new LongTermMemory({
       om,
       agentId: config.id,
+      mastraId,
       memoryBasePath: agentMemoryPath,
       omModel: omModelKey,
     });
@@ -259,7 +281,7 @@ export async function createInternalAgentRuntime<
       buildAgentSystemPrompt(config.instructions, config.companyName, config.companyContext),
     ),
     model: config.model,
-    tools: searchableTools as TTools,
+    tools: allAgentTools as TTools,
     workflows: config.workflows,
     workspace,
     agents: config.agents,
@@ -270,11 +292,13 @@ export async function createInternalAgentRuntime<
 
   return {
     id: config.id,
+    mastraId,
     pricingModelKey: config.pricingModelKey,
     modelProfileId: config.modelProfileId,
     omPricingModelKey,
     omModelProfileId: config.omModelProfileId,
     agent,
+    communication,
     onReceiveMessage: communication.onReceiveMessage,
   };
 }

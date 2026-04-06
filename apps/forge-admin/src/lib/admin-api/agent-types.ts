@@ -1,0 +1,323 @@
+export type AgentListItem = {
+  agentId: string;
+  name: string;
+  description?: string;
+  executionState: 'idle' | 'running';
+  roleId: string | null;
+  roleName: string | null;
+  modelProfile: {
+    profileId: string;
+    name: string;
+    modelKey: string;
+  } | null;
+  omModelProfile: {
+    profileId: string;
+    name: string;
+    modelKey: string;
+  } | null;
+  loaded: boolean;
+  runner: {
+    stopped: boolean;
+    instant: boolean;
+    executing: boolean;
+    scheduled: boolean;
+    backoffMs: number;
+    nextStepAt: number | null;
+    estimatedDelayMs: number | null;
+    lastWakeStartedAt: number | null;
+    wake: {
+      pending: boolean;
+      waitingForIdle: boolean;
+      firstPendingAt: number | null;
+      nextTriggerAt: number | null;
+    };
+  } | null;
+  providerTypes: string[];
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type AgentSchedule = {
+  scheduleId: string;
+  kind: 'agent' | 'heartbeat';
+  name: string;
+  description?: string;
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string;
+  scheduledDate?: number;
+  timezone: string;
+  content: string;
+  isActive: boolean;
+  lastTriggeredAt?: number;
+  nextTriggerAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
+};
+
+export type AgentDetail = {
+  agentId: string;
+  name: string;
+  description?: string;
+  instructions: string;
+  executionState: 'idle' | 'running';
+  modelProfile: {
+    profileId: string;
+    name: string;
+    modelKey: string;
+  } | null;
+  omModelProfile: {
+    profileId: string;
+    name: string;
+    modelKey: string;
+  } | null;
+  role: {
+    roleId: string;
+    name: string;
+    description?: string | null;
+  } | null;
+  workspace: {
+    autoSync: boolean;
+    bm25: boolean;
+    embedder: string | null;
+    filesystem: string | null;
+    sandbox: string | null;
+  };
+  loaded: boolean;
+  runner: AgentListItem['runner'];
+  providers: Array<{
+    providerType: string;
+    createdAt: number;
+    editable: boolean;
+    credentials: unknown;
+  }>;
+  mcpServers: Array<{
+    configId: string;
+    serverId: string;
+    name: string;
+    description?: string;
+    transport: 'stdio' | 'http_streamable';
+    command: string;
+    argsText: string;
+    envVarsText: string;
+    url: string;
+    headersText: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  skills: Array<{
+    skillName: string;
+    description?: string;
+    fileCount: number;
+    updatedAt: number;
+  }>;
+  githubProvisioning: {
+    agentId: string;
+    status: 'pending' | 'created' | 'active';
+    registrationUrl: string;
+    installUrl?: string;
+  } | null;
+  activeContract: {
+    contractId: string;
+    agentId: string;
+    agentName: string;
+    startsAt: number;
+    endsAt: number;
+    weeklyValueUsd: number;
+    spentUsd: number;
+    spentPercent: number;
+    autoRenew: boolean;
+  } | null;
+  recentExecutionSteps: Array<{
+    stepId: string;
+    llmProfileId: string;
+    kind: string;
+    modelKey: string;
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+    inputPerMillionUsd: number;
+    inputCachePerMillionUsd: number;
+    outputPerMillionUsd: number;
+    contractCostMultiplier: number;
+    costUsd: number;
+    createdAt: number;
+  }>;
+  schedules: AgentSchedule[];
+  heartbeat: AgentSchedule | null;
+  recentNotifications: Array<{
+    notificationId: string;
+    content: string;
+    timestamp: number;
+    read: boolean;
+  }>;
+  recentConversations: Array<{
+    conversationId: string;
+    conversationKey: string;
+    provider: string;
+    type: string;
+    name?: string;
+    participants: string[];
+    updatedAt: number;
+    messages: Array<{
+      messageId: string;
+      content: string;
+      unread: boolean;
+      authorDisplayName: string;
+      createdAt: number;
+    }>;
+  }>;
+};
+
+export type HireAgentInput = {
+  hiringRequest: string;
+  additionalContext?: string;
+  weeklyBudgetUsd: number;
+};
+
+export type HireAgentResult = {
+  agentId: string;
+  emailAddress: string | null;
+  githubAppRegistrationUrl: string | null;
+};
+
+export type AgentMcpServerInput =
+  | {
+      agentId: string;
+      name: string;
+      description?: string;
+      transport: 'stdio';
+      command: string;
+      argsText?: string;
+      envVarsText?: string;
+      isActive: boolean;
+    }
+  | {
+      agentId: string;
+      name: string;
+      description?: string;
+      transport: 'http_streamable';
+      url: string;
+      headersText?: string;
+      isActive: boolean;
+    };
+
+export type UpdateAgentMcpServerInput = {
+  configId: string;
+  serverId: string;
+} & AgentMcpServerInput;
+
+export type UploadAgentSkillsInput = {
+  agentId: string;
+  archiveBase64: string;
+};
+
+export type DeleteAgentSkillInput = {
+  agentId: string;
+  skillName: string;
+};
+
+export type CreateScheduleInput = {
+  agentId: string;
+  name: string;
+  description?: string;
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string;
+  scheduledDate?: string;
+  timezone: string;
+  content: string;
+};
+
+export type UpdateScheduleInput = {
+  agentId: string;
+  scheduleId: string;
+  name?: string;
+  description?: string | null;
+  scheduleType?: 'cron' | 'date';
+  cronExpression?: string | null;
+  scheduledDate?: string | null;
+  timezone?: string;
+  content?: string;
+  isActive?: boolean;
+};
+
+export type AgentExecutionStepsResponse = {
+  items: AgentDetail['recentExecutionSteps'];
+  hasMore: boolean;
+};
+
+export type AgentThreadMessage = {
+  id: string;
+  role: string;
+  createdAt: number;
+  threadId: string | null;
+  resourceId: string | null;
+  type: string | null;
+  content: {
+    content?: string;
+    reasoning?: string;
+    parts?: Array<Record<string, unknown>>;
+    toolInvocations?: Array<Record<string, unknown>>;
+  };
+};
+
+export type AgentThreadMessagesResponse = {
+  items: AgentThreadMessage[];
+  hasMore: boolean;
+};
+
+export type AgentConversationMessage = {
+  messageId: string;
+  provider: string;
+  authorId: string;
+  authorAgentId?: string | null;
+  targetKey: string;
+  content: string;
+  attachments?: unknown[];
+  unread: boolean;
+  createdAt: string;
+  authorDisplayName: string;
+};
+
+export type AgentConversationMessagesResponse = {
+  items: AgentConversationMessage[];
+  hasMore: boolean;
+};
+
+export type DiscordProviderCredentials = {
+  token: string;
+  channels: Array<{
+    channelId: string;
+    channelName?: string;
+    respondToMentionsOnly: boolean;
+  }>;
+};
+
+export type EmailProviderCredentials = {
+  imap: {
+    host: string;
+    port: number;
+    secure: boolean;
+    user: string;
+    password: string;
+  };
+  smtp: {
+    host: string;
+    port: number;
+    secure: boolean;
+    user: string;
+    password: string;
+  };
+};
+
+export type UpsertAgentProviderInput =
+  | {
+      agentId: string;
+      providerType: 'discord';
+      credentials: DiscordProviderCredentials;
+    }
+  | {
+      agentId: string;
+      providerType: 'email';
+      credentials: EmailProviderCredentials;
+    };

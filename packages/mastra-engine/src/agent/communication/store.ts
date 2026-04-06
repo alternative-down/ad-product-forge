@@ -1,10 +1,10 @@
 import crypto from 'node:crypto';
 
 import { z } from 'zod';
-import { eq, and, inArray, or, ne } from 'drizzle-orm';
+import { eq, and, inArray, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { createId } from '@paralleldrive/cuid2';
 import * as schema from './schema';
+import { createCommunicationConversationKey } from './conversation-key';
 
 const attachmentSchema = z.object({
   id: z.string().optional(),
@@ -45,7 +45,6 @@ const chatGroupMemberSchema = z.object({
   participantName: z.string(),
   role: z.string().default('normal'), // 'admin' or 'normal'
   createdAt: z.string(),
-  instanceId: z.string().optional(),
 });
 
 const messageSchema = z.object({
@@ -76,31 +75,6 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
         .trim()
         .replace(/\s+/g, '-') || 'contact'
     );
-  }
-
-  async function loadContact(slug: string) {
-    const contact = await db.query.communicationContacts.findFirst({
-      where: eq(schema.communicationContacts.slug, slug),
-      with: {
-        accounts: true,
-      },
-    });
-
-    if (!contact) {
-      return null;
-    }
-
-    return contactSchema.parse({
-      contactId: contact.contactId,
-      slug: contact.slug,
-      displayName: contact.displayName,
-      description: contact.description ?? undefined,
-      accounts: contact.accounts.map((account) => ({
-        provider: account.provider,
-        externalUserId: account.externalUserId ?? undefined,
-        username: account.username ?? undefined,
-      })),
-    });
   }
 
   async function loadContactById(contactId: string) {
@@ -247,11 +221,11 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: account.provider,
       externalAccountId: account.externalAccountId,
       displayName: account.displayName ?? undefined,
+      description:
+        account.metadataJson && typeof JSON.parse(account.metadataJson)?.description === 'string'
+          ? JSON.parse(account.metadataJson).description
+          : undefined,
     }));
-  }
-
-  async function getContact(slug: string) {
-    return loadContact(slugify(slug));
   }
 
   async function findContactByIdentity(provider: string, externalUserId?: string, username?: string) {
@@ -311,7 +285,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       }
 
       // No existing contact, create new one with UUID
-      const contactId = createId();
+      const contactId = crypto.randomUUID();
 
       await db.insert(schema.communicationContacts).values({
         contactId,
@@ -355,7 +329,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     }
 
     // Create new contact by slug
-    const contactId = createId();
+    const contactId = crypto.randomUUID();
 
     await db.insert(schema.communicationContacts).values({
       contactId,
@@ -398,7 +372,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       return loadConversation(existing.conversationId);
     }
 
-    const conversationId = `conv_${crypto.randomUUID()}`;
+    const conversationId = createCommunicationConversationKey(input.provider, input.providerConversationKey);
 
     await db.insert(schema.communicationConversations).values({
       conversationId,
@@ -418,35 +392,12 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     return loadConversation(conversationId);
   }
 
-  async function getConversationByProviderConversationKey(provider: string, providerConversationKey: string) {
-    const conversation = await db.query.communicationConversations.findFirst({
-      where: and(
-        eq(schema.communicationConversations.provider, provider),
-        eq(schema.communicationConversations.providerConversationKey, providerConversationKey),
-      ),
-    });
-
-    if (!conversation) {
-      return null;
-    }
-
-    return conversationSchema.parse({
-      conversationId: conversation.conversationId,
-      provider: conversation.provider,
-      providerConversationKey: conversation.providerConversationKey,
-      name: conversation.name ?? undefined,
-      type: conversation.type,
-      contactId: conversation.contactId ?? undefined,
-      createdAt: conversation.createdAt,
-      updatedAt: conversation.updatedAt,
-    });
-  }
-
   async function saveInboundMessage(input: {
     provider: string;
     providerConversationKey: string;
     providerMessageId: string;
     conversationName?: string;
+    conversationType?: string;
     contactId?: string;
     authorExternalId?: string;
     authorDisplayName?: string;
@@ -460,6 +411,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: input.provider,
       providerConversationKey: input.providerConversationKey,
       name: input.conversationName,
+      type: input.conversationType,
       contactId: input.contactId,
       createdAt: input.createdAt,
     });
@@ -505,6 +457,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     providerMessageId?: string;
     conversationName?: string;
     contactId?: string;
+    authorDisplayName?: string;
     content: string;
     createdAt?: string;
     metadata?: Record<string, unknown>;
@@ -529,7 +482,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: input.provider,
       providerMessageId: input.providerMessageId ?? null,
       authorExternalId: null,
-      authorDisplayName: null,
+      authorDisplayName: input.authorDisplayName ?? null,
       authorUsername: null,
       content: input.content,
       attachmentsJson: JSON.stringify([]),
@@ -713,7 +666,6 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     participantId: string;
     participantName: string;
     role?: string;
-    instanceId?: string;
   }) {
     const now = new Date().toISOString();
 
@@ -736,13 +688,11 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       participantName: input.participantName,
       role: input.role ?? 'normal',
       createdAt: now,
-      instanceId: input.instanceId ?? null,
     }).onConflictDoUpdate({
       target: [schema.chatGroupMembers.groupId, schema.chatGroupMembers.participantId],
       set: {
         participantName: input.participantName,
         role: input.role ?? 'normal',
-        instanceId: input.instanceId ?? null,
       },
     });
 
@@ -752,7 +702,6 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       participantName: input.participantName,
       role: input.role ?? 'normal',
       createdAt: now,
-      instanceId: input.instanceId,
     };
   }
 
@@ -812,94 +761,17 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       participantName: member.participantName,
       role: member.role,
       createdAt: member.createdAt,
-      instanceId: member.instanceId,
     }));
-  }
-
-  // ============= Instance Management for Cross-Instance Fan-Out =============
-
-  async function upsertInstance(input: {
-    instanceId: string;
-    baseUrl: string;
-    displayName?: string;
-    isLocal?: boolean;
-  }) {
-    const now = new Date().toISOString();
-    const existing = await db.query.mastraInstances.findFirst({
-      where: eq(schema.mastraInstances.instanceId, input.instanceId),
-    });
-
-    if (existing) {
-      await db.update(schema.mastraInstances)
-        .set({
-          baseUrl: input.baseUrl,
-          displayName: input.displayName,
-          isLocal: input.isLocal ? 1 : 0,
-          updatedAt: now,
-        })
-        .where(eq(schema.mastraInstances.instanceId, input.instanceId));
-    } else {
-      await db.insert(schema.mastraInstances).values({
-        instanceId: input.instanceId,
-        baseUrl: input.baseUrl,
-        displayName: input.displayName,
-        isLocal: input.isLocal ? 1 : 0,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    return { instanceId: input.instanceId, baseUrl: input.baseUrl, displayName: input.displayName };
-  }
-
-  async function getInstance(instanceId: string) {
-    return db.query.mastraInstances.findFirst({
-      where: eq(schema.mastraInstances.instanceId, instanceId),
-    });
-  }
-
-  async function getInstanceByUrl(baseUrl: string) {
-    return db.query.mastraInstances.findFirst({
-      where: eq(schema.mastraInstances.baseUrl, baseUrl),
-    });
-  }
-
-  async function listInstances() {
-    return db.query.mastraInstances.findMany();
-  }
-
-  async function getLocalInstance() {
-    return db.query.mastraInstances.findFirst({
-      where: eq(schema.mastraInstances.isLocal, 1),
-    });
-  }
-
-  async function getGroupMembersByInstance(groupId: string, excludeInstanceId: string) {
-    // Get members from other instances (for fan-out delivery)
-    const members = await db.query.chatGroupMembers.findMany({
-      where: and(
-        eq(schema.chatGroupMembers.groupId, groupId),
-        schema.chatGroupMembers.instanceId ? 
-          and(
-            ne(schema.chatGroupMembers.instanceId, excludeInstanceId),
-            ne(schema.chatGroupMembers.instanceId, '')
-          ) : 
-          eq(schema.chatGroupMembers.instanceId, '')
-      ),
-    });
-    return members;
   }
 
   return {
     upsertSelfAccount,
     listSelfAccounts,
     listContacts,
-    getContact,
     findContactByIdentity,
     upsertContact,
     upsertConversation,
     getConversation,
-    getConversationByProviderConversationKey,
     saveInboundMessage,
     saveOutboundMessage,
     getMessage,
@@ -910,12 +782,5 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     removeMemberFromGroup,
     listChatGroups,
     listGroupMembers,
-    // Instance management
-    upsertInstance,
-    getInstance,
-    getInstanceByUrl,
-    listInstances,
-    getLocalInstance,
-    getGroupMembersByInstance,
   };
 }

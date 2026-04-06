@@ -1,72 +1,104 @@
-import type { Attachment } from './store';
+export type CommunicationFile = {
+  name: string;
+  data: Uint8Array;
+  contentType?: string;
+  sizeBytes?: number;
+};
+
+export type CommunicationAttachmentView = {
+  path: string;
+  name: string;
+  contentType?: string;
+  sizeBytes?: number;
+};
 
 export type CommunicationInboundMessage = {
-  providerConversationKey: string;
-  providerMessageId: string;
+  targetKey: string;
+  messageId: string;
   conversationName?: string;
-  authorExternalId?: string;
+  authorId?: string;
   authorDisplayName?: string;
   authorUsername?: string;
   content: string;
-  attachments?: Attachment[];
+  attachments?: CommunicationFile[];
   createdAt: string;
   metadata?: Record<string, unknown>;
 };
 
-export type CommunicationProvider = {
-  id: string;
-  getAccount(): Promise<{
-    externalAccountId: string;
-    displayName?: string;
-    metadata?: Record<string, unknown>;
-  }>;
-  onMessage?(callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> | void;
-  syncContacts?(): Promise<
-    Array<{
-      slug: string;
-      displayName: string;
-      externalUserId?: string;
-      username?: string;
-    }>
-  >;
-  // TODO: Extend to support multiple TO recipients, CC, and BCC fields.
-  // Currently limited to a single recipient via conversationId or contactExternalId.
-  sendMessage(input: {
-    providerConversationKey?: string;
-    contactExternalId?: string;
-    conversationName?: string;
-    conversationType?: string;
-    content: string;
-    replyToProviderMessageId?: string;
-  }): Promise<{
-    providerConversationKey: string;
-    providerMessageId?: string;
-    conversationName?: string;
-  }>;
+export type CommunicationProviderMessage = {
+  messageId: string;
+  provider: string;
+  authorId?: string;
+  targetKey?: string;
+  content: string;
+  attachments: CommunicationFile[];
+  unread: boolean;
+  createdAt: string;
+  authorDisplayName?: string;
 };
 
-export type CommunicationConversationView = {
-  conversationId: string;
+export type CommunicationProviderContact = {
+  slug: string;
+  displayName: string;
+  description?: string;
+};
+
+export type CommunicationProviderConversation = {
+  targetKey: string;
   provider: string;
-  providerConversationKey: string;
   latestMessageAt: string;
   unreadCount: number;
   name?: string;
-  type?: string;
-  contactSlug?: string;
-  contactDisplayName?: string;
+  participants?: string[];
+  messages: CommunicationProviderMessage[];
+};
+
+export type CommunicationConversationView = {
+  targetKey: string;
+  provider: string;
+  latestMessageAt: string;
+  unreadCount: number;
+  name?: string;
+  participants?: string[];
   messages: CommunicationMessageView[];
 };
 
 export type CommunicationMessageView = {
   messageId: string;
-  conversationId: string;
   provider: string;
+  authorId?: string;
+  targetKey?: string;
   content: string;
-  attachments: Attachment[];
+  attachments: CommunicationAttachmentView[];
   unread: boolean;
   createdAt: string;
   authorDisplayName?: string;
-  contactSlug?: string;
-  contactDisplayName?: string;
+};
+
+export type CommunicationProvider = {
+  id: string;
+  onMessage?(callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> | void;
+  getSelfContact?(): Promise<CommunicationProviderContact | null>;
+  listContacts?(): Promise<CommunicationProviderContact[]>;
+  listConversations?(input: {
+    limit: number;
+    unread?: boolean;
+  }): Promise<CommunicationProviderConversation[]>;
+  getMessages?(input: {
+    targetKey: string;
+    limit: number;
+    offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<CommunicationProviderMessage[]>;
+  sendMessage(input: {
+    targetKey: string;
+    content: string;
+    attachments: CommunicationFile[];
+  }): Promise<{
+    targetKey: string;
+    messageId?: string;
+    conversationName?: string;
+  }>;
 };

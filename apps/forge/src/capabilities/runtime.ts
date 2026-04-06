@@ -1,7 +1,7 @@
 import type { Database } from '../database/index';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
-import { agents, agentProviders, agentFunctions, functionRoles } from '../database/schema';
+import { agents, agentProviders, agentRoles } from '../database/schema';
 import { loadAgent, type AgentLoaderConfig } from '../agents/agent-loader';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createAgentNotificationStore } from '../notifications/store';
@@ -22,34 +22,9 @@ export async function reloadAgentIfLoaded(db: Database, config: AgentLoaderConfi
   await registry.add(db, runtime);
 }
 
-export async function reloadAgentsForFunction(db: Database, config: AgentLoaderConfig, functionId: string) {
-  const assignedAgents = await db.query.agents.findMany({
-    where: eq(agents.functionId, functionId),
-    columns: {
-      id: true,
-    },
-  });
-
-  for (const agent of assignedAgents) {
-    await reloadAgentIfLoaded(db, config, agent.id);
-  }
-}
-
 export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfig, roleId: string) {
-  const linkedFunctions = await db.query.functionRoles.findMany({
-    where: eq(functionRoles.roleId, roleId),
-    columns: {
-      functionId: true,
-    },
-  });
-
-  if (linkedFunctions.length === 0) {
-    return;
-  }
-
-  const functionIds = linkedFunctions.map((link) => link.functionId);
   const assignedAgents = await db.query.agents.findMany({
-    where: inArray(agents.functionId, functionIds),
+    where: eq(agents.roleId, roleId),
     columns: {
       id: true,
     },
@@ -60,12 +35,12 @@ export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfi
   }
 }
 
-export async function changeAgentFunction(input: {
+export async function changeAgentRole(input: {
   db: Database;
   loaderConfig: AgentLoaderConfig;
   actorAgentId: string;
   targetAgentId: string;
-  functionId: string;
+  roleId: string;
 }) {
   const actorAgent = await input.db.query.agents.findFirst({
     where: eq(agents.id, input.actorAgentId),
@@ -83,18 +58,18 @@ export async function changeAgentFunction(input: {
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
-  const agentFunction = await input.db.query.agentFunctions.findFirst({
-    where: eq(agentFunctions.id, input.functionId),
+  const agentRole = await input.db.query.agentRoles.findFirst({
+    where: eq(agentRoles.id, input.roleId),
   });
 
-  if (!agentFunction) {
-    throw new Error(`Function not found: ${input.functionId}`);
+  if (!agentRole) {
+    throw new Error(`Role not found: ${input.roleId}`);
   }
 
   await input.db
     .update(agents)
     .set({
-      functionId: input.functionId,
+      roleId: input.roleId,
       updatedAt: Date.now(),
     })
     .where(eq(agents.id, input.targetAgentId));
@@ -102,16 +77,16 @@ export async function changeAgentFunction(input: {
   await updateInternalChatProviderProfile(input.db, {
     agentId: input.targetAgentId,
     displayName: targetAgent.name,
-    description: agentFunction.description ?? agentFunction.name,
+    description: agentRole.description ?? agentRole.name,
   });
 
   const notifications = createAgentNotificationStore(input.db);
   const actorLabel = input.actorAgentId === input.targetAgentId ? `${actorAgent.name} (self)` : actorAgent.name;
   const changeTimestamp = Date.now();
-  const eventContent = createFunctionChangeContent({
+  const eventContent = createRoleChangeContent({
     targetAgentId: input.targetAgentId,
-    functionId: agentFunction.id,
-    functionName: agentFunction.name,
+    roleId: agentRole.id,
+    roleName: agentRole.name,
     changedBy: actorLabel,
     changedByAgentId: input.actorAgentId,
     timestamp: changeTimestamp,
@@ -126,25 +101,30 @@ export async function changeAgentFunction(input: {
 
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
   targetEntry?.runner.notifyExternalEvent({
-    type: 'function-change',
-    id: `function-change:${input.targetAgentId}:${changeTimestamp}`,
-    content: eventContent,
+    type: 'role-change',
+    groupKey: `role-change:${input.targetAgentId}`,
+    groupMetadata: {
+      Source: 'capabilities',
+      TargetAgentId: input.targetAgentId,
+    },
+    idempotencyKey: `role-change:${input.targetAgentId}:${changeTimestamp}`,
+    text: eventContent,
     timestamp: changeTimestamp,
   });
 
   return {
     agentId: input.targetAgentId,
-    functionId: agentFunction.id,
-    functionName: agentFunction.name,
+    roleId: agentRole.id,
+    roleName: agentRole.name,
     changedByAgentId: input.actorAgentId,
   };
 }
 
-export async function changeAgentFunctionFromAdmin(input: {
+export async function changeAgentRoleFromAdmin(input: {
   db: Database;
   loaderConfig: AgentLoaderConfig;
   targetAgentId: string;
-  functionId: string;
+  roleId: string;
 }) {
   const targetAgent = await input.db.query.agents.findFirst({
     where: eq(agents.id, input.targetAgentId),
@@ -154,18 +134,18 @@ export async function changeAgentFunctionFromAdmin(input: {
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
-  const agentFunction = await input.db.query.agentFunctions.findFirst({
-    where: eq(agentFunctions.id, input.functionId),
+  const agentRole = await input.db.query.agentRoles.findFirst({
+    where: eq(agentRoles.id, input.roleId),
   });
 
-  if (!agentFunction) {
-    throw new Error(`Function not found: ${input.functionId}`);
+  if (!agentRole) {
+    throw new Error(`Role not found: ${input.roleId}`);
   }
 
   await input.db
     .update(agents)
     .set({
-      functionId: input.functionId,
+      roleId: input.roleId,
       updatedAt: Date.now(),
     })
     .where(eq(agents.id, input.targetAgentId));
@@ -173,15 +153,15 @@ export async function changeAgentFunctionFromAdmin(input: {
   await updateInternalChatProviderProfile(input.db, {
     agentId: input.targetAgentId,
     displayName: targetAgent.name,
-    description: agentFunction.description ?? agentFunction.name,
+    description: agentRole.description ?? agentRole.name,
   });
 
   const notifications = createAgentNotificationStore(input.db);
   const changeTimestamp = Date.now();
-  const eventContent = createFunctionChangeContent({
+  const eventContent = createRoleChangeContent({
     targetAgentId: input.targetAgentId,
-    functionId: agentFunction.id,
-    functionName: agentFunction.name,
+    roleId: agentRole.id,
+    roleName: agentRole.name,
     changedBy: 'admin console',
     timestamp: changeTimestamp,
   });
@@ -195,16 +175,21 @@ export async function changeAgentFunctionFromAdmin(input: {
 
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
   targetEntry?.runner.notifyExternalEvent({
-    type: 'function-change',
-    id: `function-change:${input.targetAgentId}:${changeTimestamp}`,
-    content: eventContent,
+    type: 'role-change',
+    groupKey: `role-change:${input.targetAgentId}`,
+    groupMetadata: {
+      Source: 'admin-console',
+      TargetAgentId: input.targetAgentId,
+    },
+    idempotencyKey: `role-change:${input.targetAgentId}:${changeTimestamp}`,
+    text: eventContent,
     timestamp: changeTimestamp,
   });
 
   return {
     agentId: input.targetAgentId,
-    functionId: agentFunction.id,
-    functionName: agentFunction.name,
+    roleId: agentRole.id,
+    roleName: agentRole.name,
     changedBy: 'admin-console',
   };
 }
@@ -247,19 +232,19 @@ export async function updateInternalChatProviderProfile(
     .where(eq(agentProviders.id, provider.id));
 }
 
-function createFunctionChangeContent(input: {
+function createRoleChangeContent(input: {
   targetAgentId: string;
-  functionId: string;
-  functionName: string;
+  roleId: string;
+  roleName: string;
   changedBy: string;
   changedByAgentId?: string;
   timestamp: number;
 }) {
   const lines = [
-    'Agent function assignment changed.',
+    'Agent role assignment changed.',
     `Target agent id: ${input.targetAgentId}`,
-    `Function id: ${input.functionId}`,
-    `Function name: ${input.functionName}`,
+    `Role id: ${input.roleId}`,
+    `Role name: ${input.roleName}`,
     `Changed by: ${input.changedBy}`,
     `Timestamp: ${new Date(input.timestamp).toISOString()}`,
   ];

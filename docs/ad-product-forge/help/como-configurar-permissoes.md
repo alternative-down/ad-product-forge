@@ -103,16 +103,15 @@ O sistema possui mais de 60 ferramentas organizadas em categorias:
 - `write_file`, `read_file`, `edit_file`, `delete_file` - Operações de arquivo
 - `execute_command` - Executar comandos shell
 
-**Gestão de Tarefas**
-- `create_task_for_agent` - Criar tarefa para outro agente
-- `list_agent_tasks` - Listar tarefas
-- `cancel_agent_task` - Cancelar tarefa
-- `update_agent_task` - Atualizar tarefa
+**Gestão de Crons**
+- `manage_self_crons` - Criar, atualizar ou deletar cron próprio
+- `list_self_crons` - Listar crons próprios
+- `manage_crons` - Criar, atualizar ou deletar cron para outro agente
+- `list_crons` - Listar crons criados para outros agentes
 
 **Comunicação**
 - `send_message` - Enviar mensagem
-- `create_chat_group` - Criar grupo
-- `add_member_to_group` - Adicionar membro
+- `change_chat_group` - Criar ou atualizar grupo
 
 **Financeiro**
 - `get_company_financial_summary` - Ver resumo financeiro

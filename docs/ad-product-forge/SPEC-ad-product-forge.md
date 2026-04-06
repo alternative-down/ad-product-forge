@@ -133,12 +133,12 @@ Admin → Forge-Admin → POST /admin/agent/hire → Workflow Hire
                                     Agente Ativo
 ```
 
-### Fluxo 2: Delegação de Tarefa
+### Fluxo 2: Delegação de Cron
 
 ```
-Coordinator → create_task_for_agent
+Coordinator → manage_crons(action=create)
                          ↓
-              Tarefa Criada (pending)
+               Cron Criado (pending)
                          ↓
               Agent Notificado
                          ↓

@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX `agent_provider_unique` ON `agent_providers` (`agent_id`,`provider_type`);

@@ -26,21 +26,22 @@ const marketResearchInputSchema = z.object({
   customPrompt: z
     .string()
     .optional()
-    .describe('Custom research prompt to override the default market research strategy'),
+    .describe('Optional custom research prompt if you want to guide the market research in a more specific direction.'),
 });
 
 export const marketResearchTool = createTool({
   id: 'market_research',
   description:
-    'Search the web for market signals, user pain points, and product opportunities using Firecrawl.',
+    'Search the web for market signals, user pain points, trends, and product opportunities. Returns structured signals you can use for strategy, discovery, or prioritization.',
   inputSchema: marketResearchInputSchema,
   execute: async (input) => {
     const API_KEY = process.env.FIRECRAWL_API_KEY;
 
     if (!API_KEY) {
       return {
-        success: false,
+        valid: false,
         error: 'FIRECRAWL_API_KEY environment variable is not set',
+        hint: 'Configure the Firecrawl integration before using market_research.',
       };
     }
 
@@ -87,8 +88,9 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
 
       if (!result.success) {
         return {
-          success: false,
+          valid: false,
           error: `Invalid response from Firecrawl agent: ${result.error.message}`,
+          hint: 'Try again in a moment. If the problem persists, Firecrawl may be returning an unexpected payload.',
         };
       }
 
@@ -96,14 +98,15 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
 
       if (!response.success) {
         return {
-          success: false,
+          valid: false,
           status: response.status,
           error: `Firecrawl agent failed with status: ${response.status}`,
+          hint: 'Try again with a narrower prompt or verify the Firecrawl service is available.',
         };
       }
 
       return {
-        success: true,
+        valid: true,
         signals: response.data || [],
         creditsUsed: response.creditsUsed,
         status: response.status,
@@ -111,8 +114,9 @@ Focus on authentic signals from real users, not marketing hype. Prioritize signa
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       return {
-        success: false,
+        valid: false,
         error: errorMessage,
+        hint: 'Try again in a moment. If the problem persists, verify the Firecrawl integration is configured.',
       };
     }
   },

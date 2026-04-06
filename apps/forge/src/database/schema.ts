@@ -6,9 +6,9 @@
  * - agent_providers: Associação agente-provedor com credenciais
  *
  * IMPORTANTE:
- * - conversations e messages são do módulo de comunicação no mastra-engine
+ * - internal-chat é persistido no banco central da aplicação
+ * - os demais providers continuam no módulo de comunicação do mastra-engine por enquanto
  * - Cada agente tem seu próprio banco de dados (path relativo a workspace)
- * - Este schema é APENAS para a aplicação central
  */
 
 import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
@@ -23,8 +23,11 @@ const _WorkspaceSandboxConfigSchema = z.object({
   workingDirectory: z.string(),
 });
 
+const _WorkspaceSkillsConfigSchema = z.array(z.string());
+
 export type WorkspaceFilesystemConfig = z.infer<typeof _WorkspaceFilesystemConfigSchema>;
 export type WorkspaceSandboxConfig = z.infer<typeof _WorkspaceSandboxConfigSchema>;
+export type WorkspaceSkillsConfig = z.infer<typeof _WorkspaceSkillsConfigSchema>;
 
 /**
  * Tabela: agents
@@ -34,8 +37,8 @@ export const agents = sqliteTable('agents', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
-  functionId: text('function_id')
-    .references(() => agentFunctions.id, { onDelete: 'set null' }),
+  roleId: text('role_id')
+    .references(() => agentRoles.id, { onDelete: 'set null' }),
   modelProfileId: text('model_profile_id')
     .notNull()
     .references(() => llmProfiles.id, { onDelete: 'restrict' }),
@@ -50,25 +53,13 @@ export const agents = sqliteTable('agents', {
   workspaceEmbedder: text('workspace_embedder').notNull().default('fastembed'),
   workspaceFilesystem: text('workspace_filesystem', { mode: 'json' }).$type<WorkspaceFilesystemConfig>(),
   workspaceSandbox: text('workspace_sandbox', { mode: 'json' }).$type<WorkspaceSandboxConfig>(),
+  workspaceSkills: text('workspace_skills', { mode: 'json' }).$type<WorkspaceSkillsConfig>(),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
 
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
-
-export const agentFunctions = sqliteTable('agent_functions', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-}, (table) => ({
-  agentFunctionsNameIdx: uniqueIndex('agent_functions_name_idx').on(table.name),
-}));
-
-export type AgentFunction = typeof agentFunctions.$inferSelect;
-export type NewAgentFunction = typeof agentFunctions.$inferInsert;
 
 export const agentRoles = sqliteTable('agent_roles', {
   id: text('id').primaryKey(),
@@ -82,23 +73,6 @@ export const agentRoles = sqliteTable('agent_roles', {
 
 export type AgentRole = typeof agentRoles.$inferSelect;
 export type NewAgentRole = typeof agentRoles.$inferInsert;
-
-export const functionRoles = sqliteTable('function_roles', {
-  functionId: text('function_id')
-    .notNull()
-    .references(() => agentFunctions.id, { onDelete: 'cascade' }),
-  roleId: text('role_id')
-    .notNull()
-    .references(() => agentRoles.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at').notNull(),
-}, (table) => ({
-  functionRolesUniqueIdx: uniqueIndex('function_roles_unique_idx').on(table.functionId, table.roleId),
-  functionRolesFunctionIdIdx: index('function_roles_function_id_idx').on(table.functionId),
-  functionRolesRoleIdIdx: index('function_roles_role_id_idx').on(table.roleId),
-}));
-
-export type FunctionRole = typeof functionRoles.$inferSelect;
-export type NewFunctionRole = typeof functionRoles.$inferInsert;
 
 export const roleToolPermissions = sqliteTable('role_tool_permissions', {
   roleId: text('role_id')
@@ -132,6 +106,7 @@ export const systemSettings = sqliteTable('system_settings', {
   id: text('id').primaryKey(),
   companyName: text('company_name').notNull(),
   companyContext: text('company_context').notNull(),
+  stepDelayEnabled: integer('step_delay_enabled').notNull().default(1),
   updatedAt: integer('updated_at').notNull(),
 });
 
@@ -237,6 +212,92 @@ export const agentSchedules = sqliteTable('agent_schedules', {
 export type AgentSchedule = typeof agentSchedules.$inferSelect;
 export type NewAgentSchedule = typeof agentSchedules.$inferInsert;
 
+export const internalChatAccounts = sqliteTable('forge_internal_chat_accounts', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  displayName: text('display_name').notNull(),
+  description: text('description'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  internalChatAccountsSlugIdx: uniqueIndex('forge_internal_chat_accounts_slug_idx').on(table.slug),
+  internalChatAccountsAgentIdIdx: uniqueIndex('forge_internal_chat_accounts_agent_id_idx').on(table.agentId),
+}));
+
+export type InternalChatAccount = typeof internalChatAccounts.$inferSelect;
+export type NewInternalChatAccount = typeof internalChatAccounts.$inferInsert;
+
+export const internalChatConversations = sqliteTable('forge_internal_chat_conversations', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  name: text('name'),
+  createdByAccountId: text('created_by_account_id')
+    .references(() => internalChatAccounts.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  internalChatConversationsTypeIdx: index('forge_internal_chat_conversations_type_idx').on(table.type),
+  internalChatConversationsUpdatedAtIdx: index('forge_internal_chat_conversations_updated_at_idx').on(table.updatedAt),
+}));
+
+export type InternalChatConversation = typeof internalChatConversations.$inferSelect;
+export type NewInternalChatConversation = typeof internalChatConversations.$inferInsert;
+
+export const internalChatConversationMembers = sqliteTable('forge_internal_chat_conversation_members', {
+  conversationId: text('conversation_id')
+    .notNull()
+    .references(() => internalChatConversations.id, { onDelete: 'cascade' }),
+  accountId: text('account_id')
+    .notNull()
+    .references(() => internalChatAccounts.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('normal'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  internalChatConversationMembersUniqueIdx: uniqueIndex('forge_internal_chat_conversation_members_unique_idx').on(table.conversationId, table.accountId),
+  internalChatConversationMembersAccountIdx: index('forge_internal_chat_conversation_members_account_idx').on(table.accountId),
+}));
+
+export type InternalChatConversationMember = typeof internalChatConversationMembers.$inferSelect;
+export type NewInternalChatConversationMember = typeof internalChatConversationMembers.$inferInsert;
+
+export const internalChatMessages = sqliteTable('forge_internal_chat_messages', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id')
+    .notNull()
+    .references(() => internalChatConversations.id, { onDelete: 'cascade' }),
+  authorAccountId: text('author_account_id')
+    .notNull()
+    .references(() => internalChatAccounts.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  replyToMessageId: text('reply_to_message_id'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  internalChatMessagesConversationIdx: index('forge_internal_chat_messages_conversation_idx').on(table.conversationId),
+  internalChatMessagesCreatedAtIdx: index('forge_internal_chat_messages_created_at_idx').on(table.createdAt),
+}));
+
+export type InternalChatMessage = typeof internalChatMessages.$inferSelect;
+export type NewInternalChatMessage = typeof internalChatMessages.$inferInsert;
+
+export const internalChatMessageReads = sqliteTable('forge_internal_chat_message_reads', {
+  messageId: text('message_id')
+    .notNull()
+    .references(() => internalChatMessages.id, { onDelete: 'cascade' }),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  readAt: integer('read_at'),
+}, (table) => ({
+  internalChatMessageReadsUniqueIdx: uniqueIndex('forge_internal_chat_message_reads_unique_idx').on(table.messageId, table.agentId),
+  internalChatMessageReadsAgentIdx: index('forge_internal_chat_message_reads_agent_idx').on(table.agentId),
+  internalChatMessageReadsReadAtIdx: index('forge_internal_chat_message_reads_read_at_idx').on(table.readAt),
+}));
+
+export type InternalChatMessageRead = typeof internalChatMessageReads.$inferSelect;
+export type NewInternalChatMessageRead = typeof internalChatMessageReads.$inferInsert;
+
 export const llmModelPrices = sqliteTable('llm_model_prices', {
   modelKey: text('model_key').primaryKey(),
   inputPerMillionUsd: real('input_per_million_usd').notNull(),
@@ -294,6 +355,8 @@ const _MigaduSystemIntegrationConfigSchema = z.object({
 const _CoolifySystemIntegrationConfigSchema = z.object({
   baseUrl: z.string().url(),
   adminToken: z.string().min(1),
+  serverId: z.string().min(1),
+  destinationId: z.string().min(1),
   applicationsBaseDomain: z.string().min(1).optional(),
 });
 
@@ -302,13 +365,19 @@ const _GitHubSystemIntegrationConfigSchema = z.object({
   appHomeUrl: z.string().url(),
 });
 
+const _MinimaxSystemIntegrationConfigSchema = z.object({
+  apiKey: z.string().min(1),
+});
+
 export type MigaduSystemIntegrationConfig = z.infer<typeof _MigaduSystemIntegrationConfigSchema>;
 export type CoolifySystemIntegrationConfig = z.infer<typeof _CoolifySystemIntegrationConfigSchema>;
 export type GitHubSystemIntegrationConfig = z.infer<typeof _GitHubSystemIntegrationConfigSchema>;
+export type MinimaxSystemIntegrationConfig = z.infer<typeof _MinimaxSystemIntegrationConfigSchema>;
 export type SystemIntegrationConfigMap = {
   migadu: MigaduSystemIntegrationConfig;
   coolify: CoolifySystemIntegrationConfig;
   github: GitHubSystemIntegrationConfig;
+  minimax: MinimaxSystemIntegrationConfig;
 };
 
 export const systemIntegrations = sqliteTable('system_integrations', {
@@ -403,9 +472,9 @@ export type NewAgentPrompt = typeof agentPrompts.$inferInsert;
  * Relações
  */
 export const agentsRelations = relations(agents, ({ one, many }) => ({
-  function: one(agentFunctions, {
-    fields: [agents.functionId],
-    references: [agentFunctions.id],
+  role: one(agentRoles, {
+    fields: [agents.roleId],
+    references: [agentRoles.id],
   }),
   modelProfile: one(llmProfiles, {
     relationName: 'agent_model_profile',
@@ -423,6 +492,12 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
   prompts: many(agentPrompts),
+  internalChatAccount: one(internalChatAccounts, {
+    fields: [agents.id],
+    references: [internalChatAccounts.agentId],
+  }),
+  internalChatMemberships: many(internalChatConversationMembers),
+  internalChatMessages: many(internalChatMessages),
 }));
 
 export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
@@ -434,26 +509,10 @@ export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
   }),
 }));
 
-export const agentFunctionsRelations = relations(agentFunctions, ({ many }) => ({
-  roleLinks: many(functionRoles),
-  agents: many(agents),
-}));
-
 export const agentRolesRelations = relations(agentRoles, ({ many }) => ({
-  functionLinks: many(functionRoles),
+  agents: many(agents),
   toolPermissions: many(roleToolPermissions),
   workflowPermissions: many(roleWorkflowPermissions),
-}));
-
-export const functionRolesRelations = relations(functionRoles, ({ one }) => ({
-  function: one(agentFunctions, {
-    fields: [functionRoles.functionId],
-    references: [agentFunctions.id],
-  }),
-  role: one(agentRoles, {
-    fields: [functionRoles.roleId],
-    references: [agentRoles.id],
-  }),
 }));
 
 export const roleToolPermissionsRelations = relations(roleToolPermissions, ({ one }) => ({
@@ -510,6 +569,56 @@ export const agentSchedulesRelations = relations(agentSchedules, ({ one }) => ({
   }),
 }));
 
+export const internalChatAccountsRelations = relations(internalChatAccounts, ({ one }) => ({
+  agent: one(agents, {
+    fields: [internalChatAccounts.agentId],
+    references: [agents.id],
+  }),
+}));
+
+export const internalChatConversationsRelations = relations(internalChatConversations, ({ one, many }) => ({
+  creator: one(internalChatAccounts, {
+    fields: [internalChatConversations.createdByAccountId],
+    references: [internalChatAccounts.id],
+  }),
+  members: many(internalChatConversationMembers),
+  messages: many(internalChatMessages),
+}));
+
+export const internalChatConversationMembersRelations = relations(internalChatConversationMembers, ({ one }) => ({
+  conversation: one(internalChatConversations, {
+    fields: [internalChatConversationMembers.conversationId],
+    references: [internalChatConversations.id],
+  }),
+  account: one(internalChatAccounts, {
+    fields: [internalChatConversationMembers.accountId],
+    references: [internalChatAccounts.id],
+  }),
+}));
+
+export const internalChatMessagesRelations = relations(internalChatMessages, ({ one, many }) => ({
+  conversation: one(internalChatConversations, {
+    fields: [internalChatMessages.conversationId],
+    references: [internalChatConversations.id],
+  }),
+  author: one(internalChatAccounts, {
+    fields: [internalChatMessages.authorAccountId],
+    references: [internalChatAccounts.id],
+  }),
+  reads: many(internalChatMessageReads),
+}));
+
+export const internalChatMessageReadsRelations = relations(internalChatMessageReads, ({ one }) => ({
+  message: one(internalChatMessages, {
+    fields: [internalChatMessageReads.messageId],
+    references: [internalChatMessages.id],
+  }),
+  agent: one(agents, {
+    fields: [internalChatMessageReads.agentId],
+    references: [agents.id],
+  }),
+}));
+
 export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
   agent: one(agents, {
     fields: [agentPrompts.agentId],
@@ -518,24 +627,74 @@ export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
 }));
 
 /**
- * Mastra Instances - for cross-instance communication fan-out
- * This table is shared with the mastra-engine communication module
+ * MCP Server Configs - Configuration for MCP servers that agents can connect to
  */
-export const mastraInstances = sqliteTable(
-  'mastra_instances',
+export const mcpServerConfigs = sqliteTable(
+  'mcp_server_configs',
   {
-    instanceId: text('instance_id').primaryKey(),
-    baseUrl: text('base_url').notNull(),
-    displayName: text('display_name'),
-    isLocal: integer('is_local').notNull().default(0),
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    transport: text('transport').notNull(), // 'stdio' | 'http_streamable'
+    command: text('command'), // For stdio transport
+    args: text('args'), // JSON array for stdio args
+    envVars: text('env_vars'), // JSON object for env vars
+    url: text('url'), // For http_streamable transport
+    headers: text('headers'), // JSON object for HTTP headers
+    version: integer('version').notNull().default(1),
+    isActive: integer('is_active').notNull().default(1),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => ({
-    baseUrlIdx: index('idx_mastra_instances_base_url').on(table.baseUrl),
-    isLocalIdx: index('idx_mastra_instances_is_local').on(table.isLocal),
+    nameIdx: index('idx_mcp_server_configs_name').on(table.name),
+    isActiveIdx: index('idx_mcp_server_configs_is_active').on(table.isActive),
   }),
 );
 
-export type MastraInstance = typeof mastraInstances.$inferSelect;
-export type NewMastraInstance = typeof mastraInstances.$inferInsert;
+export type McpServerConfig = typeof mcpServerConfigs.$inferSelect;
+export type NewMcpServerConfig = typeof mcpServerConfigs.$inferInsert;
+
+/**
+ * Agent MCP Configs - Association table linking agents to MCP servers
+ */
+export const agentMcpConfigs = sqliteTable(
+  'agent_mcp_configs',
+  {
+    id: text('id').primaryKey(),
+    agentId: text('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    serverId: text('server_id')
+      .notNull()
+      .references(() => mcpServerConfigs.id, { onDelete: 'cascade' }),
+    isActive: integer('is_active').notNull().default(1),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    agentIdIdx: index('idx_agent_mcp_configs_agent_id').on(table.agentId),
+    serverIdIdx: index('idx_agent_mcp_configs_server_id').on(table.serverId),
+    isActiveIdx: index('idx_agent_mcp_configs_is_active').on(table.isActive),
+    uniqueAgentServer: uniqueIndex('unique_agent_server').on(table.agentId, table.serverId),
+  }),
+);
+
+export type AgentMcpConfig = typeof agentMcpConfigs.$inferSelect;
+export type NewAgentMcpConfig = typeof agentMcpConfigs.$inferInsert;
+
+// Relations
+export const mcpServerConfigsRelations = relations(mcpServerConfigs, ({ many }) => ({
+  agentConfigs: many(agentMcpConfigs),
+}));
+
+export const agentMcpConfigsRelations = relations(agentMcpConfigs, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentMcpConfigs.agentId],
+    references: [agents.id],
+  }),
+  server: one(mcpServerConfigs, {
+    fields: [agentMcpConfigs.serverId],
+    references: [mcpServerConfigs.id],
+  }),
+}));

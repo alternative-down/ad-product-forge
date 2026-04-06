@@ -5,36 +5,45 @@ import type { Database } from '../database/index';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentScheduleStore } from './store';
 
-const createScheduleSchema = z.object({
+const scheduleBaseSchema = {
   name: z.string().min(1),
   description: z.string().optional(),
-  scheduleType: z.enum(['cron', 'date']),
-  cronExpression: z.string().min(1).optional(),
-  scheduledDate: z.string().min(1).optional(),
   timezone: z.string().min(1).default('UTC'),
   content: z.string().min(1),
-});
+} as const;
+
+const createScheduleSchema = z.discriminatedUnion('scheduleType', [
+  z.object({
+    ...scheduleBaseSchema,
+    scheduleType: z.literal('cron'),
+    cronExpression: z.string().min(1),
+    scheduledDate: z.undefined().optional(),
+  }),
+  z.object({
+    ...scheduleBaseSchema,
+    scheduleType: z.literal('date'),
+    scheduledDate: z.string().min(1),
+    cronExpression: z.undefined().optional(),
+  }),
+]);
 
 // Schema for creating schedule for another agent (cross-agent)
-const createScheduleForAgentSchema = createScheduleSchema.extend({
-  targetAgentId: z.string().min(1),
-}).superRefine((input, ctx) => {
-  if (input.scheduleType === 'cron' && !input.cronExpression) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['cronExpression'],
-      message: 'cronExpression is required when scheduleType is cron',
-    });
-  }
-
-  if (input.scheduleType === 'date' && !input.scheduledDate) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['scheduledDate'],
-      message: 'scheduledDate is required when scheduleType is date',
-    });
-  }
-});
+const createScheduleForAgentSchema = z.discriminatedUnion('scheduleType', [
+  z.object({
+    ...scheduleBaseSchema,
+    targetAgentId: z.string().min(1),
+    scheduleType: z.literal('cron'),
+    cronExpression: z.string().min(1),
+    scheduledDate: z.undefined().optional(),
+  }),
+  z.object({
+    ...scheduleBaseSchema,
+    targetAgentId: z.string().min(1),
+    scheduleType: z.literal('date'),
+    scheduledDate: z.string().min(1),
+    cronExpression: z.undefined().optional(),
+  }),
+]);
 
 const HEARTBEAT_NAME = 'System heartbeat';
 const HEARTBEAT_CRON_EXPRESSION = '0 * * * *';
@@ -49,13 +58,6 @@ const updateScheduleSchema = z.object({
   timezone: z.string().min(1).optional(),
   content: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
-}).superRefine((input, ctx) => {
-  if (Object.keys(input).length === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'At least one field must be provided',
-    });
-  }
 });
 
 export function createAgentScheduleManager(input: {
@@ -65,7 +67,14 @@ export function createAgentScheduleManager(input: {
     unreadConversationCount: number;
     unreadMessageCount: number;
   }>;
-  notifyAgent(input: { agentId: string; scheduleId: string; content: string; timestamp: number }): void;
+  notifyAgent(input: {
+    agentId: string;
+    scheduleId: string;
+    scheduleKind: 'agent' | 'heartbeat';
+    scheduleName: string;
+    content: string;
+    timestamp: number;
+  }): void;
 }) {
   const store = createAgentScheduleStore(input.db);
   const notifications = createAgentNotificationStore(input.db);
@@ -144,6 +153,16 @@ export function createAgentScheduleManager(input: {
   async function listSchedules(agentId: string) {
     const schedules = await store.listAgentSchedules(agentId);
     return schedules.map(toToolOutput);
+  }
+
+  async function listTasks(creatorAgentId: string, targetAgentId?: string) {
+    const schedules = await store.listCreatedAgentSchedules(creatorAgentId, targetAgentId);
+    return schedules.map((schedule) => ({
+      ...toToolOutput(schedule),
+      createdBy: creatorAgentId,
+      targetAgentId: schedule.agentId,
+      taskId: schedule.scheduleId,
+    }));
   }
 
   async function updateSchedule(agentId: string, scheduleId: string, rawInput: z.input<typeof updateScheduleSchema>) {
@@ -414,10 +433,6 @@ export function createAgentScheduleManager(input: {
     nextTriggerAt: number | null = null,
   ) {
     cancelCompletedDateJob(scheduleRecord.scheduleId, remainsActive);
-    const pendingSummary = input.getAgentPendingSummary
-      ? await input.getAgentPendingSummary(scheduleRecord.agentId)
-      : null;
-
     if (scheduleRecord.kind === 'agent') {
       await notifications.createNotification({
         agentId: scheduleRecord.agentId,
@@ -446,21 +461,12 @@ export function createAgentScheduleManager(input: {
     input.notifyAgent({
       agentId: scheduleRecord.agentId,
       scheduleId: scheduleRecord.scheduleId,
+      scheduleKind: scheduleRecord.kind,
+      scheduleName: scheduleRecord.name,
       content: createWakeContent({
-        agentId: scheduleRecord.agentId,
-        scheduleId: scheduleRecord.scheduleId,
-        kind: scheduleRecord.kind,
-        name: scheduleRecord.name,
-        description: scheduleRecord.description,
-        scheduleType: scheduleRecord.scheduleType,
-        cronExpression: scheduleRecord.cronExpression,
-        scheduledDate: scheduleRecord.scheduledDate,
-        timezone: scheduleRecord.timezone,
-        fireDate,
-        pendingSummary,
         content: scheduleRecord.kind === 'agent'
           ? scheduleRecord.content
-          : createHeartbeatWakeInstruction(scheduleRecord.agentId),
+          : createHeartbeatWakeInstruction(),
       }),
       timestamp: fireDate.getTime(),
     });
@@ -490,6 +496,7 @@ export function createAgentScheduleManager(input: {
     createHeartbeatSchedule,
     createSchedule,
     listSchedules,
+    listTasks,
     updateSchedule,
     deleteSchedule,
     removeAgent,
@@ -547,93 +554,33 @@ function createNotificationContent(input: {
   content: string;
   fireDate: Date;
 }) {
-  const lines = [
-    'Scheduled notification received.',
-    `Agent id: ${input.agentId}`,
-    `Schedule id: ${input.scheduleId}`,
-    `Schedule kind: ${input.kind}`,
-    `Schedule name: ${input.name}`,
-    `Schedule type: ${input.scheduleType}`,
-    `Triggered at: ${input.fireDate.toISOString()}`,
-    `Timezone: ${input.timezone}`,
-  ];
+  const title = input.kind === 'heartbeat' ? 'Cron' : `Cron: ${input.scheduleId}`;
+  const sections = [title];
+  const description = input.description?.trim();
+  const content = input.content.trim();
 
-  if (input.description) {
-    lines.push(`Description: ${input.description}`);
+  if (description) {
+    sections.push(`Description: ${description}`);
   }
 
-  if (input.cronExpression) {
-    lines.push(`Cron expression: ${input.cronExpression}`);
+  if (content) {
+    sections.push(`Task:\n${content}`);
   }
 
-  if (input.scheduledDate) {
-    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
-  }
+  sections.push(input.fireDate.toISOString());
 
-  lines.push('', 'Content:', input.content);
-
-  return lines.join('\n');
+  return sections.join('\n\n');
 }
 
 function createWakeContent(input: {
-  agentId: string;
-  scheduleId: string;
-  kind: 'agent' | 'heartbeat';
-  name: string;
-  description?: string | null;
-  scheduleType: 'cron' | 'date';
-  cronExpression?: string | null;
-  scheduledDate?: number | null;
-  timezone: string;
-  fireDate: Date;
-  pendingSummary?: {
-    unreadNotificationCount: number;
-    unreadConversationCount: number;
-    unreadMessageCount: number;
-  } | null;
   content: string;
 }) {
-  const lines = [
-    'Scheduled wake event received.',
-    `Agent id: ${input.agentId}`,
-    `Schedule id: ${input.scheduleId}`,
-    `Schedule kind: ${input.kind}`,
-    `Schedule name: ${input.name}`,
-    `Schedule type: ${input.scheduleType}`,
-    `Triggered at: ${input.fireDate.toISOString()}`,
-    `Timezone: ${input.timezone}`,
-  ];
-
-  if (input.description) {
-    lines.push(`Schedule description: ${input.description}`);
-  }
-
-  if (input.cronExpression) {
-    lines.push(`Cron expression: ${input.cronExpression}`);
-  }
-
-  if (input.scheduledDate) {
-    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
-  }
-
-  if (input.pendingSummary) {
-    lines.push(
-      '',
-      'Pending summary:',
-      `Unread notifications: ${input.pendingSummary.unreadNotificationCount}`,
-      `Unread conversations: ${input.pendingSummary.unreadConversationCount}`,
-      `Unread messages: ${input.pendingSummary.unreadMessageCount}`,
-    );
-  }
-
-  lines.push('', 'Scheduled content:', input.content.trim());
-
-  return lines.join('\n');
+  return input.content.trim();
 }
 
-function createHeartbeatWakeInstruction(agentId: string) {
+function createHeartbeatWakeInstruction() {
   return [
-    `Heartbeat triggered for ${agentId}.`,
+    'Heartbeat triggered.',
     'Use this run to re-orient yourself in the current operational state.',
     'Check your unread conversations, unread notifications, pending schedules, and any unresolved work you may have left behind in earlier runs.',
     'If you find pending work, inspect it with tools and act on it. If nothing requires action, stop cleanly.',

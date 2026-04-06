@@ -1,0 +1,1 @@
+ALTER TABLE `system_settings` ADD `step_delay_enabled` integer DEFAULT 1 NOT NULL;

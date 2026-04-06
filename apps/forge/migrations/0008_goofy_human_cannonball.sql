@@ -1,0 +1,1 @@
+ALTER TABLE `agents` ADD `role_id` text REFERENCES agent_roles(id);

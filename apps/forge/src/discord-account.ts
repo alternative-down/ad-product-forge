@@ -1,24 +1,45 @@
-import { ChannelType, Client, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
+import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord.js';
 
-import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
+
+type DiscordSendableChannel = {
+  id: string;
+  name?: string | null;
+  sendTyping(): Promise<unknown>;
+  send(input: string | { content?: string; files?: Array<{ attachment: Buffer; name: string }> }): Promise<Message>;
+  messages: {
+    fetch(messageId: string): Promise<Message>;
+    fetch(options: { limit: number; before?: string }): Promise<Collection<string, Message>>;
+  };
+};
+
+type DiscordOutboundFile = {
+  attachment: Buffer;
+  name: string;
+};
 
 export function createDiscordProvider(config: {
   token: string;
-  allowedChannelIds?: string[];
-  respondToMentionsOnly?: boolean;
+  channels?: Array<{
+    channelId: string;
+    channelName?: string;
+    respondToMentionsOnly: boolean;
+  }>;
 }): CommunicationProvider {
   const OUTBOUND_ECHO_TTL_MS = 2 * 60_000;
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMembers,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.DirectMessages,
       GatewayIntentBits.MessageContent,
     ],
     partials: [Partials.Channel],
   });
-  const allowedChannelIds = new Set(config.allowedChannelIds ?? []);
-  const respondToMentionsOnly = config.respondToMentionsOnly ?? true;
+  const configuredChannels = new Map(
+    (config.channels ?? []).map((channel) => [channel.channelId, channel.respondToMentionsOnly]),
+  );
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
   const recentOutboundMessages = new Map<string, Array<{ content: string; createdAt: number }>>();
@@ -51,11 +72,127 @@ export function createDiscordProvider(config: {
     return messages.some((message) => message.content === content);
   }
 
+  function splitDiscordMessageContent(content: string) {
+    const chunks: string[] = [];
+    const normalizedContent = content.trim();
+
+    if (!normalizedContent) {
+      return [''];
+    }
+
+    for (const paragraph of normalizedContent.split('\n\n')) {
+      if (paragraph.length <= 2_000) {
+        const nextChunk = chunks[chunks.length - 1];
+
+        if (!nextChunk) {
+          chunks.push(paragraph);
+          continue;
+        }
+
+        const separator = nextChunk.length === 0 ? '' : '\n\n';
+        if (nextChunk.length + separator.length + paragraph.length <= 2_000) {
+          chunks[chunks.length - 1] = `${nextChunk}${separator}${paragraph}`;
+          continue;
+        }
+
+        chunks.push(paragraph);
+        continue;
+      }
+
+      let remainingParagraph = paragraph;
+
+      while (remainingParagraph.length > 2_000) {
+        const slice = remainingParagraph.slice(0, 2_000);
+        const breakIndex = Math.max(slice.lastIndexOf('\n'), slice.lastIndexOf(' '));
+        const chunkEnd = breakIndex >= 1_500 ? breakIndex : 2_000;
+        chunks.push(remainingParagraph.slice(0, chunkEnd).trim());
+        remainingParagraph = remainingParagraph.slice(chunkEnd).trim();
+      }
+
+      if (remainingParagraph.length > 0) {
+        chunks.push(remainingParagraph);
+      }
+    }
+
+    return chunks;
+  }
+
+  function parseFilterDate(value: string | undefined, fieldName: string) {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = Date.parse(value);
+
+    if (Number.isNaN(parsed)) {
+      throw new Error(`Invalid ${fieldName}: ${value}`);
+    }
+
+    return parsed;
+  }
+
+  async function downloadDiscordAttachments(message: Message): Promise<CommunicationFile[]> {
+    return Promise.all(
+      Array.from(message.attachments.values()).map(async (attachment) => {
+        const response = await fetch(attachment.url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to download Discord attachment: ${attachment.url}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+
+        return {
+          name: attachment.name ?? attachment.id,
+          data: new Uint8Array(arrayBuffer),
+          contentType: attachment.contentType ?? undefined,
+          sizeBytes: attachment.size,
+        };
+      }),
+    );
+  }
+
+  function toDiscordOutboundFiles(attachments: CommunicationFile[]): DiscordOutboundFile[] {
+    return attachments.map((attachment) => ({
+      attachment: Buffer.from(attachment.data),
+      name: attachment.name,
+    }));
+  }
+
+  async function sendDiscordChunks(input: {
+    channel: DiscordSendableChannel;
+    content: string;
+    attachments: CommunicationFile[];
+  }) {
+    const messageChunks = splitDiscordMessageContent(input.content);
+    let lastSentMessage: Message | null = null;
+    const outboundFiles = toDiscordOutboundFiles(input.attachments);
+
+    for (const [index, chunk] of messageChunks.entries()) {
+      if (index === 0) {
+        lastSentMessage = await input.channel.send({
+          content: chunk,
+          ...(outboundFiles.length > 0 ? { files: outboundFiles } : {}),
+        });
+      } else {
+        lastSentMessage = await input.channel.send(chunk);
+      }
+
+      rememberOutboundMessage(lastSentMessage.channelId, chunk);
+    }
+
+    if (!lastSentMessage) {
+      throw new Error('Discord message content produced no chunks to send');
+    }
+
+    return lastSentMessage;
+  }
+
   async function withTyping<T extends { sendTyping(): Promise<unknown> }>(
     channel: T,
     run: () => Promise<{
-      providerConversationKey: string;
-      providerMessageId?: string;
+      targetKey: string;
+      messageId?: string;
       conversationName?: string;
     }>,
   ) {
@@ -78,13 +215,13 @@ export function createDiscordProvider(config: {
       return null;
     }
 
-    if (allowedChannelIds.size > 0 && !allowedChannelIds.has(message.channelId)) {
+    if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
       return null;
     }
 
     if (
       message.channel.type !== ChannelType.DM &&
-      respondToMentionsOnly &&
+      configuredChannels.get(message.channelId) === true &&
       !message.mentions.users.has(botUserId)
     ) {
       return null;
@@ -126,25 +263,15 @@ export function createDiscordProvider(config: {
       return null;
     }
 
-    const attachments = Array.from(message.attachments.values()).map((attachment) => ({
-      id: attachment.id,
-      name: attachment.name,
-      url: attachment.url,
-      contentType: attachment.contentType ?? undefined,
-      sizeBytes: attachment.size,
-      description: attachment.description ?? undefined,
-    }));
-
     return {
-      providerConversationKey: message.channelId,
-      providerMessageId: message.id,
-      conversationName:
-        message.channel.type === ChannelType.DM ? 'direct-message' : message.channel.name ?? 'unknown-channel',
-      authorExternalId: message.author.id,
+      targetKey: message.channelId,
+      messageId: message.id,
+      conversationName: getDiscordConversationName(message.channel, authorDisplayName),
+      authorId: message.author.id,
       authorDisplayName,
       authorUsername: message.author.username,
       content: content || '[attachment only]',
-      attachments,
+      attachments: await downloadDiscordAttachments(message),
       createdAt: new Date(message.createdTimestamp).toISOString(),
       metadata: {
         serverName: message.guild?.name ?? 'direct-message',
@@ -210,71 +337,308 @@ export function createDiscordProvider(config: {
     return ready;
   }
 
+  async function listCandidateChannels() {
+    await getReadyClient();
+    const channelIds = new Set<string>(configuredChannels.keys());
+
+    for (const channel of client.channels.cache.values()) {
+      if (channel.type === ChannelType.DM || channel.type === ChannelType.GroupDM) {
+        channelIds.add(channel.id);
+      }
+    }
+
+    const channels: DiscordSendableChannel[] = [];
+
+    for (const channelId of channelIds) {
+      const channel = await client.channels.fetch(channelId);
+
+      if (!channel?.isTextBased() || !channel.isSendable()) {
+        continue;
+      }
+
+      channels.push(channel as DiscordSendableChannel);
+    }
+
+    return channels;
+  }
+
+  async function loadCandidateUsers() {
+    await getReadyClient();
+    const users = new Map<string, User>();
+
+    const rememberUser = (user: User | null | undefined) => {
+      if (!user || user.bot || !user.username) {
+        return;
+      }
+
+      users.set(user.username, user);
+    };
+
+    for (const guild of client.guilds.cache.values()) {
+      try {
+        const members = await guild.members.fetch();
+
+        for (const member of members.values()) {
+          rememberUser(member.user);
+        }
+      } catch (error) {
+        console.warn(`[discord] Failed to fetch members for guild ${guild.id}:`, error);
+      }
+    }
+
+    const channels = await listCandidateChannels();
+
+    for (const channel of channels) {
+      if ('recipient' in channel && channel.recipient instanceof User) {
+        rememberUser(channel.recipient);
+      }
+    }
+
+    return [...users.values()].sort((left, right) => left.username.localeCompare(right.username));
+  }
+
+  async function listCandidateUsers() {
+    const users = await loadCandidateUsers();
+
+    return users
+      .sort((left, right) => left.username.localeCompare(right.username))
+      .map((user) => ({
+        slug: user.username,
+        displayName: user.globalName ?? user.username,
+        description: `@${user.username}`,
+      }));
+  }
+
+  async function resolveDiscordTargetChannel(targetKey: string) {
+    await getReadyClient();
+
+    if (/^\d+$/.test(targetKey)) {
+      const channel = await client.channels.fetch(targetKey);
+
+      if (!channel?.isSendable()) {
+        throw new Error(`Discord target is not sendable: ${targetKey}`);
+      }
+
+      return channel as DiscordSendableChannel;
+    }
+
+    const candidateUsers = await loadCandidateUsers();
+    const matchedUser = candidateUsers.find((user) => user.username === targetKey);
+
+    if (!matchedUser) {
+      throw new Error(`Discord user not found: ${targetKey}`);
+    }
+
+    const channel = await matchedUser.createDM();
+    return channel as DiscordSendableChannel;
+  }
+
+  async function listChannelMessages(input: {
+    channel: DiscordSendableChannel;
+    limit: number;
+    offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) {
+    const parsedDateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
+    const parsedDateTo = parseFilterDate(input.dateTo, 'dateTo');
+    const matchesMessage = (message: Message) =>
+      (!input.query || message.content.includes(input.query) || message.attachments.size > 0) &&
+      (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
+      (parsedDateTo === null || message.createdTimestamp <= parsedDateTo);
+    const targetCount = input.limit + input.offset;
+    const collected = new Collection<string, Message>();
+    let before: string | undefined;
+
+    while (collected.size < targetCount) {
+      const batch = await input.channel.messages.fetch({
+        limit: Math.min(100, targetCount - collected.size),
+        ...(before ? { before } : {}),
+      });
+
+      if (batch.size === 0) {
+        break;
+      }
+
+      for (const [messageId, message] of batch) {
+        collected.set(messageId, message);
+      }
+
+      const oldestMessage = Array.from(batch.values()).at(-1);
+
+      if (!oldestMessage) {
+        break;
+      }
+
+      before = oldestMessage.id;
+    }
+
+    const sortedMessages = Array.from(collected.values())
+      .filter(matchesMessage)
+      .sort((left, right) => left.createdTimestamp - right.createdTimestamp);
+    const filteredMessages = sortedMessages.slice(
+      Math.max(0, sortedMessages.length - targetCount),
+      input.offset > 0 ? sortedMessages.length - input.offset : undefined,
+    );
+
+    return Promise.all(
+      filteredMessages.map(async (message) => ({
+        messageId: message.id,
+        provider: 'discord',
+        authorId: message.author.id,
+        targetKey: input.channel.id,
+        content: message.content.trim() || '[attachment only]',
+        attachments: await downloadDiscordAttachments(message),
+        unread: false,
+        createdAt: new Date(message.createdTimestamp).toISOString(),
+        authorDisplayName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
+      })),
+    );
+  }
+
   return {
     id: 'discord',
-    async getAccount() {
-      const user = await getReadyClient();
-
-      return {
-        externalAccountId: user.id,
-        displayName: user.tag,
-      };
-    },
     onMessage(callback) {
       onInboundMessage = callback;
       void flushPendingMessages();
     },
-    async sendMessage(input) {
-      await getReadyClient();
+    async getSelfContact() {
+      const currentUser = await getReadyClient();
 
-      if (input.contactExternalId && !input.providerConversationKey) {
-        const targetUser = await client.users.fetch(input.contactExternalId);
-        const channel = await targetUser.createDM();
+      return {
+        slug: currentUser.username,
+        displayName: currentUser.globalName ?? currentUser.username,
+        description: `@${currentUser.username}`,
+      };
+    },
+    async listContacts() {
+      return listCandidateUsers();
+    },
+    async listConversations({ limit }) {
+      const channels = await listCandidateChannels();
+      const conversations = [];
 
-        return withTyping(channel, async () => {
-          const sent = await channel.send(input.content);
-          rememberOutboundMessage(channel.id, input.content);
+      for (const channel of channels) {
+        const messages = await listChannelMessages({ channel, limit: 5, offset: 0 });
 
-          return {
-            providerConversationKey: channel.id,
-            providerMessageId: sent.id,
-            conversationName: 'direct-message',
-          };
+        if (messages.length === 0) {
+          continue;
+        }
+
+        const latestMessage = messages[messages.length - 1];
+        conversations.push({
+          provider: 'discord',
+          targetKey: channel.id,
+          latestMessageAt: latestMessage.createdAt,
+          unreadCount: 0,
+          name: getDiscordConversationName(channel, latestMessage.authorDisplayName),
+          participants: getDiscordConversationParticipants(channel, messages),
+          messages,
         });
       }
 
-      if (!input.providerConversationKey || !/^\d+$/.test(input.providerConversationKey)) {
-        throw new Error(`Unsupported Discord conversation: ${input.providerConversationKey}`);
+      return conversations
+        .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt))
+        .slice(0, limit);
+    },
+    async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
+      await getReadyClient();
+      const channel = await client.channels.fetch(targetKey);
+
+      if (!channel?.isTextBased() || !channel.isSendable()) {
+        throw new Error(`Discord target is not readable: ${targetKey}`);
       }
 
-      const channel = await client.channels.fetch(input.providerConversationKey);
-
-      if (!channel?.isSendable()) {
-        throw new Error(`Discord target is not sendable: ${input.providerConversationKey}`);
-      }
+      return listChannelMessages({
+        channel: channel as DiscordSendableChannel,
+        limit,
+        offset,
+        query,
+        dateFrom,
+        dateTo,
+      });
+    },
+    async sendMessage(input) {
+      const channel = await resolveDiscordTargetChannel(input.targetKey);
 
       return withTyping(channel, async () => {
-        if (input.replyToProviderMessageId) {
-          const replyTarget = await channel.messages.fetch(input.replyToProviderMessageId);
-          const sent = await replyTarget.reply(input.content);
-          rememberOutboundMessage(sent.channelId, input.content);
-
-          return {
-            providerConversationKey: sent.channelId,
-            providerMessageId: sent.id,
-            conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
-          };
-        }
-
-        const sent = await channel.send(input.content);
-        rememberOutboundMessage(sent.channelId, input.content);
+        const sent = await sendDiscordChunks({
+          channel: channel as DiscordSendableChannel,
+          content: input.content,
+          attachments: input.attachments,
+        });
 
         return {
-          providerConversationKey: sent.channelId,
-          providerMessageId: sent.id,
+          targetKey: sent.channelId,
+          messageId: sent.id,
           conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
         };
       });
     },
   };
+}
+
+function getDiscordConversationName(
+  channel: unknown,
+  fallbackName?: string,
+) {
+  if (
+    typeof channel === 'object' &&
+    channel !== null &&
+    'type' in channel &&
+    channel.type === ChannelType.DM
+  ) {
+    const recipient =
+      'recipient' in channel && typeof channel.recipient === 'object' && channel.recipient !== null
+        ? channel.recipient
+        : null;
+
+    return (
+      (recipient && 'globalName' in recipient && typeof recipient.globalName === 'string' ? recipient.globalName : null)
+      ?? (recipient && 'username' in recipient && typeof recipient.username === 'string' ? recipient.username : null)
+      ?? fallbackName
+      ?? 'direct-message'
+    );
+  }
+
+  if (typeof channel === 'object' && channel !== null && 'name' in channel && typeof channel.name === 'string') {
+    return channel.name;
+  }
+
+  return 'unknown-channel';
+}
+
+function getDiscordConversationParticipants(channel: unknown, messages: Array<{ authorDisplayName?: string }>) {
+  const participants = new Set<string>();
+
+  if (
+    typeof channel === 'object' &&
+    channel !== null &&
+    'recipients' in channel &&
+    Array.isArray(channel.recipients)
+  ) {
+    for (const recipient of channel.recipients) {
+      if (typeof recipient !== 'object' || recipient === null) {
+        continue;
+      }
+
+      if ('globalName' in recipient && typeof recipient.globalName === 'string') {
+        participants.add(recipient.globalName);
+        continue;
+      }
+
+      if ('username' in recipient && typeof recipient.username === 'string') {
+        participants.add(recipient.username);
+      }
+    }
+  }
+
+  for (const message of messages) {
+    if (message.authorDisplayName) {
+      participants.add(message.authorDisplayName);
+    }
+  }
+
+  return [...participants];
 }

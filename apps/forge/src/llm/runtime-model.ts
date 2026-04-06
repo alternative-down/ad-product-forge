@@ -1,4 +1,5 @@
 import type { AgentConfig } from '@mastra/core/agent';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOAuthGateway, OAUTH_GATEWAY_ID } from '@mastra-engine/core';
 
 type RuntimeProfile = {
@@ -26,6 +27,25 @@ export async function resolveProfileRuntimeModel(
       providerId,
       apiKey,
     });
+  }
+
+  if (profile.modelKey.startsWith('minimax-coding-plan/')) {
+    const [, ...modelIdParts] = profile.modelKey.split('/');
+    const modelId = modelIdParts.join('/');
+
+    if (!modelId) {
+      throw new Error(`Invalid MiniMax coding model key: ${profile.modelKey}`);
+    }
+
+    const baseUrl =
+      profile.baseUrl === 'https://api.minimax.io'
+        ? 'https://api.minimax.io/anthropic/v1'
+        : profile.baseUrl || 'https://api.minimax.io/anthropic/v1';
+
+    return createAnthropic({
+      authToken: profile.apiKey,
+      baseURL: baseUrl,
+    })(modelId);
   }
 
   return {

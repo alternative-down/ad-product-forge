@@ -9,6 +9,7 @@ import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
+import type { InternalChatService } from '../communication/internal-chat-service';
 
 type RunInternalHiringInput = {
   hiringRequest: string;
@@ -20,6 +21,7 @@ type RunInternalHiringInput = {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   schedules: ReturnType<typeof createAgentScheduleManager>;
+  internalChat: InternalChatService;
 };
 
 export async function runInternalHiring(db: Database, input: RunInternalHiringInput) {
@@ -32,16 +34,22 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       githubApps: input.githubApps,
       coolify: input.coolify,
       schedules: input.schedules,
+      internalChat: input.internalChat,
     },
   });
+
+  if (!hiringRh.valid) {
+    throw new Error(hiringRh.error || 'Hiring process failed');
+  }
+
   const profile = await buildHiredAgentProfile(db, {
     agentName: hiringRh.agentName,
     agentDescription: hiringRh.agentDescription,
   });
   const companyCashOperations = createCompanyCashOperations(db);
   const hired = await hireInternalAgent(db, {
-    functionId: hiringRh.functionId,
-    functionDescription: hiringRh.functionDescription,
+    roleId: hiringRh.roleId,
+    roleDescription: hiringRh.roleDescription,
     ...profile,
     instructions: hiringRh.instructions,
     weeklyBudgetUsd: input.weeklyBudgetUsd,
@@ -51,16 +59,21 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     emailMailboxes: input.emailMailboxes,
     coolify: input.coolify,
     schedules: input.schedules,
+    internalChat: input.internalChat,
   });
   try {
-    const githubApp = await input.githubApps.createAgentApp({
-      agentId: hired.agentId,
-      agentName: profile.name,
-    });
+    const githubApp = await (
+      await input.githubApps.isConfigured()
+        ? input.githubApps.createAgentApp({
+            agentId: hired.agentId,
+            agentName: profile.name,
+          })
+        : null
+    );
     await companyCashOperations.recordCashOut({
       type: 'agent-hiring-process',
       amountUsd: hiringRh.costUsd,
-      description: `Hiring workflow cost for ${hiringRh.functionDescription}`,
+      description: `Hiring workflow cost for ${hiringRh.roleDescription}`,
       referenceType: 'hiring-workflow',
       referenceId: hired.agentId,
     });
@@ -68,7 +81,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     return {
       agentId: hired.agentId,
       emailAddress: hired.emailAddress,
-      githubAppRegistrationUrl: githubApp.registrationUrl,
+      githubAppRegistrationUrl: githubApp?.registrationUrl ?? null,
     };
   } catch (error) {
     await terminateInternalAgent(db, {

@@ -93,3 +93,9 @@ Current surface:
 - active contract lookup for a target agent
 
 This is intentionally read-only. Agents do not write directly to the ledger through the micro ERP surface.
+
+Planned direction:
+
+- move the micro ERP out of Forge into a separate application
+- let agents use it through a dedicated skill
+- that skill can expose API usage, CLI usage, or both depending on the operation

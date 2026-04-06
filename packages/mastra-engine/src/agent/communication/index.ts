@@ -28,7 +28,16 @@ export { createCommunicationModule } from './module';
 export { createCommunicationStore } from './store';
 export * as communicationSchema from './schema';
 
-export type { CommunicationProvider, CommunicationConversationView, CommunicationMessageView } from './provider-types';
+export type {
+  CommunicationProvider,
+  CommunicationConversationView,
+  CommunicationMessageView,
+  CommunicationFile,
+  CommunicationAttachmentView,
+  CommunicationProviderConversation,
+  CommunicationProviderMessage,
+  CommunicationInboundMessage,
+} from './provider-types';
 
 export {
   communicationAccounts,
@@ -37,7 +46,6 @@ export {
   communicationConversations,
   communicationMessages,
   chatGroupMembers,
-  mastraInstances,
   type CommunicationAccount,
   type NewCommunicationAccount,
   type CommunicationContact,
@@ -50,8 +58,4 @@ export {
   type NewCommunicationMessage,
   type ChatGroupMember,
   type NewChatGroupMember,
-  type MastraInstance,
-  type NewMastraInstance,
 } from './schema';
-
-export type { Attachment } from './store';

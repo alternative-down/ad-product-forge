@@ -12,29 +12,27 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
   if (hasToolPermission(allowedToolIds, 'list_agent_notifications')) {
     tools.list_agent_notifications = createTool({
       id: 'list_agent_notifications',
-      description: 'List the latest notifications for this agent.',
+      description: 'List your notifications. Listing them marks the returned notifications as read.',
       inputSchema: z.object({
-        unreadOnly: z.boolean().default(false),
-        limit: z.number().int().positive().max(100).default(20),
+        unreadOnly: z.boolean().default(false).describe('Set this to true if you only want unread notifications.'),
+        limit: z.number().int().positive().max(100).default(20).describe('Maximum number of notifications to return.'),
       }),
-      execute: async (input) => notifications.listNotifications({
-        agentId,
-        unreadOnly: input.unreadOnly ?? false,
-        limit: input.limit ?? 20,
-      }),
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'mark_agent_notification_read')) {
-    tools.mark_agent_notification_read = createTool({
-      id: 'mark_agent_notification_read',
-      description: 'Mark one notification for this agent as read.',
-      inputSchema: z.object({
-        notificationId: z.string().min(1),
-      }),
-      execute: async (input) => ({
-        success: await notifications.markNotificationRead(agentId, input.notificationId),
-      }),
+      execute: async (input) => {
+        try {
+          return await notifications.listNotifications({
+            agentId,
+            unreadOnly: input.unreadOnly ?? false,
+            limit: input.limit ?? 20,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again in a moment. If the problem persists, verify the notification store is available.',
+          };
+        }
+      },
     });
   }
 

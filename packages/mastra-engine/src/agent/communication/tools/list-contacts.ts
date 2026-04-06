@@ -4,21 +4,30 @@ import { z } from 'zod';
 import type { CommunicationModule } from '../module';
 
 const listContactsInputSchema = z.object({
-  filter: z.enum(['self', 'others', 'all']).optional().default('others'),
+  filter: z
+    .enum(['self', 'others', 'all'])
+    .optional()
+    .default('others')
+    .describe("Which contacts to list. Use 'others' for the contacts you registered, 'self' for your own identities, or 'all' for both."),
 });
 
 export function createListContactsTool(communication: CommunicationModule) {
   return createTool({
     id: 'list_contacts',
     description:
-      "List contacts. Returns 'self' (the agent's own accounts on each communication provider as { accountId, provider, displayName } pairs) and 'others' (external contacts). " +
-      "The 'self' accounts show your identity on each provider without external IDs. " +
-      "When sending to one of the returned 'others', use the returned contact.slug as send_message.contactSlug. " +
-      "Use filter='self' to know your own identity on each provider before sending. " +
-      "Use filter='all' to get both. Defaults to 'others'.",
+      "List your contacts. This includes your saved contacts and other accounts available through communication providers such as internal-chat. Use this to discover the contact slug you can use later.",
     inputSchema: listContactsInputSchema,
     execute: async (input) => {
-      return communication.listContacts(input.filter);
+      try {
+        return await communication.listContacts(input.filter);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          valid: false,
+          error: message,
+          hint: 'Try again in a moment. If the problem persists, verify the communication store is available.',
+        };
+      }
     },
   });
 }

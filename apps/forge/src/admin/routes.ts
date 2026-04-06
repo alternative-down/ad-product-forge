@@ -16,9 +16,8 @@ import { loadAgent } from '../agents/agent-loader';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createCapabilityStore } from '../capabilities/store';
 import {
-  changeAgentFunctionFromAdmin,
+  changeAgentRoleFromAdmin,
   reloadAgentIfLoaded,
-  reloadAgentsForFunction,
   reloadAgentsForRole,
   updateInternalChatProviderProfile,
 } from '../capabilities/runtime';
@@ -29,11 +28,18 @@ import { runInternalHiring, runInternalTermination } from '../agents/internal-ag
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { GitHubAppManager } from '../github/manager';
-import { agentFunctions, agents, agentProviders } from '../database/schema';
+import {
+  agentMcpConfigs,
+  agents,
+  agentProviders,
+  agentRoles,
+  mcpServerConfigs,
+} from '../database/schema';
 import { encryptSecret } from '../encryption/crypto';
 import { parseProviderCredentials } from '../communication/provider-loader';
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 import { createSystemIntegrationStore } from '../system-integrations/store';
+import type { InternalChatService } from '../communication/internal-chat-service';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createLlmSettingsStore } from '../llm/settings-store';
@@ -53,9 +59,34 @@ import {
   searchPrompts,
   type PromptType,
 } from '../agents/prompts/store';
+import { clearAgentMCPClient } from '../agents/mcp/client-manager';
+import {
+  deleteAgentWorkspaceSkill,
+  installAgentWorkspaceSkillsFromZip,
+} from '../agents/workspace-skills';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
+});
+
+const agentExecutionStepsQuerySchema = z.object({
+  agentId: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+const agentThreadMessagesQuerySchema = z.object({
+  agentId: z.string().min(1),
+  page: z.coerce.number().int().min(0).default(0),
+  perPage: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+const agentConversationMessagesQuerySchema = z.object({
+  agentId: z.string().min(1),
+  provider: z.string().min(1),
+  targetKey: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 const roleToolPermissionSchema = z.object({
@@ -66,6 +97,11 @@ const roleToolPermissionSchema = z.object({
 const roleWorkflowPermissionSchema = z.object({
   roleId: z.string().min(1),
   workflowId: z.string().min(1),
+});
+
+const roleCapabilitySchema = z.object({
+  roleId: z.string().min(1),
+  capabilityId: z.string().min(1),
 });
 
 const createRoleSchema = z.object({
@@ -80,26 +116,6 @@ const updateRoleSchema = z.object({
 });
 
 const deleteRoleSchema = z.object({
-  roleId: z.string().min(1),
-});
-
-const createFunctionSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-});
-
-const updateFunctionSchema = z.object({
-  functionId: z.string().min(1),
-  name: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-});
-
-const deleteFunctionSchema = z.object({
-  functionId: z.string().min(1),
-});
-
-const functionRoleSchema = z.object({
-  functionId: z.string().min(1),
   roleId: z.string().min(1),
 });
 
@@ -136,6 +152,108 @@ const agentActionSchema = z.object({
   agentId: z.string().min(1),
 });
 
+const adminInternalChatSendSchema = z.object({
+  agentId: z.string().min(1),
+  targetKey: z.string().min(1).optional(),
+  senderSlug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  senderDisplayName: z.string().trim().min(1),
+  content: z.string().trim().min(1),
+});
+
+const createExternalInternalChatAccountSchema = z.object({
+  slug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  displayName: z.string().trim().min(1),
+  description: z.string().trim().optional(),
+});
+
+const updateExternalInternalChatAccountSchema = z.object({
+  accountId: z.string().min(1),
+  slug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  displayName: z.string().trim().min(1),
+  description: z.string().trim().optional(),
+});
+
+const deleteExternalInternalChatAccountSchema = z.object({
+  accountId: z.string().min(1),
+});
+
+const internalChatAccountIdQuerySchema = z.object({
+  accountId: z.string().min(1),
+});
+
+const internalChatMessagesQuerySchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+const internalChatMessageAttachmentQuerySchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  messageId: z.string().min(1),
+  attachmentName: z.string().min(1),
+});
+
+const createInternalChatConversationSchema = z.object({
+  accountId: z.string().min(1),
+  type: z.enum(['dm', 'group']),
+  name: z.string().trim().optional(),
+  participantAccountIds: z.array(z.string().min(1)).min(1),
+});
+
+const sendInternalChatConversationMessageSchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  content: z.string().trim().default(''),
+  attachments: z.array(z.object({
+    name: z.string().min(1),
+    contentType: z.string().optional(),
+    dataBase64: z.string().min(1),
+  })).default([]),
+}).refine(
+  (value) => value.content.length > 0 || value.attachments.length > 0,
+  {
+    message: 'Message content or attachments are required.',
+  },
+);
+
+const updateInternalChatConversationSchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  name: z.string().trim().min(1),
+});
+
+const archiveInternalChatConversationSchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+});
+
+const internalChatGroupMembersQuerySchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+});
+
+const addInternalChatGroupMemberSchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  participantAccountId: z.string().min(1),
+  role: z.enum(['admin', 'normal']).default('normal'),
+});
+
+const updateInternalChatGroupMemberRoleSchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  participantAccountId: z.string().min(1),
+  role: z.enum(['admin', 'normal']),
+});
+
+const removeInternalChatGroupMemberSchema = z.object({
+  accountId: z.string().min(1),
+  conversationId: z.string().min(1),
+  participantAccountId: z.string().min(1),
+});
+
 const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
   amountUsd: z.coerce.number().positive(),
@@ -156,9 +274,9 @@ const terminateAgentSchema = z.object({
   agentId: z.string().min(1),
 });
 
-const changeAgentFunctionSchema = z.object({
+const changeAgentRoleSchema = z.object({
   agentId: z.string().min(1),
-  functionId: z.string().min(1),
+  roleId: z.string().min(1),
 });
 
 const updateAgentConfigSchema = z.object({
@@ -183,7 +301,62 @@ const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
-const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github']);
+const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
+  z.object({
+    transport: z.literal('stdio'),
+    command: z.string().trim().min(1),
+    argsText: z.string().optional().default(''),
+    envVarsText: z.string().optional().default(''),
+    url: z.string().optional().default(''),
+    headersText: z.string().optional().default(''),
+  }),
+  z.object({
+    transport: z.literal('http_streamable'),
+    url: z.string().trim().url(),
+    headersText: z.string().optional().default(''),
+    command: z.string().optional().default(''),
+    argsText: z.string().optional().default(''),
+    envVarsText: z.string().optional().default(''),
+  }),
+]);
+
+const createAgentMcpServerSchema = z
+  .object({
+    agentId: z.string().min(1),
+    name: z.string().trim().min(1),
+    description: z.string().trim().optional().default(''),
+    isActive: z.boolean().default(true),
+  })
+  .and(mcpServerFieldsSchema);
+
+const updateAgentMcpServerSchema = z
+  .object({
+    agentId: z.string().min(1),
+    configId: z.string().min(1),
+    serverId: z.string().min(1),
+    name: z.string().trim().min(1),
+    description: z.string().trim().optional().default(''),
+    isActive: z.boolean().default(true),
+  })
+  .and(mcpServerFieldsSchema);
+
+const deleteAgentMcpServerSchema = z.object({
+  agentId: z.string().min(1),
+  configId: z.string().min(1),
+  serverId: z.string().min(1),
+});
+
+const uploadAgentSkillsSchema = z.object({
+  agentId: z.string().min(1),
+  archiveBase64: z.string().min(1),
+});
+
+const deleteAgentSkillSchema = z.object({
+  agentId: z.string().min(1),
+  skillName: z.string().min(1),
+});
+
+const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
 
 const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({
@@ -200,6 +373,8 @@ const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
     config: z.object({
       baseUrl: z.string().url(),
       adminToken: z.string().min(1),
+      serverId: z.string().min(1),
+      destinationId: z.string().min(1),
       applicationsBaseDomain: z.string().min(1).optional(),
     }),
   }),
@@ -209,6 +384,13 @@ const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
     config: z.object({
       organization: z.string().min(1),
       appHomeUrl: z.string().url(),
+    }),
+  }),
+  z.object({
+    providerType: z.literal('minimax'),
+    isEnabled: z.boolean().default(true),
+    config: z.object({
+      apiKey: z.string().min(1),
     }),
   }),
 ]);
@@ -247,6 +429,7 @@ const upsertLlmModelPriceSchema = z.object({
 const upsertSystemSettingsSchema = z.object({
   companyName: z.string(),
   companyContext: z.string(),
+  stepDelayEnabled: z.boolean().default(true),
 });
 
 const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
@@ -317,11 +500,13 @@ export function registerAdminRoutes(input: {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
+  internalChat: InternalChatService;
 }) {
   const readModel = createAdminReadModel({
     db: input.db,
     workspaceBasePath: input.workspaceBasePath,
     githubApps: input.githubApps,
+    internalChat: input.internalChat,
   });
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
@@ -363,8 +548,46 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'GET',
-    path: '/admin/functions',
-    handler: async () => jsonResponse(await readModel.listFunctions()),
+    path: '/admin/agent/execution-steps',
+    handler: async (request) => {
+      const query = agentExecutionStepsQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        limit: request.query.get('limit') ?? undefined,
+        offset: request.query.get('offset') ?? undefined,
+      });
+
+      return jsonResponse(await readModel.listAgentExecutionSteps(query));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agent/thread-messages',
+    handler: async (request) => {
+      const query = agentThreadMessagesQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        page: request.query.get('page') ?? undefined,
+        perPage: request.query.get('perPage') ?? undefined,
+      });
+
+      return jsonResponse(await readModel.listAgentThreadMessages(query));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agent/conversation-messages',
+    handler: async (request) => {
+      const query = agentConversationMessagesQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        provider: request.query.get('provider'),
+        targetKey: request.query.get('targetKey'),
+        limit: request.query.get('limit') ?? undefined,
+        offset: request.query.get('offset') ?? undefined,
+      });
+
+      return jsonResponse(await readModel.listAgentConversationMessages(query));
+    },
   });
 
   input.httpServer.registerRoute({
@@ -405,6 +628,7 @@ export function registerAdminRoutes(input: {
       const result = await systemSettings.upsertSettings({
         companyName: body.companyName.trim(),
         companyContext: body.companyContext.trim(),
+        stepDelayEnabled: body.stepDelayEnabled,
       });
       const registry = getInternalAgentRegistry();
 
@@ -443,6 +667,12 @@ export function registerAdminRoutes(input: {
   });
 
   input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/finance/contracts',
+    handler: async () => jsonResponse(await readModel.getFinanceContracts()),
+  });
+
+  input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/wake',
     handler: async (request) => {
@@ -456,16 +686,350 @@ export function registerAdminRoutes(input: {
 
       entry.runner.notifyExternalEvent({
         type: 'manual-wake',
-        id: `manual-wake:${agentId}:${timestamp}`,
-        content: [
-          'Manual wake requested from admin console.',
-          `Agent id: ${agentId}`,
-          `Source: admin-console`,
-          `Timestamp: ${new Date(timestamp).toISOString()}`,
-        ].join('\n'),
+        groupKey: `manual-wake:${agentId}`,
+        groupMetadata: {
+          Source: 'admin-console',
+          AgentId: agentId,
+        },
+        idempotencyKey: `manual-wake:${agentId}:${timestamp}`,
+        text: 'Manual wake requested from admin console.',
         timestamp,
       });
       return jsonResponse({ success: true });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/internal-chat/send',
+    handler: async (request) => {
+      const payload = parseJsonBody(request.bodyText, adminInternalChatSendSchema);
+      const sender = await input.internalChat.registerExternalAccount({
+        slug: payload.senderSlug,
+        displayName: payload.senderDisplayName,
+      });
+      const sent = await input.internalChat.sendMessage({
+        accountId: sender.accountId,
+        targetKey: payload.targetKey ?? payload.agentId,
+        content: payload.content,
+        attachments: [],
+      });
+
+      return jsonResponse({
+        success: true,
+        conversationKey: sent.conversationKey,
+        messageId: sent.messageId,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/accounts',
+    handler: async () => {
+      const accounts = await input.internalChat.listAccounts();
+
+      return jsonResponse(
+        accounts
+          .filter((account) => account.agentId === null)
+          .map((account) => ({
+            accountId: account.id,
+            slug: account.slug,
+            displayName: account.displayName,
+            description: account.description ?? '',
+          })),
+      );
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/contacts',
+    handler: async () => {
+      const accounts = await input.internalChat.listAccounts();
+
+      return jsonResponse(
+        accounts.map((account) => ({
+          accountId: account.id,
+          agentId: account.agentId,
+          slug: account.slug,
+          displayName: account.displayName,
+          description: account.description ?? '',
+          isAgent: Boolean(account.agentId),
+        })),
+      );
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
+      return jsonResponse(
+        await input.internalChat.registerExternalAccount({
+          slug: body.slug,
+          displayName: body.displayName,
+          description: body.description,
+        }),
+      );
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateExternalInternalChatAccountSchema);
+      return jsonResponse(
+        await input.internalChat.updateExternalAccount({
+          accountId: body.accountId,
+          slug: body.slug,
+          displayName: body.displayName,
+          description: body.description,
+        }),
+      );
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteExternalInternalChatAccountSchema);
+      return jsonResponse(await input.internalChat.deleteExternalAccount(body));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/conversations',
+    handler: async (request) => {
+      const query = internalChatAccountIdQuerySchema.parse({
+        accountId: request.query.get('accountId'),
+      });
+      const items = await input.internalChat.listConversationsByAccount({
+        accountId: query.accountId,
+        limit: 100,
+      });
+
+        return jsonResponse(items.map((conversation) => ({
+          conversationId: conversation.targetKey,
+          conversationKey: conversation.targetKey,
+          provider: 'internal-chat',
+          type: (conversation.participants ?? []).length > 1 ? 'group' : 'dm',
+          name: conversation.name ?? conversation.targetKey,
+          participants: conversation.participants ?? [],
+          updatedAt: Date.parse(conversation.latestMessageAt),
+          messages: conversation.messages.map((message) => ({
+            messageId: message.messageId,
+          content: message.content,
+          unread: message.unread,
+          authorDisplayName: message.authorDisplayName,
+          createdAt: Date.parse(message.createdAt),
+        })),
+      })));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/messages',
+    handler: async (request) => {
+      const query = internalChatMessagesQuerySchema.parse({
+        accountId: request.query.get('accountId'),
+        conversationId: request.query.get('conversationId'),
+        limit: request.query.get('limit') ?? undefined,
+        offset: request.query.get('offset') ?? undefined,
+      });
+      const items = await input.internalChat.getMessagesByAccount({
+        accountId: query.accountId,
+        conversationKey: query.conversationId,
+        limit: query.limit,
+        offset: query.offset,
+      });
+
+      return jsonResponse({
+        items: items.map((message) => ({
+          messageId: message.messageId,
+          authorAccountId: message.authorId,
+          authorDisplayName: message.authorDisplayName,
+          content: message.content,
+          createdAt: Date.parse(message.createdAt),
+          attachments: message.attachments?.map((attachment) => ({
+            name: attachment.name,
+            contentType: attachment.contentType,
+            sizeBytes: attachment.sizeBytes,
+          })) ?? [],
+        })),
+        hasMore: items.length === query.limit,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/message-attachment',
+    handler: async (request) => {
+      const query = internalChatMessageAttachmentQuerySchema.parse({
+        accountId: request.query.get('accountId'),
+        conversationId: request.query.get('conversationId'),
+        messageId: request.query.get('messageId'),
+        attachmentName: request.query.get('attachmentName'),
+      });
+      const attachment = await input.internalChat.getMessageAttachmentByAccount({
+        accountId: query.accountId,
+        conversationId: query.conversationId,
+        messageId: query.messageId,
+        attachmentName: query.attachmentName,
+      });
+
+      return {
+        status: 200,
+        headers: {
+          'content-type': attachment.contentType ?? 'application/octet-stream',
+          'content-disposition': `inline; filename="${encodeURIComponent(attachment.name)}"`,
+          'cache-control': 'no-store',
+        },
+        body: Buffer.from(attachment.data),
+      };
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createInternalChatConversationSchema);
+
+      if (body.type === 'dm') {
+        const conversation = await input.internalChat.ensureDirectConversationByAccount({
+          accountId: body.accountId,
+          participantAccountId: body.participantAccountIds[0] as string,
+        });
+
+        return jsonResponse({
+          conversationId: conversation.conversationId,
+          conversationKey: conversation.conversationKey,
+        });
+      }
+
+      const conversationKey = createId();
+      await input.internalChat.createExternalChatGroup({
+        accountId: body.accountId,
+        conversationKey,
+        name: body.name?.trim() || 'Novo grupo',
+      });
+
+      for (const participantAccountId of body.participantAccountIds) {
+        await input.internalChat.addMemberToGroupByAccount({
+          accountId: body.accountId,
+          groupId: conversationKey,
+          participantAccountId,
+          role: 'normal',
+        });
+      }
+
+      return jsonResponse({
+        conversationId: conversationKey,
+        conversationKey,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/send',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, sendInternalChatConversationMessageSchema);
+      return jsonResponse(await input.internalChat.sendMessage({
+        accountId: body.accountId,
+        targetKey: body.conversationId,
+        content: body.content,
+        attachments: body.attachments.map((attachment) => ({
+          name: attachment.name,
+          contentType: attachment.contentType,
+          data: Uint8Array.from(Buffer.from(attachment.dataBase64, 'base64')),
+        })),
+      }));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateInternalChatConversationSchema);
+      return jsonResponse(await input.internalChat.updateGroupByAccount({
+        accountId: body.accountId,
+        groupId: body.conversationId,
+        name: body.name,
+      }));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/archive',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
+      return jsonResponse(await input.internalChat.archiveConversationByAccount(body));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/group-members',
+    handler: async (request) => {
+      const query = internalChatGroupMembersQuerySchema.parse({
+        accountId: request.query.get('accountId'),
+        conversationId: request.query.get('conversationId'),
+      });
+      return jsonResponse(await input.internalChat.listGroupMembersByAccount({
+        accountId: query.accountId,
+        groupId: query.conversationId,
+      }));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/group-member/add',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, addInternalChatGroupMemberSchema);
+      return jsonResponse(await input.internalChat.addMemberToGroupByAccount({
+        accountId: body.accountId,
+        groupId: body.conversationId,
+        participantAccountId: body.participantAccountId,
+        role: body.role,
+      }));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/group-member/update-role',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateInternalChatGroupMemberRoleSchema);
+      return jsonResponse(await input.internalChat.updateMemberRoleByAccount({
+        accountId: body.accountId,
+        groupId: body.conversationId,
+        participantAccountId: body.participantAccountId,
+        role: body.role,
+      }));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/group-member/remove',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, removeInternalChatGroupMemberSchema);
+      return jsonResponse(await input.internalChat.removeMemberFromGroupByAccount({
+        accountId: body.accountId,
+        groupId: body.conversationId,
+        participantAccountId: body.participantAccountId,
+      }));
     },
   });
 
@@ -517,6 +1081,7 @@ export function registerAdminRoutes(input: {
         emailMailboxes: input.emailMailboxes,
         coolify: input.coolify,
         schedules: input.schedules,
+        internalChat: input.internalChat,
       });
 
       return jsonResponse(result, 201);
@@ -543,14 +1108,14 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
-    path: '/admin/agent/change-function',
+    path: '/admin/agent/change-role',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, changeAgentFunctionSchema);
-      const result = await changeAgentFunctionFromAdmin({
+      const body = parseJsonBody(request.bodyText, changeAgentRoleSchema);
+      const result = await changeAgentRoleFromAdmin({
         db: input.db,
         loaderConfig: input.loaderConfig,
         targetAgentId: body.agentId,
-        functionId: body.functionId,
+        roleId: body.roleId,
       });
 
       return jsonResponse(result);
@@ -584,16 +1149,16 @@ export function registerAdminRoutes(input: {
         })
         .where(eq(agents.id, body.agentId));
 
-      const agentFunction = agent.functionId
-        ? await input.db.query.agentFunctions.findFirst({
-            where: eq(agentFunctions.id, agent.functionId),
+      const role = agent.roleId
+        ? await input.db.query.agentRoles.findFirst({
+            where: eq(agentRoles.id, agent.roleId),
           })
         : null;
 
       await updateInternalChatProviderProfile(input.db, {
         agentId: body.agentId,
         displayName: body.name,
-        description: agentFunction?.description ?? agentFunction?.name ?? body.name,
+        description: role?.description ?? role?.name ?? body.name,
       });
 
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
@@ -662,10 +1227,195 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
+    path: '/admin/agent-mcp/create',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
+      const timestamp = new Date().toISOString();
+      const serverId = createId();
+      const configId = createId();
+
+      await input.db.insert(mcpServerConfigs).values({
+        id: serverId,
+        name: body.name,
+        description: normalizeOptionalText(body.description),
+        transport: body.transport,
+        command: body.transport === 'stdio' ? body.command : null,
+        args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
+        envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+        url: body.transport === 'http_streamable' ? body.url : null,
+        headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+        version: 1,
+        isActive: body.isActive ? 1 : 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+
+      await input.db.insert(agentMcpConfigs).values({
+        id: configId,
+        agentId: body.agentId,
+        serverId,
+        isActive: body.isActive ? 1 : 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
+      const timestamp = new Date().toISOString();
+
+      await input.db
+        .update(mcpServerConfigs)
+        .set({
+          name: body.name,
+          description: normalizeOptionalText(body.description),
+          transport: body.transport,
+          command: body.transport === 'stdio' ? body.command : null,
+          args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
+          envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+          url: body.transport === 'http_streamable' ? body.url : null,
+          headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+          isActive: body.isActive ? 1 : 0,
+          updatedAt: timestamp,
+        })
+        .where(eq(mcpServerConfigs.id, body.serverId));
+
+      await input.db
+        .update(agentMcpConfigs)
+        .set({
+          isActive: body.isActive ? 1 : 0,
+          updatedAt: timestamp,
+        })
+        .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+
+      await input.db
+        .delete(agentMcpConfigs)
+        .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+
+      const remainingLinks = await input.db.query.agentMcpConfigs.findMany({
+        where: eq(agentMcpConfigs.serverId, body.serverId),
+        columns: {
+          id: true,
+        },
+      });
+
+      if (remainingLinks.length === 0) {
+        await input.db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
+      }
+
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-skills/upload',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      const installedSkillNames = await installAgentWorkspaceSkillsFromZip({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        zipBase64: body.archiveBase64,
+      });
+
+      // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
+      // Reload is acceptable here because skill changes are rare, but this is the place to
+      // switch to explicit skill refresh if we want to avoid full runtime recreation later.
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        installedSkillNames,
+      }, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-skills/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      await deleteAgentWorkspaceSkill({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+
+      // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
+      // Reload is acceptable here because skill changes are rare, but this is the place to
+      // switch to explicit skill refresh if we want to avoid full runtime recreation later.
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        skillName: body.skillName,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
     path: '/admin/agent-schedule/create',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, createScheduleSchema);
-      const schedule = await input.schedules.createSchedule(body.agentId, body);
+      const scheduleInput = body.scheduleType === 'cron'
+        ? {
+            name: body.name,
+            description: body.description,
+            scheduleType: body.scheduleType,
+            cronExpression: body.cronExpression!,
+            timezone: body.timezone,
+            content: body.content,
+          }
+        : {
+            name: body.name,
+            description: body.description,
+            scheduleType: body.scheduleType,
+            scheduledDate: body.scheduledDate!,
+            timezone: body.timezone,
+            content: body.content,
+          };
+      const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
       return jsonResponse(schedule, 201);
     },
   });
@@ -747,58 +1497,41 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
-    path: '/admin/function/create',
+    path: '/admin/role-capability/add',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createFunctionSchema);
-      return jsonResponse(await capabilities.createFunction(body), 201);
+      try {
+        const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
+        const result = await capabilities.manageRoleCapability({
+          action: 'add',
+          roleId: body.roleId,
+          capabilityId: body.capabilityId,
+        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to add role capability:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
   input.httpServer.registerRoute({
     method: 'POST',
-    path: '/admin/function/update',
+    path: '/admin/role-capability/remove',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateFunctionSchema);
-      const result = await capabilities.updateFunction(body);
-      await reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId);
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteFunctionSchema);
-      return jsonResponse(await capabilities.deleteFunction(body.functionId));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function-role/add',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, functionRoleSchema);
-      const result = await capabilities.addRoleToFunction(body);
-
-      void reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId).catch((error) => {
-        console.error(`[Admin] Failed to reload agents for function ${body.functionId}:`, error);
-      });
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/function-role/remove',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, functionRoleSchema);
-      const result = await capabilities.removeRoleFromFunction(body);
-
-      void reloadAgentsForFunction(input.db, input.loaderConfig, body.functionId).catch((error) => {
-        console.error(`[Admin] Failed to reload agents for function ${body.functionId}:`, error);
-      });
-      return jsonResponse(result);
+      try {
+        const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
+        const result = await capabilities.manageRoleCapability({
+          action: 'remove',
+          roleId: body.roleId,
+          capabilityId: body.capabilityId,
+        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to remove role capability:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -809,9 +1542,7 @@ export function registerAdminRoutes(input: {
       try {
         const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
         const result = await capabilities.addRoleToolPermission(body);
-        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
-        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
         console.error('[Admin] Failed to add role tool permission:', error);
@@ -827,9 +1558,7 @@ export function registerAdminRoutes(input: {
       try {
         const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
         const result = await capabilities.addRoleWorkflowPermission(body);
-        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
-        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
         console.error('[Admin] Failed to add role workflow permission:', error);
@@ -845,9 +1574,7 @@ export function registerAdminRoutes(input: {
       try {
         const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
         const result = await capabilities.removeRoleWorkflowPermission(body);
-        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
-        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
         console.error('[Admin] Failed to remove role workflow permission:', error);
@@ -863,9 +1590,7 @@ export function registerAdminRoutes(input: {
       try {
         const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
         const result = await capabilities.removeRoleToolPermission(body);
-        void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
-        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
         console.error('[Admin] Failed to remove role tool permission:', error);
@@ -1194,6 +1919,40 @@ export function registerAdminRoutes(input: {
       return jsonResponse({ success: true });
     },
   });
+}
+
+async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
+  clearAgentMCPClient(agentId);
+  await reloadAgentIfLoaded(db, loaderConfig, agentId);
+}
+
+function normalizeOptionalText(value?: string) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function normalizeJsonText(
+  value: string | undefined,
+  fieldName: string,
+  expectedShape: 'array' | 'object',
+) {
+  const normalized = value?.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = JSON.parse(normalized);
+  const valid =
+    expectedShape === 'array'
+      ? Array.isArray(parsed)
+      : typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
+
+  if (!valid) {
+    throw new Error(`${fieldName} must be a JSON ${expectedShape}`);
+  }
+
+  return JSON.stringify(parsed);
 }
 
 function parseJsonBody<TSchema extends z.ZodTypeAny>(

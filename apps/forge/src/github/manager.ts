@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { createId } from '@paralleldrive/cuid2';
+import { createId } from '../utils/id';
 import { nanoid } from 'nanoid';
 import { createAppAuth } from '@octokit/auth-app';
 import { App, Octokit } from 'octokit';
@@ -22,30 +22,34 @@ const GITHUB_APP_NAME_SUFFIX_LENGTH = 6;
 const GITHUB_APP_NAME_MAX_LENGTH = 32;
 
 /**
- * Normalizes GitHub usernames for API calls.
- * GitHub App bot accounts require the [bot] suffix when used as assignees.
- * For example: "architectron-the-scalabil-sykutp" -> "architectron-the-scalabil-sykutp[bot]"
+ * Normalizes GitHub usernames for assignees.
+ * - Accounts already ending with [bot] are used as-is
+ * - GitHub App bot accounts (kebab-case like "architectron-the-scalabil-sykutp") 
+ *   need [bot] suffix appended
+ * - Regular accounts are used as-is
  */
 function normalizeAssignees(assignees?: string[]): string[] | undefined {
   if (!assignees || assignees.length === 0) {
     return undefined;
   }
 
+  // GitHub App bot accounts follow the pattern: app-name-appId
+  // They have at least 2 kebab-case segments and end with an alphanumeric ID
+  // Examples: architectron-the-scalabil-sykutp, wireframe-wizard-pixelia-l85akb
+  const gitHubAppPattern = /^[a-z0-9]+(-[a-z0-9]+)+$/;
+
   return assignees.map((assignee) => {
-    // If already has [bot] suffix, return as-is
+    // Already has [bot] suffix - use as-is
     if (assignee.endsWith('[bot]')) {
       return assignee;
     }
 
-    // GitHub App bot accounts follow the pattern: app-name-appId
-    // They have at least 2 kebab-case segments and end with an alphanumeric ID
-    // Examples: architectron-the-scalabil-sykutp, pixel-quill-4c1jvk
-    const gitHubAppPattern = /^[a-z0-9]+(-[a-z0-9]+)+$/;
-
+    // GitHub App bot accounts (kebab-case): add [bot] suffix
     if (gitHubAppPattern.test(assignee)) {
       return `${assignee}[bot]`;
     }
 
+    // Regular accounts: use as-is
     return assignee;
   });
 }
@@ -82,6 +86,10 @@ export function createGitHubAppManager(config: {
     }
 
     return githubConfig;
+  }
+
+  async function isConfigured() {
+    return Boolean(await config.integrations.getGitHubConfig());
   }
 
   async function getDefaultOwner(owner?: string) {
@@ -612,6 +620,29 @@ export function createGitHubAppManager(config: {
     }));
   }
 
+  async function getIssueComment(agentId: string, input: {
+    owner?: string;
+    repositoryName: string;
+    commentId: number;
+  }) {
+    const octokit = await getInstallationOctokit(agentId);
+    const owner = await getDefaultOwner(input.owner);
+    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+      owner,
+      repo: input.repositoryName,
+      comment_id: input.commentId,
+    });
+
+    return {
+      id: response.data.id,
+      url: response.data.html_url,
+      body: response.data.body ?? '',
+      author: response.data.user?.login ?? null,
+      createdAt: response.data.created_at,
+      updatedAt: response.data.updated_at,
+    };
+  }
+
   async function createIssueComment(agentId: string, input: {
     owner?: string;
     repositoryName: string;
@@ -944,6 +975,7 @@ export function createGitHubAppManager(config: {
   }
 
   return {
+    isConfigured,
     getAgentProvisioning,
     createAgentApp,
     loadAllAgents,
@@ -968,6 +1000,7 @@ export function createGitHubAppManager(config: {
     closeIssue,
     reopenIssue,
     listIssueComments,
+    getIssueComment,
     createIssueComment,
     updateIssueComment,
     deleteIssueComment,

@@ -1,5 +1,5 @@
-import { createId } from '@paralleldrive/cuid2';
-import { and, asc, eq } from 'drizzle-orm';
+import { createId } from '../utils/id';
+import { and, asc, desc, eq } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
 import { agentSchedules } from '../database/schema';
@@ -73,6 +73,17 @@ export function createAgentScheduleStore(db: Database) {
     });
 
     return rows.map(toScheduleRecord);
+  }
+
+  async function listCreatedAgentSchedules(creatorId: string, targetAgentId?: string) {
+    const rows = await db.query.agentSchedules.findMany({
+      where: targetAgentId
+        ? and(eq(agentSchedules.creatorId, creatorId), eq(agentSchedules.agentId, targetAgentId))
+        : eq(agentSchedules.creatorId, creatorId),
+      orderBy: [desc(agentSchedules.createdAt)],
+    });
+
+    return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
   }
 
   async function getAgentSchedule(agentId: string, scheduleId: string) {
@@ -216,6 +227,7 @@ export function createAgentScheduleStore(db: Database) {
     createSchedule,
     listAgentSchedules,
     listActiveSchedules,
+    listCreatedAgentSchedules,
     getAgentSchedule,
     getScheduleByKind,
     getScheduleById,
@@ -246,7 +258,7 @@ function toScheduleRecord(row: typeof agentSchedules.$inferSelect) {
 }
 
 function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
-  const { id, agentId: _agentId, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = row;
+  const { id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = row;
 
   return {
     ...rest,

@@ -26,8 +26,10 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 │  ┌─────────┐     ┌─────────────────────────────────────────┐   │
 │  │ DEVELOPER│───► │ tool: get_github_git_credentials       │   │
 │  │         │ ──► │ tool: list_github_repositories          │   │
-│  │         │ ──► │ tool: manage_github_repository           │   │
-│  │         │ ──► │ ... (GitHub tools)                       │   │
+│  │         │ ──► │ tool: create_github_repository          │   │
+│  │         │ ──► │ tool: update_github_repository          │   │
+│  │         │ ──► │ tool: delete_github_repository          │   │
+│  │         │ ──► │ ... (mais GitHub tools)                 │   │
 │  └─────────┘     └─────────────────────────────────────────┘   │
 │                                                                 │
 │  Role ─────────► Workflow                                      │
@@ -45,18 +47,12 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 
 | Tool ID | Descrição | Roles Comuns |
 |---------|-----------|--------------|
-| `search_web` | Busca na web | ALL |
 | `list_contacts` | Lista contatos | ALL |
-| `get_contact` | Busca contato | ALL |
 | `upsert_contact` | Cria/atualiza contato | ALL |
 | `list_conversations` | Lista conversas | ALL |
 | `get_messages` | Busca mensagens | ALL |
 | `send_message` | Envia mensagem | ALL |
-| `create_chat_group` | Cria grupo | ADMIN |
-| `add_member_to_group` | Adiciona membro | ADMIN |
-| `remove_member_from_group` | Remove membro | ADMIN |
-| `list_chat_groups` | Lista grupos | ALL |
-| `list_group_members` | Lista membros | ALL |
+| `change_chat_group` | Cria ou atualiza grupo | ADMIN |
 
 ### Ferramentas Financeiras
 
@@ -65,7 +61,6 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `list_company_cash` | Lista saldo | FINANCE |
 | `get_company_cash` | Busca saldo | FINANCE |
 | `list_internal_agent_contracts` | Lista contratos | FINANCE |
-| `manage_internal_agent_contract` | Gerencia contrato | FINANCE |
 | `adjust_agent_contract_budget` | Ajusta orçamento | FINANCE |
 
 ### Ferramentas GitHub
@@ -73,46 +68,29 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
 | `get_github_git_credentials` | Credenciais Git | DEVELOPER |
-| `list_github_repositories` | Lista repos | DEVELOPER |
-| `get_github_repository` | Busca repo | DEVELOPER |
-| `manage_github_repository` | Gerencia repo | DEVELOPER |
-| `list_github_pull_requests` | Lista PRs | DEVELOPER |
-| `get_github_pull_request` | Busca PR | DEVELOPER |
-| `manage_github_pull_request` | Gerencia PR | DEVELOPER |
-| `list_github_issues` | Lista issues | DEVELOPER |
-| `get_github_issue` | Busca issue | DEVELOPER |
-| `manage_github_issue` | Gerencia issue | DEVELOPER |
-| `toggle_github_issue` | Abre/fecha issue | DEVELOPER |
-| `manage_github_issue_comment` | Comenta issue | DEVELOPER |
-| `list_github_labels` | Lista labels | DEVELOPER |
-| `manage_github_label` | Gerencia label | DEVELOPER |
-| `list_github_milestones` | Lista milestones | DEVELOPER |
-| `manage_github_milestone` | Gerencia milestone | DEVELOPER |
 
 ### Ferramentas Coolify
 
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
-| `list_coolify_github_apps` | Lista GitHub Apps | DEVELOPER |
-| `list_coolify_github_app_repositories` | Lista repos de App | DEVELOPER |
-| `list_coolify_github_app_repository_branches` | Lista branches | DEVELOPER |
-| `list_coolify_applications` | Lista aplicações | DEVELOPER |
-| `get_coolify_application` | Busca aplicação | DEVELOPER |
-| `manage_coolify_application` | Gerencia aplicação | DEVELOPER |
-| `toggle_coolify_application` | Start/stop app | DEVELOPER |
-| `list_coolify_application_deployments` | Lista deployments | DEVELOPER |
-| `get_coolify_deployment_logs` | Logs de deployment | DEVELOPER |
-| `get_coolify_application_logs` | Logs da aplicação | DEVELOPER |
-| `get_coolify_application_envs` | Lista env vars | DEVELOPER |
-| `manage_coolify_application_env` | Gerencia env vars | DEVELOPER |
+| `get_coolify_credentials` | Credenciais da API | DEVELOPER |
 
 ### Ferramentas de Agendamento
 
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
-| `list_agent_schedules` | Lista agendamentos | DEVELOPER |
-| `manage_agent_schedule` | Gerencia agendamento | DEVELOPER |
-| `toggle_agent_schedule` | Ativa/desativa | DEVELOPER |
+| `list_self_crons` | Lista crons próprios | DEVELOPER |
+| `manage_self_crons` | Gerencia crons próprios | DEVELOPER |
+| `list_crons` | Lista crons criados para outros agentes | DEVELOPER |
+| `manage_crons` | Gerencia crons para outros agentes | DEVELOPER |
+
+### Ferramentas MiniMax
+
+| Tool ID | Descrição | Roles |
+|---------|-----------|-------|
+| `minimax_tts` | Gera áudio via text-to-speech | DEVELOPER |
+| `minimax_image` | Gera imagem via IA | DEVELOPER |
+| `minimax_video` | Gera vídeo via IA | DEVELOPER |
 
 ### Ferramentas de Agentes
 
@@ -124,14 +102,9 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `manage_agent_role` | Gerencia role | ADMIN |
 | `assign_role_to_function` | Atribui role | ADMIN |
 | `change_agent_function` | Altera função | ADMIN |
-| `change_own_function` | Altera própria função | ALL |
-| `list_role_tool_permissions` | Lista permissões de tools | ADMIN |
-| `manage_role_tool_permissions` | Gerencia permissões | ADMIN |
-| `list_role_workflow_permissions` | Lista permissões de workflows | ADMIN |
-| `manage_role_workflow_permissions` | Gerencia workflows | ADMIN |
-| `list_available_capabilities` | Lista capacidades disponíveis | ALL |
+| `list_role_capabilities` | Lista capacidades da role | ADMIN |
+| `manage_role_capabilities` | Gerencia capacidades | ADMIN |
 | `list_agent_notifications` | Lista notificações | ALL |
-| `mark_agent_notification_read` | Marca como lida | ALL |
 
 ## Workflows Disponíveis
 
@@ -142,7 +115,7 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 
 ## Aliases de Permissões Legadas
 
-Para retrocompatibilidade, algumas tools possuem aliases:
+Para retrocompatibilidade, ferramentas legadas redirecionam para ferramentas de responsabilidade única:
 
 ```typescript
 const legacyToolPermissionAliases = {
@@ -152,16 +125,26 @@ const legacyToolPermissionAliases = {
   
   // Contracts
   list_internal_agent_contracts: ['list_active_internal_agent_contracts', 'get_active_internal_agent_contract'],
-  manage_internal_agent_contract: ['top_up_internal_agent_contract'],
   adjust_agent_contract_budget: ['adjust_internal_agent_contract_budget'],
   
   // Notifications
   list_agent_notifications: ['get_agent_notification'],
   
-  // GitHub
-  manage_github_repository: ['create_github_repository'],
-  manage_github_pull_request: ['create_github_pull_request'],
-  manage_github_issue: ['create_github_issue', 'update_github_issue'],
+  // GitHub - Pull Requests (PR comments)
+  list_github_pull_request_comments: ['list_github_pull_request_comments'],
+  
+  // GitHub - Issues
+  toggle_github_issue: ['toggle_github_issue'],
+  
+  // Scheduling
+  create_cron_for_agent: ['create_schedule_for_agent'],
+  edit_cron: ['edit_schedule'],
+  delete_cron: ['delete_schedule'],
+  
+  // Agent Management
+  manage_agent_function: ['create_agent_function', 'update_agent_function'],
+  manage_agent_role: ['create_agent_role', 'update_agent_role', 'delete_agent_role'],
+  manage_role_capabilities: ['add_role_tool_permission', 'remove_role_tool_permission', 'add_role_workflow_permission', 'remove_role_workflow_permission'],
 };
 ```
 

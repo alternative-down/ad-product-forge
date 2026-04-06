@@ -26,9 +26,15 @@ export default defineConfig([
       ],
     },
   },
-  // TanStack Router route files export Route objects alongside components
+  // Route modules can export Route objects alongside components.
   {
     files: ['src/routes/**/*.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['src/components/ui/**/*.tsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

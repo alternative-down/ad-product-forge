@@ -1,0 +1,96 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource/instrument-sans/400.css";
+@import "@fontsource/instrument-sans/500.css";
+@import "@fontsource/instrument-sans/600.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Instrument Sans', sans-serif;
+  --font-heading: var(--font-sans);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: calc(var(--radius) * 0.875);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.25);
+}
+
+:root {
+  --background: #f7f5ef;
+  --foreground: #24211d;
+  --card: #ffffff;
+  --card-foreground: #24211d;
+  --popover: #ffffff;
+  --popover-foreground: #24211d;
+  --primary: #8a616d;
+  --primary-foreground: #ffffff;
+  --secondary: #ece7dd;
+  --secondary-foreground: #24211d;
+  --muted: #f1ede4;
+  --muted-foreground: #6b675e;
+  --accent: #ece7dd;
+  --accent-foreground: #24211d;
+  --destructive: #c75858;
+  --border: #d8d2c7;
+  --input: #d8d2c7;
+  --ring: #8a616d;
+  --radius: 0.25rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Instrument Sans', sans-serif;
+  min-height: 100vh;
+}
+
+.dark {
+  --background: #171514;
+  --foreground: #f2ede4;
+  --card: #201d1b;
+  --card-foreground: #f2ede4;
+  --popover: #201d1b;
+  --popover-foreground: #f2ede4;
+  --primary: #d39aaa;
+  --primary-foreground: #201d1b;
+  --secondary: #2b2724;
+  --secondary-foreground: #f2ede4;
+  --muted: #221f1c;
+  --muted-foreground: #bcb3a6;
+  --accent: #2b2724;
+  --accent-foreground: #f2ede4;
+  --destructive: #d57f7f;
+  --border: #3b3530;
+  --input: #3b3530;
+  --ring: #d39aaa;
+}
+
+* {
+  @apply border-border outline-ring/50;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

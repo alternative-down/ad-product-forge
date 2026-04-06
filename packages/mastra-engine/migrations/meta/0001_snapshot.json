@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b9d3f6f9-b83c-4cf4-b39e-35c6adef8899",
-  "prevId": "39989c0f-d17e-4bc9-bee5-5b346590f1ba",
+  "id": "359473b3-7c27-41d6-8681-c242b9cd15d7",
+  "prevId": "dedc981d-a004-40b3-b07d-f4c2909a67cd",
   "tables": {
     "forge_chat_group_members": {
       "name": "forge_chat_group_members",
@@ -121,8 +121,8 @@
     "forge_communication_contact_accounts": {
       "name": "forge_communication_contact_accounts",
       "columns": {
-        "slug": {
-          "name": "slug",
+        "contact_id": {
+          "name": "contact_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -151,17 +151,17 @@
         }
       },
       "indexes": {
-        "idx_contact_accounts_slug": {
-          "name": "idx_contact_accounts_slug",
+        "idx_contact_accounts_contact_id": {
+          "name": "idx_contact_accounts_contact_id",
           "columns": [
-            "slug"
+            "contact_id"
           ],
           "isUnique": false
         },
-        "forge_communication_contact_accounts_slug_provider_external_user_id_username_unique": {
-          "name": "forge_communication_contact_accounts_slug_provider_external_user_id_username_unique",
+        "forge_communication_contact_accounts_contact_id_provider_external_user_id_username_unique": {
+          "name": "forge_communication_contact_accounts_contact_id_provider_external_user_id_username_unique",
           "columns": [
-            "slug",
+            "contact_id",
             "provider",
             "external_user_id",
             "username"
@@ -177,10 +177,17 @@
     "forge_communication_contacts": {
       "name": "forge_communication_contacts",
       "columns": {
+        "contact_id": {
+          "name": "contact_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
         "slug": {
           "name": "slug",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -199,7 +206,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "forge_communication_contacts_slug_unique": {
+          "name": "forge_communication_contacts_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        },
+        "idx_contacts_slug": {
+          "name": "idx_contacts_slug",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -244,8 +266,8 @@
           "autoincrement": false,
           "default": "'dm'"
         },
-        "contact_slug": {
-          "name": "contact_slug",
+        "contact_id": {
+          "name": "contact_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -274,10 +296,10 @@
           ],
           "isUnique": false
         },
-        "idx_conversations_contact_slug": {
-          "name": "idx_conversations_contact_slug",
+        "idx_conversations_contact_id": {
+          "name": "idx_conversations_contact_id",
           "columns": [
-            "contact_slug"
+            "contact_id"
           ],
           "isUnique": false
         },
