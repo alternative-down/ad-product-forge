@@ -55,7 +55,6 @@ export function getCapabilityRequiredToolIds(toolIds: string[]) {
   }
 
   if (toolIds.includes('manage_role_capabilities')) {
-    requiredToolIds.add('list_available_capabilities');
     requiredToolIds.add('list_role_capabilities');
   }
 

@@ -33,7 +33,6 @@ function resolveLoadedToolIds(toolIds: string[]) {
   }
 
   if (resolvedToolIds.has('manage_role_capabilities')) {
-    resolvedToolIds.add('list_available_capabilities');
     resolvedToolIds.add('list_role_capabilities');
   }
 
@@ -225,7 +224,7 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
-  async function listRoleCapabilities(roleId: string) {
+  async function listGrantedRoleCapabilities(roleId: string) {
     const [toolIds, workflowIds] = await Promise.all([
       listRoleToolPermissions(roleId),
       listRoleWorkflowPermissions(roleId),
@@ -234,8 +233,15 @@ export function createCapabilityStore(db: Database) {
     return [...new Set([...toolIds, ...workflowIds])].sort((left, right) => left.localeCompare(right));
   }
 
-  async function listAvailableCapabilities() {
-    return [...forgeCapabilityIds].sort((left, right) => left.localeCompare(right));
+  async function listRoleCapabilities(roleId: string) {
+    const grantedCapabilityIds = new Set(await listGrantedRoleCapabilities(roleId));
+
+    return [...forgeCapabilityIds]
+      .sort((left, right) => left.localeCompare(right))
+      .map((capabilityId) => ({
+        capabilityId,
+        granted: grantedCapabilityIds.has(capabilityId),
+      }));
   }
 
   async function manageRole(input: {
@@ -321,8 +327,8 @@ export function createCapabilityStore(db: Database) {
     listRoleWorkflowPermissions,
     addRoleWorkflowPermission,
     removeRoleWorkflowPermission,
+    listGrantedRoleCapabilities,
     listRoleCapabilities,
-    listAvailableCapabilities,
     manageRole,
     manageRoleCapability,
     getAgentCapabilities,

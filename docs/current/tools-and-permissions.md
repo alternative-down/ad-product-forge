@@ -120,7 +120,6 @@ These ids are the current permission targets stored in role permissions.
 - `change_agent_function`
 - `list_role_capabilities`
 - `manage_role_capabilities`
-- `list_available_capabilities`
 
 ### MCP (Model Context Protocol)
 

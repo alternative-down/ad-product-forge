@@ -147,7 +147,6 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `change_agent_function` | Altera função | ADMIN |
 | `list_role_capabilities` | Lista capacidades da role | ADMIN |
 | `manage_role_capabilities` | Gerencia capacidades | ADMIN |
-| `list_available_capabilities` | Lista capacidades disponíveis | ALL |
 | `list_agent_notifications` | Lista notificações | ALL |
 
 ## Workflows Disponíveis
@@ -195,7 +194,6 @@ const legacyToolPermissionAliases = {
   manage_agent_function: ['create_agent_function', 'update_agent_function'],
   manage_agent_role: ['create_agent_role', 'update_agent_role', 'delete_agent_role'],
   manage_role_capabilities: ['add_role_tool_permission', 'remove_role_tool_permission', 'add_role_workflow_permission', 'remove_role_workflow_permission'],
-  list_available_capabilities: ['list_available_custom_tools', 'list_available_workflows'],
 };
 ```
 

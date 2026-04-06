@@ -122,7 +122,7 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_role_capabilities')) {
     tools.list_role_capabilities = createTool({
       id: 'list_role_capabilities',
-      description: 'List every capability granted to a role, including tools and workflows.',
+      description: 'List every capability in the system for one role, marking each one with granted true or false.',
       inputSchema: z.object({
         roleId: z.string().min(1).describe('The roleId you want to inspect.'),
       }),
@@ -167,21 +167,10 @@ export function createCapabilityTools(
           return {
             valid: false,
             error: message,
-            hint: 'Use list_agent_roles and list_available_capabilities to verify the roleId and capabilityId.',
+            hint: 'Use list_agent_roles and list_role_capabilities to verify the roleId and capabilityId.',
           };
         }
       },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'list_available_capabilities')) {
-    tools.list_available_capabilities = createTool({
-      id: 'list_available_capabilities',
-      description: 'List every capability that can be granted to a role, including tools and workflows.',
-      inputSchema: z.object({}),
-      execute: async () => ({
-        capabilityIds: await capabilities.listAvailableCapabilities(),
-      }),
     });
   }
 

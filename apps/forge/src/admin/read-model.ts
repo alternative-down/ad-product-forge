@@ -452,7 +452,7 @@ export function createAdminReadModel(input: {
     const capabilityPermissions = await Promise.all(
       roles.map(async (role) => ({
         roleId: role.roleId,
-        capabilityIds: await capabilities.listRoleCapabilities(role.roleId),
+        capabilityIds: await capabilities.listGrantedRoleCapabilities(role.roleId),
       })),
     );
     const assignedAgentCountByRoleId = new Map(

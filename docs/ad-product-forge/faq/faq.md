@@ -160,7 +160,7 @@ Role `DEVELOPER` com capabilities de Coolify.
 
 **Solução:**
 1. Verificar role atual: `list_agent_roles()`
-2. Verificar capabilities da tool: `list_available_capabilities()`
+2. Verificar capabilities da role: `list_role_capabilities()`
 3. Atribuir role adequado ou adicionar capability
 
 ---

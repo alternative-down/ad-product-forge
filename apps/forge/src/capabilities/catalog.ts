@@ -68,7 +68,6 @@ export const forgeCustomToolIds = [
   'change_agent_role',
   'list_role_capabilities',
   'manage_role_capabilities',
-  'list_available_capabilities',
   'list_minimax_voices',
   'minimax_tts',
   'minimax_image',

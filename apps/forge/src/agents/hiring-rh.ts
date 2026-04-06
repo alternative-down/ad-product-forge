@@ -57,7 +57,6 @@ const HIRING_RH_TOOL_IDS = new Set([
   'change_agent_role',
   'list_role_capabilities',
   'manage_role_capabilities',
-  'list_available_capabilities',
 ] as const);
 const REQUIRED_HIRING_TOOL_IDS = AGENT_BASE_TOOL_IDS;
 const hiringRhResultSchema = z.object({
