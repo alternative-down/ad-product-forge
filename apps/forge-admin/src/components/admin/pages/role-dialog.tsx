@@ -18,6 +18,7 @@ export function RoleDialog(input: {
   open: boolean;
   pending: boolean;
   form: RoleForm;
+  lockedToolIds: string[];
   workflowIds: string[];
   toolSections: Array<{ title: string; toolIds: string[] }>;
   errorMessage?: string;
@@ -82,16 +83,20 @@ export function RoleDialog(input: {
                         <div className="border-t border-border">
                           {section.toolIds.map((toolId) => {
                             const enabled = input.form.toolIds.includes(toolId);
+                            const locked = input.lockedToolIds.includes(toolId);
 
                             return (
                               <label
                                 key={toolId}
                                 className="flex items-center justify-between gap-4 px-4 py-3 not-last:border-b not-last:border-border"
                               >
-                                <span className="min-w-0 font-mono text-[13px] break-all">{toolId}</span>
+                                <div className="min-w-0 space-y-1">
+                                  <div className="font-mono text-[13px] break-all">{toolId}</div>
+                                  {locked ? <div className="text-xs text-muted-foreground">Sempre ativo</div> : null}
+                                </div>
                                 <Switch
                                   checked={enabled}
-                                  disabled={input.pending}
+                                  disabled={input.pending || locked}
                                   onCheckedChange={(checked) =>
                                     input.onFormChange({
                                       ...input.form,

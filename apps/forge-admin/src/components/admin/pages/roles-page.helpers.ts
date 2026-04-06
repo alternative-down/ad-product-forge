@@ -1,5 +1,16 @@
 import type { RoleItem } from '@/lib/admin-api';
 
+export const BASE_ROLE_TOOL_IDS = [
+  'list_contacts',
+  'get_contact',
+  'upsert_contact',
+  'list_conversations',
+  'get_messages',
+  'send_message',
+  'list_self_crons',
+  'manage_self_crons',
+] as const;
+
 export type RoleForm = {
   roleId?: string;
   name: string;
@@ -12,7 +23,7 @@ export function createEmptyRoleForm(): RoleForm {
   return {
     name: '',
     description: '',
-    toolIds: [],
+    toolIds: [...BASE_ROLE_TOOL_IDS],
     workflowIds: [],
   };
 }
@@ -22,9 +33,13 @@ export function createRoleForm(role: RoleItem): RoleForm {
     roleId: role.roleId,
     name: role.name,
     description: role.description ?? '',
-    toolIds: role.toolIds,
+    toolIds: mergeBaseRoleToolIds(role.toolIds),
     workflowIds: role.workflowIds,
   };
+}
+
+export function mergeBaseRoleToolIds(toolIds: string[]) {
+  return [...new Set([...BASE_ROLE_TOOL_IDS, ...toolIds])].sort((left, right) => left.localeCompare(right));
 }
 
 export function groupToolIds(toolIds: string[]) {
@@ -73,7 +88,7 @@ function getToolSectionTitle(toolId: string) {
     return 'Coolify';
   }
 
-  if (toolId.includes('schedule') || toolId.includes('calendar') || toolId.includes('task')) {
+  if (toolId.includes('schedule') || toolId.includes('calendar') || toolId.includes('task') || toolId.includes('cron')) {
     return 'Agenda & Tarefas';
   }
 

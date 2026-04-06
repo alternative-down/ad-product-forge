@@ -21,7 +21,7 @@ import {
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { RoleDialog } from './role-dialog';
-import { createEmptyRoleForm, createRoleForm, groupToolIds, type RoleForm } from './roles-page.helpers';
+import { BASE_ROLE_TOOL_IDS, createEmptyRoleForm, createRoleForm, groupToolIds, mergeBaseRoleToolIds, type RoleForm } from './roles-page.helpers';
 
 export function RolesPage() {
   const queryClient = useQueryClient();
@@ -60,7 +60,7 @@ export function RolesPage() {
       const currentToolIds = input.roleId
         ? (roles.find((role) => role.roleId === input.roleId)?.toolIds ?? [])
         : [];
-      const nextToolIds = [...new Set(input.toolIds)].sort((left, right) => left.localeCompare(right));
+      const nextToolIds = mergeBaseRoleToolIds(input.toolIds);
       const toolIdsToAdd = nextToolIds.filter((toolId) => !currentToolIds.includes(toolId));
       const toolIdsToRemove = currentToolIds.filter((toolId) => !nextToolIds.includes(toolId));
       const currentWorkflowIds = input.roleId
@@ -207,6 +207,7 @@ export function RolesPage() {
         open={dialogOpen}
         pending={roleMutation.isPending}
         form={roleForm}
+        lockedToolIds={[...BASE_ROLE_TOOL_IDS]}
         workflowIds={workflowIds}
         toolSections={toolSections}
         errorMessage={roleMutation.error?.message}

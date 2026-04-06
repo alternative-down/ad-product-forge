@@ -15,6 +15,17 @@ type CapabilitySet = {
   workflowIds: string[];
 };
 
+function resolveLoadedToolIds(toolIds: string[]) {
+  const resolvedToolIds = [...toolIds];
+  const hasCrossAgentCronTools = resolvedToolIds.includes('manage_crons') || resolvedToolIds.includes('list_crons');
+
+  if (!hasCrossAgentCronTools) {
+    return resolvedToolIds;
+  }
+
+  return resolvedToolIds.filter((toolId) => toolId !== 'manage_self_crons' && toolId !== 'list_self_crons');
+}
+
 export function createCapabilityStore(db: Database) {
   async function listRoles() {
     const rows = await db.query.agentRoles.findMany({
@@ -202,7 +213,7 @@ export function createCapabilityStore(db: Database) {
     }
 
     return {
-      toolIds: await listRoleToolPermissions(agent.roleId),
+      toolIds: resolveLoadedToolIds(await listRoleToolPermissions(agent.roleId)),
       workflowIds: await listRoleWorkflowPermissions(agent.roleId),
     };
   }
