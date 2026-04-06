@@ -77,31 +77,6 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     );
   }
 
-  async function loadContact(slug: string) {
-    const contact = await db.query.communicationContacts.findFirst({
-      where: eq(schema.communicationContacts.slug, slug),
-      with: {
-        accounts: true,
-      },
-    });
-
-    if (!contact) {
-      return null;
-    }
-
-    return contactSchema.parse({
-      contactId: contact.contactId,
-      slug: contact.slug,
-      displayName: contact.displayName,
-      description: contact.description ?? undefined,
-      accounts: contact.accounts.map((account) => ({
-        provider: account.provider,
-        externalUserId: account.externalUserId ?? undefined,
-        username: account.username ?? undefined,
-      })),
-    });
-  }
-
   async function loadContactById(contactId: string) {
     const contact = await db.query.communicationContacts.findFirst({
       where: eq(schema.communicationContacts.contactId, contactId),
