@@ -25,7 +25,7 @@ const contactSchema = z.object({
   slug: z.string(),
   displayName: z.string(),
   description: z.string().optional(),
-  accounts: z.array(contactIdentitySchema).default([]),
+  identities: z.array(contactIdentitySchema).default([]),
 });
 
 const conversationSchema = z.object({
@@ -81,7 +81,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     const contact = await db.query.communicationContacts.findFirst({
       where: eq(schema.communicationContacts.contactId, contactId),
       with: {
-        accounts: true,
+        identities: true,
       },
     });
 
@@ -94,10 +94,10 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       slug: contact.slug,
       displayName: contact.displayName,
       description: contact.description ?? undefined,
-      accounts: contact.accounts.map((account) => ({
-        provider: account.provider,
-        externalUserId: account.externalUserId ?? undefined,
-        username: account.username ?? undefined,
+      identities: contact.identities.map((identity) => ({
+        provider: identity.provider,
+        externalUserId: identity.externalUserId ?? undefined,
+        username: identity.username ?? undefined,
       })),
     });
   }
@@ -191,7 +191,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     const contacts = await db.query.communicationContacts.findMany({
       orderBy: [schema.communicationContacts.displayName, schema.communicationContacts.slug],
       with: {
-        accounts: true,
+        identities: true,
       },
     });
 
@@ -201,10 +201,10 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
           slug: contact.slug,
           displayName: contact.displayName,
           description: contact.description ?? undefined,
-          accounts: contact.accounts.map((account) => ({
-            provider: account.provider,
-            externalUserId: account.externalUserId ?? undefined,
-            username: account.username ?? undefined,
+          identities: contact.identities.map((identity) => ({
+            provider: identity.provider,
+            externalUserId: identity.externalUserId ?? undefined,
+            username: identity.username ?? undefined,
           })),
         });
       }),

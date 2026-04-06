@@ -196,8 +196,8 @@ export async function createCommunicationModule(config: {
   }
 
   function toAgentContactView(contact: Awaited<ReturnType<typeof store.listContacts>>[number]) {
-    const primaryAccount = contact.accounts[0];
-    const targetKey = primaryAccount?.externalUserId ?? primaryAccount?.username ?? contact.slug;
+    const primaryIdentity = contact.identities[0];
+    const targetKey = primaryIdentity?.externalUserId ?? primaryIdentity?.username ?? contact.slug;
 
     return {
       targetKey,
