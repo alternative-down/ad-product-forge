@@ -1,6 +1,6 @@
 # Get Coolify Credentials
 
-This skill assumes a future `get_coolify_credentials` step that returns the data needed to call Coolify directly.
+Use `get_coolify_credentials` to retrieve the data needed to call Coolify directly.
 
 ## Expected credential shape
 
@@ -8,7 +8,7 @@ Based on the current Forge Coolify integration, the credential payload should pr
 
 - `baseUrl`
   - full Coolify API base URL
-- `adminToken`
+- `apiToken`
   - bearer token for API access
 - `serverId`
   - default Coolify server UUID used by Forge
@@ -22,14 +22,14 @@ These fields reflect the current Coolify integration config used by Forge.
 ## Meaning
 
 - `baseUrl` is the API origin used for every request.
-- `adminToken` is the bearer token sent in the `Authorization` header.
+- `apiToken` is the bearer token sent in the `Authorization` header.
 - `serverId` identifies the default target server for application creation.
 - `destinationId` identifies the default destination used during deployment setup.
 - `applicationsBaseDomain` helps build application FQDNs when the task needs to define domains explicitly.
 
 ## Safety
 
-- Treat `adminToken` as secret.
+- Treat `apiToken` as secret.
 - Do not print it in normal outputs.
 - Do not store it in long-lived files unless the task explicitly requires it.
 

@@ -11,6 +11,7 @@ export const forgeCustomToolIds = [
   'adjust_agent_contract_budget',
   'list_agent_notifications',
   'get_github_git_credentials',
+  'get_coolify_credentials',
   'list_coolify_github_apps',
   'list_coolify_github_app_repositories',
   'list_coolify_github_app_repository_branches',

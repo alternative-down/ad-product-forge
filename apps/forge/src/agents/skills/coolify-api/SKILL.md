@@ -17,7 +17,7 @@ Use this skill when work requires direct Coolify API access with `curl`.
 
 ## Workflow
 
-1. Call `get_coolify_credentials` when it exists.
+1. Call `get_coolify_credentials`.
 2. Read `references/get-coolify-credentials.md` to understand the expected credential fields.
 3. Read `references/coolify-rest-api.md` for the shared `curl` pattern.
 4. Choose the reference that matches the task:

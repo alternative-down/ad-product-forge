@@ -73,6 +73,7 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
+| `get_coolify_credentials` | Credenciais da API | DEVELOPER |
 | `list_coolify_github_apps` | Lista GitHub Apps | DEVELOPER |
 | `list_coolify_github_app_repositories` | Lista repos de App | DEVELOPER |
 | `list_coolify_github_app_repository_branches` | Lista branches | DEVELOPER |

@@ -84,6 +84,18 @@ export type CoolifyManager = ReturnType<typeof createCoolifyManager>;
 export function createCoolifyManager(config: {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
+  async function getCredentials() {
+    const providerConfig = await getProviderConfig();
+
+    return {
+      baseUrl: providerConfig.baseUrl,
+      apiToken: providerConfig.adminToken,
+      serverId: providerConfig.serverId,
+      destinationId: providerConfig.destinationId,
+      applicationsBaseDomain: providerConfig.applicationsBaseDomain ?? null,
+    };
+  }
+
   async function listGitHubApps() {
     const data = await requestJson('GET', '/github-apps');
     const apps = extractCollection(data, GitHubAppSchema);
@@ -401,6 +413,7 @@ export function createCoolifyManager(config: {
   }
 
   return {
+    getCredentials,
     listGitHubApps,
     createGitHubApp,
     listGitHubAppRepositories,
