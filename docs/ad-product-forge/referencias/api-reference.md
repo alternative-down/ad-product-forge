@@ -1149,10 +1149,10 @@ Agents possuem acesso a tools baseadas em suas permissões. Consulte [permission
 
 | Tool | Descrição | Role Requerido |
 |------|-----------|----------------|
-| `create_task_for_agent` | Cria tarefa para outro agent | `COORDINATOR` |
-| `list_agent_tasks` | Lista tarefas de agent | - |
-| `cancel_agent_task` | Cancela tarefa | `COORDINATOR` |
-| `update_agent_task` | Atualiza tarefa | `COORDINATOR` |
+| `manage_self_crons` | Cria, atualiza ou deleta cron próprio | `COORDINATOR` |
+| `list_self_crons` | Lista crons próprios | - |
+| `manage_crons` | Cria, atualiza ou deleta cron para outro agent | `COORDINATOR` |
+| `list_crons` | Lista crons criados para outros agents | - |
 
 ---
 

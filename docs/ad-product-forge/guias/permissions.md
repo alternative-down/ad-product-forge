@@ -122,11 +122,10 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
-| `list_agent_schedules` | Lista agendamentos | DEVELOPER |
-| `create_agent_schedule` | Cria agendamento | DEVELOPER |
-| `update_agent_schedule` | Atualiza agendamento | DEVELOPER |
-| `delete_agent_schedule` | Deleta agendamento | DEVELOPER |
-| `toggle_agent_schedule` | Ativa/desativa | DEVELOPER |
+| `list_self_crons` | Lista crons próprios | DEVELOPER |
+| `manage_self_crons` | Gerencia crons próprios | DEVELOPER |
+| `list_crons` | Lista crons criados para outros agentes | DEVELOPER |
+| `manage_crons` | Gerencia crons para outros agentes | DEVELOPER |
 
 ### Ferramentas MiniMax
 

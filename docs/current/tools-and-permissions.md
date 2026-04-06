@@ -104,11 +104,10 @@ These ids are the current permission targets stored in role permissions.
 
 ### Schedules
 
-- `list_agent_schedules`
-- `create_agent_schedule`
-- `update_agent_schedule`
-- `delete_agent_schedule`
-- `toggle_agent_schedule`
+- `list_self_crons`
+- `manage_self_crons`
+- `list_crons`
+- `manage_crons`
 
 ### Capability management
 
