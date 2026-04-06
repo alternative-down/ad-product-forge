@@ -24,7 +24,7 @@
     "@libsql/client": "^0.17.2",
     "@mastra/core": "^1.16.0",
     "@mastra/fastembed": "^1.0.0",
-    "@mastra/libsql": "^1.7.2",
+    "@mastra/libsql": "^1.7.4",
     "@mastra/memory": "^1.10.0",
     "@mendable/firecrawl-js": "^4.15.4",
     "drizzle-kit": "^0.31.10",

@@ -180,6 +180,15 @@ export async function generateHiredAgentInstructions(
   const companySettings = await systemSettings.getSettings();
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
+  const existingRoles = await db.query.agentRoles.findMany();
+  const existingRoleNamesById = new Map(existingRoles.map((role) => [role.id, role.name]));
+  const existingAgents = await db.query.agents.findMany({
+    columns: {
+      name: true,
+      roleId: true,
+    },
+    orderBy: (fields, { asc }) => [asc(fields.name)],
+  });
   const modelPrice = await db.query.llmModelPrices.findFirst({
     where: eq(llmModelPrices.modelKey, hiringRhModelKey),
   });
@@ -187,6 +196,10 @@ export async function generateHiredAgentInstructions(
     ...input,
     companyName: companySettings.companyName,
     companyContext: companySettings.companyContext,
+    existingAgents: existingAgents.map((agent) => ({
+      name: agent.name,
+      roleName: agent.roleId ? (existingRoleNamesById.get(agent.roleId) ?? null) : null,
+    })),
   });
 
   if (!modelPrice) {
@@ -471,6 +484,10 @@ function buildHiringPrompt(input: {
   additionalContext?: string;
   companyName?: string;
   companyContext?: string;
+  existingAgents: Array<{
+    name: string;
+    roleName: string | null;
+  }>;
 }) {
   const sections = [
     'Design one newly hired permanent internal collaborator from the hiring request.',
@@ -484,6 +501,7 @@ function buildHiringPrompt(input: {
     'The hireAgent tool requires an object with: agentName, agentDescription, roleId, instructions.',
     'The name must be fictional, unique, and a single name only. Do not use a common human first name, a full person name, or a multi-word name.',
     'Use a name that feels like a proper identity for a professional agent, without jokes, mascots, or caricature framing.',
+    'The new name must not duplicate or closely resemble the name of any existing internal collaborator.',
     'The professional profile, backstory, goals, and instructions must be grounded in the real-world role and how that role operates in practice.',
     'Write the prompt with exactly these sections and no others: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
     'Keep the structure simple and direct, in a CrewAI-like style.',
@@ -492,6 +510,16 @@ function buildHiringPrompt(input: {
     'Put the practical operating guidance into Instructions.',
     'The collaborator works inside the company and primarily communicates through internal-chat.',
   ];
+
+  if (input.existingAgents.length > 0) {
+    sections.push(
+      [
+        'Existing internal collaborators:',
+        ...input.existingAgents.map((agent) => `- ${agent.name} — ${agent.roleName ?? 'Sem função definida'}`),
+        'Avoid duplicate names and avoid names that look too similar to the existing ones.',
+      ].join('\n'),
+    );
+  }
 
   if (input.companyName?.trim() || input.companyContext?.trim()) {
     sections.push(

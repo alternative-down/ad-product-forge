@@ -77,7 +77,7 @@ function buildAgentSectionItems(input: {
 
   items.push({
     value: `/agents/${input.agentId}/github`,
-    label: 'Github',
+    label: 'Github App',
   });
 
   items.push({ value: `/agents/${input.agentId}/log`, label: 'Log' });
