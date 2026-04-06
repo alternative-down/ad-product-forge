@@ -304,6 +304,82 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
         return loadContactById(existingAccount.contactId);
       }
 
+      if (input.username) {
+        const existingAccountByUsername = await db.query.communicationContactAccounts.findFirst({
+          where: and(
+            eq(schema.communicationContactAccounts.provider, input.provider),
+            eq(schema.communicationContactAccounts.username, input.username),
+          ),
+        });
+
+        if (existingAccountByUsername) {
+          await db
+            .update(schema.communicationContacts)
+            .set({
+              slug: normalizedSlug,
+              displayName: input.displayName,
+              description: input.description ?? null,
+            })
+            .where(eq(schema.communicationContacts.contactId, existingAccountByUsername.contactId));
+
+          await db
+            .insert(schema.communicationContactAccounts)
+            .values({
+              contactId: existingAccountByUsername.contactId,
+              provider: input.provider,
+              externalUserId: input.externalUserId,
+              username: input.username,
+            })
+            .onConflictDoUpdate({
+              target: [
+                schema.communicationContactAccounts.contactId,
+                schema.communicationContactAccounts.provider,
+              ],
+              set: {
+                externalUserId: input.externalUserId,
+                username: input.username,
+              },
+            });
+
+          return loadContactById(existingAccountByUsername.contactId);
+        }
+      }
+
+      const existingBySlug = await db.query.communicationContacts.findFirst({
+        where: eq(schema.communicationContacts.slug, normalizedSlug),
+      });
+
+      if (existingBySlug) {
+        await db
+          .update(schema.communicationContacts)
+          .set({
+            displayName: input.displayName,
+            description: input.description ?? null,
+          })
+          .where(eq(schema.communicationContacts.contactId, existingBySlug.contactId));
+
+        await db
+          .insert(schema.communicationContactAccounts)
+          .values({
+            contactId: existingBySlug.contactId,
+            provider: input.provider,
+            externalUserId: input.externalUserId,
+            username: input.username ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [
+              schema.communicationContactAccounts.contactId,
+              schema.communicationContactAccounts.provider,
+            ],
+            set: {
+              externalUserId: input.externalUserId,
+              username: input.username ?? null,
+            },
+          });
+
+        return loadContactById(existingBySlug.contactId);
+      }
+
       // No existing contact, create new one with UUID
       const contactId = crypto.randomUUID();
 
