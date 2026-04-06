@@ -22,7 +22,7 @@ export function createInternalChatTools(
   if (hasToolPermission(allowedToolIds, 'change_chat_group')) {
     tools.change_chat_group = createTool({
       id: 'change_chat_group',
-      description: 'Create or update one internal-chat group. Use this to create a new group, rename a group, or replace its members and roles in one request.',
+      description: 'Create or update one internal-chat group. Use this to create a new group, rename a group, or replace its members and roles in one request. For updates, use the group id from the internal-chat conversation targetKey. For creation, leave groupId empty and a new id will be generated.',
       inputSchema: z.object({
         groupId: z.string().min(1).nullish().describe('Provide the group id to update one existing group. Leave empty to create a new group.'),
         name: z.string().min(1).nullish().describe('Optional group display name. Required when creating a group.'),
@@ -49,7 +49,7 @@ export function createInternalChatTools(
           return {
             valid: false,
             error: message,
-            hint: 'Provide a name to create a new group. For updates, use a group id you can access and pass the full desired member state.',
+            hint: 'Provide a name to create a new group. For updates, use the group id from the internal-chat conversation targetKey and pass the full desired member state.',
           };
         }
       },
