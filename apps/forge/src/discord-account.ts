@@ -1,4 +1,4 @@
-import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
+import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord.js';
 
 import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
@@ -30,6 +30,7 @@ export function createDiscordProvider(config: {
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMembers,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.DirectMessages,
       GatewayIntentBits.MessageContent,
@@ -361,6 +362,77 @@ export function createDiscordProvider(config: {
     return channels;
   }
 
+  async function loadCandidateUsers() {
+    await getReadyClient();
+    const users = new Map<string, User>();
+
+    const rememberUser = (user: User | null | undefined) => {
+      if (!user || user.bot || !user.username) {
+        return;
+      }
+
+      users.set(user.username, user);
+    };
+
+    for (const guild of client.guilds.cache.values()) {
+      try {
+        const members = await guild.members.fetch();
+
+        for (const member of members.values()) {
+          rememberUser(member.user);
+        }
+      } catch (error) {
+        console.warn(`[discord] Failed to fetch members for guild ${guild.id}:`, error);
+      }
+    }
+
+    const channels = await listCandidateChannels();
+
+    for (const channel of channels) {
+      if ('recipient' in channel && channel.recipient instanceof User) {
+        rememberUser(channel.recipient);
+      }
+    }
+
+    return [...users.values()].sort((left, right) => left.username.localeCompare(right.username));
+  }
+
+  async function listCandidateUsers() {
+    const users = await loadCandidateUsers();
+
+    return users
+      .sort((left, right) => left.username.localeCompare(right.username))
+      .map((user) => ({
+        slug: user.username,
+        displayName: user.globalName ?? user.username,
+        description: `@${user.username}`,
+      }));
+  }
+
+  async function resolveDiscordTargetChannel(targetKey: string) {
+    await getReadyClient();
+
+    if (/^\d+$/.test(targetKey)) {
+      const channel = await client.channels.fetch(targetKey);
+
+      if (!channel?.isSendable()) {
+        throw new Error(`Discord target is not sendable: ${targetKey}`);
+      }
+
+      return channel as DiscordSendableChannel;
+    }
+
+    const candidateUsers = await loadCandidateUsers();
+    const matchedUser = candidateUsers.find((user) => user.username === targetKey);
+
+    if (!matchedUser) {
+      throw new Error(`Discord user not found: ${targetKey}`);
+    }
+
+    const channel = await matchedUser.createDM();
+    return channel as DiscordSendableChannel;
+  }
+
   async function listChannelMessages(input: {
     channel: DiscordSendableChannel;
     limit: number;
@@ -431,6 +503,18 @@ export function createDiscordProvider(config: {
       onInboundMessage = callback;
       void flushPendingMessages();
     },
+    async getSelfContact() {
+      const currentUser = await getReadyClient();
+
+      return {
+        slug: currentUser.username,
+        displayName: currentUser.globalName ?? currentUser.username,
+        description: `@${currentUser.username}`,
+      };
+    },
+    async listContacts() {
+      return listCandidateUsers();
+    },
     async listConversations({ limit }) {
       const channels = await listCandidateChannels();
       const conversations = [];
@@ -476,17 +560,7 @@ export function createDiscordProvider(config: {
       });
     },
     async sendMessage(input) {
-      await getReadyClient();
-
-      if (!/^\d+$/.test(input.targetKey)) {
-        throw new Error(`Unsupported Discord targetKey: ${input.targetKey}`);
-      }
-
-      const channel = await client.channels.fetch(input.targetKey);
-
-      if (!channel?.isSendable()) {
-        throw new Error(`Discord target is not sendable: ${input.targetKey}`);
-      }
+      const channel = await resolveDiscordTargetChannel(input.targetKey);
 
       return withTyping(channel, async () => {
         const sent = await sendDiscordChunks({

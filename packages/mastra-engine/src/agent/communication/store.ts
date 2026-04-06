@@ -246,6 +246,10 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: account.provider,
       externalAccountId: account.externalAccountId,
       displayName: account.displayName ?? undefined,
+      description:
+        account.metadataJson && typeof JSON.parse(account.metadataJson)?.description === 'string'
+          ? JSON.parse(account.metadataJson).description
+          : undefined,
     }));
   }
 

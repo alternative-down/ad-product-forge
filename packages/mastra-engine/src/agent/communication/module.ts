@@ -203,8 +203,29 @@ export async function createCommunicationModule(config: {
     };
   }
 
+  function toAgentSelfContactView(account: Awaited<ReturnType<typeof store.listSelfAccounts>>[number]) {
+    return {
+      slug: account.externalAccountId,
+      displayName: account.displayName ?? account.externalAccountId,
+      description: account.description,
+    };
+  }
+
   async function syncProviderContacts() {
     for (const provider of providers.values()) {
+      if (provider.getSelfContact) {
+        const selfContact = await provider.getSelfContact();
+
+        if (selfContact) {
+          await store.upsertSelfAccount({
+            provider: provider.id,
+            externalAccountId: selfContact.slug,
+            displayName: selfContact.displayName,
+            metadata: selfContact.description ? { description: selfContact.description } : undefined,
+          });
+        }
+      }
+
       if (!provider.listContacts) {
         continue;
       }
@@ -225,10 +246,11 @@ export async function createCommunicationModule(config: {
 
   async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
     await syncProviderContacts();
+    const selfAccounts = filter === 'others' ? [] : await store.listSelfAccounts();
     const contacts = filter === 'self' ? [] : await store.listContacts();
 
     return {
-      self: [],
+      self: selfAccounts.map((account) => toAgentSelfContactView(account)),
       others: contacts.map((contact) => toAgentContactView(contact)),
     };
   }

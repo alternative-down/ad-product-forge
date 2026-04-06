@@ -10,8 +10,8 @@ const sendMessageInputSchema = z
       .min(1)
       .describe('Which communication provider to use, such as internal-chat, email, or discord.'),
     targetKey: z
-    .string()
-    .describe('Who or where to send the message in that provider. Examples: an internal-chat agentId or groupId, an email address, or a Discord channel id.'),
+      .string()
+      .describe('Who or where to send the message in that provider. Examples: an internal-chat account slug or group id, an email address, or a Discord username/channel id.'),
     content: z
       .string()
       .min(1)

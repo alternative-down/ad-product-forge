@@ -11,6 +11,19 @@ export function createInternalChatProvider(input: {
     onMessage(callback) {
       input.internalChat.onReceiveMessage(input.agentId, callback);
     },
+    async getSelfContact() {
+      const account = await input.internalChat.getAccountByAgentId(input.agentId);
+
+      if (!account) {
+        return null;
+      }
+
+      return {
+        slug: account.slug,
+        displayName: account.displayName,
+        description: account.description ?? undefined,
+      };
+    },
     async listContacts() {
       const accounts = await input.internalChat.listAccounts({ excludeAgentId: input.agentId });
 

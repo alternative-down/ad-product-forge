@@ -120,6 +120,27 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     return null;
   }
 
+  function rememberEmailContact(
+    contacts: Map<string, { slug: string; displayName: string }>,
+    address: string | null,
+    displayName?: string | null,
+  ) {
+    if (!address) {
+      return;
+    }
+
+    const normalizedAddress = address.toLowerCase();
+
+    if (normalizedAddress === config.imap.user.toLowerCase()) {
+      return;
+    }
+
+    contacts.set(normalizedAddress, {
+      slug: normalizedAddress,
+      displayName: displayName?.trim() || normalizedAddress,
+    });
+  }
+
   function resolveConversationParticipant(email: Email) {
     const fromAddress = getAddressValue(email.from);
     const selfAddress = config.imap.user.toLowerCase();
@@ -373,6 +394,26 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     onMessage(callback) {
       onInboundMessage = callback;
       void flushPendingMessages();
+    },
+    async getSelfContact() {
+      return {
+        slug: config.imap.user.toLowerCase(),
+        displayName: config.imap.user,
+      };
+    },
+    async listContacts() {
+      const contacts = new Map<string, { slug: string; displayName: string }>();
+      const inboxEmails = await listRecentInboxEmails(RECENT_EMAIL_SCAN_LIMIT);
+
+      for (const email of inboxEmails) {
+        rememberEmailContact(contacts, email.targetKey, email.authorId === email.targetKey ? email.authorDisplayName : email.targetKey);
+      }
+
+      for (const targetKey of recentOutboundMessages.keys()) {
+        rememberEmailContact(contacts, targetKey, targetKey);
+      }
+
+      return [...contacts.values()].sort((left, right) => left.displayName.localeCompare(right.displayName));
     },
     async listConversations() {
       // TODO: Resolve email conversations by real thread metadata (message-id, in-reply-to, references)
