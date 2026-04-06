@@ -18,6 +18,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   const OUTBOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   let client: ImapFlow | null = null;
+  let connectPromise: Promise<ImapFlow> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectDelayMs = 1000;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
@@ -183,39 +185,55 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   }
 
   async function connectImap() {
-    const nextClient = new ImapFlow({
-      host: config.imap.host,
-      port: config.imap.port,
-      secure: config.imap.secure,
-      auth: {
-        user: config.imap.user,
-        pass: config.imap.password,
-      },
-      logger: false,
-      connectionTimeout: CONNECTION_TIMEOUT_MS,
-    });
+    if (client) {
+      return client;
+    }
 
-    await nextClient.connect();
-    await nextClient.mailboxOpen('INBOX');
+    if (connectPromise) {
+      return connectPromise;
+    }
 
-    client = nextClient;
-    reconnectDelayMs = 1000;
-    console.log('[email] Connected to IMAP server');
+    connectPromise = (async () => {
+      const nextClient = new ImapFlow({
+        host: config.imap.host,
+        port: config.imap.port,
+        secure: config.imap.secure,
+        auth: {
+          user: config.imap.user,
+          pass: config.imap.password,
+        },
+        logger: false,
+        connectionTimeout: CONNECTION_TIMEOUT_MS,
+      });
 
-    nextClient.on('close', () => {
-      if (client === nextClient) {
-        client = null;
-      }
+      await nextClient.connect();
+      await nextClient.mailboxOpen('INBOX');
 
-      console.log('[email] Connection closed');
-      void reconnect();
-    });
+      client = nextClient;
+      reconnectDelayMs = 1000;
+      console.log('[email] Connected to IMAP server');
 
-    nextClient.on('exists', () => {
-      void processUnseenMessages(nextClient);
-    });
+      nextClient.on('close', () => {
+        if (client === nextClient) {
+          client = null;
+        }
 
-    return nextClient;
+        console.log('[email] Connection closed');
+        scheduleReconnect();
+      });
+
+      nextClient.on('exists', () => {
+        void processUnseenMessages(nextClient);
+      });
+
+      return nextClient;
+    })();
+
+    try {
+      return await connectPromise;
+    } finally {
+      connectPromise = null;
+    }
   }
 
   async function deliverMessage(message: CommunicationInboundMessage) {
@@ -365,10 +383,16 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     return emails;
   }
 
-  async function reconnect() {
-    await new Promise((resolve) => setTimeout(resolve, reconnectDelayMs));
-    reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30000);
-    void listen();
+  function scheduleReconnect() {
+    if (reconnectTimer) {
+      return;
+    }
+
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30000);
+      void listen();
+    }, reconnectDelayMs);
   }
 
   async function listen() {
@@ -382,7 +406,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     } catch (error) {
       console.error('[email] Listener error:', error);
       if (!client) {
-        void reconnect();
+        scheduleReconnect();
       }
     }
   }
