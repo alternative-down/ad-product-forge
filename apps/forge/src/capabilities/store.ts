@@ -15,16 +15,44 @@ type CapabilitySet = {
   workflowIds: string[];
 };
 
-function resolveLoadedToolIds(toolIds: string[]) {
-  const resolvedToolIds = [...toolIds];
-  const hasCrossAgentCronTools = resolvedToolIds.includes('manage_crons') || resolvedToolIds.includes('list_crons');
-  const hasCrossAgentRoleTool = resolvedToolIds.includes('change_agent_role');
+const roleInspectionToolIds = [
+  'create_agent_role',
+  'update_agent_role',
+  'delete_agent_role',
+  'change_agent_role',
+  'change_own_role',
+  'list_role_tool_permissions',
+  'manage_role_tool_permissions',
+  'list_role_workflow_permissions',
+  'manage_role_workflow_permissions',
+] as const;
 
-  if (!hasCrossAgentCronTools && !hasCrossAgentRoleTool) {
-    return resolvedToolIds;
+function resolveLoadedToolIds(toolIds: string[]) {
+  const resolvedToolIds = new Set(toolIds);
+  const hasCrossAgentCronTools = resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
+  const hasCrossAgentRoleTool = resolvedToolIds.has('change_agent_role');
+  const hasRoleInspectionTool = roleInspectionToolIds.some((toolId) => resolvedToolIds.has(toolId));
+
+  if (hasRoleInspectionTool) {
+    resolvedToolIds.add('list_agent_roles');
   }
 
-  return resolvedToolIds.filter((toolId) => {
+  if (resolvedToolIds.has('manage_role_tool_permissions')) {
+    resolvedToolIds.add('list_available_capabilities');
+    resolvedToolIds.add('list_role_tool_permissions');
+  }
+
+  if (resolvedToolIds.has('manage_role_workflow_permissions')) {
+    resolvedToolIds.add('list_available_capabilities');
+    resolvedToolIds.add('list_role_workflow_permissions');
+  }
+
+  if (!hasCrossAgentCronTools && !hasCrossAgentRoleTool) {
+    return [...resolvedToolIds].sort((left, right) => left.localeCompare(right));
+  }
+
+  return [...resolvedToolIds]
+    .filter((toolId) => {
     if (hasCrossAgentCronTools && (toolId === 'manage_self_crons' || toolId === 'list_self_crons')) {
       return false;
     }
@@ -34,7 +62,8 @@ function resolveLoadedToolIds(toolIds: string[]) {
     }
 
     return true;
-  });
+    })
+    .sort((left, right) => left.localeCompare(right));
 }
 
 export function createCapabilityStore(db: Database) {

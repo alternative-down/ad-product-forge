@@ -22,9 +22,9 @@ import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/adm
 
 import { RoleDialog } from './role-dialog';
 import {
-  BASE_ROLE_TOOL_IDS,
   createEmptyRoleForm,
   createRoleForm,
+  getLockedRoleToolIds,
   groupToolIds,
   mergeBaseRoleToolIds,
   normalizeRoleFormToolIds,
@@ -215,7 +215,7 @@ export function RolesPage() {
         open={dialogOpen}
         pending={roleMutation.isPending}
         form={roleForm}
-        lockedToolIds={[...BASE_ROLE_TOOL_IDS]}
+        lockedToolIds={getLockedRoleToolIds(roleForm.toolIds)}
         workflowIds={workflowIds}
         toolSections={toolSections}
         errorMessage={roleMutation.error?.message}

@@ -11,6 +11,18 @@ export const BASE_ROLE_TOOL_IDS = [
   'manage_self_crons',
 ] as const;
 
+const ROLE_INSPECTION_TOOL_IDS = [
+  'create_agent_role',
+  'update_agent_role',
+  'delete_agent_role',
+  'change_agent_role',
+  'change_own_role',
+  'list_role_tool_permissions',
+  'manage_role_tool_permissions',
+  'list_role_workflow_permissions',
+  'manage_role_workflow_permissions',
+] as const;
+
 export type RoleForm = {
   roleId?: string;
   name: string;
@@ -23,7 +35,7 @@ export function createEmptyRoleForm(): RoleForm {
   return {
     name: '',
     description: '',
-    toolIds: [...BASE_ROLE_TOOL_IDS],
+    toolIds: normalizeRoleFormToolIds([...BASE_ROLE_TOOL_IDS]),
     workflowIds: [],
   };
 }
@@ -42,8 +54,35 @@ export function mergeBaseRoleToolIds(toolIds: string[]) {
   return [...new Set([...BASE_ROLE_TOOL_IDS, ...toolIds])].sort((left, right) => left.localeCompare(right));
 }
 
+export function getCapabilityRequiredToolIds(toolIds: string[]) {
+  const requiredToolIds = new Set<string>();
+  const hasRoleInspectionTool = ROLE_INSPECTION_TOOL_IDS.some((toolId) => toolIds.includes(toolId));
+
+  if (hasRoleInspectionTool) {
+    requiredToolIds.add('list_agent_roles');
+  }
+
+  if (toolIds.includes('manage_role_tool_permissions')) {
+    requiredToolIds.add('list_available_capabilities');
+    requiredToolIds.add('list_role_tool_permissions');
+  }
+
+  if (toolIds.includes('manage_role_workflow_permissions')) {
+    requiredToolIds.add('list_available_capabilities');
+    requiredToolIds.add('list_role_workflow_permissions');
+  }
+
+  return [...requiredToolIds].sort((left, right) => left.localeCompare(right));
+}
+
+export function getLockedRoleToolIds(toolIds: string[]) {
+  return [...new Set([...BASE_ROLE_TOOL_IDS, ...getCapabilityRequiredToolIds(toolIds)])].sort((left, right) =>
+    left.localeCompare(right),
+  );
+}
+
 export function normalizeRoleFormToolIds(toolIds: string[]) {
-  const nextToolIds = [...toolIds];
+  const nextToolIds = [...new Set([...toolIds, ...getLockedRoleToolIds(toolIds)])].sort((left, right) => left.localeCompare(right));
 
   if (!nextToolIds.includes('change_agent_role')) {
     return nextToolIds;

@@ -12,20 +12,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Dialog } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 
-import type { RoleForm } from './roles-page.helpers';
+import { normalizeRoleFormToolIds, type RoleForm } from './roles-page.helpers';
 
 function toggleRoleToolIds(toolIds: string[], toolId: string, checked: boolean) {
   const nextToolIds = checked ? [...toolIds, toolId] : toolIds.filter((currentToolId) => currentToolId !== toolId);
-
-  if (toolId === 'change_agent_role' && checked) {
-    return nextToolIds.filter((currentToolId) => currentToolId !== 'change_own_role');
-  }
-
-  if (toolId === 'change_own_role' && checked && nextToolIds.includes('change_agent_role')) {
-    return nextToolIds.filter((currentToolId) => currentToolId !== 'change_own_role');
-  }
-
-  return nextToolIds;
+  return normalizeRoleFormToolIds(nextToolIds);
 }
 
 export function RoleDialog(input: {
