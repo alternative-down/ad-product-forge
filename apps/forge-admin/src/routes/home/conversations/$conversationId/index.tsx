@@ -41,6 +41,7 @@ function HomeConversationDetailIndexRoute() {
   const { contacts, conversations, selectedAccount, reloadConversations } = useHomeConversations();
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const initialScrollDoneRef = useRef(false);
+  const activeConversationKeyRef = useRef('');
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const [participantsDialogOpen, setParticipantsDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -67,11 +68,18 @@ function HomeConversationDetailIndexRoute() {
   }, [contacts, members]);
 
   useEffect(() => {
+    activeConversationKeyRef.current = selectedAccountId && selectedConversationId
+      ? `${selectedAccountId}:${selectedConversationId}`
+      : '';
+  }, [selectedAccountId, selectedConversationId]);
+
+  useEffect(() => {
     if (!selectedAccountId || !selectedConversationId) {
       return;
     }
 
     let cancelled = false;
+    const conversationKey = `${selectedAccountId}:${selectedConversationId}`;
 
     async function loadConversationState() {
       const [messageResult, memberResult] = await Promise.all([
@@ -81,7 +89,7 @@ function HomeConversationDetailIndexRoute() {
           : Promise.resolve([]),
       ]);
 
-      if (!cancelled) {
+      if (!cancelled && activeConversationKeyRef.current === conversationKey) {
         setMessages(messageResult.items);
         setMembers(memberResult);
         setGroupNameDraft(selectedConversationName);
@@ -110,6 +118,9 @@ function HomeConversationDetailIndexRoute() {
       return;
     }
 
+    let cancelled = false;
+    const conversationKey = `${selectedAccountId}:${selectedConversationId}`;
+
     const interval = window.setInterval(() => {
       void (async () => {
         const messageResult = await getHomeInternalChatMessages(
@@ -118,6 +129,10 @@ function HomeConversationDetailIndexRoute() {
           100,
           0,
         );
+
+        if (cancelled || activeConversationKeyRef.current !== conversationKey) {
+          return;
+        }
 
         setMessages(messageResult.items);
         await reloadConversations();
@@ -135,6 +150,7 @@ function HomeConversationDetailIndexRoute() {
     }, 500);
 
     return () => {
+      cancelled = true;
       window.clearInterval(interval);
     };
   }, [autoScrollEnabled, reloadConversations, selectedAccountId, selectedConversationId]);
