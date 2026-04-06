@@ -249,10 +249,6 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     }));
   }
 
-  async function getContact(slug: string) {
-    return loadContact(slugify(slug));
-  }
-
   async function findContactByIdentity(provider: string, externalUserId?: string, username?: string) {
     if (!externalUserId && !username) {
       return null;
@@ -793,7 +789,6 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
     upsertSelfAccount,
     listSelfAccounts,
     listContacts,
-    getContact,
     findContactByIdentity,
     upsertContact,
     upsertConversation,

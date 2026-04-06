@@ -237,17 +237,6 @@ export async function createCommunicationModule(config: {
     };
   }
 
-  async function getContact(slug: string) {
-    await syncProviderContacts();
-    const contact = await store.getContact(slug);
-
-    if (!contact) {
-      return null;
-    }
-
-    return toAgentContactView(contact);
-  }
-
   async function upsertContact(input: { slug: string; displayName: string; description?: string }) {
     const contact = await store.upsertContact(input);
 
@@ -361,7 +350,6 @@ export async function createCommunicationModule(config: {
   return {
     onReceiveMessage,
     listContacts,
-    getContact,
     upsertContact,
     listConversations,
     getMessages,

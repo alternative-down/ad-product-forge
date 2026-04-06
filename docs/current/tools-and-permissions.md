@@ -26,7 +26,6 @@ So the live agent surface is currently based on processor-driven discovery, not 
 These come from the engine communication module and are not part of the Forge permission catalog:
 
 - `list_contacts`
-- `get_contact`
 - `upsert_contact`
 - `list_conversations`
 - `get_messages`
