@@ -117,9 +117,7 @@ Via `get_github_git_credentials()` que retorna:
 ### O agente pode fazer deploys via Coolify?
 
 Sim, com as tools:
-- `list_coolify_applications()`
-- `manage_coolify_application()`
-- `toggle_coolify_application()`
+- `get_coolify_credentials()`
 - `get_coolify_deployment_logs()`
 
 ### Quais permissões são necessárias para deploy?

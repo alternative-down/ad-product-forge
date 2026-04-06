@@ -58,18 +58,6 @@ These ids are the current permission targets stored in role permissions.
 ### Coolify
 
 - `get_coolify_credentials`
-- `list_coolify_github_apps`
-- `list_coolify_github_app_repositories`
-- `list_coolify_github_app_repository_branches`
-- `list_coolify_applications`
-- `get_coolify_application`
-- `manage_coolify_application`
-- `toggle_coolify_application`
-- `list_coolify_application_deployments`
-- `get_coolify_deployment_logs`
-- `get_coolify_application_logs`
-- `get_coolify_application_envs`
-- `manage_coolify_application_env`
 
 ### Schedules
 

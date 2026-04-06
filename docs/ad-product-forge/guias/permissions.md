@@ -74,18 +74,6 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
 | `get_coolify_credentials` | Credenciais da API | DEVELOPER |
-| `list_coolify_github_apps` | Lista GitHub Apps | DEVELOPER |
-| `list_coolify_github_app_repositories` | Lista repos de App | DEVELOPER |
-| `list_coolify_github_app_repository_branches` | Lista branches | DEVELOPER |
-| `list_coolify_applications` | Lista aplicações | DEVELOPER |
-| `get_coolify_application` | Busca aplicação | DEVELOPER |
-| `manage_coolify_application` | Gerencia aplicação | DEVELOPER |
-| `toggle_coolify_application` | Start/stop app | DEVELOPER |
-| `list_coolify_application_deployments` | Lista deployments | DEVELOPER |
-| `get_coolify_deployment_logs` | Logs de deployment | DEVELOPER |
-| `get_coolify_application_logs` | Logs da aplicação | DEVELOPER |
-| `get_coolify_application_envs` | Lista env vars | DEVELOPER |
-| `manage_coolify_application_env` | Gerencia env vars | DEVELOPER |
 
 ### Ferramentas de Agendamento
 
@@ -147,12 +135,6 @@ const legacyToolPermissionAliases = {
   
   // GitHub - Issues
   toggle_github_issue: ['toggle_github_issue'],
-  
-  // GitHub - Coolify Integration
-  manage_coolify_application: ['create_coolify_application', 'update_coolify_application', 'delete_coolify_application', 'restart_coolify_application'],
-  toggle_coolify_application: ['start_coolify_application', 'stop_coolify_application'],
-  get_coolify_application_envs: ['list_coolify_application_envs'],
-  manage_coolify_application_env: ['set_coolify_application_env', 'delete_coolify_application_env'],
   
   // Scheduling
   create_cron_for_agent: ['create_schedule_for_agent'],
