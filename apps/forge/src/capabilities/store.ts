@@ -18,12 +18,23 @@ type CapabilitySet = {
 function resolveLoadedToolIds(toolIds: string[]) {
   const resolvedToolIds = [...toolIds];
   const hasCrossAgentCronTools = resolvedToolIds.includes('manage_crons') || resolvedToolIds.includes('list_crons');
+  const hasCrossAgentRoleTool = resolvedToolIds.includes('change_agent_role');
 
-  if (!hasCrossAgentCronTools) {
+  if (!hasCrossAgentCronTools && !hasCrossAgentRoleTool) {
     return resolvedToolIds;
   }
 
-  return resolvedToolIds.filter((toolId) => toolId !== 'manage_self_crons' && toolId !== 'list_self_crons');
+  return resolvedToolIds.filter((toolId) => {
+    if (hasCrossAgentCronTools && (toolId === 'manage_self_crons' || toolId === 'list_self_crons')) {
+      return false;
+    }
+
+    if (hasCrossAgentRoleTool && toolId === 'change_own_role') {
+      return false;
+    }
+
+    return true;
+  });
 }
 
 export function createCapabilityStore(db: Database) {
@@ -131,7 +142,7 @@ export function createCapabilityStore(db: Database) {
       orderBy: [asc(roleToolPermissions.toolId)],
     });
 
-    return normalizeToolPermissionIds(rows.map((row) => row.toolId));
+    return resolveLoadedToolIds(normalizeToolPermissionIds(rows.map((row) => row.toolId)));
   }
 
   async function addRoleToolPermission(input: { roleId: string; toolId: string }) {

@@ -33,13 +33,23 @@ export function createRoleForm(role: RoleItem): RoleForm {
     roleId: role.roleId,
     name: role.name,
     description: role.description ?? '',
-    toolIds: mergeBaseRoleToolIds(role.toolIds),
+    toolIds: normalizeRoleFormToolIds(mergeBaseRoleToolIds(role.toolIds)),
     workflowIds: role.workflowIds,
   };
 }
 
 export function mergeBaseRoleToolIds(toolIds: string[]) {
   return [...new Set([...BASE_ROLE_TOOL_IDS, ...toolIds])].sort((left, right) => left.localeCompare(right));
+}
+
+export function normalizeRoleFormToolIds(toolIds: string[]) {
+  const nextToolIds = [...toolIds];
+
+  if (!nextToolIds.includes('change_agent_role')) {
+    return nextToolIds;
+  }
+
+  return nextToolIds.filter((toolId) => toolId !== 'change_own_role');
 }
 
 export function groupToolIds(toolIds: string[]) {

@@ -21,7 +21,15 @@ import {
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { RoleDialog } from './role-dialog';
-import { BASE_ROLE_TOOL_IDS, createEmptyRoleForm, createRoleForm, groupToolIds, mergeBaseRoleToolIds, type RoleForm } from './roles-page.helpers';
+import {
+  BASE_ROLE_TOOL_IDS,
+  createEmptyRoleForm,
+  createRoleForm,
+  groupToolIds,
+  mergeBaseRoleToolIds,
+  normalizeRoleFormToolIds,
+  type RoleForm,
+} from './roles-page.helpers';
 
 export function RolesPage() {
   const queryClient = useQueryClient();
@@ -60,7 +68,7 @@ export function RolesPage() {
       const currentToolIds = input.roleId
         ? (roles.find((role) => role.roleId === input.roleId)?.toolIds ?? [])
         : [];
-      const nextToolIds = mergeBaseRoleToolIds(input.toolIds);
+      const nextToolIds = normalizeRoleFormToolIds(mergeBaseRoleToolIds(input.toolIds));
       const toolIdsToAdd = nextToolIds.filter((toolId) => !currentToolIds.includes(toolId));
       const toolIdsToRemove = currentToolIds.filter((toolId) => !nextToolIds.includes(toolId));
       const currentWorkflowIds = input.roleId

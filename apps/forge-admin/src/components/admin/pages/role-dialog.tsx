@@ -14,6 +14,20 @@ import { Switch } from '@/components/ui/switch';
 
 import type { RoleForm } from './roles-page.helpers';
 
+function toggleRoleToolIds(toolIds: string[], toolId: string, checked: boolean) {
+  const nextToolIds = checked ? [...toolIds, toolId] : toolIds.filter((currentToolId) => currentToolId !== toolId);
+
+  if (toolId === 'change_agent_role' && checked) {
+    return nextToolIds.filter((currentToolId) => currentToolId !== 'change_own_role');
+  }
+
+  if (toolId === 'change_own_role' && checked && nextToolIds.includes('change_agent_role')) {
+    return nextToolIds.filter((currentToolId) => currentToolId !== 'change_own_role');
+  }
+
+  return nextToolIds;
+}
+
 export function RoleDialog(input: {
   open: boolean;
   pending: boolean;
@@ -100,9 +114,7 @@ export function RoleDialog(input: {
                                   onCheckedChange={(checked) =>
                                     input.onFormChange({
                                       ...input.form,
-                                      toolIds: checked
-                                        ? [...input.form.toolIds, toolId]
-                                        : input.form.toolIds.filter((currentToolId) => currentToolId !== toolId),
+                                      toolIds: toggleRoleToolIds(input.form.toolIds, toolId, checked),
                                     })
                                   }
                                 />
