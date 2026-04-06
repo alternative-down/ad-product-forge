@@ -59,10 +59,6 @@ async function installBundledSkill(agentWorkspaceDirectory: string, sourceDirect
   const skillContent = await fs.readFile(skillFilePath, 'utf8');
   const skillName = parseSkillName(skillContent);
 
-  if (skillName !== sourceDirectoryName) {
-    throw new Error(`Bundled skill directory must match frontmatter name: ${sourceDirectoryName} != ${skillName}`);
-  }
-
   const targetSkillRoot = path.resolve(agentWorkspaceDirectory, 'skills', skillName);
   await copyDirectoryContents(sourceSkillRoot, targetSkillRoot);
 }
