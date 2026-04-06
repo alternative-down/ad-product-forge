@@ -1,5 +1,4 @@
 export const forgeCustomToolIds = [
-  'search_web',
   'list_contacts',
   'get_contact',
   'upsert_contact',

@@ -47,7 +47,6 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 
 | Tool ID | Descrição | Roles Comuns |
 |---------|-----------|--------------|
-| `search_web` | Busca na web | ALL |
 | `list_contacts` | Lista contatos | ALL |
 | `get_contact` | Busca contato | ALL |
 | `upsert_contact` | Cria/atualiza contato | ALL |

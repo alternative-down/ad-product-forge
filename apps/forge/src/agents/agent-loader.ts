@@ -21,7 +21,6 @@ import { createCapabilityTools } from '../capabilities/tools';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import { createSystemSettingsStore } from '../system-settings/store';
-import { createWebTools } from '../web/tools';
 import { getMCPToolsForAgent } from './mcp/client-manager';
 import { createMiniMaxTools } from '../minimax/tools';
 import { createInternalChatTools } from '../communication/internal-chat-tools';
@@ -143,7 +142,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const coolifyTools = config.coolify ? createCoolifyTools(config.coolify, allowedToolIds) : {};
   const scheduleTools = createAgentScheduleTools(agentConfig.id, config.schedules, allowedToolIds);
   const capabilityTools = createCapabilityTools(db, config, agentConfig.id, allowedToolIds);
-  const webTools = createWebTools(allowedToolIds);
   const internalChatTools = createInternalChatTools(
     agentConfig.id,
     agentConfig.name,
@@ -164,7 +162,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     ...coolifyTools,
     ...scheduleTools,
     ...capabilityTools,
-    ...webTools,
     ...internalChatTools,
     ...minimaxTools,
     ...mcpTools,
@@ -177,7 +174,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     coolify: Object.keys(coolifyTools).length,
     schedules: Object.keys(scheduleTools).length,
     capabilities: Object.keys(capabilityTools).length,
-    web: Object.keys(webTools).length,
     internalChat: Object.keys(internalChatTools).length,
     minimax: Object.keys(minimaxTools).length,
     mcp: Object.keys(mcpTools).length,

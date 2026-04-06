@@ -151,10 +151,10 @@ ad-product-forge/
 │  │     }                                                    │    │
 │  │                                                          │    │
 │  │  2. Tool Execution                                       │    │
-│  │     agent.use(search_web, { query: "..." })              │    │
+│  │     agent.use(list_contacts, {})                         │    │
 │  │          │                                                │    │
 │  │          ▼                                                │    │
-│  │     capabilityRegistry.execute('search_web', ctx)        │    │
+│  │     capabilityRegistry.execute('list_contacts', ctx)     │    │
 │  │          │                                                │    │
 │  │          ▼                                                │    │
 │  │     // Verifica permissions antes de executar            │    │
