@@ -41,7 +41,6 @@ export type CommunicationProviderContact = {
   slug: string;
   displayName: string;
   description?: string;
-  agentId?: string;
 };
 
 export type CommunicationProviderConversation = {

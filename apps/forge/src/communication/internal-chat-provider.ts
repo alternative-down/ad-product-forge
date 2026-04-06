@@ -18,7 +18,6 @@ export function createInternalChatProvider(input: {
         slug: account.slug,
         displayName: account.displayName,
         description: account.description ?? undefined,
-        agentId: account.agentId ?? undefined,
       }));
     },
     async listConversations({ limit, unread }) {

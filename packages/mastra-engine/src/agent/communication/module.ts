@@ -196,13 +196,10 @@ export async function createCommunicationModule(config: {
   }
 
   function toAgentContactView(contact: Awaited<ReturnType<typeof store.listContacts>>[number]) {
-    const internalChatAccount = contact.accounts.find((account) => account.provider === 'internal-chat');
-
     return {
       slug: contact.slug,
       displayName: contact.displayName,
       description: contact.description,
-      agentId: internalChatAccount?.externalUserId,
     };
   }
 
@@ -220,7 +217,6 @@ export async function createCommunicationModule(config: {
           displayName: contact.displayName,
           description: contact.description,
           provider: provider.id,
-          externalUserId: contact.agentId,
           username: contact.slug,
         });
       }
