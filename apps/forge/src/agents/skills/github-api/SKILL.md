@@ -1,32 +1,40 @@
 ---
 name: github-api
-description: Use GitHub through Forge credentials when raw GitHub API calls or git-over-HTTPS operations are needed beyond the built-in GitHub tools.
+description: Use GitHub through Forge credentials with direct curl requests and git-over-HTTPS when working with repositories, pull requests, issues, comments, labels, or milestones.
 ---
 
 # GitHub API
 
-Use this skill when work requires raw GitHub API access or git-over-HTTPS access through the Forge GitHub App credentials.
+Use this skill when work requires direct GitHub API access with `curl` or git-over-HTTPS through the Forge GitHub App credentials.
 
 ## When to use
 
-- A built-in GitHub tool does not cover the needed operation.
 - The task needs a raw GitHub REST API request.
 - The task needs `git clone`, `git fetch`, `git pull`, or `git push` over HTTPS.
+- The task needs parity with the current GitHub tool surface, but implemented directly through API calls.
 - The task needs credentials for one specific repository or for all repositories the agent can access.
 
 ## Workflow
 
-1. Check whether an existing GitHub tool already covers the task.
-2. If raw access is still needed, call `get_github_git_credentials`.
-3. If the work targets one repository, pass `repositoryName`.
-4. Read `references/get-github-credentials.md` to use the returned fields correctly.
-5. For REST API calls, follow `references/github-rest-api.md`.
-6. For git-over-HTTPS operations, follow `references/git-over-https.md`.
-7. Keep usage scoped to repositories the returned credentials can access.
-8. Do not expose the raw token back to the user unless the task explicitly requires it.
+1. Call `get_github_git_credentials`.
+2. If the work targets one repository, pass `repositoryName`.
+3. Read `references/get-github-credentials.md` to use the returned fields correctly.
+4. Read `references/github-rest-api.md` for the shared `curl` setup.
+5. Choose the operation reference that matches the task:
+   - repositories
+   - pull requests
+   - issues and comments
+   - labels and milestones
+6. Keep requests scoped to repositories the returned credentials can access.
+7. Do not expose the raw token back to the user unless the task explicitly requires it.
+8. Use `references/git-over-https.md` only when the task truly needs raw git instead of REST.
 
 ## References
 
 - Read `references/get-github-credentials.md` for the return shape and usage rules.
-- Read `references/github-rest-api.md` for REST request patterns with the Forge GitHub App token.
+- Read `references/github-rest-api.md` for the shared `curl` pattern.
+- Read `references/repositories.md` for repository listing, reading, creation, update, and deletion.
+- Read `references/pull-requests.md` for PR listing, reading, creation, update, merge, close, and review comments.
+- Read `references/issues-and-comments.md` for issues and issue comments.
+- Read `references/labels-and-milestones.md` for labels, milestones, and issue label assignment.
 - Read `references/git-over-https.md` for clone/fetch/pull/push patterns with the returned credentials.
