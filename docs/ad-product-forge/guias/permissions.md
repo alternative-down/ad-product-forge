@@ -19,6 +19,7 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 │  ┌─────────┐     ┌─────────────────────────────────────────┐   │
 │  │ FINANCE │ ──► │ tool: list_company_cash                 │   │
 │  │         │ ──► │ tool: get_company_cash                   │   │
+│  │         │ ──► │ tool: manage_company_cash_movement      │   │
 │  │         │ ──► │ tool: adjust_agent_contract_budget      │   │
 │  └─────────┘     └─────────────────────────────────────────┘   │
 │                                                                 │
@@ -60,6 +61,7 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 |---------|-----------|-------|
 | `list_company_cash` | Lista saldo | FINANCE |
 | `get_company_cash` | Busca saldo | FINANCE |
+| `manage_company_cash_movement` | Maneja movimentos de caixa | FINANCE |
 | `list_internal_agent_contracts` | Lista contratos | FINANCE |
 | `adjust_agent_contract_budget` | Ajusta orçamento | FINANCE |
 

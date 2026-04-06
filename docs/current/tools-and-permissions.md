@@ -39,6 +39,7 @@ These ids are the current permission targets stored in role permissions.
 
 - `list_company_cash`
 - `get_company_cash`
+- `manage_company_cash_movement`
 - `list_internal_agent_contracts`
 
 ### Notifications

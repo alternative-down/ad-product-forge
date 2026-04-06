@@ -7,6 +7,7 @@ export const forgeCustomToolIds = [
   'change_chat_group',
   'list_company_cash',
   'get_company_cash',
+  'manage_company_cash_movement',
   'list_internal_agent_contracts',
   'adjust_agent_contract_budget',
   'list_agent_notifications',
