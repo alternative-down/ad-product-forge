@@ -1316,7 +1316,7 @@ export function createInternalChatService(
     content: string;
     attachments: CommunicationFile[];
   }) {
-    const directAccount = await getAccountByAgentId(input.targetKey);
+    const directAccount = await getAccountByAgentId(input.targetKey) ?? await getAccountBySlug(input.targetKey);
     const conversation = directAccount
       ? await ensureDirectConversation(input.accountId, directAccount.id)
       : await getRequiredConversationForAccount(input.accountId, input.targetKey);

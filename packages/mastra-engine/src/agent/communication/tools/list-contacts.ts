@@ -15,7 +15,7 @@ export function createListContactsTool(communication: CommunicationModule) {
   return createTool({
     id: 'list_contacts',
     description:
-      "List your contacts. This includes your saved contacts and other accounts available through communication providers such as internal-chat. Use this to discover the contact slug you can use later.",
+      "List your contacts. Each contact includes the targetKey you should use with send_message, plus a slug in metadata when the provider also exposes a human-friendly identifier.",
     inputSchema: listContactsInputSchema,
     execute: async (input) => {
       try {

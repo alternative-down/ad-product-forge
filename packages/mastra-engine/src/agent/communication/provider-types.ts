@@ -38,9 +38,11 @@ export type CommunicationProviderMessage = {
 };
 
 export type CommunicationProviderContact = {
+  targetKey?: string;
   slug: string;
   displayName: string;
   description?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type CommunicationProviderConversation = {
