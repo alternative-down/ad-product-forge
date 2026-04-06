@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 import type { Database } from '../database/index';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
-import { agentProviders, type NewAgentProvider } from '../database/schema';
+import { agentProviders, agents, type NewAgentProvider } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import type { createForgeHttpServer, HttpResponse } from '../http/server';
 import { createAgentNotificationStore } from '../notifications/store';
@@ -124,11 +124,22 @@ export function createGitHubAppManager(config: {
   async function getAgentProvisioning(agentId: string) {
     const credentials = await getCredentials(agentId);
 
-    if (!credentials) {
+    if (credentials) {
+      return buildProvisioning(agentId, credentials);
+    }
+
+    const agent = await config.db.query.agents.findFirst({
+      where: eq(agents.id, agentId),
+    });
+
+    if (!agent) {
       return null;
     }
 
-    return buildProvisioning(agentId, credentials);
+    return createAgentApp({
+      agentId,
+      agentName: agent.name,
+    });
   }
 
   async function loadAllAgents() {
