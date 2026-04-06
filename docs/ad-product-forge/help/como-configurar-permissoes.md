@@ -111,8 +111,7 @@ O sistema possui mais de 60 ferramentas organizadas em categorias:
 
 **Comunicação**
 - `send_message` - Enviar mensagem
-- `create_chat_group` - Criar grupo
-- `add_member_to_group` - Adicionar membro
+- `change_chat_group` - Criar ou atualizar grupo
 
 **Financeiro**
 - `get_company_financial_summary` - Ver resumo financeiro

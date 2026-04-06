@@ -13,27 +13,31 @@ function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolI
 
 export function createInternalChatTools(
   agentId: string,
-  agentName: string,
+  _agentName: string,
   internalChat: InternalChatService,
   allowedToolIds?: Set<string> | null,
 ) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
 
-  if (hasToolPermission(allowedToolIds, 'create_chat_group')) {
-    tools.create_chat_group = createTool({
-      id: 'create_chat_group',
-      description: 'Create a new internal-chat group. Use this when you want to start a group conversation. Returns the groupId that you can use later with provider "internal-chat" and targetKey equal to that groupId.',
+  if (hasToolPermission(allowedToolIds, 'change_chat_group')) {
+    tools.change_chat_group = createTool({
+      id: 'change_chat_group',
+      description: 'Create or update one internal-chat group. Use this to create a new group, rename a group, or replace its members and roles in one request.',
       inputSchema: z.object({
-        groupId: z.string().min(1).describe('A unique ID for the new group. Choose something short and clear because you will use this groupId later to send messages to the group.'),
-        name: z.string().min(1).describe('The display name of the group conversation.'),
+        groupId: z.string().min(1).nullish().describe('Provide the group id to update one existing group. Leave empty to create a new group.'),
+        name: z.string().min(1).nullish().describe('Optional group display name. Required when creating a group.'),
+        members: z.array(z.object({
+          participantSlug: z.string().min(1).describe('Participant slug to include in the group state.'),
+          role: z.enum(['admin', 'normal']).default('normal').describe('Desired participant role in the final group state.'),
+        })).nullish().describe('Optional full member state for the group. When provided, it replaces the current non-creator member set.'),
       }),
       execute: async (input) => {
         try {
-          const result = await internalChat.createChatGroup({
+          const result = await internalChat.changeChatGroup({
             agentId,
-            conversationKey: input.groupId,
-            name: input.name,
-            creatorName: agentName,
+            groupId: input.groupId ?? undefined,
+            name: input.name ?? undefined,
+            members: input.members ?? undefined,
           });
 
           return {
@@ -45,123 +49,7 @@ export function createInternalChatTools(
           return {
             valid: false,
             error: message,
-            hint: 'Use a unique groupId and a clear name for the internal-chat group.',
-          };
-        }
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'add_member_to_group')) {
-    tools.add_member_to_group = createTool({
-      id: 'add_member_to_group',
-      description: 'Add one participant to an internal-chat group. Use the participant slug returned by list_contacts. Returns the updated group information.',
-      inputSchema: z.object({
-        groupId: z.string().min(1).describe('The groupId of the internal-chat group that should receive the new participant.'),
-        participantSlug: z.string().min(1).describe('The participant slug returned by list_contacts.'),
-        role: z.enum(['admin', 'normal']).default('normal').describe('The role for the new participant inside the group.'),
-      }),
-      execute: async (input) => {
-        try {
-          const result = await internalChat.addMemberToGroup({
-            agentId,
-            groupId: input.groupId,
-            participantSlug: input.participantSlug,
-            role: input.role,
-          });
-
-          return {
-            valid: true,
-            ...result,
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            valid: false,
-            error: message,
-            hint: 'Use list_chat_groups to confirm the groupId, then use the participant slug returned by list_contacts.',
-          };
-        }
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'remove_member_from_group')) {
-    tools.remove_member_from_group = createTool({
-      id: 'remove_member_from_group',
-      description: 'Remove one participant from an internal-chat group. Use the participant slug already present in the group. Returns the updated group information.',
-      inputSchema: z.object({
-        groupId: z.string().min(1).describe('The groupId of the internal-chat group.'),
-        participantSlug: z.string().min(1).describe('The participant slug to remove from the group.'),
-      }),
-      execute: async (input) => {
-        try {
-          const result = await internalChat.removeMemberFromGroup({
-            agentId,
-            groupId: input.groupId,
-            participantSlug: input.participantSlug,
-          });
-
-          return {
-            valid: true,
-            ...result,
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            valid: false,
-            error: message,
-            hint: 'Use list_group_members to confirm the participant slug before removing it.',
-          };
-        }
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'list_chat_groups')) {
-    tools.list_chat_groups = createTool({
-      id: 'list_chat_groups',
-      description: 'List the internal-chat groups you can access. Use this to find existing groups, their names, and the groupId you need to send messages or manage members.',
-      inputSchema: z.object({
-        limit: z.number().int().positive().max(100).default(50).describe('Maximum number of groups to return.'),
-      }),
-      execute: async (input) => {
-        try {
-          return await internalChat.listChatGroups({
-            agentId,
-            limit: input.limit,
-          });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            valid: false,
-            error: message,
-            hint: 'Try again in a moment. If the problem persists, verify the internal-chat service is available.',
-          };
-        }
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'list_group_members')) {
-    tools.list_group_members = createTool({
-      id: 'list_group_members',
-      description: 'List the members of one internal-chat group. Use this before adding or removing members, or when you need the participant slugs already in the group.',
-      inputSchema: z.object({
-        groupId: z.string().min(1).describe('The groupId of the internal-chat group.'),
-      }),
-      execute: async (input) => {
-        try {
-          return await internalChat.listGroupMembers({
-            agentId,
-            groupId: input.groupId,
-          });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            valid: false,
-            error: message,
-            hint: 'Use list_chat_groups to confirm the groupId before listing members.',
+            hint: 'Provide a name to create a new group. For updates, use a group id you can access and pass the full desired member state.',
           };
         }
       },

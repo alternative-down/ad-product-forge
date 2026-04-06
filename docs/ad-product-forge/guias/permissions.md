@@ -53,11 +53,7 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `list_conversations` | Lista conversas | ALL |
 | `get_messages` | Busca mensagens | ALL |
 | `send_message` | Envia mensagem | ALL |
-| `create_chat_group` | Cria grupo | ADMIN |
-| `add_member_to_group` | Adiciona membro | ADMIN |
-| `remove_member_from_group` | Remove membro | ADMIN |
-| `list_chat_groups` | Lista grupos | ALL |
-| `list_group_members` | Lista membros | ALL |
+| `change_chat_group` | Cria ou atualiza grupo | ADMIN |
 
 ### Ferramentas Financeiras
 
