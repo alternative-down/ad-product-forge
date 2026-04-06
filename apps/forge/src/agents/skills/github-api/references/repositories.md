@@ -17,8 +17,6 @@ Load the shared headers from `github-rest-api.md`.
 
 ## List repositories available to the installation
 
-Equivalent to `list_github_repositories`.
-
 ```sh
 curl -sS \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -29,8 +27,6 @@ curl -sS \
 
 ## Get one repository
 
-Equivalent to `get_github_repository`.
-
 ```sh
 curl -sS \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -40,8 +36,6 @@ curl -sS \
 ```
 
 ## Create repository
-
-Equivalent to `create_github_repository`.
 
 The Forge manager creates repos under the configured organization with:
 
@@ -69,8 +63,6 @@ curl -sS \
 
 ## Update repository
 
-Equivalent to `update_github_repository`.
-
 ```sh
 curl -sS \
   -X PATCH \
@@ -87,8 +79,6 @@ curl -sS \
 ```
 
 ## Delete repository
-
-Equivalent to `delete_github_repository`.
 
 ```sh
 curl -sS \

@@ -16,8 +16,6 @@ API="https://api.github.com"
 
 ## List labels
 
-Equivalent to `list_github_labels`.
-
 ```sh
 curl -sS \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -27,8 +25,6 @@ curl -sS \
 ```
 
 ## Create label
-
-Equivalent to `create_github_label`.
 
 ```sh
 curl -sS \
@@ -46,8 +42,6 @@ curl -sS \
 
 ## Update label
 
-Equivalent to `update_github_label`.
-
 ```sh
 curl -sS \
   -X PATCH \
@@ -64,8 +58,6 @@ curl -sS \
 
 ## Delete label
 
-Equivalent to `delete_github_label`.
-
 ```sh
 curl -sS \
   -X DELETE \
@@ -76,8 +68,6 @@ curl -sS \
 ```
 
 ## Add labels to an issue
-
-This matches the internal Forge helper used for issue label assignment.
 
 ```sh
 curl -sS \
@@ -104,8 +94,6 @@ curl -sS \
 
 ## List milestones
 
-Equivalent to `list_github_milestones`.
-
 ```sh
 curl -sS \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -115,8 +103,6 @@ curl -sS \
 ```
 
 ## Create milestone
-
-Equivalent to `create_github_milestone`.
 
 ```sh
 curl -sS \
@@ -135,8 +121,6 @@ curl -sS \
 
 ## Update milestone
 
-Equivalent to `update_github_milestone`.
-
 ```sh
 curl -sS \
   -X PATCH \
@@ -153,8 +137,6 @@ curl -sS \
 ```
 
 ## Delete milestone
-
-Equivalent to `delete_github_milestone`.
 
 ```sh
 curl -sS \

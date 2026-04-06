@@ -11,7 +11,6 @@ Use this skill when work requires direct GitHub API access with `curl` or git-ov
 
 - The task needs a raw GitHub REST API request.
 - The task needs `git clone`, `git fetch`, `git pull`, or `git push` over HTTPS.
-- The task needs parity with the current GitHub tool surface, but implemented directly through API calls.
 - The task needs credentials for one specific repository or for all repositories the agent can access.
 
 ## Workflow

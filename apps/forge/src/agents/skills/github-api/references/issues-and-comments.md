@@ -15,8 +15,6 @@ API="https://api.github.com"
 
 ## List issues
 
-Equivalent to `list_github_issues`.
-
 The Forge behavior filters out pull requests from this result.
 
 ```sh
@@ -37,8 +35,6 @@ Optional filters that match the Forge surface:
 
 ## Get issue
 
-Equivalent to `get_github_issue`.
-
 ```sh
 curl -sS \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -48,8 +44,6 @@ curl -sS \
 ```
 
 ## Create issue
-
-Equivalent to `create_github_issue`.
 
 ```sh
 curl -sS \
@@ -69,8 +63,6 @@ curl -sS \
 
 ## Update issue
 
-Equivalent to `update_github_issue`.
-
 ```sh
 curl -sS \
   -X PATCH \
@@ -89,8 +81,6 @@ curl -sS \
 ```
 
 ## Close or reopen issue
-
-Equivalent to `toggle_github_issue`.
 
 Close:
 
@@ -118,13 +108,11 @@ curl -sS \
 
 ## Delete issue
 
-There is no GitHub REST issue deletion used by Forge here. The current product surface has a `delete_github_issue` tool id, but the practical REST-safe pattern is closing the issue, not hard-deleting it.
+There is no practical issue hard-delete path here. The safe operational behavior is closing the issue, not deleting it.
 
 Use the close flow above unless product behavior is intentionally changed.
 
 ## List issue comments
-
-Equivalent to `list_github_issue_comments`.
 
 ```sh
 curl -sS \
@@ -136,8 +124,6 @@ curl -sS \
 
 ## Get issue comment
 
-Equivalent to `get_github_issue_comment`.
-
 ```sh
 curl -sS \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -147,8 +133,6 @@ curl -sS \
 ```
 
 ## Create issue comment
-
-Equivalent to `create_github_issue_comment`.
 
 ```sh
 curl -sS \
@@ -162,8 +146,6 @@ curl -sS \
 
 ## Update issue comment
 
-Equivalent to `update_github_issue_comment`.
-
 ```sh
 curl -sS \
   -X PATCH \
@@ -175,8 +157,6 @@ curl -sS \
 ```
 
 ## Delete issue comment
-
-Equivalent to `delete_github_issue_comment`.
 
 ```sh
 curl -sS \

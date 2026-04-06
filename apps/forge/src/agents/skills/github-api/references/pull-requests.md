@@ -14,8 +14,6 @@ API="https://api.github.com"
 
 ## List pull requests
 
-Equivalent to `list_github_pull_requests`.
-
 ```sh
 curl -sS \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -32,8 +30,6 @@ Allowed states:
 
 ## Get one pull request
 
-Equivalent to `get_github_pull_request`.
-
 ```sh
 curl -sS \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -43,8 +39,6 @@ curl -sS \
 ```
 
 ## Create pull request
-
-Equivalent to `create_github_pull_request`.
 
 ```sh
 curl -sS \
@@ -62,8 +56,6 @@ curl -sS \
 ```
 
 ## Update pull request
-
-Equivalent to `update_github_pull_request`.
 
 ```sh
 curl -sS \
@@ -87,8 +79,6 @@ Allowed states:
 
 ## Merge pull request
 
-Equivalent to `merge_github_pull_request`.
-
 ```sh
 curl -sS \
   -X PUT \
@@ -111,9 +101,7 @@ Allowed merge methods:
 
 ## Close pull request without merging
 
-Equivalent to `delete_github_pull_request`.
-
-There is no real pull request delete in Forge. The tool behavior is to close the PR by updating its state to `closed`.
+There is no real pull request delete here. To discard a pull request without merging, close it by updating its state to `closed`.
 
 ```sh
 curl -sS \
@@ -126,8 +114,6 @@ curl -sS \
 ```
 
 ## List pull request review comments
-
-Equivalent to `list_github_pull_request_comments`.
 
 This uses review comments, not issue comments.
 

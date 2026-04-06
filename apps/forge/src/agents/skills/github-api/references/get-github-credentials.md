@@ -43,11 +43,11 @@ The implementation is in:
 
 ## Decision rule
 
-Prefer built-in GitHub tools first. Use `get_github_git_credentials` only when the task needs:
+Use `get_github_git_credentials` when the task needs:
 
-- a raw GitHub REST endpoint not already covered by tools
+- a raw GitHub REST endpoint
 - direct git commands over HTTPS
-- low-level repository automation outside the current tool set
+- low-level repository automation
 
 ## Safety
 
