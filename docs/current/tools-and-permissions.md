@@ -45,7 +45,6 @@ These ids are the current permission targets stored in role permissions.
 ### Notifications
 
 - `list_agent_notifications`
-- `mark_agent_notification_read`
 
 ### GitHub
 

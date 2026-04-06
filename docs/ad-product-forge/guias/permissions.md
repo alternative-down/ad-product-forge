@@ -152,7 +152,6 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `manage_role_workflow_permissions` | Gerencia workflows | ADMIN |
 | `list_available_capabilities` | Lista capacidades disponíveis | ALL |
 | `list_agent_notifications` | Lista notificações | ALL |
-| `mark_agent_notification_read` | Marca como lida | ALL |
 
 ## Workflows Disponíveis
 
