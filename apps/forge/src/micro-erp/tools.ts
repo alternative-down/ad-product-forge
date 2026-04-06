@@ -4,7 +4,6 @@ import { z } from 'zod';
 import type { Database } from '../database/index';
 import { hasToolPermission } from '../capabilities/catalog';
 import { createMicroErpReadModel } from './read-model';
-import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 
 const listCompanyCashInputSchema = z.object({
@@ -75,37 +74,6 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             valid: false,
             error: message,
             hint: 'Try again in a moment. If the problem persists, verify the contract store is available.',
-          };
-        }
-      },
-    });
-  }
-
-  if (hasToolPermission(allowedToolIds, 'manage_internal_agent_contract')) {
-    tools.manage_internal_agent_contract = createTool({
-      id: 'manage_internal_agent_contract',
-      description: 'Add more budget to one internal agent that already has an active contract. Returns the updated contract information.',
-      inputSchema: z.object({
-        action: z.literal('top-up').describe('Use "top-up" to add more budget to an active contract.'),
-        agentId: z.string().min(1).describe('The agentId of the agent whose active contract should receive more budget.'),
-        amountUsd: z.number().positive().describe('How much budget to add, in USD.'),
-      }),
-      execute: async (input) => {
-        try {
-          const result = await topUpActiveAgentContract(db, {
-            agentId: input.agentId,
-            amountUsd: input.amountUsd,
-          });
-          return {
-            valid: true,
-            ...result,
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            valid: false,
-            error: message,
-            hint: 'Use list_internal_agent_contracts to confirm the agent has an active contract before topping it up.',
           };
         }
       },

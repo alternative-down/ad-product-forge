@@ -62,7 +62,6 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | `list_company_cash` | Lista saldo | FINANCE |
 | `get_company_cash` | Busca saldo | FINANCE |
 | `list_internal_agent_contracts` | Lista contratos | FINANCE |
-| `manage_internal_agent_contract` | Gerencia contrato | FINANCE |
 | `adjust_agent_contract_budget` | Ajusta orçamento | FINANCE |
 
 ### Ferramentas GitHub
@@ -175,7 +174,6 @@ const legacyToolPermissionAliases = {
   
   // Contracts
   list_internal_agent_contracts: ['list_active_internal_agent_contracts', 'get_active_internal_agent_contract'],
-  manage_internal_agent_contract: ['top_up_internal_agent_contract'],
   adjust_agent_contract_budget: ['adjust_internal_agent_contract_budget'],
   
   // Notifications
