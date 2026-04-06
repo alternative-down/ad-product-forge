@@ -24,7 +24,6 @@ export function RoleDialog(input: {
   pending: boolean;
   form: RoleForm;
   lockedToolIds: string[];
-  workflowIds: string[];
   toolSections: Array<{ title: string; toolIds: string[] }>;
   errorMessage?: string;
   onOpenChange(open: boolean): void;
@@ -73,7 +72,7 @@ export function RoleDialog(input: {
               </div>
 
               <div className="space-y-3">
-                <div className="text-sm font-medium">Ferramentas</div>
+                <div className="text-sm font-medium">Capacidades</div>
 
                 <Accordion className="space-y-3">
                   {input.toolSections.map((section) => (
@@ -87,7 +86,7 @@ export function RoleDialog(input: {
                       <AccordionContent className="pb-0">
                         <div className="border-t border-border">
                           {section.toolIds.map((toolId) => {
-                            const enabled = input.form.toolIds.includes(toolId);
+                            const enabled = input.form.capabilityIds.includes(toolId);
                             const locked = input.lockedToolIds.includes(toolId);
 
                             return (
@@ -105,7 +104,7 @@ export function RoleDialog(input: {
                                   onCheckedChange={(checked) =>
                                     input.onFormChange({
                                       ...input.form,
-                                      toolIds: toggleRoleToolIds(input.form.toolIds, toolId, checked),
+                                      capabilityIds: toggleRoleToolIds(input.form.capabilityIds, toolId, checked),
                                     })
                                   }
                                 />
@@ -117,41 +116,6 @@ export function RoleDialog(input: {
                     </AccordionItem>
                   ))}
                 </Accordion>
-              </div>
-
-              <div className="space-y-3">
-                <div className="text-sm font-medium">Workflows</div>
-
-                <div className="overflow-hidden rounded-sm border border-border">
-                  {input.workflowIds.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-muted-foreground">Nenhum workflow disponível.</div>
-                  ) : (
-                    input.workflowIds.map((workflowId) => {
-                      const enabled = input.form.workflowIds.includes(workflowId);
-
-                      return (
-                        <label
-                          key={workflowId}
-                          className="flex items-center justify-between gap-4 px-4 py-3 not-last:border-b not-last:border-border"
-                        >
-                          <span className="min-w-0 font-mono text-[13px] break-all">{workflowId}</span>
-                          <Switch
-                            checked={enabled}
-                            disabled={input.pending}
-                            onCheckedChange={(checked) =>
-                              input.onFormChange({
-                                ...input.form,
-                                workflowIds: checked
-                                  ? [...input.form.workflowIds, workflowId]
-                                  : input.form.workflowIds.filter((currentWorkflowId) => currentWorkflowId !== workflowId),
-                              })
-                            }
-                          />
-                        </label>
-                      );
-                    })
-                  )}
-                </div>
               </div>
 
               {input.errorMessage ? <div className="text-sm text-destructive">{input.errorMessage}</div> : null}

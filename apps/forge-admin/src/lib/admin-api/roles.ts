@@ -53,21 +53,21 @@ export function removeRoleToolPermission(input: {
   });
 }
 
-export function addRoleWorkflowPermission(input: {
+export function addRoleCapability(input: {
   roleId: string;
-  workflowId: string;
+  capabilityId: string;
 }) {
-  return request<{ success?: boolean }>('/admin/role-workflow-permission/add', {
+  return request<{ success?: boolean }>('/admin/role-capability/add', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
-export function removeRoleWorkflowPermission(input: {
+export function removeRoleCapability(input: {
   roleId: string;
-  workflowId: string;
+  capabilityId: string;
 }) {
-  return request<{ success?: boolean }>('/admin/role-workflow-permission/remove', {
+  return request<{ success?: boolean }>('/admin/role-capability/remove', {
     method: 'POST',
     body: JSON.stringify(input),
   });

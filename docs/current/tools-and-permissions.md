@@ -115,16 +115,11 @@ These ids are the current permission targets stored in role permissions.
 - `update_agent_function`
 - `delete_agent_function`
 - `list_agent_roles`
-- `create_agent_role`
-- `update_agent_role`
-- `delete_agent_role`
+- `manage_agent_role`
 - `assign_role_to_function`
 - `change_agent_function`
-- `change_own_function`
-- `list_role_tool_permissions`
-- `manage_role_tool_permissions`
-- `list_role_workflow_permissions`
-- `manage_role_workflow_permissions`
+- `list_role_capabilities`
+- `manage_role_capabilities`
 - `list_available_capabilities`
 
 ### MCP (Model Context Protocol)

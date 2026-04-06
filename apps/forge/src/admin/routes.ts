@@ -99,6 +99,11 @@ const roleWorkflowPermissionSchema = z.object({
   workflowId: z.string().min(1),
 });
 
+const roleCapabilitySchema = z.object({
+  roleId: z.string().min(1),
+  capabilityId: z.string().min(1),
+});
+
 const createRoleSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -1485,6 +1490,46 @@ export function registerAdminRoutes(input: {
         return jsonResponse(await capabilities.deleteRole(body.roleId));
       } catch (error) {
         console.error('[Admin] Failed to delete role:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/role-capability/add',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
+        const result = await capabilities.manageRoleCapability({
+          action: 'add',
+          roleId: body.roleId,
+          capabilityId: body.capabilityId,
+        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to add role capability:', error);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/role-capability/remove',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
+        const result = await capabilities.manageRoleCapability({
+          action: 'remove',
+          roleId: body.roleId,
+          capabilityId: body.capabilityId,
+        });
+        await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[Admin] Failed to remove role capability:', error);
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },

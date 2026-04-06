@@ -53,14 +53,10 @@ class HireAgentDisablerProcessor implements Processor {
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
   'list_agent_roles',
-  'create_agent_role',
-  'update_agent_role',
-  'delete_agent_role',
+  'manage_agent_role',
   'change_agent_role',
-  'list_role_tool_permissions',
-  'manage_role_tool_permissions',
-  'list_role_workflow_permissions',
-  'manage_role_workflow_permissions',
+  'list_role_capabilities',
+  'manage_role_capabilities',
   'list_available_capabilities',
 ] as const);
 const REQUIRED_HIRING_TOOL_IDS = AGENT_BASE_TOOL_IDS;
@@ -136,7 +132,7 @@ async function validateHireAgentInput(
     return {
       valid: false as const,
       error: 'The new agent must have a roleId.',
-      hint: 'Pick an existing role with list_agent_roles or create one with create_agent_role before calling hireAgent.',
+      hint: 'Pick an existing role with list_agent_roles or create one with manage_agent_role before calling hireAgent.',
     };
   }
 
@@ -157,7 +153,7 @@ async function validateHireAgentInput(
     return {
       valid: false as const,
       error: `Role "${agentRole.name}" is missing the minimum base tools required for a hired agent.`,
-      hint: `Add these tool permissions to the role with manage_role_tool_permissions: ${missingToolIds.join(', ')}.`,
+      hint: `Add these capabilities to the role with manage_role_capabilities: ${missingToolIds.join(', ')}.`,
     };
   }
 
@@ -249,7 +245,7 @@ export async function generateHiredAgentInstructions(
       '',
       '1. **Report Initial State**: Call reportHiringState to describe what you see available.',
       '',
-      '2. **Inspect First**: Use capability management tools to explore existing roles, tool permissions, workflow permissions, and available capabilities.',
+      '2. **Inspect First**: Use capability management tools to explore existing roles, current role capabilities, and available capabilities.',
       '',
       '3. **Role Selection**: Reuse an existing role when it matches the hiring request. Create or update a new role only when no existing role fits.',
       '',
@@ -260,7 +256,7 @@ export async function generateHiredAgentInstructions(
       '   - list_self_crons',
       '   - manage_self_crons',
       '',
-      'Use manage_role_tool_permissions when those requirements are missing.',
+      'Use manage_role_capabilities when those requirements are missing.',
       '',
       '5. **Report Progress**: After each major step, call reportHiringState to describe what you found and what you plan to do next.',
       '',
@@ -483,7 +479,7 @@ function buildHiringPrompt(input: {
     'Inspect the current capability structure with tools before deciding whether to reuse or change roles.',
     'Before calling hireAgent, make sure the chosen role exists and grants the minimum base tools listed below.',
     `Minimum base tools: ${REQUIRED_HIRING_TOOL_IDS.join(', ')}.`,
-    'If the role is missing permissions, fix that first with manage_role_tool_permissions.',
+    'If the role is missing capabilities, fix that first with manage_role_capabilities.',
     'After designing the agent profile, you MUST call the tool "hireAgent" with the structured data to finalize the hiring.',
     'If hireAgent returns valid false, read the hint, fix the capability setup, and call hireAgent again only after the setup is valid.',
     'The hireAgent tool requires an object with: agentName, agentDescription, roleId, instructions.',

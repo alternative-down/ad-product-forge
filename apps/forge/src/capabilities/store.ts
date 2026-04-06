@@ -8,7 +8,7 @@ import {
   roleToolPermissions,
   roleWorkflowPermissions,
 } from '../database/schema';
-import { normalizeToolPermissionIds } from './catalog';
+import { forgeCapabilityIds, isWorkflowCapabilityId, normalizeToolPermissionIds } from './catalog';
 
 type CapabilitySet = {
   toolIds: string[];
@@ -16,15 +16,10 @@ type CapabilitySet = {
 };
 
 const roleInspectionToolIds = [
-  'create_agent_role',
-  'update_agent_role',
-  'delete_agent_role',
+  'manage_agent_role',
   'change_agent_role',
-  'change_own_role',
-  'list_role_tool_permissions',
-  'manage_role_tool_permissions',
-  'list_role_workflow_permissions',
-  'manage_role_workflow_permissions',
+  'list_role_capabilities',
+  'manage_role_capabilities',
 ] as const;
 
 function resolveLoadedToolIds(toolIds: string[]) {
@@ -37,14 +32,9 @@ function resolveLoadedToolIds(toolIds: string[]) {
     resolvedToolIds.add('list_agent_roles');
   }
 
-  if (resolvedToolIds.has('manage_role_tool_permissions')) {
+  if (resolvedToolIds.has('manage_role_capabilities')) {
     resolvedToolIds.add('list_available_capabilities');
-    resolvedToolIds.add('list_role_tool_permissions');
-  }
-
-  if (resolvedToolIds.has('manage_role_workflow_permissions')) {
-    resolvedToolIds.add('list_available_capabilities');
-    resolvedToolIds.add('list_role_workflow_permissions');
+    resolvedToolIds.add('list_role_capabilities');
   }
 
   if (!hasCrossAgentCronTools && !hasCrossAgentRoleTool) {
@@ -54,10 +44,6 @@ function resolveLoadedToolIds(toolIds: string[]) {
   return [...resolvedToolIds]
     .filter((toolId) => {
     if (hasCrossAgentCronTools && (toolId === 'manage_self_crons' || toolId === 'list_self_crons')) {
-      return false;
-    }
-
-    if (hasCrossAgentRoleTool && toolId === 'change_own_role') {
       return false;
     }
 
@@ -239,6 +225,71 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
+  async function listRoleCapabilities(roleId: string) {
+    const [toolIds, workflowIds] = await Promise.all([
+      listRoleToolPermissions(roleId),
+      listRoleWorkflowPermissions(roleId),
+    ]);
+
+    return [...new Set([...toolIds, ...workflowIds])].sort((left, right) => left.localeCompare(right));
+  }
+
+  async function listAvailableCapabilities() {
+    return [...forgeCapabilityIds].sort((left, right) => left.localeCompare(right));
+  }
+
+  async function manageRole(input: {
+    action: 'create' | 'update' | 'delete';
+    roleId?: string;
+    name?: string;
+    description?: string | null;
+  }) {
+    if (input.action === 'create') {
+      if (!input.name?.trim()) {
+        throw new Error('Role name is required.');
+      }
+
+      return createRole({
+        name: input.name.trim(),
+        description: input.description?.trim() || undefined,
+      });
+    }
+
+    if (!input.roleId) {
+      throw new Error('roleId is required.');
+    }
+
+    if (input.action === 'delete') {
+      return deleteRole(input.roleId);
+    }
+
+    if (!input.name?.trim() && input.description === undefined) {
+      throw new Error('At least one field besides roleId must be provided.');
+    }
+
+    return updateRole({
+      roleId: input.roleId,
+      name: input.name?.trim(),
+      description: input.description === undefined ? undefined : (input.description?.trim() || null),
+    });
+  }
+
+  async function manageRoleCapability(input: {
+    action: 'add' | 'remove';
+    roleId: string;
+    capabilityId: string;
+  }) {
+    if (isWorkflowCapabilityId(input.capabilityId)) {
+      return input.action === 'add'
+        ? addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
+        : removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId });
+    }
+
+    return input.action === 'add'
+      ? addRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId })
+      : removeRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
+  }
+
   async function getAgentCapabilities(agentId: string): Promise<CapabilitySet> {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
@@ -270,6 +321,10 @@ export function createCapabilityStore(db: Database) {
     listRoleWorkflowPermissions,
     addRoleWorkflowPermission,
     removeRoleWorkflowPermission,
+    listRoleCapabilities,
+    listAvailableCapabilities,
+    manageRole,
+    manageRoleCapability,
     getAgentCapabilities,
   };
 }

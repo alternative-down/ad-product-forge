@@ -9,13 +9,11 @@ import {
 } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  addRoleWorkflowPermission,
-  addRoleToolPermission,
+  addRoleCapability,
   createRole,
   deleteRole,
   getRoles,
-  removeRoleWorkflowPermission,
-  removeRoleToolPermission,
+  removeRoleCapability,
   updateRole,
 } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
@@ -44,12 +42,8 @@ export function RolesPage() {
     [rolesQuery.data?.items],
   );
   const toolSections = useMemo(
-    () => groupToolIds(rolesQuery.data?.availableToolIds ?? []),
-    [rolesQuery.data?.availableToolIds],
-  );
-  const workflowIds = useMemo(
-    () => [...(rolesQuery.data?.availableWorkflowIds ?? [])].sort((left, right) => left.localeCompare(right)),
-    [rolesQuery.data?.availableWorkflowIds],
+    () => groupToolIds(rolesQuery.data?.availableCapabilityIds ?? []),
+    [rolesQuery.data?.availableCapabilityIds],
   );
 
   const roleMutation = useMutation({
@@ -66,43 +60,23 @@ export function RolesPage() {
           });
 
       const currentToolIds = input.roleId
-        ? (roles.find((role) => role.roleId === input.roleId)?.toolIds ?? [])
+        ? (roles.find((role) => role.roleId === input.roleId)?.capabilityIds ?? [])
         : [];
-      const nextToolIds = normalizeRoleFormToolIds(mergeBaseRoleToolIds(input.toolIds));
+      const nextToolIds = normalizeRoleFormToolIds(mergeBaseRoleToolIds(input.capabilityIds));
       const toolIdsToAdd = nextToolIds.filter((toolId) => !currentToolIds.includes(toolId));
       const toolIdsToRemove = currentToolIds.filter((toolId) => !nextToolIds.includes(toolId));
-      const currentWorkflowIds = input.roleId
-        ? (roles.find((role) => role.roleId === input.roleId)?.workflowIds ?? [])
-        : [];
-      const nextWorkflowIds = [...new Set(input.workflowIds)].sort((left, right) => left.localeCompare(right));
-      const workflowIdsToAdd = nextWorkflowIds.filter((workflowId) => !currentWorkflowIds.includes(workflowId));
-      const workflowIdsToRemove = currentWorkflowIds.filter((workflowId) => !nextWorkflowIds.includes(workflowId));
 
       for (const toolId of toolIdsToAdd) {
-        await addRoleToolPermission({
+        await addRoleCapability({
           roleId: savedRole.roleId,
-          toolId,
+          capabilityId: toolId,
         });
       }
 
       for (const toolId of toolIdsToRemove) {
-        await removeRoleToolPermission({
+        await removeRoleCapability({
           roleId: savedRole.roleId,
-          toolId,
-        });
-      }
-
-      for (const workflowId of workflowIdsToAdd) {
-        await addRoleWorkflowPermission({
-          roleId: savedRole.roleId,
-          workflowId,
-        });
-      }
-
-      for (const workflowId of workflowIdsToRemove) {
-        await removeRoleWorkflowPermission({
-          roleId: savedRole.roleId,
-          workflowId,
+          capabilityId: toolId,
         });
       }
 
@@ -136,7 +110,7 @@ export function RolesPage() {
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
         title="Papéis & Ferramentas"
-        description="Defina os papéis do sistema e quais ferramentas cada um pode usar."
+        description="Defina os papéis do sistema e quais capacidades cada um pode usar."
       />
 
       <section className="space-y-5">
@@ -215,8 +189,7 @@ export function RolesPage() {
         open={dialogOpen}
         pending={roleMutation.isPending}
         form={roleForm}
-        lockedToolIds={getLockedRoleToolIds(roleForm.toolIds)}
-        workflowIds={workflowIds}
+        lockedToolIds={getLockedRoleToolIds(roleForm.capabilityIds)}
         toolSections={toolSections}
         errorMessage={roleMutation.error?.message}
         onOpenChange={setDialogOpen}

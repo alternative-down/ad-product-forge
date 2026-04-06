@@ -21,7 +21,7 @@ import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createCapabilityStore } from '../capabilities/store';
-import { forgeCustomToolIds, forgeWorkflowIds } from '../capabilities/catalog';
+import { forgeCapabilityIds } from '../capabilities/catalog';
 import { decryptSecret } from '../encryption/crypto';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createSystemIntegrationStore } from '../system-integrations/store';
@@ -449,39 +449,28 @@ export function createAdminReadModel(input: {
         .from(agents)
         .groupBy(agents.roleId),
     ]);
-    const [toolPermissions, workflowPermissions] = await Promise.all([
-      Promise.all(
-        roles.map(async (role) => ({
-          roleId: role.roleId,
-          toolIds: await capabilities.listRoleToolPermissions(role.roleId),
-        })),
-      ),
-      Promise.all(
-        roles.map(async (role) => ({
-          roleId: role.roleId,
-          workflowIds: await capabilities.listRoleWorkflowPermissions(role.roleId),
-        })),
-      ),
-    ]);
+    const capabilityPermissions = await Promise.all(
+      roles.map(async (role) => ({
+        roleId: role.roleId,
+        capabilityIds: await capabilities.listRoleCapabilities(role.roleId),
+      })),
+    );
     const assignedAgentCountByRoleId = new Map(
       agentCounts
         .filter((row) => row.roleId)
         .map((row) => [row.roleId as string, row.count]),
     );
 
-    const toolMap = new Map(toolPermissions.map((row) => [row.roleId, row.toolIds]));
-    const workflowMap = new Map(workflowPermissions.map((row) => [row.roleId, row.workflowIds]));
+    const capabilityMap = new Map(capabilityPermissions.map((row) => [row.roleId, row.capabilityIds]));
 
     return {
-      availableToolIds: forgeCustomToolIds,
-      availableWorkflowIds: forgeWorkflowIds,
+      availableCapabilityIds: forgeCapabilityIds,
       items: roles.map((role) => ({
         roleId: role.roleId,
         name: role.name,
         description: role.description,
         assignedAgentCount: assignedAgentCountByRoleId.get(role.roleId) ?? 0,
-        toolIds: toolMap.get(role.roleId) ?? [],
-        workflowIds: workflowMap.get(role.roleId) ?? [],
+        capabilityIds: capabilityMap.get(role.roleId) ?? [],
         createdAt: role.createdAt,
         updatedAt: role.updatedAt,
       })),

@@ -64,15 +64,10 @@ export const forgeCustomToolIds = [
   'list_crons',
   'manage_crons',
   'list_agent_roles',
-  'create_agent_role',
-  'update_agent_role',
-  'delete_agent_role',
+  'manage_agent_role',
   'change_agent_role',
-  'change_own_role',
-  'list_role_tool_permissions',
-  'manage_role_tool_permissions',
-  'list_role_workflow_permissions',
-  'manage_role_workflow_permissions',
+  'list_role_capabilities',
+  'manage_role_capabilities',
   'list_available_capabilities',
   'list_minimax_voices',
   'minimax_tts',
@@ -86,6 +81,8 @@ export const forgeWorkflowIds = [
 
 export type ForgeCustomToolId = typeof forgeCustomToolIds[number];
 export type ForgeWorkflowId = typeof forgeWorkflowIds[number];
+export const forgeCapabilityIds = [...forgeCustomToolIds, ...forgeWorkflowIds] as const;
+export type ForgeCapabilityId = typeof forgeCapabilityIds[number];
 
 export function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolId: ForgeCustomToolId) {
   if (!allowedToolIds) {
@@ -97,6 +94,14 @@ export function hasToolPermission(allowedToolIds: Set<string> | null | undefined
   }
 
   return false;
+}
+
+export function isWorkflowCapabilityId(capabilityId: string): capabilityId is ForgeWorkflowId {
+  return forgeWorkflowIds.some((workflowId) => workflowId === capabilityId);
+}
+
+export function isToolCapabilityId(capabilityId: string): capabilityId is ForgeCustomToolId {
+  return forgeCustomToolIds.some((toolId) => toolId === capabilityId);
 }
 
 export function normalizeToolPermissionIds(toolIds: readonly string[]) {

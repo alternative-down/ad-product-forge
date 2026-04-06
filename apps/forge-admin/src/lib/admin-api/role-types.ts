@@ -3,14 +3,12 @@ export type RoleItem = {
   name: string;
   description?: string | null;
   assignedAgentCount: number;
-  toolIds: string[];
-  workflowIds: string[];
+  capabilityIds: string[];
   createdAt: number;
   updatedAt: number;
 };
 
 export type RolesResponse = {
-  availableToolIds: string[];
-  availableWorkflowIds: string[];
+  availableCapabilityIds: string[];
   items: RoleItem[];
 };

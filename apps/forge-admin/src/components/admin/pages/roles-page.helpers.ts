@@ -12,31 +12,24 @@ export const BASE_ROLE_TOOL_IDS = [
 ] as const;
 
 const ROLE_INSPECTION_TOOL_IDS = [
-  'create_agent_role',
-  'update_agent_role',
-  'delete_agent_role',
+  'manage_agent_role',
   'change_agent_role',
-  'change_own_role',
-  'list_role_tool_permissions',
-  'manage_role_tool_permissions',
-  'list_role_workflow_permissions',
-  'manage_role_workflow_permissions',
+  'list_role_capabilities',
+  'manage_role_capabilities',
 ] as const;
 
 export type RoleForm = {
   roleId?: string;
   name: string;
   description: string;
-  toolIds: string[];
-  workflowIds: string[];
+  capabilityIds: string[];
 };
 
 export function createEmptyRoleForm(): RoleForm {
   return {
     name: '',
     description: '',
-    toolIds: normalizeRoleFormToolIds([...BASE_ROLE_TOOL_IDS]),
-    workflowIds: [],
+    capabilityIds: normalizeRoleFormToolIds([...BASE_ROLE_TOOL_IDS]),
   };
 }
 
@@ -45,8 +38,7 @@ export function createRoleForm(role: RoleItem): RoleForm {
     roleId: role.roleId,
     name: role.name,
     description: role.description ?? '',
-    toolIds: normalizeRoleFormToolIds(mergeBaseRoleToolIds(role.toolIds)),
-    workflowIds: role.workflowIds,
+    capabilityIds: normalizeRoleFormToolIds(mergeBaseRoleToolIds(role.capabilityIds)),
   };
 }
 
@@ -62,14 +54,9 @@ export function getCapabilityRequiredToolIds(toolIds: string[]) {
     requiredToolIds.add('list_agent_roles');
   }
 
-  if (toolIds.includes('manage_role_tool_permissions')) {
+  if (toolIds.includes('manage_role_capabilities')) {
     requiredToolIds.add('list_available_capabilities');
-    requiredToolIds.add('list_role_tool_permissions');
-  }
-
-  if (toolIds.includes('manage_role_workflow_permissions')) {
-    requiredToolIds.add('list_available_capabilities');
-    requiredToolIds.add('list_role_workflow_permissions');
+    requiredToolIds.add('list_role_capabilities');
   }
 
   return [...requiredToolIds].sort((left, right) => left.localeCompare(right));
@@ -84,11 +71,7 @@ export function getLockedRoleToolIds(toolIds: string[]) {
 export function normalizeRoleFormToolIds(toolIds: string[]) {
   const nextToolIds = [...new Set([...toolIds, ...getLockedRoleToolIds(toolIds)])].sort((left, right) => left.localeCompare(right));
 
-  if (!nextToolIds.includes('change_agent_role')) {
-    return nextToolIds;
-  }
-
-  return nextToolIds.filter((toolId) => toolId !== 'change_own_role');
+  return nextToolIds;
 }
 
 export function groupToolIds(toolIds: string[]) {
