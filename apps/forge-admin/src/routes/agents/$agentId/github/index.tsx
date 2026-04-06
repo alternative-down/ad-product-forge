@@ -21,7 +21,7 @@ function AgentGithubIndexRoute() {
   return (
     <div className="min-w-0 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
-        title="Github"
+        title="Github App"
         actions={
           <>
             {registrationUrl ? (
@@ -50,7 +50,7 @@ function AgentGithubIndexRoute() {
         }
       />
 
-      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando Github..." /> : null}
+      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando Github App..." /> : null}
 
       <section className="space-y-4">
         <ReadOnlyItem label="Status" value={provisioning ? humanizeGithubStatus(provisioning.status) : '—'} />
