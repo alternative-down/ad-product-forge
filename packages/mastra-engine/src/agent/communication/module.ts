@@ -196,18 +196,33 @@ export async function createCommunicationModule(config: {
   }
 
   function toAgentContactView(contact: Awaited<ReturnType<typeof store.listContacts>>[number]) {
+    const primaryAccount = contact.accounts[0];
+    const targetKey = primaryAccount?.externalUserId ?? primaryAccount?.username ?? contact.slug;
+
     return {
+      targetKey,
       slug: contact.slug,
       displayName: contact.displayName,
       description: contact.description,
+      metadata: {
+        slug: contact.slug,
+      },
     };
   }
 
   function toAgentSelfContactView(account: Awaited<ReturnType<typeof store.listSelfAccounts>>[number]) {
+    const slug = typeof account.metadata?.slug === 'string'
+      ? account.metadata.slug
+      : account.externalAccountId;
+
     return {
-      slug: account.externalAccountId,
+      targetKey: account.externalAccountId,
+      slug,
       displayName: account.displayName ?? account.externalAccountId,
       description: account.description,
+      metadata: {
+        slug,
+      },
     };
   }
 
@@ -219,9 +234,12 @@ export async function createCommunicationModule(config: {
         if (selfContact) {
           await store.upsertSelfAccount({
             provider: provider.id,
-            externalAccountId: selfContact.slug,
+            externalAccountId: selfContact.targetKey ?? selfContact.slug,
             displayName: selfContact.displayName,
-            metadata: selfContact.description ? { description: selfContact.description } : undefined,
+            metadata: {
+              ...(selfContact.description ? { description: selfContact.description } : {}),
+              slug: selfContact.slug,
+            },
           });
         }
       }
@@ -238,6 +256,7 @@ export async function createCommunicationModule(config: {
           displayName: contact.displayName,
           description: contact.description,
           provider: provider.id,
+          externalUserId: contact.targetKey ?? contact.slug,
           username: contact.slug,
         });
       }

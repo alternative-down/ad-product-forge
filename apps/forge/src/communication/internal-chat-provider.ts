@@ -19,18 +19,26 @@ export function createInternalChatProvider(input: {
       }
 
       return {
+        targetKey: account.agentId ?? account.slug,
         slug: account.slug,
         displayName: account.displayName,
         description: account.description ?? undefined,
+        metadata: {
+          slug: account.slug,
+        },
       };
     },
     async listContacts() {
       const accounts = await input.internalChat.listAccounts({ excludeAgentId: input.agentId });
 
       return accounts.map((account) => ({
+        targetKey: account.agentId ?? account.slug,
         slug: account.slug,
         displayName: account.displayName,
         description: account.description ?? undefined,
+        metadata: {
+          slug: account.slug,
+        },
       }));
     },
     async listConversations({ limit, unread }) {

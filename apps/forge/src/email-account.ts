@@ -397,12 +397,13 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     },
     async getSelfContact() {
       return {
+        targetKey: config.imap.user.toLowerCase(),
         slug: config.imap.user.toLowerCase(),
         displayName: config.imap.user,
       };
     },
     async listContacts() {
-      const contacts = new Map<string, { slug: string; displayName: string }>();
+      const contacts = new Map<string, { targetKey: string; slug: string; displayName: string }>();
       const inboxEmails = await listRecentInboxEmails(RECENT_EMAIL_SCAN_LIMIT);
 
       for (const email of inboxEmails) {

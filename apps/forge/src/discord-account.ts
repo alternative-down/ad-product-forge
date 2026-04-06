@@ -507,6 +507,7 @@ export function createDiscordProvider(config: {
       const currentUser = await getReadyClient();
 
       return {
+        targetKey: currentUser.username,
         slug: currentUser.username,
         displayName: currentUser.globalName ?? currentUser.username,
         description: `@${currentUser.username}`,

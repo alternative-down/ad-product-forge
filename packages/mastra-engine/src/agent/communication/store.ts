@@ -221,6 +221,7 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
       provider: account.provider,
       externalAccountId: account.externalAccountId,
       displayName: account.displayName ?? undefined,
+      metadata: account.metadataJson ? JSON.parse(account.metadataJson) : undefined,
       description:
         account.metadataJson && typeof JSON.parse(account.metadataJson)?.description === 'string'
           ? JSON.parse(account.metadataJson).description
@@ -281,6 +282,25 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
           })
           .where(eq(schema.communicationContacts.contactId, existingAccount.contactId));
 
+        await db
+          .insert(schema.communicationContactAccounts)
+          .values({
+            contactId: existingAccount.contactId,
+            provider: input.provider,
+            externalUserId: input.externalUserId ?? null,
+            username: input.username ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [
+              schema.communicationContactAccounts.contactId,
+              schema.communicationContactAccounts.provider,
+            ],
+            set: {
+              externalUserId: input.externalUserId ?? null,
+              username: input.username ?? null,
+            },
+          });
+
         return loadContactById(existingAccount.contactId);
       }
 
@@ -324,6 +344,27 @@ export async function createCommunicationStore(db: LibSQLDatabase<typeof schema>
           description: input.description ?? null,
         })
         .where(eq(schema.communicationContacts.contactId, existingBySlug.contactId));
+
+      if (input.provider && (input.externalUserId || input.username)) {
+        await db
+          .insert(schema.communicationContactAccounts)
+          .values({
+            contactId: existingBySlug.contactId,
+            provider: input.provider,
+            externalUserId: input.externalUserId ?? null,
+            username: input.username ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [
+              schema.communicationContactAccounts.contactId,
+              schema.communicationContactAccounts.provider,
+            ],
+            set: {
+              externalUserId: input.externalUserId ?? null,
+              username: input.username ?? null,
+            },
+          });
+      }
 
       return loadContactById(existingBySlug.contactId);
     }
