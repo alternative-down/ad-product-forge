@@ -54,7 +54,7 @@ function buildAgentSectionItems(input: {
   ];
 
   for (const providerType of input.providerTypes) {
-    if (providerType === 'internal-chat') {
+    if (providerType === 'internal-chat' || providerType === 'github-app') {
       continue;
     }
 
