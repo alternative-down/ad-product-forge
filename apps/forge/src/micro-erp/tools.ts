@@ -5,6 +5,7 @@ import type { Database } from '../database/index';
 import { hasToolPermission } from '../capabilities/catalog';
 import { createMicroErpReadModel } from './read-model';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
+import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
 const listCompanyCashInputSchema = z.object({
   direction: z.enum(['in', 'out']).nullish(),
@@ -16,8 +17,57 @@ const listCompanyCashInputSchema = z.object({
   offset: z.number().int().min(0).default(0),
 });
 
+const manageCompanyCashMovementInputSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('record_in'),
+    type: z.string().min(1),
+    amountUsd: z.number().positive(),
+    description: z.string().min(1).optional(),
+    referenceType: z.string().min(1).optional(),
+    referenceId: z.string().min(1).optional(),
+    effectiveAt: z.number().int().optional(),
+  }),
+  z.object({
+    action: z.literal('record_out'),
+    type: z.string().min(1),
+    amountUsd: z.number().positive(),
+    description: z.string().min(1).optional(),
+    referenceType: z.string().min(1).optional(),
+    referenceId: z.string().min(1).optional(),
+    effectiveAt: z.number().int().optional(),
+  }),
+  z.object({
+    action: z.literal('schedule_in'),
+    type: z.string().min(1),
+    amountUsd: z.number().positive(),
+    description: z.string().min(1).optional(),
+    referenceType: z.string().min(1).optional(),
+    referenceId: z.string().min(1).optional(),
+    dueAt: z.number().int(),
+  }),
+  z.object({
+    action: z.literal('schedule_out'),
+    type: z.string().min(1),
+    amountUsd: z.number().positive(),
+    description: z.string().min(1).optional(),
+    referenceType: z.string().min(1).optional(),
+    referenceId: z.string().min(1).optional(),
+    dueAt: z.number().int(),
+  }),
+  z.object({
+    action: z.literal('post_planned'),
+    entryId: z.string().min(1),
+    effectiveAt: z.number().int().optional(),
+  }),
+  z.object({
+    action: z.literal('cancel_planned'),
+    entryId: z.string().min(1),
+  }),
+]);
+
 export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> | null) {
   const microErp = createMicroErpReadModel(db);
+  const companyCash = createCompanyCashOperations(db);
   const tools: Record<string, unknown> = {};
 
   if (hasToolPermission(allowedToolIds, 'get_company_cash')) {
@@ -74,6 +124,54 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             valid: false,
             error: message,
             hint: 'Try again in a moment. If the problem persists, verify the contract store is available.',
+          };
+        }
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'manage_company_cash_movement')) {
+    tools.manage_company_cash_movement = createTool({
+      id: 'manage_company_cash_movement',
+      description: 'Create and manage company cash movements. Use this to record immediate entries, schedule planned entries, post a planned entry, or cancel a planned entry.',
+      inputSchema: manageCompanyCashMovementInputSchema,
+      execute: async (input) => {
+        try {
+          if (input.action === 'record_in') {
+            const result = await companyCash.recordCashIn(input);
+            return { valid: true, action: input.action, ...result };
+          }
+
+          if (input.action === 'record_out') {
+            const result = await companyCash.recordCashOut(input);
+            return { valid: true, action: input.action, ...result };
+          }
+
+          if (input.action === 'schedule_in') {
+            const result = await companyCash.scheduleCashIn(input);
+            return { valid: true, action: input.action, ...result };
+          }
+
+          if (input.action === 'schedule_out') {
+            const result = await companyCash.scheduleCashOut(input);
+            return { valid: true, action: input.action, ...result };
+          }
+
+          if (input.action === 'post_planned') {
+            const result = await companyCash.postPlannedEntry(input.entryId, {
+              effectiveAt: input.effectiveAt,
+            });
+            return { valid: true, action: input.action, ...result };
+          }
+
+          const result = await companyCash.cancelPlannedEntry(input.entryId);
+          return { valid: true, action: input.action, ...result };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
           };
         }
       },

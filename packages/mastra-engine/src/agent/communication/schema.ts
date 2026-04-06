@@ -133,7 +133,7 @@ export const communicationMessages = sqliteTable(
 export const communicationContactsRelations = relations(
   communicationContacts,
   ({ many }) => ({
-    accounts: many(communicationContactAccounts),
+    identities: many(communicationContactAccounts),
     conversations: many(communicationConversations),
   }),
 );
