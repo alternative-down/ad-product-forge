@@ -68,37 +68,6 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
 | `get_github_git_credentials` | Credenciais Git | DEVELOPER |
-| `list_github_repositories` | Lista repos | DEVELOPER |
-| `get_github_repository` | Busca repo | DEVELOPER |
-| `create_github_repository` | Cria repo | DEVELOPER |
-| `update_github_repository` | Atualiza repo | DEVELOPER |
-| `delete_github_repository` | Deleta repo | DEVELOPER |
-| `list_github_pull_requests` | Lista PRs | DEVELOPER |
-| `get_github_pull_request` | Busca PR | DEVELOPER |
-| `create_github_pull_request` | Cria PR | DEVELOPER |
-| `update_github_pull_request` | Atualiza PR | DEVELOPER |
-| `merge_github_pull_request` | Faz merge de PR | DEVELOPER |
-| `delete_github_pull_request` | Deleta PR | DEVELOPER |
-| `list_github_issue_comments` | Lista comentários | DEVELOPER |
-| `get_github_issue` | Busca issue | DEVELOPER |
-| `create_github_issue` | Cria issue | DEVELOPER |
-| `update_github_issue` | Atualiza issue | DEVELOPER |
-| `delete_github_issue` | Deleta issue | DEVELOPER |
-| `toggle_github_issue` | Abre/fecha issue | DEVELOPER |
-| `list_github_issue_comments` | Lista comentários | DEVELOPER |
-| `get_github_issue_comment` | Busca comentário | DEVELOPER |
-| `create_github_issue_comment` | Cria comentário | DEVELOPER |
-| `update_github_issue_comment` | Atualiza comentário | DEVELOPER |
-| `delete_github_issue_comment` | Deleta comentário | DEVELOPER |
-| `list_github_labels` | Lista labels | DEVELOPER |
-| `create_github_label` | Cria label | DEVELOPER |
-| `update_github_label` | Atualiza label | DEVELOPER |
-| `delete_github_label` | Deleta label | DEVELOPER |
-| `list_github_milestones` | Lista milestones | DEVELOPER |
-| `create_github_milestone` | Cria milestone | DEVELOPER |
-| `update_github_milestone` | Atualiza milestone | DEVELOPER |
-| `delete_github_milestone` | Deleta milestone | DEVELOPER |
-| `list_github_issues` | Lista issues | DEVELOPER |
 
 ### Ferramentas Coolify
 

@@ -48,36 +48,6 @@ These ids are the current permission targets stored in role permissions.
 ### GitHub
 
 - `get_github_git_credentials`
-- `list_github_repositories`
-- `get_github_repository`
-- `create_github_repository`
-- `update_github_repository`
-- `delete_github_repository`
-- `list_github_pull_requests`
-- `get_github_pull_request`
-- `create_github_pull_request`
-- `update_github_pull_request`
-- `merge_github_pull_request`
-- `delete_github_pull_request`
-- `list_github_issues`
-- `get_github_issue`
-- `create_github_issue`
-- `update_github_issue`
-- `delete_github_issue`
-- `toggle_github_issue`
-- `list_github_issue_comments`
-- `get_github_issue_comment`
-- `create_github_issue_comment`
-- `update_github_issue_comment`
-- `delete_github_issue_comment`
-- `list_github_labels`
-- `create_github_label`
-- `update_github_label`
-- `delete_github_label`
-- `list_github_milestones`
-- `create_github_milestone`
-- `update_github_milestone`
-- `delete_github_milestone`
 
 ### MiniMax (requer chave API)
 
