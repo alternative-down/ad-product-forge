@@ -18,6 +18,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   const OUTBOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   let client: ImapFlow | null = null;
+  let connectPromise: Promise<ImapFlow> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectDelayMs = 1000;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
@@ -183,7 +185,59 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   }
 
   async function connectImap() {
-    const nextClient = new ImapFlow({
+    if (client) {
+      return client;
+    }
+
+    if (connectPromise) {
+      return connectPromise;
+    }
+
+    connectPromise = (async () => {
+      const nextClient = new ImapFlow({
+        host: config.imap.host,
+        port: config.imap.port,
+        secure: config.imap.secure,
+        auth: {
+          user: config.imap.user,
+          pass: config.imap.password,
+        },
+        logger: false,
+        connectionTimeout: CONNECTION_TIMEOUT_MS,
+      });
+
+      await nextClient.connect();
+      await nextClient.mailboxOpen('INBOX');
+
+      client = nextClient;
+      reconnectDelayMs = 1000;
+      console.log('[email] Connected to IMAP server');
+
+      nextClient.on('close', () => {
+        if (client === nextClient) {
+          client = null;
+        }
+
+        console.log('[email] Connection closed');
+        scheduleReconnect();
+      });
+
+      nextClient.on('exists', () => {
+        void processUnseenMessages(nextClient);
+      });
+
+      return nextClient;
+    })();
+
+    try {
+      return await connectPromise;
+    } finally {
+      connectPromise = null;
+    }
+  }
+
+  async function withInboxQueryClient<T>(run: (queryClient: ImapFlow) => Promise<T>) {
+    const queryClient = new ImapFlow({
       host: config.imap.host,
       port: config.imap.port,
       secure: config.imap.secure,
@@ -195,27 +249,18 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       connectionTimeout: CONNECTION_TIMEOUT_MS,
     });
 
-    await nextClient.connect();
-    await nextClient.mailboxOpen('INBOX');
+    await queryClient.connect();
+    await queryClient.mailboxOpen('INBOX');
 
-    client = nextClient;
-    reconnectDelayMs = 1000;
-    console.log('[email] Connected to IMAP server');
-
-    nextClient.on('close', () => {
-      if (client === nextClient) {
-        client = null;
+    try {
+      return await run(queryClient);
+    } finally {
+      try {
+        await queryClient.logout();
+      } catch {
+        // Ignore logout failures on best-effort query connections.
       }
-
-      console.log('[email] Connection closed');
-      void reconnect();
-    });
-
-    nextClient.on('exists', () => {
-      void processUnseenMessages(nextClient);
-    });
-
-    return nextClient;
+    }
   }
 
   async function deliverMessage(message: CommunicationInboundMessage) {
@@ -302,73 +347,73 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     }
   }
 
-  async function getConnectedClient() {
-    if (client) {
-      return client;
-    }
-
-    return connectImap();
-  }
-
   async function listRecentInboxEmails(limit: number) {
-    const currentClient = await getConnectedClient();
-    await currentClient.mailboxOpen('INBOX');
-    const uids = await currentClient.search({ all: true }, { uid: true });
-    const recentUids = Array.isArray(uids)
-      ? uids.slice(Math.max(0, uids.length - Math.min(limit, RECENT_EMAIL_SCAN_LIMIT)))
-      : [];
+    const emails = await withInboxQueryClient(async (queryClient) => {
+      const uids = await queryClient.search({ all: true }, { uid: true });
+      const recentUids = Array.isArray(uids)
+        ? uids.slice(Math.max(0, uids.length - Math.min(limit, RECENT_EMAIL_SCAN_LIMIT)))
+        : [];
 
-    if (recentUids.length === 0) {
-      return [];
-    }
-
-    const emails: Array<{
-      messageId: string;
-      targetKey: string;
-      authorId: string;
-      authorDisplayName: string;
-      content: string;
-      createdAt: string;
-      unread: boolean;
-      conversationName?: string;
-      attachments: CommunicationFile[];
-    }> = [];
-
-    for await (const message of currentClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
-      if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
-        continue;
+      if (recentUids.length === 0) {
+        return [];
       }
 
-      const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
-      const parsed = await PostalMime.parse(source);
-      const participant = resolveConversationParticipant(parsed);
+      const items: Array<{
+        messageId: string;
+        targetKey: string;
+        authorId: string;
+        authorDisplayName: string;
+        content: string;
+        createdAt: string;
+        unread: boolean;
+        conversationName?: string;
+        attachments: CommunicationFile[];
+      }> = [];
 
-      if (!participant) {
-        continue;
+      for await (const message of queryClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
+        if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
+          continue;
+        }
+
+        const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
+        const parsed = await PostalMime.parse(source);
+        const participant = resolveConversationParticipant(parsed);
+
+        if (!participant) {
+          continue;
+        }
+
+        const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${items.length}`;
+        items.push({
+          messageId: providerMessageId,
+          targetKey: participant.targetKey,
+          authorId: participant.authorId,
+          authorDisplayName: participant.authorDisplayName,
+          content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
+          createdAt: resolveCreatedAt(parsed),
+          unread: !(message.flags?.has?.('\\Seen') ?? false),
+          conversationName: parsed.subject ?? undefined,
+          attachments: toCommunicationAttachments(parsed, providerMessageId),
+        });
       }
 
-      const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${emails.length}`;
-      emails.push({
-        messageId: providerMessageId,
-        targetKey: participant.targetKey,
-        authorId: participant.authorId,
-        authorDisplayName: participant.authorDisplayName,
-        content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
-        createdAt: resolveCreatedAt(parsed),
-        unread: !(message.flags?.has?.('\\Seen') ?? false),
-        conversationName: parsed.subject ?? undefined,
-        attachments: toCommunicationAttachments(parsed, providerMessageId),
-      });
-    }
+      return items;
+    });
 
     pruneRecentOutboundMessages();
     return emails;
   }
 
-  async function reconnect() {
-    await new Promise((resolve) => setTimeout(resolve, reconnectDelayMs));
-    reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30000);
-    void listen();
+  function scheduleReconnect() {
+    if (reconnectTimer) {
+      return;
+    }
+
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30000);
+      void listen();
+    }, reconnectDelayMs);
   }
 
   async function listen() {
@@ -382,7 +427,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     } catch (error) {
       console.error('[email] Listener error:', error);
       if (!client) {
-        void reconnect();
+        scheduleReconnect();
       }
     }
   }
