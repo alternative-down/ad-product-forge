@@ -127,6 +127,20 @@ function HomeConversationsLayoutRoute() {
     void reloadConversations();
   }, [reloadConversations]);
 
+  useEffect(() => {
+    if (!selectedAccountId) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void reloadConversations();
+    }, 5_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [reloadConversations, selectedAccountId]);
+
   const contextValue = useMemo(() => ({
     accounts,
     contacts,

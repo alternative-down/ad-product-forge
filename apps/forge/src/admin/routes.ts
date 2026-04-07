@@ -548,6 +548,23 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'GET',
+    path: '/admin/agent/recent-conversations',
+    handler: async (request) => {
+      const { agentId } = agentIdQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+      });
+      const conversations = await readModel.listAgentRecentConversations(agentId);
+
+      if (!conversations) {
+        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+      }
+
+      return jsonResponse(conversations);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
     path: '/admin/agent/execution-steps',
     handler: async (request) => {
       const query = agentExecutionStepsQuerySchema.parse({

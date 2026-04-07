@@ -174,7 +174,6 @@ export function createAdminReadModel(input: {
       agentScheduleRows,
       activeContract,
       recentNotifications,
-      recentConversations,
       githubProvisioning,
     ] =
       await Promise.all([
@@ -216,7 +215,6 @@ export function createAdminReadModel(input: {
           agentId,
           limit: RECENT_NOTIFICATION_LIMIT,
         }),
-        listRecentConversations(input.workspaceBasePath, input.internalChat, agentId, agent.name),
         input.githubApps.getAgentProvisioning(agentId),
       ]);
     const registry = getInternalAgentRegistry();
@@ -322,11 +320,25 @@ export function createAdminReadModel(input: {
         };
       }),
       recentNotifications,
-      recentConversations,
-      recentThreadMessages: await listRecentThreadMessages(input.workspaceBasePath, agentId),
       createdAt: agent.createdAt,
       updatedAt: agent.updatedAt,
     };
+  }
+
+  async function listAgentRecentConversations(agentId: string) {
+    const agent = await db.query.agents.findFirst({
+      where: eq(agents.id, agentId),
+      columns: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!agent) {
+      return null;
+    }
+
+    return listRecentConversations(input.workspaceBasePath, input.internalChat, agentId, agent.name);
   }
 
   async function listAgentExecutionSteps(input: {
@@ -563,6 +575,7 @@ export function createAdminReadModel(input: {
     getDashboard,
     listAgents,
     getAgent,
+    listAgentRecentConversations,
     listAgentExecutionSteps,
     listAgentThreadMessages,
     listAgentConversationMessages,
@@ -724,13 +737,6 @@ async function listInternalChatGroupParticipants(
   } catch {
     return [];
   }
-}
-
-async function listRecentThreadMessages(workspaceBasePath: string, agentId: string) {
-  return listThreadMessages(workspaceBasePath, agentId, {
-    page: 0,
-    perPage: 20,
-  });
 }
 
 async function listThreadMessages(
