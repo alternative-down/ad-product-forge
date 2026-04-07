@@ -12,7 +12,7 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
   return (
     <DialogContent
       className={cn(
-        'flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-lg sm:max-h-[80dvh] [&>form]:min-h-0 [&>form]:flex [&>form]:flex-1 [&>form]:flex-col',
+        'flex w-[calc(100dvw-2rem)] max-h-[calc(100dvh-2rem)] max-w-[calc(100dvw-2rem)] flex-col overflow-hidden rounded-lg sm:max-h-[80dvh] sm:max-w-[60vw] [&>form]:min-h-0 [&>form]:flex [&>form]:flex-1 [&>form]:flex-col',
         className,
       )}
       showCloseButton={false}
