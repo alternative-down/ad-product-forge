@@ -232,6 +232,10 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     return content || normalizedContent;
   }
 
+  function toReplySubject(subject: string) {
+    return /^re:/i.test(subject.trim()) ? subject.trim() : `Re: ${subject.trim()}`;
+  }
+
   async function connectImap() {
     if (client) {
       return client;
@@ -598,6 +602,14 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         throw new Error('[email] Cannot send without a targetKey');
       }
 
+      const recentInboxEmails = await listRecentInboxEmails(50);
+      const latestConversationEmail = recentInboxEmails
+        .filter((email) => email.targetKey === recipientAddress)
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
+      const subject = latestConversationEmail?.conversationName
+        ? toReplySubject(latestConversationEmail.conversationName)
+        : `Message from ${config.smtp.user}`;
+
       const transporter = nodemailer.createTransport({
         host: config.smtp.host,
         port: config.smtp.port,
@@ -613,7 +625,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         const mailOptions: Record<string, unknown> = {
           from: config.smtp.user,
           to: recipientAddress,
-          subject: `Message from ${config.smtp.user}`,
+          subject,
           text: input.content,
           bcc: config.bcc,
           attachments: input.attachments.map((attachment) => ({
@@ -621,6 +633,12 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
             content: Buffer.from(attachment.data),
             contentType: attachment.contentType,
           })),
+          ...(latestConversationEmail?.messageId
+            ? {
+                inReplyTo: latestConversationEmail.messageId,
+                references: latestConversationEmail.messageId,
+              }
+            : {}),
         };
 
         const info = await transporter.sendMail(mailOptions);
