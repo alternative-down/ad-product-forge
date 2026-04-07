@@ -96,6 +96,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     resolveProfileRuntimeModel(omProfile),
   ]);
   const capabilities = createCapabilityStore(db);
+  const role = await capabilities.getRole(agentConfig.roleId);
   const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
   const allowedToolIds = new Set(capabilitySet.toolIds);
 
@@ -133,7 +134,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   await config.internalChat.registerAgentAccount({
     agentId: agentConfig.id,
     displayName: providerCredentials['internal-chat']?.displayName ?? agentConfig.name,
-    description: providerCredentials['internal-chat']?.description ?? agentConfig.description ?? undefined,
+    agentName: agentConfig.name,
+    agentDescription: agentConfig.description ?? undefined,
+    roleName: role?.name,
+    roleDescription: role?.description,
   });
 
   const tools = createMicroErpTools(db, allowedToolIds);
@@ -196,6 +200,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       omModelProfileId: omProfile.profileId,
       companyName: companySettings.companyName,
       companyContext: companySettings.companyContext,
+      roleName: role?.name,
+      roleDescription: role?.description,
       tools: customTools,
       providers,
       workflows: filteredWorkflows,

@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 
 import { AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { getAgent } from '@/lib/admin-api';
+import { getAgentRecentConversations } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/conversations')({
   component: AgentConversationsLayoutRoute,
@@ -17,10 +17,10 @@ function AgentConversationsLayoutRoute() {
     select: (state) => state.location.pathname,
   });
   const agentQuery = useQuery({
-    queryKey: ['admin', 'agent', agentId],
-    queryFn: () => getAgent(agentId),
+    queryKey: ['admin', 'agent', agentId, 'recent-conversations'],
+    queryFn: () => getAgentRecentConversations(agentId),
   });
-  const conversations = useMemo(() => agentQuery.data?.recentConversations ?? [], [agentQuery.data?.recentConversations]);
+  const conversations = useMemo(() => agentQuery.data ?? [], [agentQuery.data]);
   const selectedConversationId = pathname.startsWith(`/agents/${agentId}/conversations/`)
     ? decodeURIComponent(pathname.split('/conversations/')[1] ?? '')
     : null;

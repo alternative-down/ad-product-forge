@@ -175,6 +175,24 @@ export async function createCommunicationModule(config: {
           Provider: provider.id,
           TargetKey: message.targetKey,
           ...(message.conversationName ? { ConversationName: message.conversationName } : {}),
+          ...(typeof message.metadata?.conversationType === 'string'
+            ? { ConversationType: message.metadata.conversationType }
+            : {}),
+          ...(Array.isArray(message.metadata?.groupMembers)
+            ? {
+                Participants: message.metadata.groupMembers
+                  .map((member) =>
+                    typeof member === 'object' &&
+                    member !== null &&
+                    'displayName' in member &&
+                    typeof member.displayName === 'string'
+                      ? member.displayName
+                      : null,
+                  )
+                  .filter((value): value is string => Boolean(value))
+                  .join(', '),
+              }
+            : {}),
         },
         idempotencyKey: `${provider.id}:${message.messageId}`,
         itemMetadata: {

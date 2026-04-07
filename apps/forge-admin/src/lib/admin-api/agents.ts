@@ -4,6 +4,7 @@ import type {
   AgentDetail,
   AgentExecutionStepsResponse,
   AgentListItem,
+  AgentRecentConversation,
   AgentMcpServerInput,
   AgentSchedule,
   AgentThreadMessagesResponse,
@@ -25,6 +26,12 @@ export function getAgents() {
 
 export function getAgent(agentId: string) {
   return request<AgentDetail>(`/admin/agent?agentId=${encodeURIComponent(agentId)}`);
+}
+
+export function getAgentRecentConversations(agentId: string) {
+  return request<AgentRecentConversation[]>(
+    `/admin/agent/recent-conversations?agentId=${encodeURIComponent(agentId)}`,
+  );
 }
 
 export function reloadAgent(agentId: string) {

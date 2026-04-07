@@ -87,6 +87,22 @@ function resolveContentType(fileName: string) {
   return undefined;
 }
 
+function buildAgentAccountDescription(input: {
+  agentId: string;
+  agentName: string;
+  agentDescription?: string;
+  roleName?: string;
+  roleDescription?: string;
+}) {
+  return [
+    `Agent id: ${input.agentId}`,
+    `Agent name: ${input.agentName}`,
+    input.agentDescription?.trim() ? `Agent description: ${input.agentDescription.trim()}` : null,
+    input.roleName?.trim() ? `Role name: ${input.roleName.trim()}` : null,
+    input.roleDescription?.trim() ? `Role description: ${input.roleDescription.trim()}` : null,
+  ].filter(Boolean).join('\n');
+}
+
 export function createInternalChatService(
   db: Database,
   config: {
@@ -153,9 +169,19 @@ export function createInternalChatService(
   async function registerAgentAccount(input: {
     agentId: string;
     displayName: string;
-    description?: string;
+    agentName: string;
+    agentDescription?: string;
+    roleName?: string;
+    roleDescription?: string;
   }) {
     const now = Date.now();
+    const description = buildAgentAccountDescription({
+      agentId: input.agentId,
+      agentName: input.agentName,
+      agentDescription: input.agentDescription,
+      roleName: input.roleName,
+      roleDescription: input.roleDescription,
+    });
     const existing = await db.query.internalChatAccounts.findFirst({
       where: eq(internalChatAccounts.agentId, input.agentId),
     });
@@ -165,7 +191,7 @@ export function createInternalChatService(
         .update(internalChatAccounts)
         .set({
           displayName: input.displayName,
-          description: input.description ?? null,
+          description,
           updatedAt: now,
         })
         .where(eq(internalChatAccounts.agentId, input.agentId));
@@ -175,7 +201,7 @@ export function createInternalChatService(
         agentId: input.agentId,
         slug: existing.slug,
         displayName: input.displayName,
-        description: input.description,
+        description,
       };
     }
 
@@ -187,7 +213,7 @@ export function createInternalChatService(
       agentId: input.agentId,
       slug,
       displayName: input.displayName,
-      description: input.description ?? null,
+      description,
       createdAt: now,
       updatedAt: now,
     });
@@ -197,7 +223,7 @@ export function createInternalChatService(
       agentId: input.agentId,
       slug,
       displayName: input.displayName,
-      description: input.description,
+      description,
     };
   }
 

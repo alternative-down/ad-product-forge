@@ -135,7 +135,6 @@ function HomeConversationDetailIndexRoute() {
         }
 
         setMessages(messageResult.items);
-        await reloadConversations();
 
         if (autoScrollEnabled) {
           requestAnimationFrame(() => {
@@ -147,13 +146,13 @@ function HomeConversationDetailIndexRoute() {
           });
         }
       })();
-    }, 500);
+    }, 2_000);
 
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [autoScrollEnabled, reloadConversations, selectedAccountId, selectedConversationId]);
+  }, [autoScrollEnabled, selectedAccountId, selectedConversationId]);
 
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');

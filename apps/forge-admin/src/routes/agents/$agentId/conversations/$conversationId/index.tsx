@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import { AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { getAgent, getAgentConversationMessages } from '@/lib/admin-api';
+import { getAgentConversationMessages, getAgentRecentConversations } from '@/lib/admin-api';
 
 export const Route = createFileRoute('/agents/$agentId/conversations/$conversationId/')({
   component: AgentConversationDetailIndexRoute,
@@ -25,10 +25,10 @@ function AgentConversationDetailIndexRoute() {
     scrollTop: number;
   } | null>(null);
   const agentQuery = useQuery({
-    queryKey: ['admin', 'agent', agentId],
-    queryFn: () => getAgent(agentId),
+    queryKey: ['admin', 'agent', agentId, 'recent-conversations'],
+    queryFn: () => getAgentRecentConversations(agentId),
   });
-  const conversations = useMemo(() => agentQuery.data?.recentConversations ?? [], [agentQuery.data?.recentConversations]);
+  const conversations = useMemo(() => agentQuery.data ?? [], [agentQuery.data]);
   const selectedConversation =
     conversations.find((conversation) => conversation.conversationId === decodedConversationId) ?? null;
   const messagesQuery = useInfiniteQuery({
