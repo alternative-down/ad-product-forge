@@ -184,6 +184,46 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     return new Date().toISOString();
   }
 
+  function extractEmailBody(email: Email) {
+    const rawContent = email.text ?? email.html?.replace(/<[^>]+>/g, '') ?? '[no content]';
+    const normalizedContent = rawContent
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim();
+
+    if (!normalizedContent) {
+      return '[no content]';
+    }
+
+    const lines = normalizedContent.split('\n');
+    const cleanedLines: string[] = [];
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      if (/^>/.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^On .+wrote:$/i.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^Em .+escreveu:$/i.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^-{2,}\s*Original Message\s*-{2,}$/i.test(trimmedLine)) {
+        break;
+      }
+
+      cleanedLines.push(line);
+    }
+
+    const content = cleanedLines.join('\n').trim();
+    return content || normalizedContent;
+  }
+
   async function connectImap() {
     if (client) {
       return client;
@@ -319,7 +359,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           authorId: participant.authorId,
           authorUsername: parsed.from?.address ?? 'unknown',
           authorDisplayName: participant.authorDisplayName,
-          content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
+          content: extractEmailBody(parsed),
           attachments: toCommunicationAttachments(parsed, providerMessageId),
           createdAt: resolveCreatedAt(parsed),
         });
@@ -389,7 +429,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           targetKey: participant.targetKey,
           authorId: participant.authorId,
           authorDisplayName: participant.authorDisplayName,
-          content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
+          content: extractEmailBody(parsed),
           createdAt: resolveCreatedAt(parsed),
           unread: !(message.flags?.has?.('\\Seen') ?? false),
           conversationName: parsed.subject ?? undefined,
