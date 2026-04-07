@@ -209,7 +209,15 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         break;
       }
 
+      if (/^On .{8,}$/i.test(trimmedLine)) {
+        break;
+      }
+
       if (/^Em .+escreveu:$/i.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^Em .{8,}$/i.test(trimmedLine)) {
         break;
       }
 
@@ -330,7 +338,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
   async function processMessage(uid: number, currentClient: ImapFlow) {
     try {
-      const fetchResult = await currentClient.fetch(String(uid), { source: true });
+      const fetchResult = await currentClient.fetch(String(uid), { source: true }, { uid: true });
 
       for await (const message of fetchResult) {
         if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
@@ -342,12 +350,12 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         const participant = resolveConversationParticipant(parsed);
 
         if (parsed.from?.address?.toLowerCase() === config.imap.user.toLowerCase()) {
-          await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+          markMessageSeen(currentClient, uid);
           continue;
         }
 
         if (!participant) {
-          await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+          markMessageSeen(currentClient, uid);
           continue;
         }
 
@@ -364,16 +372,22 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           createdAt: resolveCreatedAt(parsed),
         });
 
-        await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+        markMessageSeen(currentClient, uid);
       }
     } catch (error) {
       console.error('[email] Error processing message:', error);
     }
   }
 
+  function markMessageSeen(currentClient: ImapFlow, uid: number) {
+    void currentClient.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch((error) => {
+      console.error('[email] Failed to mark message as seen:', error);
+    });
+  }
+
   async function processUnseenMessages(currentClient: ImapFlow) {
     try {
-      const unseenUids = await currentClient.search({ seen: false });
+      const unseenUids = await currentClient.search({ seen: false }, { uid: true });
 
       if (!Array.isArray(unseenUids) || unseenUids.length === 0) {
         return;
