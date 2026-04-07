@@ -96,6 +96,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     resolveProfileRuntimeModel(omProfile),
   ]);
   const capabilities = createCapabilityStore(db);
+  const role = await capabilities.getRole(agentConfig.roleId);
   const capabilitySet = await capabilities.getAgentCapabilities(agentConfig.id);
   const allowedToolIds = new Set(capabilitySet.toolIds);
 
@@ -196,6 +197,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
       omModelProfileId: omProfile.profileId,
       companyName: companySettings.companyName,
       companyContext: companySettings.companyContext,
+      roleName: role?.name,
+      roleDescription: role?.description,
       tools: customTools,
       providers,
       workflows: filteredWorkflows,

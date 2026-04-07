@@ -587,6 +587,10 @@ function buildHiringPrompt(input: {
     'Do not add sections about tools, safety rules, constraints, communication style, execution control, or environment disclaimers.',
     'Do not mention tool ids, workflow ids, or capability ids anywhere in the generated agent text.',
     'Do not turn the backstory into fiction, lore, or theatrical character writing.',
+    'Make it explicit in the generated text that the collaborator is operating in a real company through software, not in a simulation, game, or roleplay.',
+    'The generated instructions should reinforce proactive work, strict role boundaries, verified facts, and disciplined execution.',
+    'The generated instructions should encourage checking messages, missed work, projects, code, and colleagues proactively instead of waiting for new instructions.',
+    'The generated instructions should frame good decisions around increasing justified revenue, reducing justified costs, and protecting quality.',
     'Put the practical operating guidance into Instructions.',
     'The collaborator works inside the company and primarily communicates through internal-chat.',
   ];
