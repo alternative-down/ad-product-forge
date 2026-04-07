@@ -236,6 +236,33 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     }
   }
 
+  async function withInboxQueryClient<T>(run: (queryClient: ImapFlow) => Promise<T>) {
+    const queryClient = new ImapFlow({
+      host: config.imap.host,
+      port: config.imap.port,
+      secure: config.imap.secure,
+      auth: {
+        user: config.imap.user,
+        pass: config.imap.password,
+      },
+      logger: false,
+      connectionTimeout: CONNECTION_TIMEOUT_MS,
+    });
+
+    await queryClient.connect();
+    await queryClient.mailboxOpen('INBOX');
+
+    try {
+      return await run(queryClient);
+    } finally {
+      try {
+        await queryClient.logout();
+      } catch {
+        // Ignore logout failures on best-effort query connections.
+      }
+    }
+  }
+
   async function deliverMessage(message: CommunicationInboundMessage) {
     if (!onInboundMessage) {
       pendingMessages.push(message);
@@ -320,64 +347,58 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     }
   }
 
-  async function getConnectedClient() {
-    if (client) {
-      return client;
-    }
-
-    return connectImap();
-  }
-
   async function listRecentInboxEmails(limit: number) {
-    const currentClient = await getConnectedClient();
-    await currentClient.mailboxOpen('INBOX');
-    const uids = await currentClient.search({ all: true }, { uid: true });
-    const recentUids = Array.isArray(uids)
-      ? uids.slice(Math.max(0, uids.length - Math.min(limit, RECENT_EMAIL_SCAN_LIMIT)))
-      : [];
+    const emails = await withInboxQueryClient(async (queryClient) => {
+      const uids = await queryClient.search({ all: true }, { uid: true });
+      const recentUids = Array.isArray(uids)
+        ? uids.slice(Math.max(0, uids.length - Math.min(limit, RECENT_EMAIL_SCAN_LIMIT)))
+        : [];
 
-    if (recentUids.length === 0) {
-      return [];
-    }
-
-    const emails: Array<{
-      messageId: string;
-      targetKey: string;
-      authorId: string;
-      authorDisplayName: string;
-      content: string;
-      createdAt: string;
-      unread: boolean;
-      conversationName?: string;
-      attachments: CommunicationFile[];
-    }> = [];
-
-    for await (const message of currentClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
-      if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
-        continue;
+      if (recentUids.length === 0) {
+        return [];
       }
 
-      const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
-      const parsed = await PostalMime.parse(source);
-      const participant = resolveConversationParticipant(parsed);
+      const items: Array<{
+        messageId: string;
+        targetKey: string;
+        authorId: string;
+        authorDisplayName: string;
+        content: string;
+        createdAt: string;
+        unread: boolean;
+        conversationName?: string;
+        attachments: CommunicationFile[];
+      }> = [];
 
-      if (!participant) {
-        continue;
+      for await (const message of queryClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
+        if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
+          continue;
+        }
+
+        const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
+        const parsed = await PostalMime.parse(source);
+        const participant = resolveConversationParticipant(parsed);
+
+        if (!participant) {
+          continue;
+        }
+
+        const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${items.length}`;
+        items.push({
+          messageId: providerMessageId,
+          targetKey: participant.targetKey,
+          authorId: participant.authorId,
+          authorDisplayName: participant.authorDisplayName,
+          content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
+          createdAt: resolveCreatedAt(parsed),
+          unread: !(message.flags?.has?.('\\Seen') ?? false),
+          conversationName: parsed.subject ?? undefined,
+          attachments: toCommunicationAttachments(parsed, providerMessageId),
+        });
       }
 
-      const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${emails.length}`;
-      emails.push({
-        messageId: providerMessageId,
-        targetKey: participant.targetKey,
-        authorId: participant.authorId,
-        authorDisplayName: participant.authorDisplayName,
-        content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
-        createdAt: resolveCreatedAt(parsed),
-        unread: !(message.flags?.has?.('\\Seen') ?? false),
-        conversationName: parsed.subject ?? undefined,
-        attachments: toCommunicationAttachments(parsed, providerMessageId),
-      });
-    }
+      return items;
+    });
 
     pruneRecentOutboundMessages();
     return emails;
