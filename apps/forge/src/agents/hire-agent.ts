@@ -27,6 +27,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export type HireInternalAgentInput = {
   agentId?: string;
   roleId: string;
+  roleName?: string;
   roleDescription?: string;
   name: string;
   description?: string;
@@ -116,7 +117,10 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     await input.internalChat.registerAgentAccount({
       agentId,
       displayName: input.name,
-      description: input.roleDescription ?? input.description ?? undefined,
+      agentName: input.name,
+      agentDescription: input.description ?? undefined,
+      roleName: input.roleName,
+      roleDescription: input.roleDescription,
     });
 
     await input.schedules.createHeartbeatSchedule(agentId);
