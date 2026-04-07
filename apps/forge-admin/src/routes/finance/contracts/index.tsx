@@ -97,6 +97,8 @@ function FinanceContractsIndexRoute() {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Valor semanal</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Usado</TableHead>
+                <TableHead className="px-4 py-3 font-medium">% de uso</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Início</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Fim</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Renovação</TableHead>
@@ -108,6 +110,8 @@ function FinanceContractsIndexRoute() {
                 <TableRow key={contract.contractId}>
                   <TableCell className="px-4 py-3">{contract.agentName}</TableCell>
                   <TableCell className="px-4 py-3">{formatUsd(contract.weeklyValueUsd)}</TableCell>
+                  <TableCell className="px-4 py-3">{formatUsd(contract.spentUsd)}</TableCell>
+                  <TableCell className="px-4 py-3">{formatPercent(contract.spentPercent)}%</TableCell>
                   <TableCell className="px-4 py-3">{formatDate(contract.startsAt)}</TableCell>
                   <TableCell className="px-4 py-3">{formatDate(contract.endsAt)}</TableCell>
                   <TableCell className="px-4 py-3">
@@ -132,7 +136,7 @@ function FinanceContractsIndexRoute() {
               ))}
               {contracts.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={6}>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={8}>
                     Nenhum contrato ativo agora.
                   </TableCell>
                 </TableRow>
@@ -240,5 +244,12 @@ function formatUsd(value: number) {
 function formatDate(value: number) {
   return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
+  }).format(value);
+}
+
+function formatPercent(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
   }).format(value);
 }

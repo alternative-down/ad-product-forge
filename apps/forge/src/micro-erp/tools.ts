@@ -113,7 +113,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'list_internal_agent_contracts')) {
     tools.list_internal_agent_contracts = createTool({
       id: 'list_internal_agent_contracts',
-      description: 'List the active contracts for internal agents. Use this before topping up or adjusting an agent budget.',
+      description: 'List the active contracts for internal agents, including budget usage and recent execution interval. Use this before deciding whether a contract needs a budget adjustment.',
       inputSchema: z.object({}),
       execute: async () => {
         try {

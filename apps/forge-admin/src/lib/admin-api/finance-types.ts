@@ -68,6 +68,8 @@ export type FinanceContractsResponse = {
     startsAt: number;
     endsAt: number;
     weeklyValueUsd: number;
+    spentUsd: number;
+    spentPercent: number;
     autoRenew: boolean;
   }>;
 };

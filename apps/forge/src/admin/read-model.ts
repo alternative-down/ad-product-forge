@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 
-import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibSQLStore } from '@mastra/libsql';
 import type { MastraDBMessage } from '@mastra/core/agent';
@@ -510,7 +510,39 @@ export function createAdminReadModel(input: {
   }
 
   async function getFinanceContracts() {
-    return finance.listActiveInternalAgentContracts();
+    const contracts = await finance.listActiveInternalAgentContracts();
+    const contractIds = contracts.items.map((contract) => contract.contractId);
+
+    if (contractIds.length === 0) {
+      return contracts;
+    }
+
+    const spendRows = await db
+      .select({
+        contractId: agentExecutionSteps.contractId,
+        total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
+      })
+      .from(agentExecutionSteps)
+      .where(inArray(agentExecutionSteps.contractId, contractIds))
+      .groupBy(agentExecutionSteps.contractId);
+    const spentUsdByContractId = new Map(
+      spendRows.map((row) => [row.contractId, row.total]),
+    );
+
+    return {
+      ...contracts,
+      items: contracts.items.map((contract) => {
+        const spentUsd = spentUsdByContractId.get(contract.contractId) ?? 0;
+
+        return {
+          ...contract,
+          spentUsd,
+          spentPercent: contract.weeklyValueUsd > 0
+            ? (spentUsd / contract.weeklyValueUsd) * 100
+            : 0,
+        };
+      }),
+    };
   }
 
   async function getSystemLlm() {
