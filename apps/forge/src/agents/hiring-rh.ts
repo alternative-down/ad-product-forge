@@ -134,7 +134,6 @@ function validateGeneratedAgentInstructions(instructions: string) {
     'Primary Goal:',
     'Secondary Goals:',
     'Backstory:',
-    'Instructions:',
   ];
 
   let previousIndex = -1;
@@ -146,7 +145,7 @@ function validateGeneratedAgentInstructions(instructions: string) {
       return {
         valid: false as const,
         error: `The system prompt must include the section "${section}".`,
-        hint: 'Rewrite the prompt using exactly these sections: Primary Goal, Secondary Goals, Backstory, Instructions.',
+        hint: 'Rewrite the prompt using exactly these sections: Primary Goal, Secondary Goals, Backstory.',
       };
     }
 
@@ -154,7 +153,7 @@ function validateGeneratedAgentInstructions(instructions: string) {
       return {
         valid: false as const,
         error: 'The system prompt sections are out of order.',
-        hint: 'Keep the section order exactly as: Primary Goal, Secondary Goals, Backstory, Instructions.',
+        hint: 'Keep the section order exactly as: Primary Goal, Secondary Goals, Backstory.',
       };
     }
 
@@ -345,17 +344,12 @@ export async function generateHiredAgentInstructions(
       '- Example: "Create compelling, conversion-focused product copy for Brazilian e-commerce platforms while maintaining brand voice consistency."',
       '',
       '### Backstory',
-      '- Write 2-3 paragraphs grounded in the real-world professional background of the role.',
-      '- Focus on: domain knowledge, relevant experience, operating discipline, standards, and how the role approaches problems in practice.',
+      '- Write 2-3 paragraphs as a realistic professional backstory for the agent.',
+      '- It does not need to be specifically about the current company. It should read like a small biography grounded in the real-world vocational context of the role.',
+      '- Focus on: domain knowledge, relevant experience, vocational history, operating discipline, standards, and how the role approaches problems in practice.',
       '- AVOID: fictional worlds, character lore, whimsical archetypes, mascots, jokes, or cartoon framing.',
-      '- The backstory must read like a serious professional profile for the real role being hired.',
+      '- The backstory must read like a serious professional profile for a real-world role, even if the agent identity is fictional.',
       '- Example: "With years of experience building operational systems for product teams, you know how to turn ambiguous requests into scoped execution plans, coordinate dependencies, and keep delivery moving while maintaining technical quality..."',
-      '',
-      '### Instructions',
-      '- Practical day-to-day operating guidance.',
-      '- Focus on HOW to accomplish tasks: decision frameworks, priorities, communication patterns.',
-      '- Do NOT include tool ids, workflow ids, tool descriptions, or environment-control instructions.',
-      '- Do NOT name internal functions such as list_conversations, send_message, manage_crons, or any other capability id in the agent text.',
       '',
       '## Important Constraints',
       '',
@@ -365,9 +359,11 @@ export async function generateHiredAgentInstructions(
       '- Do not use a common human first name, full person name, title + name, nickname + surname, or multi-word name.',
       '- The name should feel like a proper identity, not a joke, not a mascot label, and not a generic placeholder.',
       '- Everything except the name must stay grounded in the real professional role and real operating context of the work.',
+      '- The generated text should read more like a real-world professional role profile than an operational instruction manual.',
       '- The selected role must already grant the minimum base tools before hireAgent is called.',
       '- Generated agent prompts should feel professionally written, not templated.',
-      '- Each agent should be able to COMPLETE TASKS AUTONOMOUSLY with clear object and completion criteria.',
+      '- Do NOT include tool ids, workflow ids, tool descriptions, environment-control instructions, or platform mechanics in the generated agent text.',
+      '- Do NOT name internal functions such as list_conversations, send_message, manage_crons, or any other capability id in the agent text.',
       '',
       '## Output Structure',
       '',
@@ -378,7 +374,7 @@ export async function generateHiredAgentInstructions(
       'Role ID: [internal role id]',
       '',
       'System Prompt:',
-      '[Full system prompt with Primary Goal, Secondary Goals, Backstory, and Instructions sections]',
+      '[Full system prompt with Primary Goal, Secondary Goals, and Backstory sections]',
     ].join('\n'),
     model: hiringRhRuntimeModel,
     tools: {
@@ -580,17 +576,15 @@ function buildHiringPrompt(input: {
     'The name must be fictional, unique, and a single name only. Do not use a common human first name, a full person name, or a multi-word name.',
     'Use a name that feels like a proper identity for a professional agent, without jokes, mascots, or caricature framing.',
     'The new name must not duplicate or closely resemble the name of any existing internal collaborator.',
-    'The professional profile, backstory, goals, and instructions must be grounded in the real-world role and how that role operates in practice.',
-    'Write the prompt with exactly these sections and no others: Primary Goal, Secondary Goals, Backstory, Instructions.',
+    'The professional profile, backstory, and goals must be grounded in the real-world role and how that role operates in practice.',
+    'Write the prompt with exactly these sections and no others: Primary Goal, Secondary Goals, Backstory.',
     'Keep the structure simple and direct, in a CrewAI-like style.',
     'Do not add sections about tools, safety rules, constraints, communication style, execution control, or environment disclaimers.',
     'Do not mention tool ids, workflow ids, or capability ids anywhere in the generated agent text.',
     'Do not turn the backstory into fiction, lore, or theatrical character writing.',
     'Make it explicit in the generated text that the collaborator is operating in a real company through software, not in a simulation, game, or roleplay.',
-    'The generated instructions should reinforce proactive work, strict role boundaries, verified facts, and disciplined execution.',
-    'The generated instructions should encourage checking messages, missed work, projects, code, and colleagues proactively instead of waiting for new instructions.',
-    'The generated instructions should frame good decisions around increasing justified revenue, reducing justified costs, and protecting quality.',
-    'Put the practical operating guidance into Instructions.',
+    'Use the backstory to give realistic vocational context to the agent, like a concise professional biography.',
+    'Keep the text descriptive and role-oriented, closer to a real-world role profile than to an operational handbook.',
     'The collaborator works inside the company and primarily communicates through internal-chat.',
   ];
 
