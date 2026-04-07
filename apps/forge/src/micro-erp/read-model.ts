@@ -1,7 +1,7 @@
-import { and, desc, eq, gte, lte, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
-import { agents, agentExecutionContracts, companyCashLedger } from '../database/schema';
+import { agents, agentExecutionContracts, agentExecutionSteps, companyCashLedger } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 
 const IN = 'in';
@@ -156,11 +156,13 @@ export function createMicroErpReadModel(db: Database) {
         ),
       )
       .orderBy(desc(agentExecutionContracts.endsAt));
+    const metricsByContractId = await getActiveContractMetrics(rows, now);
 
     return {
       items: rows.map((row) => ({
         ...row,
         autoRenew: Boolean(row.autoRenew),
+        ...metricsByContractId.get(row.contractId),
       })),
     };
   }
@@ -194,11 +196,85 @@ export function createMicroErpReadModel(db: Database) {
     if (!contract) {
       return null;
     }
+    const metricsByContractId = await getActiveContractMetrics([contract], now);
 
     return {
       ...contract,
       autoRenew: Boolean(contract.autoRenew),
+      ...metricsByContractId.get(contract.contractId),
     };
+  }
+
+  async function getActiveContractMetrics(
+    contracts: Array<{
+      contractId: string;
+      weeklyValueUsd: number;
+      endsAt: number;
+    }>,
+    now: number,
+  ) {
+    if (contracts.length === 0) {
+      return new Map();
+    }
+    const contractIds = contracts.map((contract) => contract.contractId);
+    const contractBudgetById = new Map(
+      contracts.map((contract) => [contract.contractId, contract.weeklyValueUsd]),
+    );
+    const contractEndsAtById = new Map(
+      contracts.map((contract) => [contract.contractId, contract.endsAt]),
+    );
+
+    const [spendRows, stepRows] = await Promise.all([
+      db
+        .select({
+          contractId: agentExecutionSteps.contractId,
+          total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
+        })
+        .from(agentExecutionSteps)
+        .where(inArray(agentExecutionSteps.contractId, contractIds))
+        .groupBy(agentExecutionSteps.contractId),
+      db.query.agentExecutionSteps.findMany({
+        where: inArray(agentExecutionSteps.contractId, contractIds),
+        orderBy: [desc(agentExecutionSteps.createdAt)],
+      }),
+    ]);
+    const spentUsdByContractId = new Map(
+      spendRows.map((row) => [row.contractId, row.total]),
+    );
+    const recentStepsByContractId = new Map<string, typeof stepRows>();
+
+    for (const step of stepRows) {
+      const recentSteps = recentStepsByContractId.get(step.contractId) ?? [];
+
+      if (recentSteps.length >= 10) {
+        continue;
+      }
+
+      recentSteps.push(step);
+      recentStepsByContractId.set(step.contractId, recentSteps);
+    }
+
+    return new Map(
+      contractIds.map((contractId) => {
+        const spentUsd = spentUsdByContractId.get(contractId) ?? 0;
+        const recentSteps = recentStepsByContractId.get(contractId) ?? [];
+
+        return [
+          contractId,
+          {
+            spentUsd,
+            spentPercent: getUsagePercent(spentUsd, contractBudgetById.get(contractId) ?? 0),
+            averageStepIntervalMinutes: getAverageStepIntervalMinutes(recentSteps),
+            averageStepIntervalLabel: formatAverageStepInterval(recentSteps),
+            recentStepCount: recentSteps.length,
+            daysRemaining: Math.max(
+              Math.ceil(((contractEndsAtById.get(contractId) ?? now) - now) / 86_400_000),
+              0,
+            ),
+          },
+        ];
+      }),
+    );
   }
 
   return {
@@ -208,6 +284,58 @@ export function createMicroErpReadModel(db: Database) {
     listActiveInternalAgentContracts,
     getActiveInternalAgentContract,
   };
+}
+
+function getUsagePercent(spentUsd: number, budgetUsd: number) {
+  if (budgetUsd <= 0) {
+    return 0;
+  }
+
+  return (spentUsd / budgetUsd) * 100;
+}
+
+function getAverageStepIntervalMinutes(
+  steps: Array<{
+    createdAt: number;
+  }>,
+) {
+  if (steps.length < 2) {
+    return null;
+  }
+
+  const sortedSteps = [...steps].sort((left, right) => left.createdAt - right.createdAt);
+  let totalDiff = 0;
+
+  for (let index = 1; index < sortedSteps.length; index += 1) {
+    totalDiff += sortedSteps[index].createdAt - sortedSteps[index - 1].createdAt;
+  }
+
+  return Math.round(totalDiff / (sortedSteps.length - 1) / 60000);
+}
+
+function formatAverageStepInterval(
+  steps: Array<{
+    createdAt: number;
+  }>,
+) {
+  const totalMinutes = getAverageStepIntervalMinutes(steps);
+
+  if (totalMinutes === null) {
+    return 'Sem dados';
+  }
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (minutes === 0) {
+    return `${hours} h`;
+  }
+
+  return `${hours} h ${minutes} min`;
 }
 
 function movementTimestamp() {
