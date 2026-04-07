@@ -393,7 +393,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         return;
       }
 
-      for (const uid of unseenUids) {
+      for (const uid of [...unseenUids].sort((left, right) => right - left)) {
         await processMessage(uid, currentClient);
       }
     } catch (error) {
