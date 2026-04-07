@@ -585,7 +585,21 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
 function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
     const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
-    return `targetKey: ${targetKey}`;
+    const lines = [`targetKey: ${targetKey}`];
+
+    if (event.groupMetadata?.ConversationType === 'group') {
+      lines.push('conversationType: group');
+    }
+
+    if (event.groupMetadata?.ConversationName) {
+      lines.push(`conversationName: ${event.groupMetadata.ConversationName}`);
+    }
+
+    if (event.groupMetadata?.Participants) {
+      lines.push(`participants: ${event.groupMetadata.Participants}`);
+    }
+
+    return lines.join('\n');
   }
 
   if (event.type === 'schedule') {
