@@ -184,6 +184,54 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     return new Date().toISOString();
   }
 
+  function extractEmailBody(email: Email) {
+    const rawContent = email.text ?? email.html?.replace(/<[^>]+>/g, '') ?? '[no content]';
+    const normalizedContent = rawContent
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim();
+
+    if (!normalizedContent) {
+      return '[no content]';
+    }
+
+    const lines = normalizedContent.split('\n');
+    const cleanedLines: string[] = [];
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      if (/^>/.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^On .+wrote:$/i.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^On .{8,}$/i.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^Em .+escreveu:$/i.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^Em .{8,}$/i.test(trimmedLine)) {
+        break;
+      }
+
+      if (/^-{2,}\s*Original Message\s*-{2,}$/i.test(trimmedLine)) {
+        break;
+      }
+
+      cleanedLines.push(line);
+    }
+
+    const content = cleanedLines.join('\n').trim();
+    return content || normalizedContent;
+  }
+
   async function connectImap() {
     if (client) {
       return client;
@@ -290,7 +338,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
   async function processMessage(uid: number, currentClient: ImapFlow) {
     try {
-      const fetchResult = await currentClient.fetch(String(uid), { source: true });
+      const fetchResult = await currentClient.fetch(String(uid), { source: true }, { uid: true });
 
       for await (const message of fetchResult) {
         if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
@@ -302,12 +350,12 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         const participant = resolveConversationParticipant(parsed);
 
         if (parsed.from?.address?.toLowerCase() === config.imap.user.toLowerCase()) {
-          await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+          markMessageSeen(currentClient, uid);
           continue;
         }
 
         if (!participant) {
-          await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+          markMessageSeen(currentClient, uid);
           continue;
         }
 
@@ -319,27 +367,33 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           authorId: participant.authorId,
           authorUsername: parsed.from?.address ?? 'unknown',
           authorDisplayName: participant.authorDisplayName,
-          content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
+          content: extractEmailBody(parsed),
           attachments: toCommunicationAttachments(parsed, providerMessageId),
           createdAt: resolveCreatedAt(parsed),
         });
 
-        await currentClient.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+        markMessageSeen(currentClient, uid);
       }
     } catch (error) {
       console.error('[email] Error processing message:', error);
     }
   }
 
+  function markMessageSeen(currentClient: ImapFlow, uid: number) {
+    void currentClient.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch((error) => {
+      console.error('[email] Failed to mark message as seen:', error);
+    });
+  }
+
   async function processUnseenMessages(currentClient: ImapFlow) {
     try {
-      const unseenUids = await currentClient.search({ seen: false });
+      const unseenUids = await currentClient.search({ seen: false }, { uid: true });
 
       if (!Array.isArray(unseenUids) || unseenUids.length === 0) {
         return;
       }
 
-      for (const uid of unseenUids) {
+      for (const uid of [...unseenUids].sort((left, right) => right - left)) {
         await processMessage(uid, currentClient);
       }
     } catch (error) {
@@ -389,7 +443,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           targetKey: participant.targetKey,
           authorId: participant.authorId,
           authorDisplayName: participant.authorDisplayName,
-          content: parsed.text ?? parsed.html?.replace(/<[^>]+>/g, '') ?? '[no content]',
+          content: extractEmailBody(parsed),
           createdAt: resolveCreatedAt(parsed),
           unread: !(message.flags?.has?.('\\Seen') ?? false),
           conversationName: parsed.subject ?? undefined,
