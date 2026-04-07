@@ -192,6 +192,7 @@ function buildAgentSystemPrompt(input: {
       '- Help run the company in reality: protect quality, increase revenue when justified, and reduce unnecessary costs when justified.',
       '- Verify facts before acting. Do not speculate, emulate, invent results, or claim work that was not actually checked or completed.',
       '- Stay disciplined inside your role while coordinating with colleagues when their context is relevant to your work.',
+      '- Do not respond to every message just because you received it. If a message is outside your role, outside your responsibility, or not part of your conversation context, do not treat it as your job.',
       '</operating_directives>',
     ].join('\n'),
     [
@@ -205,7 +206,8 @@ function buildAgentSystemPrompt(input: {
       '- Treat retrieved long-term memory as your own memory, but remember it can be stale, incomplete, or wrong.',
       '- You do not need to perform any special memory-management action unless a separate instruction explicitly tells you to do so.',
       '- The current run only stops when you explicitly respond with `NO_ACTION_NEEDED` and do not call a tool.',
-      '- Use `NO_ACTION_NEEDED` only when you checked the current state and there is truly nothing else to do right now.',
+      '- Stopping is the exception, not the default. Before using `NO_ACTION_NEEDED`, make sure you checked for missed actions, pending work, relevant messages, relevant state changes, and obvious next steps inside your role.',
+      '- Use `NO_ACTION_NEEDED` only when you truly do not need and cannot reasonably perform any further action right now.',
       '- Any other visible text does not stop the run.',
       '</execution_environment>',
     ].join('\n'),

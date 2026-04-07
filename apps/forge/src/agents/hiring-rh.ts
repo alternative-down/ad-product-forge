@@ -131,7 +131,6 @@ function normalizeAgentName(value: string) {
 function validateGeneratedAgentInstructions(instructions: string) {
   const normalizedInstructions = instructions.trim();
   const requiredSections = [
-    'Name:',
     'Primary Goal:',
     'Secondary Goals:',
     'Backstory:',
@@ -147,7 +146,7 @@ function validateGeneratedAgentInstructions(instructions: string) {
       return {
         valid: false as const,
         error: `The system prompt must include the section "${section}".`,
-        hint: 'Rewrite the prompt using exactly these sections: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
+        hint: 'Rewrite the prompt using exactly these sections: Primary Goal, Secondary Goals, Backstory, Instructions.',
       };
     }
 
@@ -155,7 +154,7 @@ function validateGeneratedAgentInstructions(instructions: string) {
       return {
         valid: false as const,
         error: 'The system prompt sections are out of order.',
-        hint: 'Keep the section order exactly as: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
+        hint: 'Keep the section order exactly as: Primary Goal, Secondary Goals, Backstory, Instructions.',
       };
     }
 
@@ -379,7 +378,7 @@ export async function generateHiredAgentInstructions(
       'Role ID: [internal role id]',
       '',
       'System Prompt:',
-      '[Full system prompt with Role, Goal, Backstory, and Instructions sections]',
+      '[Full system prompt with Primary Goal, Secondary Goals, Backstory, and Instructions sections]',
     ].join('\n'),
     model: hiringRhRuntimeModel,
     tools: {
@@ -582,7 +581,7 @@ function buildHiringPrompt(input: {
     'Use a name that feels like a proper identity for a professional agent, without jokes, mascots, or caricature framing.',
     'The new name must not duplicate or closely resemble the name of any existing internal collaborator.',
     'The professional profile, backstory, goals, and instructions must be grounded in the real-world role and how that role operates in practice.',
-    'Write the prompt with exactly these sections and no others: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
+    'Write the prompt with exactly these sections and no others: Primary Goal, Secondary Goals, Backstory, Instructions.',
     'Keep the structure simple and direct, in a CrewAI-like style.',
     'Do not add sections about tools, safety rules, constraints, communication style, execution control, or environment disclaimers.',
     'Do not mention tool ids, workflow ids, or capability ids anywhere in the generated agent text.',
