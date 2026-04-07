@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
+import { forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createTool } from '@mastra/core/tools';
 import type { Processor, ProcessInputStepArgs, ProcessInputStepResult } from '@mastra/core/processors';
@@ -121,6 +122,59 @@ function hasSuccessfulHireAgentToolResult(toolResult: unknown) {
   }
 
   return false;
+}
+
+function normalizeAgentName(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function validateGeneratedAgentInstructions(instructions: string) {
+  const normalizedInstructions = instructions.trim();
+  const requiredSections = [
+    'Name:',
+    'Primary Goal:',
+    'Secondary Goals:',
+    'Backstory:',
+    'Instructions:',
+  ];
+
+  let previousIndex = -1;
+
+  for (const section of requiredSections) {
+    const sectionIndex = normalizedInstructions.indexOf(section);
+
+    if (sectionIndex === -1) {
+      return {
+        valid: false as const,
+        error: `The system prompt must include the section "${section}".`,
+        hint: 'Rewrite the prompt using exactly these sections: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
+      };
+    }
+
+    if (sectionIndex <= previousIndex) {
+      return {
+        valid: false as const,
+        error: 'The system prompt sections are out of order.',
+        hint: 'Keep the section order exactly as: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
+      };
+    }
+
+    previousIndex = sectionIndex;
+  }
+
+  const mentionedToolIds = forgeCustomToolIds.filter((toolId) => normalizedInstructions.includes(toolId));
+
+  if (mentionedToolIds.length > 0) {
+    return {
+      valid: false as const,
+      error: 'The system prompt must not mention tool ids directly.',
+      hint: `Remove direct tool mentions from the agent text, including: ${mentionedToolIds.join(', ')}.`,
+    };
+  }
+
+  return {
+    valid: true as const,
+  };
 }
 
 async function validateHireAgentInput(
@@ -301,8 +355,8 @@ export async function generateHiredAgentInstructions(
       '### Instructions',
       '- Practical day-to-day operating guidance.',
       '- Focus on HOW to accomplish tasks: decision frameworks, priorities, communication patterns.',
-      '- Include any specific tools or workflows this agent should use.',
-      '- Do NOT include: tool descriptions, safety rules, execution control, environment behavior (handled elsewhere).',
+      '- Do NOT include tool ids, workflow ids, tool descriptions, or environment-control instructions.',
+      '- Do NOT name internal functions such as list_conversations, send_message, manage_crons, or any other capability id in the agent text.',
       '',
       '## Important Constraints',
       '',
@@ -356,6 +410,31 @@ export async function generateHiredAgentInstructions(
         execute: async ({ agent }) => {
           try {
             console.log(`[HiringRH] hireAgent called with:`, JSON.stringify(agent, null, 2));
+            const currentAgents = await db.query.agents.findMany({
+              columns: {
+                name: true,
+              },
+            });
+            const normalizedAgentName = normalizeAgentName(agent.agentName);
+
+            if (currentAgents.some((currentAgent) => normalizeAgentName(currentAgent.name) === normalizedAgentName)) {
+              return {
+                valid: false,
+                error: `An internal collaborator named "${agent.agentName}" already exists.`,
+                hint: 'Choose a different fictional single-word name that does not duplicate an existing collaborator.',
+              };
+            }
+
+            const instructionsValidation = validateGeneratedAgentInstructions(agent.instructions);
+
+            if (!instructionsValidation.valid) {
+              return {
+                valid: false,
+                error: instructionsValidation.error,
+                hint: instructionsValidation.hint,
+              };
+            }
+
             const validation = await validateHireAgentInput(capabilities, agent.roleId);
 
             if (!validation.valid) {
@@ -506,6 +585,7 @@ function buildHiringPrompt(input: {
     'Write the prompt with exactly these sections and no others: Name, Primary Goal, Secondary Goals, Backstory, Instructions.',
     'Keep the structure simple and direct, in a CrewAI-like style.',
     'Do not add sections about tools, safety rules, constraints, communication style, execution control, or environment disclaimers.',
+    'Do not mention tool ids, workflow ids, or capability ids anywhere in the generated agent text.',
     'Do not turn the backstory into fiction, lore, or theatrical character writing.',
     'Put the practical operating guidance into Instructions.',
     'The collaborator works inside the company and primarily communicates through internal-chat.',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -35,6 +35,7 @@ const EMPTY_FORM: HireAgentForm = {
 export function HireAgentDialog(input: HireAgentDialogProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<HireAgentForm>(EMPTY_FORM);
+  const submittingRef = useRef(false);
   const mutation = useMutation({
     mutationFn: async () =>
       hireAgent({
@@ -44,6 +45,7 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
       }),
     onMutate: () => startAdminAction('Contratando agente...'),
     onSuccess: async (_data, _variables, context) => {
+      submittingRef.current = false;
       succeedAdminAction(context, 'Agente contratado.');
       input.onOpenChange(false);
       setForm(EMPTY_FORM);
@@ -54,6 +56,7 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
       ]);
     },
     onError: (error, _variables, context) => {
+      submittingRef.current = false;
       failAdminAction(context, error);
     },
   });
@@ -66,6 +69,7 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
         input.onOpenChange(open);
 
         if (!open) {
+          submittingRef.current = false;
           setForm(EMPTY_FORM);
         }
       }}
@@ -79,6 +83,12 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
           className="flex min-h-0 flex-1 flex-col"
           onSubmit={(event) => {
             event.preventDefault();
+
+            if (submittingRef.current) {
+              return;
+            }
+
+            submittingRef.current = true;
             mutation.mutate();
           }}
         >
