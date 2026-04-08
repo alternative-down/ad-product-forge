@@ -191,6 +191,12 @@ export function createAgentScheduleTools(
       id: 'manage_self_crons',
       description: 'Create, update, or delete your own crons. Use this for your own recurring wakes or one-time future executions.',
       inputSchema: manageSelfCronsInputSchema,
+      onInputAvailable: async ({ input, toolCallId }) => {
+        console.log('[CronTool] manage_self_crons input available:', JSON.stringify({
+          toolCallId,
+          input,
+        }, null, 2));
+      },
       execute: async (input) => {
         forgeDebug('tools:schedules', 'manage_self_crons called', { agentId, action: input.action, input });
 
@@ -322,6 +328,12 @@ export function createAgentScheduleTools(
       id: 'manage_crons',
       description: 'Create, update, or delete crons for other agents. Use this when you want another agent to receive recurring or one-time scheduled work.',
       inputSchema: manageCronsInputSchema,
+      onInputAvailable: async ({ input, toolCallId }) => {
+        console.log('[CronTool] manage_crons input available:', JSON.stringify({
+          toolCallId,
+          input,
+        }, null, 2));
+      },
       execute: async (input) => {
         forgeDebug('tools:schedules', 'manage_crons called', { agentId, action: input.action, input });
 
