@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { unzipSync } from 'fflate';
 
-import type { Agent, WorkspaceFilesystemConfig } from '../database/schema';
+import type { Agent } from '../database/schema';
+import { installAgentWorkspaceSkillsArchive } from './workspace-skill-archive';
+import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
 
 type AgentSkillSummary = {
   skillName: string;
@@ -10,26 +11,6 @@ type AgentSkillSummary = {
   fileCount: number;
   updatedAt: number;
 };
-
-function resolveAgentWorkspaceRoot(
-  workspaceBasePath: string,
-  workspaceFilesystem: WorkspaceFilesystemConfig | null | undefined,
-  agentId: string,
-) {
-  const agentWorkspacePath = path.resolve(workspaceBasePath, agentId);
-
-  return workspaceFilesystem?.basePath
-    ? path.resolve(agentWorkspacePath, workspaceFilesystem.basePath)
-    : path.resolve(agentWorkspacePath, 'workspace');
-}
-
-function resolveAgentSkillsRoot(
-  workspaceBasePath: string,
-  workspaceFilesystem: WorkspaceFilesystemConfig | null | undefined,
-  agentId: string,
-) {
-  return path.resolve(resolveAgentWorkspaceRoot(workspaceBasePath, workspaceFilesystem, agentId), 'skills');
-}
 
 function parseSkillMetadata(skillContent: string) {
   if (!skillContent.startsWith('---\n')) {
@@ -82,54 +63,6 @@ async function countSkillFiles(skillRoot: string): Promise<number> {
   }
 
   return fileCount;
-}
-
-async function ensureDirectory(targetPath: string) {
-  try {
-    const stat = await fs.stat(targetPath);
-
-    if (stat.isDirectory()) {
-      return;
-    }
-
-    await fs.rm(targetPath, { force: true });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error;
-    }
-  }
-
-  await fs.mkdir(targetPath, { recursive: true });
-}
-
-async function ensureParentDirectories(targetPath: string, rootPath: string) {
-  const relativePath = path.relative(rootPath, targetPath);
-  const segments = relativePath.split(path.sep).slice(0, -1);
-  let currentPath = rootPath;
-
-  for (const segment of segments) {
-    currentPath = path.resolve(currentPath, segment);
-    await ensureDirectory(currentPath);
-  }
-}
-
-function normalizeArchiveEntryPath(entryPath: string) {
-  const normalizedPath = entryPath.replace(/\\/g, '/').replace(/^\/+/, '');
-  const isDirectory = normalizedPath.endsWith('/');
-  const withoutSkillsPrefix = normalizedPath.startsWith('skills/')
-    ? normalizedPath.slice('skills/'.length)
-    : normalizedPath;
-
-  const safePath = path.posix.normalize(isDirectory ? withoutSkillsPrefix.slice(0, -1) : withoutSkillsPrefix);
-
-  if (!safePath || safePath === '.' || safePath.startsWith('../') || safePath.includes('/../')) {
-    throw new Error(`Invalid skill archive entry: ${entryPath}`);
-  }
-
-  return {
-    safePath,
-    isDirectory,
-  };
 }
 
 export async function listAgentWorkspaceSkills(
@@ -192,46 +125,7 @@ export async function installAgentWorkspaceSkillsFromZip(input: {
   agent: Pick<Agent, 'id' | 'workspaceFilesystem'>;
   zipBase64: string;
 }) {
-  const skillsRoot = resolveAgentSkillsRoot(
-    input.workspaceBasePath,
-    input.agent.workspaceFilesystem ?? undefined,
-    input.agent.id,
-  );
-  const archive = unzipSync(Buffer.from(input.zipBase64, 'base64'));
-  const writtenSkills = new Set<string>();
-
-  await fs.mkdir(skillsRoot, { recursive: true });
-
-  for (const [entryPath, content] of Object.entries(archive)) {
-    const { safePath, isDirectory } = normalizeArchiveEntryPath(entryPath);
-    const [skillName] = safePath.split('/');
-
-    if (!skillName) {
-      continue;
-    }
-
-    const targetPath = path.resolve(skillsRoot, safePath);
-    const relativePath = path.relative(skillsRoot, targetPath);
-
-    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-      throw new Error(`Invalid skill archive entry: ${entryPath}`);
-    }
-
-    if (isDirectory) {
-      await ensureDirectory(targetPath);
-      continue;
-    }
-
-    await ensureParentDirectories(targetPath, skillsRoot);
-    await fs.writeFile(targetPath, Buffer.from(content));
-    writtenSkills.add(skillName);
-  }
-
-  if (writtenSkills.size === 0) {
-    throw new Error('Skill archive did not contain any files');
-  }
-
-  return Array.from(writtenSkills).sort((left, right) => left.localeCompare(right));
+  return installAgentWorkspaceSkillsArchive(input);
 }
 
 export async function deleteAgentWorkspaceSkill(input: {
@@ -245,12 +139,11 @@ export async function deleteAgentWorkspaceSkill(input: {
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 
-  const skillsRoot = resolveAgentSkillsRoot(
-    input.workspaceBasePath,
-    input.agent.workspaceFilesystem ?? undefined,
-    input.agent.id,
-  );
-  const skillRoot = path.resolve(skillsRoot, skillName);
+  const { skillsRoot, skillRoot } = resolveAgentSkillRoot({
+    workspaceBasePath: input.workspaceBasePath,
+    agent: input.agent,
+    skillName,
+  });
   const relativePath = path.relative(skillsRoot, skillRoot);
 
   if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {

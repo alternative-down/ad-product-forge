@@ -31,6 +31,7 @@ const manageSelfCronsInputSchema = z.preprocess(
   z.object({
     action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
     cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
+    targetCronName: z.string().min(1).nullish().describe('Optional current cron name to resolve the cron when you do not have the cronId.'),
     ...Object.fromEntries(
       Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
     ),
@@ -44,6 +45,7 @@ const manageCronsInputSchema = z.preprocess(
     action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
     targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation.'),
     cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
+    targetCronName: z.string().min(1).nullish().describe('Optional current cron name to resolve the delegated cron when you do not have the cronId.'),
     ...Object.fromEntries(
       Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
     ),
@@ -108,6 +110,67 @@ function normalizeCronId(input: {
   cronId?: string | null;
 }) {
   return input.cronId ?? null;
+}
+
+async function resolveSelfCronId(input: {
+  cronId?: string | null;
+  targetCronName?: string | null;
+}, agentId: string, schedules: ReturnType<typeof createAgentScheduleManager>) {
+  const cronId = normalizeCronId(input);
+
+  if (cronId) {
+    return cronId;
+  }
+
+  const ownCrons = await schedules.listSchedules(agentId);
+
+  if (ownCrons.length === 1) {
+    return ownCrons[0].scheduleId;
+  }
+
+  if (!input.targetCronName) {
+    return null;
+  }
+
+  const normalizedName = input.targetCronName.trim().toLowerCase();
+  const matches = ownCrons.filter((cron) => cron.name.trim().toLowerCase() === normalizedName);
+
+  if (matches.length === 1) {
+    return matches[0].scheduleId;
+  }
+
+  return null;
+}
+
+async function resolveDelegatedCronId(input: {
+  cronId?: string | null;
+  targetCronName?: string | null;
+  targetAgentId?: string | null;
+}, creatorAgentId: string, schedules: ReturnType<typeof createAgentScheduleManager>) {
+  const cronId = normalizeCronId(input);
+
+  if (cronId) {
+    return cronId;
+  }
+
+  const delegatedCrons = await schedules.listTasks(creatorAgentId, input.targetAgentId ?? undefined);
+
+  if (delegatedCrons.length === 1) {
+    return delegatedCrons[0].scheduleId;
+  }
+
+  if (!input.targetCronName) {
+    return null;
+  }
+
+  const normalizedName = input.targetCronName.trim().toLowerCase();
+  const matches = delegatedCrons.filter((cron) => cron.name.trim().toLowerCase() === normalizedName);
+
+  if (matches.length === 1) {
+    return matches[0].scheduleId;
+  }
+
+  return null;
 }
 
 function validateDelegatedCronCreateTarget(input: { targetAgentId?: string | null }) {
@@ -203,13 +266,13 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
-          const cronId = normalizeCronId(input);
+          const cronId = await resolveSelfCronId(input, agentId, schedules);
 
           if (!cronId) {
             return {
               valid: false as const,
               error: 'cronId is required for update and delete',
-              hint: 'Use list_self_crons or list_crons to get the cronId you want to change.',
+              hint: 'Use list_self_crons to get the cronId, or provide targetCronName when you know the current cron name.',
             };
           }
 
@@ -239,13 +302,13 @@ export function createAgentScheduleTools(
           }
         }
 
-        const cronId = normalizeCronId(input);
+        const cronId = await resolveSelfCronId(input, agentId, schedules);
 
         if (!cronId) {
           return {
             valid: false as const,
             error: 'cronId is required for update and delete',
-            hint: 'Use list_self_crons or list_crons to get the cronId you want to change.',
+            hint: 'Use list_self_crons to get the cronId, or provide targetCronName when you know the current cron name.',
           };
         }
 
@@ -341,13 +404,13 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
-          const cronId = normalizeCronId(input);
+          const cronId = await resolveDelegatedCronId(input, agentId, schedules);
 
           if (!cronId) {
             return {
               valid: false as const,
               error: 'cronId is required for update and delete',
-              hint: 'Use list_crons to get the cronId you want to change.',
+              hint: 'Use list_crons to get the cronId, or provide targetCronName when you know the current cron name.',
             };
           }
 
@@ -377,13 +440,13 @@ export function createAgentScheduleTools(
           }
         }
 
-        const cronId = normalizeCronId(input);
+        const cronId = await resolveDelegatedCronId(input, agentId, schedules);
 
         if (!cronId) {
           return {
             valid: false as const,
             error: 'cronId is required for update and delete',
-            hint: 'Use list_crons to get the cronId you want to change.',
+            hint: 'Use list_crons to get the cronId, or provide targetCronName when you know the current cron name.',
           };
         }
 

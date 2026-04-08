@@ -1,59 +1,22 @@
 import { createAgentWakeQueue } from '@mastra-engine/core';
 import type { AgentWakeEvent } from '@mastra-engine/core';
 
-import type { InternalAgentRuntime } from './create-forge-agent';
+import type { InternalAgentRuntime } from './agent-runtime-types';
 import { createAgentContractStore } from './agent-contract-store';
 import type { Database } from '../database/index';
 import { createSystemSettingsStore } from '../system-settings/store';
+import { createAgentRunnerUsage } from './agent-runner-usage';
+import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
-const RECENT_STEP_LIMIT = 10;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
-const RUN_STOP_REMINDER = [
-  'System Message:',
-  'A response without tool calls was detected.',
-  '',
-  'If you want to take any action, use your tools.',
-  'Plain text responses without tool calls are ignored by the system.',
-  '',
-  'Use NO_ACTION_NEEDED only when you want your visible text ignored and you still intend to keep working in this run.',
-  'Use STOP_AND_IDLE only when you have finished everything you intend to do in this run and really want to stop.',
-  '',
-  'If you answer STOP_AND_IDLE:',
-  '- this run stops immediately',
-  '- you will not inspect, message, or act further now',
-  '- your execution will stay idle until a future wake event happens',
-  '',
-  'Do not use STOP_AND_IDLE to skip, postpone, or ignore pending work from the current wake.',
-  'If there is anything to investigate or act on now, use tools instead of answering STOP_AND_IDLE.',
-  '',
-  'This is an automatic system message. You do not need to reply to this message itself.',
-].join('\n');
-type AgentUsage = {
-  inputTokens?: number;
-  outputTokens?: number;
-  promptTokens?: number;
-  completionTokens?: number;
-  cachedInputTokens?: number;
-  inputTokenDetails?: {
-    noCacheTokens?: number;
-    cacheReadTokens?: number;
-  };
-};
-
-type OmObservationEndPart = {
-  type: 'data-om-observation-end';
-  data?: {
-    tokensObserved?: number;
-    observationTokens?: number;
-  };
-};
 
 export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
   const systemSettings = createSystemSettingsStore(db);
+  const usage = createAgentRunnerUsage({ store, runtime });
   const wakeQueue = createAgentWakeQueue({
     label: runtime.id,
     execute,
@@ -249,15 +212,14 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           };
         },
       });
-      const usage = result.usage as AgentUsage;
-      const inputTokens =
-        usage.inputTokenDetails?.noCacheTokens ?? usage.inputTokens ?? usage.promptTokens ?? 0;
-      const cachedInputTokens =
-        usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
-      const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0;
+      const {
+        inputTokens,
+        cachedInputTokens,
+        outputTokens,
+      } = usage.getUsageFromResult(result);
 
-      await recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
-      await recordObservationalMemorySteps(contractId, result.steps);
+      await usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
+      await usage.recordObservationalMemorySteps(contractId, result.steps);
 
       const ignoredTextRequested = result.text.trim() === NO_ACTION_NEEDED_PREFIX;
       const stopRequested = result.text.trim() === STOP_AND_IDLE_PREFIX;
@@ -319,7 +281,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
     const spentUsd = await store.getContractSpend(contract.id);
     const remainingBudgetUsd = contract.budgetUsd - spentUsd;
-    const estimatedStepUsd = await estimateStepCostUsd();
+    const estimatedStepUsd = await usage.estimateStepCostUsd();
 
     if (estimatedStepUsd !== null && remainingBudgetUsd < estimatedStepUsd) {
       return {
@@ -339,36 +301,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         ? 0
         : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
     };
-  }
-
-  async function estimateStepCostUsd() {
-    if (!runtime.modelProfileId) {
-      throw new Error(`Agent runtime is missing primary model profile: ${runtime.id}`);
-    }
-
-    const recentSteps = await store.listRecentSteps(runtime.id, RECENT_STEP_LIMIT);
-
-    if (recentSteps.length === 0) {
-      return null;
-    }
-
-    const averageStepUsd =
-      recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
-    const pricing = await store.getUsagePricing({
-      pricingModelKey: runtime.pricingModelKey,
-      profileId: runtime.modelProfileId,
-    });
-    const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
-
-    if (!pricing.modelPrice || !lastAgentStep) {
-      return averageStepUsd;
-    }
-
-    const inputEstimatedUsd =
-      (lastAgentStep.inputTokens / 1_000_000) *
-      pricing.modelPrice.inputPerMillionUsd *
-      pricing.contractCostMultiplier;
-    return (inputEstimatedUsd + averageStepUsd) / 2;
   }
 
   function calculateDelayMs(
@@ -396,116 +328,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     return delayMs;
   }
 
-  async function recordAgentStep(
-    contractId: string,
-    inputTokens: number,
-    cachedInputTokens: number,
-    outputTokens: number,
-  ) {
-    if (!runtime.modelProfileId) {
-      throw new Error(`Agent runtime is missing primary model profile: ${runtime.id}`);
-    }
-
-    const pricing = await store.getUsagePricing({
-      pricingModelKey: runtime.pricingModelKey,
-      profileId: runtime.modelProfileId,
-    });
-    let costUsd = 0;
-
-    if (pricing.modelPrice) {
-      costUsd =
-        ((inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
-          (cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
-          (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
-        pricing.contractCostMultiplier;
-    }
-
-    await store.recordAgentStep({
-      agentId: runtime.id,
-      contractId,
-      llmProfileId: runtime.modelProfileId,
-      modelKey: runtime.pricingModelKey,
-      kind: 'agent-step',
-      inputTokens,
-      cachedInputTokens,
-      outputTokens,
-      inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
-      inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
-      outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
-      contractCostMultiplier: pricing.contractCostMultiplier,
-      costUsd,
-    });
-  }
-
-  async function recordObservationalMemorySteps(
-    contractId: string,
-    steps: Array<{
-      response?: {
-        uiMessages?: Array<{
-          parts?: Array<unknown>;
-        }>;
-      };
-    }>,
-  ) {
-    if (!runtime.omModelProfileId) {
-      throw new Error(`Agent runtime is missing OM model profile: ${runtime.id}`);
-    }
-
-    const pricing = await store.getUsagePricing({
-      pricingModelKey: runtime.omPricingModelKey,
-      profileId: runtime.omModelProfileId,
-    });
-    const parts = steps
-      .flatMap((step) => step.response?.uiMessages ?? [])
-      .flatMap((message) => message.parts ?? []);
-
-    for (const part of parts) {
-      if (!isOmObservationEndPart(part)) {
-        continue;
-      }
-
-      const inputTokens = part.data?.tokensObserved ?? 0;
-      const outputTokens = part.data?.observationTokens ?? 0;
-
-      if (inputTokens <= 0 && outputTokens <= 0) {
-        continue;
-      }
-
-      let costUsd = 0;
-
-      if (pricing.modelPrice) {
-        costUsd =
-          ((inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
-            (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
-          pricing.contractCostMultiplier;
-      }
-
-      await store.recordAgentStep({
-        agentId: runtime.id,
-        contractId,
-        llmProfileId: runtime.omModelProfileId,
-        modelKey: runtime.omPricingModelKey,
-        kind: 'om',
-        inputTokens,
-        cachedInputTokens: 0,
-        outputTokens,
-        inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
-        inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
-        outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
-        contractCostMultiplier: pricing.contractCostMultiplier,
-        costUsd,
-      });
-    }
-  }
-
-  function isOmObservationEndPart(part: unknown): part is OmObservationEndPart {
-    if (!part || typeof part !== 'object') {
-      return false;
-    }
-
-    return 'type' in part && part.type === 'data-om-observation-end';
-  }
-
   function getSnapshot() {
     return {
       stopped,
@@ -527,157 +349,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     getSnapshot,
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
-}
-
-function formatPendingRunEvents(events: AgentWakeEvent[]) {
-  const groups = new Map<string, AgentWakeEvent[]>();
-  const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
-
-  for (const event of orderedEvents) {
-    const existingGroup = groups.get(event.groupKey);
-
-    if (existingGroup) {
-      existingGroup.push(event);
-      continue;
-    }
-
-    groups.set(event.groupKey, [event]);
-  }
-
-  return Array.from(groups.values())
-    .map((groupEvents) => formatPendingRunEventGroup(groupEvents))
-    .join('\n\n');
-}
-
-function formatPendingRunEventGroup(events: AgentWakeEvent[]) {
-  const orderedEvents = [...events].sort((left, right) => left.timestamp - right.timestamp);
-  const firstEvent = orderedEvents[0];
-  const header = describeWakeGroup(firstEvent);
-  const itemLines = orderedEvents.map((event) => formatPendingRunEventItem(event));
-
-  return [header, '', ...itemLines].join('\n');
-}
-
-function formatPendingRunEventItem(event: AgentWakeEvent) {
-  const timeLabel = formatWakeTime(event.timestamp);
-  const messageId = normalizeProviderCode(event.itemMetadata?.MessageId);
-  const actor = event.itemMetadata?.Author ?? describeWakeActor(event);
-  const actorKey = event.itemMetadata?.AuthorKey;
-  const attachments = event.itemMetadata?.Attachments;
-  const text = event.text.trim();
-
-  const label = [
-    `[${timeLabel}]`,
-    messageId ? `[messageId: ${messageId}]` : '',
-    actor
-      ? actorKey
-        ? `${actor} (${actorKey})`
-        : actor
-      : '',
-  ]
-    .filter(Boolean)
-    .join('');
-
-  const suffix = attachments ? ` (attachments: ${attachments})` : '';
-
-  if (text.includes('\n')) {
-    return actor
-      ? `${label}:\n${text}${suffix}`
-      : `${[label, `${text}${suffix}`.trim()].filter(Boolean).join('\n')}`.trim();
-  }
-
-  return actor
-    ? `${label}: ${text}${suffix}`
-    : `${[label, `${text}${suffix}`.trim()].filter(Boolean).join(' ')}`.trim();
-}
-
-function describeWakeGroup(event: AgentWakeEvent) {
-  if (event.type.startsWith('message:')) {
-    const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
-    const lines = [`targetKey: ${targetKey}`];
-
-    if (event.groupMetadata?.ConversationType === 'group') {
-      lines.push('conversationType: group');
-    }
-
-    if (event.groupMetadata?.ConversationName) {
-      lines.push(`conversationName: ${event.groupMetadata.ConversationName}`);
-    }
-
-    if (event.groupMetadata?.Participants) {
-      lines.push(`participants: ${event.groupMetadata.Participants}`);
-    }
-
-    return lines.join('\n');
-  }
-
-  if (event.type === 'schedule') {
-    if (event.groupMetadata?.ScheduleKind === 'heartbeat') {
-      return 'scheduler';
-    }
-
-    return event.groupMetadata?.ScheduleId
-      ? `scheduler: ${event.groupMetadata.ScheduleId}`
-      : 'scheduler';
-  }
-
-  if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
-    return `GitHub: ${event.groupMetadata?.EventType ?? event.groupKey}`;
-  }
-
-  if (event.type === 'role-change') {
-    return `Role change: ${event.groupMetadata?.TargetAgentId ?? event.groupKey}`;
-  }
-
-  if (event.type === 'runner-reminder') {
-    return 'System: runner-reminder';
-  }
-
-  return `${formatWakeLabel(event.type)}: ${event.groupKey}`;
-}
-
-function formatWakeLabel(value: string) {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[-_:]+/g, ' ')
-    .toLowerCase();
-}
-
-function normalizeProviderCode(value?: string) {
-  if (!value) {
-    return value;
-  }
-
-  return value
-    .replace(/^conv_/, '')
-    .replace(/^msg_/, '');
-}
-
-function describeWakeActor(event: AgentWakeEvent) {
-  if (event.type === 'schedule') {
-    return '';
-  }
-
-  if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
-    return 'GitHub';
-  }
-
-  if (event.type === 'role-change') {
-    return 'System';
-  }
-
-  if (event.type === 'runner-reminder') {
-    return 'System';
-  }
-
-  return '';
-}
-
-function formatWakeTime(timestamp: number) {
-  const date = new Date(timestamp);
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

@@ -5,7 +5,11 @@ import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibSQLStore } from '@mastra/libsql';
 import type { MastraDBMessage } from '@mastra/core/agent';
-import { toMastraSafeIdentifier } from '@mastra-engine/core';
+import {
+  toMastraSafeIdentifier,
+  type CommunicationMessageView,
+  type CommunicationProviderMessage,
+} from '@mastra-engine/core';
 
 import type { Database } from '../database/index';
 import {
@@ -417,7 +421,7 @@ export function createAdminReadModel(input: {
       const agentIdByAccountId = new Map(accounts.map((account) => [account.id, account.agentId ?? null]));
 
       return {
-        items: messages.map((message) => ({
+        items: messages.map((message: CommunicationProviderMessage) => ({
           ...message,
           authorAgentId: message.authorId ? (agentIdByAccountId.get(message.authorId) ?? null) : null,
         })),
@@ -650,12 +654,12 @@ async function listRecentExternalConversations(_workspaceBasePath: string, _agen
     });
 
     return rows
-      .filter((conversation) => conversation.provider !== 'internal-chat')
-      .map((conversation) => {
+      .filter((conversation): conversation is (typeof rows)[number] => conversation.provider !== 'internal-chat')
+      .map((conversation: (typeof rows)[number]) => {
         const participants = collectConversationParticipants({
           name: conversation.name,
           participants: conversation.participants,
-          messages: conversation.messages.map((message) => ({
+          messages: conversation.messages.map((message: CommunicationMessageView) => ({
             authorDisplayName: message.authorDisplayName,
           })),
         });
@@ -668,7 +672,7 @@ async function listRecentExternalConversations(_workspaceBasePath: string, _agen
           name: conversation.name ?? undefined,
           participants,
           updatedAt: Date.parse(conversation.latestMessageAt) || 0,
-          messages: conversation.messages.map((message) => ({
+          messages: conversation.messages.map((message: CommunicationMessageView) => ({
             messageId: message.messageId,
             content: message.content,
             unread: message.unread,
