@@ -472,7 +472,7 @@ export async function generateHiredAgentInstructions(
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
     maxSteps: 20,
-    toolChoice: 'required',
+    toolChoice: 'auto',
   });
 
   const inputTokens = result.usage.inputTokens ?? 0;
