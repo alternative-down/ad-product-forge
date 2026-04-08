@@ -19,8 +19,8 @@
     "drizzle:push": "drizzle-kit push"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.63",
-    "@ai-sdk/openai": "^3.0.47",
+    "@ai-sdk/anthropic": "^3.0.68",
+    "@ai-sdk/openai": "^3.0.52",
     "@libsql/client": "^0.17.2",
     "@mastra/core": "^1.24.0",
     "@mastra/fastembed": "^1.0.1",
