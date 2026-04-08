@@ -31,7 +31,6 @@ const manageSelfCronsInputSchema = z.preprocess(
   z.object({
     action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
     cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
-    targetCronName: z.string().min(1).nullish().describe('Optional current cron name to resolve the cron when you do not have the cronId.'),
     ...Object.fromEntries(
       Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
     ),
@@ -45,7 +44,6 @@ const manageCronsInputSchema = z.preprocess(
     action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
     targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation.'),
     cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
-    targetCronName: z.string().min(1).nullish().describe('Optional current cron name to resolve the delegated cron when you do not have the cronId.'),
     ...Object.fromEntries(
       Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
     ),
@@ -114,7 +112,6 @@ function normalizeCronId(input: {
 
 async function resolveSelfCronId(input: {
   cronId?: string | null;
-  targetCronName?: string | null;
 }, agentId: string, schedules: ReturnType<typeof createAgentScheduleManager>) {
   const cronId = normalizeCronId(input);
 
@@ -128,23 +125,11 @@ async function resolveSelfCronId(input: {
     return ownCrons[0].scheduleId;
   }
 
-  if (!input.targetCronName) {
-    return null;
-  }
-
-  const normalizedName = input.targetCronName.trim().toLowerCase();
-  const matches = ownCrons.filter((cron) => cron.name.trim().toLowerCase() === normalizedName);
-
-  if (matches.length === 1) {
-    return matches[0].scheduleId;
-  }
-
   return null;
 }
 
 async function resolveDelegatedCronId(input: {
   cronId?: string | null;
-  targetCronName?: string | null;
   targetAgentId?: string | null;
 }, creatorAgentId: string, schedules: ReturnType<typeof createAgentScheduleManager>) {
   const cronId = normalizeCronId(input);
@@ -157,17 +142,6 @@ async function resolveDelegatedCronId(input: {
 
   if (delegatedCrons.length === 1) {
     return delegatedCrons[0].scheduleId;
-  }
-
-  if (!input.targetCronName) {
-    return null;
-  }
-
-  const normalizedName = input.targetCronName.trim().toLowerCase();
-  const matches = delegatedCrons.filter((cron) => cron.name.trim().toLowerCase() === normalizedName);
-
-  if (matches.length === 1) {
-    return matches[0].scheduleId;
   }
 
   return null;
@@ -272,7 +246,7 @@ export function createAgentScheduleTools(
             return {
               valid: false as const,
               error: 'cronId is required for update and delete',
-              hint: 'Use list_self_crons to get the cronId, or provide targetCronName when you know the current cron name.',
+              hint: 'Use list_self_crons to get the cronId. If you only have one cron, the tool can resolve it automatically.',
             };
           }
 
@@ -308,7 +282,7 @@ export function createAgentScheduleTools(
           return {
             valid: false as const,
             error: 'cronId is required for update and delete',
-            hint: 'Use list_self_crons to get the cronId, or provide targetCronName when you know the current cron name.',
+            hint: 'Use list_self_crons to get the cronId. If you only have one cron, the tool can resolve it automatically.',
           };
         }
 
@@ -410,7 +384,7 @@ export function createAgentScheduleTools(
             return {
               valid: false as const,
               error: 'cronId is required for update and delete',
-              hint: 'Use list_crons to get the cronId, or provide targetCronName when you know the current cron name.',
+              hint: 'Use list_crons to get the cronId. If there is only one matching delegated cron, the tool can resolve it automatically.',
             };
           }
 
@@ -446,7 +420,7 @@ export function createAgentScheduleTools(
           return {
             valid: false as const,
             error: 'cronId is required for update and delete',
-            hint: 'Use list_crons to get the cronId, or provide targetCronName when you know the current cron name.',
+            hint: 'Use list_crons to get the cronId. If there is only one matching delegated cron, the tool can resolve it automatically.',
           };
         }
 
