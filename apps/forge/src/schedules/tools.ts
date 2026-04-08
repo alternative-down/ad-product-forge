@@ -7,29 +7,57 @@ import type { createAgentScheduleManager } from './manager';
 
 const manageSelfCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
-  cronId: z.string().min(1).nullish().describe('Required for update and delete. Omit this field when creating a cron.'),
-  name: z.string().min(1).nullish().describe('Cron name. Required for create. Do not send null when creating.'),
-  description: z.string().nullish().describe('Optional note explaining what this cron is for.'),
-  scheduleType: z.enum(['cron', 'date']).nullish().describe('Required for create. Use the literal string cron for recurring execution or date for one-time execution. Do not send null when creating.'),
-  cronExpression: z.string().min(1).nullish().describe('Required when action is create and scheduleType is cron. Example: 0 * * * *.'),
-  scheduledDate: z.string().min(1).nullish().describe('Required when action is create and scheduleType is date. Use an ISO string.'),
-  timezone: z.string().min(1).nullish().describe('Optional timezone. If omitted, UTC is used.'),
-  content: z.string().min(1).nullish().describe('Required for create. This is the message or task content that should be delivered when the cron runs. Do not send null when creating.'),
-  isActive: z.boolean().nullish().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
+  create: z.object({
+    name: z.string().min(1).describe('Cron name.'),
+    description: z.string().nullish().describe('Optional note explaining what this cron is for.'),
+    scheduleType: z.enum(['cron', 'date']).describe('Use the literal string cron for recurring execution or date for one-time execution.'),
+    cronExpression: z.string().min(1).nullish().describe('Required when scheduleType is cron. Example: 0 * * * *.'),
+    scheduledDate: z.string().min(1).nullish().describe('Required when scheduleType is date. Use an ISO string.'),
+    timezone: z.string().min(1).nullish().describe('Optional timezone. If omitted, UTC is used.'),
+    content: z.string().min(1).describe('The message or task content that should be delivered when the cron runs.'),
+  }).nullish().describe('Provide this object only when action is create.'),
+  update: z.object({
+    cronId: z.string().min(1).describe('Required cron id to update.'),
+    name: z.string().min(1).nullish().describe('New cron name.'),
+    description: z.string().nullish().describe('Optional new note.'),
+    scheduleType: z.enum(['cron', 'date']).nullish().describe('Optional new schedule type.'),
+    cronExpression: z.string().min(1).nullish().describe('Optional new cron expression.'),
+    scheduledDate: z.string().min(1).nullish().describe('Optional new one-time execution date.'),
+    timezone: z.string().min(1).nullish().describe('Optional new timezone.'),
+    content: z.string().min(1).nullish().describe('Optional new content.'),
+    isActive: z.boolean().nullish().describe('Optional active flag.'),
+  }).nullish().describe('Provide this object only when action is update.'),
+  delete: z.object({
+    cronId: z.string().min(1).describe('Required cron id to delete.'),
+  }).nullish().describe('Provide this object only when action is delete.'),
 });
 
 const manageCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
-  targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation. Do not send null when creating a delegated cron.'),
-  cronId: z.string().min(1).nullish().describe('Required for update and delete. Omit this field when creating a cron.'),
-  name: z.string().min(1).nullish().describe('Cron name. Required for create. Do not send null when creating.'),
-  description: z.string().nullish().describe('Optional note explaining what this cron is for.'),
-  scheduleType: z.enum(['cron', 'date']).nullish().describe('Required for create. Use the literal string cron for recurring execution or date for one-time execution. Do not send null when creating.'),
-  cronExpression: z.string().min(1).nullish().describe('Required when action is create and scheduleType is cron. Example: 0 * * * *.'),
-  scheduledDate: z.string().min(1).nullish().describe('The date and time to use when scheduleType is date. Use an ISO string.'),
-  timezone: z.string().min(1).nullish().describe('Timezone used to interpret the cron.'),
-  content: z.string().min(1).nullish().describe('Required for create. This is the message or task content that should be delivered when the cron runs. Do not send null when creating.'),
-  isActive: z.boolean().nullish().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
+  create: z.object({
+    targetAgentId: z.string().min(1).describe('Required target agent id for delegated cron creation.'),
+    name: z.string().min(1).describe('Cron name.'),
+    description: z.string().nullish().describe('Optional note explaining what this cron is for.'),
+    scheduleType: z.enum(['cron', 'date']).describe('Use the literal string cron for recurring execution or date for one-time execution.'),
+    cronExpression: z.string().min(1).nullish().describe('Required when scheduleType is cron. Example: 0 * * * *.'),
+    scheduledDate: z.string().min(1).nullish().describe('Required when scheduleType is date. Use an ISO string.'),
+    timezone: z.string().min(1).nullish().describe('Optional timezone. If omitted, UTC is used.'),
+    content: z.string().min(1).describe('The message or task content that should be delivered when the cron runs.'),
+  }).nullish().describe('Provide this object only when action is create.'),
+  update: z.object({
+    cronId: z.string().min(1).describe('Required delegated cron id to update.'),
+    name: z.string().min(1).nullish().describe('New cron name.'),
+    description: z.string().nullish().describe('Optional new note.'),
+    scheduleType: z.enum(['cron', 'date']).nullish().describe('Optional new schedule type.'),
+    cronExpression: z.string().min(1).nullish().describe('Optional new cron expression.'),
+    scheduledDate: z.string().min(1).nullish().describe('Optional new one-time execution date.'),
+    timezone: z.string().min(1).nullish().describe('Optional new timezone.'),
+    content: z.string().min(1).nullish().describe('Optional new content.'),
+    isActive: z.boolean().nullish().describe('Optional active flag.'),
+  }).nullish().describe('Provide this object only when action is update.'),
+  delete: z.object({
+    cronId: z.string().min(1).describe('Required delegated cron id to delete.'),
+  }).nullish().describe('Provide this object only when action is delete.'),
 });
 
 function validateCreateTiming(input: {
@@ -146,6 +174,30 @@ function normalizeOptionalText(value?: string) {
   return normalized.length > 0 ? normalized : undefined;
 }
 
+function getSelfCreateInput(input: z.infer<typeof manageSelfCronsInputSchema>) {
+  return input.action === 'create' ? input.create ?? null : null;
+}
+
+function getSelfUpdateInput(input: z.infer<typeof manageSelfCronsInputSchema>) {
+  return input.action === 'update' ? input.update ?? null : null;
+}
+
+function getSelfDeleteInput(input: z.infer<typeof manageSelfCronsInputSchema>) {
+  return input.action === 'delete' ? input.delete ?? null : null;
+}
+
+function getDelegatedCreateInput(input: z.infer<typeof manageCronsInputSchema>) {
+  return input.action === 'create' ? input.create ?? null : null;
+}
+
+function getDelegatedUpdateInput(input: z.infer<typeof manageCronsInputSchema>) {
+  return input.action === 'update' ? input.update ?? null : null;
+}
+
+function getDelegatedDeleteInput(input: z.infer<typeof manageCronsInputSchema>) {
+  return input.action === 'delete' ? input.delete ?? null : null;
+}
+
 function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value: T) {
   const cronId = value.scheduleId ?? value.taskId;
   const { scheduleId: _scheduleId, taskId: _taskId, ...rest } = value;
@@ -195,22 +247,40 @@ export function createAgentScheduleTools(
         forgeDebug('tools:schedules', 'manage_self_crons called', { agentId, action: input.action });
 
         if (input.action === 'create') {
-          const validation = validateCreateTiming(input);
+          const createInput = getSelfCreateInput(input);
+
+          if (!createInput) {
+            return {
+              valid: false,
+              error: 'create is required when action is create',
+              hint: 'Send the create object with name, scheduleType, and content.',
+            };
+          }
+
+          const validation = validateCreateTiming(createInput);
 
           if (validation) {
             return validation;
           }
 
           try {
-            const result = await schedules.createSchedule(agentId, {
-              name: input.name,
-              description: normalizeOptionalText(input.description),
-              scheduleType: input.scheduleType,
-              cronExpression: input.scheduleType === 'cron' ? input.cronExpression : undefined,
-              scheduledDate: input.scheduleType === 'date' ? input.scheduledDate : undefined,
-              timezone: input.timezone ?? 'UTC',
-              content: input.content,
-            });
+            const result = createInput.scheduleType === 'cron'
+              ? await schedules.createSchedule(agentId, {
+                  name: createInput.name,
+                  description: normalizeOptionalText(createInput.description ?? undefined),
+                  scheduleType: 'cron',
+                  cronExpression: createInput.cronExpression!,
+                  timezone: createInput.timezone ?? 'UTC',
+                  content: createInput.content,
+                })
+              : await schedules.createSchedule(agentId, {
+                  name: createInput.name,
+                  description: normalizeOptionalText(createInput.description ?? undefined),
+                  scheduleType: 'date',
+                  scheduledDate: createInput.scheduledDate!,
+                  timezone: createInput.timezone ?? 'UTC',
+                  content: createInput.content,
+                });
 
             return {
               valid: true,
@@ -227,7 +297,16 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
-          const cronId = await resolveSelfCronId(input, agentId, schedules);
+          const updateInput = getSelfUpdateInput(input);
+
+          if (!updateInput) {
+            return {
+              valid: false,
+              error: 'update is required when action is update',
+              hint: 'Send the update object with cronId and the fields you want to change.',
+            };
+          }
+          const cronId = await resolveSelfCronId(updateInput, agentId, schedules);
 
           if (!cronId) {
             return {
@@ -239,14 +318,14 @@ export function createAgentScheduleTools(
 
           try {
             const result = await schedules.updateSchedule(agentId, cronId, {
-              name: normalizeOptionalText(input.name),
-              description: normalizeOptionalText(input.description),
-              scheduleType: input.scheduleType ?? undefined,
-              cronExpression: normalizeOptionalText(input.cronExpression),
-              scheduledDate: normalizeOptionalText(input.scheduledDate),
-              timezone: normalizeOptionalText(input.timezone),
-              content: normalizeOptionalText(input.content),
-              isActive: input.isActive ?? undefined,
+              name: normalizeOptionalText(updateInput.name ?? undefined),
+              description: normalizeOptionalText(updateInput.description ?? undefined),
+              scheduleType: updateInput.scheduleType ?? undefined,
+              cronExpression: normalizeOptionalText(updateInput.cronExpression ?? undefined),
+              scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
+              timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
+              content: normalizeOptionalText(updateInput.content ?? undefined),
+              isActive: updateInput.isActive ?? undefined,
             });
 
             return {
@@ -263,7 +342,17 @@ export function createAgentScheduleTools(
           }
         }
 
-        const cronId = await resolveSelfCronId(input, agentId, schedules);
+        const deleteInput = getSelfDeleteInput(input);
+
+        if (!deleteInput) {
+          return {
+            valid: false,
+            error: 'delete is required when action is delete',
+            hint: 'Send the delete object with cronId.',
+          };
+        }
+
+        const cronId = await resolveSelfCronId(deleteInput, agentId, schedules);
 
         if (!cronId) {
           return {
@@ -326,29 +415,48 @@ export function createAgentScheduleTools(
         forgeDebug('tools:schedules', 'manage_crons called', { agentId, action: input.action });
 
         if (input.action === 'create') {
-          const createTargetValidation = validateDelegatedCronCreateTarget(input);
+          const createInput = getDelegatedCreateInput(input);
+
+          if (!createInput) {
+            return {
+              valid: false,
+              error: 'create is required when action is create',
+              hint: 'Send the create object with targetAgentId, name, scheduleType, and content.',
+            };
+          }
+
+          const createTargetValidation = validateDelegatedCronCreateTarget(createInput);
 
           if (createTargetValidation) {
             return createTargetValidation;
           }
 
-          const validation = validateCreateTiming(input);
+          const validation = validateCreateTiming(createInput);
 
           if (validation) {
             return validation;
           }
 
           try {
-            const result = await schedules.createScheduleForAgent(agentId, {
-              targetAgentId: input.targetAgentId,
-              name: input.name,
-              description: normalizeOptionalText(input.description),
-              scheduleType: input.scheduleType,
-              cronExpression: input.scheduleType === 'cron' ? input.cronExpression : undefined,
-              scheduledDate: input.scheduleType === 'date' ? input.scheduledDate : undefined,
-              timezone: input.timezone ?? 'UTC',
-              content: input.content,
-            });
+            const result = createInput.scheduleType === 'cron'
+              ? await schedules.createScheduleForAgent(agentId, {
+                  targetAgentId: createInput.targetAgentId,
+                  name: createInput.name,
+                  description: normalizeOptionalText(createInput.description ?? undefined),
+                  scheduleType: 'cron',
+                  cronExpression: createInput.cronExpression!,
+                  timezone: createInput.timezone ?? 'UTC',
+                  content: createInput.content,
+                })
+              : await schedules.createScheduleForAgent(agentId, {
+                  targetAgentId: createInput.targetAgentId,
+                  name: createInput.name,
+                  description: normalizeOptionalText(createInput.description ?? undefined),
+                  scheduleType: 'date',
+                  scheduledDate: createInput.scheduledDate!,
+                  timezone: createInput.timezone ?? 'UTC',
+                  content: createInput.content,
+                });
 
             return {
               valid: true,
@@ -365,7 +473,17 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
-          const cronId = await resolveDelegatedCronId(input, agentId, schedules);
+          const updateInput = getDelegatedUpdateInput(input);
+
+          if (!updateInput) {
+            return {
+              valid: false,
+              error: 'update is required when action is update',
+              hint: 'Send the update object with cronId and the fields you want to change.',
+            };
+          }
+
+          const cronId = await resolveDelegatedCronId(updateInput, agentId, schedules);
 
           if (!cronId) {
             return {
@@ -377,14 +495,14 @@ export function createAgentScheduleTools(
 
           try {
             const result = await schedules.editCron(agentId, cronId, {
-              name: normalizeOptionalText(input.name),
-              description: normalizeOptionalText(input.description),
-              scheduleType: input.scheduleType ?? undefined,
-              cronExpression: normalizeOptionalText(input.cronExpression),
-              scheduledDate: normalizeOptionalText(input.scheduledDate),
-              timezone: normalizeOptionalText(input.timezone),
-              content: normalizeOptionalText(input.content),
-              isActive: input.isActive ?? undefined,
+              name: normalizeOptionalText(updateInput.name ?? undefined),
+              description: normalizeOptionalText(updateInput.description ?? undefined),
+              scheduleType: updateInput.scheduleType ?? undefined,
+              cronExpression: normalizeOptionalText(updateInput.cronExpression ?? undefined),
+              scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
+              timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
+              content: normalizeOptionalText(updateInput.content ?? undefined),
+              isActive: updateInput.isActive ?? undefined,
             });
 
             return {
@@ -401,7 +519,17 @@ export function createAgentScheduleTools(
           }
         }
 
-        const cronId = await resolveDelegatedCronId(input, agentId, schedules);
+        const deleteInput = getDelegatedDeleteInput(input);
+
+        if (!deleteInput) {
+          return {
+            valid: false,
+            error: 'delete is required when action is delete',
+            hint: 'Send the delete object with cronId.',
+          };
+        }
+
+        const cronId = await resolveDelegatedCronId(deleteInput, agentId, schedules);
 
         if (!cronId) {
           return {
