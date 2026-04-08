@@ -69,14 +69,10 @@ These ids are the current permission targets stored in role permissions.
 
 ### Capability management
 
-- `list_agent_functions`
-- `create_agent_function`
-- `update_agent_function`
-- `delete_agent_function`
 - `list_agent_roles`
 - `manage_agent_role`
-- `assign_role_to_function`
-- `change_agent_function`
+- `change_agent_role`
+- `list_agent_statuses`
 - `list_role_capabilities`
 - `manage_role_capabilities`
 

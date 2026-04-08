@@ -20,6 +20,7 @@ export const forgeCustomToolIds = [
   'list_agent_roles',
   'manage_agent_role',
   'change_agent_role',
+  'list_agent_statuses',
   'list_role_capabilities',
   'manage_role_capabilities',
   'list_minimax_voices',
