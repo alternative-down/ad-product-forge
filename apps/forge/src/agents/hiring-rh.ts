@@ -472,7 +472,7 @@ export async function generateHiredAgentInstructions(
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
     maxSteps: 20,
-    toolChoice: 'auto',
+    toolChoice: 'required',
   });
 
   const inputTokens = result.usage.inputTokens ?? 0;
@@ -572,6 +572,8 @@ function buildHiringPrompt(input: {
     'If the role is missing capabilities, fix that first with manage_role_capabilities.',
     'After designing the agent profile, you MUST call the tool "hireAgent" with the structured data to finalize the hiring.',
     'If hireAgent returns valid false, read the hint, fix the capability setup, and call hireAgent again only after the setup is valid.',
+    'Do not finish in plain text before hireAgent returns valid true.',
+    'This workflow is not complete until there is a successful hireAgent tool result.',
     'The hireAgent tool requires an object with: agentName, agentDescription, roleId, instructions.',
     'The name must be fictional, unique, and a single name only. Do not use a common human first name, a full person name, or a multi-word name.',
     'Use a name that feels like a proper identity for a professional agent, without jokes, mascots, or caricature framing.',
