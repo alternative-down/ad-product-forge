@@ -60,10 +60,15 @@ const HIRING_RH_TOOL_IDS = new Set([
   'manage_role_capabilities',
 ] as const);
 const REQUIRED_HIRING_TOOL_IDS = AGENT_BASE_TOOL_IDS;
-const hiringRhResultSchema = z.object({
+const generatedAgentProfileSchema = z.object({
   agentName: z.string().min(1),
   agentDescription: z.string().min(1),
   roleId: z.string().min(1),
+  primaryGoal: z.string().min(1),
+  secondaryGoals: z.array(z.string().min(1)).min(1),
+  backstory: z.string().min(1),
+});
+const hiringRhResultSchema = generatedAgentProfileSchema.extend({
   instructions: z.string().min(1),
 });
 const hireAgentSuccessSchema = hiringRhResultSchema.extend({
@@ -128,51 +133,37 @@ function normalizeAgentName(value: string) {
   return value.trim().toLowerCase();
 }
 
-function validateGeneratedAgentInstructions(instructions: string) {
-  const normalizedInstructions = instructions.trim();
-  const requiredSections = [
-    'Primary Goal:',
-    'Secondary Goals:',
-    'Backstory:',
-  ];
-
-  let previousIndex = -1;
-
-  for (const section of requiredSections) {
-    const sectionIndex = normalizedInstructions.indexOf(section);
-
-    if (sectionIndex === -1) {
-      return {
-        valid: false as const,
-        error: `The system prompt must include the section "${section}".`,
-        hint: 'Rewrite the prompt using exactly these sections: Primary Goal, Secondary Goals, Backstory.',
-      };
-    }
-
-    if (sectionIndex <= previousIndex) {
-      return {
-        valid: false as const,
-        error: 'The system prompt sections are out of order.',
-        hint: 'Keep the section order exactly as: Primary Goal, Secondary Goals, Backstory.',
-      };
-    }
-
-    previousIndex = sectionIndex;
-  }
-
-  const mentionedToolIds = forgeCustomToolIds.filter((toolId) => normalizedInstructions.includes(toolId));
+function validateGeneratedAgentProfile(profile: z.infer<typeof generatedAgentProfileSchema>) {
+  const mentionedToolIds = forgeCustomToolIds.filter((toolId) =>
+    profile.primaryGoal.includes(toolId)
+    || profile.secondaryGoals.some((goal) => goal.includes(toolId))
+    || profile.backstory.includes(toolId),
+  );
 
   if (mentionedToolIds.length > 0) {
     return {
       valid: false as const,
-      error: 'The system prompt must not mention tool ids directly.',
-      hint: `Remove direct tool mentions from the agent text, including: ${mentionedToolIds.join(', ')}.`,
+      error: 'The generated agent profile must not mention tool ids directly.',
+      hint: `Remove direct tool mentions from the generated profile, including: ${mentionedToolIds.join(', ')}.`,
     };
   }
 
   return {
     valid: true as const,
   };
+}
+
+function buildGeneratedAgentInstructions(profile: z.infer<typeof generatedAgentProfileSchema>) {
+  return [
+    'Primary Goal:',
+    profile.primaryGoal.trim(),
+    '',
+    'Secondary Goals:',
+    ...profile.secondaryGoals.map((goal) => `- ${goal.trim()}`),
+    '',
+    'Backstory:',
+    profile.backstory.trim(),
+  ].join('\n');
 }
 
 async function validateHireAgentInput(
@@ -279,7 +270,7 @@ export async function generateHiredAgentInstructions(
   }
 
   const inputSchema = z.object({
-    agent: hiringRhResultSchema,
+    agent: generatedAgentProfileSchema,
   });
 
   // NOTE: inputSchema kept for reference but we now use toolResults instead of args
@@ -420,13 +411,13 @@ export async function generateHiredAgentInstructions(
               };
             }
 
-            const instructionsValidation = validateGeneratedAgentInstructions(agent.instructions);
+            const profileValidation = validateGeneratedAgentProfile(agent);
 
-            if (!instructionsValidation.valid) {
+            if (!profileValidation.valid) {
               return {
                 valid: false,
-                error: instructionsValidation.error,
-                hint: instructionsValidation.hint,
+                error: profileValidation.error,
+                hint: profileValidation.hint,
               };
             }
 
@@ -439,6 +430,7 @@ export async function generateHiredAgentInstructions(
 
             const result = {
               ...agent,
+              instructions: buildGeneratedAgentInstructions(agent),
               roleId: validation.roleId,
               roleName: validation.roleName,
               roleDescription: validation.roleDescription,
@@ -471,7 +463,7 @@ export async function generateHiredAgentInstructions(
     },
   });
   const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
-    maxSteps: 20,
+    maxSteps: 100,
     toolChoice: 'auto',
   });
 
@@ -519,6 +511,17 @@ export async function generateHiredAgentInstructions(
     );
     const parsedToolResult = hireAgentToolResultSchema.safeParse(toolResult.payload.result);
 
+    if (!parsedToolResult.success) {
+      console.log(
+        '[HiringRH] ERROR: hireAgent tool result failed schema validation',
+        JSON.stringify(parsedToolResult.error.flatten(), null, 2),
+      );
+      console.log(
+        '[HiringRH] ERROR: raw hireAgent tool result payload',
+        JSON.stringify(toolResult.payload.result, null, 2),
+      );
+    }
+
     if (parsedToolResult.success && parsedToolResult.data.valid) {
       console.log(
         `[HiringRH] SUCCESS - agentHired from toolResult:`,
@@ -547,6 +550,24 @@ export async function generateHiredAgentInstructions(
   }
 
   console.log(`[HiringRH] ERROR: Could not extract hiring data from response`);
+  console.log(
+    '[HiringRH] ERROR DETAILS:',
+    JSON.stringify(
+      {
+        text: result.text,
+        toolCalls: result.toolCalls.map((chunk) => ({
+          toolName: chunk.payload.toolName,
+          args: chunk.payload.args,
+        })),
+        toolResults: result.toolResults.map((chunk) => ({
+          toolName: chunk.payload.toolName,
+          result: chunk.payload.result,
+        })),
+      },
+      null,
+      2,
+    ),
+  );
   return {
     error: 'Hiring process did not return valid agent data. Please try again.',
     valid: false,
@@ -572,7 +593,10 @@ function buildHiringPrompt(input: {
     'If the role is missing capabilities, fix that first with manage_role_capabilities.',
     'After designing the agent profile, you MUST call the tool "hireAgent" with the structured data to finalize the hiring.',
     'If hireAgent returns valid false, read the hint, fix the capability setup, and call hireAgent again only after the setup is valid.',
-    'The hireAgent tool requires an object with: agentName, agentDescription, roleId, instructions.',
+    'Do not finish in plain text before hireAgent returns valid true.',
+    'This workflow is not complete until there is a successful hireAgent tool result.',
+    'The hireAgent tool requires an object with: agentName, agentDescription, roleId, primaryGoal, secondaryGoals, backstory.',
+    'secondaryGoals must be an array of short goal strings.',
     'The name must be fictional, unique, and a single name only. Do not use a common human first name, a full person name, or a multi-word name.',
     'Use a name that feels like a proper identity for a professional agent, without jokes, mascots, or caricature framing.',
     'The new name must not duplicate or closely resemble the name of any existing internal collaborator.',
