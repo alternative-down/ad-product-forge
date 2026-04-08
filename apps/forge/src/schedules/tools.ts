@@ -192,7 +192,7 @@ export function createAgentScheduleTools(
       description: 'Create, update, or delete your own crons. Use this for your own recurring wakes or one-time future executions.',
       inputSchema: manageSelfCronsInputSchema,
       execute: async (input) => {
-        forgeDebug('tools:schedules', 'manage_self_crons called', { agentId, action: input.action });
+        forgeDebug('tools:schedules', 'manage_self_crons called', { agentId, action: input.action, input });
 
         if (input.action === 'create') {
           const validation = validateCreateTiming(input);
@@ -323,7 +323,7 @@ export function createAgentScheduleTools(
       description: 'Create, update, or delete crons for other agents. Use this when you want another agent to receive recurring or one-time scheduled work.',
       inputSchema: manageCronsInputSchema,
       execute: async (input) => {
-        forgeDebug('tools:schedules', 'manage_crons called', { agentId, action: input.action });
+        forgeDebug('tools:schedules', 'manage_crons called', { agentId, action: input.action, input });
 
         if (input.action === 'create') {
           const createTargetValidation = validateDelegatedCronCreateTarget(input);
