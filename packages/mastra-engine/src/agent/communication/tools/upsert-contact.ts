@@ -20,7 +20,7 @@ export function createUpsertContactTool(communication: CommunicationModule) {
         const contact = await communication.upsertContact({
           slug: input.slug,
           displayName: input.displayName,
-          description: input.description,
+          description: input.description ?? undefined,
         });
 
         return {

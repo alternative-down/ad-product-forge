@@ -31,8 +31,8 @@ export function createListConversationsTool(communication: CommunicationModule) 
       try {
         return {
           conversations: await communication.listConversations({
-            provider: input.provider,
-            unread: input.unread,
+            provider: input.provider ?? undefined,
+            unread: input.unread ?? undefined,
             limit: input.limit ?? 20,
           }),
         };

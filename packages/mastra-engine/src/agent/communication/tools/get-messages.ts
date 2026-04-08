@@ -59,9 +59,9 @@ export function createGetMessagesTool(communication: CommunicationModule) {
             targetKey: input.targetKey,
             limit: input.limit ?? 100,
             offset: input.offset ?? 0,
-            query: input.query,
-            dateFrom: input.dateFrom,
-            dateTo: input.dateTo,
+            query: input.query ?? undefined,
+            dateFrom: input.dateFrom ?? undefined,
+            dateTo: input.dateTo ?? undefined,
           }),
         };
       } catch (error) {

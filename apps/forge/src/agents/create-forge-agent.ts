@@ -57,8 +57,8 @@ export async function createInternalAgentRuntime<
     vector: platform.vector,
     agentId: config.id,
     mastraId: platform.mastraId,
-    agentModel: config.model,
-    omModel: config.omModel,
+    agentModel: config.model as CreateAgentConfig['model'],
+    omModel: config.omModel as CreateAgentConfig['omModel'],
     agentMemoryPath: platform.agentMemoryPath,
     longTermMemory: options.longTermMemory,
   });
