@@ -102,6 +102,18 @@ export function createAgentScheduleStore(db: Database) {
     return toScheduleRecord(row);
   }
 
+  async function getOwnedSchedule(agentId: string, scheduleId: string) {
+    const row = await db.query.agentSchedules.findFirst({
+      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return toScheduleRecord(row);
+  }
+
   async function getScheduleByKind(agentId: string, kind: ScheduleKind) {
     const row = await db.query.agentSchedules.findFirst({
       where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, kind)),
@@ -164,6 +176,41 @@ export function createAgentScheduleStore(db: Database) {
       .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
 
     return getAgentSchedule(agentId, scheduleId);
+  }
+
+  async function updateOwnedSchedule(
+    agentId: string,
+    scheduleId: string,
+    input: UpdateAgentScheduleInput,
+  ) {
+    const existing = await db.query.agentSchedules.findFirst({
+      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    const updated = {
+      name: input.name ?? existing.name,
+      description: input.description === undefined ? existing.description : input.description,
+      scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
+      cronExpression:
+        input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
+      scheduledDate:
+        input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
+      timezone: input.timezone ?? existing.timezone,
+      content: input.content ?? existing.content,
+      isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
+      updatedAt: Date.now(),
+    };
+
+    await db
+      .update(agentSchedules)
+      .set(updated)
+      .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
+
+    return getOwnedSchedule(agentId, scheduleId);
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {
@@ -229,9 +276,11 @@ export function createAgentScheduleStore(db: Database) {
     listActiveSchedules,
     listCreatedAgentSchedules,
     getAgentSchedule,
+    getOwnedSchedule,
     getScheduleByKind,
     getScheduleById,
     updateAgentSchedule,
+    updateOwnedSchedule,
     deleteAgentSchedule,
     deactivateSchedule,
     setNextTriggerAt,

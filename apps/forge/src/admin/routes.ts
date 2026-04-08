@@ -1412,7 +1412,7 @@ export function registerAdminRoutes(input: {
     path: '/admin/agent-schedule/update',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, updateScheduleSchema);
-      const schedule = await input.schedules.updateSchedule(body.agentId, body.scheduleId, {
+      const schedule = await input.schedules.updateOwnedSchedule(body.agentId, body.scheduleId, {
         name: body.name,
         description: body.description,
         scheduleType: body.scheduleType,
