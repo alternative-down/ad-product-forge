@@ -29,19 +29,19 @@ const getMessagesInputSchema = z.object({
     .string()
     .trim()
     .min(1)
-    .optional()
+    .nullish()
     .describe('Optional text filter. Only messages containing this text will be returned.'),
   dateFrom: z
     .string()
     .trim()
     .min(1)
-    .optional()
+    .nullish()
     .describe('Optional start of the time window. Use an ISO date or date-time, such as 2026-04-01 or 2026-04-01T09:00:00Z.'),
   dateTo: z
     .string()
     .trim()
     .min(1)
-    .optional()
+    .nullish()
     .describe('Optional end of the time window. Use an ISO date or date-time, such as 2026-04-01 or 2026-04-01T18:00:00Z.'),
 });
 

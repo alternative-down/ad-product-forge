@@ -6,8 +6,7 @@ import type { CommunicationModule } from '../module';
 const listContactsInputSchema = z.object({
   filter: z
     .enum(['self', 'others', 'all'])
-    .optional()
-    .default('others')
+    .nullish()
     .describe("Which contacts to list. Use 'others' for the contacts you registered, 'self' for your own identities, or 'all' for both."),
 });
 
@@ -19,7 +18,7 @@ export function createListContactsTool(communication: CommunicationModule) {
     inputSchema: listContactsInputSchema,
     execute: async (input) => {
       try {
-        return await communication.listContacts(input.filter);
+        return await communication.listContacts(input.filter ?? 'others');
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return {

@@ -6,11 +6,11 @@ import type { CommunicationModule } from '../module';
 const listConversationsInputSchema = z.object({
   provider: z
     .string()
-    .optional()
+    .nullish()
     .describe('Optional provider filter. Leave empty to list conversations from every provider that supports this tool.'),
   unread: z
     .boolean()
-    .optional()
+    .nullish()
     .describe('Set this to true if you only want conversations with unread messages.'),
   limit: z
     .number()

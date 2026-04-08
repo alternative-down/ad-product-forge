@@ -18,7 +18,7 @@ const sendMessageInputSchema = z
       .describe('The message text to send.'),
     attachments: z
       .array(z.string())
-      .optional()
+      .nullish()
       .describe('Optional file paths from your workspace to send together with the message.'),
   })
   ;
