@@ -56,9 +56,9 @@ export function createCapabilityTools(
       description: 'Create, update, or delete a role.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']).describe('The role operation to perform.'),
-        roleId: z.string().min(1).optional().describe('Required for update and delete.'),
-        name: z.string().min(1).optional().describe('Required for create. Optional for update.'),
-        description: z.string().optional().describe('Optional description for create or update.'),
+        roleId: z.string().min(1).nullish().describe('Required for update and delete.'),
+        name: z.string().min(1).nullish().describe('Required for create. Optional for update.'),
+        description: z.string().nullish().describe('Optional description for create or update.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'manage_agent_role called', { input });

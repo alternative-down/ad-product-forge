@@ -8,11 +8,11 @@ import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budge
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
 const listCompanyCashInputSchema = z.object({
-  direction: z.enum(['in', 'out']).optional(),
-  status: z.enum(['planned', 'posted', 'canceled']).optional(),
-  type: z.string().optional(),
-  periodStart: z.coerce.number().int().optional(),
-  periodEnd: z.coerce.number().int().optional(),
+  direction: z.enum(['in', 'out']).nullish(),
+  status: z.enum(['planned', 'posted', 'canceled']).nullish(),
+  type: z.string().nullish(),
+  periodStart: z.coerce.number().int().nullish(),
+  periodEnd: z.coerce.number().int().nullish(),
   limit: z.coerce.number().int().positive().max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -21,14 +21,14 @@ const manageCompanyCashMovementInputSchema = z.object({
   action: z
     .enum(['record_in', 'record_out', 'schedule_in', 'schedule_out', 'post_planned', 'cancel_planned'])
     .describe('The cash movement operation to perform.'),
-  entryId: z.string().min(1).optional().describe('Required for post_planned and cancel_planned.'),
-  type: z.string().min(1).optional().describe('Required for record_* and schedule_* actions.'),
-  amountUsd: z.coerce.number().positive().optional().describe('Required for record_* and schedule_* actions.'),
-  description: z.string().min(1).optional(),
-  referenceType: z.string().min(1).optional(),
-  referenceId: z.string().min(1).optional(),
-  effectiveAt: z.coerce.number().int().optional().describe('Optional posting time for record_* and post_planned.'),
-  dueAt: z.coerce.number().int().optional().describe('Required for schedule_in and schedule_out.'),
+  entryId: z.string().min(1).nullish().describe('Required for post_planned and cancel_planned.'),
+  type: z.string().min(1).nullish().describe('Required for record_* and schedule_* actions.'),
+  amountUsd: z.coerce.number().positive().nullish().describe('Required for record_* and schedule_* actions.'),
+  description: z.string().min(1).nullish(),
+  referenceType: z.string().min(1).nullish(),
+  referenceId: z.string().min(1).nullish(),
+  effectiveAt: z.coerce.number().int().nullish().describe('Optional posting time for record_* and post_planned.'),
+  dueAt: z.coerce.number().int().nullish().describe('Required for schedule_in and schedule_out.'),
 });
 
 function validateCompanyCashMovementInput(input: z.infer<typeof manageCompanyCashMovementInputSchema>) {

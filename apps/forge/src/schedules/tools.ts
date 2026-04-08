@@ -7,29 +7,29 @@ import type { createAgentScheduleManager } from './manager';
 
 const manageSelfCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
-  cronId: z.string().min(1).optional().describe('Required for update and delete. Omit this field when creating a cron.'),
-  name: z.string().min(1).optional().describe('A short name so you can recognize this cron later.'),
-  description: z.string().optional().describe('Optional note explaining what this cron is for.'),
-  scheduleType: z.enum(['cron', 'date']).optional().describe('Use cron for recurring execution or date for one-time execution.'),
-  cronExpression: z.string().min(1).optional().describe('The cron expression to use when scheduleType is cron.'),
-  scheduledDate: z.string().min(1).optional().describe('The date and time to use when scheduleType is date. Use an ISO string.'),
-  timezone: z.string().min(1).optional().describe('Timezone used to interpret the cron.'),
-  content: z.string().min(1).optional().describe('The message or task content that should be delivered when this cron runs.'),
-  isActive: z.boolean().optional().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
+  cronId: z.string().min(1).nullish().describe('Required for update and delete. Omit this field when creating a cron.'),
+  name: z.string().min(1).nullish().describe('A short name so you can recognize this cron later.'),
+  description: z.string().nullish().describe('Optional note explaining what this cron is for.'),
+  scheduleType: z.enum(['cron', 'date']).nullish().describe('Use cron for recurring execution or date for one-time execution.'),
+  cronExpression: z.string().min(1).nullish().describe('The cron expression to use when scheduleType is cron.'),
+  scheduledDate: z.string().min(1).nullish().describe('The date and time to use when scheduleType is date. Use an ISO string.'),
+  timezone: z.string().min(1).nullish().describe('Timezone used to interpret the cron.'),
+  content: z.string().min(1).nullish().describe('The message or task content that should be delivered when this cron runs.'),
+  isActive: z.boolean().nullish().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
 });
 
 const manageCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
-  targetAgentId: z.string().min(1).optional().describe('Required for delegated cron creation.'),
-  cronId: z.string().min(1).optional().describe('Required for update and delete. Omit this field when creating a cron.'),
-  name: z.string().min(1).optional().describe('A short name so you can recognize this cron later.'),
-  description: z.string().optional().describe('Optional note explaining what this cron is for.'),
-  scheduleType: z.enum(['cron', 'date']).optional().describe('Use cron for recurring execution or date for one-time execution.'),
-  cronExpression: z.string().min(1).optional().describe('The cron expression to use when scheduleType is cron.'),
-  scheduledDate: z.string().min(1).optional().describe('The date and time to use when scheduleType is date. Use an ISO string.'),
-  timezone: z.string().min(1).optional().describe('Timezone used to interpret the cron.'),
-  content: z.string().min(1).optional().describe('The message or task content that should be delivered when this cron runs.'),
-  isActive: z.boolean().optional().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
+  targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation.'),
+  cronId: z.string().min(1).nullish().describe('Required for update and delete. Omit this field when creating a cron.'),
+  name: z.string().min(1).nullish().describe('A short name so you can recognize this cron later.'),
+  description: z.string().nullish().describe('Optional note explaining what this cron is for.'),
+  scheduleType: z.enum(['cron', 'date']).nullish().describe('Use cron for recurring execution or date for one-time execution.'),
+  cronExpression: z.string().min(1).nullish().describe('The cron expression to use when scheduleType is cron.'),
+  scheduledDate: z.string().min(1).nullish().describe('The date and time to use when scheduleType is date. Use an ISO string.'),
+  timezone: z.string().min(1).nullish().describe('Timezone used to interpret the cron.'),
+  content: z.string().min(1).nullish().describe('The message or task content that should be delivered when this cron runs.'),
+  isActive: z.boolean().nullish().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
 });
 
 function validateCreateTiming(input: {
@@ -279,7 +279,7 @@ export function createAgentScheduleTools(
       id: 'list_crons',
       description: 'List the crons you created for other agents. Use this to review delegated scheduled executions and get the cronId needed for later changes.',
       inputSchema: z.object({
-        targetAgentId: z.string().min(1).optional().describe('Optional target agent id if you want to see only crons aimed at one specific agent.'),
+        targetAgentId: z.string().min(1).nullish().describe('Optional target agent id if you want to see only crons aimed at one specific agent.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'list_crons called', { agentId, targetAgentId: input.targetAgentId });
