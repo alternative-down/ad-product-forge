@@ -37,7 +37,7 @@ export async function getMCPToolsForAgent(
       }
     }
 
-    const mcpClient = createAgentMCPClient(mcpServers);
+    const mcpClient = createAgentMCPClient(agentId, mcpServers);
     const tools = await mcpClient.listTools();
 
     agentMCPClients.set(agentId, mcpClient);
@@ -51,11 +51,15 @@ export async function getMCPToolsForAgent(
 }
 
 function createAgentMCPClient(
+  agentId: string,
   mcpServers: Awaited<ReturnType<typeof getAgentMcpServers>>,
 ) {
   const serverDefs: Record<string, MastraMCPServerDefinition> = {};
+  const serverIds: string[] = [];
 
   for (const { server } of mcpServers) {
+    serverIds.push(server.id);
+
     if (server.transport === 'stdio') {
       serverDefs[server.name] = {
         command: server.command || '',
@@ -77,7 +81,12 @@ function createAgentMCPClient(
     }
   }
 
-  return new MCPClient({ servers: serverDefs });
+  serverIds.sort();
+
+  return new MCPClient({
+    id: `forge-agent:${agentId}:${serverIds.join(',')}`,
+    servers: serverDefs,
+  });
 }
 
 /**

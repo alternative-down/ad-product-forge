@@ -443,32 +443,6 @@ export type AgentProvider = typeof agentProviders.$inferSelect;
 export type NewAgentProvider = typeof agentProviders.$inferInsert;
 
 /**
- * Tabela: agent_prompts
- * Prompts customizáveis injetados no contexto do sistema do agente
- */
-export const agentPrompts = sqliteTable('agent_prompts', {
-  id: text('id').primaryKey(),
-  agentId: text('agent_id')
-    .references(() => agents.id, { onDelete: 'cascade' }),
-  promptType: text('prompt_type').notNull(),
-  name: text('name').notNull(),
-  description: text('description'),
-  content: text('content').notNull(),
-  version: integer('version').notNull().default(1),
-  isActive: integer('is_active').notNull().default(1),
-  createdBy: text('created_by'),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-}, (table) => ({
-  agentPromptsAgentIdIdx: index('agent_prompts_agent_id_idx').on(table.agentId),
-  agentPromptsPromptTypeIdx: index('agent_prompts_prompt_type_idx').on(table.promptType),
-  agentPromptsIsActiveIdx: index('agent_prompts_is_active_idx').on(table.isActive),
-}));
-
-export type AgentPrompt = typeof agentPrompts.$inferSelect;
-export type NewAgentPrompt = typeof agentPrompts.$inferInsert;
-
-/**
  * Relações
  */
 export const agentsRelations = relations(agents, ({ one, many }) => ({
@@ -491,7 +465,6 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   executionSteps: many(agentExecutionSteps),
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
-  prompts: many(agentPrompts),
   internalChatAccount: one(internalChatAccounts, {
     fields: [agents.id],
     references: [internalChatAccounts.agentId],
@@ -615,13 +588,6 @@ export const internalChatMessageReadsRelations = relations(internalChatMessageRe
   }),
   agent: one(agents, {
     fields: [internalChatMessageReads.agentId],
-    references: [agents.id],
-  }),
-}));
-
-export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
-  agent: one(agents, {
-    fields: [agentPrompts.agentId],
     references: [agents.id],
   }),
 }));
