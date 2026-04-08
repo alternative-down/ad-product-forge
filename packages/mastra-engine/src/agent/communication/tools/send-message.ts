@@ -15,7 +15,7 @@ const sendMessageInputSchema = z
     content: z
       .string()
       .min(1)
-      .describe('The message text to send.'),
+      .describe('The exact message text to actually deliver to the recipient. Writing that text outside this tool does not send anything.'),
     attachments: z
       .array(z.string())
       .nullish()
@@ -27,7 +27,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
   return createTool({
     id: 'send_message',
     description:
-      'Send a message through a provider. Use this both to continue an existing conversation and to start a new one when that provider supports it. Returns the sent message information, including the provider, targetKey, and messageId.',
+      'Actually deliver a message through a provider. Use this both to continue an existing conversation and to start a new one when that provider supports it. Writing plain text in your response does not send anything. A message is only delivered when this tool is called successfully. The result confirms delivery with provider, targetKey, and messageId.',
     inputSchema: sendMessageInputSchema,
     execute: async (input) => {
       try {
