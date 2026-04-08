@@ -41,8 +41,8 @@
     ]
   },
   "dependencies": {
-    "@mastra/core": "^1.16.0",
-    "@mastra/rag": "^2.1.3",
-    "ai": "^6.0.138"
+    "@mastra/core": "^1.24.0",
+    "@mastra/rag": "^2.2.0",
+    "ai": "^6.0.153"
   }
 }

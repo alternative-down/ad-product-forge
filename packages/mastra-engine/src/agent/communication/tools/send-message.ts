@@ -35,7 +35,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
           provider: input.provider,
           targetKey: input.targetKey,
           content: input.content,
-          attachments: input.attachments,
+          attachments: input.attachments ?? undefined,
         });
         return result;
       } catch (error) {
