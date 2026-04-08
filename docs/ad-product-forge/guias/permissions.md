@@ -98,12 +98,10 @@ O Forge utiliza um sistema granular de permissões baseado em **roles** (papéis
 
 | Tool ID | Descrição | Roles |
 |---------|-----------|-------|
-| `list_agent_functions` | Lista funções | ADMIN |
-| `manage_agent_function` | Gerencia função | ADMIN |
 | `list_agent_roles` | Lista roles | ADMIN |
 | `manage_agent_role` | Gerencia role | ADMIN |
-| `assign_role_to_function` | Atribui role | ADMIN |
-| `change_agent_function` | Altera função | ADMIN |
+| `change_agent_role` | Altera role de outro agente | ADMIN |
+| `list_agent_statuses` | Lista status de execução dos agentes | ADMIN |
 | `list_role_capabilities` | Lista capacidades da role | ADMIN |
 | `manage_role_capabilities` | Gerencia capacidades | ADMIN |
 | `list_agent_notifications` | Lista notificações | ALL |

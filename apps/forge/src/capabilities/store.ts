@@ -315,6 +315,50 @@ export function createCapabilityStore(db: Database) {
     };
   }
 
+  async function listAgentStatuses(input: {
+    agentId?: string;
+    executionState?: 'idle' | 'running';
+  }) {
+    const rows = await db.query.agents.findMany({
+      where: (agent, { and, eq }) => {
+        const filters = [];
+
+        if (input.agentId) {
+          filters.push(eq(agent.id, input.agentId));
+        }
+
+        if (input.executionState) {
+          filters.push(eq(agent.executionState, input.executionState));
+        }
+
+        if (filters.length === 0) {
+          return undefined;
+        }
+
+        return and(...filters);
+      },
+      orderBy: [asc(agents.name)],
+      with: {
+        role: {
+          columns: {
+            name: true,
+            description: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((row) => ({
+      agentId: row.id,
+      name: row.name,
+      description: row.description ?? undefined,
+      roleName: row.role?.name ?? undefined,
+      roleDescription: row.role?.description ?? undefined,
+      executionState: row.executionState as 'idle' | 'running',
+      updatedAt: row.updatedAt,
+    }));
+  }
+
   return {
     listRoles,
     getRole,
@@ -332,5 +376,6 @@ export function createCapabilityStore(db: Database) {
     manageRole,
     manageRoleCapability,
     getAgentCapabilities,
+    listAgentStatuses,
   };
 }

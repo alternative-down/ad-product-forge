@@ -119,6 +119,37 @@ export function createCapabilityTools(
     });
   }
 
+  if (hasToolPermission(allowedToolIds, 'list_agent_statuses')) {
+    tools.list_agent_statuses = createTool({
+      id: 'list_agent_statuses',
+      description: 'List the current execution status of agents, such as idle or running. You can filter by one agentId or by one executionState.',
+      inputSchema: z.object({
+        agentId: z.string().nullish().describe('Optional agentId if you want to inspect one specific agent.'),
+        executionState: z.enum(['idle', 'running']).nullish().describe('Optional execution state filter. Use idle or running.'),
+      }),
+      execute: async (input) => {
+        forgeDebug('tools:capabilities', 'list_agent_statuses called', { input });
+
+        try {
+          const result = await capabilities.listAgentStatuses({
+            agentId: input.agentId ?? undefined,
+            executionState: input.executionState ?? undefined,
+          });
+          forgeDebug('tools:capabilities', 'list_agent_statuses result', { count: result.length });
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          forgeDebug('tools:capabilities', 'list_agent_statuses error', { error: message });
+          return {
+            valid: false,
+            error: message,
+            hint: 'Verify the agentId when filtering one agent.',
+          };
+        }
+      },
+    });
+  }
+
   if (hasToolPermission(allowedToolIds, 'list_role_capabilities')) {
     tools.list_role_capabilities = createTool({
       id: 'list_role_capabilities',
