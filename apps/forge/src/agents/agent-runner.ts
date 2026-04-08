@@ -12,6 +12,8 @@ const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
+const NO_ACTION_NEEDED_XML_PATTERN = /<invoke[^>]*name=["']NO_ACTION_NEEDED["'][^>]*>/i;
+const STOP_AND_IDLE_XML_PATTERN = /<invoke[^>]*name=["']STOP_AND_IDLE["'][^>]*>/i;
 
 export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
@@ -221,8 +223,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       await usage.recordObservationalMemorySteps(contractId, result.steps);
 
-      const ignoredTextRequested = result.text.trim() === NO_ACTION_NEEDED_PREFIX;
-      const stopRequested = result.text.trim() === STOP_AND_IDLE_PREFIX;
+      const controlDirective = extractRunnerControlDirective(result.text);
+      const ignoredTextRequested = controlDirective === 'ignore';
+      const stopRequested = controlDirective === 'stop';
 
       if (result.toolCalls.length === 0 && stopRequested) {
         nextStepAt = null;
@@ -253,6 +256,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
             timestamp: Date.now(),
           },
         ]);
+        instant = true;
       }
 
       backoffMs = ONE_MINUTE_MS;
@@ -352,3 +356,23 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
+
+function extractRunnerControlDirective(text: string) {
+  const normalizedText = text.trim();
+
+  if (
+    normalizedText === STOP_AND_IDLE_PREFIX
+    || STOP_AND_IDLE_XML_PATTERN.test(normalizedText)
+  ) {
+    return 'stop' as const;
+  }
+
+  if (
+    normalizedText === NO_ACTION_NEEDED_PREFIX
+    || NO_ACTION_NEEDED_XML_PATTERN.test(normalizedText)
+  ) {
+    return 'ignore' as const;
+  }
+
+  return null;
+}
