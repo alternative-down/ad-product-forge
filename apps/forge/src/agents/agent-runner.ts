@@ -214,6 +214,17 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           };
         },
       });
+      console.log(
+        `[AgentRunner] ${runtime.id} toolCalls:`,
+        JSON.stringify(
+          result.toolCalls.map((chunk) => ({
+            toolName: chunk.payload.toolName,
+            args: chunk.payload.args,
+          })),
+          null,
+          2,
+        ),
+      );
       const {
         inputTokens,
         cachedInputTokens,
