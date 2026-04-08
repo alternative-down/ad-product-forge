@@ -258,6 +258,99 @@ export function createAgentScheduleManager(input: {
     return toToolOutput(reloaded);
   }
 
+  async function updateOwnedSchedule(agentId: string, scheduleId: string, rawInput: z.input<typeof updateScheduleSchema>) {
+    const parsed = updateScheduleSchema.parse(rawInput);
+    const existing = await store.getOwnedSchedule(agentId, scheduleId);
+
+    if (!existing) {
+      throw new Error(`Schedule not found: ${scheduleId}`);
+    }
+
+    const scheduleType = parsed.scheduleType ?? existing.scheduleType;
+    const cronExpression = parsed.cronExpression === undefined
+      ? existing.cronExpression
+      : parsed.cronExpression ?? undefined;
+    const scheduledDate = parsed.scheduledDate === undefined
+      ? existing.scheduledDate
+      : parsed.scheduledDate === null
+        ? undefined
+        : parseScheduleDate(parsed.scheduledDate);
+
+    validateScheduleShape({
+      scheduleType,
+      cronExpression,
+      scheduledDate,
+    });
+    const shouldRequireFutureDate =
+      scheduleType === 'date' &&
+      (
+        parsed.scheduledDate !== undefined ||
+        parsed.scheduleType !== undefined ||
+        parsed.isActive === true
+      );
+
+    if (shouldRequireFutureDate) {
+      assertFutureScheduledDate(scheduleType, scheduledDate);
+    }
+
+    const normalizedCronExpression = scheduleType === 'cron'
+      ? cronExpression ?? null
+      : null;
+    const normalizedScheduledDate = scheduleType === 'date'
+      ? scheduledDate ?? null
+      : null;
+    const rollbackInput = {
+      name: existing.name,
+      description: existing.description ?? null,
+      scheduleType: existing.scheduleType,
+      cronExpression: existing.cronExpression ?? null,
+      scheduledDate: existing.scheduledDate ?? null,
+      timezone: existing.timezone,
+      content: existing.content,
+      isActive: existing.isActive,
+    } as const;
+    const updated = await store.updateOwnedSchedule(agentId, scheduleId, {
+      name: parsed.name,
+      description: parsed.description,
+      scheduleType,
+      cronExpression: normalizedCronExpression,
+      scheduledDate: normalizedScheduledDate,
+      timezone: parsed.timezone,
+      content: parsed.content,
+      isActive: parsed.isActive,
+    });
+
+    if (!updated) {
+      throw new Error(`Schedule not found: ${scheduleId}`);
+    }
+
+    cancelJob(scheduleId);
+
+    try {
+      if (updated.isActive) {
+        await registerSchedule(updated);
+      } else {
+        await store.setNextTriggerAt(scheduleId, null);
+      }
+    } catch (error) {
+      const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
+
+      if (existing.isActive && restored) {
+        await registerSchedule(restored);
+      }
+
+      throw error;
+    }
+
+    const reloaded = await store.getOwnedSchedule(agentId, scheduleId);
+
+    if (!reloaded) {
+      throw new Error(`Schedule not found after update: ${scheduleId}`);
+    }
+
+    return toToolOutput(reloaded);
+  }
+
   async function deleteSchedule(agentId: string, scheduleId: string) {
     cancelJob(scheduleId);
     return {
@@ -498,6 +591,7 @@ export function createAgentScheduleManager(input: {
     listSchedules,
     listTasks,
     updateSchedule,
+    updateOwnedSchedule,
     deleteSchedule,
     removeAgent,
     stop,
