@@ -279,7 +279,7 @@ export function createAgentScheduleTools(
       id: 'list_crons',
       description: 'List the crons you created for other agents. Use this to review delegated scheduled executions and get the cronId needed for later changes.',
       inputSchema: z.object({
-        targetAgentId: z.string().min(1).nullish().describe('Optional target agent id if you want to see only crons aimed at one specific agent.'),
+        targetAgentId: z.string().min(1).optional().describe('Optional target agent id if you want to see only crons aimed at one specific agent.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:schedules', 'list_crons called', { agentId, targetAgentId: input.targetAgentId });

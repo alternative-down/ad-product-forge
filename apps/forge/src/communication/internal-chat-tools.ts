@@ -24,12 +24,12 @@ export function createInternalChatTools(
       id: 'change_chat_group',
       description: 'Create or update one internal-chat group. Use this to create a new group, rename a group, or replace its members and roles in one request. For updates, use the group id from the internal-chat conversation targetKey. For creation, leave groupId empty and a new id will be generated.',
       inputSchema: z.object({
-        groupId: z.string().min(1).nullish().describe('Provide the group id to update one existing group. Leave empty to create a new group.'),
-        name: z.string().min(1).nullish().describe('Optional group display name. Required when creating a group.'),
+        groupId: z.string().min(1).optional().describe('Provide the group id to update one existing group. Leave empty to create a new group.'),
+        name: z.string().min(1).optional().describe('Optional group display name. Required when creating a group.'),
         members: z.array(z.object({
           participantSlug: z.string().min(1).describe('Participant slug to include in the group state.'),
           role: z.enum(['admin', 'normal']).default('normal').describe('Desired participant role in the final group state.'),
-        })).nullish().describe('Optional full member state for the group. When provided, it replaces the current non-creator member set.'),
+        })).optional().describe('Optional full member state for the group. When provided, it replaces the current non-creator member set.'),
       }),
       execute: async (input) => {
         try {
