@@ -16,55 +16,68 @@ export async function getMCPToolsForAgent(
   agentId: string,
 ): Promise<Record<string, Tool<unknown, unknown>>> {
   try {
-    // Get MCP server configs for this agent
     const mcpServers = await getAgentMcpServers(agentId);
-    
+
     if (mcpServers.length === 0) {
       return {};
     }
-    
+
     console.log(`[MCP] Found ${mcpServers.length} MCP server(s) for agent ${agentId}`);
-    
-    // Get or create MCP client for this agent
-    let mcpClient = agentMCPClients.get(agentId);
-    
-    if (!mcpClient) {
-      // Create server definitions from config
-      // MCPClient uses server name as key, not id
-      const serverDefs: Record<string, MastraMCPServerDefinition> = {};
-      
-      for (const { server } of mcpServers) {
-        if (server.transport === 'stdio') {
-          serverDefs[server.name] = {
-            command: server.command || '',
-            args: server.args ? JSON.parse(server.args) : [],
-            env: server.envVars ? JSON.parse(server.envVars) : {},
-          };
-        } else if (server.transport === 'http_streamable') {
-          serverDefs[server.name] = {
-            url: new URL(server.url || 'http://localhost:3000/mcp'),
-            requestInit: server.headers ? {
-              headers: JSON.parse(server.headers),
-            } : undefined,
-          };
-        }
+
+    const cachedClient = agentMCPClients.get(agentId);
+
+    if (cachedClient) {
+      try {
+        const tools = await cachedClient.listTools();
+        console.log(`[MCP] Loaded ${Object.keys(tools).length} tool(s) for agent ${agentId}`);
+        return tools;
+      } catch (error) {
+        console.warn(`[MCP] Cached client failed for agent ${agentId}, rebuilding client:`, error);
+        clearAgentMCPClient(agentId);
       }
-      
-      mcpClient = new MCPClient({ servers: serverDefs });
-      agentMCPClients.set(agentId, mcpClient);
     }
-    
-    // Get all tools from the client
-    // Tools are automatically namespaced as "serverName_toolName"
+
+    const mcpClient = createAgentMCPClient(mcpServers);
     const tools = await mcpClient.listTools();
-    
+
+    agentMCPClients.set(agentId, mcpClient);
     console.log(`[MCP] Loaded ${Object.keys(tools).length} tool(s) for agent ${agentId}`);
-    
     return tools;
   } catch (error) {
+    clearAgentMCPClient(agentId);
     console.warn(`[MCP] Failed to get tools for agent ${agentId}:`, error);
     return {};
   }
+}
+
+function createAgentMCPClient(
+  mcpServers: Awaited<ReturnType<typeof getAgentMcpServers>>,
+) {
+  const serverDefs: Record<string, MastraMCPServerDefinition> = {};
+
+  for (const { server } of mcpServers) {
+    if (server.transport === 'stdio') {
+      serverDefs[server.name] = {
+        command: server.command || '',
+        args: server.args ? JSON.parse(server.args) : [],
+        env: server.envVars ? JSON.parse(server.envVars) : {},
+      };
+      continue;
+    }
+
+    if (server.transport === 'http_streamable') {
+      serverDefs[server.name] = {
+        url: new URL(server.url || 'http://localhost:3000/mcp'),
+        requestInit: server.headers
+          ? {
+              headers: JSON.parse(server.headers),
+            }
+          : undefined,
+      };
+    }
+  }
+
+  return new MCPClient({ servers: serverDefs });
 }
 
 /**
