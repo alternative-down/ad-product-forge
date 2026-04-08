@@ -29,6 +29,9 @@ const cronUpdateFieldsSchema = {
 const manageSelfCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
   cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
+  scheduleId: z.string().min(1).nullish().describe('Alias for cronId.'),
+  taskId: z.string().min(1).nullish().describe('Alias for cronId.'),
+  id: z.string().min(1).nullish().describe('Alias for cronId.'),
   ...Object.fromEntries(
     Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
   ),
@@ -39,6 +42,9 @@ const manageCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
   targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation.'),
   cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
+  scheduleId: z.string().min(1).nullish().describe('Alias for cronId.'),
+  taskId: z.string().min(1).nullish().describe('Alias for cronId.'),
+  id: z.string().min(1).nullish().describe('Alias for cronId.'),
   ...Object.fromEntries(
     Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
   ),
@@ -77,16 +83,13 @@ function validateCreateTiming(input: {
   return null;
 }
 
-function validateCronUpdateTarget(input: { cronId?: string | null }) {
-  if (input.cronId) {
-    return null;
-  }
-
-  return {
-    valid: false as const,
-    error: 'cronId is required for update and delete',
-    hint: 'Use list_self_crons or list_crons to get the cronId you want to change.',
-  };
+function normalizeCronId(input: {
+  cronId?: string | null;
+  scheduleId?: string | null;
+  taskId?: string | null;
+  id?: string | null;
+}) {
+  return input.cronId ?? input.scheduleId ?? input.taskId ?? input.id ?? null;
 }
 
 function validateDelegatedCronCreateTarget(input: { targetAgentId?: string | null }) {
@@ -181,14 +184,18 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
-          const validation = validateCronUpdateTarget(input);
+          const cronId = normalizeCronId(input);
 
-          if (validation) {
-            return validation;
+          if (!cronId) {
+            return {
+              valid: false as const,
+              error: 'cronId is required for update and delete',
+              hint: 'Use list_self_crons or list_crons to get the cronId you want to change. scheduleId, taskId, and id are also accepted.',
+            };
           }
 
           try {
-            const result = await schedules.updateSchedule(agentId, input.cronId, {
+            const result = await schedules.updateSchedule(agentId, cronId, {
               name: input.name ?? undefined,
               description: input.description,
               scheduleType: input.scheduleType ?? undefined,
@@ -213,17 +220,21 @@ export function createAgentScheduleTools(
           }
         }
 
-        const validation = validateCronUpdateTarget(input);
+        const cronId = normalizeCronId(input);
 
-        if (validation) {
-          return validation;
+        if (!cronId) {
+          return {
+            valid: false as const,
+            error: 'cronId is required for update and delete',
+            hint: 'Use list_self_crons or list_crons to get the cronId you want to change. scheduleId, taskId, and id are also accepted.',
+          };
         }
 
         try {
-          const result = await schedules.deleteSchedule(agentId, input.cronId);
+          const result = await schedules.deleteSchedule(agentId, cronId);
           return {
             valid: true,
-            cronId: input.cronId,
+            cronId,
             ...result,
           };
         } catch (error) {
@@ -311,14 +322,18 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
-          const validation = validateCronUpdateTarget(input);
+          const cronId = normalizeCronId(input);
 
-          if (validation) {
-            return validation;
+          if (!cronId) {
+            return {
+              valid: false as const,
+              error: 'cronId is required for update and delete',
+              hint: 'Use list_crons to get the cronId you want to change. scheduleId, taskId, and id are also accepted.',
+            };
           }
 
           try {
-            const result = await schedules.editCron(agentId, input.cronId, {
+            const result = await schedules.editCron(agentId, cronId, {
               name: input.name ?? undefined,
               description: input.description,
               scheduleType: input.scheduleType ?? undefined,
@@ -343,17 +358,21 @@ export function createAgentScheduleTools(
           }
         }
 
-        const validation = validateCronUpdateTarget(input);
+        const cronId = normalizeCronId(input);
 
-        if (validation) {
-          return validation;
+        if (!cronId) {
+          return {
+            valid: false as const,
+            error: 'cronId is required for update and delete',
+            hint: 'Use list_crons to get the cronId you want to change. scheduleId, taskId, and id are also accepted.',
+          };
         }
 
         try {
-          const result = await schedules.deleteCron(agentId, input.cronId);
+          const result = await schedules.deleteCron(agentId, cronId);
           return {
             valid: true,
-            cronId: input.cronId,
+            cronId,
             ...result,
           };
         } catch (error) {
