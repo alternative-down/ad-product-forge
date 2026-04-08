@@ -1,95 +1,20 @@
-import { Agent, type AgentConfig, type ToolsInput } from '@mastra/core/agent';
+import { Agent, type ToolsInput } from '@mastra/core/agent';
 import {
   type InputProcessorOrWorkflow,
   type OutputProcessorOrWorkflow,
 } from '@mastra/core/processors';
 import type { Tool } from '@mastra/core/tools';
 import {
-  type CommunicationModule,
-  type CommunicationProvider,
   createExternalAccountTools,
-  type AgentWakeEvent,
 } from '@mastra-engine/core';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig, WorkspaceSkillsConfig } from '../database/schema';
 import { createAgentRuntimePlatform } from './agent-runtime-platform';
 import { createAgentRuntimeMemory } from './agent-runtime-memory';
 import { buildAgentSystemPrompt } from './agent-runtime-prompt';
-
-export type CreateForgeAgentConfig<
-  TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
-  TOutput = undefined,
-  TRequestContext extends Record<string, unknown> | unknown = unknown,
-> = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
-  omModel?: AgentConfig['model'];
-  pricingModelKey: string;
-  omPricingModelKey?: string;
-  modelProfileId?: string;
-  omModelProfileId?: string;
-  companyName?: string;
-  companyContext?: string;
-  roleName?: string;
-  roleDescription?: string;
-  providers?: CommunicationProvider[];
-  communication?: CommunicationModule;
-  workspaceFilesystem?: WorkspaceFilesystemConfig;
-  workspaceSandbox?: WorkspaceSandboxConfig;
-  workspaceSkills?: WorkspaceSkillsConfig;
-};
-
-export type CreateAgentOptions = {
-  longTermMemory?: boolean;
-};
-
-export type InternalAgentRuntime<
-  TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
-  TOutput = undefined,
-  TRequestContext extends Record<string, unknown> | unknown = unknown,
-> = {
-  id: TAgentId;
-  mastraId: string;
-  pricingModelKey: string;
-  modelProfileId?: string;
-  omPricingModelKey: string;
-  omModelProfileId?: string;
-  agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
-  communication: CommunicationModule;
-  onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
-};
-
-export interface CreateAgentConfig<
-  TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
-  TOutput = undefined,
-  TRequestContext extends Record<string, unknown> | unknown = unknown,
-> extends Pick<
-  CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-  | 'id'
-  | 'name'
-  | 'description'
-  | 'instructions'
-  | 'model'
-  | 'pricingModelKey'
-  | 'tools'
-  | 'workflows'
-  | 'agents'
-  | 'omModel'
-  | 'omPricingModelKey'
-  | 'modelProfileId'
-  | 'omModelProfileId'
-  | 'companyName'
-  | 'companyContext'
-  | 'roleName'
-  | 'roleDescription'
-  | 'providers'
-  | 'communication'
-  | 'workspaceFilesystem'
-  | 'workspaceSandbox'
-  | 'workspaceSkills'
-> {
-  workspaceBasePath: string;
-}
+import type {
+  CreateAgentConfig,
+  CreateAgentOptions,
+  InternalAgentRuntime,
+} from './agent-runtime-types';
 
 export async function createAgent<
   TAgentId extends string = string,

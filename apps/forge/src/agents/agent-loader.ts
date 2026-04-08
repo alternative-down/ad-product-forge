@@ -1,26 +1,12 @@
 import type { Database } from '../database/index';
-import { createInternalAgentRuntime, type CreateAgentConfig, type InternalAgentRuntime } from './create-forge-agent';
-import type { InternalChatService } from '../communication/internal-chat-service';
-import type { GitHubAppManager } from '../github/manager';
-import type { CoolifyManager } from '../coolify/manager';
-import type { MiniMaxManager } from '../minimax/manager';
-import type { createAgentScheduleManager } from '../schedules/manager';
+import { createInternalAgentRuntime } from './create-forge-agent';
+import type { InternalAgentRuntime } from './agent-runtime-types';
 import { loadAgentRuntimeData } from './agent-loader-data';
 import { loadAgentToolset } from './agent-loader-tools';
+import type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';
+import { buildAgentRuntimeConfig } from './agent-loader-runtime-config';
 
-export interface AgentLoaderConfig {
-  workspaceBasePath: string;
-  workflows?: CreateAgentConfig['workflows'];
-  githubApps: GitHubAppManager;
-  coolify: CoolifyManager | null;
-  minimax?: MiniMaxManager;
-  schedules: ReturnType<typeof createAgentScheduleManager>;
-  internalChat: InternalChatService;
-}
-
-export interface SingleAgentLoaderConfig extends AgentLoaderConfig {
-  agentId: string;
-}
+export type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';
 
 /**
  * Load agent configuration from database and create agent instance
@@ -57,60 +43,12 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
 
   console.log(`[AgentLoader] Tools loaded for ${runtimeData.agent.id}:`, toolset.breakdown);
 
-  const runtime = await createInternalAgentRuntime(
-    {
-      id: runtimeData.agent.id,
-      name: runtimeData.agent.name,
-      description: runtimeData.agent.description || undefined,
-      instructions: runtimeData.agent.instructions,
-      model: runtimeData.primaryRuntimeModel,
-      pricingModelKey: runtimeData.primaryProfile.modelKey,
-      modelProfileId: runtimeData.primaryProfile.profileId,
-      omModel: runtimeData.omRuntimeModel,
-      omPricingModelKey: runtimeData.omProfile.modelKey,
-      omModelProfileId: runtimeData.omProfile.profileId,
-      companyName: runtimeData.companySettings.companyName,
-      companyContext: runtimeData.companySettings.companyContext,
-      roleName: runtimeData.role?.name,
-      roleDescription: runtimeData.role?.description,
-      tools: toolset.tools,
-      providers: runtimeData.providers,
-      workflows: filterWorkflows(config.workflows, runtimeData.capabilitySet.workflowIds),
-      workspaceBasePath: config.workspaceBasePath,
-      workspaceFilesystem: runtimeData.agent.workspaceFilesystem ?? undefined,
-      workspaceSandbox: runtimeData.agent.workspaceSandbox ?? undefined,
-      workspaceSkills: runtimeData.agent.workspaceSkills ?? undefined,
-    },
-    { longTermMemory: true },
-  );
+  const runtime = await createInternalAgentRuntime(buildAgentRuntimeConfig(config, runtimeData, toolset), {
+    longTermMemory: true,
+  });
 
   console.log(`[AgentLoader] Agent loaded successfully: ${runtimeData.agent.id}`);
   return runtime;
-}
-
-function filterWorkflows(
-  workflows: CreateAgentConfig['workflows'],
-  allowedWorkflowIds: string[] | null,
-): CreateAgentConfig['workflows'] {
-  if (!workflows || !allowedWorkflowIds) {
-    return workflows;
-  }
-
-  const allowedWorkflowIdSet = new Set(allowedWorkflowIds);
-
-  if (typeof workflows === 'function') {
-    return async (context) => {
-      const resolvedWorkflows = await workflows(context);
-
-      return Object.fromEntries(
-        Object.entries(resolvedWorkflows).filter(([, workflow]) => allowedWorkflowIdSet.has(workflow.id)),
-      );
-    };
-  }
-
-  return Object.fromEntries(
-    Object.entries(workflows).filter(([, workflow]) => allowedWorkflowIdSet.has(workflow.id)),
-  );
 }
 
 /**

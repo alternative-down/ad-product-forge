@@ -1,7 +1,7 @@
 import type { Database } from '../database/index';
 import { loadAgents, type AgentLoaderConfig } from './agent-loader';
 import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
-import type { InternalAgentRuntime } from './create-forge-agent';
+import type { InternalAgentRuntime } from './agent-runtime-types';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;

@@ -12,7 +12,7 @@ import {
 } from '../database/schema';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
 import { encryptSecret } from '../encryption/crypto';
-import type { CreateAgentConfig } from './create-forge-agent';
+import type { CreateAgentConfig } from './agent-runtime-types';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
 import type { GitHubAppManager } from '../github/manager';

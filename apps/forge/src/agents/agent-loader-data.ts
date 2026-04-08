@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
 import { agents, agentProviders } from '../database/schema';
-import type { SingleAgentLoaderConfig } from './agent-loader';
+import type { SingleAgentLoaderConfig } from './agent-loader-types';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import { createSystemSettingsStore } from '../system-settings/store';

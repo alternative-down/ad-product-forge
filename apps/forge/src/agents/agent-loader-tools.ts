@@ -2,7 +2,7 @@ import type { ToolsInput } from '@mastra/core/agent';
 import type { Tool } from '@mastra/core/tools';
 
 import type { Database } from '../database/index';
-import type { AgentLoaderConfig } from './agent-loader';
+import type { AgentLoaderConfig } from './agent-loader-types';
 import { createMicroErpTools } from '../micro-erp/tools';
 import { createAgentNotificationTools } from '../notifications/tools';
 import { createGitHubTools } from '../github/tools';

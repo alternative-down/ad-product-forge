@@ -1,5 +1,6 @@
 import { Agent, type ToolsInput } from '@mastra/core/agent';
-import { createAgent, type CreateAgentConfig } from './create-forge-agent';
+import { createAgent } from './create-forge-agent';
+import type { CreateAgentConfig } from './agent-runtime-types';
 
 export async function createSimpleAgent<
   TAgentId extends string = string,
