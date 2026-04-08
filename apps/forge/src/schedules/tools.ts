@@ -26,30 +26,30 @@ const cronUpdateFieldsSchema = {
   isActive: z.boolean().nullish().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
 } as const;
 
-const manageSelfCronsInputSchema = z.object({
-  action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
-  cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
-  scheduleId: z.string().min(1).nullish().describe('Alias for cronId.'),
-  taskId: z.string().min(1).nullish().describe('Alias for cronId.'),
-  id: z.string().min(1).nullish().describe('Alias for cronId.'),
-  ...Object.fromEntries(
-    Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
-  ),
-  ...cronUpdateFieldsSchema,
-});
+const manageSelfCronsInputSchema = z.preprocess(
+  normalizeCronToolInput,
+  z.object({
+    action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
+    cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
+    ...Object.fromEntries(
+      Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
+    ),
+    ...cronUpdateFieldsSchema,
+  }),
+);
 
-const manageCronsInputSchema = z.object({
-  action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
-  targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation.'),
-  cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
-  scheduleId: z.string().min(1).nullish().describe('Alias for cronId.'),
-  taskId: z.string().min(1).nullish().describe('Alias for cronId.'),
-  id: z.string().min(1).nullish().describe('Alias for cronId.'),
-  ...Object.fromEntries(
-    Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
-  ),
-  ...cronUpdateFieldsSchema,
-});
+const manageCronsInputSchema = z.preprocess(
+  normalizeCronToolInput,
+  z.object({
+    action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
+    targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation.'),
+    cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
+    ...Object.fromEntries(
+      Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
+    ),
+    ...cronUpdateFieldsSchema,
+  }),
+);
 
 function validateCreateTiming(input: {
   scheduleType: 'cron' | 'date' | null | undefined;
@@ -83,13 +83,31 @@ function validateCreateTiming(input: {
   return null;
 }
 
+function normalizeCronToolInput(value: unknown) {
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const input = value as {
+    cronId?: string | null;
+    scheduleId?: string | null;
+    taskId?: string | null;
+    id?: string | null;
+  };
+  const cronId = input.cronId ?? input.scheduleId ?? input.taskId ?? input.id;
+
+  return cronId
+    ? {
+        ...input,
+        cronId,
+      }
+    : input;
+}
+
 function normalizeCronId(input: {
   cronId?: string | null;
-  scheduleId?: string | null;
-  taskId?: string | null;
-  id?: string | null;
 }) {
-  return input.cronId ?? input.scheduleId ?? input.taskId ?? input.id ?? null;
+  return input.cronId ?? null;
 }
 
 function validateDelegatedCronCreateTarget(input: { targetAgentId?: string | null }) {
@@ -106,9 +124,10 @@ function validateDelegatedCronCreateTarget(input: { targetAgentId?: string | nul
 
 function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value: T) {
   const cronId = value.scheduleId ?? value.taskId;
+  const { scheduleId: _scheduleId, taskId: _taskId, ...rest } = value;
 
   return {
-    ...value,
+    ...rest,
     cronId,
   };
 }
@@ -190,7 +209,7 @@ export function createAgentScheduleTools(
             return {
               valid: false as const,
               error: 'cronId is required for update and delete',
-              hint: 'Use list_self_crons or list_crons to get the cronId you want to change. scheduleId, taskId, and id are also accepted.',
+              hint: 'Use list_self_crons or list_crons to get the cronId you want to change.',
             };
           }
 
@@ -226,7 +245,7 @@ export function createAgentScheduleTools(
           return {
             valid: false as const,
             error: 'cronId is required for update and delete',
-            hint: 'Use list_self_crons or list_crons to get the cronId you want to change. scheduleId, taskId, and id are also accepted.',
+            hint: 'Use list_self_crons or list_crons to get the cronId you want to change.',
           };
         }
 
@@ -328,7 +347,7 @@ export function createAgentScheduleTools(
             return {
               valid: false as const,
               error: 'cronId is required for update and delete',
-              hint: 'Use list_crons to get the cronId you want to change. scheduleId, taskId, and id are also accepted.',
+              hint: 'Use list_crons to get the cronId you want to change.',
             };
           }
 
@@ -364,7 +383,7 @@ export function createAgentScheduleTools(
           return {
             valid: false as const,
             error: 'cronId is required for update and delete',
-            hint: 'Use list_crons to get the cronId you want to change. scheduleId, taskId, and id are also accepted.',
+            hint: 'Use list_crons to get the cronId you want to change.',
           };
         }
 
