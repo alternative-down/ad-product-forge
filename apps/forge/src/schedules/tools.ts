@@ -7,28 +7,28 @@ import type { createAgentScheduleManager } from './manager';
 
 const manageSelfCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
-  cronId: z.string().min(1).nullish().describe('Required for update and delete. Omit this field when creating a cron.'),
-  name: z.string().min(1).nullish().describe('Cron name. Required for create. Do not send null when creating.'),
+  cronId: z.string().nullish().describe('Required for update and delete. Omit this field when creating a cron.'),
+  name: z.string().nullish().describe('Cron name. Required for create. Do not send null when creating.'),
   description: z.string().nullish().describe('Optional note explaining what this cron is for.'),
   scheduleType: z.enum(['cron', 'date']).nullish().describe('Required for create. Use the literal string cron for recurring execution or date for one-time execution. Do not send null when creating.'),
-  cronExpression: z.string().min(1).nullish().describe('Required when action is create and scheduleType is cron. Example: 0 * * * *.'),
-  scheduledDate: z.string().min(1).nullish().describe('Required when action is create and scheduleType is date. Use an ISO string.'),
-  timezone: z.string().min(1).nullish().describe('Optional timezone. If omitted, UTC is used.'),
-  content: z.string().min(1).nullish().describe('Required for create. This is the message or task content that should be delivered when the cron runs. Do not send null when creating.'),
+  cronExpression: z.string().nullish().describe('Required when action is create and scheduleType is cron. Example: 0 * * * *.'),
+  scheduledDate: z.string().nullish().describe('Required when action is create and scheduleType is date. Use an ISO string.'),
+  timezone: z.string().nullish().describe('Optional timezone. If omitted, UTC is used.'),
+  content: z.string().nullish().describe('Required for create. This is the message or task content that should be delivered when the cron runs. Do not send null when creating.'),
   isActive: z.boolean().nullish().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
 });
 
 const manageCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
-  targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation. Do not send null when creating a delegated cron.'),
-  cronId: z.string().min(1).nullish().describe('Required for update and delete. Omit this field when creating a cron.'),
-  name: z.string().min(1).nullish().describe('Cron name. Required for create. Do not send null when creating.'),
+  targetAgentId: z.string().nullish().describe('Required for delegated cron creation. Do not send null when creating a delegated cron.'),
+  cronId: z.string().nullish().describe('Required for update and delete. Omit this field when creating a cron.'),
+  name: z.string().nullish().describe('Cron name. Required for create. Do not send null when creating.'),
   description: z.string().nullish().describe('Optional note explaining what this cron is for.'),
   scheduleType: z.enum(['cron', 'date']).nullish().describe('Required for create. Use the literal string cron for recurring execution or date for one-time execution. Do not send null when creating.'),
-  cronExpression: z.string().min(1).nullish().describe('Required when action is create and scheduleType is cron. Example: 0 * * * *.'),
-  scheduledDate: z.string().min(1).nullish().describe('The date and time to use when scheduleType is date. Use an ISO string.'),
-  timezone: z.string().min(1).nullish().describe('Timezone used to interpret the cron.'),
-  content: z.string().min(1).nullish().describe('Required for create. This is the message or task content that should be delivered when the cron runs. Do not send null when creating.'),
+  cronExpression: z.string().nullish().describe('Required when action is create and scheduleType is cron. Example: 0 * * * *.'),
+  scheduledDate: z.string().nullish().describe('The date and time to use when scheduleType is date. Use an ISO string.'),
+  timezone: z.string().nullish().describe('Timezone used to interpret the cron.'),
+  content: z.string().nullish().describe('Required for create. This is the message or task content that should be delivered when the cron runs. Do not send null when creating.'),
   isActive: z.boolean().nullish().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
 });
 
