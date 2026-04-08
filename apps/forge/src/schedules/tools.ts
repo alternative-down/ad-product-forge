@@ -26,44 +26,38 @@ const cronUpdateFieldsSchema = {
   isActive: z.boolean().nullish().describe('Set this to false to pause the cron without deleting it, or true to reactivate it.'),
 } as const;
 
-const manageSelfCronsInputSchema = z.discriminatedUnion('action', [
-  z.object({
-    action: z.literal('create'),
-    ...cronCreateFieldsSchema,
-  }),
-  z.object({
-    action: z.literal('update'),
-    cronId: z.string().min(1).describe('The cron id you want to update.'),
-    ...cronUpdateFieldsSchema,
-  }),
-  z.object({
-    action: z.literal('delete'),
-    cronId: z.string().min(1).describe('The cron id you want to delete.'),
-  }),
-]);
+const manageSelfCronsInputSchema = z.object({
+  action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
+  cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
+  ...Object.fromEntries(
+    Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
+  ),
+  ...cronUpdateFieldsSchema,
+});
 
-const manageCronsInputSchema = z.discriminatedUnion('action', [
-  z.object({
-    action: z.literal('create'),
-    targetAgentId: z.string().min(1).describe('The target agent that should receive this cron.'),
-    ...cronCreateFieldsSchema,
-  }),
-  z.object({
-    action: z.literal('update'),
-    cronId: z.string().min(1).describe('The cron id you want to update.'),
-    ...cronUpdateFieldsSchema,
-  }),
-  z.object({
-    action: z.literal('delete'),
-    cronId: z.string().min(1).describe('The cron id you want to delete.'),
-  }),
-]);
+const manageCronsInputSchema = z.object({
+  action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
+  targetAgentId: z.string().min(1).nullish().describe('Required for delegated cron creation.'),
+  cronId: z.string().min(1).nullish().describe('Required for update and delete.'),
+  ...Object.fromEntries(
+    Object.entries(cronCreateFieldsSchema).map(([key, schema]) => [key, schema.nullish()]),
+  ),
+  ...cronUpdateFieldsSchema,
+});
 
 function validateCreateTiming(input: {
-  scheduleType: 'cron' | 'date';
+  scheduleType: 'cron' | 'date' | null | undefined;
   cronExpression?: string | null;
   scheduledDate?: string | null;
 }) {
+  if (!input.scheduleType) {
+    return {
+      valid: false as const,
+      error: 'scheduleType is required when action is create',
+      hint: 'Use scheduleType cron for recurring execution or date for one-time execution.',
+    };
+  }
+
   if (input.scheduleType === 'cron' && !input.cronExpression) {
     return {
       valid: false as const,
@@ -81,6 +75,30 @@ function validateCreateTiming(input: {
   }
 
   return null;
+}
+
+function validateCronUpdateTarget(input: { cronId?: string | null }) {
+  if (input.cronId) {
+    return null;
+  }
+
+  return {
+    valid: false as const,
+    error: 'cronId is required for update and delete',
+    hint: 'Use list_self_crons or list_crons to get the cronId you want to change.',
+  };
+}
+
+function validateDelegatedCronCreateTarget(input: { targetAgentId?: string | null }) {
+  if (input.targetAgentId) {
+    return null;
+  }
+
+  return {
+    valid: false as const,
+    error: 'targetAgentId is required when action is create',
+    hint: 'Provide the agentId that should receive the delegated cron.',
+  };
 }
 
 function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value: T) {
@@ -163,6 +181,12 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
+          const validation = validateCronUpdateTarget(input);
+
+          if (validation) {
+            return validation;
+          }
+
           try {
             const result = await schedules.updateSchedule(agentId, input.cronId, {
               name: input.name ?? undefined,
@@ -187,6 +211,12 @@ export function createAgentScheduleTools(
               hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
             };
           }
+        }
+
+        const validation = validateCronUpdateTarget(input);
+
+        if (validation) {
+          return validation;
         }
 
         try {
@@ -242,6 +272,12 @@ export function createAgentScheduleTools(
         forgeDebug('tools:schedules', 'manage_crons called', { agentId, action: input.action });
 
         if (input.action === 'create') {
+          const createTargetValidation = validateDelegatedCronCreateTarget(input);
+
+          if (createTargetValidation) {
+            return createTargetValidation;
+          }
+
           const validation = validateCreateTiming(input);
 
           if (validation) {
@@ -275,6 +311,12 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
+          const validation = validateCronUpdateTarget(input);
+
+          if (validation) {
+            return validation;
+          }
+
           try {
             const result = await schedules.editCron(agentId, input.cronId, {
               name: input.name ?? undefined,
@@ -299,6 +341,12 @@ export function createAgentScheduleTools(
               hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
             };
           }
+        }
+
+        const validation = validateCronUpdateTarget(input);
+
+        if (validation) {
+          return validation;
         }
 
         try {

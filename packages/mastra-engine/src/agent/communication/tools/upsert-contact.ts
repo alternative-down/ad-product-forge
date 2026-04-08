@@ -6,7 +6,7 @@ import type { CommunicationModule } from '../module';
 const upsertContactInputSchema = z.object({
   slug: z.string().describe('A stable slug to identify this contact later.'),
   displayName: z.string().describe('The human-readable name of the contact.'),
-  description: z.string().optional().describe('Optional notes or description about this contact.'),
+  description: z.string().nullish().describe('Optional notes or description about this contact.'),
 });
 
 export function createUpsertContactTool(communication: CommunicationModule) {

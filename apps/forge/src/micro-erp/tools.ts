@@ -17,53 +17,59 @@ const listCompanyCashInputSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-const manageCompanyCashMovementInputSchema = z.discriminatedUnion('action', [
-  z.object({
-    action: z.literal('record_in'),
-    type: z.string().min(1),
-    amountUsd: z.coerce.number().positive(),
-    description: z.string().min(1).optional(),
-    referenceType: z.string().min(1).optional(),
-    referenceId: z.string().min(1).optional(),
-    effectiveAt: z.coerce.number().int().optional(),
-  }),
-  z.object({
-    action: z.literal('record_out'),
-    type: z.string().min(1),
-    amountUsd: z.coerce.number().positive(),
-    description: z.string().min(1).optional(),
-    referenceType: z.string().min(1).optional(),
-    referenceId: z.string().min(1).optional(),
-    effectiveAt: z.coerce.number().int().optional(),
-  }),
-  z.object({
-    action: z.literal('schedule_in'),
-    type: z.string().min(1),
-    amountUsd: z.coerce.number().positive(),
-    description: z.string().min(1).optional(),
-    referenceType: z.string().min(1).optional(),
-    referenceId: z.string().min(1).optional(),
-    dueAt: z.coerce.number().int(),
-  }),
-  z.object({
-    action: z.literal('schedule_out'),
-    type: z.string().min(1),
-    amountUsd: z.coerce.number().positive(),
-    description: z.string().min(1).optional(),
-    referenceType: z.string().min(1).optional(),
-    referenceId: z.string().min(1).optional(),
-    dueAt: z.coerce.number().int(),
-  }),
-  z.object({
-    action: z.literal('post_planned'),
-    entryId: z.string().min(1),
-    effectiveAt: z.coerce.number().int().optional(),
-  }),
-  z.object({
-    action: z.literal('cancel_planned'),
-    entryId: z.string().min(1),
-  }),
-]);
+const manageCompanyCashMovementInputSchema = z.object({
+  action: z
+    .enum(['record_in', 'record_out', 'schedule_in', 'schedule_out', 'post_planned', 'cancel_planned'])
+    .describe('The cash movement operation to perform.'),
+  entryId: z.string().min(1).nullish().describe('Required for post_planned and cancel_planned.'),
+  type: z.string().min(1).nullish().describe('Required for record_* and schedule_* actions.'),
+  amountUsd: z.coerce.number().positive().nullish().describe('Required for record_* and schedule_* actions.'),
+  description: z.string().min(1).nullish(),
+  referenceType: z.string().min(1).nullish(),
+  referenceId: z.string().min(1).nullish(),
+  effectiveAt: z.coerce.number().int().nullish().describe('Optional posting time for record_* and post_planned.'),
+  dueAt: z.coerce.number().int().nullish().describe('Required for schedule_in and schedule_out.'),
+});
+
+function validateCompanyCashMovementInput(input: z.infer<typeof manageCompanyCashMovementInputSchema>) {
+  if (input.action === 'post_planned' || input.action === 'cancel_planned') {
+    if (input.entryId) {
+      return null;
+    }
+
+    return {
+      valid: false as const,
+      error: 'entryId is required for post_planned and cancel_planned',
+      hint: 'Use list_company_cash to find the planned entryId before trying to post or cancel it.',
+    };
+  }
+
+  if (!input.type) {
+    return {
+      valid: false as const,
+      error: 'type is required for record and schedule actions',
+      hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
+    };
+  }
+
+  if (input.amountUsd === null || input.amountUsd === undefined) {
+    return {
+      valid: false as const,
+      error: 'amountUsd is required for record and schedule actions',
+      hint: 'Provide the USD amount for this movement.',
+    };
+  }
+
+  if ((input.action === 'schedule_in' || input.action === 'schedule_out') && !input.dueAt) {
+    return {
+      valid: false as const,
+      error: 'dueAt is required for scheduled cash movements',
+      hint: 'Provide the due date as a unix timestamp in milliseconds.',
+    };
+  }
+
+  return null;
+}
 
 export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> | null) {
   const microErp = createMicroErpReadModel(db);
@@ -136,6 +142,12 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
       description: 'Create and manage company cash movements. Use this to record immediate entries, schedule planned entries, post a planned entry, or cancel a planned entry.',
       inputSchema: manageCompanyCashMovementInputSchema,
       execute: async (input) => {
+        const validation = validateCompanyCashMovementInput(input);
+
+        if (validation) {
+          return validation;
+        }
+
         try {
           if (input.action === 'record_in') {
             const result = await companyCash.recordCashIn(input);
