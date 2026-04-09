@@ -178,6 +178,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
     executing = true;
     let continueRunning = false;
+    let prompt = '';
 
     try {
       const executionState = await store.getExecutionState(runtime.id);
@@ -193,7 +194,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
-      const prompt = flushPendingRunMessages() ?? [];
+      prompt = flushPendingRunMessages() ?? '';
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       const result = await runtime.agent.generate(prompt, {
@@ -301,7 +302,17 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       backoffMs = ONE_MINUTE_MS;
       continueRunning = true;
     } catch (error) {
-      console.error(`[AgentRunner] ${runtime.id} step failed:`, error);
+      console.error(
+        `[AgentRunner] ${runtime.id} step failed:`,
+        JSON.stringify({
+          agentId: runtime.id,
+          mastraId: runtime.mastraId,
+          pricingModelKey: runtime.pricingModelKey,
+          modelProfileId: runtime.modelProfileId,
+          prompt,
+          error: serializeError(error),
+        }, null, 2),
+      );
       schedule(nextBackoff());
     } finally {
       executing = false;
@@ -426,6 +437,44 @@ function buildLoopSignature(result: {
       args: chunk.payload.args,
     })),
   });
+}
+
+function serializeError(error: unknown): Record<string, unknown> {
+  if (!(error instanceof Error)) {
+    return {
+      type: typeof error,
+      value: error,
+    };
+  }
+
+  const extra = Object.fromEntries(
+    Object.entries(error).map(([key, value]) => [key, serializeUnknown(value)]),
+  );
+
+  return {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    ...extra,
+  };
+}
+
+function serializeUnknown(value: unknown): unknown {
+  if (value instanceof Error) {
+    return serializeError(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(serializeUnknown);
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, serializeUnknown(item)]),
+  );
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
