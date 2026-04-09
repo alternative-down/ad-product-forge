@@ -5,11 +5,13 @@ import type { InternalAgentRuntime } from './agent-runtime-types';
 import { createAgentContractStore } from './agent-contract-store';
 import type { Database } from '../database/index';
 import { createSystemSettingsStore } from '../system-settings/store';
+import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentRunnerUsage } from './agent-runner-usage';
 import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
+const STUCK_LOOP_REPEAT_LIMIT = 6;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 const NO_ACTION_NEEDED_XML_PATTERN = /<invoke[^>]*name=["']NO_ACTION_NEEDED["'][^>]*>/i;
@@ -18,6 +20,7 @@ const STOP_AND_IDLE_XML_PATTERN = /<invoke[^>]*name=["']STOP_AND_IDLE["'][^>]*>/
 export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
   const systemSettings = createSystemSettingsStore(db);
+  const notifications = createAgentNotificationStore(db);
   const usage = createAgentRunnerUsage({ store, runtime });
   const wakeQueue = createAgentWakeQueue({
     label: runtime.id,
@@ -30,6 +33,8 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let backoffMs = ONE_MINUTE_MS;
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
+  let lastLoopSignature: string | null = null;
+  let repeatedLoopCount = 0;
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
@@ -68,6 +73,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     instant = true;
+    resetLoopDetector();
     lastWakeStartedAt = Date.now();
     await queueNextStep();
   }
@@ -87,6 +93,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
     instant = true;
     backoffMs = ONE_MINUTE_MS;
+    resetLoopDetector();
     lastWakeStartedAt = Date.now();
     await store.setExecutionState(runtime.id, 'running');
     await queueNextStep();
@@ -237,9 +244,30 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       const controlDirective = extractRunnerControlDirective(result.text);
       const ignoredTextRequested = controlDirective === 'ignore';
       const stopRequested = controlDirective === 'stop';
+      const loopSignature = buildLoopSignature(result);
+
+      if (registerLoopSignature(loopSignature) >= STUCK_LOOP_REPEAT_LIMIT) {
+        await notifications.createNotification({
+          agentId: runtime.id,
+          content: [
+            'Stuck loop detected.',
+            `Repeated signature count: ${repeatedLoopCount}`,
+            'The agent repeated the same tool/text pattern and was forced to stop.',
+            '',
+            'Signature:',
+            loopSignature,
+          ].join('\n'),
+        });
+        nextStepAt = null;
+        resetLoopDetector();
+        await store.setExecutionState(runtime.id, 'idle');
+        await wakeQueue.onRunnerIdle();
+        return;
+      }
 
       if (result.toolCalls.length === 0 && stopRequested) {
         nextStepAt = null;
+        resetLoopDetector();
         await store.setExecutionState(runtime.id, 'idle');
         await wakeQueue.onRunnerIdle();
         return;
@@ -282,6 +310,22 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         await queueNextStep();
       }
     }
+  }
+
+  function resetLoopDetector() {
+    lastLoopSignature = null;
+    repeatedLoopCount = 0;
+  }
+
+  function registerLoopSignature(signature: string) {
+    if (lastLoopSignature === signature) {
+      repeatedLoopCount += 1;
+      return repeatedLoopCount;
+    }
+
+    lastLoopSignature = signature;
+    repeatedLoopCount = 1;
+    return repeatedLoopCount;
   }
 
   async function planNextAttempt() {
@@ -364,6 +408,24 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     getSnapshot,
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
+}
+
+function buildLoopSignature(result: {
+  text: string;
+  toolCalls: Array<{
+    payload: {
+      toolName: string;
+      args?: unknown;
+    };
+  }>;
+}) {
+  return JSON.stringify({
+    text: result.text.trim(),
+    toolCalls: result.toolCalls.map((chunk) => ({
+      toolName: chunk.payload.toolName,
+      args: chunk.payload.args,
+    })),
+  });
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

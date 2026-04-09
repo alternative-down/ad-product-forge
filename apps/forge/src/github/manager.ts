@@ -1321,6 +1321,11 @@ export function createGitHubAppManager(config: {
         sender,
         payload,
       });
+      const isSelfEvent = isGitHubSelfEvent(sender, credentials);
+      const shouldWakeAgent = shouldWakeForGitHubEvent({
+        event: name,
+        action,
+      });
       const receivedAt = Date.now();
       const content = createGitHubWebhookWakeContent({
         agentId,
@@ -1333,11 +1338,22 @@ export function createGitHubAppManager(config: {
         timestamp: receivedAt,
       });
 
+      if (isSelfEvent) {
+        console.log(`[GitHubWebhook] Ignoring self event for agent ${agentId}: ${name}`);
+        return;
+      }
+
       await notifications.createNotification({
         agentId,
         content,
       });
       console.log(`[GitHubWebhook] Created notification for agent ${agentId}: ${content}`);
+
+      if (!shouldWakeAgent) {
+        console.log(`[GitHubWebhook] Stored notification without wake for agent ${agentId}: ${name}`);
+        return;
+      }
+
       config.notifyAgent({
         agentId,
         type: `github:${name}`,
@@ -1606,6 +1622,43 @@ function createGitHubWebhookWakeContent(input: {
   lines.push('', 'Summary:', input.summary);
 
   return lines.join('\n');
+}
+
+function isGitHubSelfEvent(
+  sender: string | undefined,
+  credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+) {
+  if (!sender) {
+    return false;
+  }
+
+  return sender === credentials.appSlug || sender === `${credentials.appSlug}[bot]`;
+}
+
+function shouldWakeForGitHubEvent(input: {
+  event: string;
+  action?: string;
+}) {
+  if (input.event === 'issues') {
+    return input.action === 'opened' || input.action === 'reopened' || input.action === 'assigned';
+  }
+
+  if (input.event === 'issue_comment') {
+    return input.action === 'created';
+  }
+
+  if (input.event === 'pull_request') {
+    return input.action === 'opened'
+      || input.action === 'reopened'
+      || input.action === 'ready_for_review'
+      || input.action === 'review_requested';
+  }
+
+  if (input.event === 'pull_request_review' || input.event === 'pull_request_review_comment') {
+    return input.action === 'submitted' || input.action === 'created';
+  }
+
+  return false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
