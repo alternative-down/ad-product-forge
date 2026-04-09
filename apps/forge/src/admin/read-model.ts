@@ -453,7 +453,7 @@ export function createAdminReadModel(input: {
     ]);
 
     return {
-      workingMemory: formatMemoryValue(workingMemory),
+      workingMemory: formatWorkingMemoryValue(workingMemory),
       observations: formatMemoryValue(omRecord.activeObservations),
       reflection: formatMemoryValue(omRecord.bufferedReflection),
       generationCount: omRecord.generationCount,
@@ -925,11 +925,53 @@ function formatMemoryValue(value: string | null | undefined) {
     return null;
   }
 
+  return value.trim();
+}
+
+function formatWorkingMemoryValue(value: string | null | undefined) {
+  if (!value || !value.trim()) {
+    return null;
+  }
+
   const trimmed = value.trim();
 
   try {
-    return JSON.stringify(JSON.parse(trimmed), null, 2);
+    return renderWorkingMemoryMarkdown(JSON.parse(trimmed));
   } catch {
     return trimmed;
   }
+}
+
+function renderWorkingMemoryMarkdown(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return JSON.stringify(value, null, 2);
+  }
+
+  const sections = Object.entries(value)
+    .filter(([, sectionValue]) => sectionValue && typeof sectionValue === 'object' && !Array.isArray(sectionValue))
+    .map(([sectionKey, sectionValue]) => {
+      const entries = Object.entries(sectionValue as Record<string, unknown>)
+        .filter(([, item]) => typeof item === 'string' && item.trim())
+        .map(([fieldKey, item]) => `- **${humanizeMemoryKey(fieldKey)}**: ${String(item).trim()}`);
+
+      if (entries.length === 0) {
+        return null;
+      }
+
+      return [`## ${humanizeMemoryKey(sectionKey)}`, ...entries].join('\n');
+    })
+    .filter(Boolean);
+
+  if (sections.length === 0) {
+    return JSON.stringify(value, null, 2);
+  }
+
+  return sections.join('\n\n');
+}
+
+function humanizeMemoryKey(value: string) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
