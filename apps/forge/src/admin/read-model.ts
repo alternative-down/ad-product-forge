@@ -3,9 +3,11 @@ import { readFile } from 'node:fs/promises';
 
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
-import { LibSQLStore } from '@mastra/libsql';
+import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import type { MastraDBMessage } from '@mastra/core/agent';
 import {
+  createAgentMemory,
+  createObservationalMemory,
   toMastraSafeIdentifier,
   type CommunicationMessageView,
   type CommunicationProviderMessage,
@@ -404,6 +406,62 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function getAgentRuntimeMemory(agentId: string) {
+    const agent = await db.query.agents.findFirst({
+      where: eq(agents.id, agentId),
+    });
+
+    if (!agent) {
+      return null;
+    }
+
+    const mastraAgentId = toMastraSafeIdentifier(agentId);
+    const agentDatabasePath = path.resolve(input.workspaceBasePath, agentId, 'database.db');
+    const client = createClient({
+      url: `file:${agentDatabasePath}`,
+    });
+    const storage = new LibSQLStore({
+      id: `${mastraAgentId}_storage`,
+      client,
+    });
+    const vector = new LibSQLVector({
+      id: `${mastraAgentId}_vector`,
+      url: `file:${agentDatabasePath}`,
+    });
+
+    if (hasCreateThread(storage.stores.memory)) {
+      await storage.stores.memory.createThread({
+        resourceId: mastraAgentId,
+        threadId: mastraAgentId,
+      });
+    }
+
+    const memory = createAgentMemory({
+      storage,
+      vector,
+    });
+    const observationalMemory = createObservationalMemory({
+      storage,
+      model: 'anthropic/claude-sonnet-4-20250514',
+    });
+    const [workingMemory, omRecord] = await Promise.all([
+      memory.getWorkingMemory({
+        threadId: mastraAgentId,
+        resourceId: mastraAgentId,
+      }),
+      observationalMemory.getOrCreateRecord(mastraAgentId, mastraAgentId),
+    ]);
+
+    return {
+      workingMemory: formatMemoryValue(workingMemory),
+      observations: formatMemoryValue(omRecord.activeObservations),
+      reflection: formatMemoryValue(omRecord.bufferedReflection),
+      generationCount: omRecord.generationCount,
+      updatedAt: omRecord.updatedAt.getTime(),
+      lastObservedAt: omRecord.lastObservedAt?.getTime() ?? null,
+    };
+  }
+
   async function listAgentConversationMessages(params: {
     agentId: string;
     provider: string;
@@ -615,6 +673,7 @@ export function createAdminReadModel(input: {
     listAgentRecentConversations,
     listAgentExecutionSteps,
     listAgentThreadMessages,
+    getAgentRuntimeMemory,
     listAgentConversationMessages,
     listRoles,
     listSystemIntegrations,
@@ -859,4 +918,18 @@ function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+function formatMemoryValue(value: string | null | undefined) {
+  if (!value || !value.trim()) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  try {
+    return JSON.stringify(JSON.parse(trimmed), null, 2);
+  } catch {
+    return trimmed;
+  }
 }

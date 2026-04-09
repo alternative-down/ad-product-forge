@@ -563,6 +563,23 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'GET',
+    path: '/admin/agent/runtime-memory',
+    handler: async (request) => {
+      const { agentId } = agentIdQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+      });
+      const snapshot = await readModel.getAgentRuntimeMemory(agentId);
+
+      if (!snapshot) {
+        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+      }
+
+      return jsonResponse(snapshot);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
     path: '/admin/agent/conversation-messages',
     handler: async (request) => {
       const query = agentConversationMessagesQuerySchema.parse({
