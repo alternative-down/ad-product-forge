@@ -86,27 +86,6 @@ export async function main() {
     httpServer,
     publicBaseUrl,
     integrations,
-    notifyAgent(input) {
-      const entry = registry.get(input.agentId);
-
-      if (!entry) {
-        console.warn(`[Forge] GitHub wake requested for unloaded agent ${input.agentId}`);
-        return;
-      }
-
-      console.log(`[Forge] GitHub wake requested for agent ${input.agentId}`);
-      entry.runner.notifyExternalEvent({
-        type: input.type,
-        groupKey: `github:${input.type}`,
-        groupMetadata: {
-          Source: 'github',
-          EventType: input.type,
-        },
-        idempotencyKey: input.id,
-        text: input.content,
-        timestamp: input.timestamp,
-      });
-    },
   });
   const coolify = createCoolifyManager({
     integrations,
