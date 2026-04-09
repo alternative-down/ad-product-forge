@@ -73,7 +73,6 @@ export function createGitHubAppManager(config: {
   httpServer: ReturnType<typeof createForgeHttpServer>;
   publicBaseUrl: string;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
-  notifyAgent(input: { agentId: string; id: string; content: string; timestamp: number; type: string }): void;
 }) {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
@@ -1256,26 +1255,18 @@ export function createGitHubAppManager(config: {
 
     await saveCredentials(agentId, activeCredentials);
     const githubConfig = await getGlobalConfig();
-    const installTimestamp = Date.now();
     const installContent = createGitHubInstallWakeContent({
       agentId,
       installationId,
       organization: githubConfig.organization,
       appName: activeCredentials.appName,
       appSlug: activeCredentials.appSlug,
-      timestamp: installTimestamp,
+      timestamp: Date.now(),
     });
 
     await notifications.createNotification({
       agentId,
       content: installContent,
-    });
-    config.notifyAgent({
-      agentId,
-      type: 'github-install',
-      id: `github-install:${agentId}:${installationId}`,
-      content: installContent,
-      timestamp: installTimestamp,
     });
 
     return html(200, '<h1>GitHub App installed successfully</h1><p>The agent is now connected to GitHub.</p>');
@@ -1322,10 +1313,6 @@ export function createGitHubAppManager(config: {
         payload,
       });
       const isSelfEvent = isGitHubSelfEvent(sender, credentials);
-      const shouldWakeAgent = shouldWakeForGitHubEvent({
-        event: name,
-        action,
-      });
       const receivedAt = Date.now();
       const content = createGitHubWebhookWakeContent({
         agentId,
@@ -1348,20 +1335,7 @@ export function createGitHubAppManager(config: {
         content,
       });
       console.log(`[GitHubWebhook] Created notification for agent ${agentId}: ${content}`);
-
-      if (!shouldWakeAgent) {
-        console.log(`[GitHubWebhook] Stored notification without wake for agent ${agentId}: ${name}`);
-        return;
-      }
-
-      config.notifyAgent({
-        agentId,
-        type: `github:${name}`,
-        id: `github:${deliveryId}`,
-        content,
-        timestamp: receivedAt,
-      });
-      console.log(`[GitHubWebhook] Requested wake for agent ${agentId}`);
+      console.log(`[GitHubWebhook] Stored notification without wake for agent ${agentId}: ${name}`);
     });
 
     await app.webhooks.verifyAndReceive({
@@ -1633,32 +1607,6 @@ function isGitHubSelfEvent(
   }
 
   return sender === credentials.appSlug || sender === `${credentials.appSlug}[bot]`;
-}
-
-function shouldWakeForGitHubEvent(input: {
-  event: string;
-  action?: string;
-}) {
-  if (input.event === 'issues') {
-    return input.action === 'opened' || input.action === 'reopened' || input.action === 'assigned';
-  }
-
-  if (input.event === 'issue_comment') {
-    return input.action === 'created';
-  }
-
-  if (input.event === 'pull_request') {
-    return input.action === 'opened'
-      || input.action === 'reopened'
-      || input.action === 'ready_for_review'
-      || input.action === 'review_requested';
-  }
-
-  if (input.event === 'pull_request_review' || input.event === 'pull_request_review_comment') {
-    return input.action === 'submitted' || input.action === 'created';
-  }
-
-  return false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
