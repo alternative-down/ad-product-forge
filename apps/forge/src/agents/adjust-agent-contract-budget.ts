@@ -15,7 +15,6 @@ export async function adjustAgentContractBudget(
 ) {
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
-  const contractStore = createAgentContractStore(db);
   const now = Date.now();
 
   // Get the active contract
@@ -82,13 +81,7 @@ export async function adjustAgentContractBudget(
   }
 
   // Downward adjustment (decrease budget) - requires validation
-  const executionState = await contractStore.getExecutionState(input.agentId);
-
-  if (executionState === 'running') {
-    throw new Error('Cannot reduce budget while agent is running');
-  }
-
-  // Get current spend on this contract
+  const contractStore = createAgentContractStore(db);
   const contractSpend = await contractStore.getContractSpend(activeContract.id);
 
   // New budget cannot be less than what's already spent

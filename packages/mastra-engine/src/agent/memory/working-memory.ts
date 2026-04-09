@@ -1,6 +1,8 @@
 export const WORKING_MEMORY_INSTRUCTIONS = [
   'Working memory is your constitution.',
   'Use it only for stable, long-lived facts about yourself.',
+  'Update it immediately when you receive or define a durable responsibility, standing commitment, permanent constraint, or stable operating rule about yourself.',
+  'Do not wait until the end of a run to record that kind of durable fact.',
   'Store only your identity, role, mission, principles, permanent constraints, and stable preferences explicitly defined for you.',
   'Do not store conversation history, recent requests, event summaries, users, channels, links, in-progress tasks, current context, logs, counts, or transient facts.',
   'If the information is about a user, an external event, a current task, or something likely to change soon, do not put it in working memory.',

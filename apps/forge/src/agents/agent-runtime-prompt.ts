@@ -71,6 +71,7 @@ export function buildAgentSystemPrompt(input: {
       '- Verify facts before acting. Do not speculate, emulate, invent results, or claim work that was not actually checked or completed.',
       '- Stay disciplined inside your role while coordinating with colleagues when their context is relevant to your work.',
       '- Do not respond to every message just because you received it. If a message is outside your role, outside your responsibility, or not part of your conversation context, do not treat it as your job.',
+      '- Update working memory as soon as you receive or define durable personal operating facts, commitments, responsibilities, constraints, or standing decisions that should remain true across future runs. Do not wait until the end of the run to do that.',
       '</operating_directives>',
     ].join('\n'),
     [

@@ -557,9 +557,17 @@ export function createAgentScheduleManager(input: {
       scheduleKind: scheduleRecord.kind,
       scheduleName: scheduleRecord.name,
       content: createWakeContent({
+        name: scheduleRecord.name,
+        description: scheduleRecord.description,
+        scheduleKind: scheduleRecord.kind,
+        scheduleType: scheduleRecord.scheduleType,
+        cronExpression: scheduleRecord.cronExpression,
+        scheduledDate: scheduleRecord.scheduledDate,
+        timezone: scheduleRecord.timezone,
+        nextTriggerAt,
         content: scheduleRecord.kind === 'agent'
           ? scheduleRecord.content
-          : createHeartbeatWakeInstruction(),
+          : createHeartbeatWakeInstruction(scheduleRecord.content),
       }),
       timestamp: fireDate.getTime(),
     });
@@ -667,18 +675,57 @@ function createNotificationContent(input: {
 }
 
 function createWakeContent(input: {
+  name: string;
+  description?: string;
+  scheduleKind: 'agent' | 'heartbeat';
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string | null;
+  scheduledDate?: number | null;
+  timezone: string;
+  nextTriggerAt?: number | null;
   content: string;
 }) {
-  return input.content.trim();
+  const lines = [
+    input.scheduleKind === 'heartbeat' ? 'Heartbeat triggered.' : 'Scheduled task triggered.',
+    `Schedule name: ${input.name}`,
+    `Schedule kind: ${input.scheduleKind}`,
+    `Schedule type: ${input.scheduleType}`,
+    `Timezone: ${input.timezone}`,
+  ];
+
+  if (input.description?.trim()) {
+    lines.push(`Description: ${input.description.trim()}`);
+  }
+
+  if (input.scheduleType === 'cron' && input.cronExpression) {
+    lines.push(`Cron expression: ${input.cronExpression}`);
+  }
+
+  if (input.scheduleType === 'date' && input.scheduledDate) {
+    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
+  }
+
+  if (input.nextTriggerAt) {
+    lines.push(`Next trigger at: ${new Date(input.nextTriggerAt).toISOString()}`);
+  }
+
+  lines.push('', 'Content:', input.content.trim());
+  return lines.join('\n');
 }
 
-function createHeartbeatWakeInstruction() {
-  return [
-    'Heartbeat triggered.',
+function createHeartbeatWakeInstruction(content?: string) {
+  const lines = [
     'Use this run to re-orient yourself in the current operational state.',
     'Check your unread conversations, unread notifications, pending schedules, and any unresolved work you may have left behind in earlier runs.',
     'If you find pending work, inspect it with tools and act on it. If nothing requires action, stop cleanly.',
-  ].join('\n');
+  ];
+  const customContent = content?.trim();
+
+  if (customContent) {
+    lines.push('', 'Heartbeat content:', customContent);
+  }
+
+  return lines.join('\n');
 }
 
 function toToolOutput(scheduleRecord: {
