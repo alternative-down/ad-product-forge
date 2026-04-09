@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "types": ["node"],
     "moduleResolution": "Bundler",
     "noEmit": false,
     "outDir": "./dist",

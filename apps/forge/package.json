@@ -16,27 +16,27 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.68",
     "@mastra-engine/core": "0.1.0",
-    "@mastra/core": "^1.24.0",
+    "@mastra/core": "^1.24.1",
     "@mastra/mcp": "^1.4.2",
     "@octokit/auth-app": "^8.1.1",
     "@types/node-schedule": "^2.1.8",
     "discord.js": "^14.26.2",
     "dotenv": "^17.4.1",
     "fflate": "^0.8.2",
-    "imapflow": "^1.2.18",
-    "nanoid": "^3.3.11",
+    "imapflow": "^1.3.1",
+    "nanoid": "^5.1.7",
     "node-schedule": "^2.1.1",
-    "nodemailer": "^8.0.3",
+    "nodemailer": "^8.0.5",
     "octokit": "^5.0.3",
     "postal-mime": "^2.7.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
-    "@types/nodemailer": "^7.0.11",
+    "@types/nodemailer": "^8.0.0",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.4"
   }
 }

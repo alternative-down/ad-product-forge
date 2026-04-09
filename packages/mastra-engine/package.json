@@ -22,11 +22,11 @@
     "@ai-sdk/anthropic": "^3.0.68",
     "@ai-sdk/openai": "^3.0.52",
     "@libsql/client": "^0.17.2",
-    "@mastra/core": "^1.24.0",
+    "@mastra/core": "^1.24.1",
     "@mastra/fastembed": "^1.0.1",
     "@mastra/libsql": "^1.8.0",
     "@mastra/memory": "^1.15.0",
-    "@mendable/firecrawl-js": "^4.15.4",
+    "@mendable/firecrawl-js": "^4.18.1",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.1",
     "zod": "3.25.76"
