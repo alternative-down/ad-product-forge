@@ -27,6 +27,7 @@ export function createAgentNotificationStore(db: Database) {
     agentId: string;
     unreadOnly?: boolean;
     limit: number;
+    markRead?: boolean;
   }) {
     const rows = await db.query.agentNotifications.findMany({
       where: and(
@@ -39,7 +40,7 @@ export function createAgentNotificationStore(db: Database) {
 
     const unreadNotificationIds = rows.filter((row) => row.readAt === null).map((row) => row.id);
 
-    if (unreadNotificationIds.length > 0) {
+    if ((input.markRead ?? true) && unreadNotificationIds.length > 0) {
       await db
         .update(agentNotifications)
         .set({ readAt: Date.now() })
@@ -50,7 +51,7 @@ export function createAgentNotificationStore(db: Database) {
       notificationId: row.id,
       content: row.content,
       timestamp: row.createdAt,
-      read: true,
+      read: (input.markRead ?? true) ? true : row.readAt !== null,
     }));
   }
 

@@ -218,6 +218,7 @@ export function createAdminReadModel(input: {
         notifications.listNotifications({
           agentId,
           limit: RECENT_NOTIFICATION_LIMIT,
+          markRead: false,
         }),
         input.githubApps.getAgentProvisioning(agentId),
       ]);
