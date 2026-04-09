@@ -714,18 +714,19 @@ function createWakeContent(input: {
 }
 
 function createHeartbeatWakeInstruction(content?: string) {
+  const customContent = content?.trim();
+
+  if (customContent) {
+    return customContent;
+  }
+
   const lines = [
     'Use this run to re-orient yourself in the current operational state.',
-    'Check your unread conversations, unread notifications, your own crons, pending schedules, and any unresolved work you may have left behind in earlier runs.',
+    'Check your unread conversations, unread notifications, and any unresolved work you may have left behind in earlier runs.',
     'Review your working memory and keep it consolidated: refactor the information, remove items that are already resolved, register durable next steps and durable learnings, and leave it concise and well structured.',
     'Do not keep redundant information there when it already exists clearly in other places or is already defined in the system prompt.',
     'If you find pending work, inspect it with tools and act on it. If nothing requires action, stop cleanly.',
   ];
-  const customContent = content?.trim();
-
-  if (customContent) {
-    lines.push('', 'Heartbeat content:', customContent);
-  }
 
   return lines.join('\n');
 }
