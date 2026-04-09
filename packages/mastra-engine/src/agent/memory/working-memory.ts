@@ -1,29 +1,111 @@
+import { z } from 'zod';
+
+const workingMemoryText = (description: string) =>
+  z
+    .string()
+    .nullish()
+    .describe(description);
+
 export const WORKING_MEMORY_INSTRUCTIONS = [
-  'Working memory is your constitution.',
-  'Use it only for stable, long-lived facts about yourself.',
-  'Update it immediately when you receive or define a durable responsibility, standing commitment, permanent constraint, or stable operating rule about yourself.',
-  'Do not wait until the end of a run to record that kind of durable fact.',
-  'Store only your identity, role, mission, principles, permanent constraints, and stable preferences explicitly defined for you.',
-  'Do not store conversation history, recent requests, event summaries, users, channels, links, in-progress tasks, current context, logs, counts, or transient facts.',
-  'If the information is about a user, an external event, a current task, or something likely to change soon, do not put it in working memory.',
-  'Keep it short, dense, and stable.',
-  'Use short bullets.',
+  'Working memory is an actively maintained operating memory.',
+  'Update it as soon as something meaningfully changes in your durable knowledge, rules, pending track, objectives, or task direction.',
+  'When several related fields changed, update them together in one working-memory update instead of making multiple fragmented updates.',
+  'Use working memory for consolidated facts, stable rules, learned patterns, medium-lived observations, current objectives, and tracked tasks.',
+  'Do not duplicate the system prompt, role text, tool descriptions, obvious runtime behavior, full conversation history, or information that is easy to find elsewhere.',
+  'If something should stay discoverable but is already stored elsewhere, keep only a short reference or a note explaining where to find it.',
+  'Keep every field concise, information-dense, and easy to scan.',
+  'Remove or rewrite entries when they are resolved, replaced, no longer true, or no longer useful.',
+  'Prefer compact bullets or short paragraphs inside each field.',
+  'Use observations for temporary but still useful tracking, not for permanent truth.',
+  'Use tasks for active next actions and blocked work, not for vague intentions.',
+  'Use objectives for what you are currently trying to achieve, and update them when priorities shift.',
 ].join('\n');
 
-export const WORKING_MEMORY_TEMPLATE = [
-  'Identity',
-  '-',
-  'Role',
-  '-',
-  'Mission',
-  '-',
-  'Principles',
-  '-',
-  'Permanent constraints',
-  '-',
-  'Stable preferences',
-  '-',
-].join('\n');
+export const WORKING_MEMORY_SCHEMA = z.object({
+  facts: z
+    .object({
+      identity: workingMemoryText(
+        'Core identity and stable self-description that remains useful across runs.',
+      ),
+      stableContext: workingMemoryText(
+        'Consolidated background facts, durable context, or low-change truths worth keeping in memory.',
+      ),
+      lookupHints: workingMemoryText(
+        'Short references to where larger or easier-to-find information lives instead of duplicating it.',
+      ),
+    })
+    .nullish()
+    .describe('Durable facts and stable context that should remain available over time.'),
+  rules: z
+    .object({
+      obligations: workingMemoryText(
+        'Standing responsibilities, commitments, and instructions that the agent must keep following.',
+      ),
+      constraints: workingMemoryText(
+        'Hard limits, prohibitions, approval boundaries, or things the agent must avoid doing.',
+      ),
+      preferences: workingMemoryText(
+        'Stable operating preferences or recurring ways of working that remain useful across runs.',
+      ),
+    })
+    .nullish()
+    .describe('What to do, what not to do, and stable operating rules.'),
+  learnings: z
+    .object({
+      product: workingMemoryText(
+        'Important learned truths about products, customers, positioning, or business behavior.',
+      ),
+      technical: workingMemoryText(
+        'Important learned truths about systems, tooling, code, infra, or technical constraints.',
+      ),
+      operational: workingMemoryText(
+        'Important learned truths about routines, coordination, workflows, or execution patterns.',
+      ),
+    })
+    .nullish()
+    .describe('Learnings and inferences that became useful knowledge after analysis or repeated observation.'),
+  observations: z
+    .object({
+      activeNotes: workingMemoryText(
+        'Medium-lived notes worth tracking for a while, including pending checks and things to revisit.',
+      ),
+      risks: workingMemoryText(
+        'Current risks, uncertainties, or watch items that still matter and may require follow-up.',
+      ),
+      pendingReview: workingMemoryText(
+        'Items that should be reviewed later because they are unresolved, waiting, or need confirmation.',
+      ),
+    })
+    .nullish()
+    .describe('Temporary but useful notes that help the agent maintain track of ongoing reality.'),
+  objectives: z
+    .object({
+      current: workingMemoryText(
+        'Current goals, desired outcomes, or what the agent is actively trying to achieve now.',
+      ),
+      rationale: workingMemoryText(
+        'Why the current objectives matter and what success looks like at a high level.',
+      ),
+    })
+    .nullish()
+    .describe('Active objectives and what the agent is currently trying to accomplish.'),
+  tasks: z
+    .object({
+      nextActions: workingMemoryText(
+        'Concrete next actions or active task track aligned with the current objectives.',
+      ),
+      blocked: workingMemoryText(
+        'Blocked work, dependencies, or waiting points that still need follow-up later.',
+      ),
+      doneRecently: workingMemoryText(
+        'Very short summary of recently completed meaningful steps only when still useful for continuity.',
+      ),
+    })
+    .nullish()
+    .describe('Tracked tasks, next actions, and blocked items that help maintain continuity.'),
+}).describe(
+  'Structured working memory for durable facts, rules, learnings, observations, objectives, and tasks.',
+);
 
 export function appendWorkingMemoryInstructions(instructions: string): string;
 export function appendWorkingMemoryInstructions<T>(instructions: T): T;
