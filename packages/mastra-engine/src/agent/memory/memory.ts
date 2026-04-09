@@ -2,7 +2,7 @@ import { fastembed } from '@mastra/fastembed';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { Memory } from '@mastra/memory';
 
-import { WORKING_MEMORY_TEMPLATE } from './working-memory';
+import { WORKING_MEMORY_SCHEMA } from './working-memory';
 
 export function createAgentMemory(config: {
   storage: LibSQLStore;
@@ -20,7 +20,7 @@ export function createAgentMemory(config: {
       workingMemory: {
         enabled: true,
         scope: 'thread',
-        template: WORKING_MEMORY_TEMPLATE,
+        schema: WORKING_MEMORY_SCHEMA,
       },
     },
   });
