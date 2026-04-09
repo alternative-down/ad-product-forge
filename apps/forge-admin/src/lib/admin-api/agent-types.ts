@@ -170,6 +170,15 @@ export type AgentRecentConversation = {
   }>;
 };
 
+export type AgentRuntimeMemorySnapshot = {
+  workingMemory: string | null;
+  observations: string | null;
+  reflection: string | null;
+  generationCount: number;
+  updatedAt: number;
+  lastObservedAt: number | null;
+};
+
 export type HireAgentInput = {
   hiringRequest: string;
   additionalContext?: string;

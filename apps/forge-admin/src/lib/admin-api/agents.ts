@@ -5,6 +5,7 @@ import type {
   AgentExecutionStepsResponse,
   AgentListItem,
   AgentRecentConversation,
+  AgentRuntimeMemorySnapshot,
   AgentMcpServerInput,
   AgentSchedule,
   AgentThreadMessagesResponse,
@@ -50,6 +51,12 @@ export function getAgentExecutionSteps(agentId: string, limit: number, offset: n
 export function getAgentThreadMessages(agentId: string, page: number, perPage: number) {
   return request<AgentThreadMessagesResponse>(
     `/admin/agent/thread-messages?agentId=${encodeURIComponent(agentId)}&page=${page}&perPage=${perPage}`,
+  );
+}
+
+export function getAgentRuntimeMemory(agentId: string) {
+  return request<AgentRuntimeMemorySnapshot>(
+    `/admin/agent/runtime-memory?agentId=${encodeURIComponent(agentId)}`,
   );
 }
 
