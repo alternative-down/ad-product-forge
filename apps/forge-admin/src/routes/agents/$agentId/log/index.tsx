@@ -111,7 +111,6 @@ function AgentRuntimeMemorySection(input: {
       <MemoryDisclosure
         title="Working Memory"
         value={input.workingMemory}
-        defaultOpen
       />
       <MemoryDisclosure
         title="Observations"
@@ -128,19 +127,18 @@ function AgentRuntimeMemorySection(input: {
 function MemoryDisclosure(input: {
   title: string;
   value: string | null;
-  defaultOpen?: boolean;
 }) {
   return (
-    <details className="group" open={input.defaultOpen}>
+    <details className="group">
       <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
         <span>{input.title}</span>
         <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="pt-3">
         {input.value ? (
-          <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-2xl border border-border/80 bg-background/70 p-4 text-xs leading-6 text-foreground">
+          <div className="overflow-x-auto whitespace-pre-wrap break-words rounded-2xl border border-border/80 bg-background/70 p-4 text-xs leading-6 text-foreground">
             {input.value}
-          </pre>
+          </div>
         ) : (
           <div className="text-sm text-muted-foreground">Sem dados.</div>
         )}
