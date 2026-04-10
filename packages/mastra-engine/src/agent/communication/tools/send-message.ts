@@ -12,31 +12,14 @@ const sendMessageInputSchema = z
     targetKey: z
       .string()
       .describe('Who or where to send the message in that provider. Use the targetKey returned by list_contacts or list_conversations. Examples: an internal-chat agentId, slug, or group id, an email address, or a Discord username/channel id.'),
-    action: z
-      .enum(['send', 'send_with_attachments'])
-      .describe('Use send for a plain message. Use send_with_attachments when the message must include workspace file paths.'),
-    send: z
-      .object({
-        content: z
-          .string()
-          .min(1)
-          .describe('The exact message text to actually deliver to the recipient.'),
-      })
-      .nullish()
-      .describe('Provide this object only when action is send.'),
-    sendWithAttachments: z
-      .object({
-        content: z
-          .string()
-          .min(1)
-          .describe('The exact message text to actually deliver to the recipient together with the attachments.'),
-        attachments: z
-          .array(z.string())
-          .nullish()
-          .describe('Required workspace file paths to send with the message. Pass an array of string paths. Do not pass null.'),
-      })
-      .nullish()
-      .describe('Provide this object only when action is send_with_attachments.'),
+    content: z
+      .string()
+      .min(1)
+      .describe('The exact message text to actually deliver to the recipient. Writing that text outside this tool does not send anything.'),
+    attachments: z
+      .array(z.string())
+      .optional()
+      .describe('Optional workspace file paths to send with the message. Omit this field entirely when there are no attachments. When sending files, pass an array of string paths.'),
   })
   ;
 
@@ -48,44 +31,11 @@ export function createSendMessageTool(communication: CommunicationModule) {
     inputSchema: sendMessageInputSchema,
     execute: async (input) => {
       try {
-        if (input.action === 'send') {
-          if (!input.send) {
-            return {
-              valid: false,
-              error: 'send is required when action is send',
-              hint: 'Provide send.content for a plain message.',
-            };
-          }
-
-          const result = await communication.sendMessage({
-            provider: input.provider,
-            targetKey: input.targetKey,
-            content: input.send.content,
-          });
-          return result;
-        }
-
-        if (!input.sendWithAttachments) {
-          return {
-            valid: false,
-            error: 'sendWithAttachments is required when action is send_with_attachments',
-            hint: 'Provide sendWithAttachments.content and sendWithAttachments.attachments.',
-          };
-        }
-
-        if (!input.sendWithAttachments.attachments || input.sendWithAttachments.attachments.length === 0) {
-          return {
-            valid: false,
-            error: 'sendWithAttachments.attachments is required when action is send_with_attachments',
-            hint: 'Pass an array of workspace file paths in sendWithAttachments.attachments.',
-          };
-        }
-
         const result = await communication.sendMessage({
           provider: input.provider,
           targetKey: input.targetKey,
-          content: input.sendWithAttachments.content,
-          attachments: input.sendWithAttachments.attachments,
+          content: input.content,
+          attachments: input.attachments,
         });
         return result;
       } catch (error) {
