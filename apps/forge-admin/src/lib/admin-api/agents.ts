@@ -42,6 +42,20 @@ export function reloadAgent(agentId: string) {
   });
 }
 
+export function forceAgentIdle(agentId: string) {
+  return request<{ success: true; agentId: string }>('/admin/agent/force-idle', {
+    method: 'POST',
+    body: JSON.stringify({ agentId }),
+  });
+}
+
+export function rewakeupAgent(agentId: string) {
+  return request<{ success: true; agentId: string }>('/admin/agent/rewakeup', {
+    method: 'POST',
+    body: JSON.stringify({ agentId }),
+  });
+}
+
 export function getAgentExecutionSteps(agentId: string, limit: number, offset: number) {
   return request<AgentExecutionStepsResponse>(
     `/admin/agent/execution-steps?agentId=${encodeURIComponent(agentId)}&limit=${limit}&offset=${offset}`,
