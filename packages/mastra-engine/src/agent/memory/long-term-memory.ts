@@ -121,8 +121,15 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       return args.messageList;
     }
 
+    const recallStartedAt = Date.now();
     const { formatted: workspaceResults, results: workspaceSearchResults } = await this.searchWorkspace(queryText);
     const graphContext = await this.searchGraph(queryText, workspaceSearchResults);
+    forgeDebug('ltm', 'recall completed', {
+      durationMs: Date.now() - recallStartedAt,
+      queryLength: queryText.length,
+      workspaceResultLength: workspaceResults.length,
+      graphContextLength: graphContext.length,
+    });
     const sections = [
       workspaceResults ? 'Workspace memory:\n' + workspaceResults : '',
       graphContext ? 'Graph memory:\n' + graphContext : '',
@@ -228,6 +235,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     return args.messageList;
   }
   private async searchWorkspace(queryText: string): Promise<{ formatted: string; results: SearchResult[] }> {
+    const startedAt = Date.now();
     try {
       const results = await this.workspace.search(queryText, {
         topK: 3,
@@ -235,6 +243,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       });
 
       forgeDebug('ltm', 'workspace search completed', {
+        durationMs: Date.now() - startedAt,
         resultCount: results.length,
       });
 
@@ -258,12 +267,16 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
         return { formatted: '', results: [] };
       }
-      forgeDebug('ltm', 'workspace search failed', { error: message });
+      forgeDebug('ltm', 'workspace search failed', {
+        durationMs: Date.now() - startedAt,
+        error: message,
+      });
       return { formatted: '', results: [] };
     }
   }
 
   private async searchGraph(queryText: string, workspaceResults: SearchResult[]) {
+    const startedAt = Date.now();
     try {
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
@@ -292,12 +305,14 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         : '';
 
       forgeDebug('ltm', 'graph search completed', {
+        durationMs: Date.now() - startedAt,
         resultCount: relevantContext.length,
       });
 
       return relevantContext.trim();
     } catch (error) {
       forgeDebug('ltm', 'graph search failed', {
+        durationMs: Date.now() - startedAt,
         error: error instanceof Error ? error.message : String(error),
       });
       return '';
