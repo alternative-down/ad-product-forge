@@ -41,6 +41,7 @@ function parseFilterDate(value: string | undefined, fieldName: string) {
 type InternalChatGroupMember = {
   groupId: string;
   participantId: string;
+  participantKey: string;
   participantSlug: string;
   participantName: string;
   role: string;
@@ -364,6 +365,10 @@ export function createInternalChatService(
     });
   }
 
+  async function getAccountByTargetKey(targetKey: string) {
+    return await getAccountByAgentId(targetKey) ?? await getAccountBySlug(targetKey);
+  }
+
   async function getConversationForAgent(agentId: string, conversationId: string) {
     const account = await getRequiredAgentAccount(agentId);
     const membership = await db.query.internalChatConversationMembers.findFirst({
@@ -557,7 +562,7 @@ export function createInternalChatService(
     groupId?: string;
     name?: string;
     members?: Array<{
-      participantSlug: string;
+      participantKey: string;
       role?: 'admin' | 'normal';
     }>;
   }) {
@@ -612,12 +617,18 @@ export function createInternalChatService(
     }
 
     if (input.members) {
-      const desiredMembers = new Map<string, { accountId: string; participantSlug: string; participantName: string; role: string }>();
+      const desiredMembers = new Map<string, { accountId: string; participantKey: string; participantSlug: string; participantName: string; role: string }>();
 
       for (const member of input.members) {
-        const participant = await getRequiredAccountBySlug(member.participantSlug);
+        const participant = await getAccountByTargetKey(member.participantKey);
+
+        if (!participant) {
+          throw new Error(`Internal chat participant not found: ${member.participantKey}`);
+        }
+
         desiredMembers.set(participant.id, {
           accountId: participant.id,
+          participantKey: participant.agentId ?? participant.slug,
           participantSlug: participant.slug,
           participantName: participant.displayName,
           role: member.role ?? 'normal',
@@ -626,6 +637,7 @@ export function createInternalChatService(
 
       desiredMembers.set(actorAccount.id, {
         accountId: actorAccount.id,
+        participantKey: actorAccount.agentId ?? actorAccount.slug,
         participantSlug: actorAccount.slug,
         participantName: actorAccount.displayName,
         role: 'admin',
@@ -694,6 +706,7 @@ export function createInternalChatService(
       conversationKey: groupId,
       members: members.map((member) => ({
         participantId: member.participantId,
+        participantKey: member.participantKey,
         participantSlug: member.participantSlug,
         participantName: member.participantName,
         role: member.role,
@@ -744,6 +757,7 @@ export function createInternalChatService(
       .select({
         groupId: internalChatConversationMembers.conversationId,
         participantId: internalChatAccounts.id,
+        participantKey: sql<string>`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
         participantSlug: internalChatAccounts.slug,
         participantName: internalChatAccounts.displayName,
         role: internalChatConversationMembers.role,
@@ -772,6 +786,7 @@ export function createInternalChatService(
       .select({
         groupId: internalChatConversationMembers.conversationId,
         participantId: internalChatAccounts.id,
+        participantKey: sql<string>`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
         participantSlug: internalChatAccounts.slug,
         participantName: internalChatAccounts.displayName,
         role: internalChatConversationMembers.role,

@@ -22,13 +22,13 @@ export function createInternalChatTools(
   if (hasToolPermission(allowedToolIds, 'change_chat_group')) {
     tools.change_chat_group = createTool({
       id: 'change_chat_group',
-      description: 'Create or update one internal-chat group. Use action create with the create object to create a new group. Use action update with the update object to rename one existing group or replace its member state. For updates, use the group id from the internal-chat conversation targetKey.',
+      description: 'Create or update one internal-chat group. Use action create with the create object to create a new group. Use action update with the update object to rename one existing group or replace its member state. For updates, use the group id from the internal-chat conversation targetKey. For group members, always use the contact targetKey from list_contacts, not the display name.',
       inputSchema: z.object({
         action: z.enum(['create', 'update']).describe('Use create to create a new group. Use update to change one existing group.'),
         create: z.object({
           name: z.string().nullish().describe('Required group display name for the new group. Do not pass null when creating.'),
           members: z.array(z.object({
-            participantSlug: z.string().describe('Participant slug to include in the new group.'),
+            participantKey: z.string().describe('The internal-chat contact targetKey to include in the new group. Use the targetKey returned by list_contacts.'),
             role: z.enum(['admin', 'normal']).nullish().describe('Optional participant role in the final group state.'),
           })).nullish().describe('Optional full initial member state for the new group. The creator is always kept as admin.'),
         }).nullish().describe('Provide this object only when action is create.'),
@@ -36,7 +36,7 @@ export function createInternalChatTools(
           groupId: z.string().nullish().describe('Required group id to update one existing group.'),
           name: z.string().nullish().describe('Optional new group display name.'),
           members: z.array(z.object({
-            participantSlug: z.string().describe('Participant slug to include in the final group state.'),
+            participantKey: z.string().describe('The internal-chat contact targetKey to include in the final group state. Use the targetKey returned by list_contacts.'),
             role: z.enum(['admin', 'normal']).nullish().describe('Optional participant role in the final group state.'),
           })).nullish().describe('Optional full member state for the group. When provided, it replaces the current non-creator member set.'),
         }).nullish().describe('Provide this object only when action is update.'),
@@ -63,8 +63,8 @@ export function createInternalChatTools(
             const result = await internalChat.changeChatGroup({
               agentId,
               name: input.create.name,
-              members: input.create.members?.map((member: { participantSlug: string; role?: 'admin' | 'normal' | null | undefined }) => ({
-                participantSlug: member.participantSlug,
+              members: input.create.members?.map((member: { participantKey: string; role?: 'admin' | 'normal' | null | undefined }) => ({
+                participantKey: member.participantKey,
                 role: member.role ?? undefined,
               })),
             });
@@ -95,8 +95,8 @@ export function createInternalChatTools(
             agentId,
             groupId: input.update.groupId,
             name: input.update.name ?? undefined,
-            members: input.update.members?.map((member: { participantSlug: string; role?: 'admin' | 'normal' | null | undefined }) => ({
-              participantSlug: member.participantSlug,
+            members: input.update.members?.map((member: { participantKey: string; role?: 'admin' | 'normal' | null | undefined }) => ({
+              participantKey: member.participantKey,
               role: member.role ?? undefined,
             })),
           });
