@@ -22,22 +22,83 @@ export function createInternalChatTools(
   if (hasToolPermission(allowedToolIds, 'change_chat_group')) {
     tools.change_chat_group = createTool({
       id: 'change_chat_group',
-      description: 'Create or update one internal-chat group. Use this to create a new group, rename a group, or replace its members and roles in one request. For updates, use the group id from the internal-chat conversation targetKey. For creation, leave groupId empty and a new id will be generated.',
+      description: 'Create or update one internal-chat group. Use action create with the create object to create a new group. Use action update with the update object to rename one existing group or replace its member state. For updates, use the group id from the internal-chat conversation targetKey.',
       inputSchema: z.object({
-        groupId: z.string().min(1).nullish().describe('Provide the group id to update one existing group. Leave empty to create a new group.'),
-        name: z.string().min(1).nullish().describe('Optional group display name. Required when creating a group.'),
-        members: z.array(z.object({
-          participantSlug: z.string().min(1).describe('Participant slug to include in the group state.'),
-          role: z.enum(['admin', 'normal']).default('normal').describe('Desired participant role in the final group state.'),
-        })).nullish().describe('Optional full member state for the group. When provided, it replaces the current non-creator member set.'),
+        action: z.enum(['create', 'update']).describe('Use create to create a new group. Use update to change one existing group.'),
+        create: z.object({
+          name: z.string().nullish().describe('Required group display name for the new group. Do not pass null when creating.'),
+          members: z.array(z.object({
+            participantSlug: z.string().describe('Participant slug to include in the new group.'),
+            role: z.enum(['admin', 'normal']).nullish().describe('Optional participant role in the final group state.'),
+          })).nullish().describe('Optional full initial member state for the new group. The creator is always kept as admin.'),
+        }).nullish().describe('Provide this object only when action is create.'),
+        update: z.object({
+          groupId: z.string().nullish().describe('Required group id to update one existing group.'),
+          name: z.string().nullish().describe('Optional new group display name.'),
+          members: z.array(z.object({
+            participantSlug: z.string().describe('Participant slug to include in the final group state.'),
+            role: z.enum(['admin', 'normal']).nullish().describe('Optional participant role in the final group state.'),
+          })).nullish().describe('Optional full member state for the group. When provided, it replaces the current non-creator member set.'),
+        }).nullish().describe('Provide this object only when action is update.'),
       }),
       execute: async (input) => {
         try {
+          if (input.action === 'create') {
+            if (!input.create) {
+              return {
+                valid: false,
+                error: 'create is required when action is create',
+                hint: 'Provide create.name and optionally create.members.',
+              };
+            }
+
+            if (!input.create.name) {
+              return {
+                valid: false,
+                error: 'create.name is required when action is create',
+                hint: 'Provide the new group name in create.name.',
+              };
+            }
+
+            const result = await internalChat.changeChatGroup({
+              agentId,
+              name: input.create.name,
+              members: input.create.members?.map((member: { participantSlug: string; role?: 'admin' | 'normal' | null | undefined }) => ({
+                participantSlug: member.participantSlug,
+                role: member.role ?? undefined,
+              })),
+            });
+
+            return {
+              valid: true,
+              ...result,
+            };
+          }
+
+          if (!input.update) {
+            return {
+              valid: false,
+              error: 'update is required when action is update',
+              hint: 'Provide update.groupId and any fields you want to change.',
+            };
+          }
+
+          if (!input.update.groupId) {
+            return {
+              valid: false,
+              error: 'update.groupId is required when action is update',
+              hint: 'Use the internal-chat conversation targetKey as update.groupId.',
+            };
+          }
+
           const result = await internalChat.changeChatGroup({
             agentId,
-            groupId: input.groupId ?? undefined,
-            name: input.name ?? undefined,
-            members: input.members ?? undefined,
+            groupId: input.update.groupId,
+            name: input.update.name ?? undefined,
+            members: input.update.members?.map((member: { participantSlug: string; role?: 'admin' | 'normal' | null | undefined }) => ({
+              participantSlug: member.participantSlug,
+              role: member.role ?? undefined,
+            })),
           });
 
           return {
@@ -49,7 +110,7 @@ export function createInternalChatTools(
           return {
             valid: false,
             error: message,
-            hint: 'Provide a name to create a new group. For updates, use the group id from the internal-chat conversation targetKey and pass the full desired member state.',
+            hint: 'Use action create with create.name to create a group. Use action update with update.groupId to update one existing group.',
           };
         }
       },
