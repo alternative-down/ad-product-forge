@@ -41,6 +41,7 @@ function parseFilterDate(value: string | undefined, fieldName: string) {
 type InternalChatGroupMember = {
   groupId: string;
   participantId: string;
+  participantKey: string;
   participantSlug: string;
   participantName: string;
   role: string;
@@ -364,6 +365,10 @@ export function createInternalChatService(
     });
   }
 
+  async function getAccountByTargetKey(targetKey: string) {
+    return await getAccountByAgentId(targetKey) ?? await getAccountBySlug(targetKey);
+  }
+
   async function getConversationForAgent(agentId: string, conversationId: string) {
     const account = await getRequiredAgentAccount(agentId);
     const membership = await db.query.internalChatConversationMembers.findFirst({
@@ -557,15 +562,50 @@ export function createInternalChatService(
     groupId?: string;
     name?: string;
     members?: Array<{
-      participantSlug: string;
+      participantKey: string;
       role?: 'admin' | 'normal';
     }>;
   }) {
     const actorAccount = await getRequiredAgentAccount(input.agentId);
     const now = Date.now();
-    let groupId = input.groupId;
+    const groupId = input.groupId ?? `grp_${createId()}`;
+    let desiredMembers: Map<string, {
+      accountId: string;
+      participantKey: string;
+      participantSlug: string;
+      participantName: string;
+      role: string;
+    }> | null = null;
 
-    if (groupId) {
+    if (input.members) {
+      desiredMembers = new Map<string, { accountId: string; participantKey: string; participantSlug: string; participantName: string; role: string }>();
+
+      for (const member of input.members) {
+        const participant = await getAccountByTargetKey(member.participantKey);
+
+        if (!participant) {
+          throw new Error(`Internal chat participant not found: ${member.participantKey}`);
+        }
+
+        desiredMembers.set(participant.id, {
+          accountId: participant.id,
+          participantKey: participant.agentId ?? participant.slug,
+          participantSlug: participant.slug,
+          participantName: participant.displayName,
+          role: member.role ?? 'normal',
+        });
+      }
+
+      desiredMembers.set(actorAccount.id, {
+        accountId: actorAccount.id,
+        participantKey: actorAccount.agentId ?? actorAccount.slug,
+        participantSlug: actorAccount.slug,
+        participantName: actorAccount.displayName,
+        role: 'admin',
+      });
+    }
+
+    if (input.groupId) {
       await getRequiredGroupForAgent(input.agentId, groupId);
       const membership = await db.query.internalChatConversationMembers.findFirst({
         where: and(
@@ -581,64 +621,49 @@ export function createInternalChatService(
       if (!input.name) {
         throw new Error('name is required when creating a group.');
       }
-
-      groupId = `grp_${createId()}`;
-
-      await db.insert(internalChatConversations).values({
-        id: groupId,
-        type: 'group',
-        name: input.name,
-        createdByAccountId: actorAccount.id,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      await db.insert(internalChatConversationMembers).values({
-        conversationId: groupId,
-        accountId: actorAccount.id,
-        role: 'admin',
-        createdAt: now,
-      });
     }
 
-    if (input.name !== undefined) {
-      await db
-        .update(internalChatConversations)
-        .set({
+    await db.transaction(async (tx) => {
+      if (!input.groupId) {
+        await tx.insert(internalChatConversations).values({
+          id: groupId,
+          type: 'group',
           name: input.name,
+          createdByAccountId: actorAccount.id,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(internalChatConversations.id, groupId));
-    }
+        });
 
-    if (input.members) {
-      const desiredMembers = new Map<string, { accountId: string; participantSlug: string; participantName: string; role: string }>();
-
-      for (const member of input.members) {
-        const participant = await getRequiredAccountBySlug(member.participantSlug);
-        desiredMembers.set(participant.id, {
-          accountId: participant.id,
-          participantSlug: participant.slug,
-          participantName: participant.displayName,
-          role: member.role ?? 'normal',
+        await tx.insert(internalChatConversationMembers).values({
+          conversationId: groupId,
+          accountId: actorAccount.id,
+          role: 'admin',
+          createdAt: now,
         });
       }
 
-      desiredMembers.set(actorAccount.id, {
-        accountId: actorAccount.id,
-        participantSlug: actorAccount.slug,
-        participantName: actorAccount.displayName,
-        role: 'admin',
-      });
+      if (input.name !== undefined) {
+        await tx
+          .update(internalChatConversations)
+          .set({
+            name: input.name,
+            updatedAt: now,
+          })
+          .where(eq(internalChatConversations.id, groupId));
+      }
 
-      const existingMembers = await db.query.internalChatConversationMembers.findMany({
+      if (!desiredMembers) {
+        return;
+      }
+
+      const existingMembers = await tx.query.internalChatConversationMembers.findMany({
         where: eq(internalChatConversationMembers.conversationId, groupId),
       });
       const existingByAccountId = new Map(existingMembers.map((member) => [member.accountId, member]));
 
       for (const existingMember of existingMembers) {
         if (!desiredMembers.has(existingMember.accountId)) {
-          await db
+          await tx
             .delete(internalChatConversationMembers)
             .where(and(
               eq(internalChatConversationMembers.conversationId, groupId),
@@ -651,7 +676,7 @@ export function createInternalChatService(
         const existingMember = existingByAccountId.get(desiredMember.accountId);
 
         if (!existingMember) {
-          await db.insert(internalChatConversationMembers).values({
+          await tx.insert(internalChatConversationMembers).values({
             conversationId: groupId,
             accountId: desiredMember.accountId,
             role: desiredMember.role,
@@ -661,7 +686,7 @@ export function createInternalChatService(
         }
 
         if (existingMember.role !== desiredMember.role) {
-          await db
+          await tx
             .update(internalChatConversationMembers)
             .set({
               role: desiredMember.role,
@@ -673,13 +698,13 @@ export function createInternalChatService(
         }
       }
 
-      await db
+      await tx
         .update(internalChatConversations)
         .set({
           updatedAt: now,
         })
         .where(eq(internalChatConversations.id, groupId));
-    }
+    });
 
     const group = await getRequiredGroupForAgent(input.agentId, groupId);
     const members = await listGroupMembers({
@@ -694,6 +719,7 @@ export function createInternalChatService(
       conversationKey: groupId,
       members: members.map((member) => ({
         participantId: member.participantId,
+        participantKey: member.participantKey,
         participantSlug: member.participantSlug,
         participantName: member.participantName,
         role: member.role,
@@ -744,6 +770,7 @@ export function createInternalChatService(
       .select({
         groupId: internalChatConversationMembers.conversationId,
         participantId: internalChatAccounts.id,
+        participantKey: sql<string>`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
         participantSlug: internalChatAccounts.slug,
         participantName: internalChatAccounts.displayName,
         role: internalChatConversationMembers.role,
@@ -772,6 +799,7 @@ export function createInternalChatService(
       .select({
         groupId: internalChatConversationMembers.conversationId,
         participantId: internalChatAccounts.id,
+        participantKey: sql<string>`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
         participantSlug: internalChatAccounts.slug,
         participantName: internalChatAccounts.displayName,
         role: internalChatConversationMembers.role,

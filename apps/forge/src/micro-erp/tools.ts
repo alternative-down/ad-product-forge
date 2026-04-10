@@ -21,55 +21,46 @@ const manageCompanyCashMovementInputSchema = z.object({
   action: z
     .enum(['record_in', 'record_out', 'schedule_in', 'schedule_out', 'post_planned', 'cancel_planned'])
     .describe('The cash movement operation to perform.'),
-  entryId: z.string().min(1).nullish().describe('Required for post_planned and cancel_planned.'),
-  type: z.string().min(1).nullish().describe('Required for record_* and schedule_* actions.'),
-  amountUsd: z.coerce.number().positive().nullish().describe('Required for record_* and schedule_* actions.'),
-  description: z.string().min(1).nullish(),
-  referenceType: z.string().min(1).nullish(),
-  referenceId: z.string().min(1).nullish(),
-  effectiveAt: z.coerce.number().int().nullish().describe('Optional posting time for record_* and post_planned.'),
-  dueAt: z.coerce.number().int().nullish().describe('Required for schedule_in and schedule_out.'),
+  recordIn: z.object({
+    type: z.string().nullish().describe('Required movement type for the immediate cash-in entry.'),
+    amountUsd: z.coerce.number().positive().nullish().describe('Required USD amount for the immediate cash-in entry.'),
+    description: z.string().nullish(),
+    referenceType: z.string().nullish(),
+    referenceId: z.string().nullish(),
+    effectiveAt: z.coerce.number().int().nullish().describe('Optional posting time for the immediate cash-in entry.'),
+  }).nullish().describe('Provide this object only when action is record_in.'),
+  recordOut: z.object({
+    type: z.string().nullish().describe('Required movement type for the immediate cash-out entry.'),
+    amountUsd: z.coerce.number().positive().nullish().describe('Required USD amount for the immediate cash-out entry.'),
+    description: z.string().nullish(),
+    referenceType: z.string().nullish(),
+    referenceId: z.string().nullish(),
+    effectiveAt: z.coerce.number().int().nullish().describe('Optional posting time for the immediate cash-out entry.'),
+  }).nullish().describe('Provide this object only when action is record_out.'),
+  scheduleIn: z.object({
+    type: z.string().nullish().describe('Required movement type for the planned cash-in entry.'),
+    amountUsd: z.coerce.number().positive().nullish().describe('Required USD amount for the planned cash-in entry.'),
+    description: z.string().nullish(),
+    referenceType: z.string().nullish(),
+    referenceId: z.string().nullish(),
+    dueAt: z.coerce.number().int().nullish().describe('Required due date for the planned cash-in entry.'),
+  }).nullish().describe('Provide this object only when action is schedule_in.'),
+  scheduleOut: z.object({
+    type: z.string().nullish().describe('Required movement type for the planned cash-out entry.'),
+    amountUsd: z.coerce.number().positive().nullish().describe('Required USD amount for the planned cash-out entry.'),
+    description: z.string().nullish(),
+    referenceType: z.string().nullish(),
+    referenceId: z.string().nullish(),
+    dueAt: z.coerce.number().int().nullish().describe('Required due date for the planned cash-out entry.'),
+  }).nullish().describe('Provide this object only when action is schedule_out.'),
+  postPlanned: z.object({
+    entryId: z.string().nullish().describe('Required planned entryId to post.'),
+    effectiveAt: z.coerce.number().int().nullish().describe('Optional posting time for the planned entry.'),
+  }).nullish().describe('Provide this object only when action is post_planned.'),
+  cancelPlanned: z.object({
+    entryId: z.string().nullish().describe('Required planned entryId to cancel.'),
+  }).nullish().describe('Provide this object only when action is cancel_planned.'),
 });
-
-function validateCompanyCashMovementInput(input: z.infer<typeof manageCompanyCashMovementInputSchema>) {
-  if (input.action === 'post_planned' || input.action === 'cancel_planned') {
-    if (input.entryId) {
-      return null;
-    }
-
-    return {
-      valid: false as const,
-      error: 'entryId is required for post_planned and cancel_planned',
-      hint: 'Use list_company_cash to find the planned entryId before trying to post or cancel it.',
-    };
-  }
-
-  if (!input.type) {
-    return {
-      valid: false as const,
-      error: 'type is required for record and schedule actions',
-      hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
-    };
-  }
-
-  if (input.amountUsd === null || input.amountUsd === undefined) {
-    return {
-      valid: false as const,
-      error: 'amountUsd is required for record and schedule actions',
-      hint: 'Provide the USD amount for this movement.',
-    };
-  }
-
-  if ((input.action === 'schedule_in' || input.action === 'schedule_out') && !input.dueAt) {
-    return {
-      valid: false as const,
-      error: 'dueAt is required for scheduled cash movements',
-      hint: 'Provide the due date as a unix timestamp in milliseconds.',
-    };
-  }
-
-  return null;
-}
 
 export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> | null) {
   const microErp = createMicroErpReadModel(db);
@@ -142,41 +133,179 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
       description: 'Create and manage company cash movements. Use this to record immediate entries, schedule planned entries, post a planned entry, or cancel a planned entry.',
       inputSchema: manageCompanyCashMovementInputSchema,
       execute: async (input) => {
-        const validation = validateCompanyCashMovementInput(input);
-
-        if (validation) {
-          return validation;
-        }
-
         try {
           if (input.action === 'record_in') {
-            const result = await companyCash.recordCashIn(input);
+            if (!input.recordIn) {
+              return {
+                valid: false,
+                error: 'recordIn is required when action is record_in',
+                hint: 'Provide recordIn.type and recordIn.amountUsd.',
+              };
+            }
+
+            if (!input.recordIn.type) {
+              return {
+                valid: false,
+                error: 'recordIn.type is required when action is record_in',
+                hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
+              };
+            }
+
+            if (input.recordIn.amountUsd === null || input.recordIn.amountUsd === undefined) {
+              return {
+                valid: false,
+                error: 'recordIn.amountUsd is required when action is record_in',
+                hint: 'Provide the USD amount for this movement.',
+              };
+            }
+
+            const result = await companyCash.recordCashIn(input.recordIn);
             return { valid: true, action: input.action, ...result };
           }
 
           if (input.action === 'record_out') {
-            const result = await companyCash.recordCashOut(input);
+            if (!input.recordOut) {
+              return {
+                valid: false,
+                error: 'recordOut is required when action is record_out',
+                hint: 'Provide recordOut.type and recordOut.amountUsd.',
+              };
+            }
+
+            if (!input.recordOut.type) {
+              return {
+                valid: false,
+                error: 'recordOut.type is required when action is record_out',
+                hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
+              };
+            }
+
+            if (input.recordOut.amountUsd === null || input.recordOut.amountUsd === undefined) {
+              return {
+                valid: false,
+                error: 'recordOut.amountUsd is required when action is record_out',
+                hint: 'Provide the USD amount for this movement.',
+              };
+            }
+
+            const result = await companyCash.recordCashOut(input.recordOut);
             return { valid: true, action: input.action, ...result };
           }
 
           if (input.action === 'schedule_in') {
-            const result = await companyCash.scheduleCashIn(input);
+            if (!input.scheduleIn) {
+              return {
+                valid: false,
+                error: 'scheduleIn is required when action is schedule_in',
+                hint: 'Provide scheduleIn.type, scheduleIn.amountUsd, and scheduleIn.dueAt.',
+              };
+            }
+
+            if (!input.scheduleIn.type) {
+              return {
+                valid: false,
+                error: 'scheduleIn.type is required when action is schedule_in',
+                hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
+              };
+            }
+
+            if (input.scheduleIn.amountUsd === null || input.scheduleIn.amountUsd === undefined) {
+              return {
+                valid: false,
+                error: 'scheduleIn.amountUsd is required when action is schedule_in',
+                hint: 'Provide the USD amount for this movement.',
+              };
+            }
+
+            if (!input.scheduleIn.dueAt) {
+              return {
+                valid: false,
+                error: 'scheduleIn.dueAt is required when action is schedule_in',
+                hint: 'Provide the due date as a unix timestamp in milliseconds.',
+              };
+            }
+
+            const result = await companyCash.scheduleCashIn(input.scheduleIn);
             return { valid: true, action: input.action, ...result };
           }
 
           if (input.action === 'schedule_out') {
-            const result = await companyCash.scheduleCashOut(input);
+            if (!input.scheduleOut) {
+              return {
+                valid: false,
+                error: 'scheduleOut is required when action is schedule_out',
+                hint: 'Provide scheduleOut.type, scheduleOut.amountUsd, and scheduleOut.dueAt.',
+              };
+            }
+
+            if (!input.scheduleOut.type) {
+              return {
+                valid: false,
+                error: 'scheduleOut.type is required when action is schedule_out',
+                hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
+              };
+            }
+
+            if (input.scheduleOut.amountUsd === null || input.scheduleOut.amountUsd === undefined) {
+              return {
+                valid: false,
+                error: 'scheduleOut.amountUsd is required when action is schedule_out',
+                hint: 'Provide the USD amount for this movement.',
+              };
+            }
+
+            if (!input.scheduleOut.dueAt) {
+              return {
+                valid: false,
+                error: 'scheduleOut.dueAt is required when action is schedule_out',
+                hint: 'Provide the due date as a unix timestamp in milliseconds.',
+              };
+            }
+
+            const result = await companyCash.scheduleCashOut(input.scheduleOut);
             return { valid: true, action: input.action, ...result };
           }
 
           if (input.action === 'post_planned') {
-            const result = await companyCash.postPlannedEntry(input.entryId, {
-              effectiveAt: input.effectiveAt,
+            if (!input.postPlanned) {
+              return {
+                valid: false,
+                error: 'postPlanned is required when action is post_planned',
+                hint: 'Provide postPlanned.entryId and optionally postPlanned.effectiveAt.',
+              };
+            }
+
+            if (!input.postPlanned.entryId) {
+              return {
+                valid: false,
+                error: 'postPlanned.entryId is required when action is post_planned',
+                hint: 'Use list_company_cash to find the planned entryId before posting it.',
+              };
+            }
+
+            const result = await companyCash.postPlannedEntry(input.postPlanned.entryId, {
+              effectiveAt: input.postPlanned.effectiveAt,
             });
             return { valid: true, action: input.action, ...result };
           }
 
-          const result = await companyCash.cancelPlannedEntry(input.entryId);
+          if (!input.cancelPlanned) {
+            return {
+              valid: false,
+              error: 'cancelPlanned is required when action is cancel_planned',
+              hint: 'Provide cancelPlanned.entryId.',
+            };
+          }
+
+          if (!input.cancelPlanned.entryId) {
+            return {
+              valid: false,
+              error: 'cancelPlanned.entryId is required when action is cancel_planned',
+              hint: 'Use list_company_cash to find the planned entryId before canceling it.',
+            };
+          }
+
+          const result = await companyCash.cancelPlannedEntry(input.cancelPlanned.entryId);
           return { valid: true, action: input.action, ...result };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
