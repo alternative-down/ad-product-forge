@@ -721,12 +721,26 @@ function createHeartbeatWakeInstruction(content?: string) {
   }
 
   const lines = [
-    'Use this run to re-orient yourself in the current operational state.',
-    'Check your unread conversations, unread notifications, and any unresolved work you may have left behind in earlier runs.',
-    'Review your working memory and keep it consolidated: refactor the information, remove items that are already resolved, register durable next steps and durable learnings, and leave it concise and well structured.',
-    'Do not keep redundant information there when it already exists clearly in other places or is already defined in the system prompt.',
-    'Also review the relevant files in your workspace notes and records. Keep them organized, consolidate overlapping notes, expand important observations when needed, refine conclusions, remove stale material, and leave the workspace in a shape that supports later review, reflection, and follow-up work.',
-    'If you find pending work, inspect it with tools and act on it. If nothing requires action, stop cleanly.',
+    'Use this heartbeat run as a structured maintenance and re-orientation cycle.',
+    '',
+    '1. Triage incoming work.',
+    'Check unread conversations and unread notifications first. Identify whether any of them create work, require a response, reveal a risk, unblock a dependency, or change your priorities.',
+    '',
+    '2. Rebuild context before acting.',
+    'Review the parts of working memory and workspace notes that matter for the work you are about to touch. Recover prior decisions, pending items, assumptions, recent conclusions, and anything you need in order to continue with continuity instead of restarting from scratch.',
+    '',
+    '3. Clean and strengthen your records.',
+    'Refactor working memory so it stays concise, durable, and current. Remove resolved or stale items, rewrite vague notes into clearer durable guidance, register lasting learnings and next steps, and avoid duplicating what is already obvious elsewhere.',
+    'Do the same for relevant workspace files: consolidate overlapping notes, organize them, expand what deserves detail, remove stale material, and leave the workspace in a state that supports later review, reflection, and follow-up work.',
+    '',
+    '4. Execute the most useful next work.',
+    'If this review reveals something that should be done, act on it. Prioritize high-impact work, dependency unblocking, critical information gathering, risk reduction, and then useful optimization.',
+    '',
+    '5. Do not stop at the first small action.',
+    'If you complete something small or quick, continue to the next useful action in your area instead of treating that small completion as the end of the run.',
+    '',
+    '6. Only stop after a real check.',
+    'Only stop cleanly if you have checked the relevant inputs, updated your records, and genuinely found no further useful action to take right now.',
   ];
 
   return lines.join('\n');
