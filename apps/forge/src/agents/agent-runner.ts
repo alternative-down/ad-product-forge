@@ -225,6 +225,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       lastStepStage = 'agent-generate';
+      console.log(`[AgentRunner] ${runtime.id} generate start`);
       const result = await runtime.agent.generate(prompt, {
         maxSteps: 1,
         // toolChoice: 'required', removio para não requerer tool call obrigatoriamente
@@ -250,6 +251,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           };
         },
       });
+      console.log(`[AgentRunner] ${runtime.id} generate completed`);
       lastStepStage = 'logging-tool-calls';
       console.log(
         `[AgentRunner] ${runtime.id} toolCalls:`,
