@@ -37,6 +37,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
   let lastStepStartedAt: number | null = null;
+  let lastStepStage: string | null = null;
   let lastLoopSignature: string | null = null;
   let repeatedLoopCount = 0;
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
@@ -184,6 +185,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     let continueRunning = false;
     let prompt = '';
     lastStepStartedAt = Date.now();
+    lastStepStage = 'step-started';
     const stepWarningTimer = setTimeout(() => {
       console.error(
         `[AgentRunner] ${runtime.id} step appears stuck:`,
@@ -193,6 +195,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           pricingModelKey: runtime.pricingModelKey,
           modelProfileId: runtime.modelProfileId,
           stepStartedAt: lastStepStartedAt,
+          stepStage: lastStepStage,
           prompt,
           snapshot: getSnapshot(),
           stepHangWarningMs: STEP_HANG_WARNING_MS,
@@ -202,12 +205,14 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }, STEP_HANG_WARNING_MS);
 
     try {
+      lastStepStage = 'checking-execution-state';
       const executionState = await store.getExecutionState(runtime.id);
 
       if (executionState !== 'running') {
         return;
       }
 
+      lastStepStage = 'loading-runnable-contract';
       const contract = await store.getRunnableContract(runtime.id);
 
       if (!contract || contract.id !== contractId) {
@@ -215,9 +220,11 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
+      lastStepStage = 'flushing-pending-run-messages';
       prompt = flushPendingRunMessages() ?? '';
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
+      lastStepStage = 'agent-generate';
       const result = await runtime.agent.generate(prompt, {
         maxSteps: 1,
         // toolChoice: 'required', removio para não requerer tool call obrigatoriamente
@@ -243,6 +250,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           };
         },
       });
+      lastStepStage = 'logging-tool-calls';
       console.log(
         `[AgentRunner] ${runtime.id} toolCalls:`,
         JSON.stringify(
@@ -254,6 +262,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           2,
         ),
       );
+      lastStepStage = 'recording-agent-usage';
       const {
         inputTokens,
         cachedInputTokens,
@@ -261,8 +270,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       } = usage.getUsageFromResult(result);
 
       await usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
+      lastStepStage = 'recording-observational-memory-usage';
       await usage.recordObservationalMemorySteps(contractId, result.steps);
 
+      lastStepStage = 'processing-runner-control';
       const controlDirective = extractRunnerControlDirective(result.text);
       const ignoredTextRequested = controlDirective === 'ignore';
       const stopRequested = controlDirective === 'stop';
@@ -330,6 +341,8 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           mastraId: runtime.mastraId,
           pricingModelKey: runtime.pricingModelKey,
           modelProfileId: runtime.modelProfileId,
+          stepStartedAt: lastStepStartedAt,
+          stepStage: lastStepStage,
           prompt,
           error: serializeError(error),
         }, null, 2),
@@ -338,6 +351,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     } finally {
       clearTimeout(stepWarningTimer);
       lastStepStartedAt = null;
+      lastStepStage = null;
       executing = false;
 
       if (continueRunning) {
@@ -431,6 +445,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       nextStepAt,
       estimatedDelayMs: nextStepAt ? Math.max(nextStepAt - Date.now(), 0) : null,
       lastStepStartedAt,
+      lastStepStage,
       wake: wakeQueue.getSnapshot(),
       lastWakeStartedAt,
     };
