@@ -6,7 +6,7 @@ import type { CommunicationModule } from '../module';
 const listContactsInputSchema = z.object({
   filter: z
     .enum(['self', 'others', 'all'])
-    .nullish()
+    .optional()
     .describe("Which contacts to list. Use 'others' for the contacts you registered, 'self' for your own identities, or 'all' for both."),
 });
 
