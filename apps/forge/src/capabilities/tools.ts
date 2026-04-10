@@ -56,15 +56,106 @@ export function createCapabilityTools(
       description: 'Create, update, or delete a role.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']).describe('The role operation to perform.'),
-        roleId: z.string().min(1).nullish().describe('Required for update and delete.'),
-        name: z.string().min(1).nullish().describe('Required for create. Optional for update.'),
-        description: z.string().nullish().describe('Optional description for create or update.'),
+        create: z.object({
+          name: z.string().nullish().describe('Required role name for the new role.'),
+          description: z.string().nullish().describe('Optional description for the new role.'),
+        }).nullish().describe('Provide this object only when action is create.'),
+        update: z.object({
+          roleId: z.string().nullish().describe('Required roleId to update one existing role.'),
+          name: z.string().nullish().describe('Optional new role name.'),
+          description: z.string().nullish().describe('Optional new description.'),
+        }).nullish().describe('Provide this object only when action is update.'),
+        delete: z.object({
+          roleId: z.string().nullish().describe('Required roleId to delete one existing role.'),
+        }).nullish().describe('Provide this object only when action is delete.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'manage_agent_role called', { input });
 
         try {
-          const result = await capabilities.manageRole(input);
+          if (input.action === 'create') {
+            if (!input.create) {
+              return {
+                valid: false,
+                error: 'create is required when action is create',
+                hint: 'Provide create.name and optionally create.description.',
+              };
+            }
+
+            if (!input.create.name) {
+              return {
+                valid: false,
+                error: 'create.name is required when action is create',
+                hint: 'Provide the new role name in create.name.',
+              };
+            }
+
+            const result = await capabilities.manageRole({
+              action: 'create',
+              name: input.create.name,
+              description: input.create.description,
+            });
+
+            if ('roleId' in result && result.roleId) {
+              await reloadAgentsForRole(db, loaderConfig, result.roleId);
+            }
+
+            forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
+            return { valid: true, ...result };
+          }
+
+          if (input.action === 'update') {
+            if (!input.update) {
+              return {
+                valid: false,
+                error: 'update is required when action is update',
+                hint: 'Provide update.roleId and at least one field to change.',
+              };
+            }
+
+            if (!input.update.roleId) {
+              return {
+                valid: false,
+                error: 'update.roleId is required when action is update',
+                hint: 'Use list_agent_roles to find the roleId you want to change.',
+              };
+            }
+
+            const result = await capabilities.manageRole({
+              action: 'update',
+              roleId: input.update.roleId,
+              name: input.update.name,
+              description: input.update.description,
+            });
+
+            if ('roleId' in result && result.roleId) {
+              await reloadAgentsForRole(db, loaderConfig, result.roleId);
+            }
+
+            forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
+            return { valid: true, ...result };
+          }
+
+          if (!input.delete) {
+            return {
+              valid: false,
+              error: 'delete is required when action is delete',
+              hint: 'Provide delete.roleId.',
+            };
+          }
+
+          if (!input.delete.roleId) {
+            return {
+              valid: false,
+              error: 'delete.roleId is required when action is delete',
+              hint: 'Use list_agent_roles to find the roleId you want to delete.',
+            };
+          }
+
+          const result = await capabilities.manageRole({
+            action: 'delete',
+            roleId: input.delete.roleId,
+          });
 
           if ('roleId' in result && result.roleId) {
             await reloadAgentsForRole(db, loaderConfig, result.roleId);
