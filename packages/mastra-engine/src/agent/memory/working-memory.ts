@@ -11,6 +11,7 @@ export const WORKING_MEMORY_INSTRUCTIONS = [
   'Update it as soon as something meaningfully changes in your durable knowledge, rules, pending track, objectives, or task direction.',
   'When several related fields changed, update them together in one working-memory update instead of making multiple fragmented updates.',
   'Use working memory for consolidated facts, stable rules, learned patterns, medium-lived observations, current objectives, and tracked tasks.',
+  'Use domain expansion to capture the practical shape of your area inside the limits of your role: what belongs to your function, how your work is usually done, what kinds of activities fit your scope, and what operational territory is legitimately yours beyond the base role text without expanding into another role.',
   'Do not duplicate the system prompt, role text, tool descriptions, obvious runtime behavior, full conversation history, or information that is easy to find elsewhere.',
   'If something should stay discoverable but is already stored elsewhere, keep only a short reference or a note explaining where to find it.',
   'Keep every field concise, information-dense, and easy to scan.',
@@ -50,6 +51,23 @@ export const WORKING_MEMORY_SCHEMA = z.object({
     })
     .nullish()
     .describe('What to do, what not to do, and stable operating rules.'),
+  domainExpansion: z
+    .object({
+      area: workingMemoryText(
+        'Expanded description of the agent area inside the limits of the role, what the function really covers in practice, and what belongs inside that domain without drifting into another function.',
+      ),
+      methods: workingMemoryText(
+        'How the agent usually works, recurring operating approaches, and practical ways the role executes its responsibilities.',
+      ),
+      activities: workingMemoryText(
+        'Types of activities, initiatives, reviews, decisions, and follow-ups that are legitimately part of this role.',
+      ),
+      scopeEdges: workingMemoryText(
+        'Clarifications about the edges of the role: what is inside scope, what is adjacent, and what should only be handled in a supporting or coordinating way.',
+      ),
+    })
+    .nullish()
+    .describe('Expanded model of the agent domain, area of action, ways of working, and practical scope while staying inside the role boundaries.'),
   learnings: z
     .object({
       product: workingMemoryText(
@@ -104,7 +122,7 @@ export const WORKING_MEMORY_SCHEMA = z.object({
     .nullish()
     .describe('Tracked tasks, next actions, and blocked items that help maintain continuity.'),
 }).describe(
-  'Structured working memory for durable facts, rules, learnings, observations, objectives, and tasks.',
+  'Structured working memory for durable facts, rules, domain expansion, learnings, observations, objectives, and tasks.',
 );
 
 export function appendWorkingMemoryInstructions(instructions: string): string;
