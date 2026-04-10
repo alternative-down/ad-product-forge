@@ -898,7 +898,7 @@ export function createInternalChatService(
           authorDisplayName: row.authorDisplayName,
         });
 
-        if (!input.unread && row.unread === 1) {
+        if (row.unread === 1) {
           messageIdsToMarkRead.add(row.messageId);
         }
       }
