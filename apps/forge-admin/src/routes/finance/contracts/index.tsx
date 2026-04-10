@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   adjustAgentContractBudget,
   getFinanceContracts,
+  renewAgentContract,
   topUpAgentContract,
   type FinanceContractsResponse,
 } from '@/lib/admin-api';
@@ -32,7 +33,7 @@ export const Route = createFileRoute('/finance/contracts/')({
 type ContractForm = {
   agentId: string;
   agentName: string;
-  action: 'adjust-budget' | 'top-up';
+  action: 'adjust-budget' | 'top-up' | 'renew';
   amountUsd: number;
 };
 
@@ -59,6 +60,13 @@ function FinanceContractsIndexRoute() {
         return topUpAgentContract({
           agentId: input.agentId,
           amountUsd: input.amountUsd,
+        });
+      }
+
+      if (input.action === 'renew') {
+        return renewAgentContract({
+          agentId: input.agentId,
+          newBudgetUsd: input.amountUsd,
         });
       }
 
@@ -186,19 +194,28 @@ function FinanceContractsIndexRoute() {
                   >
                     <SelectTrigger id="finance-contract-action" className="w-full">
                       <SelectValue>
-                        {contractForm.action === 'top-up' ? 'Adicionar saldo' : 'Ajustar orçamento'}
+                        {contractForm.action === 'top-up'
+                          ? 'Adicionar saldo'
+                          : contractForm.action === 'renew'
+                            ? 'Recontratar'
+                            : 'Ajustar orçamento'}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="adjust-budget">Ajustar orçamento</SelectItem>
                       <SelectItem value="top-up">Adicionar saldo</SelectItem>
+                      <SelectItem value="renew">Recontratar</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="finance-contract-amount">
-                    {contractForm.action === 'top-up' ? 'Valor adicional' : 'Novo valor semanal'}
+                    {contractForm.action === 'top-up'
+                      ? 'Valor adicional'
+                      : contractForm.action === 'renew'
+                        ? 'Novo valor semanal do novo contrato'
+                        : 'Novo valor semanal'}
                   </label>
                   <AdminInput
                     id="finance-contract-amount"

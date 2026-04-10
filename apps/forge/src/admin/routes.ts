@@ -46,6 +46,7 @@ import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
+import { renewAgentContract } from '../agents/renew-agent-contract';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { clearAgentMCPClient } from '../agents/mcp/client-manager';
 import { createAgentContractStore } from '../agents/agent-contract-store';
@@ -249,6 +250,11 @@ const topUpAgentContractSchema = z.object({
 });
 
 const adjustAgentContractBudgetSchema = z.object({
+  agentId: z.string().min(1),
+  newBudgetUsd: z.coerce.number().min(0),
+});
+
+const renewAgentContractSchema = z.object({
   agentId: z.string().min(1),
   newBudgetUsd: z.coerce.number().min(0),
 });
@@ -1114,6 +1120,15 @@ export function registerAdminRoutes(input: {
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
       return jsonResponse(await adjustAgentContractBudget(input.db, body));
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/contract/renew',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
+      return jsonResponse(await renewAgentContract(input.db, body));
     },
   });
 
