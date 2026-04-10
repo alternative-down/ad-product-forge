@@ -768,11 +768,6 @@ function createHeartbeatWakeInstruction(content?: string) {
     '- If no clear pending item exists, deliberately search for useful work.',
     '  Why: lack of explicit assignment is not the same as lack of useful work.',
     '  What to do: initiate, review, plan, discuss, validate, improve, or investigate something that is logically derived from your goals, obligations, risks, or current context.',
-    '',
-    'Phase 6. Stop only after a real negative check.',
-    '- Only consider stopping after checking all the relevant surfaces.',
-    '  Why: stopping too early causes missed follow-ups, lost context, and work that remains undone simply because it was not looked for carefully enough.',
-    '  What to do: only stop cleanly if you have reviewed the important inputs, refreshed your records, and genuinely found no further useful action to take right now.',
   ];
 
   return lines.join('\n');
