@@ -15,6 +15,9 @@ const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
 const STUCK_LOOP_REPEAT_LIMIT = 6;
 const STEP_HANG_WARNING_MS = ONE_HOUR_MS;
 const STEP_TIMEOUT_RECOVERY_ENABLED = false;
+const GENERATE_TIMEOUT_MS = 5 * ONE_MINUTE_MS;
+const GENERATE_TIMEOUT_MAX_ATTEMPTS = 3;
+const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 const NO_ACTION_NEEDED_XML_PATTERN = /<invoke[^>]*name=["']NO_ACTION_NEEDED["'][^>]*>/i;
@@ -225,33 +228,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       lastStepStage = 'agent-generate';
-      console.log(`[AgentRunner] ${runtime.id} generate start`);
-      const result = await runtime.agent.generate(prompt, {
-        maxSteps: 1,
-        // toolChoice: 'required', removio para não requerer tool call obrigatoriamente
-        memory: {
-          thread: runtime.mastraId,
-          resource: runtime.mastraId,
-        },
-        providerOptions: {
-          anthropic: {
-            thinking: { type: 'enabled', budgetTokens: 2000 },
-          },
-        },
-        onIterationComplete: () => {
-          const feedback = flushPendingRunMessages();
-
-          if (!feedback) {
-            return;
-          }
-
-          return {
-            continue: true,
-            feedback,
-          };
-        },
-      });
-      console.log(`[AgentRunner] ${runtime.id} generate completed`);
+      const result = await generateWithTimeoutRetries(prompt);
       lastStepStage = 'logging-tool-calls';
       console.log(
         `[AgentRunner] ${runtime.id} toolCalls:`,
@@ -460,6 +437,68 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     getSnapshot,
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
+
+  async function generateWithTimeoutRetries(promptText: string) {
+    for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort(new Error(`Agent generate timed out after ${GENERATE_TIMEOUT_MS}ms`));
+      }, GENERATE_TIMEOUT_MS);
+
+      try {
+        console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
+        const result = await runtime.agent.generate(promptText, {
+          maxSteps: 1,
+          abortSignal: controller.signal,
+          memory: {
+            thread: runtime.mastraId,
+            resource: runtime.mastraId,
+          },
+          providerOptions: {
+            anthropic: {
+              thinking: { type: 'enabled', budgetTokens: 2000 },
+            },
+          },
+          onIterationComplete: () => {
+            const feedback = flushPendingRunMessages();
+
+            if (!feedback) {
+              return;
+            }
+
+            return {
+              continue: true,
+              feedback,
+            };
+          },
+        });
+        console.log(`[AgentRunner] ${runtime.id} generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
+        return result;
+      } catch (error) {
+        const timedOut = controller.signal.aborted;
+
+        if (!timedOut || attempt === GENERATE_TIMEOUT_MAX_ATTEMPTS) {
+          throw error;
+        }
+
+        const backoffMs = GENERATE_TIMEOUT_BACKOFF_MS * attempt;
+        console.error(
+          `[AgentRunner] ${runtime.id} generate timed out on attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS}; retrying in ${backoffMs}ms`,
+        );
+        await delay(backoffMs);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    throw new Error('Agent generate timed out after all retry attempts');
+  }
+}
+
+function delay(delayMs: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
 }
 
 function buildLoopSignature(result: {
