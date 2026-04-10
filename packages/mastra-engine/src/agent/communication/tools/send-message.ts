@@ -27,7 +27,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
   return createTool({
     id: 'send_message',
     description:
-      'Actually deliver a message through a provider. Use this both to continue an existing conversation and to start a new one when that provider supports it. Writing plain text in your response does not send anything. A message is only delivered when this tool is called successfully. The result confirms delivery with provider, targetKey, and messageId.',
+      'Actually deliver a message through a provider. Use this both to continue an existing conversation and to start a new one when that provider supports it. Writing plain text in your response does not send anything. A message is only delivered when this tool is called successfully. The result confirms delivery with provider, targetKey, and messageId, and may also include unread messages that were still pending in that conversation.',
     inputSchema: sendMessageInputSchema,
     execute: async (input) => {
       try {

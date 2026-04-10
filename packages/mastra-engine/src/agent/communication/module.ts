@@ -375,6 +375,38 @@ export async function createCommunicationModule(config: {
     })).map((message) => toAgentMessageView(message)));
   }
 
+  async function getUnreadConversationContext(input: {
+    provider: string;
+    targetKey: string;
+  }) {
+    const provider = providers.get(input.provider);
+
+    if (!provider?.listConversations) {
+      return null;
+    }
+
+    const unreadConversations = await provider.listConversations({
+      unread: true,
+      limit: 100,
+    });
+    const unreadConversation = unreadConversations.find((conversation) => conversation.targetKey === input.targetKey);
+
+    if (!unreadConversation) {
+      return null;
+    }
+
+    const unreadMessages = unreadConversation.messages.filter((message) => message.unread);
+
+    return {
+      targetKey: unreadConversation.targetKey,
+      provider: unreadConversation.provider,
+      unreadCount: unreadConversation.unreadCount,
+      name: unreadConversation.name,
+      participants: unreadConversation.participants,
+      messages: await Promise.all(unreadMessages.map((message) => toAgentMessageView(message))),
+    };
+  }
+
   async function sendMessage(input: {
     provider: string;
     targetKey: string;
@@ -392,6 +424,10 @@ export async function createCommunicationModule(config: {
       content: input.content,
       attachments: await readOutboundAttachments(input.attachments ?? []),
     });
+    const unreadConversation = await getUnreadConversationContext({
+      provider: input.provider,
+      targetKey: result.targetKey,
+    });
 
     return {
       valid: true,
@@ -399,6 +435,7 @@ export async function createCommunicationModule(config: {
       targetKey: result.targetKey,
       ...(result.messageId ? { messageId: result.messageId } : {}),
       ...(result.conversationName ? { conversationName: result.conversationName } : {}),
+      ...(unreadConversation ? { unreadConversation } : {}),
     };
   }
 
