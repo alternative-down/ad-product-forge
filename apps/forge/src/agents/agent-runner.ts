@@ -276,6 +276,13 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       }
 
       if (result.toolCalls.length === 0 && stopRequested) {
+        if (pendingRunMessages.size > 0) {
+          console.log(`[AgentRunner] ${runtime.id} ignored STOP_AND_IDLE because pending run messages arrived during the step`);
+          backoffMs = ONE_MINUTE_MS;
+          continueRunning = true;
+          return;
+        }
+
         nextStepAt = null;
         resetLoopDetector();
         await store.setExecutionState(runtime.id, 'idle');
