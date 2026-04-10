@@ -67,6 +67,7 @@ export function createAgentScheduleManager(input: {
     unreadConversationCount: number;
     unreadMessageCount: number;
   }>;
+  getAgentExecutionState?(agentId: string): Promise<'idle' | 'running'>;
   notifyAgent(input: {
     agentId: string;
     scheduleId: string;
@@ -551,6 +552,15 @@ export function createAgentScheduleManager(input: {
       nextTriggerAt,
       isActive: remainsActive,
     });
+
+    if (scheduleRecord.kind === 'heartbeat' && input.getAgentExecutionState) {
+      const executionState = await input.getAgentExecutionState(scheduleRecord.agentId);
+
+      if (executionState !== 'idle') {
+        return;
+      }
+    }
+
     input.notifyAgent({
       agentId: scheduleRecord.agentId,
       scheduleId: scheduleRecord.scheduleId,
