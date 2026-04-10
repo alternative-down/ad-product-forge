@@ -20,8 +20,6 @@ const GENERATE_TIMEOUT_MAX_ATTEMPTS = 3;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
-const NO_ACTION_NEEDED_XML_PATTERN = /<invoke[^>]*name=["']NO_ACTION_NEEDED["'][^>]*>/i;
-const STOP_AND_IDLE_XML_PATTERN = /<invoke[^>]*name=["']STOP_AND_IDLE["'][^>]*>/i;
 
 export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   const store = createAgentContractStore(db);
@@ -562,17 +560,11 @@ export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
 function extractRunnerControlDirective(text: string) {
   const normalizedText = text.trim();
 
-  if (
-    normalizedText === STOP_AND_IDLE_PREFIX
-    || STOP_AND_IDLE_XML_PATTERN.test(normalizedText)
-  ) {
+  if (normalizedText.includes(STOP_AND_IDLE_PREFIX)) {
     return 'stop' as const;
   }
 
-  if (
-    normalizedText === NO_ACTION_NEEDED_PREFIX
-    || NO_ACTION_NEEDED_XML_PATTERN.test(normalizedText)
-  ) {
+  if (normalizedText.includes(NO_ACTION_NEEDED_PREFIX)) {
     return 'ignore' as const;
   }
 
