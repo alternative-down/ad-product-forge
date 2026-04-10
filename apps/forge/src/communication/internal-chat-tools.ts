@@ -26,20 +26,20 @@ export function createInternalChatTools(
       inputSchema: z.object({
         action: z.enum(['create', 'update']).describe('Use create to create a new group. Use update to change one existing group.'),
         create: z.object({
-          name: z.string().nullish().describe('Required group display name for the new group. Do not pass null when creating.'),
+          name: z.string().optional().describe('Required group display name for the new group. Omit this field only when not creating.'),
           members: z.array(z.object({
             participantKey: z.string().describe('The internal-chat contact targetKey to include in the new group. Use the targetKey returned by list_contacts.'),
-            role: z.enum(['admin', 'normal']).nullish().describe('Optional participant role in the final group state.'),
-          })).nullish().describe('Optional full initial member state for the new group. The creator is always kept as admin.'),
-        }).nullish().describe('Provide this object only when action is create.'),
+            role: z.enum(['admin', 'normal']).optional().describe('Optional participant role in the final group state.'),
+          })).optional().describe('Optional full initial member state for the new group. The creator is always kept as admin.'),
+        }).optional().describe('Provide this object only when action is create.'),
         update: z.object({
-          groupId: z.string().nullish().describe('Required group id to update one existing group.'),
-          name: z.string().nullish().describe('Optional new group display name.'),
+          groupId: z.string().optional().describe('Required group id to update one existing group.'),
+          name: z.string().optional().describe('Optional new group display name.'),
           members: z.array(z.object({
             participantKey: z.string().describe('The internal-chat contact targetKey to include in the final group state. Use the targetKey returned by list_contacts.'),
-            role: z.enum(['admin', 'normal']).nullish().describe('Optional participant role in the final group state.'),
-          })).nullish().describe('Optional full member state for the group. When provided, it replaces the current non-creator member set.'),
-        }).nullish().describe('Provide this object only when action is update.'),
+            role: z.enum(['admin', 'normal']).optional().describe('Optional participant role in the final group state.'),
+          })).optional().describe('Optional full member state for the group. When provided, it replaces the current non-creator member set.'),
+        }).optional().describe('Provide this object only when action is update.'),
       }),
       execute: async (input) => {
         try {

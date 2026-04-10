@@ -57,17 +57,17 @@ export function createCapabilityTools(
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']).describe('The role operation to perform.'),
         create: z.object({
-          name: z.string().nullish().describe('Required role name for the new role.'),
-          description: z.string().nullish().describe('Optional description for the new role.'),
-        }).nullish().describe('Provide this object only when action is create.'),
+          name: z.string().optional().describe('Required role name for the new role.'),
+          description: z.string().optional().describe('Optional description for the new role.'),
+        }).optional().describe('Provide this object only when action is create.'),
         update: z.object({
-          roleId: z.string().nullish().describe('Required roleId to update one existing role.'),
-          name: z.string().nullish().describe('Optional new role name.'),
-          description: z.string().nullish().describe('Optional new description.'),
-        }).nullish().describe('Provide this object only when action is update.'),
+          roleId: z.string().optional().describe('Required roleId to update one existing role.'),
+          name: z.string().optional().describe('Optional new role name.'),
+          description: z.string().optional().describe('Optional new description.'),
+        }).optional().describe('Provide this object only when action is update.'),
         delete: z.object({
-          roleId: z.string().nullish().describe('Required roleId to delete one existing role.'),
-        }).nullish().describe('Provide this object only when action is delete.'),
+          roleId: z.string().optional().describe('Required roleId to delete one existing role.'),
+        }).optional().describe('Provide this object only when action is delete.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'manage_agent_role called', { input });
@@ -215,8 +215,8 @@ export function createCapabilityTools(
       id: 'list_agent_statuses',
       description: 'List the current execution status of agents, such as idle or running. You can filter by one agentId or by one executionState.',
       inputSchema: z.object({
-        agentId: z.string().nullish().describe('Optional agentId if you want to inspect one specific agent.'),
-        executionState: z.enum(['idle', 'running']).nullish().describe('Optional execution state filter. Use idle or running.'),
+        agentId: z.string().optional().describe('Optional agentId if you want to inspect one specific agent.'),
+        executionState: z.enum(['idle', 'running']).optional().describe('Optional execution state filter. Use idle or running.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'list_agent_statuses called', { input });

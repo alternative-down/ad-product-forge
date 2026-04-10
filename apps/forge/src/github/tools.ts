@@ -16,7 +16,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
       inputSchema: z.object({
         repositoryName: z
           .string()
-          .nullish()
+          .optional()
           .describe('Optional repository name if you want credentials for one specific repository. Leave empty to get all available credentials.'),
       }),
       execute: async (input) => {
