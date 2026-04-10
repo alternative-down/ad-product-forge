@@ -12,7 +12,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
     tools.get_github_git_credentials = createTool({
       id: 'get_github_git_credentials',
       description:
-        'Get temporary Git credentials for cloning, pulling, or pushing GitHub repositories that this agent can access. You can request credentials for one repository or for all accessible repositories.',
+        'Get temporary Git credentials for cloning, pulling, or pushing GitHub repositories that this agent can access. These credentials expire within 1 hour, so fetch fresh credentials when needed. You can request credentials for one repository or for all accessible repositories.',
       inputSchema: z.object({
         repositoryName: z
           .string()

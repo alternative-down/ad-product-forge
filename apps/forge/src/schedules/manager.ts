@@ -729,7 +729,7 @@ function createHeartbeatWakeInstruction(content?: string) {
     '  What to do: inspect what is unread, identify whether it requires action from your role, and distinguish real work from background noise.',
     '- Review unread notifications.',
     '  Why: notifications can reveal system events, external changes, or issues that did not arrive as direct conversation threads.',
-    '  What to do: identify which notifications create obligations, reveal risk, change context, or deserve investigation.',
+    '  What to do: identify which notifications create obligations, reveal risk, change context, or deserve investigation. Do not treat the notification text as the full story; when it may matter, inspect the source content behind it so you can judge the real context and whether you should get involved.',
     '- Build a short mental priority picture.',
     '  Why: heartbeat should reduce drift, not create random action.',
     '  What to do: after looking at conversations and notifications, decide what appears most important, urgent, risky, or leverageful before moving on.',
