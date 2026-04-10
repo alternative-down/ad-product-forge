@@ -12,12 +12,12 @@ export function createAgentContractStore(db: Database) {
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
 
-  async function getExecutionState(agentId: string) {
+  async function getExecutionState(agentId: string): Promise<'idle' | 'running'> {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
     });
 
-    return agent?.executionState ?? 'idle';
+    return (agent?.executionState as 'idle' | 'running' | undefined) ?? 'idle';
   }
 
   async function setExecutionState(agentId: string, executionState: 'idle' | 'running') {

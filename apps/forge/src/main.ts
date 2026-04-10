@@ -18,6 +18,7 @@ import { createAgentPendingSummaryReader } from './agents/pending-summary';
 import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
 import { createInternalChatService } from './communication/internal-chat-service';
+import { createAgentContractStore } from './agents/agent-contract-store';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -44,6 +45,7 @@ export async function main() {
   const internalChat = createInternalChatService(db, {
     dataRoot: env.FORGE_DATA_PATH,
   });
+  const agentContracts = createAgentContractStore(db);
 
   const emailMailboxes = createAgentEmailManager({
     db,
@@ -57,6 +59,9 @@ export async function main() {
   const schedules = createAgentScheduleManager({
     db,
     getAgentPendingSummary,
+    getAgentExecutionState(agentId) {
+      return agentContracts.getExecutionState(agentId);
+    },
     notifyAgent(input) {
       const entry = registry.get(input.agentId);
 
