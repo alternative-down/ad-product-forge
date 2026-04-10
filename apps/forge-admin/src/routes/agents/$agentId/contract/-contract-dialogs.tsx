@@ -13,7 +13,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export type ContractForm = {
-  action: 'adjust-budget' | 'top-up';
+  action: 'adjust-budget' | 'top-up' | 'renew';
   amountUsd: number;
 };
 
@@ -54,19 +54,28 @@ export function ContractAdjustDialog(input: {
                 >
                   <SelectTrigger id="agent-contract-action" className="w-full">
                     <SelectValue>
-                      {input.form.action === 'top-up' ? 'Adicionar saldo' : 'Ajustar orçamento'}
+                      {input.form.action === 'top-up'
+                        ? 'Adicionar saldo'
+                        : input.form.action === 'renew'
+                          ? 'Recontratar'
+                          : 'Ajustar orçamento'}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="adjust-budget">Ajustar orçamento</SelectItem>
                     <SelectItem value="top-up">Adicionar saldo</SelectItem>
+                    <SelectItem value="renew">Recontratar</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="agent-contract-amount">
-                  {input.form.action === 'top-up' ? 'Valor adicional' : 'Novo valor semanal'}
+                  {input.form.action === 'top-up'
+                    ? 'Valor adicional'
+                    : input.form.action === 'renew'
+                      ? 'Novo valor semanal do novo contrato'
+                      : 'Novo valor semanal'}
                 </label>
                 <AdminInput
                   id="agent-contract-amount"

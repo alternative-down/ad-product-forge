@@ -83,3 +83,8 @@ export type AdjustAgentContractBudgetInput = {
   agentId: string;
   newBudgetUsd: number;
 };
+
+export type RenewAgentContractInput = {
+  agentId: string;
+  newBudgetUsd: number;
+};

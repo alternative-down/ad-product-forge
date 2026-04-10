@@ -7,6 +7,7 @@ import {
   adjustAgentContractBudget,
   getAgent,
   getAgentExecutionSteps,
+  renewAgentContract,
   topUpAgentContract,
 } from '@/lib/admin-api';
 import {
@@ -51,6 +52,13 @@ function AgentContractIndexRoute() {
         return topUpAgentContract({
           agentId,
           amountUsd: input.amountUsd,
+        });
+      }
+
+      if (input.action === 'renew') {
+        return renewAgentContract({
+          agentId,
+          newBudgetUsd: input.amountUsd,
         });
       }
 

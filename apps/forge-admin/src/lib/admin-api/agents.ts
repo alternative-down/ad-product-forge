@@ -151,6 +151,23 @@ export function adjustAgentContractBudget(input: AdjustAgentContractBudgetInput)
   });
 }
 
+export function renewAgentContract(input: import('./finance-types').RenewAgentContractInput) {
+  return request<{
+    agentId: string;
+    previousContractId: string;
+    newContractId: string;
+    previousBudgetUsd: number;
+    previousSpentUsd: number;
+    refundedUsd: number;
+    newBudgetUsd: number;
+    startsAt: number;
+    endsAt: number;
+  }>('/admin/agent/contract/renew', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function hireAgent(input: HireAgentInput) {
   return request<HireAgentResult>('/admin/agent/hire', {
     method: 'POST',
