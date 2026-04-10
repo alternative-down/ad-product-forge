@@ -568,56 +568,17 @@ export function createInternalChatService(
   }) {
     const actorAccount = await getRequiredAgentAccount(input.agentId);
     const now = Date.now();
-    let groupId = input.groupId;
-
-    if (groupId) {
-      await getRequiredGroupForAgent(input.agentId, groupId);
-      const membership = await db.query.internalChatConversationMembers.findFirst({
-        where: and(
-          eq(internalChatConversationMembers.conversationId, groupId),
-          eq(internalChatConversationMembers.accountId, actorAccount.id),
-        ),
-      });
-
-      if (!membership || membership.role !== 'admin') {
-        throw new Error('Only admins can update the group.');
-      }
-    } else {
-      if (!input.name) {
-        throw new Error('name is required when creating a group.');
-      }
-
-      groupId = `grp_${createId()}`;
-
-      await db.insert(internalChatConversations).values({
-        id: groupId,
-        type: 'group',
-        name: input.name,
-        createdByAccountId: actorAccount.id,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      await db.insert(internalChatConversationMembers).values({
-        conversationId: groupId,
-        accountId: actorAccount.id,
-        role: 'admin',
-        createdAt: now,
-      });
-    }
-
-    if (input.name !== undefined) {
-      await db
-        .update(internalChatConversations)
-        .set({
-          name: input.name,
-          updatedAt: now,
-        })
-        .where(eq(internalChatConversations.id, groupId));
-    }
+    const groupId = input.groupId ?? `grp_${createId()}`;
+    let desiredMembers: Map<string, {
+      accountId: string;
+      participantKey: string;
+      participantSlug: string;
+      participantName: string;
+      role: string;
+    }> | null = null;
 
     if (input.members) {
-      const desiredMembers = new Map<string, { accountId: string; participantKey: string; participantSlug: string; participantName: string; role: string }>();
+      desiredMembers = new Map<string, { accountId: string; participantKey: string; participantSlug: string; participantName: string; role: string }>();
 
       for (const member of input.members) {
         const participant = await getAccountByTargetKey(member.participantKey);
@@ -642,15 +603,67 @@ export function createInternalChatService(
         participantName: actorAccount.displayName,
         role: 'admin',
       });
+    }
 
-      const existingMembers = await db.query.internalChatConversationMembers.findMany({
+    if (input.groupId) {
+      await getRequiredGroupForAgent(input.agentId, groupId);
+      const membership = await db.query.internalChatConversationMembers.findFirst({
+        where: and(
+          eq(internalChatConversationMembers.conversationId, groupId),
+          eq(internalChatConversationMembers.accountId, actorAccount.id),
+        ),
+      });
+
+      if (!membership || membership.role !== 'admin') {
+        throw new Error('Only admins can update the group.');
+      }
+    } else {
+      if (!input.name) {
+        throw new Error('name is required when creating a group.');
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      if (!input.groupId) {
+        await tx.insert(internalChatConversations).values({
+          id: groupId,
+          type: 'group',
+          name: input.name,
+          createdByAccountId: actorAccount.id,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        await tx.insert(internalChatConversationMembers).values({
+          conversationId: groupId,
+          accountId: actorAccount.id,
+          role: 'admin',
+          createdAt: now,
+        });
+      }
+
+      if (input.name !== undefined) {
+        await tx
+          .update(internalChatConversations)
+          .set({
+            name: input.name,
+            updatedAt: now,
+          })
+          .where(eq(internalChatConversations.id, groupId));
+      }
+
+      if (!desiredMembers) {
+        return;
+      }
+
+      const existingMembers = await tx.query.internalChatConversationMembers.findMany({
         where: eq(internalChatConversationMembers.conversationId, groupId),
       });
       const existingByAccountId = new Map(existingMembers.map((member) => [member.accountId, member]));
 
       for (const existingMember of existingMembers) {
         if (!desiredMembers.has(existingMember.accountId)) {
-          await db
+          await tx
             .delete(internalChatConversationMembers)
             .where(and(
               eq(internalChatConversationMembers.conversationId, groupId),
@@ -663,7 +676,7 @@ export function createInternalChatService(
         const existingMember = existingByAccountId.get(desiredMember.accountId);
 
         if (!existingMember) {
-          await db.insert(internalChatConversationMembers).values({
+          await tx.insert(internalChatConversationMembers).values({
             conversationId: groupId,
             accountId: desiredMember.accountId,
             role: desiredMember.role,
@@ -673,7 +686,7 @@ export function createInternalChatService(
         }
 
         if (existingMember.role !== desiredMember.role) {
-          await db
+          await tx
             .update(internalChatConversationMembers)
             .set({
               role: desiredMember.role,
@@ -685,13 +698,13 @@ export function createInternalChatService(
         }
       }
 
-      await db
+      await tx
         .update(internalChatConversations)
         .set({
           updatedAt: now,
         })
         .where(eq(internalChatConversations.id, groupId));
-    }
+    });
 
     const group = await getRequiredGroupForAgent(input.agentId, groupId);
     const members = await listGroupMembers({
