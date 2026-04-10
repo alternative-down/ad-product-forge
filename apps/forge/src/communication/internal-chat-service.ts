@@ -883,8 +883,9 @@ export function createInternalChatService(
       );
 
       const existing = messagesByConversationId.get(row.conversationId) ?? [];
+      const shouldIncludeMessage = input.unread ? row.unread === 1 : true;
 
-      if (existing.length < 5) {
+      if (shouldIncludeMessage && existing.length < 5) {
         existing.push({
           messageId: row.messageId,
           provider: 'internal-chat',

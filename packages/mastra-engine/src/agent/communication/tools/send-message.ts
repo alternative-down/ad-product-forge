@@ -18,8 +18,8 @@ const sendMessageInputSchema = z
       .describe('The exact message text to actually deliver to the recipient. Writing that text outside this tool does not send anything.'),
     attachments: z
       .array(z.string())
-      .nullish()
-      .describe('Optional file paths from your workspace to send together with the message.'),
+      .optional()
+      .describe('Optional workspace file paths to send with the message. Omit this field entirely when there are no attachments. When sending files, pass an array of string paths.'),
   })
   ;
 
@@ -35,7 +35,7 @@ export function createSendMessageTool(communication: CommunicationModule) {
           provider: input.provider,
           targetKey: input.targetKey,
           content: input.content,
-          attachments: input.attachments ?? undefined,
+          attachments: input.attachments,
         });
         return result;
       } catch (error) {
