@@ -22,6 +22,8 @@ export function ScheduleDialog(input: {
   onFormChange(value: ScheduleForm): void;
   onSubmit(): void;
 }) {
+  const requiresContent = !(input.form.scheduleId && input.form.kind === 'heartbeat');
+
   return (
     <Dialog open={input.open} onOpenChange={input.onOpenChange}>
       <AdminDialogContent>
@@ -155,7 +157,7 @@ export function ScheduleDialog(input: {
               disabled={
                 input.pending ||
                 !input.form.name.trim() ||
-                !input.form.content.trim() ||
+                (requiresContent && !input.form.content.trim()) ||
                 !input.form.timezone.trim() ||
                 (input.form.scheduleType === 'cron' ? !input.form.cronExpression.trim() : !input.form.scheduledDate)
               }

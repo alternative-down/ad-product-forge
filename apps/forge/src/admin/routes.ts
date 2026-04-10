@@ -127,7 +127,7 @@ const updateScheduleSchema = z.object({
   cronExpression: z.string().min(1).optional().nullable(),
   scheduledDate: z.string().min(1).optional().nullable(),
   timezone: z.string().min(1).optional(),
-  content: z.string().min(1).optional(),
+  content: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 

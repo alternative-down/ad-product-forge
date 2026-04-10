@@ -2,6 +2,7 @@ import type { AgentSchedule } from '@/lib/admin-api';
 
 export type ScheduleForm = {
   scheduleId?: string;
+  kind?: 'agent' | 'heartbeat';
   name: string;
   description: string;
   scheduleType: 'cron' | 'date';
@@ -28,6 +29,7 @@ export function createEmptyScheduleForm(): ScheduleForm {
 export function createScheduleForm(schedule: AgentSchedule): ScheduleForm {
   return {
     scheduleId: schedule.scheduleId,
+    kind: schedule.kind,
     name: schedule.name,
     description: schedule.description ?? '',
     scheduleType: schedule.scheduleType,
