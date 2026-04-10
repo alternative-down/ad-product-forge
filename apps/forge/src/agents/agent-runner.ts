@@ -11,7 +11,10 @@ import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
+const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
 const STUCK_LOOP_REPEAT_LIMIT = 6;
+const STEP_HANG_WARNING_MS = ONE_HOUR_MS;
+const STEP_TIMEOUT_RECOVERY_ENABLED = false;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 const NO_ACTION_NEEDED_XML_PATTERN = /<invoke[^>]*name=["']NO_ACTION_NEEDED["'][^>]*>/i;
@@ -33,6 +36,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let backoffMs = ONE_MINUTE_MS;
   let nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
+  let lastStepStartedAt: number | null = null;
   let lastLoopSignature: string | null = null;
   let repeatedLoopCount = 0;
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
@@ -179,6 +183,23 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     executing = true;
     let continueRunning = false;
     let prompt = '';
+    lastStepStartedAt = Date.now();
+    const stepWarningTimer = setTimeout(() => {
+      console.error(
+        `[AgentRunner] ${runtime.id} step appears stuck:`,
+        JSON.stringify({
+          agentId: runtime.id,
+          mastraId: runtime.mastraId,
+          pricingModelKey: runtime.pricingModelKey,
+          modelProfileId: runtime.modelProfileId,
+          stepStartedAt: lastStepStartedAt,
+          prompt,
+          snapshot: getSnapshot(),
+          stepHangWarningMs: STEP_HANG_WARNING_MS,
+          stepTimeoutRecoveryEnabled: STEP_TIMEOUT_RECOVERY_ENABLED,
+        }, null, 2),
+      );
+    }, STEP_HANG_WARNING_MS);
 
     try {
       const executionState = await store.getExecutionState(runtime.id);
@@ -315,6 +336,8 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       );
       schedule(nextBackoff());
     } finally {
+      clearTimeout(stepWarningTimer);
+      lastStepStartedAt = null;
       executing = false;
 
       if (continueRunning) {
@@ -407,6 +430,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       backoffMs,
       nextStepAt,
       estimatedDelayMs: nextStepAt ? Math.max(nextStepAt - Date.now(), 0) : null,
+      lastStepStartedAt,
       wake: wakeQueue.getSnapshot(),
       lastWakeStartedAt,
     };

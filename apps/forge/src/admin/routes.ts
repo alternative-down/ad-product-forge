@@ -48,6 +48,7 @@ import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { clearAgentMCPClient } from '../agents/mcp/client-manager';
+import { createAgentContractStore } from '../agents/agent-contract-store';
 import {
   deleteAgentWorkspaceSkill,
   installAgentWorkspaceSkillsFromZip,
@@ -483,6 +484,7 @@ export function registerAdminRoutes(input: {
   const llmSettings = createLlmSettingsStore(input.db);
   const llmModelPrices = createLlmModelPriceStore(input.db);
   const systemSettings = createSystemSettingsStore(input.db);
+  const agentContracts = createAgentContractStore(input.db);
   const registry = getInternalAgentRegistry();
   const companyCash = createCompanyCashOperations(input.db);
   const companyPayables = createCompanyPayables(input.db);
@@ -1047,6 +1049,51 @@ export function registerAdminRoutes(input: {
         agentId,
       });
       await registry.add(input.db, runtime);
+
+      return jsonResponse({ success: true, agentId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/force-idle',
+    handler: async (request) => {
+      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+      await resetAgentRuntime({
+        db: input.db,
+        loaderConfig: input.loaderConfig,
+        registry,
+        agentContracts,
+        agentId,
+      });
+
+      return jsonResponse({ success: true, agentId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/rewakeup',
+    handler: async (request) => {
+      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+      const entry = await resetAgentRuntime({
+        db: input.db,
+        loaderConfig: input.loaderConfig,
+        registry,
+        agentContracts,
+        agentId,
+      });
+
+      entry.runner.notifyExternalEvent({
+        type: 'admin-rewakeup',
+        groupKey: `admin-rewakeup:${agentId}`,
+        groupMetadata: {
+          Source: 'admin',
+        },
+        idempotencyKey: `admin-rewakeup:${agentId}:${Date.now()}`,
+        text: 'Admin requested a forced rewakeup. Rebuild context and continue work from the current state.',
+        timestamp: Date.now(),
+      });
 
       return jsonResponse({ success: true, agentId });
     },
@@ -1800,6 +1847,23 @@ export function registerAdminRoutes(input: {
 async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
   clearAgentMCPClient(agentId);
   await reloadAgentIfLoaded(db, loaderConfig, agentId);
+}
+
+async function resetAgentRuntime(input: {
+  db: Database;
+  loaderConfig: AgentLoaderConfig;
+  registry: ReturnType<typeof getInternalAgentRegistry>;
+  agentContracts: ReturnType<typeof createAgentContractStore>;
+  agentId: string;
+}) {
+  input.registry.remove(input.agentId);
+  await input.agentContracts.setExecutionState(input.agentId, 'idle');
+  const runtime = await loadAgent(input.db, {
+    ...input.loaderConfig,
+    agentId: input.agentId,
+  });
+
+  return input.registry.add(input.db, runtime);
 }
 
 function normalizeOptionalText(value?: string) {

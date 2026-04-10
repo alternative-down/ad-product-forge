@@ -10,7 +10,16 @@ import {
 } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { changeAgentRole, getAgent, getRoles, getSystemLlm, reloadAgent, updateAgentConfig } from '@/lib/admin-api';
+import {
+  changeAgentRole,
+  forceAgentIdle,
+  getAgent,
+  getRoles,
+  getSystemLlm,
+  reloadAgent,
+  rewakeupAgent,
+  updateAgentConfig,
+} from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { AgentProfileDialog } from './-agent-profile-dialog';
@@ -50,6 +59,30 @@ function AgentDetailIndexRoute() {
     onMutate: () => startAdminAction('Recarregando agente...'),
     onSuccess: async (_data, _variables, context) => {
       succeedAdminAction(context, 'Agente recarregado.');
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
+    },
+  });
+  const forceIdleMutation = useMutation({
+    mutationFn: () => forceAgentIdle(agentId),
+    onMutate: () => startAdminAction('Forçando agente para ocioso...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Agente retornou para ocioso.');
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+    },
+    onError: (error, _variables, context) => {
+      failAdminAction(context, error);
+    },
+  });
+  const rewakeupMutation = useMutation({
+    mutationFn: () => rewakeupAgent(agentId),
+    onMutate: () => startAdminAction('Forçando rewakeup do agente...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Agente reativado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
     },
@@ -138,6 +171,24 @@ function AgentDetailIndexRoute() {
                     </AdminButton>
                   </div>
                   <div className="text-sm text-muted-foreground">{agent.role?.name ?? 'Sem papel'}</div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <AdminButton
+                      variant="outline"
+                      size="sm"
+                      disabled={forceIdleMutation.isPending}
+                      onClick={() => forceIdleMutation.mutate()}
+                    >
+                      Forçar ocioso
+                    </AdminButton>
+                    <AdminButton
+                      variant="outline"
+                      size="sm"
+                      disabled={rewakeupMutation.isPending}
+                      onClick={() => rewakeupMutation.mutate()}
+                    >
+                      Rewakeup
+                    </AdminButton>
+                  </div>
                 </div>
               </div>
             </div>
@@ -193,6 +244,8 @@ function AgentDetailIndexRoute() {
 
       {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
       {reloadMutation.error ? <div className="text-sm text-destructive">{reloadMutation.error.message}</div> : null}
+      {forceIdleMutation.error ? <div className="text-sm text-destructive">{forceIdleMutation.error.message}</div> : null}
+      {rewakeupMutation.error ? <div className="text-sm text-destructive">{rewakeupMutation.error.message}</div> : null}
 
       <AgentProfileDialog
         open={dialogOpen}
