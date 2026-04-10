@@ -3,7 +3,7 @@ import { z } from 'zod';
 const workingMemoryText = (description: string) =>
   z
     .string()
-    .nullish()
+    .optional()
     .describe(description);
 
 export const WORKING_MEMORY_INSTRUCTIONS = [
@@ -35,7 +35,7 @@ export const WORKING_MEMORY_SCHEMA = z.object({
         'Short references to where larger or easier-to-find information lives instead of duplicating it.',
       ),
     })
-    .nullish()
+    .optional()
     .describe('Durable facts and stable context that should remain available over time.'),
   rules: z
     .object({
@@ -49,7 +49,7 @@ export const WORKING_MEMORY_SCHEMA = z.object({
         'Stable operating preferences or recurring ways of working that remain useful across runs.',
       ),
     })
-    .nullish()
+    .optional()
     .describe('What to do, what not to do, and stable operating rules.'),
   domainExpansion: z
     .object({
@@ -66,7 +66,7 @@ export const WORKING_MEMORY_SCHEMA = z.object({
         'Clarifications about the edges of the role: what is inside scope, what is adjacent, and what should only be handled in a supporting or coordinating way.',
       ),
     })
-    .nullish()
+    .optional()
     .describe('Expanded model of the agent domain, area of action, ways of working, and practical scope while staying inside the role boundaries.'),
   learnings: z
     .object({
@@ -80,7 +80,7 @@ export const WORKING_MEMORY_SCHEMA = z.object({
         'Important learned truths about routines, coordination, workflows, or execution patterns.',
       ),
     })
-    .nullish()
+    .optional()
     .describe('Learnings and inferences that became useful knowledge after analysis or repeated observation.'),
   observations: z
     .object({
@@ -94,7 +94,7 @@ export const WORKING_MEMORY_SCHEMA = z.object({
         'Items that should be reviewed later because they are unresolved, waiting, or need confirmation.',
       ),
     })
-    .nullish()
+    .optional()
     .describe('Temporary but useful notes that help the agent maintain track of ongoing reality.'),
   objectives: z
     .object({
@@ -105,7 +105,7 @@ export const WORKING_MEMORY_SCHEMA = z.object({
         'Why the current objectives matter and what success looks like at a high level.',
       ),
     })
-    .nullish()
+    .optional()
     .describe('Active objectives and what the agent is currently trying to accomplish.'),
   tasks: z
     .object({
@@ -119,7 +119,7 @@ export const WORKING_MEMORY_SCHEMA = z.object({
         'Very short summary of recently completed meaningful steps only when still useful for continuity.',
       ),
     })
-    .nullish()
+    .optional()
     .describe('Tracked tasks, next actions, and blocked items that help maintain continuity.'),
 }).describe(
   'Structured working memory for durable facts, rules, domain expansion, learnings, observations, objectives, and tasks.',
