@@ -8,10 +8,10 @@ import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api'
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/integrations/migadu/')({
-  component: IntegrationsMigaduRoute,
+  component: SystemMigaduSettingsPage,
 });
 
-function IntegrationsMigaduRoute() {
+export function SystemMigaduSettingsPage() {
   const queryClient = useQueryClient();
   const integrationsQuery = useQuery({
     queryKey: ['admin', 'system-integrations'],

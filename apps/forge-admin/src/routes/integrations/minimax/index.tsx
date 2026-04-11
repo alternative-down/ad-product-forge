@@ -8,10 +8,10 @@ import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api'
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/integrations/minimax/')({
-  component: IntegrationsMinimaxRoute,
+  component: SystemMinimaxSettingsPage,
 });
 
-function IntegrationsMinimaxRoute() {
+export function SystemMinimaxSettingsPage() {
   const queryClient = useQueryClient();
   const integrationsQuery = useQuery({
     queryKey: ['admin', 'system-integrations'],

@@ -8,10 +8,10 @@ import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api'
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/integrations/coolify/')({
-  component: IntegrationsCoolifyRoute,
+  component: SystemCoolifySettingsPage,
 });
 
-function IntegrationsCoolifyRoute() {
+export function SystemCoolifySettingsPage() {
   const queryClient = useQueryClient();
   const integrationsQuery = useQuery({
     queryKey: ['admin', 'system-integrations'],
