@@ -469,12 +469,11 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
       try {
         const agentContextInstructions = await loadAgentContextInstructions();
-        const executionInstructions = buildExecutionInstructions(agentContextInstructions);
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await runtime.agent.generate(promptText, {
           maxSteps: 1,
           abortSignal: controller.signal,
-          ...(executionInstructions ? { instructions: executionInstructions } : {}),
+          ...(agentContextInstructions ? { instructions: agentContextInstructions } : {}),
           memory: {
             thread: runtime.mastraId,
             resource: runtime.mastraId,
@@ -552,20 +551,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       '',
       trimmedContent,
     ].join('\n');
-  }
-
-  function buildExecutionInstructions(agentContextInstructions?: string) {
-    if (!agentContextInstructions) {
-      return undefined;
-    }
-
-    const baseInstructions = runtime.agent.__getOverridableFields().instructions;
-
-    if (typeof baseInstructions !== 'string') {
-      return agentContextInstructions;
-    }
-
-    return `${baseInstructions}\n\n${agentContextInstructions}`;
   }
 }
 
