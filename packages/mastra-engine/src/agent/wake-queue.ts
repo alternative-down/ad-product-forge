@@ -95,6 +95,12 @@ export function createAgentWakeQueue(config: {
       scheduleTrigger(Math.min(WAKE_DEBOUNCE_MS, remainingAccumulationMs));
     },
     async onRunnerIdle() {
+      if (!pending) {
+        return;
+      }
+
+      clearTimer();
+      await trigger();
     },
     stop() {
       pending = false;
