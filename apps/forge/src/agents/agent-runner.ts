@@ -133,6 +133,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       return null;
     }
 
+    incrementRunLastMessages();
     return formatPendingRunEvents(events);
   }
 
@@ -255,7 +256,6 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       lastStepStage = 'recording-observational-memory-usage';
       await usage.recordObservationalMemorySteps(contractId, result.steps);
-      incrementRunLastMessages();
 
       lastStepStage = 'processing-runner-control';
       const controlDirective = extractRunnerControlDirective(result.text);
