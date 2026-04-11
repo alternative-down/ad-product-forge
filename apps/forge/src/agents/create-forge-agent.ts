@@ -108,6 +108,7 @@ export async function createInternalAgentRuntime<
     omPricingModelKey,
     omModelProfileId: config.omModelProfileId,
     agent,
+    workspace: platform.workspace,
     communication: platform.communication,
     onReceiveMessage: platform.communication.onReceiveMessage,
   };
