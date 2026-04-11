@@ -7,11 +7,11 @@ import { Switch } from '@/components/ui/switch';
 import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-export const Route = createFileRoute('/integrations/coolify/')({
-  component: IntegrationsCoolifyRoute,
+export const Route = createFileRoute('/settings/coolify/')({
+  component: SettingsCoolifyRoute,
 });
 
-function IntegrationsCoolifyRoute() {
+function SettingsCoolifyRoute() {
   const queryClient = useQueryClient();
   const integrationsQuery = useQuery({
     queryKey: ['admin', 'system-integrations'],

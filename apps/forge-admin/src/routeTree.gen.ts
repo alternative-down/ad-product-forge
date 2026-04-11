@@ -9,30 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IntegrationsRouteRouteImport } from './routes/integrations/route'
+import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as FinanceRouteRouteImport } from './routes/finance/route'
 import { Route as AgentsRouteRouteImport } from './routes/agents/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as IntegrationsIndexRouteImport } from './routes/integrations/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as FinanceIndexRouteImport } from './routes/finance/index'
 import { Route as AgentsIndexRouteImport } from './routes/agents/index'
-import { Route as IntegrationsPricesRouteRouteImport } from './routes/integrations/prices/route'
-import { Route as IntegrationsMinimaxRouteRouteImport } from './routes/integrations/minimax/route'
-import { Route as IntegrationsMigaduRouteRouteImport } from './routes/integrations/migadu/route'
-import { Route as IntegrationsGithubRouteRouteImport } from './routes/integrations/github/route'
-import { Route as IntegrationsCoolifyRouteRouteImport } from './routes/integrations/coolify/route'
+import { Route as SettingsPricesRouteRouteImport } from './routes/settings/prices/route'
+import { Route as SettingsMinimaxRouteRouteImport } from './routes/settings/minimax/route'
+import { Route as SettingsMigaduRouteRouteImport } from './routes/settings/migadu/route'
+import { Route as SettingsLlmRouteRouteImport } from './routes/settings/llm/route'
+import { Route as SettingsGithubRouteRouteImport } from './routes/settings/github/route'
+import { Route as SettingsCoolifyRouteRouteImport } from './routes/settings/coolify/route'
 import { Route as HomeConversationsRouteRouteImport } from './routes/home/conversations/route'
 import { Route as FinanceContractsRouteRouteImport } from './routes/finance/contracts/route'
 import { Route as FinanceAccountsRouteRouteImport } from './routes/finance/accounts/route'
 import { Route as AgentsRolesRouteRouteImport } from './routes/agents/roles/route'
 import { Route as AgentsAgentIdRouteRouteImport } from './routes/agents/$agentId/route'
-import { Route as IntegrationsPricesIndexRouteImport } from './routes/integrations/prices/index'
-import { Route as IntegrationsMinimaxIndexRouteImport } from './routes/integrations/minimax/index'
-import { Route as IntegrationsMigaduIndexRouteImport } from './routes/integrations/migadu/index'
-import { Route as IntegrationsGithubIndexRouteImport } from './routes/integrations/github/index'
-import { Route as IntegrationsCoolifyIndexRouteImport } from './routes/integrations/coolify/index'
+import { Route as SettingsPricesIndexRouteImport } from './routes/settings/prices/index'
+import { Route as SettingsMinimaxIndexRouteImport } from './routes/settings/minimax/index'
+import { Route as SettingsMigaduIndexRouteImport } from './routes/settings/migadu/index'
+import { Route as SettingsLlmIndexRouteImport } from './routes/settings/llm/index'
+import { Route as SettingsGithubIndexRouteImport } from './routes/settings/github/index'
+import { Route as SettingsCoolifyIndexRouteImport } from './routes/settings/coolify/index'
 import { Route as HomeConversationsIndexRouteImport } from './routes/home/conversations/index'
 import { Route as FinanceContractsIndexRouteImport } from './routes/finance/contracts/index'
 import { Route as FinanceAccountsIndexRouteImport } from './routes/finance/accounts/index'
@@ -60,9 +62,9 @@ import { Route as AgentsAgentIdConversationsConversationIdRouteRouteImport } fro
 import { Route as AgentsAgentIdProvidersProviderTypeIndexRouteImport } from './routes/agents/$agentId/providers/$providerType/index'
 import { Route as AgentsAgentIdConversationsConversationIdIndexRouteImport } from './routes/agents/$agentId/conversations/$conversationId/index'
 
-const IntegrationsRouteRoute = IntegrationsRouteRouteImport.update({
-  id: '/integrations',
-  path: '/integrations',
+const SettingsRouteRoute = SettingsRouteRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HomeRouteRoute = HomeRouteRouteImport.update({
@@ -85,10 +87,10 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IntegrationsIndexRoute = IntegrationsIndexRouteImport.update({
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => IntegrationsRouteRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
 const HomeIndexRoute = HomeIndexRouteImport.update({
   id: '/',
@@ -105,33 +107,36 @@ const AgentsIndexRoute = AgentsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AgentsRouteRoute,
 } as any)
-const IntegrationsPricesRouteRoute = IntegrationsPricesRouteRouteImport.update({
+const SettingsPricesRouteRoute = SettingsPricesRouteRouteImport.update({
   id: '/prices',
   path: '/prices',
-  getParentRoute: () => IntegrationsRouteRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
-const IntegrationsMinimaxRouteRoute =
-  IntegrationsMinimaxRouteRouteImport.update({
-    id: '/minimax',
-    path: '/minimax',
-    getParentRoute: () => IntegrationsRouteRoute,
-  } as any)
-const IntegrationsMigaduRouteRoute = IntegrationsMigaduRouteRouteImport.update({
+const SettingsMinimaxRouteRoute = SettingsMinimaxRouteRouteImport.update({
+  id: '/minimax',
+  path: '/minimax',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsMigaduRouteRoute = SettingsMigaduRouteRouteImport.update({
   id: '/migadu',
   path: '/migadu',
-  getParentRoute: () => IntegrationsRouteRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
-const IntegrationsGithubRouteRoute = IntegrationsGithubRouteRouteImport.update({
+const SettingsLlmRouteRoute = SettingsLlmRouteRouteImport.update({
+  id: '/llm',
+  path: '/llm',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsGithubRouteRoute = SettingsGithubRouteRouteImport.update({
   id: '/github',
   path: '/github',
-  getParentRoute: () => IntegrationsRouteRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
-const IntegrationsCoolifyRouteRoute =
-  IntegrationsCoolifyRouteRouteImport.update({
-    id: '/coolify',
-    path: '/coolify',
-    getParentRoute: () => IntegrationsRouteRoute,
-  } as any)
+const SettingsCoolifyRouteRoute = SettingsCoolifyRouteRouteImport.update({
+  id: '/coolify',
+  path: '/coolify',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const HomeConversationsRouteRoute = HomeConversationsRouteRouteImport.update({
   id: '/conversations',
   path: '/conversations',
@@ -157,33 +162,36 @@ const AgentsAgentIdRouteRoute = AgentsAgentIdRouteRouteImport.update({
   path: '/$agentId',
   getParentRoute: () => AgentsRouteRoute,
 } as any)
-const IntegrationsPricesIndexRoute = IntegrationsPricesIndexRouteImport.update({
+const SettingsPricesIndexRoute = SettingsPricesIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => IntegrationsPricesRouteRoute,
+  getParentRoute: () => SettingsPricesRouteRoute,
 } as any)
-const IntegrationsMinimaxIndexRoute =
-  IntegrationsMinimaxIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => IntegrationsMinimaxRouteRoute,
-  } as any)
-const IntegrationsMigaduIndexRoute = IntegrationsMigaduIndexRouteImport.update({
+const SettingsMinimaxIndexRoute = SettingsMinimaxIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => IntegrationsMigaduRouteRoute,
+  getParentRoute: () => SettingsMinimaxRouteRoute,
 } as any)
-const IntegrationsGithubIndexRoute = IntegrationsGithubIndexRouteImport.update({
+const SettingsMigaduIndexRoute = SettingsMigaduIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => IntegrationsGithubRouteRoute,
+  getParentRoute: () => SettingsMigaduRouteRoute,
 } as any)
-const IntegrationsCoolifyIndexRoute =
-  IntegrationsCoolifyIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => IntegrationsCoolifyRouteRoute,
-  } as any)
+const SettingsLlmIndexRoute = SettingsLlmIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsLlmRouteRoute,
+} as any)
+const SettingsGithubIndexRoute = SettingsGithubIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsGithubRouteRoute,
+} as any)
+const SettingsCoolifyIndexRoute = SettingsCoolifyIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsCoolifyRouteRoute,
+} as any)
 const HomeConversationsIndexRoute = HomeConversationsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -337,21 +345,22 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AgentsRouteRouteWithChildren
   '/finance': typeof FinanceRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
-  '/integrations': typeof IntegrationsRouteRouteWithChildren
+  '/settings': typeof SettingsRouteRouteWithChildren
   '/agents/$agentId': typeof AgentsAgentIdRouteRouteWithChildren
   '/agents/roles': typeof AgentsRolesRouteRouteWithChildren
   '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
   '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
   '/home/conversations': typeof HomeConversationsRouteRouteWithChildren
-  '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
-  '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
-  '/integrations/migadu': typeof IntegrationsMigaduRouteRouteWithChildren
-  '/integrations/minimax': typeof IntegrationsMinimaxRouteRouteWithChildren
-  '/integrations/prices': typeof IntegrationsPricesRouteRouteWithChildren
+  '/settings/coolify': typeof SettingsCoolifyRouteRouteWithChildren
+  '/settings/github': typeof SettingsGithubRouteRouteWithChildren
+  '/settings/llm': typeof SettingsLlmRouteRouteWithChildren
+  '/settings/migadu': typeof SettingsMigaduRouteRouteWithChildren
+  '/settings/minimax': typeof SettingsMinimaxRouteRouteWithChildren
+  '/settings/prices': typeof SettingsPricesRouteRouteWithChildren
   '/agents/': typeof AgentsIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/home/': typeof HomeIndexRoute
-  '/integrations/': typeof IntegrationsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
   '/agents/$agentId/contract': typeof AgentsAgentIdContractRouteRouteWithChildren
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsRouteRouteWithChildren
   '/agents/$agentId/github': typeof AgentsAgentIdGithubRouteRouteWithChildren
@@ -365,11 +374,12 @@ export interface FileRoutesByFullPath {
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/conversations/': typeof HomeConversationsIndexRoute
-  '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
-  '/integrations/github/': typeof IntegrationsGithubIndexRoute
-  '/integrations/migadu/': typeof IntegrationsMigaduIndexRoute
-  '/integrations/minimax/': typeof IntegrationsMinimaxIndexRoute
-  '/integrations/prices/': typeof IntegrationsPricesIndexRoute
+  '/settings/coolify/': typeof SettingsCoolifyIndexRoute
+  '/settings/github/': typeof SettingsGithubIndexRoute
+  '/settings/llm/': typeof SettingsLlmIndexRoute
+  '/settings/migadu/': typeof SettingsMigaduIndexRoute
+  '/settings/minimax/': typeof SettingsMinimaxIndexRoute
+  '/settings/prices/': typeof SettingsPricesIndexRoute
   '/agents/$agentId/conversations/$conversationId': typeof AgentsAgentIdConversationsConversationIdRouteRouteWithChildren
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
   '/agents/$agentId/contract/': typeof AgentsAgentIdContractIndexRoute
@@ -389,17 +399,18 @@ export interface FileRoutesByTo {
   '/agents': typeof AgentsIndexRoute
   '/finance': typeof FinanceIndexRoute
   '/home': typeof HomeIndexRoute
-  '/integrations': typeof IntegrationsIndexRoute
+  '/settings': typeof SettingsIndexRoute
   '/agents/$agentId': typeof AgentsAgentIdIndexRoute
   '/agents/roles': typeof AgentsRolesIndexRoute
   '/finance/accounts': typeof FinanceAccountsIndexRoute
   '/finance/contracts': typeof FinanceContractsIndexRoute
   '/home/conversations': typeof HomeConversationsIndexRoute
-  '/integrations/coolify': typeof IntegrationsCoolifyIndexRoute
-  '/integrations/github': typeof IntegrationsGithubIndexRoute
-  '/integrations/migadu': typeof IntegrationsMigaduIndexRoute
-  '/integrations/minimax': typeof IntegrationsMinimaxIndexRoute
-  '/integrations/prices': typeof IntegrationsPricesIndexRoute
+  '/settings/coolify': typeof SettingsCoolifyIndexRoute
+  '/settings/github': typeof SettingsGithubIndexRoute
+  '/settings/llm': typeof SettingsLlmIndexRoute
+  '/settings/migadu': typeof SettingsMigaduIndexRoute
+  '/settings/minimax': typeof SettingsMinimaxIndexRoute
+  '/settings/prices': typeof SettingsPricesIndexRoute
   '/agents/$agentId/contract': typeof AgentsAgentIdContractIndexRoute
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsIndexRoute
   '/agents/$agentId/github': typeof AgentsAgentIdGithubIndexRoute
@@ -418,21 +429,22 @@ export interface FileRoutesById {
   '/agents': typeof AgentsRouteRouteWithChildren
   '/finance': typeof FinanceRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
-  '/integrations': typeof IntegrationsRouteRouteWithChildren
+  '/settings': typeof SettingsRouteRouteWithChildren
   '/agents/$agentId': typeof AgentsAgentIdRouteRouteWithChildren
   '/agents/roles': typeof AgentsRolesRouteRouteWithChildren
   '/finance/accounts': typeof FinanceAccountsRouteRouteWithChildren
   '/finance/contracts': typeof FinanceContractsRouteRouteWithChildren
   '/home/conversations': typeof HomeConversationsRouteRouteWithChildren
-  '/integrations/coolify': typeof IntegrationsCoolifyRouteRouteWithChildren
-  '/integrations/github': typeof IntegrationsGithubRouteRouteWithChildren
-  '/integrations/migadu': typeof IntegrationsMigaduRouteRouteWithChildren
-  '/integrations/minimax': typeof IntegrationsMinimaxRouteRouteWithChildren
-  '/integrations/prices': typeof IntegrationsPricesRouteRouteWithChildren
+  '/settings/coolify': typeof SettingsCoolifyRouteRouteWithChildren
+  '/settings/github': typeof SettingsGithubRouteRouteWithChildren
+  '/settings/llm': typeof SettingsLlmRouteRouteWithChildren
+  '/settings/migadu': typeof SettingsMigaduRouteRouteWithChildren
+  '/settings/minimax': typeof SettingsMinimaxRouteRouteWithChildren
+  '/settings/prices': typeof SettingsPricesRouteRouteWithChildren
   '/agents/': typeof AgentsIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/home/': typeof HomeIndexRoute
-  '/integrations/': typeof IntegrationsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
   '/agents/$agentId/contract': typeof AgentsAgentIdContractRouteRouteWithChildren
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsRouteRouteWithChildren
   '/agents/$agentId/github': typeof AgentsAgentIdGithubRouteRouteWithChildren
@@ -446,11 +458,12 @@ export interface FileRoutesById {
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/conversations/': typeof HomeConversationsIndexRoute
-  '/integrations/coolify/': typeof IntegrationsCoolifyIndexRoute
-  '/integrations/github/': typeof IntegrationsGithubIndexRoute
-  '/integrations/migadu/': typeof IntegrationsMigaduIndexRoute
-  '/integrations/minimax/': typeof IntegrationsMinimaxIndexRoute
-  '/integrations/prices/': typeof IntegrationsPricesIndexRoute
+  '/settings/coolify/': typeof SettingsCoolifyIndexRoute
+  '/settings/github/': typeof SettingsGithubIndexRoute
+  '/settings/llm/': typeof SettingsLlmIndexRoute
+  '/settings/migadu/': typeof SettingsMigaduIndexRoute
+  '/settings/minimax/': typeof SettingsMinimaxIndexRoute
+  '/settings/prices/': typeof SettingsPricesIndexRoute
   '/agents/$agentId/conversations/$conversationId': typeof AgentsAgentIdConversationsConversationIdRouteRouteWithChildren
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
   '/agents/$agentId/contract/': typeof AgentsAgentIdContractIndexRoute
@@ -472,21 +485,22 @@ export interface FileRouteTypes {
     | '/agents'
     | '/finance'
     | '/home'
-    | '/integrations'
+    | '/settings'
     | '/agents/$agentId'
     | '/agents/roles'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/conversations'
-    | '/integrations/coolify'
-    | '/integrations/github'
-    | '/integrations/migadu'
-    | '/integrations/minimax'
-    | '/integrations/prices'
+    | '/settings/coolify'
+    | '/settings/github'
+    | '/settings/llm'
+    | '/settings/migadu'
+    | '/settings/minimax'
+    | '/settings/prices'
     | '/agents/'
     | '/finance/'
     | '/home/'
-    | '/integrations/'
+    | '/settings/'
     | '/agents/$agentId/contract'
     | '/agents/$agentId/conversations'
     | '/agents/$agentId/github'
@@ -500,11 +514,12 @@ export interface FileRouteTypes {
     | '/finance/accounts/'
     | '/finance/contracts/'
     | '/home/conversations/'
-    | '/integrations/coolify/'
-    | '/integrations/github/'
-    | '/integrations/migadu/'
-    | '/integrations/minimax/'
-    | '/integrations/prices/'
+    | '/settings/coolify/'
+    | '/settings/github/'
+    | '/settings/llm/'
+    | '/settings/migadu/'
+    | '/settings/minimax/'
+    | '/settings/prices/'
     | '/agents/$agentId/conversations/$conversationId'
     | '/agents/$agentId/providers/$providerType'
     | '/agents/$agentId/contract/'
@@ -524,17 +539,18 @@ export interface FileRouteTypes {
     | '/agents'
     | '/finance'
     | '/home'
-    | '/integrations'
+    | '/settings'
     | '/agents/$agentId'
     | '/agents/roles'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/conversations'
-    | '/integrations/coolify'
-    | '/integrations/github'
-    | '/integrations/migadu'
-    | '/integrations/minimax'
-    | '/integrations/prices'
+    | '/settings/coolify'
+    | '/settings/github'
+    | '/settings/llm'
+    | '/settings/migadu'
+    | '/settings/minimax'
+    | '/settings/prices'
     | '/agents/$agentId/contract'
     | '/agents/$agentId/conversations'
     | '/agents/$agentId/github'
@@ -552,21 +568,22 @@ export interface FileRouteTypes {
     | '/agents'
     | '/finance'
     | '/home'
-    | '/integrations'
+    | '/settings'
     | '/agents/$agentId'
     | '/agents/roles'
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/conversations'
-    | '/integrations/coolify'
-    | '/integrations/github'
-    | '/integrations/migadu'
-    | '/integrations/minimax'
-    | '/integrations/prices'
+    | '/settings/coolify'
+    | '/settings/github'
+    | '/settings/llm'
+    | '/settings/migadu'
+    | '/settings/minimax'
+    | '/settings/prices'
     | '/agents/'
     | '/finance/'
     | '/home/'
-    | '/integrations/'
+    | '/settings/'
     | '/agents/$agentId/contract'
     | '/agents/$agentId/conversations'
     | '/agents/$agentId/github'
@@ -580,11 +597,12 @@ export interface FileRouteTypes {
     | '/finance/accounts/'
     | '/finance/contracts/'
     | '/home/conversations/'
-    | '/integrations/coolify/'
-    | '/integrations/github/'
-    | '/integrations/migadu/'
-    | '/integrations/minimax/'
-    | '/integrations/prices/'
+    | '/settings/coolify/'
+    | '/settings/github/'
+    | '/settings/llm/'
+    | '/settings/migadu/'
+    | '/settings/minimax/'
+    | '/settings/prices/'
     | '/agents/$agentId/conversations/$conversationId'
     | '/agents/$agentId/providers/$providerType'
     | '/agents/$agentId/contract/'
@@ -605,16 +623,16 @@ export interface RootRouteChildren {
   AgentsRouteRoute: typeof AgentsRouteRouteWithChildren
   FinanceRouteRoute: typeof FinanceRouteRouteWithChildren
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
-  IntegrationsRouteRoute: typeof IntegrationsRouteRouteWithChildren
+  SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/integrations': {
-      id: '/integrations'
-      path: '/integrations'
-      fullPath: '/integrations'
-      preLoaderRoute: typeof IntegrationsRouteRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/home': {
@@ -645,12 +663,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/integrations/': {
-      id: '/integrations/'
+    '/settings/': {
+      id: '/settings/'
       path: '/'
-      fullPath: '/integrations/'
-      preLoaderRoute: typeof IntegrationsIndexRouteImport
-      parentRoute: typeof IntegrationsRouteRoute
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/home/': {
       id: '/home/'
@@ -673,40 +691,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsIndexRouteImport
       parentRoute: typeof AgentsRouteRoute
     }
-    '/integrations/prices': {
-      id: '/integrations/prices'
+    '/settings/prices': {
+      id: '/settings/prices'
       path: '/prices'
-      fullPath: '/integrations/prices'
-      preLoaderRoute: typeof IntegrationsPricesRouteRouteImport
-      parentRoute: typeof IntegrationsRouteRoute
+      fullPath: '/settings/prices'
+      preLoaderRoute: typeof SettingsPricesRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
-    '/integrations/minimax': {
-      id: '/integrations/minimax'
+    '/settings/minimax': {
+      id: '/settings/minimax'
       path: '/minimax'
-      fullPath: '/integrations/minimax'
-      preLoaderRoute: typeof IntegrationsMinimaxRouteRouteImport
-      parentRoute: typeof IntegrationsRouteRoute
+      fullPath: '/settings/minimax'
+      preLoaderRoute: typeof SettingsMinimaxRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
-    '/integrations/migadu': {
-      id: '/integrations/migadu'
+    '/settings/migadu': {
+      id: '/settings/migadu'
       path: '/migadu'
-      fullPath: '/integrations/migadu'
-      preLoaderRoute: typeof IntegrationsMigaduRouteRouteImport
-      parentRoute: typeof IntegrationsRouteRoute
+      fullPath: '/settings/migadu'
+      preLoaderRoute: typeof SettingsMigaduRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
-    '/integrations/github': {
-      id: '/integrations/github'
+    '/settings/llm': {
+      id: '/settings/llm'
+      path: '/llm'
+      fullPath: '/settings/llm'
+      preLoaderRoute: typeof SettingsLlmRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/github': {
+      id: '/settings/github'
       path: '/github'
-      fullPath: '/integrations/github'
-      preLoaderRoute: typeof IntegrationsGithubRouteRouteImport
-      parentRoute: typeof IntegrationsRouteRoute
+      fullPath: '/settings/github'
+      preLoaderRoute: typeof SettingsGithubRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
-    '/integrations/coolify': {
-      id: '/integrations/coolify'
+    '/settings/coolify': {
+      id: '/settings/coolify'
       path: '/coolify'
-      fullPath: '/integrations/coolify'
-      preLoaderRoute: typeof IntegrationsCoolifyRouteRouteImport
-      parentRoute: typeof IntegrationsRouteRoute
+      fullPath: '/settings/coolify'
+      preLoaderRoute: typeof SettingsCoolifyRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/home/conversations': {
       id: '/home/conversations'
@@ -743,40 +768,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsAgentIdRouteRouteImport
       parentRoute: typeof AgentsRouteRoute
     }
-    '/integrations/prices/': {
-      id: '/integrations/prices/'
+    '/settings/prices/': {
+      id: '/settings/prices/'
       path: '/'
-      fullPath: '/integrations/prices/'
-      preLoaderRoute: typeof IntegrationsPricesIndexRouteImport
-      parentRoute: typeof IntegrationsPricesRouteRoute
+      fullPath: '/settings/prices/'
+      preLoaderRoute: typeof SettingsPricesIndexRouteImport
+      parentRoute: typeof SettingsPricesRouteRoute
     }
-    '/integrations/minimax/': {
-      id: '/integrations/minimax/'
+    '/settings/minimax/': {
+      id: '/settings/minimax/'
       path: '/'
-      fullPath: '/integrations/minimax/'
-      preLoaderRoute: typeof IntegrationsMinimaxIndexRouteImport
-      parentRoute: typeof IntegrationsMinimaxRouteRoute
+      fullPath: '/settings/minimax/'
+      preLoaderRoute: typeof SettingsMinimaxIndexRouteImport
+      parentRoute: typeof SettingsMinimaxRouteRoute
     }
-    '/integrations/migadu/': {
-      id: '/integrations/migadu/'
+    '/settings/migadu/': {
+      id: '/settings/migadu/'
       path: '/'
-      fullPath: '/integrations/migadu/'
-      preLoaderRoute: typeof IntegrationsMigaduIndexRouteImport
-      parentRoute: typeof IntegrationsMigaduRouteRoute
+      fullPath: '/settings/migadu/'
+      preLoaderRoute: typeof SettingsMigaduIndexRouteImport
+      parentRoute: typeof SettingsMigaduRouteRoute
     }
-    '/integrations/github/': {
-      id: '/integrations/github/'
+    '/settings/llm/': {
+      id: '/settings/llm/'
       path: '/'
-      fullPath: '/integrations/github/'
-      preLoaderRoute: typeof IntegrationsGithubIndexRouteImport
-      parentRoute: typeof IntegrationsGithubRouteRoute
+      fullPath: '/settings/llm/'
+      preLoaderRoute: typeof SettingsLlmIndexRouteImport
+      parentRoute: typeof SettingsLlmRouteRoute
     }
-    '/integrations/coolify/': {
-      id: '/integrations/coolify/'
+    '/settings/github/': {
+      id: '/settings/github/'
       path: '/'
-      fullPath: '/integrations/coolify/'
-      preLoaderRoute: typeof IntegrationsCoolifyIndexRouteImport
-      parentRoute: typeof IntegrationsCoolifyRouteRoute
+      fullPath: '/settings/github/'
+      preLoaderRoute: typeof SettingsGithubIndexRouteImport
+      parentRoute: typeof SettingsGithubRouteRoute
+    }
+    '/settings/coolify/': {
+      id: '/settings/coolify/'
+      path: '/'
+      fullPath: '/settings/coolify/'
+      preLoaderRoute: typeof SettingsCoolifyIndexRouteImport
+      parentRoute: typeof SettingsCoolifyRouteRoute
     }
     '/home/conversations/': {
       id: '/home/conversations/'
@@ -1237,103 +1269,102 @@ const HomeRouteRouteWithChildren = HomeRouteRoute._addFileChildren(
   HomeRouteRouteChildren,
 )
 
-interface IntegrationsCoolifyRouteRouteChildren {
-  IntegrationsCoolifyIndexRoute: typeof IntegrationsCoolifyIndexRoute
+interface SettingsCoolifyRouteRouteChildren {
+  SettingsCoolifyIndexRoute: typeof SettingsCoolifyIndexRoute
 }
 
-const IntegrationsCoolifyRouteRouteChildren: IntegrationsCoolifyRouteRouteChildren =
-  {
-    IntegrationsCoolifyIndexRoute: IntegrationsCoolifyIndexRoute,
-  }
-
-const IntegrationsCoolifyRouteRouteWithChildren =
-  IntegrationsCoolifyRouteRoute._addFileChildren(
-    IntegrationsCoolifyRouteRouteChildren,
-  )
-
-interface IntegrationsGithubRouteRouteChildren {
-  IntegrationsGithubIndexRoute: typeof IntegrationsGithubIndexRoute
+const SettingsCoolifyRouteRouteChildren: SettingsCoolifyRouteRouteChildren = {
+  SettingsCoolifyIndexRoute: SettingsCoolifyIndexRoute,
 }
 
-const IntegrationsGithubRouteRouteChildren: IntegrationsGithubRouteRouteChildren =
-  {
-    IntegrationsGithubIndexRoute: IntegrationsGithubIndexRoute,
-  }
+const SettingsCoolifyRouteRouteWithChildren =
+  SettingsCoolifyRouteRoute._addFileChildren(SettingsCoolifyRouteRouteChildren)
 
-const IntegrationsGithubRouteRouteWithChildren =
-  IntegrationsGithubRouteRoute._addFileChildren(
-    IntegrationsGithubRouteRouteChildren,
-  )
-
-interface IntegrationsMigaduRouteRouteChildren {
-  IntegrationsMigaduIndexRoute: typeof IntegrationsMigaduIndexRoute
+interface SettingsGithubRouteRouteChildren {
+  SettingsGithubIndexRoute: typeof SettingsGithubIndexRoute
 }
 
-const IntegrationsMigaduRouteRouteChildren: IntegrationsMigaduRouteRouteChildren =
-  {
-    IntegrationsMigaduIndexRoute: IntegrationsMigaduIndexRoute,
-  }
-
-const IntegrationsMigaduRouteRouteWithChildren =
-  IntegrationsMigaduRouteRoute._addFileChildren(
-    IntegrationsMigaduRouteRouteChildren,
-  )
-
-interface IntegrationsMinimaxRouteRouteChildren {
-  IntegrationsMinimaxIndexRoute: typeof IntegrationsMinimaxIndexRoute
+const SettingsGithubRouteRouteChildren: SettingsGithubRouteRouteChildren = {
+  SettingsGithubIndexRoute: SettingsGithubIndexRoute,
 }
 
-const IntegrationsMinimaxRouteRouteChildren: IntegrationsMinimaxRouteRouteChildren =
-  {
-    IntegrationsMinimaxIndexRoute: IntegrationsMinimaxIndexRoute,
-  }
+const SettingsGithubRouteRouteWithChildren =
+  SettingsGithubRouteRoute._addFileChildren(SettingsGithubRouteRouteChildren)
 
-const IntegrationsMinimaxRouteRouteWithChildren =
-  IntegrationsMinimaxRouteRoute._addFileChildren(
-    IntegrationsMinimaxRouteRouteChildren,
-  )
-
-interface IntegrationsPricesRouteRouteChildren {
-  IntegrationsPricesIndexRoute: typeof IntegrationsPricesIndexRoute
+interface SettingsLlmRouteRouteChildren {
+  SettingsLlmIndexRoute: typeof SettingsLlmIndexRoute
 }
 
-const IntegrationsPricesRouteRouteChildren: IntegrationsPricesRouteRouteChildren =
-  {
-    IntegrationsPricesIndexRoute: IntegrationsPricesIndexRoute,
-  }
-
-const IntegrationsPricesRouteRouteWithChildren =
-  IntegrationsPricesRouteRoute._addFileChildren(
-    IntegrationsPricesRouteRouteChildren,
-  )
-
-interface IntegrationsRouteRouteChildren {
-  IntegrationsCoolifyRouteRoute: typeof IntegrationsCoolifyRouteRouteWithChildren
-  IntegrationsGithubRouteRoute: typeof IntegrationsGithubRouteRouteWithChildren
-  IntegrationsMigaduRouteRoute: typeof IntegrationsMigaduRouteRouteWithChildren
-  IntegrationsMinimaxRouteRoute: typeof IntegrationsMinimaxRouteRouteWithChildren
-  IntegrationsPricesRouteRoute: typeof IntegrationsPricesRouteRouteWithChildren
-  IntegrationsIndexRoute: typeof IntegrationsIndexRoute
+const SettingsLlmRouteRouteChildren: SettingsLlmRouteRouteChildren = {
+  SettingsLlmIndexRoute: SettingsLlmIndexRoute,
 }
 
-const IntegrationsRouteRouteChildren: IntegrationsRouteRouteChildren = {
-  IntegrationsCoolifyRouteRoute: IntegrationsCoolifyRouteRouteWithChildren,
-  IntegrationsGithubRouteRoute: IntegrationsGithubRouteRouteWithChildren,
-  IntegrationsMigaduRouteRoute: IntegrationsMigaduRouteRouteWithChildren,
-  IntegrationsMinimaxRouteRoute: IntegrationsMinimaxRouteRouteWithChildren,
-  IntegrationsPricesRouteRoute: IntegrationsPricesRouteRouteWithChildren,
-  IntegrationsIndexRoute: IntegrationsIndexRoute,
+const SettingsLlmRouteRouteWithChildren =
+  SettingsLlmRouteRoute._addFileChildren(SettingsLlmRouteRouteChildren)
+
+interface SettingsMigaduRouteRouteChildren {
+  SettingsMigaduIndexRoute: typeof SettingsMigaduIndexRoute
 }
 
-const IntegrationsRouteRouteWithChildren =
-  IntegrationsRouteRoute._addFileChildren(IntegrationsRouteRouteChildren)
+const SettingsMigaduRouteRouteChildren: SettingsMigaduRouteRouteChildren = {
+  SettingsMigaduIndexRoute: SettingsMigaduIndexRoute,
+}
+
+const SettingsMigaduRouteRouteWithChildren =
+  SettingsMigaduRouteRoute._addFileChildren(SettingsMigaduRouteRouteChildren)
+
+interface SettingsMinimaxRouteRouteChildren {
+  SettingsMinimaxIndexRoute: typeof SettingsMinimaxIndexRoute
+}
+
+const SettingsMinimaxRouteRouteChildren: SettingsMinimaxRouteRouteChildren = {
+  SettingsMinimaxIndexRoute: SettingsMinimaxIndexRoute,
+}
+
+const SettingsMinimaxRouteRouteWithChildren =
+  SettingsMinimaxRouteRoute._addFileChildren(SettingsMinimaxRouteRouteChildren)
+
+interface SettingsPricesRouteRouteChildren {
+  SettingsPricesIndexRoute: typeof SettingsPricesIndexRoute
+}
+
+const SettingsPricesRouteRouteChildren: SettingsPricesRouteRouteChildren = {
+  SettingsPricesIndexRoute: SettingsPricesIndexRoute,
+}
+
+const SettingsPricesRouteRouteWithChildren =
+  SettingsPricesRouteRoute._addFileChildren(SettingsPricesRouteRouteChildren)
+
+interface SettingsRouteRouteChildren {
+  SettingsCoolifyRouteRoute: typeof SettingsCoolifyRouteRouteWithChildren
+  SettingsGithubRouteRoute: typeof SettingsGithubRouteRouteWithChildren
+  SettingsLlmRouteRoute: typeof SettingsLlmRouteRouteWithChildren
+  SettingsMigaduRouteRoute: typeof SettingsMigaduRouteRouteWithChildren
+  SettingsMinimaxRouteRoute: typeof SettingsMinimaxRouteRouteWithChildren
+  SettingsPricesRouteRoute: typeof SettingsPricesRouteRouteWithChildren
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
+  SettingsCoolifyRouteRoute: SettingsCoolifyRouteRouteWithChildren,
+  SettingsGithubRouteRoute: SettingsGithubRouteRouteWithChildren,
+  SettingsLlmRouteRoute: SettingsLlmRouteRouteWithChildren,
+  SettingsMigaduRouteRoute: SettingsMigaduRouteRouteWithChildren,
+  SettingsMinimaxRouteRoute: SettingsMinimaxRouteRouteWithChildren,
+  SettingsPricesRouteRoute: SettingsPricesRouteRouteWithChildren,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
+  SettingsRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRouteRoute: AgentsRouteRouteWithChildren,
   FinanceRouteRoute: FinanceRouteRouteWithChildren,
   HomeRouteRoute: HomeRouteRouteWithChildren,
-  IntegrationsRouteRoute: IntegrationsRouteRouteWithChildren,
+  SettingsRouteRoute: SettingsRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

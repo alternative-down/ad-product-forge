@@ -7,11 +7,11 @@ import { Switch } from '@/components/ui/switch';
 import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-export const Route = createFileRoute('/integrations/github/')({
-  component: IntegrationsGithubRoute,
+export const Route = createFileRoute('/settings/github/')({
+  component: SettingsGithubRoute,
 });
 
-function IntegrationsGithubRoute() {
+function SettingsGithubRoute() {
   const queryClient = useQueryClient();
   const integrationsQuery = useQuery({
     queryKey: ['admin', 'system-integrations'],

@@ -14,7 +14,7 @@ export function AdminTopbar(input: {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const homeActive = input.pathname === '/home';
   const agentsActive = input.pathname.startsWith('/agents');
-  const integrationsActive = input.pathname.startsWith('/integrations');
+  const settingsActive = input.pathname.startsWith('/settings') || input.pathname.startsWith('/integrations');
   const financeActive = input.pathname.startsWith('/finance');
 
   return (
@@ -60,11 +60,11 @@ export function AdminTopbar(input: {
                 Financeiro
               </Link>
               <Link
-                to="/integrations"
+                to="/settings"
                 onClick={() => setMobileMenuOpen(false)}
-                className={integrationsActive ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground' : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'}
+                className={settingsActive ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground' : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'}
               >
-                Integrações
+                Configurações
               </Link>
             </nav>
           </SheetContent>
@@ -91,10 +91,10 @@ export function AdminTopbar(input: {
             Financeiro
           </Link>
           <Link
-            to="/integrations"
-            className={integrationsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+            to="/settings"
+            className={settingsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
           >
-            Integrações
+            Configurações
           </Link>
         </nav>
       </div>

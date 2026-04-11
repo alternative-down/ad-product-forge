@@ -19,8 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-export const Route = createFileRoute('/integrations/prices/')({
-  component: IntegrationsPricesRoute,
+export const Route = createFileRoute('/settings/prices/')({
+  component: SettingsPricesRoute,
 });
 
 function createEmptyPriceForm(): UpsertLlmModelPriceInput {
@@ -32,7 +32,7 @@ function createEmptyPriceForm(): UpsertLlmModelPriceInput {
   };
 }
 
-function IntegrationsPricesRoute() {
+function SettingsPricesRoute() {
   const queryClient = useQueryClient();
   const llmQuery = useQuery({
     queryKey: ['admin', 'system-llm'],
