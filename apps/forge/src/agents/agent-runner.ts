@@ -19,6 +19,7 @@ const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 3;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
+const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
@@ -467,10 +468,12 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       }, GENERATE_TIMEOUT_MS);
 
       try {
+        const agentContextInstructions = await loadAgentContextInstructions();
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await runtime.agent.generate(promptText, {
           maxSteps: 1,
           abortSignal: controller.signal,
+          ...(agentContextInstructions ? { system: agentContextInstructions } : {}),
           memory: {
             thread: runtime.mastraId,
             resource: runtime.mastraId,
@@ -516,6 +519,37 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     throw new Error('Agent generate timed out after all retry attempts');
+  }
+
+  async function loadAgentContextInstructions() {
+    const filesystem = runtime.workspace.filesystem;
+
+    if (!filesystem) {
+      return undefined;
+    }
+
+    const exists = await filesystem.exists(AGENT_CONTEXT_FILE_PATH);
+
+    if (!exists) {
+      return undefined;
+    }
+
+    const data = await filesystem.readFile(AGENT_CONTEXT_FILE_PATH);
+    const content = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
+    const trimmedContent = content.trim();
+
+    if (!trimmedContent) {
+      return undefined;
+    }
+
+    return [
+      'Automatically loaded workspace context file.',
+      `File: ${AGENT_CONTEXT_FILE_PATH}`,
+      'This is the only workspace file auto-loaded into the execution context.',
+      'Treat it as a concise summary layer. Keep details in other files and store only high-signal references here when needed.',
+      '',
+      trimmedContent,
+    ].join('\n');
   }
 }
 

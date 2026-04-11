@@ -1,5 +1,6 @@
 import type { Agent, AgentConfig, ToolsInput } from '@mastra/core/agent';
 import type { AgentWakeEvent, CommunicationModule, CommunicationProvider } from '@mastra-engine/core';
+import type { Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 
 import type {
   WorkspaceFilesystemConfig,
@@ -48,6 +49,7 @@ export type InternalAgentRuntime<
   omPricingModelKey: string;
   omModelProfileId?: string;
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
+  workspace: WorkspaceRuntime;
   communication: CommunicationModule;
   onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
 };

@@ -35,6 +35,8 @@ export function buildAgentSystemPrompt(input: {
     return input.instructions;
   }
 
+  const agentContextFilePath = 'AGENT_CONTEXT.md';
+
   const sections = [
     [
       '<agent_identity>',
@@ -108,6 +110,12 @@ export function buildAgentSystemPrompt(input: {
       '- Maintain an active written record inside your workspace as your own operational notebook. Use files there to register important context, detailed notes, decisions, reflections, inferred patterns, follow-ups, and anything you may need to revisit later.',
       '- Treat those workspace files as a durable journal and knowledge base that you actively manage yourself. Keep them organized by topic, workstream, or time period so they remain easy to reread.',
       '- Before starting relevant work, reread the workspace notes that matter for that area so you recover context, resume pending thought, and avoid forgetting earlier conclusions.',
+      `- Maintain a concise top-level context file at \`${agentContextFilePath}\` in your workspace root. This file is the one workspace note that the system automatically loads into your execution context on every generate step.`,
+      `- Because \`${agentContextFilePath}\` is auto-loaded, keep it especially compact, structured, and high signal. Put only the most important operating context there.`,
+      `- Use \`${agentContextFilePath}\` for the summary layer: current domain context, durable notes worth carrying into every step, and short references to deeper files when more detail exists elsewhere.`,
+      `- Do not turn \`${agentContextFilePath}\` into a dump. If a topic needs detail, keep the detail in other workspace files and store only a short pointer or retrieval hint in \`${agentContextFilePath}\`.`,
+      `- Update \`${agentContextFilePath}\` whenever important operating context changes so the auto-loaded summary stays trustworthy and useful.`,
+      `- Since \`${agentContextFilePath}\` is auto-loaded, you do not need to manually reread it before each action. Focus manual rereads on the deeper files it references when you need the detailed context.`,
       '- Use workspace records for detailed dumps and evolving documentation. Use working memory for compact operational continuity. They are complementary and should not contain the exact same material.',
       '- Record things in the workspace when they may matter later: open questions, partial conclusions, hypotheses, observations, decisions, lessons learned, plans to revisit, and detailed context that is too large or too fluid for working memory.',
       '- Revisit and refactor those workspace notes regularly. Consolidate duplicates, remove stale material, rewrite vague notes into clearer summaries, and turn important conclusions into usable guidance for future work.',
