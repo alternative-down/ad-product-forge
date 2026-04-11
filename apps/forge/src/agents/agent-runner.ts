@@ -11,11 +11,11 @@ import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
-const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
+const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS;
 const STUCK_LOOP_REPEAT_LIMIT = 6;
-const STEP_HANG_WARNING_MS = ONE_HOUR_MS;
+const STEP_HANG_WARNING_MS = FIFTEEN_MINUTES_MS;
 const STEP_TIMEOUT_RECOVERY_ENABLED = false;
-const GENERATE_TIMEOUT_MS = 5 * ONE_MINUTE_MS;
+const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 3;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
@@ -203,6 +203,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           stepTimeoutRecoveryEnabled: STEP_TIMEOUT_RECOVERY_ENABLED,
         }, null, 2),
       );
+
     }, STEP_HANG_WARNING_MS);
 
     try {
