@@ -469,11 +469,12 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
       try {
         const agentContextInstructions = await loadAgentContextInstructions();
+        const executionInstructions = buildExecutionInstructions(agentContextInstructions);
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await runtime.agent.generate(promptText, {
           maxSteps: 1,
           abortSignal: controller.signal,
-          ...(agentContextInstructions ? { system: agentContextInstructions } : {}),
+          ...(executionInstructions ? { instructions: executionInstructions } : {}),
           memory: {
             thread: runtime.mastraId,
             resource: runtime.mastraId,
@@ -545,11 +546,26 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     return [
       'Automatically loaded workspace context file.',
       `File: ${AGENT_CONTEXT_FILE_PATH}`,
+      'This file should be treated as additional runtime instructions and context.',
       'This is the only workspace file auto-loaded into the execution context.',
       'Treat it as a concise summary layer. Keep details in other files and store only high-signal references here when needed.',
       '',
       trimmedContent,
     ].join('\n');
+  }
+
+  function buildExecutionInstructions(agentContextInstructions?: string) {
+    if (!agentContextInstructions) {
+      return undefined;
+    }
+
+    const baseInstructions = runtime.agent.__getOverridableFields().instructions;
+
+    if (typeof baseInstructions !== 'string') {
+      return agentContextInstructions;
+    }
+
+    return `${baseInstructions}\n\n${agentContextInstructions}`;
   }
 }
 
