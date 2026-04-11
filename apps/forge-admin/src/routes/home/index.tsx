@@ -42,6 +42,18 @@ function HomeIndexRoute() {
     companyName: string;
     companyContext: string;
   } | null>(null);
+  const [runtimeDraft, setRuntimeDraft] = useState<{
+    memoryLastMessagesFullEnabled: boolean;
+    memoryLastMessagesCount: string;
+    tokenCountFilterEnabled: boolean;
+    tokenCountFilterLimit: string;
+    omObservationMessageTokens: string;
+    omObservationBufferTokens: string;
+    omObservationBufferActivation: string;
+    omObservationPreviousObserverTokens: string;
+    omReflectionObservationTokens: string;
+    omReflectionBufferActivation: string;
+  } | null>(null);
   const mutation = useMutation({
     mutationFn: upsertSystemSettings,
     onMutate: () => startAdminAction('Salvando empresa...'),
@@ -49,6 +61,7 @@ function HomeIndexRoute() {
       succeedAdminAction(context, 'Empresa atualizada.');
       setEditOpen(false);
       setDraft(null);
+      setRuntimeDraft(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] });
     },
     onError: (error, _variables, context) => {
@@ -87,6 +100,21 @@ function HomeIndexRoute() {
   const companyName = draft?.companyName ?? settingsQuery.data?.companyName ?? '';
   const companyContext = draft?.companyContext ?? settingsQuery.data?.companyContext ?? '';
   const agents = agentsQuery.data ?? [];
+
+  const runtimeSettings = runtimeDraft ?? (settingsQuery.data
+    ? {
+        memoryLastMessagesFullEnabled: settingsQuery.data.memoryLastMessagesFullEnabled,
+        memoryLastMessagesCount: String(settingsQuery.data.memoryLastMessagesCount),
+        tokenCountFilterEnabled: settingsQuery.data.tokenCountFilterEnabled,
+        tokenCountFilterLimit: String(settingsQuery.data.tokenCountFilterLimit),
+        omObservationMessageTokens: String(settingsQuery.data.omObservationMessageTokens),
+        omObservationBufferTokens: String(settingsQuery.data.omObservationBufferTokens),
+        omObservationBufferActivation: String(settingsQuery.data.omObservationBufferActivation),
+        omObservationPreviousObserverTokens: String(settingsQuery.data.omObservationPreviousObserverTokens),
+        omReflectionObservationTokens: String(settingsQuery.data.omReflectionObservationTokens),
+        omReflectionBufferActivation: String(settingsQuery.data.omReflectionBufferActivation),
+      }
+    : null);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -161,6 +189,195 @@ function HomeIndexRoute() {
           />
         </div>
         {stepDelayMutation.error ? <div className="text-sm text-destructive">{stepDelayMutation.error.message}</div> : null}
+      </section>
+
+      <section className="space-y-4 border-t border-border pt-6">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Memória e contexto</div>
+          <div className="text-sm text-muted-foreground">
+            Configurações globais de `lastMessages`, token limiter e Observational Memory.
+          </div>
+        </div>
+
+        {runtimeSettings ? (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+
+              if (!settingsQuery.data) {
+                return;
+              }
+
+              mutation.mutate({
+                companyName: settingsQuery.data.companyName,
+                companyContext: settingsQuery.data.companyContext,
+                stepDelayEnabled: settingsQuery.data.stepDelayEnabled,
+                communicationDmFlushingEnabled: settingsQuery.data.communicationDmFlushingEnabled,
+                communicationGroupFlushingEnabled: settingsQuery.data.communicationGroupFlushingEnabled,
+                memoryLastMessagesFullEnabled: runtimeSettings.memoryLastMessagesFullEnabled,
+                memoryLastMessagesCount: Number(runtimeSettings.memoryLastMessagesCount),
+                tokenCountFilterEnabled: runtimeSettings.tokenCountFilterEnabled,
+                tokenCountFilterLimit: Number(runtimeSettings.tokenCountFilterLimit),
+                omObservationMessageTokens: Number(runtimeSettings.omObservationMessageTokens),
+                omObservationBufferTokens: Number(runtimeSettings.omObservationBufferTokens),
+                omObservationBufferActivation: Number(runtimeSettings.omObservationBufferActivation),
+                omObservationPreviousObserverTokens: Number(runtimeSettings.omObservationPreviousObserverTokens),
+                omReflectionObservationTokens: Number(runtimeSettings.omReflectionObservationTokens),
+                omReflectionBufferActivation: Number(runtimeSettings.omReflectionBufferActivation),
+              });
+            }}
+          >
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Last messages full load</label>
+                <Switch
+                  checked={runtimeSettings.memoryLastMessagesFullEnabled}
+                  disabled={settingsQuery.isLoading || mutation.isPending}
+                  onCheckedChange={(checked) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      memoryLastMessagesFullEnabled: checked,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Last messages count</label>
+                <AdminInput
+                  type="number"
+                  value={runtimeSettings.memoryLastMessagesCount}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      memoryLastMessagesCount: event.target.value,
+                    })
+                  }
+                  disabled={settingsQuery.isLoading || mutation.isPending || runtimeSettings.memoryLastMessagesFullEnabled}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Token count filter</label>
+                <Switch
+                  checked={runtimeSettings.tokenCountFilterEnabled}
+                  disabled={settingsQuery.isLoading || mutation.isPending}
+                  onCheckedChange={(checked) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      tokenCountFilterEnabled: checked,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Token count limit</label>
+                <AdminInput
+                  type="number"
+                  value={runtimeSettings.tokenCountFilterLimit}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      tokenCountFilterLimit: event.target.value,
+                    })
+                  }
+                  disabled={settingsQuery.isLoading || mutation.isPending || !runtimeSettings.tokenCountFilterEnabled}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">OM observation message tokens</label>
+                <AdminInput
+                  type="number"
+                  value={runtimeSettings.omObservationMessageTokens}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      omObservationMessageTokens: event.target.value,
+                    })
+                  }
+                  disabled={settingsQuery.isLoading || mutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">OM observation buffer tokens</label>
+                <AdminInput
+                  type="number"
+                  step="0.01"
+                  value={runtimeSettings.omObservationBufferTokens}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      omObservationBufferTokens: event.target.value,
+                    })
+                  }
+                  disabled={settingsQuery.isLoading || mutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">OM observation buffer activation</label>
+                <AdminInput
+                  type="number"
+                  step="0.01"
+                  value={runtimeSettings.omObservationBufferActivation}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      omObservationBufferActivation: event.target.value,
+                    })
+                  }
+                  disabled={settingsQuery.isLoading || mutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">OM previous observer tokens</label>
+                <AdminInput
+                  type="number"
+                  value={runtimeSettings.omObservationPreviousObserverTokens}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      omObservationPreviousObserverTokens: event.target.value,
+                    })
+                  }
+                  disabled={settingsQuery.isLoading || mutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">OM reflection observation tokens</label>
+                <AdminInput
+                  type="number"
+                  value={runtimeSettings.omReflectionObservationTokens}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      omReflectionObservationTokens: event.target.value,
+                    })
+                  }
+                  disabled={settingsQuery.isLoading || mutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">OM reflection buffer activation</label>
+                <AdminInput
+                  type="number"
+                  step="0.01"
+                  value={runtimeSettings.omReflectionBufferActivation}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      omReflectionBufferActivation: event.target.value,
+                    })
+                  }
+                  disabled={settingsQuery.isLoading || mutation.isPending}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <AdminButton type="submit" disabled={settingsQuery.isLoading || mutation.isPending}>
+                {mutation.isPending ? 'Salvando...' : 'Salvar memória e OM'}
+              </AdminButton>
+            </div>
+          </form>
+        ) : null}
       </section>
 
       <section className="space-y-5">
@@ -238,6 +455,16 @@ function HomeIndexRoute() {
                 stepDelayEnabled: settingsQuery.data.stepDelayEnabled,
                 communicationDmFlushingEnabled: settingsQuery.data.communicationDmFlushingEnabled,
                 communicationGroupFlushingEnabled: settingsQuery.data.communicationGroupFlushingEnabled,
+                memoryLastMessagesFullEnabled: settingsQuery.data.memoryLastMessagesFullEnabled,
+                memoryLastMessagesCount: settingsQuery.data.memoryLastMessagesCount,
+                tokenCountFilterEnabled: settingsQuery.data.tokenCountFilterEnabled,
+                tokenCountFilterLimit: settingsQuery.data.tokenCountFilterLimit,
+                omObservationMessageTokens: settingsQuery.data.omObservationMessageTokens,
+                omObservationBufferTokens: settingsQuery.data.omObservationBufferTokens,
+                omObservationBufferActivation: settingsQuery.data.omObservationBufferActivation,
+                omObservationPreviousObserverTokens: settingsQuery.data.omObservationPreviousObserverTokens,
+                omReflectionObservationTokens: settingsQuery.data.omReflectionObservationTokens,
+                omReflectionBufferActivation: settingsQuery.data.omReflectionBufferActivation,
               });
             }}
           >

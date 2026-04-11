@@ -18,12 +18,31 @@ export const OBSERVATIONAL_MEMORY_CONFIG = {
 export function createObservationalMemory(config: {
   storage: LibSQLStore;
   model: AgentConfig['model'];
+  observation?: {
+    messageTokens?: number;
+    bufferTokens?: number;
+    bufferActivation?: number;
+    previousObserverTokens?: number;
+  };
+  reflection?: {
+    observationTokens?: number;
+    bufferActivation?: number;
+  };
 }) {
+  const observation = {
+    ...OBSERVATIONAL_MEMORY_CONFIG.observation,
+    ...config.observation,
+  };
+  const reflection = {
+    ...OBSERVATIONAL_MEMORY_CONFIG.reflection,
+    ...config.reflection,
+  };
+
   return new ObservationalMemory({
     storage: config.storage.stores.memory!,
     model: config.model,
     scope: 'thread',
-    observation: OBSERVATIONAL_MEMORY_CONFIG.observation,
-    reflection: OBSERVATIONAL_MEMORY_CONFIG.reflection,
+    observation,
+    reflection,
   });
 }

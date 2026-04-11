@@ -63,6 +63,16 @@ export async function createInternalAgentRuntime<
     omModel: config.omModel as CreateAgentConfig['omModel'],
     agentMemoryPath: platform.agentMemoryPath,
     longTermMemory: options.longTermMemory,
+    memoryLastMessagesFullEnabled: config.memoryLastMessagesFullEnabled,
+    memoryLastMessagesCount: config.memoryLastMessagesCount,
+    tokenCountFilterEnabled: config.tokenCountFilterEnabled,
+    tokenCountFilterLimit: config.tokenCountFilterLimit,
+    omObservationMessageTokens: config.omObservationMessageTokens,
+    omObservationBufferTokens: config.omObservationBufferTokens,
+    omObservationBufferActivation: config.omObservationBufferActivation,
+    omObservationPreviousObserverTokens: config.omObservationPreviousObserverTokens,
+    omReflectionObservationTokens: config.omReflectionObservationTokens,
+    omReflectionBufferActivation: config.omReflectionBufferActivation,
   });
 
   const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({
