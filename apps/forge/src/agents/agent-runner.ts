@@ -18,6 +18,7 @@ const STEP_TIMEOUT_RECOVERY_ENABLED = false;
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 3;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
+const DEFAULT_RUN_LAST_MESSAGES = 20;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
@@ -41,6 +42,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let lastStepStage: string | null = null;
   let lastLoopSignature: string | null = null;
   let repeatedLoopCount = 0;
+  let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
@@ -79,6 +81,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     instant = true;
+    resetRunLastMessages();
     resetLoopDetector();
     lastWakeStartedAt = Date.now();
     await queueNextStep();
@@ -99,6 +102,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
     instant = true;
     backoffMs = ONE_MINUTE_MS;
+    resetRunLastMessages();
     resetLoopDetector();
     lastWakeStartedAt = Date.now();
     await store.setExecutionState(runtime.id, 'running');
@@ -136,6 +140,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     stopped = true;
     clearTimer();
     wakeQueue.stop();
+    resetRunLastMessages();
   }
 
   async function queueNextStep() {
@@ -250,6 +255,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       await usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
       lastStepStage = 'recording-observational-memory-usage';
       await usage.recordObservationalMemorySteps(contractId, result.steps);
+      incrementRunLastMessages();
 
       lastStepStage = 'processing-runner-control';
       const controlDirective = extractRunnerControlDirective(result.text);
@@ -270,6 +276,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           ].join('\n'),
         });
         nextStepAt = null;
+        resetRunLastMessages();
         resetLoopDetector();
         await store.setExecutionState(runtime.id, 'idle');
         await wakeQueue.onRunnerIdle();
@@ -348,6 +355,14 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   function resetLoopDetector() {
     lastLoopSignature = null;
     repeatedLoopCount = 0;
+  }
+
+  function resetRunLastMessages() {
+    runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
+  }
+
+  function incrementRunLastMessages() {
+    runLastMessages += 1;
   }
 
   function registerLoopSignature(signature: string) {
@@ -459,6 +474,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           memory: {
             thread: runtime.mastraId,
             resource: runtime.mastraId,
+            options: {
+              lastMessages: runLastMessages,
+            },
           },
           providerOptions: {
             anthropic: {
