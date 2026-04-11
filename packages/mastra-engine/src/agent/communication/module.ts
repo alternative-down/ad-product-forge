@@ -445,7 +445,16 @@ export async function createCommunicationModule(config: {
     };
   }
 
+  async function dispose() {
+    receiveMessageHandler = null;
+
+    for (const provider of providers.values()) {
+      await provider.dispose?.();
+    }
+  }
+
   return {
+    dispose,
     onReceiveMessage,
     listContacts,
     upsertContact,

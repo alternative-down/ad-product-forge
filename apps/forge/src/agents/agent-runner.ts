@@ -23,13 +23,21 @@ const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
-export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
+export function createAgentRunner(
+  db: Database,
+  runtime: InternalAgentRuntime,
+  options: {
+    reloadRuntime?: () => Promise<InternalAgentRuntime>;
+    onRuntimeReloaded?: (runtime: InternalAgentRuntime) => void;
+  } = {},
+) {
   const store = createAgentContractStore(db);
   const systemSettings = createSystemSettingsStore(db);
   const notifications = createAgentNotificationStore(db);
-  const usage = createAgentRunnerUsage({ store, runtime });
+  let currentRuntime = runtime;
+  let usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
   const wakeQueue = createAgentWakeQueue({
-    label: runtime.id,
+    label: currentRuntime.id,
     execute,
   });
   let timer: NodeJS.Timeout | null = null;
@@ -46,7 +54,21 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let runLastMessages: number | null = DEFAULT_RUN_LAST_MESSAGES;
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
-  runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
+  currentRuntime.onReceiveMessage(wakeQueue.notifyExternalEvent);
+
+  async function reloadRuntimeForNewRun() {
+    if (!options.reloadRuntime) {
+      return;
+    }
+
+    const previousRuntime = currentRuntime;
+    const nextRuntime = await options.reloadRuntime();
+    currentRuntime = nextRuntime;
+    usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
+    currentRuntime.onReceiveMessage(wakeQueue.notifyExternalEvent);
+    options.onRuntimeReloaded?.(nextRuntime);
+    await previousRuntime.dispose();
+  }
 
   function clearTimer() {
     if (!timer) {
@@ -106,6 +128,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     await resetRunLastMessages();
     resetLoopDetector();
     lastWakeStartedAt = Date.now();
+    await reloadRuntimeForNewRun();
     await store.setExecutionState(runtime.id, 'running');
     await queueNextStep();
   }
@@ -199,9 +222,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         `[AgentRunner] ${runtime.id} step appears stuck:`,
         JSON.stringify({
           agentId: runtime.id,
-          mastraId: runtime.mastraId,
-          pricingModelKey: runtime.pricingModelKey,
-          modelProfileId: runtime.modelProfileId,
+          mastraId: currentRuntime.mastraId,
+          pricingModelKey: currentRuntime.pricingModelKey,
+          modelProfileId: currentRuntime.modelProfileId,
           stepStartedAt: lastStepStartedAt,
           stepStage: lastStepStage,
           prompt,
@@ -331,9 +354,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         `[AgentRunner] ${runtime.id} step failed:`,
         JSON.stringify({
           agentId: runtime.id,
-          mastraId: runtime.mastraId,
-          pricingModelKey: runtime.pricingModelKey,
-          modelProfileId: runtime.modelProfileId,
+          mastraId: currentRuntime.mastraId,
+          pricingModelKey: currentRuntime.pricingModelKey,
+          modelProfileId: currentRuntime.modelProfileId,
           stepStartedAt: lastStepStartedAt,
           stepStage: lastStepStage,
           prompt,
@@ -480,13 +503,13 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
       try {
         const agentContextInstructions = await loadAgentContextInstructions();
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
-        const result = await runtime.agent.generate(promptText, {
+        const result = await currentRuntime.agent.generate(promptText, {
           maxSteps: 1,
           abortSignal: controller.signal,
           ...(agentContextInstructions ? { system: agentContextInstructions } : {}),
           memory: {
-            thread: runtime.mastraId,
-            resource: runtime.mastraId,
+            thread: currentRuntime.mastraId,
+            resource: currentRuntime.mastraId,
             options: runLastMessages === null
               ? undefined
               : {
@@ -534,7 +557,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   }
 
   async function loadAgentContextInstructions() {
-    const filesystem = runtime.workspace.filesystem;
+    const filesystem = currentRuntime.workspace.filesystem;
 
     if (!filesystem) {
       return undefined;

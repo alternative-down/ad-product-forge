@@ -43,6 +43,7 @@ export function createDiscordProvider(config: {
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
   const recentOutboundMessages = new Map<string, Array<{ content: string; createdAt: number }>>();
+  let disposed = false;
 
   function pruneRecentOutboundMessages(now: number) {
     for (const [conversationKey, messages] of recentOutboundMessages.entries()) {
@@ -285,6 +286,10 @@ export function createDiscordProvider(config: {
     }
 
     client.on(Events.MessageCreate, async (message) => {
+      if (disposed) {
+        return;
+      }
+
       const callback = onInboundMessage;
 
       if (!callback) {
@@ -477,6 +482,14 @@ export function createDiscordProvider(config: {
     onMessage(callback) {
       onInboundMessage = callback;
       void flushPendingMessages();
+    },
+    async dispose() {
+      disposed = true;
+      onInboundMessage = null;
+      pendingMessages.length = 0;
+      recentOutboundMessages.clear();
+      client.removeAllListeners();
+      client.destroy();
     },
     async getSelfContact() {
       const currentUser = await getReadyClient();

@@ -62,6 +62,7 @@ export type InternalAgentRuntime<
   workspace: WorkspaceRuntime;
   communication: CommunicationModule;
   onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
+  dispose(): Promise<void>;
 };
 
 export interface CreateAgentConfig<
