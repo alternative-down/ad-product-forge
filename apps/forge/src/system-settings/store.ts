@@ -15,6 +15,8 @@ export function createSystemSettingsStore(db: Database) {
       companyName: row?.companyName ?? '',
       companyContext: row?.companyContext ?? '',
       stepDelayEnabled: row ? row.stepDelayEnabled === 1 : true,
+      communicationDmFlushingEnabled: row ? row.communicationDmFlushingEnabled === 1 : true,
+      communicationGroupFlushingEnabled: row ? row.communicationGroupFlushingEnabled === 1 : true,
       updatedAt: row?.updatedAt ?? null,
     };
   }
@@ -23,6 +25,8 @@ export function createSystemSettingsStore(db: Database) {
     companyName: string;
     companyContext: string;
     stepDelayEnabled: boolean;
+    communicationDmFlushingEnabled: boolean;
+    communicationGroupFlushingEnabled: boolean;
   }) {
     const now = Date.now();
 
@@ -33,6 +37,8 @@ export function createSystemSettingsStore(db: Database) {
         companyName: input.companyName,
         companyContext: input.companyContext,
         stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
+        communicationDmFlushingEnabled: input.communicationDmFlushingEnabled ? 1 : 0,
+        communicationGroupFlushingEnabled: input.communicationGroupFlushingEnabled ? 1 : 0,
         updatedAt: now,
       })
       .onConflictDoUpdate({
@@ -41,6 +47,8 @@ export function createSystemSettingsStore(db: Database) {
           companyName: input.companyName,
           companyContext: input.companyContext,
           stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
+          communicationDmFlushingEnabled: input.communicationDmFlushingEnabled ? 1 : 0,
+          communicationGroupFlushingEnabled: input.communicationGroupFlushingEnabled ? 1 : 0,
           updatedAt: now,
         },
       });
@@ -49,6 +57,8 @@ export function createSystemSettingsStore(db: Database) {
       companyName: input.companyName,
       companyContext: input.companyContext,
       stepDelayEnabled: input.stepDelayEnabled,
+      communicationDmFlushingEnabled: input.communicationDmFlushingEnabled,
+      communicationGroupFlushingEnabled: input.communicationGroupFlushingEnabled,
       updatedAt: now,
     };
   }

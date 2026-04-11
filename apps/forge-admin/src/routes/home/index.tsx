@@ -56,7 +56,11 @@ function HomeIndexRoute() {
     },
   });
   const stepDelayMutation = useMutation({
-    mutationFn: (stepDelayEnabled: boolean) => {
+    mutationFn: (input: Partial<{
+      stepDelayEnabled: boolean;
+      communicationDmFlushingEnabled: boolean;
+      communicationGroupFlushingEnabled: boolean;
+    }>) => {
       if (!settingsQuery.data) {
         throw new Error('Configuração indisponível.');
       }
@@ -64,7 +68,11 @@ function HomeIndexRoute() {
       return upsertSystemSettings({
         companyName: settingsQuery.data.companyName,
         companyContext: settingsQuery.data.companyContext,
-        stepDelayEnabled,
+        stepDelayEnabled: input.stepDelayEnabled ?? settingsQuery.data.stepDelayEnabled,
+        communicationDmFlushingEnabled:
+          input.communicationDmFlushingEnabled ?? settingsQuery.data.communicationDmFlushingEnabled,
+        communicationGroupFlushingEnabled:
+          input.communicationGroupFlushingEnabled ?? settingsQuery.data.communicationGroupFlushingEnabled,
       });
     },
     onMutate: () => startAdminAction('Salvando delay entre steps...'),
@@ -119,7 +127,37 @@ function HomeIndexRoute() {
           <Switch
             checked={settingsQuery.data?.stepDelayEnabled ?? true}
             disabled={settingsQuery.isLoading || stepDelayMutation.isPending}
-            onCheckedChange={(checked) => stepDelayMutation.mutate(checked)}
+            onCheckedChange={(checked) => stepDelayMutation.mutate({ stepDelayEnabled: checked })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-4 rounded-sm border border-border px-4 py-3">
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Flushing de mensagens diretas</div>
+            <div className="text-sm text-muted-foreground">
+              Controla se mensagens DM dos providers acordam agentes automaticamente.
+            </div>
+          </div>
+          <Switch
+            checked={settingsQuery.data?.communicationDmFlushingEnabled ?? true}
+            disabled={settingsQuery.isLoading || stepDelayMutation.isPending}
+            onCheckedChange={(checked) =>
+              stepDelayMutation.mutate({ communicationDmFlushingEnabled: checked })
+            }
+          />
+        </div>
+        <div className="flex items-center justify-between gap-4 rounded-sm border border-border px-4 py-3">
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Flushing de mensagens em grupo</div>
+            <div className="text-sm text-muted-foreground">
+              Controla se mensagens de grupo dos providers acordam agentes automaticamente.
+            </div>
+          </div>
+          <Switch
+            checked={settingsQuery.data?.communicationGroupFlushingEnabled ?? true}
+            disabled={settingsQuery.isLoading || stepDelayMutation.isPending}
+            onCheckedChange={(checked) =>
+              stepDelayMutation.mutate({ communicationGroupFlushingEnabled: checked })
+            }
           />
         </div>
         {stepDelayMutation.error ? <div className="text-sm text-destructive">{stepDelayMutation.error.message}</div> : null}
@@ -198,6 +236,8 @@ function HomeIndexRoute() {
                 companyName: companyName.trim(),
                 companyContext: companyContext.trim(),
                 stepDelayEnabled: settingsQuery.data.stepDelayEnabled,
+                communicationDmFlushingEnabled: settingsQuery.data.communicationDmFlushingEnabled,
+                communicationGroupFlushingEnabled: settingsQuery.data.communicationGroupFlushingEnabled,
               });
             }}
           >

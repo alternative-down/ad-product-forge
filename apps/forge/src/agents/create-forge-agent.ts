@@ -46,6 +46,8 @@ export async function createInternalAgentRuntime<
     workspaceFilesystem: config.workspaceFilesystem,
     workspaceSandbox: config.workspaceSandbox,
     workspaceSkills: config.workspaceSkills,
+    communicationDmFlushingEnabled: config.communicationDmFlushingEnabled,
+    communicationGroupFlushingEnabled: config.communicationGroupFlushingEnabled,
   });
   const allAgentTools = {
     ...createExternalAccountTools(platform.communication),

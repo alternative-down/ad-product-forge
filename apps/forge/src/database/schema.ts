@@ -107,6 +107,8 @@ export const systemSettings = sqliteTable('system_settings', {
   companyName: text('company_name').notNull(),
   companyContext: text('company_context').notNull(),
   stepDelayEnabled: integer('step_delay_enabled').notNull().default(1),
+  communicationDmFlushingEnabled: integer('communication_dm_flushing_enabled').notNull().default(1),
+  communicationGroupFlushingEnabled: integer('communication_group_flushing_enabled').notNull().default(1),
   updatedAt: integer('updated_at').notNull(),
 });
 
