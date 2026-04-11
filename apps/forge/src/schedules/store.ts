@@ -17,6 +17,7 @@ type CreateAgentScheduleInput = {
   scheduledDate?: number;
   timezone: string;
   content: string;
+  wakeWhenRunning?: boolean;
   creatorId?: string; // agent that created this schedule (for cross-agent auth)
 };
 
@@ -28,6 +29,7 @@ type UpdateAgentScheduleInput = {
   scheduledDate?: number | null;
   timezone?: string;
   content?: string;
+  wakeWhenRunning?: boolean;
   isActive?: boolean;
 };
 
@@ -45,6 +47,7 @@ export function createAgentScheduleStore(db: Database) {
       scheduledDate: input.scheduledDate ?? null,
       timezone: input.timezone,
       content: input.content,
+      wakeWhenRunning: input.wakeWhenRunning === false ? 0 : 1,
       isActive: 1,
       lastTriggeredAt: null,
       nextTriggerAt: null,
@@ -166,6 +169,8 @@ export function createAgentScheduleStore(db: Database) {
         input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
       timezone: input.timezone ?? existing.timezone,
       content: input.content ?? existing.content,
+      wakeWhenRunning:
+        input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
       isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
       updatedAt: Date.now(),
     };
@@ -201,6 +206,8 @@ export function createAgentScheduleStore(db: Database) {
         input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
       timezone: input.timezone ?? existing.timezone,
       content: input.content ?? existing.content,
+      wakeWhenRunning:
+        input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
       isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
       updatedAt: Date.now(),
     };
@@ -300,6 +307,7 @@ function toScheduleRecord(row: typeof agentSchedules.$inferSelect) {
     cronExpression: rest.cronExpression ?? undefined,
     scheduledDate: rest.scheduledDate ?? undefined,
     isActive: rest.isActive === 1,
+    wakeWhenRunning: rest.wakeWhenRunning === 1,
     lastTriggeredAt: rest.lastTriggeredAt ?? undefined,
     nextTriggerAt: rest.nextTriggerAt ?? undefined,
     creatorId: rest.creatorId ?? undefined,
@@ -318,6 +326,7 @@ function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
     cronExpression: rest.cronExpression ?? undefined,
     scheduledDate: rest.scheduledDate ?? undefined,
     isActive: rest.isActive === 1,
+    wakeWhenRunning: rest.wakeWhenRunning === 1,
     lastTriggeredAt: rest.lastTriggeredAt ?? undefined,
     nextTriggerAt: rest.nextTriggerAt ?? undefined,
   };

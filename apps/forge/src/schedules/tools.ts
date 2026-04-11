@@ -15,6 +15,7 @@ const manageSelfCronsInputSchema = z.object({
     scheduledDate: z.string().optional().describe('Required when scheduleType is date. Use an ISO string.'),
     timezone: z.string().optional().describe('Optional timezone. If omitted, UTC is used.'),
     content: z.string().describe('The message or task content that should be delivered when the cron runs.'),
+    wakeWhenRunning: z.boolean().optional().describe('Only for recurring crons. If false, this cron behaves like heartbeat and only wakes you when you are idle.'),
   }).optional().describe('Provide this object only when action is create.'),
   update: z.object({
     cronId: z.string().describe('Required cron id to update.'),
@@ -25,6 +26,7 @@ const manageSelfCronsInputSchema = z.object({
     scheduledDate: z.string().optional().describe('Optional new one-time execution date.'),
     timezone: z.string().optional().describe('Optional new timezone.'),
     content: z.string().optional().describe('Optional new content.'),
+    wakeWhenRunning: z.boolean().optional().describe('Only for recurring crons. If false, this cron only wakes you when you are idle.'),
     isActive: z.boolean().optional().describe('Optional active flag.'),
   }).optional().describe('Provide this object only when action is update.'),
   delete: z.object({
@@ -43,6 +45,7 @@ const manageCronsInputSchema = z.object({
     scheduledDate: z.string().optional().describe('Required when scheduleType is date. Use an ISO string.'),
     timezone: z.string().optional().describe('Optional timezone. If omitted, UTC is used.'),
     content: z.string().describe('The message or task content that should be delivered when the cron runs.'),
+    wakeWhenRunning: z.boolean().optional().describe('Only for recurring crons. If false, this delegated cron only wakes the target when the target is idle.'),
   }).optional().describe('Provide this object only when action is create.'),
   update: z.object({
     cronId: z.string().describe('Required delegated cron id to update.'),
@@ -53,6 +56,7 @@ const manageCronsInputSchema = z.object({
     scheduledDate: z.string().optional().describe('Optional new one-time execution date.'),
     timezone: z.string().optional().describe('Optional new timezone.'),
     content: z.string().optional().describe('Optional new content.'),
+    wakeWhenRunning: z.boolean().optional().describe('Only for recurring crons. If false, this delegated cron only wakes the target when the target is idle.'),
     isActive: z.boolean().optional().describe('Optional active flag.'),
   }).optional().describe('Provide this object only when action is update.'),
   delete: z.object({
@@ -241,7 +245,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'manage_self_crons')) {
     tools.manage_self_crons = createTool({
       id: 'manage_self_crons',
-      description: 'Create, update, or delete your own crons. Use this for your own recurring wakes or one-time future executions.',
+      description: 'Use this to create, update, or delete automatic tasks for yourself. Do not rely on your own memory to remember future work. Use crons proactively to trigger your future and recurring work dynamically, and prefer simple, directed tasks.',
       inputSchema: manageSelfCronsInputSchema,
       onInputAvailable: async ({ input, toolCallId }) => {
         console.log('[CronTool] manage_self_crons input available:', JSON.stringify({
@@ -278,6 +282,7 @@ export function createAgentScheduleTools(
                   cronExpression: createInput.cronExpression ?? '',
                   timezone: createInput.timezone ?? 'UTC',
                   content: createInput.content,
+                  wakeWhenRunning: createInput.wakeWhenRunning ?? true,
                 })
               : await schedules.createSchedule(agentId, {
                   name: createInput.name,
@@ -332,6 +337,7 @@ export function createAgentScheduleTools(
               scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
               timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
               content: normalizeOptionalText(updateInput.content ?? undefined),
+              wakeWhenRunning: updateInput.wakeWhenRunning ?? undefined,
               isActive: updateInput.isActive ?? undefined,
             });
 
@@ -416,7 +422,7 @@ export function createAgentScheduleTools(
   if (hasToolPermission(allowedToolIds, 'manage_crons')) {
     tools.manage_crons = createTool({
       id: 'manage_crons',
-      description: 'Create, update, or delete crons for other agents. Use this when you want another agent to receive recurring or one-time scheduled work.',
+      description: 'Use this to create, update, or delete automatic tasks for other agents. Use delegated crons proactively when another agent should receive future or recurring work without relying on someone to remember manually. Prefer simple, directed tasks.',
       inputSchema: manageCronsInputSchema,
       onInputAvailable: async ({ input, toolCallId }) => {
         console.log('[CronTool] manage_crons input available:', JSON.stringify({
@@ -460,6 +466,7 @@ export function createAgentScheduleTools(
                   cronExpression: createInput.cronExpression ?? '',
                   timezone: createInput.timezone ?? 'UTC',
                   content: createInput.content,
+                  wakeWhenRunning: createInput.wakeWhenRunning ?? true,
                 })
               : await schedules.createScheduleForAgent(agentId, {
                   targetAgentId: createInput.targetAgentId,
@@ -515,6 +522,7 @@ export function createAgentScheduleTools(
               scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
               timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
               content: normalizeOptionalText(updateInput.content ?? undefined),
+              wakeWhenRunning: updateInput.wakeWhenRunning ?? undefined,
               isActive: updateInput.isActive ?? undefined,
             });
 

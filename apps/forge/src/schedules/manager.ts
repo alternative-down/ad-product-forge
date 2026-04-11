@@ -10,6 +10,7 @@ const scheduleBaseSchema = {
   description: z.string().optional(),
   timezone: z.string().min(1).default('UTC'),
   content: z.string().min(1),
+  wakeWhenRunning: z.boolean().optional(),
 } as const;
 
 const createScheduleSchema = z.discriminatedUnion('scheduleType', [
@@ -57,6 +58,7 @@ const updateScheduleSchema = z.object({
   scheduledDate: z.string().min(1).optional().nullable(),
   timezone: z.string().min(1).optional(),
   content: z.string().optional(),
+  wakeWhenRunning: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -102,6 +104,7 @@ export function createAgentScheduleManager(input: {
       scheduledDate: undefined,
       timezone: HEARTBEAT_TIMEZONE,
       content: '',
+      wakeWhenRunning: false,
     });
     const heartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
 
@@ -134,6 +137,7 @@ export function createAgentScheduleManager(input: {
       scheduledDate,
       timezone: parsed.timezone,
       content: parsed.content,
+      wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
     const scheduleRecord = await store.getAgentSchedule(agentId, record.id);
 
@@ -207,6 +211,9 @@ export function createAgentScheduleManager(input: {
     const normalizedScheduledDate = scheduleType === 'date'
       ? scheduledDate ?? null
       : null;
+    const normalizedWakeWhenRunning = scheduleType === 'cron'
+      ? parsed.wakeWhenRunning ?? existing.wakeWhenRunning
+      : true;
     const rollbackInput = {
       name: existing.name,
       description: existing.description ?? null,
@@ -215,6 +222,7 @@ export function createAgentScheduleManager(input: {
       scheduledDate: existing.scheduledDate ?? null,
       timezone: existing.timezone,
       content: existing.content,
+      wakeWhenRunning: existing.wakeWhenRunning,
       isActive: existing.isActive,
     } as const;
     const updated = await store.updateAgentSchedule(agentId, scheduleId, {
@@ -225,6 +233,7 @@ export function createAgentScheduleManager(input: {
       scheduledDate: normalizedScheduledDate,
       timezone: parsed.timezone,
       content: parsed.content,
+      wakeWhenRunning: normalizedWakeWhenRunning,
       isActive: parsed.isActive,
     });
 
@@ -300,6 +309,9 @@ export function createAgentScheduleManager(input: {
     const normalizedScheduledDate = scheduleType === 'date'
       ? scheduledDate ?? null
       : null;
+    const normalizedWakeWhenRunning = scheduleType === 'cron'
+      ? parsed.wakeWhenRunning ?? existing.wakeWhenRunning
+      : true;
     const rollbackInput = {
       name: existing.name,
       description: existing.description ?? null,
@@ -308,6 +320,7 @@ export function createAgentScheduleManager(input: {
       scheduledDate: existing.scheduledDate ?? null,
       timezone: existing.timezone,
       content: existing.content,
+      wakeWhenRunning: existing.wakeWhenRunning,
       isActive: existing.isActive,
     } as const;
     const updated = await store.updateOwnedSchedule(agentId, scheduleId, {
@@ -318,6 +331,7 @@ export function createAgentScheduleManager(input: {
       scheduledDate: normalizedScheduledDate,
       timezone: parsed.timezone,
       content: parsed.content,
+      wakeWhenRunning: normalizedWakeWhenRunning,
       isActive: parsed.isActive,
     });
 
@@ -385,6 +399,7 @@ export function createAgentScheduleManager(input: {
       scheduledDate,
       timezone: parsed.timezone,
       content: parsed.content,
+      wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
       creatorId: creatorAgentId,
     });
 
@@ -553,7 +568,13 @@ export function createAgentScheduleManager(input: {
       isActive: remainsActive,
     });
 
-    if (scheduleRecord.kind === 'heartbeat' && input.getAgentExecutionState) {
+    if (
+      input.getAgentExecutionState &&
+      (
+        scheduleRecord.kind === 'heartbeat'
+        || (scheduleRecord.scheduleType === 'cron' && scheduleRecord.wakeWhenRunning === false)
+      )
+    ) {
       const executionState = await input.getAgentExecutionState(scheduleRecord.agentId);
 
       if (executionState !== 'idle') {
@@ -575,6 +596,7 @@ export function createAgentScheduleManager(input: {
         scheduledDate: scheduleRecord.scheduledDate,
         timezone: scheduleRecord.timezone,
         nextTriggerAt,
+        wakeWhenRunning: scheduleRecord.wakeWhenRunning,
         content: scheduleRecord.kind === 'agent'
           ? scheduleRecord.content
           : createHeartbeatWakeInstruction(scheduleRecord.content),
@@ -694,6 +716,7 @@ function createWakeContent(input: {
   timezone: string;
   nextTriggerAt?: number | null;
   content: string;
+  wakeWhenRunning: boolean;
 }) {
   const lines = [
     input.scheduleKind === 'heartbeat' ? 'Heartbeat triggered.' : 'Scheduled task triggered.',
@@ -701,6 +724,7 @@ function createWakeContent(input: {
     `Schedule kind: ${input.scheduleKind}`,
     `Schedule type: ${input.scheduleType}`,
     `Timezone: ${input.timezone}`,
+    `Wake while running: ${input.wakeWhenRunning ? 'enabled' : 'only when idle'}`,
   ];
 
   if (input.description?.trim()) {
@@ -772,6 +796,7 @@ function toToolOutput(scheduleRecord: {
   scheduledDate?: number;
   timezone: string;
   content: string;
+  wakeWhenRunning: boolean;
   isActive: boolean;
   lastTriggeredAt?: number;
   nextTriggerAt?: number;
@@ -785,6 +810,7 @@ function toToolOutput(scheduleRecord: {
     scheduledDate: scheduleRecord.scheduledDate ? new Date(scheduleRecord.scheduledDate).toISOString() : undefined,
     timezone: scheduleRecord.timezone,
     content: scheduleRecord.content,
+    wakeWhenRunning: scheduleRecord.wakeWhenRunning,
     isActive: scheduleRecord.isActive,
     lastTriggeredAt: scheduleRecord.lastTriggeredAt ? new Date(scheduleRecord.lastTriggeredAt).toISOString() : undefined,
     nextTriggerAt: scheduleRecord.nextTriggerAt ? new Date(scheduleRecord.nextTriggerAt).toISOString() : undefined,

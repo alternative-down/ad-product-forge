@@ -118,6 +118,7 @@ const createScheduleSchema = z.object({
   scheduledDate: z.string().min(1).optional(),
   timezone: z.string().min(1).default('UTC'),
   content: z.string().min(1),
+  wakeWhenRunning: z.boolean().optional(),
 });
 
 const updateScheduleSchema = z.object({
@@ -130,6 +131,7 @@ const updateScheduleSchema = z.object({
   scheduledDate: z.string().min(1).optional().nullable(),
   timezone: z.string().min(1).optional(),
   content: z.string().optional(),
+  wakeWhenRunning: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -1496,6 +1498,7 @@ export function registerAdminRoutes(input: {
             cronExpression: body.cronExpression!,
             timezone: body.timezone,
             content: body.content,
+            wakeWhenRunning: body.wakeWhenRunning,
           }
         : {
             name: body.name,
@@ -1504,6 +1507,7 @@ export function registerAdminRoutes(input: {
             scheduledDate: body.scheduledDate!,
             timezone: body.timezone,
             content: body.content,
+            wakeWhenRunning: body.wakeWhenRunning,
           };
       const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
       return jsonResponse(schedule, 201);
@@ -1523,6 +1527,7 @@ export function registerAdminRoutes(input: {
         scheduledDate: body.scheduledDate,
         timezone: body.timezone,
         content: body.content,
+        wakeWhenRunning: body.wakeWhenRunning,
         isActive: body.isActive,
       });
       return jsonResponse(schedule);
