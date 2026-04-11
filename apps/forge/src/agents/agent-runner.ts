@@ -473,7 +473,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         const result = await runtime.agent.generate(promptText, {
           maxSteps: 1,
           abortSignal: controller.signal,
-          ...(agentContextInstructions ? { instructions: agentContextInstructions } : {}),
+          ...(agentContextInstructions ? { system: agentContextInstructions } : {}),
           memory: {
             thread: runtime.mastraId,
             resource: runtime.mastraId,
