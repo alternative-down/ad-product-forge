@@ -23,6 +23,16 @@ export type CreateForgeAgentConfig<
   companyContext?: string;
   communicationDmFlushingEnabled?: boolean;
   communicationGroupFlushingEnabled?: boolean;
+  memoryLastMessagesFullEnabled?: boolean;
+  memoryLastMessagesCount?: number;
+  tokenCountFilterEnabled?: boolean;
+  tokenCountFilterLimit?: number;
+  omObservationMessageTokens?: number;
+  omObservationBufferTokens?: number;
+  omObservationBufferActivation?: number;
+  omObservationPreviousObserverTokens?: number;
+  omReflectionObservationTokens?: number;
+  omReflectionBufferActivation?: number;
   roleName?: string;
   roleDescription?: string;
   providers?: CommunicationProvider[];
@@ -78,6 +88,16 @@ export interface CreateAgentConfig<
   | 'companyContext'
   | 'communicationDmFlushingEnabled'
   | 'communicationGroupFlushingEnabled'
+  | 'memoryLastMessagesFullEnabled'
+  | 'memoryLastMessagesCount'
+  | 'tokenCountFilterEnabled'
+  | 'tokenCountFilterLimit'
+  | 'omObservationMessageTokens'
+  | 'omObservationBufferTokens'
+  | 'omObservationBufferActivation'
+  | 'omObservationPreviousObserverTokens'
+  | 'omReflectionObservationTokens'
+  | 'omReflectionBufferActivation'
   | 'roleName'
   | 'roleDescription'
   | 'providers'

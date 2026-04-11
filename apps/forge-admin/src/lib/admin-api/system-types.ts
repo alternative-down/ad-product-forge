@@ -4,6 +4,16 @@ export type SystemSettings = {
   stepDelayEnabled: boolean;
   communicationDmFlushingEnabled: boolean;
   communicationGroupFlushingEnabled: boolean;
+  memoryLastMessagesFullEnabled: boolean;
+  memoryLastMessagesCount: number;
+  tokenCountFilterEnabled: boolean;
+  tokenCountFilterLimit: number;
+  omObservationMessageTokens: number;
+  omObservationBufferTokens: number;
+  omObservationBufferActivation: number;
+  omObservationPreviousObserverTokens: number;
+  omReflectionObservationTokens: number;
+  omReflectionBufferActivation: number;
 };
 
 export type SystemOauthState = {

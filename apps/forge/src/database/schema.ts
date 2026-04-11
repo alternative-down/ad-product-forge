@@ -109,6 +109,16 @@ export const systemSettings = sqliteTable('system_settings', {
   stepDelayEnabled: integer('step_delay_enabled').notNull().default(1),
   communicationDmFlushingEnabled: integer('communication_dm_flushing_enabled').notNull().default(1),
   communicationGroupFlushingEnabled: integer('communication_group_flushing_enabled').notNull().default(1),
+  memoryLastMessagesFullEnabled: integer('memory_last_messages_full_enabled').notNull().default(0),
+  memoryLastMessagesCount: integer('memory_last_messages_count').notNull().default(20),
+  tokenCountFilterEnabled: integer('token_count_filter_enabled').notNull().default(1),
+  tokenCountFilterLimit: integer('token_count_filter_limit').notNull().default(100000),
+  omObservationMessageTokens: integer('om_observation_message_tokens').notNull().default(15000),
+  omObservationBufferTokens: real('om_observation_buffer_tokens').notNull().default(0.2),
+  omObservationBufferActivation: real('om_observation_buffer_activation').notNull().default(0.8),
+  omObservationPreviousObserverTokens: integer('om_observation_previous_observer_tokens').notNull().default(1000),
+  omReflectionObservationTokens: integer('om_reflection_observation_tokens').notNull().default(20000),
+  omReflectionBufferActivation: real('om_reflection_buffer_activation').notNull().default(0.5),
   updatedAt: integer('updated_at').notNull(),
 });
 
