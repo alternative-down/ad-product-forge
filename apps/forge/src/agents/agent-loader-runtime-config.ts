@@ -25,6 +25,8 @@ export function buildAgentRuntimeConfig(
     omModelProfileId: runtimeData.omProfile.profileId,
     companyName: runtimeData.companySettings.companyName,
     companyContext: runtimeData.companySettings.companyContext,
+    communicationDmFlushingEnabled: runtimeData.companySettings.communicationDmFlushingEnabled,
+    communicationGroupFlushingEnabled: runtimeData.companySettings.communicationGroupFlushingEnabled,
     roleName: runtimeData.role?.name,
     roleDescription: runtimeData.role?.description,
     tools: toolset.tools,

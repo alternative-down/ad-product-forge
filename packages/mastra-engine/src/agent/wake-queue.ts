@@ -1,5 +1,7 @@
-const WAKE_DEBOUNCE_MS = 10000;
-const WAKE_MAX_ACCUMULATION_MS = 30000;
+const DEFAULT_WAKE_DEBOUNCE_MS = 10000;
+const DEFAULT_WAKE_MAX_ACCUMULATION_MS = 30000;
+const GROUP_MESSAGE_WAKE_DEBOUNCE_MS = 120000;
+const GROUP_MESSAGE_WAKE_MAX_ACCUMULATION_MS = 300000;
 
 export type AgentWakeEvent = {
   type: string;
@@ -33,6 +35,37 @@ export function createAgentWakeQueue(config: {
   let firstPendingAt: number | null = null;
   let nextTriggerAt: number | null = null;
   const events = new Map<string, AgentWakeEvent>();
+
+  function isGroupMessageEvent(event: AgentWakeEvent) {
+    return event.type.startsWith('message:') && event.groupMetadata?.ConversationType === 'group';
+  }
+
+  function getWakeWindow(event: AgentWakeEvent) {
+    if (isGroupMessageEvent(event)) {
+      return {
+        debounceMs: GROUP_MESSAGE_WAKE_DEBOUNCE_MS,
+        maxAccumulationMs: GROUP_MESSAGE_WAKE_MAX_ACCUMULATION_MS,
+      };
+    }
+
+    return {
+      debounceMs: DEFAULT_WAKE_DEBOUNCE_MS,
+      maxAccumulationMs: DEFAULT_WAKE_MAX_ACCUMULATION_MS,
+    };
+  }
+
+  function getCurrentWakeWindow() {
+    let debounceMs = DEFAULT_WAKE_DEBOUNCE_MS;
+    let maxAccumulationMs = DEFAULT_WAKE_MAX_ACCUMULATION_MS;
+
+    for (const event of events.values()) {
+      const candidate = getWakeWindow(event);
+      debounceMs = Math.max(debounceMs, candidate.debounceMs);
+      maxAccumulationMs = Math.max(maxAccumulationMs, candidate.maxAccumulationMs);
+    }
+
+    return { debounceMs, maxAccumulationMs };
+  }
 
   function clearTimer() {
     if (!timer) {
@@ -84,15 +117,16 @@ export function createAgentWakeQueue(config: {
       firstPendingAt ??= now;
       events.set(event.idempotencyKey, event);
 
+      const wakeWindow = getCurrentWakeWindow();
       const accumulatedMs = now - firstPendingAt;
-      if (accumulatedMs >= WAKE_MAX_ACCUMULATION_MS) {
+      if (accumulatedMs >= wakeWindow.maxAccumulationMs) {
         clearTimer();
         void trigger();
         return;
       }
 
-      const remainingAccumulationMs = WAKE_MAX_ACCUMULATION_MS - accumulatedMs;
-      scheduleTrigger(Math.min(WAKE_DEBOUNCE_MS, remainingAccumulationMs));
+      const remainingAccumulationMs = wakeWindow.maxAccumulationMs - accumulatedMs;
+      scheduleTrigger(Math.min(wakeWindow.debounceMs, remainingAccumulationMs));
     },
     async onRunnerIdle() {
       if (!pending) {

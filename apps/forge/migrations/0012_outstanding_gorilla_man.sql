@@ -1,0 +1,2 @@
+ALTER TABLE `system_settings` ADD `communication_dm_flushing_enabled` integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE `system_settings` ADD `communication_group_flushing_enabled` integer DEFAULT 1 NOT NULL;

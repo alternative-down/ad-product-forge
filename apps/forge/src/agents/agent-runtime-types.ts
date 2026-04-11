@@ -20,6 +20,8 @@ export type CreateForgeAgentConfig<
   omModelProfileId?: string;
   companyName?: string;
   companyContext?: string;
+  communicationDmFlushingEnabled?: boolean;
+  communicationGroupFlushingEnabled?: boolean;
   roleName?: string;
   roleDescription?: string;
   providers?: CommunicationProvider[];
@@ -72,6 +74,8 @@ export interface CreateAgentConfig<
   | 'omModelProfileId'
   | 'companyName'
   | 'companyContext'
+  | 'communicationDmFlushingEnabled'
+  | 'communicationGroupFlushingEnabled'
   | 'roleName'
   | 'roleDescription'
   | 'providers'

@@ -2,6 +2,8 @@ export type SystemSettings = {
   companyName: string;
   companyContext: string;
   stepDelayEnabled: boolean;
+  communicationDmFlushingEnabled: boolean;
+  communicationGroupFlushingEnabled: boolean;
 };
 
 export type SystemOauthState = {

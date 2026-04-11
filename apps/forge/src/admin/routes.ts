@@ -425,6 +425,8 @@ const upsertSystemSettingsSchema = z.object({
   companyName: z.string(),
   companyContext: z.string(),
   stepDelayEnabled: z.boolean().default(true),
+  communicationDmFlushingEnabled: z.boolean().default(true),
+  communicationGroupFlushingEnabled: z.boolean().default(true),
 });
 
 const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
@@ -641,6 +643,8 @@ export function registerAdminRoutes(input: {
         companyName: body.companyName.trim(),
         companyContext: body.companyContext.trim(),
         stepDelayEnabled: body.stepDelayEnabled,
+        communicationDmFlushingEnabled: body.communicationDmFlushingEnabled,
+        communicationGroupFlushingEnabled: body.communicationGroupFlushingEnabled,
       });
       const registry = getInternalAgentRegistry();
 

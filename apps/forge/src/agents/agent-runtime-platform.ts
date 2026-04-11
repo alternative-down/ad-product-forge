@@ -12,6 +12,7 @@ import {
   createCommunicationModule,
   type CommunicationModule,
   type CommunicationProvider,
+  type CommunicationInboundMessage,
   toMastraSafeIdentifier,
 } from '@mastra-engine/core';
 
@@ -43,6 +44,8 @@ export async function createAgentRuntimePlatform(input: {
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
   workspaceSkills?: WorkspaceSkillsConfig;
+  communicationDmFlushingEnabled?: boolean;
+  communicationGroupFlushingEnabled?: boolean;
 }) {
   const mastraId = toMastraSafeIdentifier(input.agentId);
   const agentWorkspacePath = path.resolve(input.workspaceBasePath, input.agentId);
@@ -90,6 +93,13 @@ export async function createAgentRuntimePlatform(input: {
     providers: input.providers ?? [],
     workspace,
     workspaceRoot: agentWorkspaceDir,
+    shouldFlushIncomingMessage(message: CommunicationInboundMessage) {
+      if (message.metadata?.conversationType === 'group') {
+        return input.communicationGroupFlushingEnabled ?? true;
+      }
+
+      return input.communicationDmFlushingEnabled ?? true;
+    },
   });
 
   return {

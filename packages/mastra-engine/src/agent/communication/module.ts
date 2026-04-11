@@ -9,6 +9,7 @@ import * as communicationSchema from './schema';
 import type { AgentWakeEvent } from '../wake-queue';
 import type {
   CommunicationConversationView,
+  CommunicationInboundMessage,
   CommunicationMessageView,
   CommunicationProviderConversation,
   CommunicationProviderMessage,
@@ -38,6 +39,7 @@ export async function createCommunicationModule(config: {
   providers: CommunicationProvider[];
   workspace: WorkspaceRuntime;
   workspaceRoot: string;
+  shouldFlushIncomingMessage?: (message: CommunicationInboundMessage) => boolean;
 }) {
   console.log('[Communication] Initializing communication database...');
   const db = drizzle(config.client, { schema: communicationSchema });
@@ -152,6 +154,10 @@ export async function createCommunicationModule(config: {
 
     await provider.onMessage(async (message) => {
       if (!receiveMessageHandler) {
+        return;
+      }
+
+      if (config.shouldFlushIncomingMessage && !config.shouldFlushIncomingMessage(message)) {
         return;
       }
 
