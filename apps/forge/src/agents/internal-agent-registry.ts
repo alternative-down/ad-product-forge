@@ -2,6 +2,7 @@ import type { Database } from '../database/index';
 import { loadAgents, type AgentLoaderConfig } from './agent-loader';
 import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './agent-runtime-types';
+import { loadAgent } from './agent-loader';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
@@ -10,10 +11,16 @@ type InternalAgentEntry = {
 
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
+  let loaderConfig: AgentLoaderConfig | null = null;
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
+    loaderConfig = config;
+
     for (const agent of agents.values()) {
       agent.runner.stop();
+      void agent.runtime.dispose().catch((error) => {
+        console.error(`[AgentRegistry] Failed to dispose runtime ${agent.runtime.id}:`, error);
+      });
     }
 
     agents.clear();
@@ -32,19 +39,35 @@ function createInternalAgentRegistry() {
 
     if (existingAgent) {
       existingAgent.runner.stop();
+      await existingAgent.runtime.dispose();
       agents.delete(runtime.id);
     }
 
-    const runner = createAgentRunner(db, runtime);
     const entry = {
       runtime,
-      runner,
+      runner: null as InternalAgentRunner | null,
     };
+    const runner = createAgentRunner(db, runtime, {
+      reloadRuntime: async () => {
+        if (!loaderConfig) {
+          throw new Error('Agent loader config is not available for runtime reload');
+        }
 
-    agents.set(runtime.id, entry);
+        return loadAgent(db, {
+          ...loaderConfig,
+          agentId: runtime.id,
+        });
+      },
+      onRuntimeReloaded: (nextRuntime) => {
+        entry.runtime = nextRuntime;
+      },
+    });
+    entry.runner = runner;
+
+    agents.set(runtime.id, entry as InternalAgentEntry);
     await runner.start();
 
-    return entry;
+    return entry as InternalAgentEntry;
   }
 
   function remove(agentId: string) {
@@ -55,6 +78,9 @@ function createInternalAgentRegistry() {
     }
 
     agent.runner.stop();
+    void agent.runtime.dispose().catch((error) => {
+      console.error(`[AgentRegistry] Failed to dispose runtime ${agentId}:`, error);
+    });
     agents.delete(agentId);
   }
 

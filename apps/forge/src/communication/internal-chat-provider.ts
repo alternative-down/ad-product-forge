@@ -11,6 +11,9 @@ export function createInternalChatProvider(input: {
     onMessage(callback) {
       input.internalChat.onReceiveMessage(input.agentId, callback);
     },
+    dispose() {
+      input.internalChat.clearHandler(input.agentId);
+    },
     async getSelfContact() {
       const account = await input.internalChat.getAccountByAgentId(input.agentId);
 

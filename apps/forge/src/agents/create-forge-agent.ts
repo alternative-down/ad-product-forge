@@ -111,6 +111,9 @@ export async function createInternalAgentRuntime<
     workspace: platform.workspace,
     communication: platform.communication,
     onReceiveMessage: platform.communication.onReceiveMessage,
+    async dispose() {
+      await platform.communication.dispose();
+    },
   };
 }
 

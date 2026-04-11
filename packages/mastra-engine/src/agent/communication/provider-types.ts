@@ -80,6 +80,7 @@ export type CommunicationMessageView = {
 export type CommunicationProvider = {
   id: string;
   onMessage?(callback: (message: CommunicationInboundMessage) => Promise<void>): Promise<void> | void;
+  dispose?(): Promise<void> | void;
   getSelfContact?(): Promise<CommunicationProviderContact | null>;
   listContacts?(): Promise<CommunicationProviderContact[]>;
   listConversations?(input: {

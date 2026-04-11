@@ -21,6 +21,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   let connectPromise: Promise<ImapFlow> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectDelayMs = 1000;
+  let disposed = false;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
   const recentOutboundMessages = new Map<string, Array<{
@@ -237,6 +238,10 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   }
 
   async function connectImap() {
+    if (disposed) {
+      throw new Error('Email provider is disposed');
+    }
+
     if (client) {
       return client;
     }
@@ -271,7 +276,9 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         }
 
         console.log('[email] Connection closed');
-        scheduleReconnect();
+        if (!disposed) {
+          scheduleReconnect();
+        }
       });
 
       nextClient.on('exists', () => {
@@ -463,7 +470,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   }
 
   function scheduleReconnect() {
-    if (reconnectTimer) {
+    if (disposed || reconnectTimer) {
       return;
     }
 
@@ -497,6 +504,27 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     onMessage(callback) {
       onInboundMessage = callback;
       void flushPendingMessages();
+    },
+    async dispose() {
+      disposed = true;
+      onInboundMessage = null;
+      pendingMessages.length = 0;
+
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+
+      const currentClient = client;
+      client = null;
+
+      if (currentClient) {
+        try {
+          await currentClient.logout();
+        } catch {
+          // Ignore logout failures during provider disposal.
+        }
+      }
     },
     async getSelfContact() {
       return {
