@@ -63,11 +63,11 @@ export function createAgentRunner(
 
     const previousRuntime = currentRuntime;
     const nextRuntime = await options.reloadRuntime();
-    await previousRuntime.dispose();
     currentRuntime = nextRuntime;
     usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
     currentRuntime.onReceiveMessage(wakeQueue.notifyExternalEvent);
     options.onRuntimeReloaded?.(nextRuntime);
+    await previousRuntime.dispose();
   }
 
   function clearTimer() {
