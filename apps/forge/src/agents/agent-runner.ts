@@ -42,7 +42,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let lastStepStage: string | null = null;
   let lastLoopSignature: string | null = null;
   let repeatedLoopCount = 0;
-  let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
+  let runLastMessages: number | null = DEFAULT_RUN_LAST_MESSAGES;
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
@@ -81,7 +81,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     }
 
     instant = true;
-    resetRunLastMessages();
+    await resetRunLastMessages();
     resetLoopDetector();
     lastWakeStartedAt = Date.now();
     await queueNextStep();
@@ -102,7 +102,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
 
     instant = true;
     backoffMs = ONE_MINUTE_MS;
-    resetRunLastMessages();
+    await resetRunLastMessages();
     resetLoopDetector();
     lastWakeStartedAt = Date.now();
     await store.setExecutionState(runtime.id, 'running');
@@ -140,7 +140,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     stopped = true;
     clearTimer();
     wakeQueue.stop();
-    resetRunLastMessages();
+    runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
   }
 
   async function queueNextStep() {
@@ -357,11 +357,22 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     repeatedLoopCount = 0;
   }
 
-  function resetRunLastMessages() {
-    runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
+  async function resetRunLastMessages() {
+    const settings = await systemSettings.getSettings();
+
+    if (settings.memoryLastMessagesFullEnabled) {
+      runLastMessages = null;
+      return;
+    }
+
+    runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
   }
 
   function incrementRunLastMessages() {
+    if (runLastMessages === null) {
+      return;
+    }
+
     runLastMessages += 1;
   }
 
@@ -474,9 +485,11 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           memory: {
             thread: runtime.mastraId,
             resource: runtime.mastraId,
-            options: {
-              lastMessages: runLastMessages,
-            },
+            options: runLastMessages === null
+              ? undefined
+              : {
+                  lastMessages: runLastMessages,
+                },
           },
           providerOptions: {
             anthropic: {
