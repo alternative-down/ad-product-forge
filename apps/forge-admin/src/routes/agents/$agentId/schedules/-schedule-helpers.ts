@@ -10,6 +10,7 @@ export type ScheduleForm = {
   scheduledDate: string;
   timezone: string;
   content: string;
+  wakeWhenRunning: boolean;
   isActive: boolean;
 };
 
@@ -22,6 +23,7 @@ export function createEmptyScheduleForm(): ScheduleForm {
     scheduledDate: '',
     timezone: 'America/Sao_Paulo',
     content: '',
+    wakeWhenRunning: true,
     isActive: true,
   };
 }
@@ -37,6 +39,7 @@ export function createScheduleForm(schedule: AgentSchedule): ScheduleForm {
     scheduledDate: schedule.scheduledDate ? toDateTimeLocalValue(schedule.scheduledDate) : '',
     timezone: schedule.timezone,
     content: schedule.content,
+    wakeWhenRunning: schedule.wakeWhenRunning,
     isActive: schedule.isActive,
   };
 }

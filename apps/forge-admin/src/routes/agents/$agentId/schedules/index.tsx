@@ -41,6 +41,7 @@ function AgentSchedulesIndexRoute() {
           scheduledDate: current.scheduleType === 'date' ? current.scheduledDate : null,
           timezone: current.timezone.trim(),
           content: current.content.trim(),
+          wakeWhenRunning: current.scheduleType === 'cron' ? current.wakeWhenRunning : true,
           isActive: current.isActive,
         });
       }
@@ -54,6 +55,7 @@ function AgentSchedulesIndexRoute() {
         scheduledDate: current.scheduleType === 'date' ? current.scheduledDate : undefined,
         timezone: current.timezone.trim(),
         content: current.content.trim(),
+        wakeWhenRunning: current.scheduleType === 'cron' ? current.wakeWhenRunning : true,
       });
     },
     onMutate: (current) =>
@@ -121,6 +123,10 @@ function AgentSchedulesIndexRoute() {
               <div className="font-medium text-foreground">Timezone</div>
               <div>{heartbeat.timezone}</div>
             </div>
+            <div>
+              <div className="font-medium text-foreground">Wake em execução</div>
+              <div>{heartbeat.wakeWhenRunning ? 'Sim' : 'Só ocioso'}</div>
+            </div>
           </div>
 
           <div className="text-sm text-muted-foreground">{heartbeat.content || 'Sem conteúdo configurado.'}</div>
@@ -145,6 +151,7 @@ function AgentSchedulesIndexRoute() {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Tipo</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Wake em execução</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Próximo</TableHead>
                 <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
@@ -154,6 +161,11 @@ function AgentSchedulesIndexRoute() {
                 <TableRow key={schedule.scheduleId}>
                   <TableCell className="px-4 py-3">{schedule.name}</TableCell>
                   <TableCell className="px-4 py-3">{schedule.scheduleType === 'cron' ? 'Cron' : 'Data'}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {schedule.scheduleType === 'cron'
+                      ? schedule.wakeWhenRunning ? 'Sim' : 'Só ocioso'
+                      : '—'}
+                  </TableCell>
                   <TableCell className="px-4 py-3">{schedule.nextTriggerAt ? formatDateTime(schedule.nextTriggerAt) : '—'}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
@@ -183,7 +195,7 @@ function AgentSchedulesIndexRoute() {
               ))}
               {schedules.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={4}>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={5}>
                     Nenhum agendamento ainda.
                   </TableCell>
                 </TableRow>

@@ -341,7 +341,16 @@ export function createInternalChatService(
     handlers.set(agentId, handler);
   }
 
-  function clearHandler(agentId: string) {
+  function clearHandler(agentId: string, handler?: InternalChatHandler) {
+    if (!handler) {
+      handlers.delete(agentId);
+      return;
+    }
+
+    if (handlers.get(agentId) !== handler) {
+      return;
+    }
+
     handlers.delete(agentId);
   }
 

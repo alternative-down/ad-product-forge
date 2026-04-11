@@ -99,16 +99,33 @@ export function ScheduleDialog(input: {
               </div>
 
               {input.form.scheduleType === 'cron' ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="schedule-cron">
-                    Expressão cron
-                  </label>
-                  <AdminInput
-                    id="schedule-cron"
-                    value={input.form.cronExpression}
-                    onChange={(event) => input.onFormChange({ ...input.form, cronExpression: event.target.value })}
-                    disabled={input.pending}
-                  />
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="schedule-cron">
+                      Expressão cron
+                    </label>
+                    <AdminInput
+                      id="schedule-cron"
+                      value={input.form.cronExpression}
+                      onChange={(event) => input.onFormChange({ ...input.form, cronExpression: event.target.value })}
+                      disabled={input.pending}
+                    />
+                  </div>
+                  {input.form.kind !== 'heartbeat' ? (
+                    <label className="flex items-center justify-between gap-4 rounded-sm border border-border px-4 py-3">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium">Wake enquanto executa</div>
+                        <div className="text-xs leading-relaxed text-muted-foreground">
+                          Se desligado, o conteúdo deste cron só entra no flushing quando o agente estiver ocioso, como no heartbeat.
+                        </div>
+                      </div>
+                      <Switch
+                        checked={input.form.wakeWhenRunning}
+                        onCheckedChange={(checked) => input.onFormChange({ ...input.form, wakeWhenRunning: checked })}
+                        disabled={input.pending}
+                      />
+                    </label>
+                  ) : null}
                 </div>
               ) : (
                 <div className="space-y-2">

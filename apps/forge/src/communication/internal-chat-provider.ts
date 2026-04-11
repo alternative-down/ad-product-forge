@@ -1,4 +1,4 @@
-import type { CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
 
 import type { InternalChatService } from './internal-chat-service';
 
@@ -6,13 +6,17 @@ export function createInternalChatProvider(input: {
   agentId: string;
   internalChat: InternalChatService;
 }): CommunicationProvider {
+  let currentHandler: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
+
   return {
     id: 'internal-chat',
     onMessage(callback) {
+      currentHandler = callback;
       input.internalChat.onReceiveMessage(input.agentId, callback);
     },
     dispose() {
-      input.internalChat.clearHandler(input.agentId);
+      input.internalChat.clearHandler(input.agentId, currentHandler ?? undefined);
+      currentHandler = null;
     },
     async getSelfContact() {
       const account = await input.internalChat.getAccountByAgentId(input.agentId);

@@ -47,6 +47,7 @@ export type AgentSchedule = {
   scheduledDate?: number;
   timezone: string;
   content: string;
+  wakeWhenRunning: boolean;
   isActive: boolean;
   lastTriggeredAt?: number;
   nextTriggerAt?: number;
@@ -236,6 +237,7 @@ export type CreateScheduleInput = {
   scheduledDate?: string;
   timezone: string;
   content: string;
+  wakeWhenRunning?: boolean;
 };
 
 export type UpdateScheduleInput = {
@@ -248,6 +250,7 @@ export type UpdateScheduleInput = {
   scheduledDate?: string | null;
   timezone?: string;
   content?: string;
+  wakeWhenRunning?: boolean;
   isActive?: boolean;
 };
 

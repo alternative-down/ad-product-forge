@@ -206,6 +206,7 @@ export const agentSchedules = sqliteTable('agent_schedules', {
   scheduledDate: integer('scheduled_date'),
   timezone: text('timezone').notNull(),
   content: text('content').notNull(),
+  wakeWhenRunning: integer('wake_when_running').notNull().default(1),
   isActive: integer('is_active').notNull().default(1),
   lastTriggeredAt: integer('last_triggered_at'),
   nextTriggerAt: integer('next_trigger_at'),

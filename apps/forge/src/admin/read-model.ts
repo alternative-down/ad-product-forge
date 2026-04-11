@@ -912,6 +912,7 @@ function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
     scheduledDate: row.scheduledDate ?? undefined,
     timezone: row.timezone,
     content: row.content,
+    wakeWhenRunning: row.wakeWhenRunning === 1,
     isActive: row.isActive === 1,
     lastTriggeredAt: row.lastTriggeredAt ?? undefined,
     nextTriggerAt: row.nextTriggerAt ?? undefined,

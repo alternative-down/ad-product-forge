@@ -1,0 +1,1 @@
+ALTER TABLE `agent_schedules` ADD `wake_when_running` integer DEFAULT 1 NOT NULL;
