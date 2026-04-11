@@ -11,11 +11,10 @@ import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
-const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
 const STUCK_LOOP_REPEAT_LIMIT = 6;
-const STEP_HANG_WARNING_MS = ONE_HOUR_MS;
+const STEP_HANG_WARNING_MS = TEN_MINUTES_MS;
 const STEP_TIMEOUT_RECOVERY_ENABLED = true;
-const GENERATE_TIMEOUT_MS = 5 * ONE_MINUTE_MS;
+const GENERATE_TIMEOUT_MS = TEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 3;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
@@ -41,7 +40,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let lastStepStage: string | null = null;
   let lastLoopSignature: string | null = null;
   let repeatedLoopCount = 0;
-  let recoveringStuckStep = false;
+  let activeGenerateController: AbortController | null = null;
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
@@ -209,11 +208,13 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         return;
       }
 
-      void recoverStuckStep({
-        stepStartedAt: lastStepStartedAt,
-        stepStage: lastStepStage,
-        prompt,
-      });
+      if (!activeGenerateController || activeGenerateController.signal.aborted) {
+        return;
+      }
+
+      activeGenerateController.abort(
+        new Error(`Agent step exceeded ${STEP_HANG_WARNING_MS}ms and was aborted for retry`),
+      );
     }, STEP_HANG_WARNING_MS);
 
     try {
@@ -454,57 +455,10 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
 
-  async function recoverStuckStep(input: {
-    stepStartedAt: number | null;
-    stepStage: string | null;
-    prompt: string;
-  }) {
-    if (recoveringStuckStep || stopped || !executing) {
-      return;
-    }
-
-    recoveringStuckStep = true;
-
-    try {
-      console.error(
-        `[AgentRunner] ${runtime.id} forcing stuck step recovery`,
-        JSON.stringify({
-          agentId: runtime.id,
-          mastraId: runtime.mastraId,
-          pricingModelKey: runtime.pricingModelKey,
-          modelProfileId: runtime.modelProfileId,
-          stepStartedAt: input.stepStartedAt,
-          stepStage: input.stepStage,
-          prompt: input.prompt,
-          snapshot: getSnapshot(),
-        }, null, 2),
-      );
-
-      await notifications.createNotification({
-        agentId: runtime.id,
-        content: [
-          'Stuck step recovery triggered.',
-          `Started at: ${input.stepStartedAt ?? 'unknown'}`,
-          `Stage: ${input.stepStage ?? 'unknown'}`,
-          'The runner forced this agent back to idle after a long-running step.',
-        ].join('\n'),
-      });
-
-      nextStepAt = null;
-      resetLoopDetector();
-      await store.setExecutionState(runtime.id, 'idle');
-      executing = false;
-      await wakeQueue.onRunnerIdle();
-    } catch (error) {
-      console.error(`[AgentRunner] ${runtime.id} failed to recover stuck step:`, error);
-    } finally {
-      recoveringStuckStep = false;
-    }
-  }
-
   async function generateWithTimeoutRetries(promptText: string) {
     for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();
+      activeGenerateController = controller;
       const timeoutId = setTimeout(() => {
         controller.abort(new Error(`Agent generate timed out after ${GENERATE_TIMEOUT_MS}ms`));
       }, GENERATE_TIMEOUT_MS);
@@ -551,6 +505,9 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
         );
         await delay(backoffMs);
       } finally {
+        if (activeGenerateController === controller) {
+          activeGenerateController = null;
+        }
         clearTimeout(timeoutId);
       }
     }
