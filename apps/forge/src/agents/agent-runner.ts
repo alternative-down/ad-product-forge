@@ -14,7 +14,7 @@ const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
 const STUCK_LOOP_REPEAT_LIMIT = 6;
 const STEP_HANG_WARNING_MS = ONE_HOUR_MS;
-const STEP_TIMEOUT_RECOVERY_ENABLED = false;
+const STEP_TIMEOUT_RECOVERY_ENABLED = true;
 const GENERATE_TIMEOUT_MS = 5 * ONE_MINUTE_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 3;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
@@ -41,6 +41,7 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
   let lastStepStage: string | null = null;
   let lastLoopSignature: string | null = null;
   let repeatedLoopCount = 0;
+  let recoveringStuckStep = false;
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
   runtime.onReceiveMessage(wakeQueue.notifyExternalEvent);
@@ -203,6 +204,16 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
           stepTimeoutRecoveryEnabled: STEP_TIMEOUT_RECOVERY_ENABLED,
         }, null, 2),
       );
+
+      if (!STEP_TIMEOUT_RECOVERY_ENABLED) {
+        return;
+      }
+
+      void recoverStuckStep({
+        stepStartedAt: lastStepStartedAt,
+        stepStage: lastStepStage,
+        prompt,
+      });
     }, STEP_HANG_WARNING_MS);
 
     try {
@@ -442,6 +453,54 @@ export function createAgentRunner(db: Database, runtime: InternalAgentRuntime) {
     getSnapshot,
     notifyExternalEvent: wakeQueue.notifyExternalEvent,
   };
+
+  async function recoverStuckStep(input: {
+    stepStartedAt: number | null;
+    stepStage: string | null;
+    prompt: string;
+  }) {
+    if (recoveringStuckStep || stopped || !executing) {
+      return;
+    }
+
+    recoveringStuckStep = true;
+
+    try {
+      console.error(
+        `[AgentRunner] ${runtime.id} forcing stuck step recovery`,
+        JSON.stringify({
+          agentId: runtime.id,
+          mastraId: runtime.mastraId,
+          pricingModelKey: runtime.pricingModelKey,
+          modelProfileId: runtime.modelProfileId,
+          stepStartedAt: input.stepStartedAt,
+          stepStage: input.stepStage,
+          prompt: input.prompt,
+          snapshot: getSnapshot(),
+        }, null, 2),
+      );
+
+      await notifications.createNotification({
+        agentId: runtime.id,
+        content: [
+          'Stuck step recovery triggered.',
+          `Started at: ${input.stepStartedAt ?? 'unknown'}`,
+          `Stage: ${input.stepStage ?? 'unknown'}`,
+          'The runner forced this agent back to idle after a long-running step.',
+        ].join('\n'),
+      });
+
+      nextStepAt = null;
+      resetLoopDetector();
+      await store.setExecutionState(runtime.id, 'idle');
+      executing = false;
+      await wakeQueue.onRunnerIdle();
+    } catch (error) {
+      console.error(`[AgentRunner] ${runtime.id} failed to recover stuck step:`, error);
+    } finally {
+      recoveringStuckStep = false;
+    }
+  }
 
   async function generateWithTimeoutRetries(promptText: string) {
     for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
