@@ -38,6 +38,9 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly maxRecentRecallMessages = 8;
   private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
   private readonly incrementalHistoryLimit = 6;
+  private readonly initTimeoutMs = 15_000;
+  private readonly recallTimeoutMs = 20_000;
+  private readonly memoryAgentTimeoutMs = 120_000;
 
   private readonly om: ObservationalMemory;
   private readonly workspace: WorkspaceRuntime;
@@ -46,6 +49,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly omModel: AgentConfig['model'];
   private memoryAgent: Agent<string, never, string> | null = null;
   private memoryAgentRunning = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(config: LongTermMemoryConfig) {
     this.om = config.om;
@@ -86,8 +90,25 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   }
 
   private async doInitialize() {
-    await this.workspace.init();
-    await this.createWorkspaceVectorIndexIfMissing(this.vectorStore, this.searchIndexName);
+    if (!this.initializationPromise) {
+      this.initializationPromise = (async () => {
+        await withTimeout(
+          this.workspace.init(),
+          this.initTimeoutMs,
+          'ltm workspace init timed out',
+        );
+        await withTimeout(
+          this.createWorkspaceVectorIndexIfMissing(this.vectorStore, this.searchIndexName),
+          this.initTimeoutMs,
+          'ltm vector index initialization timed out',
+        );
+      })().catch((error) => {
+        this.initializationPromise = null;
+        throw error;
+      });
+    }
+
+    await this.initializationPromise;
   }
 
   private async createWorkspaceVectorIndexIfMissing(vectorStore: LibSQLVector, indexName: string) {
@@ -165,7 +186,11 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       return args.messages;
     }
 
-    const currentRecord = await this.om.getRecord(context.threadId, context.resourceId);
+    const currentRecord = await withTimeout(
+      this.om.getRecord(context.threadId, context.resourceId),
+      this.recallTimeoutMs,
+      'ltm observational memory record lookup timed out',
+    );
     if (!currentRecord) {
       return args.messages;
     }
@@ -173,10 +198,14 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     const hasObservationsDir =
       (await this.workspace.filesystem?.exists(this.observationsDir)) ?? false;
     const historyLimit = hasObservationsDir ? this.incrementalHistoryLimit : this.bootstrapHistoryLimit;
-    const observations = await this.om.getHistory(
-      context.threadId,
-      context.resourceId,
-      historyLimit,
+    const observations = await withTimeout(
+      this.om.getHistory(
+        context.threadId,
+        context.resourceId,
+        historyLimit,
+      ),
+      this.recallTimeoutMs,
+      'ltm observational memory history lookup timed out',
     );
     const pendingObservations = observations.filter(
       (observation) => observation.id !== currentRecord.id,
@@ -201,10 +230,14 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         .filter(Boolean)
         .join('\n');
 
-      await this.workspace.filesystem?.writeFile(filePath, content, {
-        recursive: true,
-        overwrite: true,
-      });
+      await withTimeout(
+        this.workspace.filesystem?.writeFile(filePath, content, {
+          recursive: true,
+          overwrite: true,
+        }) ?? Promise.resolve(),
+        this.recallTimeoutMs,
+        `ltm observation write timed out for ${filePath}`,
+      );
     }
 
     // Only call memory agent if this is the last step (no toolCalls + has text response)
@@ -216,10 +249,17 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       this.memoryAgentRunning = true;
       try {
         // Fire-and-forget: call memory agent to organize observations
-        this.memoryAgent
-          .generate('Review the observations and current memory documents. Learn from the new material, update or create focused memory documents, realign outdated information when newer information supersedes it, keep the memory rich but concise for future retrieval, avoid oversized memory files, and archive only the observation files that have truly been incorporated into memory. Use workspace-relative paths only.', {
+        const controller = new AbortController();
+
+        withTimeout(
+          this.memoryAgent.generate('Review the observations and current memory documents. Learn from the new material, update or create focused memory documents, realign outdated information when newer information supersedes it, keep the memory rich but concise for future retrieval, avoid oversized memory files, and archive only the observation files that have truly been incorporated into memory. Use workspace-relative paths only.', {
             maxSteps: 1000,
-          })
+            abortSignal: controller.signal,
+          }),
+          this.memoryAgentTimeoutMs,
+          'ltm memory agent timed out',
+          () => controller.abort(),
+        )
           .catch((error: unknown) => {
             forgeDebug('ltm', 'memory agent call failed', { error: String(error) });
           })
@@ -237,10 +277,14 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private async searchWorkspace(queryText: string): Promise<{ formatted: string; results: SearchResult[] }> {
     const startedAt = Date.now();
     try {
-      const results = await this.workspace.search(queryText, {
-        topK: 3,
-        mode: 'hybrid',
-      });
+      const results = await withTimeout(
+        this.workspace.search(queryText, {
+          topK: 3,
+          mode: 'hybrid',
+        }),
+        this.recallTimeoutMs,
+        'ltm workspace search timed out',
+      );
 
       forgeDebug('ltm', 'workspace search completed', {
         durationMs: Date.now() - startedAt,
@@ -292,16 +336,20 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
         .map((r) => r.content)
         .join('\n');
 
-      const graphResult = await graphTool.execute(
-        {
-          queryText: workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText,
-          topK: 3,
-        },
-        {} as MastraToolInvocationOptions,
+      const graphResult = await withTimeout(
+        graphTool.execute(
+          {
+            queryText: workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText,
+            topK: 3,
+          },
+          {} as MastraToolInvocationOptions,
+        ),
+        this.recallTimeoutMs,
+        'ltm graph search timed out',
       );
 
-      const relevantContext = typeof graphResult?.relevantContext === 'string' 
-        ? graphResult.relevantContext 
+      const relevantContext = typeof graphResult?.relevantContext === 'string'
+        ? graphResult.relevantContext
         : '';
 
       forgeDebug('ltm', 'graph search completed', {
@@ -510,3 +558,27 @@ type SearchResult = {
   content: string;
   score?: number;
 };
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+  onTimeout?: () => void,
+) {
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      onTimeout?.();
+      reject(new Error(message));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (!timeoutId) {
+      return;
+    }
+
+    clearTimeout(timeoutId);
+  });
+}
