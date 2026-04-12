@@ -184,6 +184,28 @@ export function createAgentRunner(
     runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
   }
 
+  async function forceIdle() {
+    const runEpoch = startNewRunEpoch();
+    startingRun = false;
+    executing = false;
+    clearTimer();
+    wakeQueue.stop();
+    pendingRunMessages.clear();
+    instant = false;
+    await resetRunLastMessages();
+    resetLoopDetector();
+    await store.setExecutionState(runtime.id, 'idle');
+
+    if (isStaleRun(runEpoch)) {
+      return;
+    }
+
+    lastWakeStartedAt = null;
+    lastStepStartedAt = null;
+    lastStepStage = null;
+    nextStepAt = null;
+  }
+
   async function beginRun(input: {
     reloadRuntime: boolean;
     wakeStartedAt: number;
@@ -612,6 +634,7 @@ export function createAgentRunner(
   return {
     start,
     stop,
+    forceIdle,
     execute,
     getSnapshot,
     notifyExternalEvent,

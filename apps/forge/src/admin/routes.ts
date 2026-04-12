@@ -1091,13 +1091,13 @@ export function registerAdminRoutes(input: {
     path: '/admin/agent/force-idle',
     handler: async (request) => {
       const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      await resetAgentRuntime({
-        db: input.db,
-        loaderConfig: input.loaderConfig,
-        registry,
-        agentContracts,
-        agentId,
-      });
+      const entry = registry.get(agentId);
+
+      if (entry) {
+        await entry.runner.forceIdle();
+      } else {
+        await agentContracts.setExecutionState(agentId, 'idle');
+      }
 
       return jsonResponse({ success: true, agentId });
     },
@@ -1108,13 +1108,18 @@ export function registerAdminRoutes(input: {
     path: '/admin/agent/rewakeup',
     handler: async (request) => {
       const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      const entry = await resetAgentRuntime({
-        db: input.db,
-        loaderConfig: input.loaderConfig,
-        registry,
-        agentContracts,
-        agentId,
-      });
+      let entry = registry.get(agentId);
+
+      if (entry) {
+        await entry.runner.forceIdle();
+      } else {
+        await agentContracts.setExecutionState(agentId, 'idle');
+        const runtime = await loadAgent(input.db, {
+          ...input.loaderConfig,
+          agentId,
+        });
+        entry = await registry.add(input.db, runtime);
+      }
 
       entry.runner.notifyExternalEvent({
         type: 'admin-rewakeup',
@@ -1891,23 +1896,6 @@ export function registerAdminRoutes(input: {
 async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
   clearAgentMCPClient(agentId);
   await reloadAgentIfLoaded(db, loaderConfig, agentId);
-}
-
-async function resetAgentRuntime(input: {
-  db: Database;
-  loaderConfig: AgentLoaderConfig;
-  registry: ReturnType<typeof getInternalAgentRegistry>;
-  agentContracts: ReturnType<typeof createAgentContractStore>;
-  agentId: string;
-}) {
-  input.registry.remove(input.agentId);
-  await input.agentContracts.setExecutionState(input.agentId, 'idle');
-  const runtime = await loadAgent(input.db, {
-    ...input.loaderConfig,
-    agentId: input.agentId,
-  });
-
-  return input.registry.add(input.db, runtime);
 }
 
 function normalizeOptionalText(value?: string) {
