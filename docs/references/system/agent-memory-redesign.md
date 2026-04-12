@@ -34,9 +34,9 @@ At any point, the active context should be thought of as:
 
 1. system and runtime instructions
 2. `AGENT_CONTEXT.md`
-3. recent raw messages
+3. active reflections
 4. active observations
-5. active reflections
+5. recent raw messages
 6. current wake/flush input
 
 Everything older than the active checkpoint should no longer compete for live context unless intentionally reintroduced by another mechanism.
@@ -236,4 +236,3 @@ The essential behavior to preserve is:
 - those aged-out reflections become LTM input
 
 If the implementation eventually differs internally but preserves that behavior, it is still acceptable.
-
