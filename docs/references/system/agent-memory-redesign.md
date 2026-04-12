@@ -75,6 +75,9 @@ In practice, that means:
 - the checkpoint must not be "last 20 messages"
 - the checkpoint must not be "everything older than N messages"
 - the checkpoint should advance only when enough newer consolidated context exists to replace older active material safely
+- checkpoint advancement should happen in reflection blocks, not one reflection at a time
+- a checkpoint-advance block can be defined as a percentage of the reflection history budget
+- an example shape is roughly `50%` of that reflection budget
 
 Another way to state it:
 - the checkpoint marks the oldest point from which active context still needs to be reconstructed
@@ -158,10 +161,11 @@ Why this is desirable:
 The active context should be managed primarily by token budget, not by message count.
 
 The current target idea is:
+- total active context target: about `50,000` tokens
 - recent raw reserve: about `10,000` tokens
 - raw-to-observation batch buffer: about `5,000` tokens
 - observation-to-reflection batch buffer: about `5,000` tokens
-- active reflection history budget: about `30,000` tokens
+- active reflection history budget: whatever remains from the total target after the three reserved areas above
 
 These values are not final, but they express the intended shape:
 - preserve a fixed recent raw reserve
@@ -173,7 +177,11 @@ This also clarifies the active layout:
 - raw material older than that does not stay raw in active context
 - once raw material accumulates another `5k` tokens beyond the recent reserve, it should become an observation
 - once observations accumulate `5k` tokens, they should become a reflection
-- reflections can occupy about `30k` tokens of active historical context
+- reflections occupy the remaining active historical budget
+
+Examples:
+- if the total target is `50k`, the reflection history budget is about `30k`
+- if the total target is `100k`, the reflection history budget is about `80k`
 
 ## Context Assembly Expectations
 When a model call is prepared, active context assembly should behave roughly like this:
@@ -238,10 +246,7 @@ The behavior must be inspectable and predictable.
 ## Open Questions
 These still need definition:
 
-- What exact rule decides when a raw batch is closed?
-- What exact rule decides when an observation batch is closed?
-- Should batching be token-only, message-only, or hybrid?
-- How many reflections should remain active before checkpoint advancement?
+- What exact condition triggers checkpoint advancement beyond "context pressure exceeded"?
 - Should checkpoint advancement happen inline during a run or in a side process?
 - What exact shape should a reflection have so that it is good active context and also good future LTM input?
 - Should there be one global checkpoint per thread, or separate checkpoints per layer?
