@@ -112,6 +112,7 @@ The intent is not to produce a timeless summary yet. The intent is to compact a 
 Rule:
 - once a raw batch becomes an observation, that raw batch should leave the active context completely
 - the observation becomes the only active representation of that older raw region
+- the raw batch should be closed by token threshold only, not by message count
 
 ## Reflection Layer
 Reflections are the second compression stage over observations.
