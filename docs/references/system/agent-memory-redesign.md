@@ -226,6 +226,7 @@ The assembly process should prefer:
 - then keeping the newest active observations that have not yet been reflected
 
 Anything older should be compressed or pushed behind the checkpoint instead of being allowed to sprawl.
+Within each active layer, ordering should remain chronological from oldest to newest.
 
 ## What "Replace" Means
 In this design, replacement is important.
