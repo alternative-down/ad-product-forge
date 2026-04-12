@@ -133,6 +133,7 @@ Rule:
 - the first implementation can do this synchronously right after block closure, while preserving the option to make this asynchronous later
 - a closed raw block is still raw source material until the observation is successfully generated
 - if synchronous observation generation fails after raw block closure, execution should stop at that point; no automatic retry should happen in this first version
+- raw blocks are strict: one raw message belongs to only one raw block and must not be replaced twice by different observations
 
 ## Reflection Layer
 Reflections are the second compression stage over observations.
@@ -160,6 +161,8 @@ Rule:
 - the first implementation can do this synchronously right after block closure, while preserving the option to make this asynchronous later
 - a closed observation block is still just source material until the reflection is successfully generated
 - if synchronous reflection generation fails after observation block closure, execution should stop at that point; no automatic retry should happen in this first version
+- observation blocks are strict: one observation belongs to only one reflection block and must not be replaced twice by different reflections
+- older blocks can still be used as supporting context when generating a newer observation or reflection, but that does not change the replacement ownership rules
 
 ## LTM Handoff
 LTM should not work from the full live thread.
