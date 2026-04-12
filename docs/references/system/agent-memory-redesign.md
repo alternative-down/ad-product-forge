@@ -124,6 +124,8 @@ Rule:
 - the raw batch should be closed by token threshold only, not by message count
 - the raw batch should start only after the recent raw reserve has already been filled
 - that means raw material first occupies the `10,000` token recent reserve, and only older overflow starts filling the `5,000` token observation batch buffer
+- the raw block should first be explicitly closed, and then the observation should be generated from that closed block
+- the first implementation can do this synchronously right after block closure, while preserving the option to make this asynchronous later
 
 ## Reflection Layer
 Reflections are the second compression stage over observations.
@@ -146,6 +148,8 @@ Rule:
 - the observation batch should be closed by token threshold only, not by message count
 - the observation batch buffer should target about `5,000` tokens before generating a reflection
 - the textual shape and prompting style of observations and reflections can initially follow the same model already used by the current OM implementation
+- the observation block should first be explicitly closed, and then the reflection should be generated from that closed block
+- the first implementation can do this synchronously right after block closure, while preserving the option to make this asynchronous later
 
 ## LTM Handoff
 LTM should not work from the full live thread.
