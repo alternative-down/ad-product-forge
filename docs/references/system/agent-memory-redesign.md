@@ -84,6 +84,8 @@ In practice, that means:
 
 Another way to state it:
 - the checkpoint marks the oldest point from which active context still needs to be reconstructed
+- there must be one primary checkpoint per thread for active-context reconstruction
+- auxiliary internal checkpoints can exist if they help manage batch buffers, but they are optional implementation details and not the main semantic boundary
 
 ## Recent RAW Message Layer
 The system should intentionally preserve a small recent raw layer.
@@ -250,7 +252,6 @@ The behavior must be inspectable and predictable.
 These still need definition:
 
 - What exact shape should a reflection have so that it is good active context and also good future LTM input?
-- Should there be one global checkpoint per thread, or separate checkpoints per layer?
 
 ## What This Document Is Trying To Lock In
 This document is trying to lock in the desired behavior, not the implementation mechanism.
