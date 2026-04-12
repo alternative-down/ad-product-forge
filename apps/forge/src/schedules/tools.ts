@@ -219,28 +219,26 @@ export function createAgentScheduleTools(
 ) {
   const tools: Record<string, unknown> = {};
 
-  if (hasToolPermission(allowedToolIds, 'list_self_crons')) {
-    tools.list_self_crons = createTool({
-      id: 'list_self_crons',
-      description: 'List your own crons. Use this to review your recurring or one-time scheduled executions and get the cronId needed for later changes.',
-      inputSchema: z.object({}),
-      execute: async () => {
-        forgeDebug('tools:schedules', 'list_self_crons called', { agentId });
-        try {
-          const result = await schedules.listSchedules(agentId);
-          forgeDebug('tools:schedules', 'list_self_crons result', { count: result.length });
-          return result.map(toCronOutput);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            valid: false,
-            error: message,
-            hint: 'Try again in a moment. If the problem persists, verify the cron store is available.',
-          };
-        }
-      },
-    });
-  }
+  tools.list_self_crons = createTool({
+    id: 'list_self_crons',
+    description: 'List all crons that belong to you. This includes crons you created yourself and crons created for you by other agents. Use this to understand your scheduled work and get the cronId for any cron you are allowed to inspect.',
+    inputSchema: z.object({}),
+    execute: async () => {
+      forgeDebug('tools:schedules', 'list_self_crons called', { agentId });
+      try {
+        const result = await schedules.listSchedules(agentId);
+        forgeDebug('tools:schedules', 'list_self_crons result', { count: result.length });
+        return result.map(toCronOutput);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          valid: false,
+          error: message,
+          hint: 'Try again in a moment. If the problem persists, verify the cron store is available.',
+        };
+      }
+    },
+  });
 
   if (hasToolPermission(allowedToolIds, 'manage_self_crons')) {
     tools.manage_self_crons = createTool({
