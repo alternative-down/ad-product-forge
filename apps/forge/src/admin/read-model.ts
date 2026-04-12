@@ -510,8 +510,8 @@ export function createAdminReadModel(input: {
       observations: omRecord.activeObservations,
       reflection: omRecord.bufferedReflection ?? latestReflection?.activeObservations ?? '',
       generationCount: omRecord.generationCount,
-      updatedAt: omRecord.updatedAt,
-      lastObservedAt: omRecord.lastObservedAt ?? null,
+      updatedAt: omRecord.updatedAt.getTime(),
+      lastObservedAt: omRecord.lastObservedAt ? omRecord.lastObservedAt.getTime() : null,
     };
   }
 
