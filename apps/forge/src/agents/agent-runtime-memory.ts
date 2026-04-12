@@ -44,13 +44,10 @@ export function createAgentRuntimeMemory(input: {
     model: input.omModel ?? input.agentModel,
     observation: {
       messageTokens: input.omObservationMessageTokens,
-      bufferTokens: input.omObservationBufferTokens,
-      bufferActivation: input.omObservationBufferActivation,
       previousObserverTokens: input.omObservationPreviousObserverTokens,
     },
     reflection: {
       observationTokens: input.omReflectionObservationTokens,
-      bufferActivation: input.omReflectionBufferActivation,
     },
   });
 
