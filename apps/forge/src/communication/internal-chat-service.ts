@@ -338,7 +338,13 @@ export function createInternalChatService(
   }
 
   function onReceiveMessage(agentId: string, handler: InternalChatHandler) {
+    const hadHandler = handlers.has(agentId);
     handlers.set(agentId, handler);
+
+    if (hadHandler) {
+      return;
+    }
+
     void replayUnreadMessages(agentId, handler).catch((error) => {
       console.error(`[InternalChat] Failed to replay unread messages for agent ${agentId}:`, error);
     });
