@@ -117,6 +117,7 @@ Observations should be:
 - more compact than the raw batch
 - still close to the concrete events
 - specific enough to preserve operational detail
+- immutable after creation
 
 The intent is not to produce a timeless summary yet. The intent is to compact a recent region of raw conversation while keeping local usefulness.
 
@@ -143,6 +144,7 @@ Reflections should be:
 - more compact than a stack of observations
 - more abstract and durable
 - less tied to one local conversation moment
+- immutable after creation
 
 Reflections are what should carry medium-term continuity inside the active context.
 
