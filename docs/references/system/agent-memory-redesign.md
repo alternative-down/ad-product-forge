@@ -88,11 +88,12 @@ Why:
 - very recent details should not be compressed too early
 
 Desired behavior:
-- keep about `10-15` recent raw messages, or a token-based equivalent
+- keep about `10,000` tokens of recent raw messages
 - keep them as raw messages, not observations
 - they should be the freshest part of the active context
 
 This raw reserve should be protected as long as possible when the context budget is assembled.
+Raw messages inside this reserve should not be compressed yet.
 
 ## Observation Layer
 Observations are the first compression stage over raw messages.
@@ -113,6 +114,8 @@ Rule:
 - once a raw batch becomes an observation, that raw batch should leave the active context completely
 - the observation becomes the only active representation of that older raw region
 - the raw batch should be closed by token threshold only, not by message count
+- the raw batch should start only after the recent raw reserve has already been filled
+- that means raw material first occupies the `10,000` token recent reserve, and only older overflow starts filling the `5,000` token observation batch buffer
 
 ## Reflection Layer
 Reflections are the second compression stage over observations.
@@ -133,6 +136,7 @@ Rule:
 - once an observation batch becomes a reflection, those observations should leave the active context completely
 - the reflection becomes the only active representation of that older observation region
 - the observation batch should be closed by token threshold only, not by message count
+- the observation batch buffer should target about `5,000` tokens before generating a reflection
 
 ## LTM Handoff
 LTM should not work from the full live thread.
@@ -154,15 +158,22 @@ Why this is desirable:
 The active context should be managed primarily by token budget, not by message count.
 
 The current target idea is:
-- total active context target: about `50,000` tokens
-- raw reserve: about `10-15` recent raw messages, or token equivalent
-- raw-to-observation batch threshold: about `5,000` tokens
-- observation-to-reflection batch threshold: about `5,000` tokens
+- recent raw reserve: about `10,000` tokens
+- raw-to-observation batch buffer: about `5,000` tokens
+- observation-to-reflection batch buffer: about `5,000` tokens
+- active reflection history budget: about `30,000` tokens
 
 These values are not final, but they express the intended shape:
-- keep the whole active context modest
-- compress in bounded chunks
-- preserve some fresh raw detail
+- preserve a fixed recent raw reserve
+- compress older material in bounded chunks
+- keep most of the active historical continuity in reflections
+
+This also clarifies the active layout:
+- newest `10k` tokens stay as raw recent context
+- raw material older than that does not stay raw in active context
+- once raw material accumulates another `5k` tokens beyond the recent reserve, it should become an observation
+- once observations accumulate `5k` tokens, they should become a reflection
+- reflections can occupy about `30k` tokens of active historical context
 
 ## Context Assembly Expectations
 When a model call is prepared, active context assembly should behave roughly like this:
@@ -177,8 +188,8 @@ When a model call is prepared, active context assembly should behave roughly lik
 
 The assembly process should prefer:
 - keeping the recent raw reserve
-- then keeping the newest useful reflections
-- then keeping the newest useful observations
+- then keeping the active reflection history
+- then keeping the newest active observations that have not yet been reflected
 
 Anything older should be compressed or pushed behind the checkpoint instead of being allowed to sprawl.
 
