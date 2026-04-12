@@ -285,7 +285,26 @@ export function createAgentRunner(
       const controlDirective = extractRunnerControlDirective(result.text);
       const ignoredTextRequested = controlDirective === 'ignore';
       const stopRequested = controlDirective === 'stop';
+      const workingMemoryUpdated = didUpdateWorkingMemory(result);
       const loopSignature = buildLoopSignature(result);
+
+      if (workingMemoryUpdated) {
+        appendPendingRunMessages([
+          {
+            type: 'runner-working-memory-update',
+            groupKey: `runner-working-memory-update:${runtime.id}`,
+            groupMetadata: {
+              Source: 'runner',
+            },
+            idempotencyKey: `runner-working-memory-update:${runtime.id}:${lastStepStartedAt ?? Date.now()}`,
+            itemMetadata: {
+              Kind: 'working-memory-update',
+            },
+            text: `Working memory was updated at ${new Date().toISOString()} during the last step.`,
+            timestamp: Date.now(),
+          },
+        ]);
+      }
 
       if (registerLoopSignature(loopSignature) >= STUCK_LOOP_REPEAT_LIMIT) {
         await notifications.createNotification({
@@ -611,6 +630,16 @@ function buildLoopSignature(result: {
       args: chunk.payload.args,
     })),
   });
+}
+
+function didUpdateWorkingMemory(result: {
+  toolCalls: Array<{
+    payload: {
+      toolName: string;
+    };
+  }>;
+}) {
+  return result.toolCalls.some((chunk) => chunk.payload.toolName === 'updateWorkingMemory');
 }
 
 function serializeError(error: unknown): Record<string, unknown> {
