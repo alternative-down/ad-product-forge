@@ -17,6 +17,7 @@ const STEP_HANG_WARNING_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 3;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
+const RUNNER_AWAIT_TIMEOUT_MS = 10_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
@@ -66,10 +67,18 @@ export function createAgentRunner(
     }
 
     const previousRuntime = currentRuntime;
-    const nextRuntime = await options.reloadRuntime();
+    const nextRuntime = await withTimeout(
+      options.reloadRuntime(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent runtime reload timed out for ${runtime.id}`,
+    );
 
     if (isStaleRun(runEpoch)) {
-      await nextRuntime.dispose();
+      await withTimeout(
+        nextRuntime.dispose(),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent runtime disposal timed out for ${runtime.id}`,
+      );
       return;
     }
 
@@ -77,7 +86,11 @@ export function createAgentRunner(
     usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
     currentRuntime.onReceiveMessage(notifyExternalEvent);
     options.onRuntimeReloaded?.(nextRuntime);
-    await previousRuntime.dispose();
+    await withTimeout(
+      previousRuntime.dispose(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Previous agent runtime disposal timed out for ${runtime.id}`,
+    );
   }
 
   function clearTimer() {
@@ -111,7 +124,11 @@ export function createAgentRunner(
       return;
     }
 
-    const executionState = await store.getExecutionState(runtime.id);
+    const executionState = await withTimeout(
+      store.getExecutionState(runtime.id),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent execution state lookup timed out for ${runtime.id}`,
+    );
 
     if (executionState !== 'running') {
       return;
@@ -129,7 +146,11 @@ export function createAgentRunner(
       return;
     }
 
-    const executionState = await store.getExecutionState(runtime.id);
+    const executionState = await withTimeout(
+      store.getExecutionState(runtime.id),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent execution state lookup timed out for ${runtime.id}`,
+    );
 
     appendPendingRunMessages(events);
 
@@ -184,6 +205,28 @@ export function createAgentRunner(
     runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
   }
 
+  async function forceIdle() {
+    const runEpoch = startNewRunEpoch();
+    startingRun = false;
+    executing = false;
+    clearTimer();
+    wakeQueue.stop();
+    pendingRunMessages.clear();
+    instant = false;
+    await resetRunLastMessages();
+    resetLoopDetector();
+    await store.setExecutionState(runtime.id, 'idle');
+
+    if (isStaleRun(runEpoch)) {
+      return;
+    }
+
+    lastWakeStartedAt = null;
+    lastStepStartedAt = null;
+    lastStepStage = null;
+    nextStepAt = null;
+  }
+
   async function beginRun(input: {
     reloadRuntime: boolean;
     wakeStartedAt: number;
@@ -212,7 +255,11 @@ export function createAgentRunner(
       }
 
       if (input.markRunning) {
-        await store.setExecutionState(runtime.id, 'running');
+        await withTimeout(
+          store.setExecutionState(runtime.id, 'running'),
+          RUNNER_AWAIT_TIMEOUT_MS,
+          `Agent execution state update timed out for ${runtime.id}`,
+        );
       }
 
       if (isStaleRun(runEpoch)) {
@@ -236,7 +283,11 @@ export function createAgentRunner(
     }
 
     try {
-      const executionState = await store.getExecutionState(runtime.id);
+      const executionState = await withTimeout(
+        store.getExecutionState(runtime.id),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent execution state lookup timed out for ${runtime.id}`,
+      );
 
       if (executionState !== 'running' || isStaleRun(runEpoch)) {
         return;
@@ -287,6 +338,7 @@ export function createAgentRunner(
     executing = true;
     activeStepEpoch = runEpoch;
     let continueRunning = false;
+    let drainWakeQueueAfterStep = false;
     let prompt = '';
     lastStepStartedAt = Date.now();
     lastStepStage = 'step-started';
@@ -310,21 +362,32 @@ export function createAgentRunner(
 
     try {
       lastStepStage = 'checking-execution-state';
-      const executionState = await store.getExecutionState(runtime.id);
+      const executionState = await withTimeout(
+        store.getExecutionState(runtime.id),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent execution state lookup timed out for ${runtime.id}`,
+      );
 
       if (executionState !== 'running' || isStaleRun(runEpoch)) {
         return;
       }
 
       lastStepStage = 'loading-runnable-contract';
-      const contract = await store.getRunnableContract(runtime.id);
+      const contract = await withTimeout(
+        store.getRunnableContract(runtime.id),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent runnable contract lookup timed out for ${runtime.id}`,
+      );
 
       if (isStaleRun(runEpoch)) {
         return;
       }
 
       if (!contract) {
-        await transitionToIdle(runEpoch);
+        await transitionToIdle(runEpoch, {
+          deferWakeQueueDrain: true,
+        });
+        drainWakeQueueAfterStep = true;
         return;
       }
 
@@ -362,9 +425,17 @@ export function createAgentRunner(
         outputTokens,
       } = usage.getUsageFromResult(result);
 
-      await usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens);
+      await withTimeout(
+        usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent usage recording timed out for ${runtime.id}`,
+      );
       lastStepStage = 'recording-observational-memory-usage';
-      await usage.recordObservationalMemorySteps(contractId, result.steps);
+      await withTimeout(
+        usage.recordObservationalMemorySteps(contractId, result.steps),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent observational memory usage recording timed out for ${runtime.id}`,
+      );
 
       lastStepStage = 'processing-runner-control';
       const controlDirective = extractRunnerControlDirective(result.text);
@@ -392,21 +463,28 @@ export function createAgentRunner(
       }
 
       if (registerLoopSignature(loopSignature) >= STUCK_LOOP_REPEAT_LIMIT) {
-        await notifications.createNotification({
-          agentId: runtime.id,
-          content: [
-            'Stuck loop detected.',
-            `Repeated signature count: ${repeatedLoopCount}`,
-            'The agent repeated the same tool/text pattern and was forced to stop.',
-            '',
-            'Signature:',
-            loopSignature,
-          ].join('\n'),
-        });
+        await withTimeout(
+          notifications.createNotification({
+            agentId: runtime.id,
+            content: [
+              'Stuck loop detected.',
+              `Repeated signature count: ${repeatedLoopCount}`,
+              'The agent repeated the same tool/text pattern and was forced to stop.',
+              '',
+              'Signature:',
+              loopSignature,
+            ].join('\n'),
+          }),
+          RUNNER_AWAIT_TIMEOUT_MS,
+          `Agent notification creation timed out for ${runtime.id}`,
+        );
         nextStepAt = null;
         await resetRunLastMessages();
         resetLoopDetector();
-        await transitionToIdle(runEpoch);
+        await transitionToIdle(runEpoch, {
+          deferWakeQueueDrain: true,
+        });
+        drainWakeQueueAfterStep = true;
         return;
       }
 
@@ -420,7 +498,10 @@ export function createAgentRunner(
 
         nextStepAt = null;
         resetLoopDetector();
-        await transitionToIdle(runEpoch);
+        await transitionToIdle(runEpoch, {
+          deferWakeQueueDrain: true,
+        });
+        drainWakeQueueAfterStep = true;
         return;
       }
 
@@ -479,6 +560,10 @@ export function createAgentRunner(
         executing = false;
       }
 
+      if (drainWakeQueueAfterStep && !isStaleRun(runEpoch)) {
+        await wakeQueue.onRunnerIdle();
+      }
+
       if (continueRunning && !isStaleRun(runEpoch)) {
         await queueNextStep(runEpoch);
       }
@@ -491,7 +576,11 @@ export function createAgentRunner(
   }
 
   async function resetRunLastMessages() {
-    const settings = await systemSettings.getSettings();
+    const settings = await withTimeout(
+      systemSettings.getSettings(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `System settings lookup timed out for ${runtime.id}`,
+    );
 
     if (settings.memoryLastMessagesFullEnabled) {
       runLastMessages = null;
@@ -533,7 +622,11 @@ export function createAgentRunner(
         delayMs: number;
       }
   > {
-    const contract = await store.getRunnableContract(runtime.id);
+    const contract = await withTimeout(
+      store.getRunnableContract(runtime.id),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent runnable contract lookup timed out for ${runtime.id}`,
+    );
 
     if (!contract) {
       return {
@@ -541,9 +634,17 @@ export function createAgentRunner(
       };
     }
 
-    const spentUsd = await store.getContractSpend(contract.id);
+    const spentUsd = await withTimeout(
+      store.getContractSpend(contract.id),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent contract spend lookup timed out for ${runtime.id}`,
+    );
     const remainingBudgetUsd = contract.budgetUsd - spentUsd;
-    const estimatedStepUsd = await usage.estimateStepCostUsd();
+    const estimatedStepUsd = await withTimeout(
+      usage.estimateStepCostUsd(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent step cost estimate timed out for ${runtime.id}`,
+    );
 
     if (estimatedStepUsd !== null && remainingBudgetUsd < estimatedStepUsd) {
       return {
@@ -552,7 +653,11 @@ export function createAgentRunner(
     }
 
     backoffMs = ONE_MINUTE_MS;
-    const settings = await systemSettings.getSettings();
+    const settings = await withTimeout(
+      systemSettings.getSettings(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `System settings lookup timed out for ${runtime.id}`,
+    );
 
     return {
       execute: true as const,
@@ -612,6 +717,7 @@ export function createAgentRunner(
   return {
     start,
     stop,
+    forceIdle,
     execute,
     getSnapshot,
     notifyExternalEvent,
@@ -694,13 +800,21 @@ export function createAgentRunner(
       return undefined;
     }
 
-    const exists = await filesystem.exists(AGENT_CONTEXT_FILE_PATH);
+    const exists = await withTimeout(
+      filesystem.exists(AGENT_CONTEXT_FILE_PATH),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent context existence check timed out for ${runtime.id}`,
+    );
 
     if (!exists) {
       return undefined;
     }
 
-    const data = await filesystem.readFile(AGENT_CONTEXT_FILE_PATH);
+    const data = await withTimeout(
+      filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent context read timed out for ${runtime.id}`,
+    );
     const content = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
     const trimmedContent = content.trim();
 
@@ -746,7 +860,12 @@ export function createAgentRunner(
     return !startingRun && !executing && !timer;
   }
 
-  async function transitionToIdle(runEpoch: number) {
+  async function transitionToIdle(
+    runEpoch: number,
+    options: {
+      deferWakeQueueDrain?: boolean;
+    } = {},
+  ) {
     if (isStaleRun(runEpoch)) {
       return;
     }
@@ -756,9 +875,17 @@ export function createAgentRunner(
     instant = false;
     await resetRunLastMessages();
     resetLoopDetector();
-    await store.setExecutionState(runtime.id, 'idle');
+    await withTimeout(
+      store.setExecutionState(runtime.id, 'idle'),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent execution state update timed out for ${runtime.id}`,
+    );
 
     if (isStaleRun(runEpoch)) {
+      return;
+    }
+
+    if (options.deferWakeQueueDrain) {
       return;
     }
 
@@ -814,6 +941,24 @@ export function createAgentRunner(
 function delay(delayMs: number) {
   return new Promise<void>((resolve) => {
     setTimeout(resolve, delayMs);
+  });
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (!timeoutId) {
+      return;
+    }
+
+    clearTimeout(timeoutId);
   });
 }
 
