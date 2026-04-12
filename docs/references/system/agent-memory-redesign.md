@@ -83,6 +83,7 @@ In practice, that means:
 - this should happen during step-time context management, not at run boundaries
 - this mechanism must be independent from the runner's run lifecycle
 - checkpoint advancement should operate only on the reflection layer, never directly on active observations
+- the model assumes that when checkpoint advancement is needed, sufficient reflection material already exists for that advancement; this should be guaranteed by the compression flow rather than handled as an exceptional branch
 
 Another way to state it:
 - the checkpoint marks the oldest point from which active context still needs to be reconstructed
