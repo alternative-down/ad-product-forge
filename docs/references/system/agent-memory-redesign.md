@@ -166,6 +166,7 @@ Why this is desirable:
 
 ## Desired Token Strategy
 The active context should be managed primarily by token budget, not by message count.
+Token accounting can initially follow the same counting approach currently used by the existing OM implementation.
 
 The current target idea is:
 - total active context target: about `50,000` tokens
