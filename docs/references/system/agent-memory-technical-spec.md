@@ -1,491 +1,574 @@
 # Agent Memory Technical Spec
 
 ## Status
-- Draft
+- Working Spec
 - Branch: `feat/custom-observational-memory`
-- Scope: technical specification for the first implementation of the new checkpoint-based active context manager
+- Scope: technical specification for the replacement of the current OM behavior with a checkpoint-based active-context manager
 
 ## Inputs
 This spec is derived from:
 - [agent-memory-redesign.md](/home/nicolas/Documentos/github/ad-product-forge/docs/references/system/agent-memory-redesign.md)
 - the current Forge runner/runtime
-- the currently installed Mastra runtime and processor APIs
+- the currently installed Mastra runtime, processor APIs, storage types, and OM structures
 
 ## Technical Goal
-Implement the new active context manager while keeping the current agent runtime usable.
+Implement a new active-context manager that:
+- preserves the current Forge agent runtime
+- reuses Mastra structures where they are useful
+- replaces Mastra's current OM behavior
+- keeps LTM handoff compatible with the current downstream pattern
+- manages context by checkpoint and block lifecycle instead of by naive message windows
 
-The first version should:
-- disable the current Mastra OM/LTM processors
-- keep Mastra agent execution, working memory, workspace, and tools
-- add our own checkpoint-based context manager
-- run that manager at step time before the final agent `generate`
-- keep the implementation inspectable and deterministic
+This spec is about the active context manager itself.
+LTM handoff is downstream from that manager, not the main design problem.
 
-## Investigation Findings About Mastra
+## Fixed Product Decisions
+The implementation must follow these already-set behavioral rules:
 
-### What Mastra gives us
-The installed Mastra runtime already gives us the processor hooks we need:
+- active context order is:
+  - system/runtime instructions
+  - `AGENT_CONTEXT.md`
+  - active reflections
+  - active observations
+  - recent raw messages
+  - current flush input
+- recent raw uses a reserved token budget
+- older raw overflow fills a raw batch buffer
+- raw batch closure is triggered only by token threshold
+- raw batch replacement is strict:
+  - once summarized, those raw messages leave active context completely
+- observation batch closure is triggered only by token threshold
+- observation batch replacement is strict:
+  - once reflected, those observations leave active context completely
+- observations and reflections are immutable artifacts
+- blocks have strict ownership
+- the primary checkpoint is per thread
+- checkpoint advancement happens only on the reflection layer
+- checkpoint advancement happens in blocks
+- checkpoint advancement triggers as soon as active reflections exceed their budget
+- closed block does not mean summarized
+- first implementation is synchronous:
+  - close block
+  - generate artifact immediately
+  - if generation fails, abort the step
+  - no automatic retry
+- if enough material exists, the manager can cascade through multiple transitions in one execution
+- all thresholds and support-context limits are configurable
 
+## Why Mastra Is Still The Right Execution Surface
+The new behavior should reuse Mastra's execution surface rather than replace it here.
+
+Mastra already gives us the parts we actually need:
 - `processInputStep`
-  - runs before each step
-  - can inspect and mutate the `MessageList`
 - `processOutputStep`
-  - runs after each step
-  - can inspect step output and persist derived state
-- `abort()` / TripWire
-  - can stop a step from inside a processor
-  - can optionally retry, but we do not want retry for this first version
 - `MessageList`
-  - can remove messages by id
-  - can add tagged system messages
-  - can replace tagged system messages
+- storage and thread metadata
+- processor abort / TripWire
+- the current OM token-accounting basis
+- the current observation/reflection prompting and text shape
 
-These capabilities are enough to build our own active context management layer without depending on Mastra's built-in OM behavior.
+What we are replacing is not the whole runtime.
+We are replacing the memory behavior.
 
-### What Mastra does not give us directly
-Mastra's built-in message history loading is still based on memory/thread loading rules such as `lastMessages`.
+So the design should:
+- keep Mastra's agent loop, tools, workspace, working memory, and thread persistence
+- stop using Mastra's built-in OM lifecycle
+- build our own checkpointed context manager as a processor-backed subsystem
 
-It does not natively support:
-- checkpoint-based thread reconstruction
-- replacing older thread regions with our own observation/reflection artifacts
-- sliding checkpoint semantics
-- our explicit block lifecycle
+## Mastra Structures We Intentionally Reuse
+The new design should reuse these Mastra OM concepts directly:
 
-So the custom implementation must own:
-- checkpoint state
-- block state
-- artifact generation state
-- active-context reconstruction logic
+- `ObservationalMemoryRecord` as the reference shape for the main per-thread active-memory record
+- `lastObservedAt` as the main cursor concept
+- `generationCount` as the state-version counter
+- `thread.metadata.mastra.om` as the place for lightweight thread-local checkpoint metadata
+- the current OM token-accounting basis
+- the current OM observation/reflection prompting and text shape
+- `MessageList` mutation methods and tagged system messages for active-context reconstruction
 
-## First-Version Integration Strategy
+The new design should not reuse these behaviors:
+- one monolithic `activeObservations` string as the whole active historical layer
+- `bufferedReflection` activation semantics
+- async/background OM lifecycle
+- Mastra's current "observe everything after cursor, then condense into a single rolling text blob" behavior
 
-### Chosen direction
-The first version should keep Mastra for:
-- the agent loop
-- tools
-- workspace
-- working memory
-- persistence of the actual thread
+## Final Integration Strategy
+The implementation should be a custom processor-backed subsystem with one main processor:
+- `CheckpointedContextProcessor`
 
-But it should replace OM/LTM behavior with a custom processor pipeline.
-
-### Why this is the right first step
-This keeps the blast radius lower:
-- we do not need to rewrite the whole agent runtime immediately
-- we can attach to `processInputStep` and `processOutputStep`
-- we can validate the new context model before deciding whether Mastra itself must later be removed from the main loop
-
-### Key design implication
-The new memory system is not "another summary processor".
-It is a thread-aware active context manager that happens to use processor hooks as the execution surface.
-
-## High-Level Runtime Shape
-
-### Before the agent step
-On every step, a custom input processor should:
-
-1. load the current checkpoint + memory state for the thread
-2. inspect newly persisted thread messages after the checkpoint
-3. update open raw / observation / reflection blocks
-4. if thresholds are crossed:
-   - close block
-   - synchronously generate observation or reflection
-   - persist the resulting artifact
-   - continue cascading while more transitions are needed
-5. if reflection budget is exceeded:
-   - advance checkpoint by reflection block
-   - mark those reflections as archived / LTM-pending
-6. rebuild the active context
-7. mutate the `MessageList` so the final model call sees:
-   - base system prompt
-   - `AGENT_CONTEXT.md`
-   - active reflections
-   - active observations
-   - recent raw messages
-   - current flush input
-
-### After the agent step
-The first version should keep post-step behavior minimal.
-
-`processOutputStep` should be used only for bookkeeping that depends on the finished step if needed, not for the main compression pipeline.
-
-The main compression pipeline should happen before the main step `generate`, because:
-- the user defined this as step-time context management
-- context must already be correct when the actual agent model runs
-
-## Recommended Processor Structure
-
-### Processor 1: `CheckpointedContextProcessor`
-Main processor responsible for active context management.
-
-Responsibilities:
-- load thread state from our custom OM store
-- inspect the thread slice after the primary checkpoint
-- create/close/update raw blocks
-- create observations
-- create reflections
-- advance checkpoint
-- prepare LTM handoff state
-- rebuild the active context inside `MessageList`
-
-Primary method:
+The main pipeline runs in:
 - `processInputStep`
 
-Optional secondary method:
-- `processOutputStep`
-  - only if some bookkeeping must happen after the step's response is known
+That is where the manager must:
+- load active-memory state
+- inspect thread messages after checkpoint
+- update raw / observation / reflection block state
+- generate missing artifacts synchronously when thresholds are crossed
+- advance checkpoint when reflection pressure requires it
+- rebuild the active context into the `MessageList`
 
-### Processor 2: `CheckpointedLtmHandoffProcessor` (optional in first version)
-If needed, LTM handoff can remain a separate processor or service.
+`processOutputStep` stays optional and minimal.
+It may be used later for bookkeeping that genuinely depends on the finished response, but it is not the core of the design.
 
-Responsibilities:
-- look for archived reflections pending LTM handoff
-- hand them to the downstream LTM flow
-- mark handoff status
+The core management cycle belongs before the main agent `generate`, because the context must already be correct when the model is called.
 
-This can be built later if we want to keep the first version smaller.
+## Context Ownership Model
+The new system owns only the checkpoint-derived active historical context.
 
-## First-Version Persistence Model
-This is the first draft of the persisted entities.
+It does not own:
+- the base system/runtime instructions
+- `AGENT_CONTEXT.md`
+- the current flush input
 
-### 1. Thread checkpoint
-One primary checkpoint per thread.
+Those are outside the OM-managed token budget.
+
+The new system does own:
+- active reflections
+- active observations
+- recent raw messages after checkpoint
+- the block/artifact lifecycle that determines what remains active and what moves behind the checkpoint
+
+## Persistence Model
+The persistence model should be split into one thread-scoped active-memory record plus immutable block/artifact records.
+
+This split is mandatory because:
+- closed block is not summarized block
+- artifacts are immutable
+- ownership is strict
+- failure after closure must still leave closed source state visible and correct
+
+### 1. Thread Active Memory Record
+One row per thread, modeled after the role Mastra's `ObservationalMemoryRecord` plays today.
 
 Suggested fields:
-- `thread_id`
-- `resource_id`
-- `checkpoint_message_id`
-- `checkpoint_created_at`
-- `latest_archived_reflection_id`
-- `updated_at`
+- `id`
+- `threadId`
+- `resourceId`
+- `createdAt`
+- `updatedAt`
+- `lastObservedAt`
+- `generationCount`
+- `checkpointMessageId`
+- `checkpointMessageCreatedAt`
+- `checkpointReflectionId`
+- `recentRawTokenCount`
+- `activeObservationTokenCount`
+- `activeReflectionTokenCount`
+- `lastSuccessfulObservationAt`
+- `lastSuccessfulReflectionAt`
+- `lastCheckpointAdvancedAt`
+- `lastFailureAt`
+- `lastFailureStage`
+- `lastFailureReason`
+- `configSnapshot`
+- `metadata`
 
 Purpose:
-- identify where active-context reconstruction starts
+- hold the canonical thread-level active state
+- define where reconstruction starts
+- expose enough thread-level health/debug state without scanning blocks
 
-### 2. Raw block
-Represents a strict batch of raw thread messages.
+### 2. Thread Metadata Mirror
+Lightweight thread-local pointers should also be mirrored into `thread.metadata.mastra.om`.
+
+Use it for:
+- `lastObservedAt`
+- checkpoint cursor breadcrumbs
+- current generation count
+- optional debug hints
+
+This keeps the design aligned with Mastra's thread metadata pattern and makes thread inspection cheap.
+
+### 3. Raw Block
+Represents a strict batch of raw thread messages that moved beyond the recent raw reserve.
 
 Suggested fields:
-- `raw_block_id`
-- `thread_id`
-- `resource_id`
-- `start_message_id`
-- `end_message_id`
-- `token_count`
+- `id`
+- `threadId`
+- `resourceId`
+- `startMessageId`
+- `endMessageId`
+- `startCreatedAt`
+- `endCreatedAt`
+- `tokenCount`
 - `status`
   - `open`
   - `closed`
   - `observed`
-- `created_at`
-- `updated_at`
+- `createdAt`
+- `updatedAt`
 
 Invariants:
-- a raw message belongs to one raw block only
-- closed does not mean observed
+- each raw message belongs to one raw block at most
+- `closed` means source ownership is fixed
+- `observed` means an immutable observation artifact was successfully produced for that block
 
-### 3. Observation artifact
-Represents one immutable observation created from one closed raw block.
+### 4. Observation Artifact
+Represents one immutable observation generated from one closed raw block.
 
 Suggested fields:
-- `observation_id`
-- `thread_id`
-- `resource_id`
-- `raw_block_id`
+- `id`
+- `threadId`
+- `resourceId`
+- `rawBlockId`
 - `content`
-- `token_count`
-- `created_at`
+- `tokenCount`
+- `supportContextTokenCount`
+- `createdAt`
 
 Invariants:
 - immutable after creation
 - one raw block maps to at most one observation artifact
 
-### 4. Observation block
-Represents a strict batch of observations to be reflected.
+### 5. Observation Block
+Represents a strict batch of observation artifacts waiting to become one reflection.
 
 Suggested fields:
-- `observation_block_id`
-- `thread_id`
-- `resource_id`
-- `start_observation_id`
-- `end_observation_id`
-- `token_count`
+- `id`
+- `threadId`
+- `resourceId`
+- `startObservationId`
+- `endObservationId`
+- `tokenCount`
 - `status`
   - `open`
   - `closed`
   - `reflected`
-- `created_at`
-- `updated_at`
+- `createdAt`
+- `updatedAt`
 
 Invariants:
-- one observation belongs to one observation block only
-- closed does not mean reflected
+- each observation belongs to one observation block at most
+- `closed` means source ownership is fixed
+- `reflected` means an immutable reflection artifact was successfully produced for that block
 
-### 5. Reflection artifact
-Represents one immutable reflection created from one closed observation block.
+### 6. Reflection Artifact
+Represents one immutable reflection generated from one closed observation block.
 
 Suggested fields:
-- `reflection_id`
-- `thread_id`
-- `resource_id`
-- `observation_block_id`
+- `id`
+- `threadId`
+- `resourceId`
+- `observationBlockId`
 - `content`
-- `token_count`
-- `created_at`
+- `tokenCount`
+- `supportContextTokenCount`
+- `createdAt`
 
 Invariants:
 - immutable after creation
 - one observation block maps to at most one reflection artifact
 
-### 6. Archived reflection / LTM handoff state
-Represents reflections that moved behind the checkpoint.
+### 7. Archived Reflection / LTM Handoff State
+Represents reflection artifacts that have moved behind the checkpoint.
 
 Suggested fields:
-- `reflection_id`
-- `thread_id`
-- `resource_id`
-- `archived_at`
-- `ltm_status`
+- `reflectionId`
+- `threadId`
+- `resourceId`
+- `archivedAt`
+- `ltmStatus`
   - `pending`
   - `processing`
   - `done`
   - `failed`
-- `ltm_attempted_at`
-- `ltm_completed_at`
+- `ltmAttemptedAt`
+- `ltmCompletedAt`
+- `ltmFailureReason`
 
 Purpose:
-- preserve deterministic handoff state
-- support later async LTM work
+- make checkpoint advancement deterministic
+- make downstream LTM handoff inspectable
+- keep LTM lifecycle separate from active-context reconstruction
 
-## Why Separate Block Tables And Artifact Tables
-We need to separate:
-- source grouping
-- generated artifact
+## Store Layer
+The processor should not talk to raw tables everywhere.
+It should go through one store boundary:
+- `CheckpointedContextStore`
 
-because the user explicitly defined:
-- a closed block is not yet the resulting summary
-- failure after closing must stop execution
-- block ownership is strict
-- artifacts are immutable
+That store should own these operations:
+- get or create thread active-memory record
+- load thread messages after checkpoint
+- load open raw block
+- load open observation block
+- append raw messages to raw block
+- close raw block
+- create observation artifact
+- mark raw block observed
+- append observation to observation block
+- close observation block
+- create reflection artifact
+- mark observation block reflected
+- list active reflections after checkpoint
+- list active observations after checkpoint
+- list recent raw messages after checkpoint
+- archive reflection block behind checkpoint
+- advance checkpoint
+- write thread metadata mirror
+- write failure state
+- write success timestamps and generation changes
 
-That means one table/object is not enough.
+This boundary is important because the processor logic should operate in terms of block and checkpoint semantics, not table details.
 
-## Step-Time Lifecycle
+## Step-Time Algorithm
+This algorithm runs in `processInputStep`.
 
-### A. Load current checkpoint state
-At the start of `processInputStep`:
-- load primary checkpoint
-- load open raw block if any
-- load open observation block if any
-- load active observations after checkpoint
-- load active reflections after checkpoint
+### Stage 1: Load thread state
+Load:
+- thread active-memory record
+- thread metadata mirror
+- raw messages after checkpoint
+- open raw block
+- open observation block
+- active observation artifacts after checkpoint
+- active reflection artifacts after checkpoint
 
-### B. Build raw candidate set
-Read the thread messages after the checkpoint.
+The checkpoint is the loading boundary.
+There is no message-count-based reconstruction here.
 
-Then:
-- preserve the newest raw reserve according to configured token budget
-- route older overflow into the current raw block
+### Stage 2: Recompute active slices after checkpoint
+From messages after checkpoint:
+- preserve the newest raw reserve by tokens
+- route older raw overflow into the raw block stream
 
-### C. Close raw block when threshold is hit
-When raw overflow reaches the configured threshold:
+Important rule:
+- messages are never truncated
+- if one message crosses the reserve boundary, the excess older region moves to the batching path
+
+### Stage 3: Update raw block state
+Take the overflow raw region and:
+- keep filling the open raw block if it exists
+- otherwise open a new raw block
+
+If the raw block token count reaches the configured threshold:
 - close the raw block
-- synchronously generate an observation from that closed block
-- if generation fails:
-  - abort step
+- immediately generate the observation artifact
+- on success:
+  - persist observation artifact
+  - mark raw block `observed`
+  - append that observation into the observation block stream
+- on failure:
+  - persist failure state
+  - abort the step
   - do not retry automatically
-- if generation succeeds:
-  - persist immutable observation
-  - mark raw block as `observed`
 
-### D. Close observation block when threshold is hit
-When open observations reach the configured threshold:
+### Stage 4: Update observation block state
+Take newly available observations and:
+- keep filling the open observation block if it exists
+- otherwise open a new observation block
+
+If the observation block token count reaches the configured threshold:
 - close the observation block
-- synchronously generate a reflection from that closed block
-- if generation fails:
-  - abort step
+- immediately generate the reflection artifact
+- on success:
+  - persist reflection artifact
+  - mark observation block `reflected`
+- on failure:
+  - persist failure state
+  - abort the step
   - do not retry automatically
-- if generation succeeds:
-  - persist immutable reflection
-  - mark observation block as `reflected`
 
-### E. Advance checkpoint if reflection budget is exceeded
-When active reflection history exceeds its derived budget:
-- advance checkpoint by reflection block
-- archive the reflections that moved behind the new checkpoint
-- mark them `ltm_status = pending`
+### Stage 5: Advance checkpoint when reflection budget is exceeded
+Compute the active reflection budget as:
+- `totalActiveBudget - recentRawReserve - rawBatchThreshold - observationBatchThreshold`
 
-### F. Cascade until stable
-The user explicitly wants all eligible transitions to happen in one management execution.
+If active reflections exceed that derived budget:
+- select the oldest checkpoint-advance block
+- archive those reflection artifacts
+- mark them `ltmStatus = pending`
+- move the primary checkpoint forward to the end of that reflection block
+- update the thread active-memory record
+- update `thread.metadata.mastra.om`
 
-So the processor should continue looping until:
-- no raw block needs closure
-- no observation block needs closure
-- no checkpoint move is needed
+Checkpoint advancement only operates on reflections.
+It never operates directly on observations or raw messages.
 
-### G. Rebuild active context in `MessageList`
-After state is stable, the processor should rebuild the active context for the upcoming model call.
+### Stage 6: Cascade until stable
+Keep looping while any of these remains true:
+- raw block threshold is crossed
+- observation block threshold is crossed
+- reflection budget is exceeded
 
-## How To Rebuild Context In Mastra
+The processor must allow full cascade in one execution.
+This is not one-transition-per-step logic.
 
-### Important constraint
-Mastra still loads thread history through its own memory/history path.
-That means our processor must treat the incoming `MessageList` as raw material to be reshaped.
+### Stage 7: Rebuild the active context
+Once the state is stable, rebuild the prompt-facing active context:
+- active reflections
+- active observations
+- recent raw messages
 
-### First-version strategy
-Use `processInputStep` to:
-
-1. identify which remembered/input messages are older than the checkpoint-derived active view
-2. remove those messages from the `MessageList`
-3. add active reflections as tagged system messages
-4. add active observations as tagged system messages
-5. leave recent raw messages in chronological order
-
-This gives the final prompt the desired layer order without depending on built-in OM.
-
-### Why system messages for reflections and observations
-This is the simplest way to force stable ordering:
-- base system prompt
+Then mutate `MessageList` so the final model call sees:
+- system/runtime instructions
 - `AGENT_CONTEXT.md`
 - reflections
 - observations
-- raw recent messages
-
-Mastra already supports tagged system messages and replacing them cleanly.
-
-### Important note
-The memory budget defined in the functional spec excludes:
-- base system/runtime instructions
-- `AGENT_CONTEXT.md`
+- recent raw
 - current flush input
 
-So the custom active-context builder only budgets:
-- checkpoint-derived reflections
-- checkpoint-derived observations
-- checkpoint-derived recent raw messages
+## How Context Reconstruction Works In Mastra
+Mastra still loads thread history through its memory/history path.
+So the processor must treat the incoming `MessageList` as input to be reshaped.
 
-## Supporting Context For Summary Generation
-When generating a new observation or reflection:
-- the block ownership stays strict
-- but older blocks may be loaded as supporting context
+The reconstruction flow should be:
 
-Selection rule:
-- choose supporting older blocks within a configurable token limit
-- do not use unconstrained block counts
+1. identify remembered/input messages that are older than the checkpoint-derived active view
+2. remove those messages from the `MessageList`
+3. add active reflections as one tagged system section
+4. add active observations as one tagged system section
+5. leave the recent raw messages in chronological order
 
-This applies to:
-- observation generation
-- reflection generation
+Recommended tags:
+- `custom-om-reflections`
+- `custom-om-observations`
+
+This keeps ordering explicit and lets the processor replace those sections cleanly on every step.
+
+## Summary Generation
+Observation and reflection generation should reuse the existing Mastra OM style:
+- same general prompting model
+- same text shape
+- same token-accounting basis
+
+What changes is:
+- source selection
+- block semantics
+- lifecycle
+- checkpoint advancement
+
+### Observation generation input
+Required input:
+- one closed raw block
+
+Optional support context:
+- older blocks within a configurable token budget
+
+Output:
+- one immutable observation artifact
+
+### Reflection generation input
+Required input:
+- one closed observation block
+
+Optional support context:
+- older observation or reflection blocks within a configurable token budget
+
+Output:
+- one immutable reflection artifact
+
+Support context does not change ownership.
+It is read-only context for better synthesis.
 
 ## Failure Semantics
+If a required observation or reflection generation fails after block closure:
+- the closed block remains closed
+- no artifact is created for that block
+- step execution stops
+- automatic retry is disabled
 
-### Summary generation failure
-If observation or reflection generation fails after the source block has already been closed:
-- abort the step
-- do not retry automatically
-- leave the closed block persisted as closed-but-not-summarized
+This should be implemented with processor abort / TripWire and `retry: false`.
 
-This is compatible with Mastra:
-- `processInputStep` can abort the step through TripWire
-- we should set retry to `false`
+This is the correct behavior for the synchronous first implementation because:
+- the active context cannot be allowed to silently continue in an inconsistent state
+- the design intentionally does not allow budget expansion as a fallback
 
-### Why not retry automatically
-The user explicitly does not want retry in this first synchronous version.
-The context window is not allowed to expand to compensate.
+## LTM Handoff
+LTM handoff is triggered only by checkpoint advancement.
 
-## Recommended Use Of TripWire
-For the first version:
-- use processor abort/tripwire to stop the step when a required summary generation fails
-- do not use processor retry
+The handoff unit is:
+- reflection artifacts that moved behind the checkpoint
 
-Reason:
-- it matches the functional spec
-- it fits Mastra's processor model cleanly
-- it avoids silent continuation with invalid context state
+The active context manager is responsible for:
+- marking those reflections archived
+- setting `ltmStatus = pending`
 
-## Runner Impact
-The current runner can remain mostly intact.
+The downstream LTM path can then continue using the same broad pattern we already use today.
+That remains a separate concern from active-context reconstruction.
 
-But these changes are recommended:
+## Configuration Surface
+All thresholds must be configurable.
 
-### 1. Stop treating `lastMessages` as the main long-horizon continuity mechanism
-The new OM becomes the main long-horizon continuity layer.
+The global configuration surface should include:
+- `activeContextTargetTokens`
+- `recentRawReserveTokens`
+- `rawBlockTokens`
+- `observationBlockTokens`
+- `checkpointAdvanceBlockPercent`
+- `observationSupportContextTokens`
+- `reflectionSupportContextTokens`
 
-`lastMessages` still matters for:
-- recent raw thread visibility
-- step continuity
+Derived value:
+- `reflectionHistoryBudgetTokens = activeContextTargetTokens - recentRawReserveTokens - rawBlockTokens - observationBlockTokens`
 
-But it should no longer be the main substitute for checkpointed context management.
-
-### 2. Keep working memory independent
-Working memory remains separate.
-This redesign is about active context compression, not about working memory semantics.
-
-### 3. Keep current flush behavior
-The flush remains outside the OM-managed budget and should still enter as current-step prompt material.
-
-## Draft Configuration Surface
-The first version should expose configurable parameters for:
-- total active context target
-- recent raw reserve tokens
-- raw block closure threshold
-- observation block closure threshold
-- reflection history budget strategy
-  - fixed derived remainder from total target
-- checkpoint advancement block percentage
-- supporting-context token limit for observation generation
-- supporting-context token limit for reflection generation
-
-These should be global settings first, not per-agent settings.
+These are global settings in the first implementation.
+Per-agent overrides are out of scope here.
 
 ## Observability Requirements
-The new system must be inspectable.
+The system must expose enough state to debug block and checkpoint behavior.
 
 At minimum we need:
-- current checkpoint per thread
-- active raw reserve token count
-- open raw block token count
-- open observation block token count
+- thread active-memory record
+- checkpoint pointer
+- `lastObservedAt`
+- `generationCount`
+- active recent raw token count
+- open raw block token count and status
+- open observation block token count and status
 - active reflection token count
+- last successful observation generation timestamp
+- last successful reflection generation timestamp
+- last checkpoint advancement timestamp
 - archived reflections pending LTM
-- last successful observation generation
-- last successful reflection generation
-- last checkpoint advancement
-- last failure reason if a summary generation aborted a step
+- last failure stage and reason
 
-This should be visible in logs and later in admin UI.
+These should be available through:
+- logs
+- admin inspection later
+- thread metadata breadcrumbs
 
-## First-Version Recommendation
-Implement in this order:
+## Implementation Constraints
+The first implementation is allowed to be operationally simple.
 
-1. create persistence schema for checkpoint, blocks, artifacts, and LTM handoff
-2. build a `CheckpointedContextStore`
-3. build the pure domain logic that:
-   - groups raw messages
-   - closes blocks
-   - decides when to generate summaries
-   - decides when to advance checkpoint
-4. build generators for:
-   - observation from closed raw block
-   - reflection from closed observation block
-5. build `CheckpointedContextProcessor.processInputStep`
-6. integrate it into the current Forge runtime with OM/LTM disabled
-7. add logs/admin inspection
+That means:
+- Mastra may still load more raw thread history than the final optimized system will want
+- the processor may prune and rebuild from that incoming `MessageList`
+- artifact generation stays synchronous
 
-## Known Risks
-- first version may still rely on Mastra loading more thread history than we ultimately want
-- using tagged system messages for active reflections/observations is operationally simple, but we need to validate that prompt behavior stays good
-- if thread history grows very large, later optimization may require bypassing Mastra's default history loading and reconstructing the step context more directly
+What is not allowed:
+- falling back to the current built-in OM semantics
+- silently mixing checkpoint-managed layers with uncontrolled historical sprawl
+- retrying failed summary generation automatically
 
-## Conclusion
-The new design can be implemented on top of Mastra's current processor hooks.
+## Implementation Order
+The implementation should proceed in this order:
 
-The key shift is:
-- stop treating OM as a black-box summarizer
-- treat it as an explicit checkpointed context-management subsystem
+1. create the persistence schema for:
+   - thread active-memory record
+   - raw blocks
+   - observation artifacts
+   - observation blocks
+   - reflection artifacts
+   - archived reflection handoff state
+2. implement `CheckpointedContextStore`
+3. implement the pure lifecycle logic for:
+   - raw reserve slicing
+   - raw block ownership
+   - observation block ownership
+   - checkpoint advancement
+   - active-context reconstruction inputs
+4. implement observation/reflection generators using the current Mastra OM prompting style
+5. implement `CheckpointedContextProcessor.processInputStep`
+6. wire it into the Forge runtime with built-in OM/LTM disabled
+7. add logs and admin inspection hooks
 
-That is feasible with the current Mastra runtime, but only if we own:
-- persistence
-- lifecycle
-- reconstruction
-- failure semantics
+## Final Architectural Position
+The design should be understood as:
+- Mastra remains the runtime shell
+- the new checkpointed context manager becomes the source of truth for active historical context
 
+The key implementation stance is:
+- reuse Mastra's structural primitives
+- replace Mastra's current OM behavior
+- keep the lifecycle explicit, deterministic, and inspectable
+
+That gives us a design that stays aligned with the runtime we already have while removing the parts of OM behavior that do not match the desired system.
