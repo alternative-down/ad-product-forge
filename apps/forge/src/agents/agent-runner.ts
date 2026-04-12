@@ -57,6 +57,7 @@ export function createAgentRunner(
   let activeGenerateToken = 0;
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages: number | null = DEFAULT_RUN_LAST_MESSAGES;
+  let flushedRunEventKeys = new Set<string>();
   let currentFlushSettings = {
     communicationDmFlushingEnabled: true,
     communicationGroupFlushingEnabled: true,
@@ -191,10 +192,20 @@ export function createAgentRunner(
     );
     pendingRunMessages.clear();
 
-    const events = allEvents.filter(shouldIncludePendingRunEventInFlush);
+    const events = allEvents.filter((event) => {
+      if (flushedRunEventKeys.has(event.idempotencyKey)) {
+        return false;
+      }
+
+      return shouldIncludePendingRunEventInFlush(event);
+    });
 
     if (events.length === 0) {
       return null;
+    }
+
+    for (const event of events) {
+      flushedRunEventKeys.add(event.idempotencyKey);
     }
 
     incrementRunLastMessages();
@@ -211,6 +222,7 @@ export function createAgentRunner(
     clearTimer();
     wakeQueue.stop();
     runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
+    flushedRunEventKeys = new Set<string>();
   }
 
   async function forceIdle() {
@@ -220,6 +232,7 @@ export function createAgentRunner(
     clearTimer();
     wakeQueue.stop();
     pendingRunMessages.clear();
+    flushedRunEventKeys = new Set<string>();
     instant = false;
     await resetRunLastMessages();
     resetLoopDetector();
@@ -252,6 +265,7 @@ export function createAgentRunner(
       backoffMs = ONE_MINUTE_MS;
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
+      flushedRunEventKeys = new Set<string>();
       await refreshRunFlushSettings();
       await resetRunLastMessages();
 
