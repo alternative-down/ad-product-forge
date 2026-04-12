@@ -159,10 +159,23 @@ export function createAgentRunner(
       `Agent execution state lookup timed out for ${runtime.id}`,
     );
 
-    appendPendingRunMessages(events);
+    const idleOnlyEvents = events.filter((event) => event.idleOnly);
+    const runnableEvents = events.filter((event) => !event.idleOnly);
 
     if (executionState === 'running' || startingRun) {
+      appendPendingRunMessages(runnableEvents);
+
+      for (const event of idleOnlyEvents) {
+        wakeQueue.notifyExternalEvent(event);
+      }
+
       return;
+    }
+
+    appendPendingRunMessages(runnableEvents);
+
+    if (idleOnlyEvents.length > 0) {
+      appendPendingRunMessages(idleOnlyEvents);
     }
 
     await beginRun({
