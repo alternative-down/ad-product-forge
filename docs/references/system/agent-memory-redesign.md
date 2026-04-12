@@ -78,6 +78,9 @@ In practice, that means:
 - checkpoint advancement should happen in reflection blocks, not one reflection at a time
 - a checkpoint-advance block can be defined as a percentage of the reflection history budget
 - an example shape is roughly `50%` of that reflection budget
+- checkpoint advancement should trigger as soon as the active reflection area exceeds its budget
+- this should happen during step-time context management, not at run boundaries
+- this mechanism must be independent from the runner's run lifecycle
 
 Another way to state it:
 - the checkpoint marks the oldest point from which active context still needs to be reconstructed
@@ -246,8 +249,6 @@ The behavior must be inspectable and predictable.
 ## Open Questions
 These still need definition:
 
-- What exact condition triggers checkpoint advancement beyond "context pressure exceeded"?
-- Should checkpoint advancement happen inline during a run or in a side process?
 - What exact shape should a reflection have so that it is good active context and also good future LTM input?
 - Should there be one global checkpoint per thread, or separate checkpoints per layer?
 
