@@ -171,6 +171,7 @@ The active context budget described in this document applies to the reconstructe
 The current flush input should be treated as additional prompt material that enters afterward, as it does today.
 This budget also excludes the base system/runtime instructions and `AGENT_CONTEXT.md`.
 In practice, the OM-managed budget applies only to the message-derived active context reconstructed from the checkpoint forward.
+Anything loaded into that reconstructed checkpoint-derived context should count toward the budget.
 
 The current target idea is:
 - total active context target: about `50,000` tokens
