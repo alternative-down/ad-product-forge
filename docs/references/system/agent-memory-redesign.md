@@ -169,6 +169,8 @@ The active context should be managed primarily by token budget, not by message c
 Token accounting can initially follow the same counting approach currently used by the existing OM implementation.
 The active context budget described in this document applies to the reconstructed active memory layers before the current flush input is added.
 The current flush input should be treated as additional prompt material that enters afterward, as it does today.
+This budget also excludes the base system/runtime instructions and `AGENT_CONTEXT.md`.
+In practice, the OM-managed budget applies only to the message-derived active context reconstructed from the checkpoint forward.
 
 The current target idea is:
 - total active context target: about `50,000` tokens
