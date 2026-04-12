@@ -163,6 +163,7 @@ Rule:
 - if synchronous reflection generation fails after observation block closure, execution should stop at that point; no automatic retry should happen in this first version
 - observation blocks are strict: one observation belongs to only one reflection block and must not be replaced twice by different reflections
 - older blocks can still be used as supporting context when generating a newer observation or reflection, but that does not change the replacement ownership rules
+- supporting context from older blocks should be selected within a token limit, not by an unconstrained block count
 
 ## LTM Handoff
 LTM should not work from the full live thread.
