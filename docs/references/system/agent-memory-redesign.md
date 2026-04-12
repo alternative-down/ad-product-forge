@@ -103,6 +103,7 @@ Desired behavior:
 
 This raw reserve should be protected as long as possible when the context budget is assembled.
 Raw messages inside this reserve should not be compressed yet.
+If a message causes the raw reserve to overflow, messages should not be truncated. Any true excess should flow into the next batching layer.
 
 ## Observation Layer
 Observations are the first compression stage over raw messages.
@@ -193,6 +194,7 @@ These values are not final, but they express the intended shape:
 - preserve a fixed recent raw reserve
 - compress older material in bounded chunks
 - keep most of the active historical continuity in reflections
+- all these thresholds should be configurable rather than treated as fixed constants
 
 This also clarifies the active layout:
 - newest `10k` tokens stay as raw recent context
