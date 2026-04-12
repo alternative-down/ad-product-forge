@@ -109,6 +109,10 @@ Observations should be:
 
 The intent is not to produce a timeless summary yet. The intent is to compact a recent region of raw conversation while keeping local usefulness.
 
+Rule:
+- once a raw batch becomes an observation, that raw batch should leave the active context completely
+- the observation becomes the only active representation of that older raw region
+
 ## Reflection Layer
 Reflections are the second compression stage over observations.
 
