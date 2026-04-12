@@ -902,6 +902,8 @@ function parseProviderCredentials(encryptedCredentials: string) {
 }
 
 function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
+  const isHeartbeat = row.kind === 'heartbeat';
+
   return {
     scheduleId: row.id,
     kind: row.kind as 'agent' | 'heartbeat',
@@ -912,7 +914,7 @@ function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
     scheduledDate: row.scheduledDate ?? undefined,
     timezone: row.timezone,
     content: row.content,
-    wakeWhenRunning: row.wakeWhenRunning === 1,
+    wakeWhenRunning: isHeartbeat ? false : row.wakeWhenRunning === 1,
     isActive: row.isActive === 1,
     lastTriggeredAt: row.lastTriggeredAt ?? undefined,
     nextTriggerAt: row.nextTriggerAt ?? undefined,
