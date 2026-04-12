@@ -74,6 +74,7 @@ export async function main() {
       entry.runner.notifyExternalEvent({
         type: 'schedule',
         groupKey: `schedule:${input.scheduleId}`,
+        idleOnly: input.idleOnly,
         groupMetadata: {
           Source: 'scheduler',
           ScheduleId: input.scheduleId,

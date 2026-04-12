@@ -22,6 +22,12 @@ export const Route = createFileRoute('/agents/$agentId/schedules/')({
 function AgentSchedulesIndexRoute() {
   const { agentId } = Route.useParams();
   const queryClient = useQueryClient();
+  const resolveWakeWhenRunning = (current: ScheduleForm) =>
+    current.kind === 'heartbeat'
+      ? false
+      : current.scheduleType === 'cron'
+        ? current.wakeWhenRunning
+        : true;
   const agentQuery = useQuery({
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
@@ -41,7 +47,7 @@ function AgentSchedulesIndexRoute() {
           scheduledDate: current.scheduleType === 'date' ? current.scheduledDate : null,
           timezone: current.timezone.trim(),
           content: current.content.trim(),
-          wakeWhenRunning: current.scheduleType === 'cron' ? current.wakeWhenRunning : true,
+          wakeWhenRunning: resolveWakeWhenRunning(current),
           isActive: current.isActive,
         });
       }
@@ -55,7 +61,7 @@ function AgentSchedulesIndexRoute() {
         scheduledDate: current.scheduleType === 'date' ? current.scheduledDate : undefined,
         timezone: current.timezone.trim(),
         content: current.content.trim(),
-        wakeWhenRunning: current.scheduleType === 'cron' ? current.wakeWhenRunning : true,
+        wakeWhenRunning: resolveWakeWhenRunning(current),
       });
     },
     onMutate: (current) =>
@@ -124,8 +130,8 @@ function AgentSchedulesIndexRoute() {
               <div>{heartbeat.timezone}</div>
             </div>
             <div>
-              <div className="font-medium text-foreground">Wake em execução</div>
-              <div>{heartbeat.wakeWhenRunning ? 'Sim' : 'Só ocioso'}</div>
+              <div className="font-medium text-foreground">Entrega</div>
+              <div>Só quando ocioso</div>
             </div>
           </div>
 

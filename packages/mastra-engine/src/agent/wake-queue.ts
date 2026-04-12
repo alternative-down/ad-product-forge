@@ -9,6 +9,7 @@ export type AgentWakeEvent = {
   idempotencyKey: string;
   timestamp: number;
   text: string;
+  idleOnly?: boolean;
   groupMetadata?: Record<string, string>;
   itemMetadata?: Record<string, string>;
 };
@@ -32,9 +33,11 @@ export function createAgentWakeQueue(config: {
 }): AgentWakeQueue {
   let timer: NodeJS.Timeout | null = null;
   let pending = false;
+  let waitingForIdle = false;
   let firstPendingAt: number | null = null;
   let nextTriggerAt: number | null = null;
-  const events = new Map<string, AgentWakeEvent>();
+  const readyEvents = new Map<string, AgentWakeEvent>();
+  const idleEvents = new Map<string, AgentWakeEvent>();
 
   function isGroupMessageEvent(event: AgentWakeEvent) {
     return event.type.startsWith('message:') && event.groupMetadata?.ConversationType === 'group';
@@ -58,7 +61,7 @@ export function createAgentWakeQueue(config: {
     let debounceMs = DEFAULT_WAKE_DEBOUNCE_MS;
     let maxAccumulationMs = DEFAULT_WAKE_MAX_ACCUMULATION_MS;
 
-    for (const event of events.values()) {
+    for (const event of readyEvents.values()) {
       const candidate = getWakeWindow(event);
       debounceMs = Math.max(debounceMs, candidate.debounceMs);
       maxAccumulationMs = Math.max(maxAccumulationMs, candidate.maxAccumulationMs);
@@ -92,11 +95,11 @@ export function createAgentWakeQueue(config: {
       return;
     }
 
-    const queuedEvents = Array.from(events.values()).sort((left, right) => left.timestamp - right.timestamp);
+    const queuedEvents = Array.from(readyEvents.values()).sort((left, right) => left.timestamp - right.timestamp);
 
     pending = false;
     firstPendingAt = null;
-    events.clear();
+    readyEvents.clear();
 
     try {
       await config.execute(queuedEvents);
@@ -108,14 +111,21 @@ export function createAgentWakeQueue(config: {
   return {
     notifyExternalEvent(event: AgentWakeEvent) {
       const now = Date.now();
+      const targetEvents = event.idleOnly ? idleEvents : readyEvents;
 
-      if (events.has(event.idempotencyKey)) {
+      if (readyEvents.has(event.idempotencyKey) || idleEvents.has(event.idempotencyKey)) {
+        return;
+      }
+
+      targetEvents.set(event.idempotencyKey, event);
+
+      if (event.idleOnly) {
+        waitingForIdle = true;
         return;
       }
 
       pending = true;
       firstPendingAt ??= now;
-      events.set(event.idempotencyKey, event);
 
       const wakeWindow = getCurrentWakeWindow();
       const accumulatedMs = now - firstPendingAt;
@@ -129,6 +139,17 @@ export function createAgentWakeQueue(config: {
       scheduleTrigger(Math.min(wakeWindow.debounceMs, remainingAccumulationMs));
     },
     async onRunnerIdle() {
+      if (idleEvents.size > 0) {
+        for (const event of idleEvents.values()) {
+          readyEvents.set(event.idempotencyKey, event);
+        }
+
+        idleEvents.clear();
+        waitingForIdle = false;
+        pending = readyEvents.size > 0;
+        firstPendingAt ??= Date.now();
+      }
+
       if (!pending) {
         return;
       }
@@ -138,17 +159,19 @@ export function createAgentWakeQueue(config: {
     },
     stop() {
       pending = false;
+      waitingForIdle = false;
       firstPendingAt = null;
-      events.clear();
+      readyEvents.clear();
+      idleEvents.clear();
       clearTimer();
     },
     getSnapshot() {
       return {
         pending,
-        waitingForIdle: false,
+        waitingForIdle,
         firstPendingAt,
         nextTriggerAt,
-        events: Array.from(events.values()),
+        events: [...readyEvents.values(), ...idleEvents.values()],
       };
     },
   };

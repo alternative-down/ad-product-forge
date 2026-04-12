@@ -77,6 +77,7 @@ export function createAgentScheduleManager(input: {
     scheduleName: string;
     content: string;
     timestamp: number;
+    idleOnly?: boolean;
   }): void;
 }) {
   const store = createAgentScheduleStore(input.db);
@@ -568,25 +569,13 @@ export function createAgentScheduleManager(input: {
       isActive: remainsActive,
     });
 
-    if (
-      input.getAgentExecutionState &&
-      (
-        scheduleRecord.kind === 'heartbeat'
-        || (scheduleRecord.scheduleType === 'cron' && scheduleRecord.wakeWhenRunning === false)
-      )
-    ) {
-      const executionState = await input.getAgentExecutionState(scheduleRecord.agentId);
-
-      if (executionState !== 'idle') {
-        return;
-      }
-    }
-
     input.notifyAgent({
       agentId: scheduleRecord.agentId,
       scheduleId: scheduleRecord.scheduleId,
       scheduleKind: scheduleRecord.kind,
       scheduleName: scheduleRecord.name,
+      idleOnly: scheduleRecord.kind === 'heartbeat'
+        || (scheduleRecord.scheduleType === 'cron' && scheduleRecord.wakeWhenRunning === false),
       content: createWakeContent({
         name: scheduleRecord.name,
         description: scheduleRecord.description,

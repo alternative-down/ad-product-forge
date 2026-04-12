@@ -15,20 +15,16 @@ function createInternalAgentRegistry() {
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
     loaderConfig = config;
-
-    for (const agent of agents.values()) {
-      agent.runner.stop();
-      void agent.runtime.dispose().catch((error) => {
-        console.error(`[AgentRegistry] Failed to dispose runtime ${agent.runtime.id}:`, error);
-      });
-    }
-
-    agents.clear();
-
+    const existingAgentIds = new Set(agents.keys());
     const runtimes = await loadAgents(db, config);
 
     for (const runtime of runtimes.values()) {
       await add(db, runtime);
+      existingAgentIds.delete(runtime.id);
+    }
+
+    for (const agentId of existingAgentIds) {
+      remove(agentId);
     }
 
     return list();
@@ -36,12 +32,12 @@ function createInternalAgentRegistry() {
 
   async function add(db: Database, runtime: InternalAgentRuntime) {
     const existingAgent = agents.get(runtime.id);
-
-    if (existingAgent) {
-      existingAgent.runner.stop();
-      await existingAgent.runtime.dispose();
-      agents.delete(runtime.id);
-    }
+    const pendingWakeEvents = existingAgent
+      ? [
+          ...existingAgent.runner.getSnapshot().wake.events,
+          ...existingAgent.runner.getSnapshot().pendingRunEvents,
+        ]
+      : [];
 
     const entry = {
       runtime,
@@ -63,11 +59,29 @@ function createInternalAgentRegistry() {
       },
     });
     entry.runner = runner;
+    const nextEntry = entry as InternalAgentEntry;
 
-    agents.set(runtime.id, entry as InternalAgentEntry);
-    await runner.start();
+    try {
+      await runner.start();
+      agents.set(runtime.id, nextEntry);
 
-    return entry as InternalAgentEntry;
+      for (const event of pendingWakeEvents) {
+        nextEntry.runner.notifyExternalEvent(event);
+      }
+
+      if (existingAgent) {
+        existingAgent.runner.stop();
+        await existingAgent.runtime.dispose();
+      }
+
+      return nextEntry;
+    } catch (error) {
+      runner.stop();
+      await runtime.dispose().catch((disposeError) => {
+        console.error(`[AgentRegistry] Failed to dispose replacement runtime ${runtime.id}:`, disposeError);
+      });
+      throw error;
+    }
   }
 
   function remove(agentId: string) {

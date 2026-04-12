@@ -339,6 +339,9 @@ export function createInternalChatService(
 
   function onReceiveMessage(agentId: string, handler: InternalChatHandler) {
     handlers.set(agentId, handler);
+    void replayUnreadMessages(agentId, handler).catch((error) => {
+      console.error(`[InternalChat] Failed to replay unread messages for agent ${agentId}:`, error);
+    });
   }
 
   function clearHandler(agentId: string, handler?: InternalChatHandler) {
@@ -1468,7 +1471,15 @@ export function createInternalChatService(
     }
 
     if (deliveries.length > 0) {
-      await Promise.all(deliveries);
+      const results = await Promise.allSettled(deliveries);
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          continue;
+        }
+
+        console.error('[InternalChat] Failed to deliver live message to handler:', result.reason);
+      }
     }
 
     return {
@@ -1703,6 +1714,85 @@ export function createInternalChatService(
     getUnreadSummary,
     listRecentConversations,
   };
+
+  async function replayUnreadMessages(agentId: string, handler: InternalChatHandler) {
+    const unreadRows = await db
+      .select({
+        conversationId: internalChatMessages.conversationId,
+        conversationName: internalChatConversations.name,
+        conversationType: internalChatConversations.type,
+        messageId: internalChatMessages.id,
+        content: internalChatMessages.content,
+        createdAt: internalChatMessages.createdAt,
+        authorAccountId: internalChatMessages.authorAccountId,
+        authorDisplayName: internalChatAccounts.displayName,
+        authorSlug: internalChatAccounts.slug,
+      })
+      .from(internalChatMessageReads)
+      .innerJoin(
+        internalChatMessages,
+        eq(internalChatMessages.id, internalChatMessageReads.messageId),
+      )
+      .innerJoin(
+        internalChatConversations,
+        eq(internalChatConversations.id, internalChatMessages.conversationId),
+      )
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+      )
+      .where(and(
+        eq(internalChatMessageReads.agentId, agentId),
+        isNull(internalChatMessageReads.readAt),
+      ))
+      .orderBy(internalChatMessages.createdAt);
+
+    if (unreadRows.length === 0) {
+      return;
+    }
+
+    const participantsByConversationId = new Map<
+      string,
+      Awaited<ReturnType<typeof listGroupMembersOrDmPeers>>
+    >();
+
+    for (const row of unreadRows) {
+      let participants = participantsByConversationId.get(row.conversationId);
+
+      if (!participants) {
+        participants = await listGroupMembersOrDmPeers(agentId, row.conversationId);
+        participantsByConversationId.set(row.conversationId, participants);
+      }
+
+      await handler({
+        targetKey: row.conversationId,
+        messageId: row.messageId,
+        conversationName: row.conversationName
+          ?? (
+            row.conversationType === 'dm'
+              ? row.authorDisplayName
+              : undefined
+          ),
+        authorId: row.authorAccountId,
+        authorDisplayName: row.authorDisplayName,
+        authorUsername: row.authorSlug,
+        content: row.content,
+        attachments: await readMessageAttachments(row.messageId),
+        createdAt: new Date(row.createdAt).toISOString(),
+        metadata: {
+          conversationType: row.conversationType,
+          groupMembers: row.conversationType === 'group'
+            ? participants.map((participant) => ({
+                participantId: participant.accountId,
+                agentId: participant.agentId,
+                slug: participant.slug,
+                displayName: participant.displayName,
+              }))
+            : undefined,
+        },
+      });
+    }
+  }
 }
 
 export type InternalChatService = ReturnType<typeof createInternalChatService>;
