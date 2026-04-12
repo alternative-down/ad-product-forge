@@ -38,9 +38,9 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
   private readonly maxRecentRecallMessages = 8;
   private readonly bootstrapHistoryLimit = Number.MAX_SAFE_INTEGER;
   private readonly incrementalHistoryLimit = 6;
-  private readonly initTimeoutMs = 15_000;
-  private readonly recallTimeoutMs = 20_000;
-  private readonly memoryAgentTimeoutMs = 120_000;
+  private readonly initTimeoutMs = 5_000;
+  private readonly recallTimeoutMs = 8_000;
+  private readonly memoryAgentTimeoutMs = 300_000;
 
   private readonly om: ObservationalMemory;
   private readonly workspace: WorkspaceRuntime;
