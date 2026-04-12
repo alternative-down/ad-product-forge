@@ -164,6 +164,7 @@ Rule:
 - observation blocks are strict: one observation belongs to only one reflection block and must not be replaced twice by different reflections
 - older blocks can still be used as supporting context when generating a newer observation or reflection, but that does not change the replacement ownership rules
 - supporting context from older blocks should be selected within a token limit, not by an unconstrained block count
+- that supporting-context token limit should be configurable
 
 ## LTM Handoff
 LTM should not work from the full live thread.
@@ -277,8 +278,27 @@ The future implementation must satisfy these requirements:
 
 The behavior must be inspectable and predictable.
 
-## Open Questions
-These still need definition:
+## Remaining Technical Specification Work
+The desired behavior is now much more defined, but the implementation spec still needs to define these technical details:
+
+- the exact persisted entities and fields for:
+  - primary checkpoint
+  - raw blocks
+  - observation blocks
+  - reflection blocks
+  - archived reflections waiting for or sent to LTM
+- the exact state machine for each block:
+  - open
+  - closed
+  - summarized
+  - archived
+  - handed off to LTM
+- the exact algorithm used to rebuild active context from the checkpoint forward
+- the exact algorithm used to choose supporting older blocks within the token limit
+- the exact place in the step lifecycle where this management runs before the final agent `generate`
+- the exact failure semantics for checkpoint movement and LTM handoff bookkeeping
+- the exact configurability surface in admin/system settings for all budgets and thresholds
+- the exact observability/debug output needed so the system is inspectable in production
 
 ## What This Document Is Trying To Lock In
 This document is trying to lock in the desired behavior, not the implementation mechanism.
