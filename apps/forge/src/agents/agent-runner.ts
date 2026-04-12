@@ -348,6 +348,7 @@ export function createAgentRunner(
     activeStepEpoch = runEpoch;
     let continueRunning = false;
     let drainWakeQueueAfterStep = false;
+    let suppressNoToolCallReminder = false;
     let prompt = '';
     lastStepStartedAt = Date.now();
     lastStepStage = 'step-started';
@@ -515,12 +516,10 @@ export function createAgentRunner(
       }
 
       if (result.toolCalls.length === 0 && ignoredTextRequested) {
-        backoffMs = ONE_MINUTE_MS;
-        continueRunning = true;
-        return;
+        suppressNoToolCallReminder = true;
       }
 
-      if (result.toolCalls.length === 0) {
+      if (result.toolCalls.length === 0 && !suppressNoToolCallReminder) {
         appendPendingRunMessages([
           {
             type: 'runner-reminder',
