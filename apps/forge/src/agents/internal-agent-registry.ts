@@ -34,7 +34,7 @@ function createInternalAgentRegistry() {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents = existingAgent
       ? [
-          ...existingAgent.runner.getSnapshot().wake.events,
+          ...existingAgent.runner.getSnapshot().wake.events.filter((event) => !event.type.startsWith('message:')),
           ...existingAgent.runner.getSnapshot().pendingRunEvents,
         ]
       : [];
