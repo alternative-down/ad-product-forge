@@ -3,185 +3,237 @@
 ## Status
 - Draft
 - Branch: `feat/custom-observational-memory`
-- Goal: define a replacement for the current Mastra Observational Memory and Long-Term Memory flow
+- Purpose: describe the desired memory behavior before implementation
 
-## Why This Exists
-The current Mastra-based OM/LTM flow does not behave like the desired active context-management system.
+## Objective
+The system needs an active context-management layer that continuously compresses older thread material without losing operational continuity.
 
-Observed problems:
-- observations rarely or never become meaningfully active
-- reflections rarely or never become meaningfully active
-- the active context is still driven too much by recent raw messages
-- consolidation is not reliable enough to trust as an operational mechanism
-- old summarized context does not advance through a clear sliding checkpoint
-- LTM handoff does not operate as a predictable downstream stage
+This layer must:
+- keep the live context bounded
+- keep recent raw interaction visible
+- progressively consolidate older material
+- carry forward useful context through structured summaries
+- hand off material that is no longer active to LTM
 
-Because of that, the current OM/LTM pair was disabled in runtime on `develop` and in this branch we are documenting a replacement design before implementation.
+The main goal is not retrieval. The main goal is controlled context compression.
 
-## Product Need
-We need a memory system that actively manages the conversation context over time instead of only reacting to message count thresholds.
-
+## What The New Memory Must Do
 The desired behavior is:
-- keep the active context window bounded
-- preserve recent raw interaction for freshness
-- summarize older conversation progressively instead of dropping it abruptly
-- carry forward consolidated context through checkpoints
-- move older consolidated material into a separate LTM pipeline only after it leaves the active context
+- keep some recent raw messages fresh in context
+- accumulate older raw messages into bounded batches
+- turn those batches into observations
+- accumulate observations into bounded batches
+- turn those observation batches into reflections
+- keep recent reflections active while older reflections move behind a checkpoint
+- send reflections that leave the active window to LTM
 
-This is not just "memory retrieval". It is active context shaping.
+This should create a sliding context with multiple compression layers instead of a flat "last N messages" view.
 
-## Core Principles
-- Context should be managed by checkpoints, not by a naive last-N-messages rule.
-- Recent raw messages should remain visible for freshness and local coherence.
-- Summaries should be built in stages:
-  - raw messages -> observations
-  - observations -> reflections
-- Older reflections should leave the active context through checkpoint advancement.
-- What leaves the active context should become LTM input.
-- The system should aim to keep the total active context under a target token budget.
+## Target Mental Model
+At any point, the active context should be thought of as:
 
-## Desired Runtime Model
-The target active context is composed of four layers:
+1. system and runtime instructions
+2. `AGENT_CONTEXT.md`
+3. recent raw messages
+4. active observations
+5. active reflections
+6. current wake/flush input
 
-1. System and runtime instructions
-2. Recent raw messages
-3. Active observations
-4. Active reflections
+Everything older than the active checkpoint should no longer compete for live context unless intentionally reintroduced by another mechanism.
 
-Outside that active context there is:
-- archived reflections past the current checkpoint
-- LTM processing input derived from those archived reflections
+## Desired Sliding Context Behavior
+The active context should move forward continuously.
 
-## Desired Sliding Context Model
-The desired context is a sliding window with structured compression.
+It should work like this:
 
-High-level flow:
-1. Start from a checkpoint.
-2. Accumulate raw messages after that checkpoint.
-3. When a raw batch reaches a threshold, generate an observation for that batch.
-4. Replace that raw batch in the active context with the observation.
-5. Keep accumulating observations.
-6. When an observation batch reaches a threshold, generate a reflection.
-7. Replace those observations in the active context with the reflection.
-8. Keep accumulating reflections.
-9. When active context pressure exceeds the target budget, move the checkpoint forward.
-10. Reflections that fall behind the new checkpoint leave active context and become LTM input.
+1. New raw messages arrive after the current checkpoint.
+2. Recent raw messages remain visible as-is for freshness.
+3. Older raw messages after the checkpoint accumulate into a bounded raw batch.
+4. When that raw batch reaches its threshold, an observation is generated.
+5. That observation replaces those raw messages in the active context.
+6. Observations continue to accumulate after the checkpoint.
+7. When an observation batch reaches its threshold, a reflection is generated.
+8. That reflection replaces those observations in the active context.
+9. Reflections continue to accumulate while the total active context stays within budget.
+10. When the total active context would exceed the target budget, the checkpoint moves forward.
+11. Reflections that fall behind the new checkpoint leave the active context.
+12. Those reflections become the material that LTM should later process.
 
-This makes the context progressive instead of flat.
+This means:
+- raw messages compress into observations
+- observations compress into reflections
+- old reflections age out through checkpoint advancement
 
 ## Checkpoint Semantics
-The checkpoint is the anchor for active context reconstruction.
+The checkpoint is the boundary between:
+- what still belongs to live active context
+- what has already been consolidated enough to leave that live context
 
-The checkpoint should represent:
-- "everything before this point has already been consolidated enough for active context purposes"
-- "everything after this point still participates in active context assembly"
+The checkpoint should represent a semantic boundary in the compression pipeline, not a message-count boundary.
 
-The checkpoint should not be tied to:
-- a fixed count of raw messages
-- a fixed count of total thread messages
+In practice, that means:
+- the checkpoint must not be "last 20 messages"
+- the checkpoint must not be "everything older than N messages"
+- the checkpoint should advance only when enough newer consolidated context exists to replace older active material safely
 
-The checkpoint should move forward only when:
-- newer consolidated context is strong enough to replace older active material
-- the active context would otherwise exceed the target token budget
+Another way to state it:
+- the checkpoint marks the oldest point from which active context still needs to be reconstructed
 
-## Desired Active Context Assembly
-When preparing a model call, the system should assemble context approximately like this:
+## Recent RAW Message Layer
+The system should intentionally preserve a small recent raw layer.
 
-1. base system/runtime instructions
-2. `AGENT_CONTEXT.md`
-3. recent raw messages kept intentionally fresh
-4. active observations after the checkpoint
-5. active reflections after the checkpoint
-6. current flush input and current-step prompt
+Why:
+- the latest interaction often depends on exact wording
+- the agent needs some immediate conversational continuity
+- very recent details should not be compressed too early
 
-The active context builder should prefer token budgeting over message counting.
+Desired behavior:
+- keep about `10-15` recent raw messages, or a token-based equivalent
+- keep them as raw messages, not observations
+- they should be the freshest part of the active context
 
-## Suggested Initial Targets
-These are working targets, not final constants:
+This raw reserve should be protected as long as possible when the context budget is assembled.
 
+## Observation Layer
+Observations are the first compression stage over raw messages.
+
+An observation should:
+- summarize a bounded batch of older raw messages
+- preserve the important facts, actions, decisions, and local implications of that batch
+- replace those raw messages inside the active context
+
+Observations should be:
+- more compact than the raw batch
+- still close to the concrete events
+- specific enough to preserve operational detail
+
+The intent is not to produce a timeless summary yet. The intent is to compact a recent region of raw conversation while keeping local usefulness.
+
+## Reflection Layer
+Reflections are the second compression stage over observations.
+
+A reflection should:
+- synthesize a bounded batch of observations
+- extract the more durable or cross-cutting meaning from them
+- replace those observations inside the active context
+
+Reflections should be:
+- more compact than a stack of observations
+- more abstract and durable
+- less tied to one local conversation moment
+
+Reflections are what should carry medium-term continuity inside the active context.
+
+## LTM Handoff
+LTM should not work from the full live thread.
+
+Instead, LTM should receive only material that has already left the active context.
+
+The preferred handoff unit is:
+- reflections that moved behind the latest checkpoint
+
+That means LTM is downstream from the active compression system.
+
+Why this is desirable:
+- LTM receives already-consolidated material
+- LTM is less coupled to live thread noise
+- active context remains the primary operational layer
+- LTM becomes a later-stage memory layer instead of trying to manage live continuity directly
+
+## Desired Token Strategy
+The active context should be managed primarily by token budget, not by message count.
+
+The current target idea is:
 - total active context target: about `50,000` tokens
-- recent raw message reserve: about `10-15` messages or a token-based equivalent
-- raw -> observation batch threshold: about `5,000` tokens
-- observation -> reflection batch threshold: about `5,000` tokens
+- raw reserve: about `10-15` recent raw messages, or token equivalent
+- raw-to-observation batch threshold: about `5,000` tokens
+- observation-to-reflection batch threshold: about `5,000` tokens
 
-These thresholds should eventually be configurable, but the first implementation can hardcode them if that helps simplify iteration.
+These values are not final, but they express the intended shape:
+- keep the whole active context modest
+- compress in bounded chunks
+- preserve some fresh raw detail
 
-## Desired LTM Relationship
-LTM should not observe the full live thread directly.
+## Context Assembly Expectations
+When a model call is prepared, active context assembly should behave roughly like this:
 
-Instead:
-- LTM should receive material only after it leaves the active context
-- the preferred handoff unit is archived reflections, not raw thread text
-- this makes LTM downstream from active context management
+1. include base runtime/system instructions
+2. include `AGENT_CONTEXT.md`
+3. include the recent raw message reserve
+4. include active observations after the checkpoint
+5. include active reflections after the checkpoint
+6. include the current flush input or current-step prompt
+7. enforce the total target token budget
 
-That means LTM becomes:
-- slower
-- more stable
-- more durable
-- less entangled with the live step loop
+The assembly process should prefer:
+- keeping the recent raw reserve
+- then keeping the newest useful reflections
+- then keeping the newest useful observations
 
-## Why The Current Mastra Model Is A Bad Fit
-The current Mastra memory processors are too opinionated for this design.
+Anything older should be compressed or pushed behind the checkpoint instead of being allowed to sprawl.
 
-Main friction points:
-- they center around their own processor lifecycle
-- they decide too much implicitly
-- they are not naturally checkpoint-driven
-- they do not expose the exact active-context replacement flow we want
-- they make it hard to treat observations and reflections as first-class runtime artifacts
-- they make LTM coupling feel indirect and reactive instead of explicit
+## What "Replace" Means
+In this design, replacement is important.
 
-This does not automatically mean Mastra must be removed entirely, but it does mean the current OM/LTM processor path is likely the wrong abstraction layer.
+When:
+- raw messages become an observation
+- or observations become a reflection
 
-## Open Architecture Question
-There are two plausible directions:
+the older material should stop competing for live context in the same layer.
 
-### Option A: Keep Mastra for the agent, replace only OM/LTM
-- keep agent execution on Mastra
-- build our own context manager outside Mastra OM
-- inject assembled context ourselves
-- maintain our own checkpoint, observation, reflection, and archive state
+That does not mean the system must delete all historical records.
+It means the active context builder should treat the newer artifact as the live representation of that older region.
 
-### Option B: Move to AI SDK for the full execution loop
-- remove Mastra from the main run loop
-- own the full step lifecycle directly
-- own message history, checkpointing, summarization, and LTM pipeline directly
+Without replacement, context only grows.
+With replacement, context slides.
 
-Option A is lower migration cost.
-Option B is cleaner if Mastra continues to resist the desired execution model.
+## Why This Is Different From Naive Summarization
+This is not just:
+- summarize sometimes
+- keep a summary around
 
-## Recommended Next Investigation
-Before implementation, define the data model of the new active context manager.
+It is a structured pipeline with:
+- checkpoints
+- bounded raw reserve
+- bounded observation batches
+- bounded reflection batches
+- explicit active-context replacement
+- explicit handoff to LTM when material ages out
 
-At minimum we need explicit persisted entities for:
-- checkpoint
-- raw batch
-- observation
-- reflection
-- archived reflection
-- LTM handoff state
+The design is closer to a rolling compression system than to a one-off memory summary.
 
-We also need to specify:
-- how active context is rebuilt for a step
-- when summarization jobs are triggered
-- whether summarization runs inline with the agent step or in a side pipeline
-- how token accounting is estimated for each layer
+## Important Behavioral Requirements
+The future implementation must satisfy these requirements:
 
-## Proposed Implementation Order
-1. Define the persistence model for checkpoint, observations, reflections, and archives.
-2. Define the active context assembly algorithm.
-3. Define the raw-to-observation batching rule.
-4. Define the observation-to-reflection batching rule.
-5. Define checkpoint advancement.
-6. Define archived reflection handoff to LTM.
-7. Only then decide whether this stays on Mastra runtime or moves to AI SDK.
+- It must be possible to tell what the current active checkpoint is.
+- It must be possible to tell which raw messages are still active as raw.
+- It must be possible to tell which observations are currently active.
+- It must be possible to tell which reflections are currently active.
+- It must be possible to tell what has already left the active context.
+- It must be possible to tell what is waiting for LTM handoff.
 
-## Non-Goals For The First Iteration
-- semantic retrieval over the full live thread
-- rich graph memory
-- generalized autonomous summarization for every artifact type
-- backward compatibility with the current Mastra OM record model
+The behavior must be inspectable and predictable.
 
-The first goal is narrower:
-- build a reliable active context compressor with checkpoints
+## Open Questions
+These still need definition:
+
+- What exact rule decides when a raw batch is closed?
+- What exact rule decides when an observation batch is closed?
+- Should batching be token-only, message-only, or hybrid?
+- How many reflections should remain active before checkpoint advancement?
+- Should checkpoint advancement happen inline during a run or in a side process?
+- What exact shape should a reflection have so that it is good active context and also good future LTM input?
+- Should there be one global checkpoint per thread, or separate checkpoints per layer?
+
+## What This Document Is Trying To Lock In
+This document is trying to lock in the desired behavior, not the implementation mechanism.
+
+The essential behavior to preserve is:
+- recent raw context stays visible
+- older context compresses progressively
+- the active window slides forward
+- older reflections leave active context
+- those aged-out reflections become LTM input
+
+If the implementation eventually differs internally but preserves that behavior, it is still acceptable.
 
