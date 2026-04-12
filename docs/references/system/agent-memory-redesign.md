@@ -63,6 +63,7 @@ This means:
 - raw messages compress into observations
 - observations compress into reflections
 - old reflections age out through checkpoint advancement
+- if enough material is available, multiple transitions can happen in cascade during the same management execution
 
 ## Checkpoint Semantics
 The checkpoint is the boundary between:
