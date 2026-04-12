@@ -67,10 +67,18 @@ export function createAgentRunner(
     }
 
     const previousRuntime = currentRuntime;
-    const nextRuntime = await options.reloadRuntime();
+    const nextRuntime = await withTimeout(
+      options.reloadRuntime(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent runtime reload timed out for ${runtime.id}`,
+    );
 
     if (isStaleRun(runEpoch)) {
-      await nextRuntime.dispose();
+      await withTimeout(
+        nextRuntime.dispose(),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent runtime disposal timed out for ${runtime.id}`,
+      );
       return;
     }
 
@@ -78,7 +86,11 @@ export function createAgentRunner(
     usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
     currentRuntime.onReceiveMessage(notifyExternalEvent);
     options.onRuntimeReloaded?.(nextRuntime);
-    await previousRuntime.dispose();
+    await withTimeout(
+      previousRuntime.dispose(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Previous agent runtime disposal timed out for ${runtime.id}`,
+    );
   }
 
   function clearTimer() {
@@ -326,6 +338,7 @@ export function createAgentRunner(
     executing = true;
     activeStepEpoch = runEpoch;
     let continueRunning = false;
+    let drainWakeQueueAfterStep = false;
     let prompt = '';
     lastStepStartedAt = Date.now();
     lastStepStage = 'step-started';
@@ -371,7 +384,10 @@ export function createAgentRunner(
       }
 
       if (!contract) {
-        await transitionToIdle(runEpoch);
+        await transitionToIdle(runEpoch, {
+          deferWakeQueueDrain: true,
+        });
+        drainWakeQueueAfterStep = true;
         return;
       }
 
@@ -465,7 +481,10 @@ export function createAgentRunner(
         nextStepAt = null;
         await resetRunLastMessages();
         resetLoopDetector();
-        await transitionToIdle(runEpoch);
+        await transitionToIdle(runEpoch, {
+          deferWakeQueueDrain: true,
+        });
+        drainWakeQueueAfterStep = true;
         return;
       }
 
@@ -479,7 +498,10 @@ export function createAgentRunner(
 
         nextStepAt = null;
         resetLoopDetector();
-        await transitionToIdle(runEpoch);
+        await transitionToIdle(runEpoch, {
+          deferWakeQueueDrain: true,
+        });
+        drainWakeQueueAfterStep = true;
         return;
       }
 
@@ -536,6 +558,10 @@ export function createAgentRunner(
       if (activeStepEpoch === runEpoch) {
         activeStepEpoch = 0;
         executing = false;
+      }
+
+      if (drainWakeQueueAfterStep && !isStaleRun(runEpoch)) {
+        await wakeQueue.onRunnerIdle();
       }
 
       if (continueRunning && !isStaleRun(runEpoch)) {
@@ -774,13 +800,21 @@ export function createAgentRunner(
       return undefined;
     }
 
-    const exists = await filesystem.exists(AGENT_CONTEXT_FILE_PATH);
+    const exists = await withTimeout(
+      filesystem.exists(AGENT_CONTEXT_FILE_PATH),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent context existence check timed out for ${runtime.id}`,
+    );
 
     if (!exists) {
       return undefined;
     }
 
-    const data = await filesystem.readFile(AGENT_CONTEXT_FILE_PATH);
+    const data = await withTimeout(
+      filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent context read timed out for ${runtime.id}`,
+    );
     const content = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
     const trimmedContent = content.trim();
 
@@ -826,7 +860,12 @@ export function createAgentRunner(
     return !startingRun && !executing && !timer;
   }
 
-  async function transitionToIdle(runEpoch: number) {
+  async function transitionToIdle(
+    runEpoch: number,
+    options: {
+      deferWakeQueueDrain?: boolean;
+    } = {},
+  ) {
     if (isStaleRun(runEpoch)) {
       return;
     }
@@ -843,6 +882,10 @@ export function createAgentRunner(
     );
 
     if (isStaleRun(runEpoch)) {
+      return;
+    }
+
+    if (options.deferWakeQueueDrain) {
       return;
     }
 
