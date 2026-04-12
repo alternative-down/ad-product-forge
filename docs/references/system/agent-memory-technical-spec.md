@@ -14,7 +14,7 @@ This spec is derived from:
 ## Technical Goal
 Implement a new active-context manager that:
 - preserves the current Forge agent runtime
-- reuses Mastra structures where they are useful
+- reuses Mastra OM structures directly
 - replaces Mastra's current OM behavior
 - keeps LTM handoff compatible with the current downstream pattern
 - manages context by checkpoint and block lifecycle instead of by naive message windows
@@ -64,6 +64,8 @@ Mastra already gives us the parts we actually need:
 - `MessageList`
 - storage and thread metadata
 - processor abort / TripWire
+- the OM storage table and history model
+- the OM markers/event shape
 - the current OM token-accounting basis
 - the current observation/reflection prompting and text shape
 
@@ -82,6 +84,9 @@ The new design should reuse these Mastra OM concepts directly:
 - `lastObservedAt` as the main cursor concept
 - `generationCount` as the state-version counter
 - `thread.metadata.mastra.om` as the place for lightweight thread-local checkpoint metadata
+- the existing OM storage table and history rows
+- the existing OM storage methods and record lifecycle shape
+- the existing OM marker family for observation/reflection visibility
 - the current OM token-accounting basis
 - the current OM observation/reflection prompting and text shape
 - `MessageList` mutation methods and tagged system messages for active-context reconstruction
@@ -129,157 +134,72 @@ The new system does own:
 - the block/artifact lifecycle that determines what remains active and what moves behind the checkpoint
 
 ## Persistence Model
-The persistence model should be split into one thread-scoped active-memory record plus immutable block/artifact records.
+The persistence model must stay on Mastra's OM surface.
 
-This split is mandatory because:
-- closed block is not summarized block
-- artifacts are immutable
-- ownership is strict
-- failure after closure must still leave closed source state visible and correct
+That means:
+- use the existing OM table
+- use the existing `ObservationalMemoryRecord` type
+- use the existing OM history chain
+- use the existing OM markers
+- do not introduce a second custom OM table family for blocks/artifacts/handoff
 
-### 1. Thread Active Memory Record
-One row per thread, modeled after the role Mastra's `ObservationalMemoryRecord` plays today.
+The implementation is allowed to add custom control state, but that control state should live on top of the Mastra OM base, not beside it as a parallel persistence model.
 
-Suggested fields:
+### 1. Canonical OM record
+The canonical persisted OM state remains the current thread-scoped `ObservationalMemoryRecord`.
+
+Its existing fields should keep their normal roles:
 - `id`
 - `threadId`
 - `resourceId`
 - `createdAt`
 - `updatedAt`
 - `lastObservedAt`
+- `originType`
 - `generationCount`
-- `checkpointMessageId`
-- `checkpointMessageCreatedAt`
-- `checkpointReflectionId`
-- `recentRawTokenCount`
-- `activeObservationTokenCount`
-- `activeReflectionTokenCount`
-- `lastSuccessfulObservationAt`
-- `lastSuccessfulReflectionAt`
-- `lastCheckpointAdvancedAt`
-- `lastFailureAt`
-- `lastFailureStage`
-- `lastFailureReason`
-- `configSnapshot`
+- `activeObservations`
+- `observationTokenCount`
+- `config`
 - `metadata`
 
-Purpose:
-- hold the canonical thread-level active state
-- define where reconstruction starts
-- expose enough thread-level health/debug state without scanning blocks
+In the new system:
+- `activeObservations` remains the persisted active observation layer
+- `generationCount` remains the version counter
+- `lastObservedAt` remains the main cursor
+- reflection generations continue using the existing OM history model
 
-### 2. Thread Metadata Mirror
-Lightweight thread-local pointers should also be mirrored into `thread.metadata.mastra.om`.
+### 2. Reflection history
+Active and previous reflections should be represented through the existing OM generation history rather than a new reflection table.
 
-Use it for:
-- `lastObservedAt`
+That means:
+- reflection output becomes a new OM generation
+- `originType = 'reflection'` remains the semantic marker for reflected generations
+- active reflections are reconstructed from the relevant OM history window after the current checkpoint
+
+This is the key point where the design must stay 1:1 with the Mastra OM base instead of creating a second artifact model.
+
+### 3. Thread-local checkpoint and block control state
+Checkpoint position and block-progress control state should live in `thread.metadata.mastra.om`, not in a parallel OM table family.
+
+That thread-local control state should include:
 - checkpoint cursor breadcrumbs
-- current generation count
-- optional debug hints
+- checkpoint reflection generation reference
+- raw block open/closed state
+- observation block open/closed state
+- recent raw token count
+- active reflection token count
+- last success/failure breadcrumbs needed for debugging
 
-This keeps the design aligned with Mastra's thread metadata pattern and makes thread inspection cheap.
+This keeps the actual persisted OM surface the same while letting us control lifecycle differently.
 
-### 3. Raw Block
-Represents a strict batch of raw thread messages that moved beyond the recent raw reserve.
+### 4. Markers
+Observation/reflection lifecycle visibility should continue to use the Mastra OM marker family.
 
-Suggested fields:
-- `id`
-- `threadId`
-- `resourceId`
-- `startMessageId`
-- `endMessageId`
-- `startCreatedAt`
-- `endCreatedAt`
-- `tokenCount`
-- `status`
-  - `open`
-  - `closed`
-  - `observed`
-- `createdAt`
-- `updatedAt`
+The processor can emit the same kinds of:
+- observation start/end/failure markers
+- reflection start/end/failure markers
 
-Invariants:
-- each raw message belongs to one raw block at most
-- `closed` means source ownership is fixed
-- `observed` means an immutable observation artifact was successfully produced for that block
-
-### 4. Observation Artifact
-Represents one immutable observation generated from one closed raw block.
-
-Suggested fields:
-- `id`
-- `threadId`
-- `resourceId`
-- `rawBlockId`
-- `content`
-- `tokenCount`
-- `supportContextTokenCount`
-- `createdAt`
-
-Invariants:
-- immutable after creation
-- one raw block maps to at most one observation artifact
-
-### 5. Observation Block
-Represents a strict batch of observation artifacts waiting to become one reflection.
-
-Suggested fields:
-- `id`
-- `threadId`
-- `resourceId`
-- `startObservationId`
-- `endObservationId`
-- `tokenCount`
-- `status`
-  - `open`
-  - `closed`
-  - `reflected`
-- `createdAt`
-- `updatedAt`
-
-Invariants:
-- each observation belongs to one observation block at most
-- `closed` means source ownership is fixed
-- `reflected` means an immutable reflection artifact was successfully produced for that block
-
-### 6. Reflection Artifact
-Represents one immutable reflection generated from one closed observation block.
-
-Suggested fields:
-- `id`
-- `threadId`
-- `resourceId`
-- `observationBlockId`
-- `content`
-- `tokenCount`
-- `supportContextTokenCount`
-- `createdAt`
-
-Invariants:
-- immutable after creation
-- one observation block maps to at most one reflection artifact
-
-### 7. Archived Reflection / LTM Handoff State
-Represents reflection artifacts that have moved behind the checkpoint.
-
-Suggested fields:
-- `reflectionId`
-- `threadId`
-- `resourceId`
-- `archivedAt`
-- `ltmStatus`
-  - `pending`
-  - `processing`
-  - `done`
-  - `failed`
-- `ltmAttemptedAt`
-- `ltmCompletedAt`
-- `ltmFailureReason`
-
-Purpose:
-- make checkpoint advancement deterministic
-- make downstream LTM handoff inspectable
-- keep LTM lifecycle separate from active-context reconstruction
+What changes is the lifecycle that decides when those markers are emitted, not the marker surface itself.
 
 ## Store Layer
 The processor should not talk to raw tables everywhere.
@@ -287,22 +207,16 @@ It should go through one store boundary:
 - `CheckpointedContextStore`
 
 That store should own these operations:
-- get or create thread active-memory record
+- get or create OM record through the existing OM storage surface
+- get OM history through the existing OM storage surface
 - load thread messages after checkpoint
-- load open raw block
-- load open observation block
-- append raw messages to raw block
-- close raw block
-- create observation artifact
-- mark raw block observed
-- append observation to observation block
-- close observation block
-- create reflection artifact
-- mark observation block reflected
+- load thread checkpoint/block control state from thread metadata
+- write thread checkpoint/block control state to thread metadata
+- update active observations on the current OM record
+- create the next reflection generation on the OM history chain
 - list active reflections after checkpoint
 - list active observations after checkpoint
 - list recent raw messages after checkpoint
-- archive reflection block behind checkpoint
 - advance checkpoint
 - write thread metadata mirror
 - write failure state
@@ -316,12 +230,13 @@ This algorithm runs in `processInputStep`.
 ### Stage 1: Load thread state
 Load:
 - thread active-memory record
+- OM history relevant to the current checkpoint
 - thread metadata mirror
 - raw messages after checkpoint
-- open raw block
-- open observation block
-- active observation artifacts after checkpoint
-- active reflection artifacts after checkpoint
+- open raw block control state
+- open observation block control state
+- active observations after checkpoint
+- active reflections after checkpoint
 
 The checkpoint is the loading boundary.
 There is no message-count-based reconstruction here.
@@ -342,11 +257,12 @@ Take the overflow raw region and:
 
 If the raw block token count reaches the configured threshold:
 - close the raw block
-- immediately generate the observation artifact
+- immediately generate the observation text
 - on success:
-  - persist observation artifact
-  - mark raw block `observed`
-  - append that observation into the observation block stream
+  - append it into `activeObservations` on the current OM record
+  - update OM token counts on the current record
+  - advance `lastObservedAt`
+  - append that observation into the observation block control stream
 - on failure:
   - persist failure state
   - abort the step
@@ -359,10 +275,11 @@ Take newly available observations and:
 
 If the observation block token count reaches the configured threshold:
 - close the observation block
-- immediately generate the reflection artifact
+- immediately generate the reflection text
 - on success:
-  - persist reflection artifact
-  - mark observation block `reflected`
+  - create a new OM reflection generation using the existing OM history model
+  - reset the active observation layer on the new current generation to the post-reflection state
+  - increment `generationCount`
 - on failure:
   - persist failure state
   - abort the step
@@ -374,8 +291,6 @@ Compute the active reflection budget as:
 
 If active reflections exceed that derived budget:
 - select the oldest checkpoint-advance block
-- archive those reflection artifacts
-- mark them `ltmStatus = pending`
 - move the primary checkpoint forward to the end of that reflection block
 - update the thread active-memory record
 - update `thread.metadata.mastra.om`
@@ -429,6 +344,7 @@ Observation and reflection generation should reuse the existing Mastra OM style:
 - same general prompting model
 - same text shape
 - same token-accounting basis
+- same broad marker/event shape
 
 What changes is:
 - source selection
@@ -444,7 +360,7 @@ Optional support context:
 - older blocks within a configurable token budget
 
 Output:
-- one immutable observation artifact
+- one observation text payload that is persisted through the current OM record's `activeObservations`
 
 ### Reflection generation input
 Required input:
@@ -454,7 +370,7 @@ Optional support context:
 - older observation or reflection blocks within a configurable token budget
 
 Output:
-- one immutable reflection artifact
+- one reflection text payload that is persisted as the next OM reflection generation
 
 Support context does not change ownership.
 It is read-only context for better synthesis.
@@ -472,18 +388,16 @@ This is the correct behavior for the synchronous first implementation because:
 - the active context cannot be allowed to silently continue in an inconsistent state
 - the design intentionally does not allow budget expansion as a fallback
 
-## LTM Handoff
-LTM handoff is triggered only by checkpoint advancement.
+## LTM Boundary
+LTM is a separate processor concern.
 
-The handoff unit is:
-- reflection artifacts that moved behind the checkpoint
+The active-context manager should not create its own archived/handoff state model.
 
-The active context manager is responsible for:
-- marking those reflections archived
-- setting `ltmStatus = pending`
+The only contract it must preserve is:
+- anything behind the latest checkpoint is no longer part of active context
+- the OM surface remains the same Mastra OM surface
 
-The downstream LTM path can then continue using the same broad pattern we already use today.
-That remains a separate concern from active-context reconstruction.
+That keeps the existing downstream LTM integration path conceptually intact and avoids coupling LTM state to the new OM manager.
 
 ## Configuration Surface
 All thresholds must be configurable.
@@ -508,17 +422,17 @@ The system must expose enough state to debug block and checkpoint behavior.
 
 At minimum we need:
 - thread active-memory record
+- relevant OM history generations
 - checkpoint pointer
 - `lastObservedAt`
 - `generationCount`
 - active recent raw token count
-- open raw block token count and status
-- open observation block token count and status
+- open raw block control state
+- open observation block control state
 - active reflection token count
 - last successful observation generation timestamp
 - last successful reflection generation timestamp
 - last checkpoint advancement timestamp
-- archived reflections pending LTM
 - last failure stage and reason
 
 These should be available through:
@@ -542,21 +456,17 @@ What is not allowed:
 ## Implementation Order
 The implementation should proceed in this order:
 
-1. create the persistence schema for:
-   - thread active-memory record
-   - raw blocks
-   - observation artifacts
-   - observation blocks
-   - reflection artifacts
-   - archived reflection handoff state
-2. implement `CheckpointedContextStore`
+1. confirm the persistence baseline:
+   - reuse the existing OM table/history surface as-is
+   - store checkpoint/block control state only in thread metadata unless a real gap forces a later schema addition
+2. implement `CheckpointedContextStore` on top of the existing OM storage surface
 3. implement the pure lifecycle logic for:
    - raw reserve slicing
    - raw block ownership
    - observation block ownership
    - checkpoint advancement
    - active-context reconstruction inputs
-4. implement observation/reflection generators using the current Mastra OM prompting style
+4. implement observation/reflection generators using the current Mastra OM prompting style and marker shape
 5. implement `CheckpointedContextProcessor.processInputStep`
 6. wire it into the Forge runtime with built-in OM/LTM disabled
 7. add logs and admin inspection hooks
