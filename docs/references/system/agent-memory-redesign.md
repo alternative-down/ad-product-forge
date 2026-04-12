@@ -128,6 +128,10 @@ Reflections should be:
 
 Reflections are what should carry medium-term continuity inside the active context.
 
+Rule:
+- once an observation batch becomes a reflection, those observations should leave the active context completely
+- the reflection becomes the only active representation of that older observation region
+
 ## LTM Handoff
 LTM should not work from the full live thread.
 
