@@ -231,7 +231,7 @@ export function createAgentRunner(
   }
 
   async function queueNextStep(runEpoch = activeRunEpoch) {
-    if (stopped || startingRun || executing || timer || isStaleRun(runEpoch)) {
+    if (stopped || executing || timer || isStaleRun(runEpoch)) {
       return;
     }
 
