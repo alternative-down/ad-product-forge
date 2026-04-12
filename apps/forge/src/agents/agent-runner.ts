@@ -57,6 +57,10 @@ export function createAgentRunner(
   let activeGenerateToken = 0;
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages: number | null = DEFAULT_RUN_LAST_MESSAGES;
+  let currentFlushSettings = {
+    communicationDmFlushingEnabled: true,
+    communicationGroupFlushingEnabled: true,
+  };
   const pendingRunMessages = new Map<string, AgentWakeEvent>();
 
   currentRuntime.onReceiveMessage(notifyExternalEvent);
@@ -124,6 +128,8 @@ export function createAgentRunner(
       return;
     }
 
+    await refreshRunFlushSettings();
+
     const executionState = await withTimeout(
       store.getExecutionState(runtime.id),
       RUNNER_AWAIT_TIMEOUT_MS,
@@ -180,10 +186,12 @@ export function createAgentRunner(
       return null;
     }
 
-    const events = Array.from(pendingRunMessages.values()).sort(
+    const allEvents = Array.from(pendingRunMessages.values()).sort(
       (left, right) => left.timestamp - right.timestamp,
     );
     pendingRunMessages.clear();
+
+    const events = allEvents.filter(shouldIncludePendingRunEventInFlush);
 
     if (events.length === 0) {
       return null;
@@ -244,6 +252,7 @@ export function createAgentRunner(
       backoffMs = ONE_MINUTE_MS;
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
+      await refreshRunFlushSettings();
       await resetRunLastMessages();
 
       if (input.reloadRuntime) {
@@ -339,6 +348,7 @@ export function createAgentRunner(
     activeStepEpoch = runEpoch;
     let continueRunning = false;
     let drainWakeQueueAfterStep = false;
+    let suppressNoToolCallReminder = false;
     let prompt = '';
     lastStepStartedAt = Date.now();
     lastStepStage = 'step-started';
@@ -506,12 +516,10 @@ export function createAgentRunner(
       }
 
       if (result.toolCalls.length === 0 && ignoredTextRequested) {
-        backoffMs = ONE_MINUTE_MS;
-        continueRunning = true;
-        return;
+        suppressNoToolCallReminder = true;
       }
 
-      if (result.toolCalls.length === 0) {
+      if (result.toolCalls.length === 0 && !suppressNoToolCallReminder) {
         appendPendingRunMessages([
           {
             type: 'runner-reminder',
@@ -588,6 +596,33 @@ export function createAgentRunner(
     }
 
     runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
+  }
+
+  async function refreshRunFlushSettings() {
+    const settings = await withTimeout(
+      systemSettings.getSettings(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `System settings lookup timed out for ${runtime.id}`,
+    );
+
+    currentFlushSettings = {
+      communicationDmFlushingEnabled: settings.communicationDmFlushingEnabled,
+      communicationGroupFlushingEnabled: settings.communicationGroupFlushingEnabled,
+    };
+  }
+
+  function shouldIncludePendingRunEventInFlush(event: AgentWakeEvent) {
+    if (!event.type.startsWith('message:')) {
+      return true;
+    }
+
+    const conversationType = event.groupMetadata?.ConversationType;
+
+    if (conversationType === 'group') {
+      return currentFlushSettings.communicationGroupFlushingEnabled;
+    }
+
+    return currentFlushSettings.communicationDmFlushingEnabled;
   }
 
   function incrementRunLastMessages() {

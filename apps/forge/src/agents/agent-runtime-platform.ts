@@ -12,7 +12,6 @@ import {
   createCommunicationModule,
   type CommunicationModule,
   type CommunicationProvider,
-  type CommunicationInboundMessage,
   toMastraSafeIdentifier,
 } from '@mastra-engine/core';
 
@@ -93,13 +92,6 @@ export async function createAgentRuntimePlatform(input: {
     providers: input.providers ?? [],
     workspace,
     workspaceRoot: agentWorkspaceDir,
-    shouldFlushIncomingMessage(message: CommunicationInboundMessage) {
-      if (message.metadata?.conversationType === 'group') {
-        return input.communicationGroupFlushingEnabled ?? true;
-      }
-
-      return input.communicationDmFlushingEnabled ?? true;
-    },
   });
 
   return {
