@@ -15,14 +15,6 @@ type AgentUsage = {
   };
 };
 
-type OmObservationEndPart = {
-  type: 'data-om-observation-end';
-  data?: {
-    tokensObserved?: number;
-    observationTokens?: number;
-  };
-};
-
 export function createAgentRunnerUsage(input: {
   store: ReturnType<typeof createAgentContractStore>;
   runtime: InternalAgentRuntime;
@@ -99,7 +91,7 @@ export function createAgentRunnerUsage(input: {
   }
 
   async function recordObservationalMemorySteps(
-    contractId: string,
+    _contractId: string,
     steps: Array<{
       response?: {
         uiMessages?: Array<{
@@ -108,55 +100,7 @@ export function createAgentRunnerUsage(input: {
       };
     }>,
   ) {
-    if (!input.runtime.omModelProfileId) {
-      throw new Error(`Agent runtime is missing OM model profile: ${input.runtime.id}`);
-    }
-
-    const pricing = await input.store.getUsagePricing({
-      pricingModelKey: input.runtime.omPricingModelKey,
-      profileId: input.runtime.omModelProfileId,
-    });
-    const parts = steps
-      .flatMap((step) => step.response?.uiMessages ?? [])
-      .flatMap((message) => message.parts ?? []);
-
-    for (const part of parts) {
-      if (!isOmObservationEndPart(part)) {
-        continue;
-      }
-
-      const inputTokens = part.data?.tokensObserved ?? 0;
-      const outputTokens = part.data?.observationTokens ?? 0;
-
-      if (inputTokens <= 0 && outputTokens <= 0) {
-        continue;
-      }
-
-      let costUsd = 0;
-
-      if (pricing.modelPrice) {
-        costUsd =
-          ((inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
-            (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
-          pricing.contractCostMultiplier;
-      }
-
-      await input.store.recordAgentStep({
-        agentId: input.runtime.id,
-        contractId,
-        llmProfileId: input.runtime.omModelProfileId,
-        modelKey: input.runtime.omPricingModelKey,
-        kind: 'om',
-        inputTokens,
-        cachedInputTokens: 0,
-        outputTokens,
-        inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
-        inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
-        outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
-        contractCostMultiplier: pricing.contractCostMultiplier,
-        costUsd,
-      });
-    }
+    void steps;
   }
 
   function getUsageFromResult(result: { usage?: unknown }) {
@@ -180,12 +124,4 @@ export function createAgentRunnerUsage(input: {
     recordObservationalMemorySteps,
     getUsageFromResult,
   };
-}
-
-function isOmObservationEndPart(part: unknown): part is OmObservationEndPart {
-  if (!part || typeof part !== 'object') {
-    return false;
-  }
-
-  return 'type' in part && part.type === 'data-om-observation-end';
 }

@@ -1,7 +1,5 @@
 import {
-  LongTermMemory,
   createAgentMemory,
-  createObservationalMemory,
 } from '@mastra-engine/core';
 import { TokenLimiterProcessor } from '@mastra/core/processors';
 import type {
@@ -36,38 +34,11 @@ export function createAgentRuntimeMemory(input: {
     vector: input.vector,
     lastMessages: input.memoryLastMessagesFullEnabled ? undefined : input.memoryLastMessagesCount,
   });
-  const omModel = input.omModel ?? input.agentModel;
-  const observationalMemory = createObservationalMemory({
-    storage: input.storage,
-    model: omModel,
-    observation: {
-      messageTokens: input.omObservationMessageTokens,
-      bufferTokens: input.omObservationBufferTokens,
-      bufferActivation: input.omObservationBufferActivation,
-      previousObserverTokens: input.omObservationPreviousObserverTokens,
-    },
-    reflection: {
-      observationTokens: input.omReflectionObservationTokens,
-      bufferActivation: input.omReflectionBufferActivation,
-    },
-  });
-  const inputProcessors: InputProcessorOrWorkflow[] = [observationalMemory];
-  const outputProcessors: OutputProcessorOrWorkflow[] = [observationalMemory];
+  const inputProcessors: InputProcessorOrWorkflow[] = [];
+  const outputProcessors: OutputProcessorOrWorkflow[] = [];
 
   if (input.tokenCountFilterEnabled ?? true) {
     inputProcessors.unshift(new TokenLimiterProcessor(input.tokenCountFilterLimit ?? 100000));
-  }
-
-  if (input.longTermMemory) {
-    const longTermMemory = new LongTermMemory({
-      om: observationalMemory,
-      agentId: input.agentId,
-      mastraId: input.mastraId,
-      memoryBasePath: input.agentMemoryPath,
-      omModel,
-    });
-    inputProcessors.push(longTermMemory);
-    outputProcessors.push(longTermMemory);
   }
 
   return {

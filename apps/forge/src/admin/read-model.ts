@@ -7,7 +7,6 @@ import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import type { MastraDBMessage } from '@mastra/core/agent';
 import {
   createAgentMemory,
-  createObservationalMemory,
   toMastraSafeIdentifier,
   type CommunicationMessageView,
   type CommunicationProviderMessage,
@@ -440,25 +439,18 @@ export function createAdminReadModel(input: {
       storage,
       vector,
     });
-    const observationalMemory = createObservationalMemory({
-      storage,
-      model: 'anthropic/claude-sonnet-4-20250514',
+    const workingMemory = await memory.getWorkingMemory({
+      threadId: mastraAgentId,
+      resourceId: mastraAgentId,
     });
-    const [workingMemory, omRecord] = await Promise.all([
-      memory.getWorkingMemory({
-        threadId: mastraAgentId,
-        resourceId: mastraAgentId,
-      }),
-      observationalMemory.getOrCreateRecord(mastraAgentId, mastraAgentId),
-    ]);
 
     return {
       workingMemory: formatWorkingMemoryValue(workingMemory),
-      observations: formatMemoryValue(omRecord.activeObservations),
-      reflection: formatMemoryValue(omRecord.bufferedReflection),
-      generationCount: omRecord.generationCount,
-      updatedAt: omRecord.updatedAt.getTime(),
-      lastObservedAt: omRecord.lastObservedAt?.getTime() ?? null,
+      observations: '',
+      reflection: '',
+      generationCount: 0,
+      updatedAt: null,
+      lastObservedAt: null,
     };
   }
 
@@ -921,14 +913,6 @@ function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
-}
-
-function formatMemoryValue(value: string | null | undefined) {
-  if (!value || !value.trim()) {
-    return null;
-  }
-
-  return value.trim();
 }
 
 function formatWorkingMemoryValue(value: string | null | undefined) {
