@@ -41,9 +41,11 @@ export function createAgentRuntimeMemory(input: {
 
   const observationalMemory = createObservationalMemory({
     storage: input.storage,
+    memory,
     model: input.omModel ?? input.agentModel,
     observation: {
       messageTokens: input.omObservationMessageTokens,
+      bufferTokens: false,
       previousObserverTokens: input.omObservationPreviousObserverTokens,
     },
     reflection: {
@@ -51,12 +53,12 @@ export function createAgentRuntimeMemory(input: {
     },
   });
 
-  inputProcessors.push(observationalMemory);
-  outputProcessors.push(observationalMemory);
+  inputProcessors.push(observationalMemory.processor);
+  outputProcessors.push(observationalMemory.processor);
 
   if (input.longTermMemory !== false) {
     const longTermMemory = new LongTermMemory({
-      om: observationalMemory,
+      om: observationalMemory.engine,
       agentId: input.agentId,
       mastraId: input.mastraId,
       omModel: input.omModel ?? input.agentModel,
