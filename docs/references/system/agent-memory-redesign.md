@@ -145,6 +145,7 @@ Rule:
 - the reflection becomes the only active representation of that older observation region
 - the observation batch should be closed by token threshold only, not by message count
 - the observation batch buffer should target about `5,000` tokens before generating a reflection
+- the textual shape and prompting style of observations and reflections can initially follow the same model already used by the current OM implementation
 
 ## LTM Handoff
 LTM should not work from the full live thread.
@@ -250,8 +251,6 @@ The behavior must be inspectable and predictable.
 
 ## Open Questions
 These still need definition:
-
-- What exact shape should a reflection have so that it is good active context and also good future LTM input?
 
 ## What This Document Is Trying To Lock In
 This document is trying to lock in the desired behavior, not the implementation mechanism.
