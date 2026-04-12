@@ -154,8 +154,18 @@ export function createAgentWakeQueue(config: {
         return;
       }
 
-      clearTimer();
-      await trigger();
+      const now = Date.now();
+      const wakeWindow = getCurrentWakeWindow();
+      const accumulatedMs = firstPendingAt ? now - firstPendingAt : 0;
+
+      if (accumulatedMs >= wakeWindow.maxAccumulationMs) {
+        clearTimer();
+        void trigger();
+        return;
+      }
+
+      const remainingAccumulationMs = wakeWindow.maxAccumulationMs - accumulatedMs;
+      scheduleTrigger(Math.min(wakeWindow.debounceMs, remainingAccumulationMs));
     },
     stop() {
       pending = false;
