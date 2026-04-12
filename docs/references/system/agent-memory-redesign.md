@@ -156,6 +156,7 @@ The preferred handoff unit is:
 - reflections that moved behind the latest checkpoint
 
 That means LTM is downstream from the active compression system.
+The handoff flow can initially follow the same general downstream model already used today by the current LTM integration.
 
 Why this is desirable:
 - LTM receives already-consolidated material
