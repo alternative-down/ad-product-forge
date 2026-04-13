@@ -58,6 +58,9 @@ function AgentLogIndexRoute() {
         generationCount={runtimeMemoryQuery.data?.generationCount ?? null}
         updatedAt={runtimeMemoryQuery.data?.updatedAt ?? null}
         lastObservedAt={runtimeMemoryQuery.data?.lastObservedAt ?? null}
+        checkpointGeneration={runtimeMemoryQuery.data?.checkpointGeneration ?? null}
+        checkpointSummary={runtimeMemoryQuery.data?.checkpointSummary ?? null}
+        checkpointUpdatedAt={runtimeMemoryQuery.data?.checkpointUpdatedAt ?? null}
         loading={runtimeMemoryQuery.isLoading}
         error={runtimeMemoryQuery.error?.message ?? null}
       />
@@ -82,6 +85,9 @@ function AgentRuntimeMemorySection(input: {
   generationCount: number | null;
   updatedAt: number | null;
   lastObservedAt: number | null;
+  checkpointGeneration: number | null;
+  checkpointSummary: string | null;
+  checkpointUpdatedAt: number | null;
   loading: boolean;
   error: string | null;
 }) {
@@ -94,7 +100,9 @@ function AgentRuntimeMemorySection(input: {
   }
 
   if (!input.workingMemory && !input.observations && !input.reflection) {
-    return null;
+    if (!input.checkpointSummary) {
+      return null;
+    }
   }
 
   return (
@@ -105,12 +113,18 @@ function AgentRuntimeMemorySection(input: {
           {input.generationCount !== null ? <span>OM generation: {input.generationCount}</span> : null}
           {input.updatedAt ? <span>Atualizada: {formatDateTime(input.updatedAt)}</span> : null}
           {input.lastObservedAt ? <span>Última observação: {formatDateTime(input.lastObservedAt)}</span> : null}
+          {input.checkpointGeneration !== null ? <span>Checkpoint: {input.checkpointGeneration}</span> : null}
+          {input.checkpointUpdatedAt ? <span>Checkpoint atualizado: {formatDateTime(input.checkpointUpdatedAt)}</span> : null}
         </div>
       </header>
 
       <MemoryDisclosure
         title="Working Memory"
         value={input.workingMemory}
+      />
+      <MemoryDisclosure
+        title="Checkpoint Summary"
+        value={input.checkpointSummary}
       />
       <MemoryDisclosure
         title="Observations"
