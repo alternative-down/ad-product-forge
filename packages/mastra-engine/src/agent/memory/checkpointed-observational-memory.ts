@@ -554,6 +554,30 @@ function splitMessagesIntoRawUnits(
   return messages.flatMap((message) => splitMessageIntoRawUnits(message, tokenCounter, maxUnitTokens));
 }
 
+function getCursorObservedIds(input: {
+  previousRecord: ObservationalMemoryRecord;
+  selectedUnits: RawUnit[];
+  cursorTime: Date;
+}) {
+  const cursorTimeMs = input.cursorTime.getTime();
+  const selectedIdsAtCursor = input.selectedUnits
+    .filter((unit) => unit.createdAt.getTime() === cursorTimeMs)
+    .map((unit) => unit.id);
+
+  if (!input.previousRecord.lastObservedAt) {
+    return selectedIdsAtCursor;
+  }
+
+  if (input.previousRecord.lastObservedAt.getTime() !== cursorTimeMs) {
+    return selectedIdsAtCursor;
+  }
+
+  return Array.from(new Set([
+    ...(input.previousRecord.observedMessageIds ?? []),
+    ...selectedIdsAtCursor,
+  ]));
+}
+
 function createMetricsSnapshot(input: {
   state: CustomOmState;
   rawUnits: RawUnit[];
@@ -667,6 +691,42 @@ function takeMessageBatch(
   }
 
   return { selected, usedTokens };
+}
+
+function getChunkIndex(unitId: string) {
+  const match = unitId.match(/:chunk:(\d+)$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function getRemainingUnitsForPart(
+  messageId: string,
+  partKey: string,
+  units: RawUnit[],
+) {
+  const prefix = `${messageId}:part:${partKey}`;
+  return units
+    .filter((unit) => unit.id === prefix || unit.id.startsWith(`${prefix}:chunk:`))
+    .sort((left, right) => getChunkIndex(left.id) - getChunkIndex(right.id));
+}
+
+function getUnitText(unit: RawUnit) {
+  const part = unit.promptMessage.content.parts?.[0];
+
+  if (part?.type !== 'text' || typeof part.text !== 'string') {
+    return null;
+  }
+
+  return part.text;
+}
+
+function getUnitReasoning(unit: RawUnit) {
+  const part = unit.promptMessage.content.parts?.[0];
+
+  if (part?.type !== 'reasoning' || typeof part.reasoning !== 'string') {
+    return null;
+  }
+
+  return part.reasoning;
 }
 
 function takeObservationBatch(blocks: ObservationBlock[], threshold: number) {
@@ -812,8 +872,10 @@ export class CheckpointedObservationalMemoryProcessor
       customState.activeReflectionBlocks,
     );
     let previousLoopSignature: string | null = null;
+    let loopIteration = 0;
 
     while (true) {
+      loopIteration += 1;
       const rawMessages = getMessagesAfterCursor(
         args.messageList.get.all.db(),
         currentRecord,
@@ -863,6 +925,14 @@ export class CheckpointedObservationalMemoryProcessor
         overflowTokens,
         reflectionBudget,
       });
+      forgeDebug('checkpointed-om', 'loop iteration', {
+        threadId: context.threadId,
+        resourceId: context.resourceId,
+        loopIteration,
+        currentGeneration: currentRecord.generationCount,
+        currentRecordId: currentRecord.id,
+        currentCursorObservedIds: currentRecord.observedMessageIds?.length ?? 0,
+      });
 
       if (sumTokens(getActiveObservationBlocks(customState)) >= this.observationReflectionBatchTokens) {
         forgeDebug('checkpointed-om', 'reflection threshold reached', {
@@ -884,6 +954,22 @@ export class CheckpointedObservationalMemoryProcessor
           context.resourceId,
           customState.activeReflectionBlocks,
         );
+        const nextRawMessages = getMessagesAfterCursor(
+          args.messageList.get.all.db(),
+          currentRecord,
+          this.tokenCounter,
+          this.recentRawTokens,
+        );
+        const nextRawSplit = splitRawMessagesByRecentReserve(nextRawMessages, this.recentRawTokens);
+        forgeDebug('checkpointed-om', 'reflection applied', {
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          loopIteration,
+          remainingRawCount: nextRawMessages.length,
+          remainingOverflowCount: nextRawSplit.overflow.length,
+          remainingOverflowTokens: nextRawSplit.overflow.reduce((total, unit) => total + unit.tokenCount, 0),
+          currentGeneration: currentRecord.generationCount,
+        });
         continue;
       }
 
@@ -904,6 +990,24 @@ export class CheckpointedObservationalMemoryProcessor
           requestContext: args.requestContext,
         });
         await this.persistCustomState(context.threadId, customState);
+        const nextRawMessages = getMessagesAfterCursor(
+          args.messageList.get.all.db(),
+          currentRecord,
+          this.tokenCounter,
+          this.recentRawTokens,
+        );
+        const nextRawSplit = splitRawMessagesByRecentReserve(nextRawMessages, this.recentRawTokens);
+        forgeDebug('checkpointed-om', 'observation applied', {
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          loopIteration,
+          currentGeneration: currentRecord.generationCount,
+          currentCursorObservedIds: currentRecord.observedMessageIds?.length ?? 0,
+          remainingRawCount: nextRawMessages.length,
+          remainingRecentRawTokens: nextRawSplit.recent.reduce((total, unit) => total + unit.tokenCount, 0),
+          remainingOverflowCount: nextRawSplit.overflow.length,
+          remainingOverflowTokens: nextRawSplit.overflow.reduce((total, unit) => total + unit.tokenCount, 0),
+        });
         continue;
       }
 
@@ -934,6 +1038,13 @@ export class CheckpointedObservationalMemoryProcessor
           context.resourceId,
           customState.activeReflectionBlocks,
         );
+        forgeDebug('checkpointed-om', 'checkpoint applied', {
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          loopIteration,
+          checkpointGeneration: customState.checkpointGeneration,
+          activeReflectionBlockCount: customState.activeReflectionBlocks.length,
+        });
         continue;
       }
 
@@ -1040,7 +1151,7 @@ export class CheckpointedObservationalMemoryProcessor
       lastBufferedAtTokens: 0,
       lastBufferedAtTime: null,
       bufferedObservationChunks: [],
-      observedMessageIds: [],
+      observedMessageIds: input.currentRecord.observedMessageIds ?? [],
     };
 
     await this.store.insertObservationalMemoryRecord(repairedRecord);
@@ -1132,6 +1243,11 @@ export class CheckpointedObservationalMemoryProcessor
     if (!lastObservedAt) {
       throw new Error('Custom OM observation batch ended without createdAt');
     }
+    const cursorObservedIds = getCursorObservedIds({
+      previousRecord: input.currentRecord,
+      selectedUnits: batch.selected,
+      cursorTime: new Date(lastObservedAt),
+    });
 
     input.state.observationBlocks.push({
       id: randomUUID(),
@@ -1151,7 +1267,7 @@ export class CheckpointedObservationalMemoryProcessor
       observations: activeObservationText,
       tokenCount: this.tokenCounter.countObservations(activeObservationText),
       lastObservedAt: new Date(lastObservedAt),
-      observedMessageIds: batch.selected.map((unit) => unit.id),
+      observedMessageIds: cursorObservedIds,
       observedTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
 
@@ -1161,6 +1277,7 @@ export class CheckpointedObservationalMemoryProcessor
       activeObservationBlockCount: getActiveObservationBlocks(input.state).length,
       activeObservationTokens: this.tokenCounter.countObservations(activeObservationText),
       lastObservedAt,
+      cursorObservedIds: cursorObservedIds.length,
     });
 
     return {
@@ -1168,7 +1285,7 @@ export class CheckpointedObservationalMemoryProcessor
       activeObservations: activeObservationText,
       observationTokenCount: this.tokenCounter.countObservations(activeObservationText),
       lastObservedAt: new Date(lastObservedAt),
-      observedMessageIds: batch.selected.map((unit) => unit.id),
+      observedMessageIds: cursorObservedIds,
       updatedAt: new Date(),
     };
   }
@@ -1233,7 +1350,7 @@ export class CheckpointedObservationalMemoryProcessor
       lastBufferedAtTokens: 0,
       lastBufferedAtTime: null,
       bufferedObservationChunks: [],
-      observedMessageIds: [],
+      observedMessageIds: input.currentRecord.observedMessageIds ?? [],
     };
 
     await this.store.insertObservationalMemoryRecord(reflectionRecord);
@@ -1458,20 +1575,43 @@ export class CheckpointedObservationalMemoryProcessor
           return [message];
         }
 
-        const remainingPartKeys = new Set(
-          remainingUnits
-            .map((unit) => unit.id.match(/:part:([^:]+)(?::chunk:\d+)?$/)?.[1])
-            .filter((value): value is string => Boolean(value))
-        );
+        const rebuiltParts = message.content.parts
+          .map((part, index) => stampRawPartKey(part, index))
+          .flatMap((part, index) => {
+            const partKey = getRawPartKey(part, index);
+            const remainingPartUnits = getRemainingUnitsForPart(message.id, partKey, remainingUnits);
 
-        return [
-          cloneMessageWithParts(
-            message,
-            message.content.parts
-              .map((part, index) => stampRawPartKey(part, index))
-              .filter((part, index) => remainingPartKeys.has(getRawPartKey(part, index))),
-          ),
-        ];
+            if (remainingPartUnits.length === 0) {
+              return [];
+            }
+
+            if (part.type === 'text' && typeof part.text === 'string') {
+              return [{
+                ...part,
+                text: remainingPartUnits
+                  .map(getUnitText)
+                  .filter((value): value is string => Boolean(value))
+                  .join('\n'),
+              }];
+            }
+
+            if (part.type === 'reasoning' && typeof part.reasoning === 'string') {
+              return [{
+                ...part,
+                reasoning: remainingPartUnits
+                  .map(getUnitReasoning)
+                  .filter((value): value is string => Boolean(value))
+                  .join('\n'),
+                details: [],
+              }];
+            }
+
+            return [part];
+          });
+
+        return rebuiltParts.length > 0
+          ? [cloneMessageWithParts(message, rebuiltParts)]
+          : [];
       });
 
       messageList.removeByIds(rememberedMessages.map((message) => message.id));
