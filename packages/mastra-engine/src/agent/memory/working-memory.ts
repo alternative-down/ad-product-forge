@@ -7,63 +7,63 @@ const workingMemoryText = (description: string) =>
     .describe(description);
 
 export const WORKING_MEMORY_INSTRUCTIONS = [
-  'Working memory is an actively maintained operating memory.',
-  'Update it as soon as something meaningfully changes in your active rules, domain expansion, or current objectives.',
+  'Working memory is your intrinsic operating core, not your notebook.',
+  'Use it for identity-level guidance that should remain true across runs unless something genuinely changed.',
+  'Update it when something meaningfully changes in your role core, non-negotiables, domain boundaries, or current mission and direction.',
   'When several related fields changed, update them together in one working-memory update instead of making multiple fragmented updates.',
-  'Use working memory only for stable rules, domain expansion, and current objectives.',
-  'Use domain expansion to capture the practical shape of your area inside the limits of your role: what belongs to your function, how your work is usually done, what kinds of activities fit your scope, and what operational territory is legitimately yours beyond the base role text without expanding into another role.',
+  'Use working memory only for intrinsic guidance: identity, stable rules, domain boundaries, and current mission-level direction.',
+  'Do not use working memory as a task log, notebook, timeline, dump of recent findings, or storage for operational detail that should live in workspace files.',
+  'Use it for things like: the core of your role, non-negotiable constraints, operating principles that define how you should behave, the true boundaries of your area, the mission you are currently advancing, and what success means at a high level.',
+  'Use domain information to capture what belongs to your function in practice, what kinds of activities are legitimately inside your role, and where the boundaries are without drifting into another function.',
   'Do not duplicate the system prompt, role text, tool descriptions, obvious runtime behavior, full conversation history, or information that is easy to find elsewhere.',
-  'Keep every field concise, information-dense, and easy to scan.',
+  'Keep every field clear, information-dense, and descriptive enough to avoid ambiguity without becoming verbose.',
   'Remove or rewrite entries when they are resolved, replaced, no longer true, or no longer useful.',
   'Prefer compact bullets or short paragraphs inside each field.',
-  'Use objectives for what you are currently trying to achieve, and update them when priorities shift.',
+  'Use direction for what you are currently trying to achieve at a high level, why it matters, and what success means.',
 ].join('\n');
 
 export const WORKING_MEMORY_SCHEMA = z.object({
-  rules: z
+  identity: z
     .object({
-      obligations: workingMemoryText(
-        'Standing responsibilities, commitments, and instructions that the agent must keep following.',
+      roleCore: workingMemoryText(
+        'The essential core of the role: what this agent fundamentally is responsible for and what defines its function.',
       ),
-      constraints: workingMemoryText(
-        'Hard limits, prohibitions, approval boundaries, or things the agent must avoid doing.',
+      nonNegotiables: workingMemoryText(
+        'Hard rules, prohibitions, approval boundaries, and things this agent must not violate.',
       ),
-      preferences: workingMemoryText(
-        'Stable operating preferences or recurring ways of working that remain useful across runs.',
+      operatingPrinciples: workingMemoryText(
+        'Stable principles that define how this agent should behave and operate across runs.',
       ),
     })
     .optional()
-    .describe('What to do, what not to do, and stable operating rules.'),
-  domainExpansion: z
+    .describe('Intrinsic identity of the role: role core, non-negotiables, and stable operating principles.'),
+  domain: z
     .object({
-      area: workingMemoryText(
-        'Expanded description of the agent area inside the limits of the role, what the function really covers in practice, and what belongs inside that domain without drifting into another function.',
-      ),
-      methods: workingMemoryText(
-        'How the agent usually works, recurring operating approaches, and practical ways the role executes its responsibilities.',
+      scope: workingMemoryText(
+        'What this role truly covers in practice, what belongs inside its area, and what operational territory is legitimately its own without drifting into another function.',
       ),
       activities: workingMemoryText(
-        'Types of activities, initiatives, reviews, decisions, and follow-ups that are legitimately part of this role.',
+        'Kinds of activities, initiatives, reviews, decisions, and follow-ups that are legitimately part of this role.',
       ),
-      scopeEdges: workingMemoryText(
+      boundaries: workingMemoryText(
         'Clarifications about the edges of the role: what is inside scope, what is adjacent, and what should only be handled in a supporting or coordinating way.',
       ),
     })
     .optional()
-    .describe('Expanded model of the agent domain, area of action, ways of working, and practical scope while staying inside the role boundaries.'),
-  objectives: z
+    .describe('Intrinsic understanding of the role domain: practical scope, activity types, and boundaries.'),
+  direction: z
     .object({
-      current: workingMemoryText(
-        'Current goals, desired outcomes, or what the agent is actively trying to achieve now.',
+      currentMission: workingMemoryText(
+        'The current high-level mission, direction, or main outcome this agent is trying to advance now.',
       ),
-      rationale: workingMemoryText(
-        'Why the current objectives matter and what success looks like at a high level.',
+      successDefinition: workingMemoryText(
+        'Why the current mission matters and what success looks like at a high level.',
       ),
     })
     .optional()
-    .describe('Active objectives and what the agent is currently trying to accomplish.'),
+    .describe('Current mission-level direction and definition of success.'),
 }).describe(
-  'Structured working memory for rules, domain expansion, and objectives.',
+  'Structured working memory for intrinsic identity, domain boundaries, and current direction.',
 );
 
 export function appendWorkingMemoryInstructions(instructions: string): string;

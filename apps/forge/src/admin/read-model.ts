@@ -164,10 +164,6 @@ function getCustomCheckpointedContextState(metadata: Record<string, unknown> | u
   };
 }
 
-function sumTokenCount(items: Array<{ tokenCount: number }>) {
-  return items.reduce((total, item) => total + item.tokenCount, 0);
-}
-
 export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
