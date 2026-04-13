@@ -55,36 +55,6 @@ function hasCreateThread(store: unknown): store is MastraMemoryStore {
   );
 }
 
-interface MastraObservationalMemoryStore {
-  getObservationalMemory(threadId: string | null, resourceId: string): Promise<{
-    activeObservations: string;
-    bufferedReflection?: string;
-    generationCount: number;
-    updatedAt: Date;
-    lastObservedAt?: Date;
-    originType: 'initial' | 'reflection';
-  } | null>;
-  getObservationalMemoryHistory(
-    threadId: string | null,
-    resourceId: string,
-    limit?: number,
-  ): Promise<Array<{
-    activeObservations: string;
-    originType: 'initial' | 'reflection';
-  }>>;
-}
-
-function hasObservationalMemoryStore(store: unknown): store is MastraObservationalMemoryStore {
-  return (
-    typeof store === 'object' &&
-    store !== null &&
-    'getObservationalMemory' in store &&
-    typeof (store as MastraObservationalMemoryStore).getObservationalMemory === 'function' &&
-    'getObservationalMemoryHistory' in store &&
-    typeof (store as MastraObservationalMemoryStore).getObservationalMemoryHistory === 'function'
-  );
-}
-
 export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
@@ -473,45 +443,13 @@ export function createAdminReadModel(input: {
       threadId: mastraAgentId,
       resourceId: mastraAgentId,
     });
-    const omStore = storage.stores.memory;
-
-    if (!hasObservationalMemoryStore(omStore)) {
-      return {
-        workingMemory: formatWorkingMemoryValue(workingMemory),
-        observations: '',
-        reflection: '',
-        generationCount: 0,
-        updatedAt: null,
-        lastObservedAt: null,
-      };
-    }
-
-    const omRecord = await omStore.getObservationalMemory(mastraAgentId, mastraAgentId);
-
-    if (!omRecord) {
-      return {
-        workingMemory: formatWorkingMemoryValue(workingMemory),
-        observations: '',
-        reflection: '',
-        generationCount: 0,
-        updatedAt: null,
-        lastObservedAt: null,
-      };
-    }
-
-    const omHistory = await omStore.getObservationalMemoryHistory(mastraAgentId, mastraAgentId, 10);
-    const latestReflection =
-      (omRecord.originType === 'reflection' ? omRecord : null)
-      ?? omHistory.find((entry) => entry.originType === 'reflection')
-      ?? null;
-
     return {
       workingMemory: formatWorkingMemoryValue(workingMemory),
-      observations: omRecord.activeObservations,
-      reflection: omRecord.bufferedReflection ?? latestReflection?.activeObservations ?? '',
-      generationCount: omRecord.generationCount,
-      updatedAt: omRecord.updatedAt.getTime(),
-      lastObservedAt: omRecord.lastObservedAt ? omRecord.lastObservedAt.getTime() : null,
+      observations: '',
+      reflection: '',
+      generationCount: 0,
+      updatedAt: null,
+      lastObservedAt: null,
     };
   }
 
