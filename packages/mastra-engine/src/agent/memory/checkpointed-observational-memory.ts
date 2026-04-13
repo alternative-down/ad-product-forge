@@ -54,12 +54,30 @@ type CheckpointSummary = {
   updatedAt: string;
 };
 
+type CustomOmMetricsSnapshot = {
+  rawMessageCount: number;
+  recentRawMessageCount: number;
+  recentRawTokenCount: number;
+  overflowMessageCount: number;
+  overflowTokenCount: number;
+  activeObservationBlockCount: number;
+  observationTokenCount: number;
+  activeReflectionBlockCount: number;
+  reflectionTokenCount: number;
+  reflectionBudget: number;
+  checkpointTokenCount: number;
+  checkpointSummaryUpToGeneration: number | null;
+  latestThreadMessageAt: string | null;
+  updatedAt: string;
+};
+
 type CustomOmState = {
   version: 1;
   checkpointGeneration: number | null;
   checkpointSummary: CheckpointSummary | null;
   observationBlocks: ObservationBlock[];
   activeReflectionBlocks: ReflectionBlock[];
+  latestMetrics: CustomOmMetricsSnapshot | null;
 };
 
 type CheckpointedObservationalMemoryConfig = {
@@ -184,6 +202,7 @@ function getCustomOmState(thread: StorageThread | null): CustomOmState {
       checkpointSummary: null,
       observationBlocks: [],
       activeReflectionBlocks: [],
+      latestMetrics: null,
     };
   }
 
@@ -200,6 +219,10 @@ function getCustomOmState(thread: StorageThread | null): CustomOmState {
     activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks)
       ? value.activeReflectionBlocks
       : [],
+    latestMetrics:
+      value.latestMetrics && typeof value.latestMetrics === 'object'
+        ? value.latestMetrics as CustomOmMetricsSnapshot
+        : null,
   };
 }
 
@@ -367,6 +390,33 @@ function renderObservationSystemText(blocks: ObservationBlock[]) {
   }
 
   return ['Active observations:', content].join('\n');
+}
+
+function createMetricsSnapshot(input: {
+  state: CustomOmState;
+  rawMessages: MastraDBMessage[];
+  recent: MastraDBMessage[];
+  recentRawTokens: number;
+  overflow: MastraDBMessage[];
+  overflowTokens: number;
+  reflectionBudget: number;
+}) {
+  return {
+    rawMessageCount: input.rawMessages.length,
+    recentRawMessageCount: input.recent.length,
+    recentRawTokenCount: input.recentRawTokens,
+    overflowMessageCount: input.overflow.length,
+    overflowTokenCount: input.overflowTokens,
+    activeObservationBlockCount: getActiveObservationBlocks(input.state).length,
+    observationTokenCount: sumTokens(getActiveObservationBlocks(input.state)),
+    activeReflectionBlockCount: input.state.activeReflectionBlocks.length,
+    reflectionTokenCount: sumTokens(input.state.activeReflectionBlocks),
+    reflectionBudget: input.reflectionBudget,
+    checkpointTokenCount: input.state.checkpointSummary?.tokenCount ?? 0,
+    checkpointSummaryUpToGeneration: input.state.checkpointSummary?.upToGeneration ?? null,
+    latestThreadMessageAt: input.rawMessages.at(-1)?.createdAt?.toISOString?.() ?? null,
+    updatedAt: new Date().toISOString(),
+  } satisfies CustomOmMetricsSnapshot;
 }
 
 function getObservationCursor(record: ObservationalMemoryRecord) {
@@ -660,6 +710,30 @@ export class CheckpointedObservationalMemoryProcessor
 
       break;
     }
+
+    const finalRawMessages = getMessagesAfterCursor(
+      args.messageList.get.all.db(),
+      getObservationCursor(currentRecord),
+    );
+    const finalRawSplit = splitRawMessagesByRecentReserve(
+      finalRawMessages,
+      this.tokenCounter,
+      this.recentRawTokens,
+    );
+    customState.latestMetrics = createMetricsSnapshot({
+      state: customState,
+      rawMessages: finalRawMessages,
+      recent: finalRawSplit.recent,
+      recentRawTokens: this.tokenCounter.countMessages(finalRawSplit.recent),
+      overflow: finalRawSplit.overflow,
+      overflowTokens: this.tokenCounter.countMessages(finalRawSplit.overflow),
+      reflectionBudget: buildReflectionBudget({
+        totalContextTokens: this.totalContextTokens,
+        recentRawTokens: this.recentRawTokens,
+        rawObservationBatchTokens: this.rawObservationBatchTokens,
+        observationReflectionBatchTokens: this.observationReflectionBatchTokens,
+      }),
+    });
 
     if (thread) {
       await this.store.updateThread({
