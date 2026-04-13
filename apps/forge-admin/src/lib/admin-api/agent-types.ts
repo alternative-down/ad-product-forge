@@ -181,6 +181,17 @@ export type AgentRuntimeMemorySnapshot = {
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
+  metrics: {
+    recentRawTokenCount: number;
+    recentRawTokenLimit: number;
+    overflowTokenCount: number;
+    observationTriggerTokenLimit: number;
+    observationTokenCount: number;
+    reflectionTriggerTokenLimit: number;
+    reflectionTokenCount: number;
+    reflectionBudget: number;
+    checkpointTokenCount: number;
+  };
 };
 
 export type HireAgentInput = {
