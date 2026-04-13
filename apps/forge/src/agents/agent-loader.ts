@@ -44,7 +44,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   console.log(`[AgentLoader] Tools loaded for ${runtimeData.agent.id}:`, toolset.breakdown);
 
   const runtime = await createInternalAgentRuntime(buildAgentRuntimeConfig(config, runtimeData, toolset), {
-    longTermMemory: true,
+    longTermMemory: false,
   });
 
   console.log(`[AgentLoader] Agent loaded successfully: ${runtimeData.agent.id}`);

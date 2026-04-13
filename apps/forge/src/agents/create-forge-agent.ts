@@ -125,5 +125,5 @@ export async function createForgeAgent<
 >(
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
 ): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
-  return createAgent(config, { longTermMemory: true });
+  return createAgent(config, { longTermMemory: false });
 }
