@@ -419,25 +419,34 @@ function createMetricsSnapshot(input: {
   } satisfies CustomOmMetricsSnapshot;
 }
 
-function getObservationCursor(record: ObservationalMemoryRecord) {
-  if (!record.lastObservedAt) {
-    return null;
+function isObservedMessage(record: ObservationalMemoryRecord, message: MastraDBMessage) {
+  if (!record.lastObservedAt || !message.createdAt) {
+    return false;
   }
 
-  return new Date(record.lastObservedAt);
+  const observedMessageIds = record.observedMessageIds ?? [];
+
+  const cursorTime = new Date(record.lastObservedAt).getTime();
+  const messageTime = new Date(message.createdAt).getTime();
+
+  if (messageTime < cursorTime) {
+    return true;
+  }
+
+  if (messageTime > cursorTime) {
+    return false;
+  }
+
+  return observedMessageIds.includes(message.id);
 }
 
-function getMessagesAfterCursor(messages: MastraDBMessage[], cursor: Date | null) {
-  if (!cursor) {
+function getMessagesAfterCursor(messages: MastraDBMessage[], record: ObservationalMemoryRecord) {
+  if (!record.lastObservedAt) {
     return messages;
   }
 
   return messages.filter((message) => {
-    if (!message.createdAt) {
-      return true;
-    }
-
-    return new Date(message.createdAt) > cursor;
+    return !isObservedMessage(record, message);
   });
 }
 
@@ -608,10 +617,7 @@ export class CheckpointedObservationalMemoryProcessor
     );
 
     while (true) {
-      const rawMessages = getMessagesAfterCursor(
-        args.messageList.get.all.db(),
-        getObservationCursor(currentRecord),
-      );
+      const rawMessages = getMessagesAfterCursor(args.messageList.get.all.db(), currentRecord);
       const { recent, overflow } = splitRawMessagesByRecentReserve(
         rawMessages,
         this.tokenCounter,
@@ -711,10 +717,7 @@ export class CheckpointedObservationalMemoryProcessor
       break;
     }
 
-    const finalRawMessages = getMessagesAfterCursor(
-      args.messageList.get.all.db(),
-      getObservationCursor(currentRecord),
-    );
+    const finalRawMessages = getMessagesAfterCursor(args.messageList.get.all.db(), currentRecord);
     const finalRawSplit = splitRawMessagesByRecentReserve(
       finalRawMessages,
       this.tokenCounter,
@@ -1171,13 +1174,29 @@ export class CheckpointedObservationalMemoryProcessor
       observationBlocks: ObservationBlock[];
     },
   ) {
-    const cursor = getObservationCursor(input.record);
-    if (cursor) {
+    if (input.record.lastObservedAt) {
+      const observedMessageIds = input.record.observedMessageIds ?? [];
+      const cursorTime = new Date(input.record.lastObservedAt).getTime();
       const idsToRemove = messageList
         .get
         .remembered
         .db()
-        .filter((message) => message.createdAt && new Date(message.createdAt) <= cursor)
+        .filter((message) => {
+          if (!message.createdAt) {
+            return false;
+          }
+
+          const messageTime = new Date(message.createdAt).getTime();
+          if (messageTime < cursorTime) {
+            return true;
+          }
+
+          if (messageTime > cursorTime) {
+            return false;
+          }
+
+          return observedMessageIds.includes(message.id);
+        })
         .map((message) => message.id);
 
       if (idsToRemove.length > 0) {
