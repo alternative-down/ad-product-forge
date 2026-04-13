@@ -54,7 +54,7 @@ export async function createInternalAgentRuntime<
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
-  const runtimeMemory = createAgentRuntimeMemory({
+  const runtimeMemory = await createAgentRuntimeMemory({
     storage: platform.storage,
     vector: platform.vector,
     agentId: config.id,
