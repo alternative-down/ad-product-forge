@@ -798,7 +798,6 @@ export class CheckpointedObservationalMemoryProcessor
     }
 
     const thread = await this.store.getThreadById({ threadId: context.threadId });
-    const omMetadata = getThreadOMMetadata(thread?.metadata);
     const customState = getCustomOmState(thread);
     let currentRecord = await this.ensureCurrentRecord(context.threadId, context.resourceId);
     currentRecord = await this.repairCurrentRecordIfNeeded({
@@ -879,6 +878,7 @@ export class CheckpointedObservationalMemoryProcessor
           state: customState,
           requestContext: args.requestContext,
         });
+        await this.persistCustomState(context.threadId, customState);
         activeReflections = await this.loadActiveReflections(
           context.threadId,
           context.resourceId,
@@ -901,9 +901,9 @@ export class CheckpointedObservationalMemoryProcessor
           resourceId: context.resourceId,
           state: customState,
           overflow,
-          omMetadata,
           requestContext: args.requestContext,
         });
+        await this.persistCustomState(context.threadId, customState);
         continue;
       }
 
@@ -928,6 +928,7 @@ export class CheckpointedObservationalMemoryProcessor
           requestContext: args.requestContext,
         });
         this.pruneArchivedObservationBlocks(customState);
+        await this.persistCustomState(context.threadId, customState);
         activeReflections = await this.loadActiveReflections(
           context.threadId,
           context.resourceId,
@@ -963,14 +964,7 @@ export class CheckpointedObservationalMemoryProcessor
         observationReflectionBatchTokens: this.observationReflectionBatchTokens,
       }),
     });
-
-    if (thread) {
-      await this.store.updateThread({
-        id: thread.id,
-        title: thread.title,
-        metadata: setCustomOmState(thread, customState, omMetadata),
-      });
-    }
+    await this.persistCustomState(context.threadId, customState);
 
     logOmState('state persisted', {
       threadId: context.threadId,
@@ -1068,7 +1062,6 @@ export class CheckpointedObservationalMemoryProcessor
     resourceId: string;
     state: CustomOmState;
     overflow: RawUnit[];
-    omMetadata: ReturnType<typeof getThreadOMMetadata>;
     requestContext: RequestContext | undefined;
   }) {
     const batch = takeMessageBatch(
@@ -1289,6 +1282,21 @@ export class CheckpointedObservationalMemoryProcessor
       remainingObservationBlockCount: getActiveObservationBlocks(input.state).length,
     });
     return currentRecord;
+  }
+
+  private async persistCustomState(threadId: string, state: CustomOmState) {
+    const thread = await this.store.getThreadById({ threadId });
+
+    if (!thread) {
+      return;
+    }
+
+    const omMetadata = getThreadOMMetadata(thread.metadata);
+    await this.store.updateThread({
+      id: thread.id,
+      title: thread.title,
+      metadata: setCustomOmState(thread, state, omMetadata),
+    });
   }
 
   private async loadActiveReflections(
