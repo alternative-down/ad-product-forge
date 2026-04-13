@@ -114,9 +114,6 @@ const DEFAULT_SUPPORT_TOKENS = 2_000;
 const DEFAULT_GENERATION_TIMEOUT_MS = 60_000;
 const DEFAULT_GENERATION_RETRY_COUNT = 3;
 const DEFAULT_GENERATION_RETRY_BACKOFF_MS = 5_000;
-const MAX_OBSERVATION_GENERATIONS_PER_STEP = 1;
-const MAX_REFLECTION_GENERATIONS_PER_STEP = 1;
-const MAX_CHECKPOINT_ADVANCEMENTS_PER_STEP = 1;
 const REFLECTOR_SYSTEM_PROMPT = [
   'You compress batches of observations into a smaller durable reflection.',
   'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
@@ -815,142 +812,79 @@ export class CheckpointedObservationalMemoryProcessor
       context.resourceId,
       customState.activeReflectionBlocks,
     );
-    let previousLoopSignature: string | null = null;
-    let observationGenerationsThisStep = 0;
-    let reflectionGenerationsThisStep = 0;
-    let checkpointAdvancementsThisStep = 0;
+    const rawMessages = getMessagesAfterCursor(
+      args.messageList.get.all.db(),
+      currentRecord,
+      this.tokenCounter,
+      this.recentRawTokens,
+    );
+    const { recent, overflow } = splitRawMessagesByRecentReserve(
+      rawMessages,
+      this.recentRawTokens,
+    );
+    const recentRawTokens = recent.reduce((total, unit) => total + unit.tokenCount, 0);
+    const overflowTokens = overflow.reduce((total, unit) => total + unit.tokenCount, 0);
+    const reflectionBudget = buildReflectionBudget({
+      totalContextTokens: this.totalContextTokens,
+      recentRawTokens: this.recentRawTokens,
+      rawObservationBatchTokens: this.rawObservationBatchTokens,
+      observationReflectionBatchTokens: this.observationReflectionBatchTokens,
+    });
 
-    while (true) {
-      const rawMessages = getMessagesAfterCursor(
-        args.messageList.get.all.db(),
-        currentRecord,
-        this.tokenCounter,
-        this.recentRawTokens,
-      );
-      const { recent, overflow } = splitRawMessagesByRecentReserve(
-        rawMessages,
-        this.recentRawTokens,
-      );
-      const recentRawTokens = recent.reduce((total, unit) => total + unit.tokenCount, 0);
-      const overflowTokens = overflow.reduce((total, unit) => total + unit.tokenCount, 0);
-      const reflectionBudget = buildReflectionBudget({
-        totalContextTokens: this.totalContextTokens,
-        recentRawTokens: this.recentRawTokens,
-        rawObservationBatchTokens: this.rawObservationBatchTokens,
-        observationReflectionBatchTokens: this.observationReflectionBatchTokens,
-      });
-      const loopSignature = JSON.stringify({
-        lastObservedAt: currentRecord.lastObservedAt?.toISOString?.() ?? null,
-        observedMessageIds: currentRecord.observedMessageIds ?? [],
-        checkpointGeneration: customState.checkpointGeneration,
-        checkpointSummaryTokens: customState.checkpointSummary?.tokenCount ?? 0,
-        activeObservationBlockCount: getActiveObservationBlocks(customState).length,
+    logOmState('state loaded', {
+      threadId: context.threadId,
+      resourceId: context.resourceId,
+      state: customState,
+      recentRawCount: recent.length,
+      recentRawTokens,
+      overflowCount: overflow.length,
+      overflowTokens,
+      reflectionBudget,
+    });
+
+    if (sumTokens(getActiveObservationBlocks(customState)) >= this.observationReflectionBatchTokens) {
+      forgeDebug('checkpointed-om', 'reflection threshold reached', {
+        threadId: context.threadId,
+        resourceId: context.resourceId,
         activeObservationTokens: sumTokens(getActiveObservationBlocks(customState)),
-        activeReflectionBlockCount: customState.activeReflectionBlocks.length,
-        activeReflectionTokens: sumTokens(customState.activeReflectionBlocks),
-        recentRawCount: recent.length,
-        recentRawTokens,
-        overflowCount: overflow.length,
-        overflowTokens,
+        threshold: this.observationReflectionBatchTokens,
       });
-
-      if (previousLoopSignature === loopSignature) {
-        throw new Error(`Checkpointed OM loop made no progress: ${loopSignature}`);
-      }
-
-      previousLoopSignature = loopSignature;
-
-      logOmState('state loaded', {
+      currentRecord = await this.createReflectionGeneration({
+        currentRecord,
         threadId: context.threadId,
         resourceId: context.resourceId,
         state: customState,
-        recentRawCount: recent.length,
-        recentRawTokens,
+        requestContext: args.requestContext,
+      });
+      activeReflections = await this.loadActiveReflections(
+        context.threadId,
+        context.resourceId,
+        customState.activeReflectionBlocks,
+      );
+    } else if (overflowTokens >= this.rawObservationBatchTokens) {
+      forgeDebug('checkpointed-om', 'observation threshold reached', {
+        threadId: context.threadId,
+        resourceId: context.resourceId,
         overflowCount: overflow.length,
         overflowTokens,
-        reflectionBudget,
+        threshold: this.rawObservationBatchTokens,
       });
-
-      if (sumTokens(getActiveObservationBlocks(customState)) >= this.observationReflectionBatchTokens) {
-        if (reflectionGenerationsThisStep >= MAX_REFLECTION_GENERATIONS_PER_STEP) {
-          forgeDebug('checkpointed-om', 'reflection per-step limit reached', {
-            threadId: context.threadId,
-            resourceId: context.resourceId,
-            reflectionGenerationsThisStep,
-            maxPerStep: MAX_REFLECTION_GENERATIONS_PER_STEP,
-          });
-          break;
-        }
-
-        forgeDebug('checkpointed-om', 'reflection threshold reached', {
-          threadId: context.threadId,
-          resourceId: context.resourceId,
-          activeObservationTokens: sumTokens(getActiveObservationBlocks(customState)),
-          threshold: this.observationReflectionBatchTokens,
-        });
-        currentRecord = await this.createReflectionGeneration({
-          currentRecord,
-          threadId: context.threadId,
-          resourceId: context.resourceId,
-          state: customState,
-          requestContext: args.requestContext,
-        });
-        reflectionGenerationsThisStep += 1;
-        activeReflections = await this.loadActiveReflections(
-          context.threadId,
-          context.resourceId,
-          customState.activeReflectionBlocks,
-        );
-        continue;
-      }
-
-      if (overflowTokens >= this.rawObservationBatchTokens) {
-        if (observationGenerationsThisStep >= MAX_OBSERVATION_GENERATIONS_PER_STEP) {
-          forgeDebug('checkpointed-om', 'observation per-step limit reached', {
-            threadId: context.threadId,
-            resourceId: context.resourceId,
-            observationGenerationsThisStep,
-            maxPerStep: MAX_OBSERVATION_GENERATIONS_PER_STEP,
-          });
-          break;
-        }
-
-        forgeDebug('checkpointed-om', 'observation threshold reached', {
-          threadId: context.threadId,
-          resourceId: context.resourceId,
-          overflowCount: overflow.length,
-          overflowTokens,
-          threshold: this.rawObservationBatchTokens,
-        });
-        currentRecord = await this.createObservationBlock({
-          currentRecord,
-          threadId: context.threadId,
-          resourceId: context.resourceId,
-          state: customState,
-          overflow,
-          omMetadata,
-          requestContext: args.requestContext,
-        });
-        observationGenerationsThisStep += 1;
-        continue;
-      }
-
+      currentRecord = await this.createObservationBlock({
+        currentRecord,
+        threadId: context.threadId,
+        resourceId: context.resourceId,
+        state: customState,
+        overflow,
+        omMetadata,
+        requestContext: args.requestContext,
+      });
+    } else {
       const reflectionTokens = activeReflections.reduce(
         (total, record) => total + this.tokenCounter.countObservations(record.activeObservations),
         0,
       );
 
       if (reflectionTokens > reflectionBudget && customState.activeReflectionBlocks.length > 0) {
-        if (checkpointAdvancementsThisStep >= MAX_CHECKPOINT_ADVANCEMENTS_PER_STEP) {
-          forgeDebug('checkpointed-om', 'checkpoint per-step limit reached', {
-            threadId: context.threadId,
-            resourceId: context.resourceId,
-            checkpointAdvancementsThisStep,
-            maxPerStep: MAX_CHECKPOINT_ADVANCEMENTS_PER_STEP,
-          });
-          break;
-        }
-
         forgeDebug('checkpointed-om', 'reflection budget exceeded', {
           threadId: context.threadId,
           resourceId: context.resourceId,
@@ -965,17 +899,13 @@ export class CheckpointedObservationalMemoryProcessor
           reflectionBudget,
           requestContext: args.requestContext,
         });
-        checkpointAdvancementsThisStep += 1;
         this.pruneArchivedObservationBlocks(customState);
         activeReflections = await this.loadActiveReflections(
           context.threadId,
           context.resourceId,
           customState.activeReflectionBlocks,
         );
-        continue;
       }
-
-      break;
     }
 
     const finalRawMessages = getMessagesAfterCursor(
