@@ -111,7 +111,9 @@ const DEFAULT_RECENT_RAW_TOKENS = 10_000;
 const DEFAULT_RAW_OBSERVATION_BATCH_TOKENS = 5_000;
 const DEFAULT_OBSERVATION_REFLECTION_BATCH_TOKENS = 5_000;
 const DEFAULT_SUPPORT_TOKENS = 2_000;
-const DEFAULT_GENERATION_TIMEOUT_MS = 120_000;
+const DEFAULT_GENERATION_TIMEOUT_MS = 60_000;
+const DEFAULT_GENERATION_RETRY_COUNT = 3;
+const DEFAULT_GENERATION_RETRY_BACKOFF_MS = 5_000;
 const REFLECTOR_SYSTEM_PROMPT = [
   'You compress batches of observations into a smaller durable reflection.',
   'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
@@ -729,37 +731,64 @@ export class CheckpointedObservationalMemoryProcessor
     requestContext?: RequestContext;
     debugContext: Record<string, unknown>;
   }) {
-    const controller = new AbortController();
+    for (let attempt = 1; attempt <= DEFAULT_GENERATION_RETRY_COUNT; attempt += 1) {
+      const controller = new AbortController();
 
-    try {
-      forgeDebug('checkpointed-om', 'om text generate start', input.debugContext);
-      const agent = new Agent({
-        id: input.agentId,
-        name: input.agentName,
-        model: this.model,
-        instructions: input.instructions,
-      });
-      const result = await withTimeout(
-        agent.generate(input.prompt, {
-          maxSteps: 1,
-          abortSignal: controller.signal,
-          requestContext: input.requestContext,
-        }),
-        DEFAULT_GENERATION_TIMEOUT_MS,
-        () => controller.abort(),
-      );
+      try {
+        forgeDebug('checkpointed-om', 'om text generate start', {
+          ...input.debugContext,
+          attempt,
+          maxAttempts: DEFAULT_GENERATION_RETRY_COUNT,
+          timeoutMs: DEFAULT_GENERATION_TIMEOUT_MS,
+        });
+        const agent = new Agent({
+          id: input.agentId,
+          name: input.agentName,
+          model: this.model,
+          instructions: input.instructions,
+        });
+        const result = await withTimeout(
+          agent.generate(input.prompt, {
+            maxSteps: 1,
+            abortSignal: controller.signal,
+            requestContext: input.requestContext,
+          }),
+          DEFAULT_GENERATION_TIMEOUT_MS,
+          () => controller.abort(),
+        );
 
-      forgeDebug('checkpointed-om', 'om text generate complete', {
-        ...input.debugContext,
-        outputLength: result.text.length,
-      });
+        forgeDebug('checkpointed-om', 'om text generate complete', {
+          ...input.debugContext,
+          attempt,
+          maxAttempts: DEFAULT_GENERATION_RETRY_COUNT,
+          outputLength: result.text.length,
+        });
 
-      return result.text;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const details = JSON.stringify(input.debugContext);
-      throw new Error(`${input.agentName} failed: ${message}. Context: ${details}`);
+        return result.text;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const isLastAttempt = attempt === DEFAULT_GENERATION_RETRY_COUNT;
+
+        forgeDebug('checkpointed-om', 'om text generate failed', {
+          ...input.debugContext,
+          attempt,
+          maxAttempts: DEFAULT_GENERATION_RETRY_COUNT,
+          error: message,
+          willRetry: !isLastAttempt,
+        });
+
+        if (isLastAttempt) {
+          const details = JSON.stringify(input.debugContext);
+          throw new Error(`${input.agentName} failed: ${message}. Context: ${details}`);
+        }
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, DEFAULT_GENERATION_RETRY_BACKOFF_MS * attempt),
+        );
+      }
     }
+
+    throw new Error(`${input.agentName} failed without returning a result`);
   }
 
   async processInputStep(args: ProcessInputStepArgs) {
