@@ -8,12 +8,13 @@ export type SystemSettings = {
   memoryLastMessagesCount: number;
   tokenCountFilterEnabled: boolean;
   tokenCountFilterLimit: number;
-  omObservationMessageTokens: number;
-  omObservationBufferTokens: number;
-  omObservationBufferActivation: number;
-  omObservationPreviousObserverTokens: number;
-  omReflectionObservationTokens: number;
-  omReflectionBufferActivation: number;
+  checkpointedOmEnabled: boolean;
+  checkpointedOmTotalContextTokens: number;
+  checkpointedOmRecentRawTokens: number;
+  checkpointedOmRawObservationBatchTokens: number;
+  checkpointedOmObservationReflectionBatchTokens: number;
+  checkpointedOmObservationSupportTokens: number;
+  checkpointedOmReflectionSupportTokens: number;
 };
 
 export type SystemOauthState = {

@@ -5,6 +5,44 @@ import { systemSettings } from '../database/schema';
 
 const SYSTEM_SETTINGS_ID = 'global';
 
+const DEFAULT_SYSTEM_SETTINGS = {
+  companyName: '',
+  companyContext: '',
+  stepDelayEnabled: true,
+  communicationDmFlushingEnabled: true,
+  communicationGroupFlushingEnabled: true,
+  memoryLastMessagesFullEnabled: false,
+  memoryLastMessagesCount: 20,
+  tokenCountFilterEnabled: true,
+  tokenCountFilterLimit: 100000,
+  checkpointedOmEnabled: false,
+  checkpointedOmTotalContextTokens: 50000,
+  checkpointedOmRecentRawTokens: 10000,
+  checkpointedOmRawObservationBatchTokens: 5000,
+  checkpointedOmObservationReflectionBatchTokens: 5000,
+  checkpointedOmObservationSupportTokens: 2000,
+  checkpointedOmReflectionSupportTokens: 2000,
+} as const;
+
+type SystemSettingsInput = {
+  companyName: string;
+  companyContext: string;
+  stepDelayEnabled: boolean;
+  communicationDmFlushingEnabled: boolean;
+  communicationGroupFlushingEnabled: boolean;
+  memoryLastMessagesFullEnabled: boolean;
+  memoryLastMessagesCount: number;
+  tokenCountFilterEnabled: boolean;
+  tokenCountFilterLimit: number;
+  checkpointedOmEnabled: boolean;
+  checkpointedOmTotalContextTokens: number;
+  checkpointedOmRecentRawTokens: number;
+  checkpointedOmRawObservationBatchTokens: number;
+  checkpointedOmObservationReflectionBatchTokens: number;
+  checkpointedOmObservationSupportTokens: number;
+  checkpointedOmReflectionSupportTokens: number;
+};
+
 export function createSystemSettingsStore(db: Database) {
   async function getSettings() {
     const row = await db.query.systemSettings.findFirst({
@@ -12,42 +50,47 @@ export function createSystemSettingsStore(db: Database) {
     });
 
     return {
-      companyName: row?.companyName ?? '',
-      companyContext: row?.companyContext ?? '',
-      stepDelayEnabled: row ? row.stepDelayEnabled === 1 : true,
-      communicationDmFlushingEnabled: row ? row.communicationDmFlushingEnabled === 1 : true,
-      communicationGroupFlushingEnabled: row ? row.communicationGroupFlushingEnabled === 1 : true,
-      memoryLastMessagesFullEnabled: row ? row.memoryLastMessagesFullEnabled === 1 : false,
-      memoryLastMessagesCount: row?.memoryLastMessagesCount ?? 20,
-      tokenCountFilterEnabled: row ? row.tokenCountFilterEnabled === 1 : true,
-      tokenCountFilterLimit: row?.tokenCountFilterLimit ?? 100000,
-      omObservationMessageTokens: row?.omObservationMessageTokens ?? 15000,
-      omObservationBufferTokens: row?.omObservationBufferTokens ?? 0.2,
-      omObservationBufferActivation: row?.omObservationBufferActivation ?? 0.8,
-      omObservationPreviousObserverTokens: row?.omObservationPreviousObserverTokens ?? 1000,
-      omReflectionObservationTokens: row?.omReflectionObservationTokens ?? 20000,
-      omReflectionBufferActivation: row?.omReflectionBufferActivation ?? 0.5,
+      companyName: row?.companyName ?? DEFAULT_SYSTEM_SETTINGS.companyName,
+      companyContext: row?.companyContext ?? DEFAULT_SYSTEM_SETTINGS.companyContext,
+      stepDelayEnabled: row ? row.stepDelayEnabled === 1 : DEFAULT_SYSTEM_SETTINGS.stepDelayEnabled,
+      communicationDmFlushingEnabled: row
+        ? row.communicationDmFlushingEnabled === 1
+        : DEFAULT_SYSTEM_SETTINGS.communicationDmFlushingEnabled,
+      communicationGroupFlushingEnabled: row
+        ? row.communicationGroupFlushingEnabled === 1
+        : DEFAULT_SYSTEM_SETTINGS.communicationGroupFlushingEnabled,
+      memoryLastMessagesFullEnabled: row
+        ? row.memoryLastMessagesFullEnabled === 1
+        : DEFAULT_SYSTEM_SETTINGS.memoryLastMessagesFullEnabled,
+      memoryLastMessagesCount:
+        row?.memoryLastMessagesCount ?? DEFAULT_SYSTEM_SETTINGS.memoryLastMessagesCount,
+      tokenCountFilterEnabled: row
+        ? row.tokenCountFilterEnabled === 1
+        : DEFAULT_SYSTEM_SETTINGS.tokenCountFilterEnabled,
+      tokenCountFilterLimit: row?.tokenCountFilterLimit ?? DEFAULT_SYSTEM_SETTINGS.tokenCountFilterLimit,
+      checkpointedOmEnabled: row
+        ? row.checkpointedOmEnabled === 1
+        : DEFAULT_SYSTEM_SETTINGS.checkpointedOmEnabled,
+      checkpointedOmTotalContextTokens:
+        row?.checkpointedOmTotalContextTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmTotalContextTokens,
+      checkpointedOmRecentRawTokens:
+        row?.checkpointedOmRecentRawTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmRecentRawTokens,
+      checkpointedOmRawObservationBatchTokens:
+        row?.checkpointedOmRawObservationBatchTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmRawObservationBatchTokens,
+      checkpointedOmObservationReflectionBatchTokens:
+        row?.checkpointedOmObservationReflectionBatchTokens
+        ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmObservationReflectionBatchTokens,
+      checkpointedOmObservationSupportTokens:
+        row?.checkpointedOmObservationSupportTokens
+        ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmObservationSupportTokens,
+      checkpointedOmReflectionSupportTokens:
+        row?.checkpointedOmReflectionSupportTokens
+        ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmReflectionSupportTokens,
       updatedAt: row?.updatedAt ?? null,
     };
   }
 
-  async function upsertSettings(input: {
-    companyName: string;
-    companyContext: string;
-    stepDelayEnabled: boolean;
-    communicationDmFlushingEnabled: boolean;
-    communicationGroupFlushingEnabled: boolean;
-    memoryLastMessagesFullEnabled: boolean;
-    memoryLastMessagesCount: number;
-    tokenCountFilterEnabled: boolean;
-    tokenCountFilterLimit: number;
-    omObservationMessageTokens: number;
-    omObservationBufferTokens: number;
-    omObservationBufferActivation: number;
-    omObservationPreviousObserverTokens: number;
-    omReflectionObservationTokens: number;
-    omReflectionBufferActivation: number;
-  }) {
+  async function upsertSettings(input: SystemSettingsInput) {
     const now = Date.now();
 
     await db
@@ -63,12 +106,14 @@ export function createSystemSettingsStore(db: Database) {
         memoryLastMessagesCount: input.memoryLastMessagesCount,
         tokenCountFilterEnabled: input.tokenCountFilterEnabled ? 1 : 0,
         tokenCountFilterLimit: input.tokenCountFilterLimit,
-        omObservationMessageTokens: input.omObservationMessageTokens,
-        omObservationBufferTokens: input.omObservationBufferTokens,
-        omObservationBufferActivation: input.omObservationBufferActivation,
-        omObservationPreviousObserverTokens: input.omObservationPreviousObserverTokens,
-        omReflectionObservationTokens: input.omReflectionObservationTokens,
-        omReflectionBufferActivation: input.omReflectionBufferActivation,
+        checkpointedOmEnabled: input.checkpointedOmEnabled ? 1 : 0,
+        checkpointedOmTotalContextTokens: input.checkpointedOmTotalContextTokens,
+        checkpointedOmRecentRawTokens: input.checkpointedOmRecentRawTokens,
+        checkpointedOmRawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
+        checkpointedOmObservationReflectionBatchTokens:
+          input.checkpointedOmObservationReflectionBatchTokens,
+        checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
+        checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
         updatedAt: now,
       })
       .onConflictDoUpdate({
@@ -83,12 +128,14 @@ export function createSystemSettingsStore(db: Database) {
           memoryLastMessagesCount: input.memoryLastMessagesCount,
           tokenCountFilterEnabled: input.tokenCountFilterEnabled ? 1 : 0,
           tokenCountFilterLimit: input.tokenCountFilterLimit,
-          omObservationMessageTokens: input.omObservationMessageTokens,
-          omObservationBufferTokens: input.omObservationBufferTokens,
-          omObservationBufferActivation: input.omObservationBufferActivation,
-          omObservationPreviousObserverTokens: input.omObservationPreviousObserverTokens,
-          omReflectionObservationTokens: input.omReflectionObservationTokens,
-          omReflectionBufferActivation: input.omReflectionBufferActivation,
+          checkpointedOmEnabled: input.checkpointedOmEnabled ? 1 : 0,
+          checkpointedOmTotalContextTokens: input.checkpointedOmTotalContextTokens,
+          checkpointedOmRecentRawTokens: input.checkpointedOmRecentRawTokens,
+          checkpointedOmRawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
+          checkpointedOmObservationReflectionBatchTokens:
+            input.checkpointedOmObservationReflectionBatchTokens,
+          checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
+          checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
           updatedAt: now,
         },
       });
@@ -103,12 +150,14 @@ export function createSystemSettingsStore(db: Database) {
       memoryLastMessagesCount: input.memoryLastMessagesCount,
       tokenCountFilterEnabled: input.tokenCountFilterEnabled,
       tokenCountFilterLimit: input.tokenCountFilterLimit,
-      omObservationMessageTokens: input.omObservationMessageTokens,
-      omObservationBufferTokens: input.omObservationBufferTokens,
-      omObservationBufferActivation: input.omObservationBufferActivation,
-      omObservationPreviousObserverTokens: input.omObservationPreviousObserverTokens,
-      omReflectionObservationTokens: input.omReflectionObservationTokens,
-      omReflectionBufferActivation: input.omReflectionBufferActivation,
+      checkpointedOmEnabled: input.checkpointedOmEnabled,
+      checkpointedOmTotalContextTokens: input.checkpointedOmTotalContextTokens,
+      checkpointedOmRecentRawTokens: input.checkpointedOmRecentRawTokens,
+      checkpointedOmRawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
+      checkpointedOmObservationReflectionBatchTokens:
+        input.checkpointedOmObservationReflectionBatchTokens,
+      checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
+      checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
       updatedAt: now,
     };
   }

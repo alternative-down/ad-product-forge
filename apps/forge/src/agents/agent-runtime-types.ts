@@ -27,12 +27,13 @@ export type CreateForgeAgentConfig<
   memoryLastMessagesCount?: number;
   tokenCountFilterEnabled?: boolean;
   tokenCountFilterLimit?: number;
-  omObservationMessageTokens?: number;
-  omObservationBufferTokens?: number;
-  omObservationBufferActivation?: number;
-  omObservationPreviousObserverTokens?: number;
-  omReflectionObservationTokens?: number;
-  omReflectionBufferActivation?: number;
+  checkpointedOmEnabled?: boolean;
+  checkpointedOmTotalContextTokens?: number;
+  checkpointedOmRecentRawTokens?: number;
+  checkpointedOmRawObservationBatchTokens?: number;
+  checkpointedOmObservationReflectionBatchTokens?: number;
+  checkpointedOmObservationSupportTokens?: number;
+  checkpointedOmReflectionSupportTokens?: number;
   roleName?: string;
   roleDescription?: string;
   providers?: CommunicationProvider[];
@@ -93,12 +94,13 @@ export interface CreateAgentConfig<
   | 'memoryLastMessagesCount'
   | 'tokenCountFilterEnabled'
   | 'tokenCountFilterLimit'
-  | 'omObservationMessageTokens'
-  | 'omObservationBufferTokens'
-  | 'omObservationBufferActivation'
-  | 'omObservationPreviousObserverTokens'
-  | 'omReflectionObservationTokens'
-  | 'omReflectionBufferActivation'
+  | 'checkpointedOmEnabled'
+  | 'checkpointedOmTotalContextTokens'
+  | 'checkpointedOmRecentRawTokens'
+  | 'checkpointedOmRawObservationBatchTokens'
+  | 'checkpointedOmObservationReflectionBatchTokens'
+  | 'checkpointedOmObservationSupportTokens'
+  | 'checkpointedOmReflectionSupportTokens'
   | 'roleName'
   | 'roleDescription'
   | 'providers'
