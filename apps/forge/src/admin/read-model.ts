@@ -527,7 +527,13 @@ export function createAdminReadModel(input: {
       ? getCustomCheckpointedContextState((await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata)
       : null;
     let reflection = '';
-    let observations = '';
+    const observations = customState
+      ? customState.observationBlocks
+        .filter((block) => block.reflectedGeneration === null)
+        .map((block) => block.text.trim())
+        .filter(Boolean)
+        .join('\n')
+      : '';
     let generationCount = 0;
     let updatedAt: number | null = null;
     let lastObservedAt: number | null = null;
@@ -535,7 +541,6 @@ export function createAdminReadModel(input: {
     if (hasObservationalMemoryAccess(memoryStore)) {
       const record = await memoryStore.getObservationalMemory(mastraAgentId, mastraAgentId);
       if (record) {
-        observations = record.activeObservations ?? '';
         generationCount = record.generationCount;
         updatedAt = record.updatedAt?.getTime?.() ?? null;
         lastObservedAt = record.lastObservedAt?.getTime?.() ?? null;

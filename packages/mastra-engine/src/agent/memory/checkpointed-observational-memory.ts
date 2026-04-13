@@ -545,6 +545,12 @@ export class CheckpointedObservationalMemoryProcessor
     const omMetadata = getThreadOMMetadata(thread?.metadata);
     const customState = getCustomOmState(thread);
     let currentRecord = await this.ensureCurrentRecord(context.threadId, context.resourceId);
+    currentRecord = await this.repairCurrentRecordIfNeeded({
+      threadId: context.threadId,
+      resourceId: context.resourceId,
+      currentRecord,
+      state: customState,
+    });
     let activeReflections = await this.loadActiveReflections(
       context.threadId,
       context.resourceId,
@@ -703,6 +709,54 @@ export class CheckpointedObservationalMemoryProcessor
         kind: 'checkpointed-observational-memory',
       },
     });
+  }
+
+  private async repairCurrentRecordIfNeeded(input: {
+    threadId: string;
+    resourceId: string;
+    currentRecord: ObservationalMemoryRecord;
+    state: CustomOmState;
+  }) {
+    const expectedObservationText = formatObservationBlocks(getActiveObservationBlocks(input.state));
+
+    if (
+      input.currentRecord.originType !== 'reflection' &&
+      input.currentRecord.activeObservations.trim() === expectedObservationText.trim()
+    ) {
+      return input.currentRecord;
+    }
+
+    const repairedRecord: ObservationalMemoryRecord = {
+      ...input.currentRecord,
+      id: randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      originType: 'initial',
+      generationCount: input.currentRecord.generationCount + 1,
+      activeObservations: expectedObservationText,
+      observationTokenCount: this.tokenCounter.countObservations(expectedObservationText),
+      pendingMessageTokens: 0,
+      isObserving: false,
+      isReflecting: false,
+      isBufferingObservation: false,
+      isBufferingReflection: false,
+      lastBufferedAtTokens: 0,
+      lastBufferedAtTime: null,
+      bufferedObservationChunks: [],
+      observedMessageIds: [],
+    };
+
+    await this.store.insertObservationalMemoryRecord(repairedRecord);
+    forgeDebug('checkpointed-om', 'current record repaired', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      previousOriginType: input.currentRecord.originType,
+      previousGeneration: input.currentRecord.generationCount,
+      repairedGeneration: repairedRecord.generationCount,
+      repairedObservationTokens: repairedRecord.observationTokenCount,
+    });
+
+    return repairedRecord;
   }
 
   private async createObservationBlock(input: {
