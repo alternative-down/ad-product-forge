@@ -70,6 +70,7 @@ const DEFAULT_RECENT_RAW_TOKENS = 10_000;
 const DEFAULT_RAW_OBSERVATION_BATCH_TOKENS = 5_000;
 const DEFAULT_OBSERVATION_REFLECTION_BATCH_TOKENS = 5_000;
 const DEFAULT_SUPPORT_TOKENS = 2_000;
+const DEFAULT_GENERATION_TIMEOUT_MS = 120_000;
 const REFLECTOR_SYSTEM_PROMPT = [
   'You compress batches of observations into a smaller durable reflection.',
   'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
@@ -268,6 +269,29 @@ function buildReflectionBudget(input: {
   );
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  onTimeout?: () => void,
+) {
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      onTimeout?.();
+      reject(new Error(`checkpointed OM generation timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
+}
+
 function renderReflectionSystemText(reflections: ObservationalMemoryRecord[]) {
   const content = reflections
     .map((record) => record.activeObservations.trim())
@@ -421,6 +445,41 @@ export class CheckpointedObservationalMemoryProcessor
     this.reflectionSupportTokens = config.reflectionSupportTokens ?? DEFAULT_SUPPORT_TOKENS;
   }
 
+  private async generateOmText(input: {
+    agentId: string;
+    agentName: string;
+    instructions: string;
+    prompt: string;
+    requestContext?: RequestContext;
+    debugContext: Record<string, unknown>;
+  }) {
+    const controller = new AbortController();
+
+    try {
+      const agent = new Agent({
+        id: input.agentId,
+        name: input.agentName,
+        model: this.model,
+        instructions: input.instructions,
+      });
+      const result = await withTimeout(
+        agent.generate(input.prompt, {
+          maxSteps: 1,
+          abortSignal: controller.signal,
+          requestContext: input.requestContext,
+        }),
+        DEFAULT_GENERATION_TIMEOUT_MS,
+        () => controller.abort(),
+      );
+
+      return result.text;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const details = JSON.stringify(input.debugContext);
+      throw new Error(`${input.agentName} failed: ${message}. Context: ${details}`);
+    }
+  }
+
   async processInputStep(args: ProcessInputStepArgs) {
     const context = getThreadContext(args.requestContext, args.messageList);
     if (!context) {
@@ -454,6 +513,7 @@ export class CheckpointedObservationalMemoryProcessor
           threadId: context.threadId,
           resourceId: context.resourceId,
           state: customState,
+          requestContext: args.requestContext,
         });
         activeReflections = await this.loadActiveReflections(
           context.threadId,
@@ -557,20 +617,20 @@ export class CheckpointedObservationalMemoryProcessor
       this.tokenCounter,
       this.observationSupportTokens,
     );
-    const observer = new Agent({
-      id: `custom-observer-${randomUUID()}`,
-      name: 'Custom Observer',
-      model: this.model,
+    const observerText = await this.generateOmText({
+      agentId: `custom-observer-${randomUUID()}`,
+      agentName: 'Checkpointed OM observer',
       instructions: buildObserverSystemPrompt(false),
-    });
-    const observerResult = await observer.generate(
-      buildObserverPrompt(supportText || undefined, batch.selected),
-      {
-        maxSteps: 1,
-        requestContext: input.requestContext,
+      prompt: buildObserverPrompt(supportText || undefined, batch.selected),
+      requestContext: input.requestContext,
+      debugContext: {
+        phase: 'observe',
+        batchMessageCount: batch.selected.length,
+        batchTokenCount: batch.usedTokens,
+        supportTokenBudget: this.observationSupportTokens,
       },
-    );
-    const parsed = parseObserverOutput(observerResult.text);
+    });
+    const parsed = parseObserverOutput(observerText);
     const observationText = parsed.observations.trim();
 
     if (!observationText) {
@@ -618,24 +678,26 @@ export class CheckpointedObservationalMemoryProcessor
     threadId: string;
     resourceId: string;
     state: CustomOmState;
+    requestContext?: RequestContext;
   }) {
     const unreflectedBlocks = getActiveObservationBlocks(input.state);
     const batch = takeObservationBatch(unreflectedBlocks, this.observationReflectionBatchTokens);
     const selectedText = batch.selected.map((block) => block.text).join('\n');
     const supportText = takeSupportText(unreflectedBlocks.slice(0, -batch.selected.length), this.tokenCounter, this.reflectionSupportTokens);
-    const reflector = new Agent({
-      id: `custom-reflector-${randomUUID()}`,
-      name: 'Custom Reflector',
-      model: this.model,
+    const reflectorText = await this.generateOmText({
+      agentId: `custom-reflector-${randomUUID()}`,
+      agentName: 'Checkpointed OM reflector',
       instructions: buildReflectorSystemPrompt(),
-    });
-    const reflectorResult = await reflector.generate(
-      buildReflectorPrompt([supportText, selectedText].filter(Boolean).join('\n')),
-      {
-        maxSteps: 1,
+      prompt: buildReflectorPrompt([supportText, selectedText].filter(Boolean).join('\n')),
+      requestContext: input.requestContext,
+      debugContext: {
+        phase: 'reflect',
+        observationBlockCount: batch.selected.length,
+        observationBatchTokens: batch.usedTokens,
+        supportTokenBudget: this.reflectionSupportTokens,
       },
-    );
-    const parsed = parseReflectorOutput(reflectorResult.text);
+    });
+    const parsed = parseReflectorOutput(reflectorText);
     const reflectionText = parsed.observations.trim();
 
     if (!reflectionText) {
