@@ -732,6 +732,7 @@ export class CheckpointedObservationalMemoryProcessor
     const controller = new AbortController();
 
     try {
+      forgeDebug('checkpointed-om', 'om text generate start', input.debugContext);
       const agent = new Agent({
         id: input.agentId,
         name: input.agentName,
@@ -747,6 +748,11 @@ export class CheckpointedObservationalMemoryProcessor
         DEFAULT_GENERATION_TIMEOUT_MS,
         () => controller.abort(),
       );
+
+      forgeDebug('checkpointed-om', 'om text generate complete', {
+        ...input.debugContext,
+        outputLength: result.text.length,
+      });
 
       return result.text;
     } catch (error) {
@@ -777,6 +783,7 @@ export class CheckpointedObservationalMemoryProcessor
       context.resourceId,
       customState.activeReflectionBlocks,
     );
+    let previousLoopSignature: string | null = null;
 
     while (true) {
       const rawMessages = getMessagesAfterCursor(
@@ -797,6 +804,26 @@ export class CheckpointedObservationalMemoryProcessor
         rawObservationBatchTokens: this.rawObservationBatchTokens,
         observationReflectionBatchTokens: this.observationReflectionBatchTokens,
       });
+      const loopSignature = JSON.stringify({
+        lastObservedAt: currentRecord.lastObservedAt?.toISOString?.() ?? null,
+        observedMessageIds: currentRecord.observedMessageIds ?? [],
+        checkpointGeneration: customState.checkpointGeneration,
+        checkpointSummaryTokens: customState.checkpointSummary?.tokenCount ?? 0,
+        activeObservationBlockCount: getActiveObservationBlocks(customState).length,
+        activeObservationTokens: sumTokens(getActiveObservationBlocks(customState)),
+        activeReflectionBlockCount: customState.activeReflectionBlocks.length,
+        activeReflectionTokens: sumTokens(customState.activeReflectionBlocks),
+        recentRawCount: recent.length,
+        recentRawTokens,
+        overflowCount: overflow.length,
+        overflowTokens,
+      });
+
+      if (previousLoopSignature === loopSignature) {
+        throw new Error(`Checkpointed OM loop made no progress: ${loopSignature}`);
+      }
+
+      previousLoopSignature = loopSignature;
 
       logOmState('state loaded', {
         threadId: context.threadId,
