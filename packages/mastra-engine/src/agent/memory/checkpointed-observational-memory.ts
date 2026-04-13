@@ -21,6 +21,8 @@ import {
   parseObserverOutput,
 } from '@mastra/memory/processors';
 
+import { forgeDebug } from '../../debug';
+
 type StorageThread = {
   id: string;
   title?: string;
@@ -269,6 +271,35 @@ function buildReflectionBudget(input: {
   );
 }
 
+function logOmState(
+  event: string,
+  input: {
+    threadId: string;
+    resourceId: string;
+    state: CustomOmState;
+    recentRawCount?: number;
+    recentRawTokens?: number;
+    overflowCount?: number;
+    overflowTokens?: number;
+    reflectionBudget?: number;
+  },
+) {
+  forgeDebug('checkpointed-om', event, {
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+    checkpointGeneration: input.state.checkpointGeneration,
+    activeObservationBlockCount: getActiveObservationBlocks(input.state).length,
+    activeObservationTokens: sumTokens(getActiveObservationBlocks(input.state)),
+    activeReflectionBlockCount: input.state.activeReflectionBlocks.length,
+    activeReflectionTokens: sumTokens(input.state.activeReflectionBlocks),
+    recentRawCount: input.recentRawCount,
+    recentRawTokens: input.recentRawTokens,
+    overflowCount: input.overflowCount,
+    overflowTokens: input.overflowTokens,
+    reflectionBudget: input.reflectionBudget,
+  });
+}
+
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -501,13 +532,38 @@ export class CheckpointedObservationalMemoryProcessor
         args.messageList.get.all.db(),
         getObservationCursor(currentRecord),
       );
-      const { overflow } = splitRawMessagesByRecentReserve(
+      const { recent, overflow } = splitRawMessagesByRecentReserve(
         rawMessages,
         this.tokenCounter,
         this.recentRawTokens,
       );
+      const recentRawTokens = this.tokenCounter.countMessages(recent);
+      const overflowTokens = this.tokenCounter.countMessages(overflow);
+      const reflectionBudget = buildReflectionBudget({
+        totalContextTokens: this.totalContextTokens,
+        recentRawTokens: this.recentRawTokens,
+        rawObservationBatchTokens: this.rawObservationBatchTokens,
+        observationReflectionBatchTokens: this.observationReflectionBatchTokens,
+      });
+
+      logOmState('state loaded', {
+        threadId: context.threadId,
+        resourceId: context.resourceId,
+        state: customState,
+        recentRawCount: recent.length,
+        recentRawTokens,
+        overflowCount: overflow.length,
+        overflowTokens,
+        reflectionBudget,
+      });
 
       if (sumTokens(getActiveObservationBlocks(customState)) >= this.observationReflectionBatchTokens) {
+        forgeDebug('checkpointed-om', 'reflection threshold reached', {
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          activeObservationTokens: sumTokens(getActiveObservationBlocks(customState)),
+          threshold: this.observationReflectionBatchTokens,
+        });
         currentRecord = await this.createReflectionGeneration({
           currentRecord,
           threadId: context.threadId,
@@ -523,8 +579,14 @@ export class CheckpointedObservationalMemoryProcessor
         continue;
       }
 
-      const overflowTokens = this.tokenCounter.countMessages(overflow);
       if (overflowTokens >= this.rawObservationBatchTokens) {
+        forgeDebug('checkpointed-om', 'observation threshold reached', {
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          overflowCount: overflow.length,
+          overflowTokens,
+          threshold: this.rawObservationBatchTokens,
+        });
         currentRecord = await this.createObservationBlock({
           currentRecord,
           threadId: context.threadId,
@@ -537,18 +599,18 @@ export class CheckpointedObservationalMemoryProcessor
         continue;
       }
 
-      const reflectionBudget = buildReflectionBudget({
-        totalContextTokens: this.totalContextTokens,
-        recentRawTokens: this.recentRawTokens,
-        rawObservationBatchTokens: this.rawObservationBatchTokens,
-        observationReflectionBatchTokens: this.observationReflectionBatchTokens,
-      });
       const reflectionTokens = activeReflections.reduce(
         (total, record) => total + this.tokenCounter.countObservations(record.activeObservations),
         0,
       );
 
       if (reflectionTokens > reflectionBudget && customState.activeReflectionBlocks.length > 0) {
+        forgeDebug('checkpointed-om', 'reflection budget exceeded', {
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          reflectionTokens,
+          reflectionBudget,
+        });
         this.trimActiveReflections(customState, reflectionBudget);
         this.pruneArchivedObservationBlocks(customState);
         activeReflections = await this.loadActiveReflections(
@@ -570,12 +632,26 @@ export class CheckpointedObservationalMemoryProcessor
       });
     }
 
+    logOmState('state persisted', {
+      threadId: context.threadId,
+      resourceId: context.resourceId,
+      state: customState,
+    });
+
     this.rebuildMessageList(args.messageList, {
       record: currentRecord,
       reflections: activeReflections,
       observationBlocks: customState.observationBlocks.filter(
         (block) => block.reflectedGeneration === null,
       ),
+    });
+
+    forgeDebug('checkpointed-om', 'message list rebuilt', {
+      threadId: context.threadId,
+      resourceId: context.resourceId,
+      rememberedCount: args.messageList.get.remembered.db().length,
+      activeReflectionCount: activeReflections.length,
+      activeObservationCount: getActiveObservationBlocks(customState).length,
     });
 
     return args.messageList;
@@ -611,6 +687,12 @@ export class CheckpointedObservationalMemoryProcessor
       this.tokenCounter,
       this.rawObservationBatchTokens,
     );
+    forgeDebug('checkpointed-om', 'creating observation block', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      batchMessageCount: batch.selected.length,
+      batchTokenCount: batch.usedTokens,
+    });
     const activeObservationBlocks = getActiveObservationBlocks(input.state);
     const supportText = takeSupportText(
       activeObservationBlocks,
@@ -664,6 +746,14 @@ export class CheckpointedObservationalMemoryProcessor
       observedTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
 
+    forgeDebug('checkpointed-om', 'observation block created', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      activeObservationBlockCount: getActiveObservationBlocks(input.state).length,
+      activeObservationTokens: this.tokenCounter.countObservations(activeObservationText),
+      lastObservedAt,
+    });
+
     return {
       ...input.currentRecord,
       activeObservations: activeObservationText,
@@ -682,6 +772,12 @@ export class CheckpointedObservationalMemoryProcessor
   }) {
     const unreflectedBlocks = getActiveObservationBlocks(input.state);
     const batch = takeObservationBatch(unreflectedBlocks, this.observationReflectionBatchTokens);
+    forgeDebug('checkpointed-om', 'creating reflection block', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      observationBlockCount: batch.selected.length,
+      observationBatchTokens: batch.usedTokens,
+    });
     const selectedText = batch.selected.map((block) => block.text).join('\n');
     const supportText = takeSupportText(unreflectedBlocks.slice(0, -batch.selected.length), this.tokenCounter, this.reflectionSupportTokens);
     const reflectorText = await this.generateOmText({
@@ -764,6 +860,13 @@ export class CheckpointedObservationalMemoryProcessor
     };
 
     await this.store.insertObservationalMemoryRecord(currentRecord);
+    forgeDebug('checkpointed-om', 'reflection block created', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      generationCount: reflectionRecord.generationCount,
+      reflectionTokens: reflectionRecord.observationTokenCount,
+      remainingObservationBlockCount: getActiveObservationBlocks(input.state).length,
+    });
     return currentRecord;
   }
 
@@ -796,6 +899,13 @@ export class CheckpointedObservationalMemoryProcessor
 
       state.checkpointGeneration = removed.generationCount;
       currentTokens -= removed.tokenCount;
+      forgeDebug('checkpointed-om', 'checkpoint advanced', {
+        checkpointGeneration: state.checkpointGeneration,
+        removedReflectionRecordId: removed.recordId,
+        removedReflectionTokens: removed.tokenCount,
+        remainingReflectionTokens: currentTokens,
+        reflectionBudget,
+      });
     }
   }
 
@@ -812,6 +922,11 @@ export class CheckpointedObservationalMemoryProcessor
       }
 
       return block.reflectedGeneration > checkpointGeneration;
+    });
+
+    forgeDebug('checkpointed-om', 'archived observation blocks pruned', {
+      checkpointGeneration,
+      remainingObservationBlockCount: state.observationBlocks.length,
     });
   }
 
