@@ -832,7 +832,8 @@ export class CheckpointedObservationalMemoryProcessor
       throw new Error('Custom OM reflector returned no observations');
     }
 
-    const nextGeneration = input.currentRecord.generationCount + 1;
+    const reflectionGeneration = input.currentRecord.generationCount + 1;
+    const currentGeneration = reflectionGeneration + 1;
     const now = new Date();
     const reflectionRecord: ObservationalMemoryRecord = {
       ...input.currentRecord,
@@ -840,7 +841,7 @@ export class CheckpointedObservationalMemoryProcessor
       createdAt: now,
       updatedAt: now,
       originType: 'reflection',
-      generationCount: nextGeneration,
+      generationCount: reflectionGeneration,
       activeObservations: reflectionText,
       observationTokenCount: this.tokenCounter.countObservations(reflectionText),
       totalTokensObserved: input.currentRecord.totalTokensObserved,
@@ -877,7 +878,7 @@ export class CheckpointedObservationalMemoryProcessor
       createdAt: new Date(now.getTime() + 1),
       updatedAt: new Date(now.getTime() + 1),
       originType: 'initial',
-      generationCount: nextGeneration,
+      generationCount: currentGeneration,
       activeObservations: remainingObservationText,
       observationTokenCount: this.tokenCounter.countObservations(remainingObservationText),
       pendingMessageTokens: 0,
@@ -895,7 +896,8 @@ export class CheckpointedObservationalMemoryProcessor
     forgeDebug('checkpointed-om', 'reflection block created', {
       threadId: input.threadId,
       resourceId: input.resourceId,
-      generationCount: reflectionRecord.generationCount,
+      reflectionGeneration,
+      currentGeneration,
       reflectionTokens: reflectionRecord.observationTokenCount,
       remainingObservationBlockCount: getActiveObservationBlocks(input.state).length,
     });
