@@ -31,10 +31,22 @@ export function createAgentRuntimeMemory(input: {
   omReflectionObservationTokens?: number;
   omReflectionBufferActivation?: number;
 }) {
+  const observationalMemoryConfig = {
+    model: input.omModel ?? input.agentModel,
+    observation: {
+      messageTokens: input.omObservationMessageTokens,
+      bufferTokens: false as const,
+      previousObserverTokens: input.omObservationPreviousObserverTokens,
+    },
+    reflection: {
+      observationTokens: input.omReflectionObservationTokens,
+    },
+  };
   const memory = createAgentMemory({
     storage: input.storage,
     vector: input.vector,
     lastMessages: input.memoryLastMessagesFullEnabled ? undefined : input.memoryLastMessagesCount,
+    observationalMemory: observationalMemoryConfig,
   });
   const inputProcessors: InputProcessorOrWorkflow[] = [];
   const outputProcessors: OutputProcessorOrWorkflow[] = [];
@@ -42,15 +54,9 @@ export function createAgentRuntimeMemory(input: {
   const observationalMemory = createObservationalMemory({
     storage: input.storage,
     memory,
-    model: input.omModel ?? input.agentModel,
-    observation: {
-      messageTokens: input.omObservationMessageTokens,
-      bufferTokens: false,
-      previousObserverTokens: input.omObservationPreviousObserverTokens,
-    },
-    reflection: {
-      observationTokens: input.omReflectionObservationTokens,
-    },
+    model: observationalMemoryConfig.model,
+    observation: observationalMemoryConfig.observation,
+    reflection: observationalMemoryConfig.reflection,
   });
 
   inputProcessors.push(observationalMemory.processor);
