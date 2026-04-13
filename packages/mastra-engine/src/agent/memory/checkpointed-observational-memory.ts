@@ -1053,19 +1053,42 @@ export class CheckpointedObservationalMemoryProcessor
       batchTokenCount: batch.usedTokens,
     });
     const activeObservationBlocks = getActiveObservationBlocks(input.state);
+    forgeDebug('checkpointed-om', 'observation support start', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      activeObservationBlockCount: activeObservationBlocks.length,
+      observationSupportTokens: this.observationSupportTokens,
+    });
     const supportText = takeSupportText(
       activeObservationBlocks,
       this.tokenCounter,
       this.observationSupportTokens,
     );
+    forgeDebug('checkpointed-om', 'observation support complete', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      supportTextLength: supportText.length,
+    });
+    forgeDebug('checkpointed-om', 'observer prompt build start', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      batchMessageCount: batch.selected.length,
+      batchTokenCount: batch.usedTokens,
+    });
+    const observerPrompt = buildObserverPrompt(
+      supportText || undefined,
+      batch.selected.map((unit) => unit.promptMessage),
+    );
+    forgeDebug('checkpointed-om', 'observer prompt build complete', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      observerPromptLength: observerPrompt.length,
+    });
     const observerText = await this.generateOmText({
       agentId: `custom-observer-${randomUUID()}`,
       agentName: 'Checkpointed OM observer',
       instructions: buildObserverSystemPrompt(false),
-      prompt: buildObserverPrompt(
-        supportText || undefined,
-        batch.selected.map((unit) => unit.promptMessage),
-      ),
+      prompt: observerPrompt,
       requestContext: input.requestContext,
       debugContext: {
         phase: 'observe',
