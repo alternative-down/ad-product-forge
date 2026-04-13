@@ -55,6 +55,10 @@ type RawUnit = {
   promptMessage: MastraDBMessage;
 };
 
+type PartWithOptionalForgeMetadata = {
+  providerMetadata?: Record<string, unknown>;
+};
+
 type CheckpointSummary = {
   text: string;
   tokenCount: number;
@@ -400,7 +404,66 @@ function renderObservationSystemText(blocks: ObservationBlock[]) {
   return ['Active observations:', content].join('\n');
 }
 
-function cloneMessageWithParts(message: MastraDBMessage, parts: MastraDBMessage['content']['parts']) {
+function getRawPartKey(part: PartWithOptionalForgeMetadata, index: number) {
+  const forge = part.providerMetadata?.forge;
+  if (
+    forge &&
+    typeof forge === 'object' &&
+    'checkpointedOmPartKey' in forge &&
+    typeof forge.checkpointedOmPartKey === 'string'
+  ) {
+    return forge.checkpointedOmPartKey;
+  }
+
+  return String(index);
+}
+
+function stampRawPartKey<TPart extends PartWithOptionalForgeMetadata>(part: TPart, index: number) {
+  const partKey = getRawPartKey(part, index);
+  const providerMetadata = part.providerMetadata ?? {};
+  const forge = providerMetadata.forge && typeof providerMetadata.forge === 'object'
+    ? providerMetadata.forge as Record<string, unknown>
+    : {};
+
+  return {
+    ...part,
+    providerMetadata: {
+      ...providerMetadata,
+      forge: {
+        ...forge,
+        checkpointedOmPartKey: partKey,
+      },
+    },
+  } satisfies TPart;
+}
+
+function splitTextIntoChunks(text: string, maxChars: number) {
+  if (text.length <= maxChars) {
+    return [text];
+  }
+
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < text.length) {
+    let end = Math.min(text.length, start + maxChars);
+    const boundary = text.lastIndexOf('\n', end);
+
+    if (boundary > start + Math.floor(maxChars * 0.5)) {
+      end = boundary;
+    }
+
+    chunks.push(text.slice(start, end).trim());
+    start = end;
+  }
+
+  return chunks.filter(Boolean);
+}
+
+function cloneMessageWithParts(
+  message: MastraDBMessage,
+  parts: MastraDBMessage['content']['parts'],
+) {
   return {
     ...message,
     content: {
@@ -416,8 +479,10 @@ function cloneMessageWithParts(message: MastraDBMessage, parts: MastraDBMessage[
 function splitMessageIntoRawUnits(
   message: MastraDBMessage,
   tokenCounter: TokenCounter,
+  maxUnitTokens: number,
 ) {
   const parts = Array.isArray(message.content.parts) ? message.content.parts : [];
+  const maxUnitChars = Math.max(1, maxUnitTokens) * 4;
 
   if (parts.length === 0) {
     return [{
@@ -429,27 +494,62 @@ function splitMessageIntoRawUnits(
     }] satisfies RawUnit[];
   }
 
-  return parts.map((part, index) => {
-    const promptMessage = cloneMessageWithParts(message, [part]);
+  return parts.flatMap((rawPart, index) => {
+    const part = stampRawPartKey(rawPart, index);
+    const partKey = getRawPartKey(part, index);
     const createdAt = typeof part.createdAt === 'number'
       ? new Date(part.createdAt)
       : message.createdAt;
 
-    return {
-      id: `${message.id}:part:${index}`,
+    if (part.type === 'text' && typeof part.text === 'string') {
+      return splitTextIntoChunks(part.text, maxUnitChars).map((text, chunkIndex) => {
+        const promptMessage = cloneMessageWithParts(message, [{ ...part, text }]);
+
+        return {
+          id: `${message.id}:part:${partKey}:chunk:${chunkIndex}`,
+          parentMessageId: message.id,
+          createdAt,
+          tokenCount: tokenCounter.countMessage(promptMessage),
+          promptMessage,
+        } satisfies RawUnit;
+      });
+    }
+
+    if (part.type === 'reasoning' && typeof part.reasoning === 'string') {
+      return splitTextIntoChunks(part.reasoning, maxUnitChars).map((reasoning, chunkIndex) => {
+        const promptMessage = cloneMessageWithParts(message, [{
+          ...part,
+          reasoning,
+          details: [],
+        }]);
+
+        return {
+          id: `${message.id}:part:${partKey}:chunk:${chunkIndex}`,
+          parentMessageId: message.id,
+          createdAt,
+          tokenCount: tokenCounter.countMessage(promptMessage),
+          promptMessage,
+        } satisfies RawUnit;
+      });
+    }
+
+    const promptMessage = cloneMessageWithParts(message, [part]);
+    return [{
+      id: `${message.id}:part:${partKey}`,
       parentMessageId: message.id,
       createdAt,
       tokenCount: tokenCounter.countMessage(promptMessage),
       promptMessage,
-    } satisfies RawUnit;
+    } satisfies RawUnit];
   });
 }
 
 function splitMessagesIntoRawUnits(
   messages: MastraDBMessage[],
   tokenCounter: TokenCounter,
+  maxUnitTokens: number,
 ) {
-  return messages.flatMap((message) => splitMessageIntoRawUnits(message, tokenCounter));
+  return messages.flatMap((message) => splitMessageIntoRawUnits(message, tokenCounter, maxUnitTokens));
 }
 
 function createMetricsSnapshot(input: {
@@ -503,8 +603,9 @@ function getMessagesAfterCursor(
   messages: MastraDBMessage[],
   record: ObservationalMemoryRecord,
   tokenCounter: TokenCounter,
+  maxUnitTokens: number,
 ) {
-  const units = splitMessagesIntoRawUnits(messages, tokenCounter);
+  const units = splitMessagesIntoRawUnits(messages, tokenCounter, maxUnitTokens);
 
   if (!record.lastObservedAt) {
     return units;
@@ -682,6 +783,7 @@ export class CheckpointedObservationalMemoryProcessor
         args.messageList.get.all.db(),
         currentRecord,
         this.tokenCounter,
+        this.recentRawTokens,
       );
       const { recent, overflow } = splitRawMessagesByRecentReserve(
         rawMessages,
@@ -785,6 +887,7 @@ export class CheckpointedObservationalMemoryProcessor
       args.messageList.get.all.db(),
       currentRecord,
       this.tokenCounter,
+      this.recentRawTokens,
     );
     const finalRawSplit = splitRawMessagesByRecentReserve(
       finalRawMessages,
@@ -1246,7 +1349,7 @@ export class CheckpointedObservationalMemoryProcessor
     if (input.record.lastObservedAt) {
       const rememberedMessages = messageList.get.remembered.db();
       const rebuiltRememberedMessages = rememberedMessages.flatMap((message) => {
-        const units = splitMessageIntoRawUnits(message, this.tokenCounter);
+        const units = splitMessageIntoRawUnits(message, this.tokenCounter, this.recentRawTokens);
         const remainingUnits = units.filter((unit) => !isObservedRawUnit(input.record, unit));
 
         if (remainingUnits.length === units.length) {
@@ -1261,17 +1364,18 @@ export class CheckpointedObservationalMemoryProcessor
           return [message];
         }
 
-        const remainingPartIndexes = new Set(
+        const remainingPartKeys = new Set(
           remainingUnits
-            .map((unit) => unit.id.match(/:part:(\d+)$/)?.[1])
+            .map((unit) => unit.id.match(/:part:([^:]+)(?::chunk:\d+)?$/)?.[1])
             .filter((value): value is string => Boolean(value))
-            .map((value) => Number(value)),
         );
 
         return [
           cloneMessageWithParts(
             message,
-            message.content.parts.filter((_part, index) => remainingPartIndexes.has(index)),
+            message.content.parts
+              .map((part, index) => stampRawPartKey(part, index))
+              .filter((part, index) => remainingPartKeys.has(getRawPartKey(part, index))),
           ),
         ];
       });
