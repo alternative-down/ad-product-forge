@@ -61,6 +61,7 @@ function AgentLogIndexRoute() {
         checkpointGeneration={runtimeMemoryQuery.data?.checkpointGeneration ?? null}
         checkpointSummary={runtimeMemoryQuery.data?.checkpointSummary ?? null}
         checkpointUpdatedAt={runtimeMemoryQuery.data?.checkpointUpdatedAt ?? null}
+        metrics={runtimeMemoryQuery.data?.metrics ?? null}
         loading={runtimeMemoryQuery.isLoading}
         error={runtimeMemoryQuery.error?.message ?? null}
       />
@@ -88,6 +89,17 @@ function AgentRuntimeMemorySection(input: {
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
+  metrics: {
+    recentRawTokenCount: number;
+    recentRawTokenLimit: number;
+    overflowTokenCount: number;
+    observationTriggerTokenLimit: number;
+    observationTokenCount: number;
+    reflectionTriggerTokenLimit: number;
+    reflectionTokenCount: number;
+    reflectionBudget: number;
+    checkpointTokenCount: number;
+  } | null;
   loading: boolean;
   error: string | null;
 }) {
@@ -118,6 +130,35 @@ function AgentRuntimeMemorySection(input: {
         </div>
       </header>
 
+      {input.metrics ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <MetricTile
+            label="RAW recente"
+            current={input.metrics.recentRawTokenCount}
+            limit={input.metrics.recentRawTokenLimit}
+          />
+          <MetricTile
+            label="Overflow RAW"
+            current={input.metrics.overflowTokenCount}
+            limit={input.metrics.observationTriggerTokenLimit}
+          />
+          <MetricTile
+            label="Observations"
+            current={input.metrics.observationTokenCount}
+            limit={input.metrics.reflectionTriggerTokenLimit}
+          />
+          <MetricTile
+            label="Reflections"
+            current={input.metrics.reflectionTokenCount}
+            limit={input.metrics.reflectionBudget}
+          />
+          <MetricTile
+            label="Checkpoint Summary"
+            current={input.metrics.checkpointTokenCount}
+          />
+        </div>
+      ) : null}
+
       <MemoryDisclosure
         title="Working Memory"
         value={input.workingMemory}
@@ -135,6 +176,32 @@ function AgentRuntimeMemorySection(input: {
         value={input.reflection}
       />
     </section>
+  );
+}
+
+function MetricTile(input: {
+  label: string;
+  current: number;
+  limit?: number;
+}) {
+  const percent = input.limit && input.limit > 0
+    ? Math.min(999, Math.round((input.current / input.limit) * 100))
+    : null;
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-background/70 px-4 py-3">
+      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        {input.label}
+      </div>
+      <div className="mt-1 text-sm font-medium text-foreground">
+        {formatNumber(input.current)} tokens
+      </div>
+      {input.limit ? (
+        <div className="mt-1 text-xs text-muted-foreground">
+          de {formatNumber(input.limit)} • {percent}%
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -166,4 +233,8 @@ function formatDateTime(value: number) {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(value);
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('pt-BR').format(value);
 }

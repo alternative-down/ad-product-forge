@@ -44,6 +44,16 @@ const RECENT_CONVERSATION_LIMIT = 10;
 
 interface MastraMemoryStore {
   createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
+  listMessages(params: {
+    threadId: string;
+    resourceId?: string;
+    page: number;
+    perPage: number;
+    orderBy?: {
+      field: 'createdAt';
+      direction: 'ASC' | 'DESC';
+    };
+  }): Promise<{ messages: MastraDBMessage[] }>;
 }
 
 type CustomCheckpointSummary = {
@@ -132,6 +142,51 @@ function getCustomCheckpointedContextState(metadata: Record<string, unknown> | u
     observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
     activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks) ? value.activeReflectionBlocks : [],
   };
+}
+
+function sumTokenCount(items: Array<{ tokenCount: number }>) {
+  return items.reduce((total, item) => total + item.tokenCount, 0);
+}
+
+function splitRecentRawMessages(
+  messages: MastraDBMessage[],
+  recentRawTokens: number,
+) {
+  const recentIds = new Set<string>();
+  let usedTokens = 0;
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    const tokenCount = estimateMessageTokens(message);
+
+    if (recentIds.size > 0 && usedTokens + tokenCount > recentRawTokens) {
+      break;
+    }
+
+    recentIds.add(message.id);
+    usedTokens += tokenCount;
+  }
+
+  const recent = messages.filter((message) => recentIds.has(message.id));
+  const overflow = messages.filter((message) => !recentIds.has(message.id));
+
+  return { recent, overflow };
+}
+
+function estimateTokenCount(text: string) {
+  return Math.ceil(text.length / 4);
+}
+
+function estimateMessageTokens(message: MastraDBMessage) {
+  if (typeof message.content.content === 'string') {
+    return estimateTokenCount(message.content.content);
+  }
+
+  return estimateTokenCount(JSON.stringify(message.content));
+}
+
+function estimateMessagesTokens(messages: MastraDBMessage[]) {
+  return messages.reduce((total, message) => total + estimateMessageTokens(message), 0);
 }
 
 export function createAdminReadModel(input: {
@@ -523,6 +578,30 @@ export function createAdminReadModel(input: {
       resourceId: mastraAgentId,
     });
     const memoryStore = storage.stores.memory;
+    if (!memoryStore) {
+      return {
+        workingMemory: formatWorkingMemoryValue(workingMemory),
+        observations: '',
+        reflection: '',
+        generationCount: 0,
+        updatedAt: null,
+        lastObservedAt: null,
+        checkpointGeneration: null,
+        checkpointSummary: null,
+        checkpointUpdatedAt: null,
+        metrics: {
+          recentRawTokenCount: 0,
+          recentRawTokenLimit: 0,
+          overflowTokenCount: 0,
+          observationTriggerTokenLimit: 0,
+          observationTokenCount: 0,
+          reflectionTriggerTokenLimit: 0,
+          reflectionTokenCount: 0,
+          reflectionBudget: 0,
+          checkpointTokenCount: 0,
+        },
+      };
+    }
     const customState = hasObservationalMemoryAccess(memoryStore)
       ? getCustomCheckpointedContextState((await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata)
       : null;
@@ -556,6 +635,43 @@ export function createAdminReadModel(input: {
       }
     }
 
+    const settings = await systemSettings.getSettings();
+    const threadMessages = await memoryStore.listMessages({
+      threadId: mastraAgentId,
+      resourceId: mastraAgentId,
+      page: 0,
+      perPage: 1000,
+      orderBy: {
+        field: 'createdAt',
+        direction: 'ASC',
+      },
+    });
+    const rawMessages = threadMessages.messages.filter((message: MastraDBMessage) => {
+      if (!lastObservedAt || !message.createdAt) {
+        return true;
+      }
+
+      return message.createdAt.getTime() > lastObservedAt;
+    });
+    const rawSplit = splitRecentRawMessages(
+      rawMessages,
+      settings.checkpointedOmRecentRawTokens,
+    );
+    const recentRawTokenCount = estimateMessagesTokens(rawSplit.recent);
+    const overflowTokenCount = estimateMessagesTokens(rawSplit.overflow);
+    const observationTokenCount = customState
+      ? sumTokenCount(customState.observationBlocks.filter((block) => block.reflectedGeneration === null))
+      : 0;
+    const reflectionTokenCount = customState ? sumTokenCount(customState.activeReflectionBlocks) : 0;
+    const checkpointTokenCount = customState?.checkpointSummary?.tokenCount ?? 0;
+    const reflectionBudget = Math.max(
+      0,
+      settings.checkpointedOmTotalContextTokens
+        - settings.checkpointedOmRecentRawTokens
+        - settings.checkpointedOmRawObservationBatchTokens
+        - settings.checkpointedOmObservationReflectionBatchTokens,
+    );
+
     return {
       workingMemory: formatWorkingMemoryValue(workingMemory),
       observations,
@@ -568,6 +684,17 @@ export function createAdminReadModel(input: {
       checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
         ? Date.parse(customState.checkpointSummary.updatedAt)
         : null,
+      metrics: {
+        recentRawTokenCount,
+        recentRawTokenLimit: settings.checkpointedOmRecentRawTokens,
+        overflowTokenCount,
+        observationTriggerTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
+        observationTokenCount,
+        reflectionTriggerTokenLimit: settings.checkpointedOmObservationReflectionBatchTokens,
+        reflectionTokenCount,
+        reflectionBudget,
+        checkpointTokenCount,
+      },
     };
   }
 
