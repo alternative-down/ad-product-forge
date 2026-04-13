@@ -90,15 +90,22 @@ function AgentRuntimeMemorySection(input: {
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
   metrics: {
+    rawMessageCount: number;
+    recentRawMessageCount: number;
     recentRawTokenCount: number;
     recentRawTokenLimit: number;
+    overflowMessageCount: number;
     overflowTokenCount: number;
     observationTriggerTokenLimit: number;
+    activeObservationBlockCount: number;
     observationTokenCount: number;
     reflectionTriggerTokenLimit: number;
+    activeReflectionBlockCount: number;
     reflectionTokenCount: number;
     reflectionBudget: number;
     checkpointTokenCount: number;
+    checkpointSummaryUpToGeneration: number | null;
+    latestThreadMessageAt: number | null;
   } | null;
   loading: boolean;
   error: string | null;
@@ -136,25 +143,43 @@ function AgentRuntimeMemorySection(input: {
             label="RAW recente"
             current={input.metrics.recentRawTokenCount}
             limit={input.metrics.recentRawTokenLimit}
+            detail={`${formatNumber(input.metrics.recentRawMessageCount)} msgs recentes`}
           />
           <MetricTile
             label="Overflow RAW"
             current={input.metrics.overflowTokenCount}
             limit={input.metrics.observationTriggerTokenLimit}
+            detail={`${formatNumber(input.metrics.overflowMessageCount)} msgs fora da reserva`}
           />
           <MetricTile
             label="Observations"
             current={input.metrics.observationTokenCount}
             limit={input.metrics.reflectionTriggerTokenLimit}
+            detail={`${formatNumber(input.metrics.activeObservationBlockCount)} blocos ativos`}
           />
           <MetricTile
             label="Reflections"
             current={input.metrics.reflectionTokenCount}
             limit={input.metrics.reflectionBudget}
+            detail={`${formatNumber(input.metrics.activeReflectionBlockCount)} blocos ativos`}
           />
           <MetricTile
             label="Checkpoint Summary"
             current={input.metrics.checkpointTokenCount}
+            detail={
+              input.metrics.checkpointSummaryUpToGeneration !== null
+                ? `até geração ${formatNumber(input.metrics.checkpointSummaryUpToGeneration)}`
+                : 'sem summary persistido'
+            }
+          />
+          <MetricTile
+            label="Thread após cursor"
+            current={input.metrics.rawMessageCount}
+            detail={
+              input.metrics.latestThreadMessageAt
+                ? `última mensagem ${formatDateTime(input.metrics.latestThreadMessageAt)}`
+                : 'sem mensagens após cursor'
+            }
           />
         </div>
       ) : null}
@@ -183,6 +208,7 @@ function MetricTile(input: {
   label: string;
   current: number;
   limit?: number;
+  detail?: string;
 }) {
   const percent = input.limit && input.limit > 0
     ? Math.min(999, Math.round((input.current / input.limit) * 100))
@@ -199,6 +225,11 @@ function MetricTile(input: {
       {input.limit ? (
         <div className="mt-1 text-xs text-muted-foreground">
           de {formatNumber(input.limit)} • {percent}%
+        </div>
+      ) : null}
+      {input.detail ? (
+        <div className="mt-1 text-xs text-muted-foreground">
+          {input.detail}
         </div>
       ) : null}
     </div>

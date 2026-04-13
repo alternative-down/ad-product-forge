@@ -182,15 +182,22 @@ export type AgentRuntimeMemorySnapshot = {
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
   metrics: {
+    rawMessageCount: number;
+    recentRawMessageCount: number;
     recentRawTokenCount: number;
     recentRawTokenLimit: number;
+    overflowMessageCount: number;
     overflowTokenCount: number;
     observationTriggerTokenLimit: number;
+    activeObservationBlockCount: number;
     observationTokenCount: number;
     reflectionTriggerTokenLimit: number;
+    activeReflectionBlockCount: number;
     reflectionTokenCount: number;
     reflectionBudget: number;
     checkpointTokenCount: number;
+    checkpointSummaryUpToGeneration: number | null;
+    latestThreadMessageAt: number | null;
   };
 };
 
