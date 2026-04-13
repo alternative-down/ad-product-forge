@@ -20,6 +20,8 @@ const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
+const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
+const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
@@ -857,9 +859,10 @@ export function createAgentRunner(
 
   async function loadAgentContextInstructions() {
     const filesystem = currentRuntime.workspace.filesystem;
+    const pressureSignals = await loadContextPressureSignals();
 
     if (!filesystem) {
-      return undefined;
+      return pressureSignals || undefined;
     }
 
     const exists = await withTimeout(
@@ -869,7 +872,7 @@ export function createAgentRunner(
     );
 
     if (!exists) {
-      return undefined;
+      return pressureSignals || undefined;
     }
 
     const data = await withTimeout(
@@ -881,10 +884,11 @@ export function createAgentRunner(
     const trimmedContent = content.trim();
 
     if (!trimmedContent) {
-      return undefined;
+      return pressureSignals || undefined;
     }
 
     return [
+      pressureSignals,
       'Automatically loaded workspace context file.',
       `File: ${AGENT_CONTEXT_FILE_PATH}`,
       'This file should be treated as additional runtime instructions and context.',
@@ -892,7 +896,71 @@ export function createAgentRunner(
       'Treat it as a concise summary layer. Keep details in other files and store only high-signal references here when needed.',
       '',
       trimmedContent,
-    ].join('\n');
+    ].filter(Boolean).join('\n');
+  }
+
+  async function loadContextPressureSignals() {
+    const warnings: string[] = [];
+    const filesystem = currentRuntime.workspace.filesystem;
+
+    if (filesystem) {
+      const exists = await withTimeout(
+        filesystem.exists(AGENT_CONTEXT_FILE_PATH),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent context existence check timed out for ${runtime.id}`,
+      );
+
+      if (exists) {
+        const data = await withTimeout(
+          filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
+          RUNNER_AWAIT_TIMEOUT_MS,
+          `Agent context read timed out for ${runtime.id}`,
+        );
+        const content = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
+        const trimmedContent = content.trim();
+
+        if (trimmedContent.length > AGENT_CONTEXT_WARNING_CHAR_LIMIT) {
+          warnings.push([
+            'Context pressure warning:',
+            `- \`${AGENT_CONTEXT_FILE_PATH}\` is getting large (${trimmedContent.length} chars).`,
+            '- Keep only high-signal summary context there.',
+            '- Move detailed notes, logs, and long task detail into separate workspace files.',
+            '- Leave short retrieval hints and file references in `AGENT_CONTEXT.md`.',
+          ].join('\n'));
+        }
+      }
+    }
+
+    if (currentRuntime.agent.hasOwnMemory()) {
+      const memory = await withTimeout(
+        currentRuntime.agent.getMemory(),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent memory lookup timed out for ${runtime.id}`,
+      );
+
+      if (memory) {
+        const workingMemory = await withTimeout(
+          memory.getWorkingMemory({
+            threadId: currentRuntime.mastraId,
+            resourceId: currentRuntime.mastraId,
+          }),
+          RUNNER_AWAIT_TIMEOUT_MS,
+          `Working memory lookup timed out for ${runtime.id}`,
+        );
+
+        if (workingMemory && workingMemory.trim().length > WORKING_MEMORY_WARNING_CHAR_LIMIT) {
+          warnings.push([
+            'Working memory pressure warning:',
+            `- Working memory is getting large (${workingMemory.trim().length} chars).`,
+            '- Working memory is for intrinsic identity, stable rules, domain boundaries, and mission-level direction.',
+            '- Do not keep notebook detail, long task logs, timelines, or operational dumps there.',
+            '- Move recoverable detail into workspace files and keep only intrinsic guidance in working memory.',
+          ].join('\n'));
+        }
+      }
+    }
+
+    return warnings.join('\n\n');
   }
 
   function notifyExternalEvent(event: AgentWakeEvent) {
