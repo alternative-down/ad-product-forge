@@ -143,13 +143,13 @@ function AgentRuntimeMemorySection(input: {
             label="RAW recente"
             current={input.metrics.recentRawTokenCount}
             limit={input.metrics.recentRawTokenLimit}
-            detail={`${formatNumber(input.metrics.recentRawMessageCount)} msgs recentes`}
+            detail={`${formatNumber(input.metrics.recentRawMessageCount)} itens ativos`}
           />
           <MetricTile
             label="Overflow RAW"
             current={input.metrics.overflowTokenCount}
             limit={input.metrics.observationTriggerTokenLimit}
-            detail={`${formatNumber(input.metrics.overflowMessageCount)} msgs fora da reserva`}
+            detail={`${formatNumber(input.metrics.overflowMessageCount)} itens fora da reserva`}
           />
           <MetricTile
             label="Observations"

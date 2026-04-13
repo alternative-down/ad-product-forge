@@ -47,6 +47,14 @@ type ReflectionBlock = {
   createdAt: string;
 };
 
+type RawUnit = {
+  id: string;
+  parentMessageId: string;
+  createdAt: Date;
+  tokenCount: number;
+  promptMessage: MastraDBMessage;
+};
+
 type CheckpointSummary = {
   text: string;
   tokenCount: number;
@@ -392,17 +400,69 @@ function renderObservationSystemText(blocks: ObservationBlock[]) {
   return ['Active observations:', content].join('\n');
 }
 
+function cloneMessageWithParts(message: MastraDBMessage, parts: MastraDBMessage['content']['parts']) {
+  return {
+    ...message,
+    content: {
+      ...message.content,
+      parts,
+      content: undefined,
+      toolInvocations: undefined,
+      reasoning: undefined,
+    },
+  } satisfies MastraDBMessage;
+}
+
+function splitMessageIntoRawUnits(
+  message: MastraDBMessage,
+  tokenCounter: TokenCounter,
+) {
+  const parts = Array.isArray(message.content.parts) ? message.content.parts : [];
+
+  if (parts.length === 0) {
+    return [{
+      id: `${message.id}:whole`,
+      parentMessageId: message.id,
+      createdAt: message.createdAt,
+      tokenCount: tokenCounter.countMessage(message),
+      promptMessage: message,
+    }] satisfies RawUnit[];
+  }
+
+  return parts.map((part, index) => {
+    const promptMessage = cloneMessageWithParts(message, [part]);
+    const createdAt = typeof part.createdAt === 'number'
+      ? new Date(part.createdAt)
+      : message.createdAt;
+
+    return {
+      id: `${message.id}:part:${index}`,
+      parentMessageId: message.id,
+      createdAt,
+      tokenCount: tokenCounter.countMessage(promptMessage),
+      promptMessage,
+    } satisfies RawUnit;
+  });
+}
+
+function splitMessagesIntoRawUnits(
+  messages: MastraDBMessage[],
+  tokenCounter: TokenCounter,
+) {
+  return messages.flatMap((message) => splitMessageIntoRawUnits(message, tokenCounter));
+}
+
 function createMetricsSnapshot(input: {
   state: CustomOmState;
-  rawMessages: MastraDBMessage[];
-  recent: MastraDBMessage[];
+  rawUnits: RawUnit[];
+  recent: RawUnit[];
   recentRawTokens: number;
-  overflow: MastraDBMessage[];
+  overflow: RawUnit[];
   overflowTokens: number;
   reflectionBudget: number;
 }) {
   return {
-    rawMessageCount: input.rawMessages.length,
+    rawMessageCount: input.rawUnits.length,
     recentRawMessageCount: input.recent.length,
     recentRawTokenCount: input.recentRawTokens,
     overflowMessageCount: input.overflow.length,
@@ -414,88 +474,89 @@ function createMetricsSnapshot(input: {
     reflectionBudget: input.reflectionBudget,
     checkpointTokenCount: input.state.checkpointSummary?.tokenCount ?? 0,
     checkpointSummaryUpToGeneration: input.state.checkpointSummary?.upToGeneration ?? null,
-    latestThreadMessageAt: input.rawMessages.at(-1)?.createdAt?.toISOString?.() ?? null,
+    latestThreadMessageAt: input.rawUnits.at(-1)?.createdAt?.toISOString?.() ?? null,
     updatedAt: new Date().toISOString(),
   } satisfies CustomOmMetricsSnapshot;
 }
 
-function isObservedMessage(record: ObservationalMemoryRecord, message: MastraDBMessage) {
-  if (!record.lastObservedAt || !message.createdAt) {
+function isObservedRawUnit(record: ObservationalMemoryRecord, unit: RawUnit) {
+  if (!record.lastObservedAt) {
     return false;
   }
 
   const observedMessageIds = record.observedMessageIds ?? [];
-
   const cursorTime = new Date(record.lastObservedAt).getTime();
-  const messageTime = new Date(message.createdAt).getTime();
+  const unitTime = unit.createdAt.getTime();
 
-  if (messageTime < cursorTime) {
+  if (unitTime < cursorTime) {
     return true;
   }
 
-  if (messageTime > cursorTime) {
+  if (unitTime > cursorTime) {
     return false;
   }
 
-  return observedMessageIds.includes(message.id);
+  return observedMessageIds.includes(unit.id) || observedMessageIds.includes(unit.parentMessageId);
 }
 
-function getMessagesAfterCursor(messages: MastraDBMessage[], record: ObservationalMemoryRecord) {
+function getMessagesAfterCursor(
+  messages: MastraDBMessage[],
+  record: ObservationalMemoryRecord,
+  tokenCounter: TokenCounter,
+) {
+  const units = splitMessagesIntoRawUnits(messages, tokenCounter);
+
   if (!record.lastObservedAt) {
-    return messages;
+    return units;
   }
 
-  return messages.filter((message) => {
-    return !isObservedMessage(record, message);
-  });
+  return units.filter((unit) => !isObservedRawUnit(record, unit));
 }
 
 function splitRawMessagesByRecentReserve(
-  messages: MastraDBMessage[],
-  tokenCounter: TokenCounter,
+  units: RawUnit[],
   recentRawTokens: number,
 ) {
   const recentIds = new Set<string>();
   let usedTokens = 0;
 
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    const tokenCount = tokenCounter.countMessage(message);
+  for (let index = units.length - 1; index >= 0; index -= 1) {
+    const unit = units[index];
+    const tokenCount = unit.tokenCount;
 
     if (recentIds.size > 0 && usedTokens + tokenCount > recentRawTokens) {
       break;
     }
 
-    recentIds.add(message.id);
+    recentIds.add(unit.id);
     usedTokens += tokenCount;
   }
 
-  const overflow: MastraDBMessage[] = [];
-  const recent: MastraDBMessage[] = [];
+  const overflow: RawUnit[] = [];
+  const recent: RawUnit[] = [];
 
-  for (const message of messages) {
-    if (recentIds.has(message.id)) {
-      recent.push(message);
+  for (const unit of units) {
+    if (recentIds.has(unit.id)) {
+      recent.push(unit);
       continue;
     }
 
-    overflow.push(message);
+    overflow.push(unit);
   }
 
   return { recent, overflow };
 }
 
 function takeMessageBatch(
-  messages: MastraDBMessage[],
-  tokenCounter: TokenCounter,
+  units: RawUnit[],
   threshold: number,
 ) {
-  const selected: MastraDBMessage[] = [];
+  const selected: RawUnit[] = [];
   let usedTokens = 0;
 
-  for (const message of messages) {
-    selected.push(message);
-    usedTokens += tokenCounter.countMessage(message);
+  for (const unit of units) {
+    selected.push(unit);
+    usedTokens += unit.tokenCount;
 
     if (usedTokens >= threshold) {
       break;
@@ -617,14 +678,17 @@ export class CheckpointedObservationalMemoryProcessor
     );
 
     while (true) {
-      const rawMessages = getMessagesAfterCursor(args.messageList.get.all.db(), currentRecord);
+      const rawMessages = getMessagesAfterCursor(
+        args.messageList.get.all.db(),
+        currentRecord,
+        this.tokenCounter,
+      );
       const { recent, overflow } = splitRawMessagesByRecentReserve(
         rawMessages,
-        this.tokenCounter,
         this.recentRawTokens,
       );
-      const recentRawTokens = this.tokenCounter.countMessages(recent);
-      const overflowTokens = this.tokenCounter.countMessages(overflow);
+      const recentRawTokens = recent.reduce((total, unit) => total + unit.tokenCount, 0);
+      const overflowTokens = overflow.reduce((total, unit) => total + unit.tokenCount, 0);
       const reflectionBudget = buildReflectionBudget({
         totalContextTokens: this.totalContextTokens,
         recentRawTokens: this.recentRawTokens,
@@ -717,19 +781,22 @@ export class CheckpointedObservationalMemoryProcessor
       break;
     }
 
-    const finalRawMessages = getMessagesAfterCursor(args.messageList.get.all.db(), currentRecord);
+    const finalRawMessages = getMessagesAfterCursor(
+      args.messageList.get.all.db(),
+      currentRecord,
+      this.tokenCounter,
+    );
     const finalRawSplit = splitRawMessagesByRecentReserve(
       finalRawMessages,
-      this.tokenCounter,
       this.recentRawTokens,
     );
     customState.latestMetrics = createMetricsSnapshot({
       state: customState,
-      rawMessages: finalRawMessages,
+      rawUnits: finalRawMessages,
       recent: finalRawSplit.recent,
-      recentRawTokens: this.tokenCounter.countMessages(finalRawSplit.recent),
+      recentRawTokens: finalRawSplit.recent.reduce((total, unit) => total + unit.tokenCount, 0),
       overflow: finalRawSplit.overflow,
-      overflowTokens: this.tokenCounter.countMessages(finalRawSplit.overflow),
+      overflowTokens: finalRawSplit.overflow.reduce((total, unit) => total + unit.tokenCount, 0),
       reflectionBudget: buildReflectionBudget({
         totalContextTokens: this.totalContextTokens,
         recentRawTokens: this.recentRawTokens,
@@ -841,13 +908,12 @@ export class CheckpointedObservationalMemoryProcessor
     threadId: string;
     resourceId: string;
     state: CustomOmState;
-    overflow: MastraDBMessage[];
+    overflow: RawUnit[];
     omMetadata: ReturnType<typeof getThreadOMMetadata>;
     requestContext: RequestContext | undefined;
   }) {
     const batch = takeMessageBatch(
       input.overflow,
-      this.tokenCounter,
       this.rawObservationBatchTokens,
     );
     forgeDebug('checkpointed-om', 'creating observation block', {
@@ -866,7 +932,10 @@ export class CheckpointedObservationalMemoryProcessor
       agentId: `custom-observer-${randomUUID()}`,
       agentName: 'Checkpointed OM observer',
       instructions: buildObserverSystemPrompt(false),
-      prompt: buildObserverPrompt(supportText || undefined, batch.selected),
+      prompt: buildObserverPrompt(
+        supportText || undefined,
+        batch.selected.map((unit) => unit.promptMessage),
+      ),
       requestContext: input.requestContext,
       debugContext: {
         phase: 'observe',
@@ -905,7 +974,7 @@ export class CheckpointedObservationalMemoryProcessor
       observations: activeObservationText,
       tokenCount: this.tokenCounter.countObservations(activeObservationText),
       lastObservedAt: new Date(lastObservedAt),
-      observedMessageIds: batch.selected.map((message) => message.id),
+      observedMessageIds: batch.selected.map((unit) => unit.id),
       observedTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
 
@@ -1175,32 +1244,41 @@ export class CheckpointedObservationalMemoryProcessor
     },
   ) {
     if (input.record.lastObservedAt) {
-      const observedMessageIds = input.record.observedMessageIds ?? [];
-      const cursorTime = new Date(input.record.lastObservedAt).getTime();
-      const idsToRemove = messageList
-        .get
-        .remembered
-        .db()
-        .filter((message) => {
-          if (!message.createdAt) {
-            return false;
-          }
+      const rememberedMessages = messageList.get.remembered.db();
+      const rebuiltRememberedMessages = rememberedMessages.flatMap((message) => {
+        const units = splitMessageIntoRawUnits(message, this.tokenCounter);
+        const remainingUnits = units.filter((unit) => !isObservedRawUnit(input.record, unit));
 
-          const messageTime = new Date(message.createdAt).getTime();
-          if (messageTime < cursorTime) {
-            return true;
-          }
+        if (remainingUnits.length === units.length) {
+          return [message];
+        }
 
-          if (messageTime > cursorTime) {
-            return false;
-          }
+        if (remainingUnits.length === 0) {
+          return [];
+        }
 
-          return observedMessageIds.includes(message.id);
-        })
-        .map((message) => message.id);
+        if (!Array.isArray(message.content.parts) || message.content.parts.length === 0) {
+          return [message];
+        }
 
-      if (idsToRemove.length > 0) {
-        messageList.removeByIds(idsToRemove);
+        const remainingPartIndexes = new Set(
+          remainingUnits
+            .map((unit) => unit.id.match(/:part:(\d+)$/)?.[1])
+            .filter((value): value is string => Boolean(value))
+            .map((value) => Number(value)),
+        );
+
+        return [
+          cloneMessageWithParts(
+            message,
+            message.content.parts.filter((_part, index) => remainingPartIndexes.has(index)),
+          ),
+        ];
+      });
+
+      messageList.removeByIds(rememberedMessages.map((message) => message.id));
+      if (rebuiltRememberedMessages.length > 0) {
+        messageList.add(rebuiltRememberedMessages, 'memory');
       }
     }
 
