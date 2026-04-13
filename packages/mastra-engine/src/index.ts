@@ -16,6 +16,7 @@ export { LongTermMemory } from './agent/memory/long-term-memory';
 export { embedTextWithFastembed } from './agent/memory/embedder';
 export { createAgentMemory } from './agent/memory/memory';
 export { createObservationalMemory } from './agent/memory/observational-memory';
+export { createCheckpointedObservationalMemoryProcessor } from './agent/memory/checkpointed-observational-memory';
 export { appendWorkingMemoryInstructions } from './agent/memory/working-memory';
 export { forgeDebug, isForgeDebugEnabled } from './debug';
 export { toMastraSafeIdentifier } from './mastra-id';

@@ -31,12 +31,17 @@ export function buildAgentRuntimeConfig(
     memoryLastMessagesCount: runtimeData.companySettings.memoryLastMessagesCount,
     tokenCountFilterEnabled: runtimeData.companySettings.tokenCountFilterEnabled,
     tokenCountFilterLimit: runtimeData.companySettings.tokenCountFilterLimit,
-    omObservationMessageTokens: runtimeData.companySettings.omObservationMessageTokens,
-    omObservationBufferTokens: runtimeData.companySettings.omObservationBufferTokens,
-    omObservationBufferActivation: runtimeData.companySettings.omObservationBufferActivation,
-    omObservationPreviousObserverTokens: runtimeData.companySettings.omObservationPreviousObserverTokens,
-    omReflectionObservationTokens: runtimeData.companySettings.omReflectionObservationTokens,
-    omReflectionBufferActivation: runtimeData.companySettings.omReflectionBufferActivation,
+    checkpointedOmEnabled: runtimeData.companySettings.checkpointedOmEnabled,
+    checkpointedOmTotalContextTokens: runtimeData.companySettings.checkpointedOmTotalContextTokens,
+    checkpointedOmRecentRawTokens: runtimeData.companySettings.checkpointedOmRecentRawTokens,
+    checkpointedOmRawObservationBatchTokens:
+      runtimeData.companySettings.checkpointedOmRawObservationBatchTokens,
+    checkpointedOmObservationReflectionBatchTokens:
+      runtimeData.companySettings.checkpointedOmObservationReflectionBatchTokens,
+    checkpointedOmObservationSupportTokens:
+      runtimeData.companySettings.checkpointedOmObservationSupportTokens,
+    checkpointedOmReflectionSupportTokens:
+      runtimeData.companySettings.checkpointedOmReflectionSupportTokens,
     roleName: runtimeData.role?.name,
     roleDescription: runtimeData.role?.description,
     tools: toolset.tools,

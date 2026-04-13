@@ -67,12 +67,14 @@ export async function createInternalAgentRuntime<
     memoryLastMessagesCount: config.memoryLastMessagesCount,
     tokenCountFilterEnabled: config.tokenCountFilterEnabled,
     tokenCountFilterLimit: config.tokenCountFilterLimit,
-    omObservationMessageTokens: config.omObservationMessageTokens,
-    omObservationBufferTokens: config.omObservationBufferTokens,
-    omObservationBufferActivation: config.omObservationBufferActivation,
-    omObservationPreviousObserverTokens: config.omObservationPreviousObserverTokens,
-    omReflectionObservationTokens: config.omReflectionObservationTokens,
-    omReflectionBufferActivation: config.omReflectionBufferActivation,
+    checkpointedOmEnabled: config.checkpointedOmEnabled,
+    checkpointedOmTotalContextTokens: config.checkpointedOmTotalContextTokens,
+    checkpointedOmRecentRawTokens: config.checkpointedOmRecentRawTokens,
+    checkpointedOmRawObservationBatchTokens: config.checkpointedOmRawObservationBatchTokens,
+    checkpointedOmObservationReflectionBatchTokens:
+      config.checkpointedOmObservationReflectionBatchTokens,
+    checkpointedOmObservationSupportTokens: config.checkpointedOmObservationSupportTokens,
+    checkpointedOmReflectionSupportTokens: config.checkpointedOmReflectionSupportTokens,
   });
 
   const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({

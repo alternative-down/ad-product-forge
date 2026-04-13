@@ -39,12 +39,13 @@ function SettingsGeneralRoute() {
     memoryLastMessagesCount: string;
     tokenCountFilterEnabled: boolean;
     tokenCountFilterLimit: string;
-    omObservationMessageTokens: string;
-    omObservationBufferTokens: string;
-    omObservationBufferActivation: string;
-    omObservationPreviousObserverTokens: string;
-    omReflectionObservationTokens: string;
-    omReflectionBufferActivation: string;
+    checkpointedOmEnabled: boolean;
+    checkpointedOmTotalContextTokens: string;
+    checkpointedOmRecentRawTokens: string;
+    checkpointedOmRawObservationBatchTokens: string;
+    checkpointedOmObservationReflectionBatchTokens: string;
+    checkpointedOmObservationSupportTokens: string;
+    checkpointedOmReflectionSupportTokens: string;
   } | null>(null);
   const [defaultsDraft, setDefaultsDraft] = useState<{
     primaryProfileId: string;
@@ -94,12 +95,13 @@ function SettingsGeneralRoute() {
         memoryLastMessagesCount: String(settingsQuery.data.memoryLastMessagesCount),
         tokenCountFilterEnabled: settingsQuery.data.tokenCountFilterEnabled,
         tokenCountFilterLimit: String(settingsQuery.data.tokenCountFilterLimit),
-        omObservationMessageTokens: String(settingsQuery.data.omObservationMessageTokens),
-        omObservationBufferTokens: String(settingsQuery.data.omObservationBufferTokens),
-        omObservationBufferActivation: String(settingsQuery.data.omObservationBufferActivation),
-        omObservationPreviousObserverTokens: String(settingsQuery.data.omObservationPreviousObserverTokens),
-        omReflectionObservationTokens: String(settingsQuery.data.omReflectionObservationTokens),
-        omReflectionBufferActivation: String(settingsQuery.data.omReflectionBufferActivation),
+        checkpointedOmEnabled: settingsQuery.data.checkpointedOmEnabled,
+        checkpointedOmTotalContextTokens: String(settingsQuery.data.checkpointedOmTotalContextTokens),
+        checkpointedOmRecentRawTokens: String(settingsQuery.data.checkpointedOmRecentRawTokens),
+        checkpointedOmRawObservationBatchTokens: String(settingsQuery.data.checkpointedOmRawObservationBatchTokens),
+        checkpointedOmObservationReflectionBatchTokens: String(settingsQuery.data.checkpointedOmObservationReflectionBatchTokens),
+        checkpointedOmObservationSupportTokens: String(settingsQuery.data.checkpointedOmObservationSupportTokens),
+        checkpointedOmReflectionSupportTokens: String(settingsQuery.data.checkpointedOmReflectionSupportTokens),
       }
     : null);
 
@@ -265,7 +267,7 @@ function SettingsGeneralRoute() {
           <div className="space-y-1">
             <div className="text-lg font-semibold tracking-[-0.03em]">Memória e contexto</div>
             <div className="max-w-3xl text-sm text-muted-foreground">
-              Ajusta `lastMessages`, token limiter e OM. Aqui você controla o tamanho do contexto recente, o freio de tokens e a cadência de observação e reflexão.
+              Ajusta `lastMessages`, token limiter e a OM checkpointed. Aqui você controla o tamanho do contexto recente, o freio de tokens e a compressão ativa por camadas.
             </div>
           </div>
 
@@ -284,12 +286,16 @@ function SettingsGeneralRoute() {
                 memoryLastMessagesCount: Number(runtimeSettings.memoryLastMessagesCount),
                 tokenCountFilterEnabled: runtimeSettings.tokenCountFilterEnabled,
                 tokenCountFilterLimit: Number(runtimeSettings.tokenCountFilterLimit),
-                omObservationMessageTokens: Number(runtimeSettings.omObservationMessageTokens),
-                omObservationBufferTokens: Number(runtimeSettings.omObservationBufferTokens),
-                omObservationBufferActivation: Number(runtimeSettings.omObservationBufferActivation),
-                omObservationPreviousObserverTokens: Number(runtimeSettings.omObservationPreviousObserverTokens),
-                omReflectionObservationTokens: Number(runtimeSettings.omReflectionObservationTokens),
-                omReflectionBufferActivation: Number(runtimeSettings.omReflectionBufferActivation),
+                checkpointedOmEnabled: runtimeSettings.checkpointedOmEnabled,
+                checkpointedOmTotalContextTokens: Number(runtimeSettings.checkpointedOmTotalContextTokens),
+                checkpointedOmRecentRawTokens: Number(runtimeSettings.checkpointedOmRecentRawTokens),
+                checkpointedOmRawObservationBatchTokens: Number(runtimeSettings.checkpointedOmRawObservationBatchTokens),
+                checkpointedOmObservationReflectionBatchTokens:
+                  Number(runtimeSettings.checkpointedOmObservationReflectionBatchTokens),
+                checkpointedOmObservationSupportTokens:
+                  Number(runtimeSettings.checkpointedOmObservationSupportTokens),
+                checkpointedOmReflectionSupportTokens:
+                  Number(runtimeSettings.checkpointedOmReflectionSupportTokens),
               });
             }}
           >
@@ -361,108 +367,121 @@ function SettingsGeneralRoute() {
                 />
               </RuntimeSettingField>
               <RuntimeSettingField
-                label="OM observation message tokens"
-                description="Volume de mensagens acumuladas na thread antes do observer gerar novas observations. Aumentar reduz frequência; diminuir faz o observer rodar mais cedo e mais vezes."
-                tooltip="É o limiar principal da etapa de observação."
+                label="Checkpointed OM"
+                description="Liga a OM nova com checkpoint, batches de observation/reflection e montagem própria do contexto ativo."
+                tooltip="Quando desligada, o runtime usa só histórico recente e token limiter."
               >
-                <AdminInput
-                  type="number"
-                  value={runtimeSettings.omObservationMessageTokens}
-                  onChange={(event) =>
+                <Switch
+                  checked={runtimeSettings.checkpointedOmEnabled}
+                  disabled={settingsMutation.isPending}
+                  onCheckedChange={(checked) =>
                     setRuntimeDraft({
                       ...runtimeSettings,
-                      omObservationMessageTokens: event.target.value,
+                      checkpointedOmEnabled: checked,
                     })
                   }
-                  disabled={settingsMutation.isPending}
                 />
               </RuntimeSettingField>
               <RuntimeSettingField
-                label="OM observation buffer tokens"
-                description="Tamanho do buffer incremental de observação. Em razão, `0.2` significa cerca de 20% do limiar de observation. Menor tende a processar em lotes menores; maior acumula mais antes de reagir."
-                tooltip="Controla o tamanho dos blocos usados pelo buffering assíncrono do observer."
+                label="OM total context tokens"
+                description="Orçamento total da OM para reflections + observations + raw recente. O flush atual continua fora desse valor."
+                tooltip="A OM usa esse teto para decidir quanto espaço sobra para a camada histórica de reflections."
               >
                 <AdminInput
                   type="number"
-                  step="0.01"
-                  value={runtimeSettings.omObservationBufferTokens}
+                  value={runtimeSettings.checkpointedOmTotalContextTokens}
                   onChange={(event) =>
                     setRuntimeDraft({
                       ...runtimeSettings,
-                      omObservationBufferTokens: event.target.value,
+                      checkpointedOmTotalContextTokens: event.target.value,
                     })
                   }
-                  disabled={settingsMutation.isPending}
+                  disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
                 />
               </RuntimeSettingField>
               <RuntimeSettingField
-                label="OM observation buffer activation"
-                description="Ponto em que o buffer de observação começa a atuar em relação ao limiar principal. `0.8` significa ativar perto de 80% do limite de observation."
-                tooltip="Valores menores ativam mais cedo; valores maiores esperam mais contexto acumular."
+                label="OM recent raw tokens"
+                description="Reserva de mensagens RAW recentes que deve continuar visível antes de qualquer compressão."
+                tooltip="Essa é a camada mais fresca do contexto ativo."
               >
                 <AdminInput
                   type="number"
-                  step="0.01"
-                  value={runtimeSettings.omObservationBufferActivation}
+                  value={runtimeSettings.checkpointedOmRecentRawTokens}
                   onChange={(event) =>
                     setRuntimeDraft({
                       ...runtimeSettings,
-                      omObservationBufferActivation: event.target.value,
+                      checkpointedOmRecentRawTokens: event.target.value,
                     })
                   }
-                  disabled={settingsMutation.isPending}
+                  disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
                 />
               </RuntimeSettingField>
               <RuntimeSettingField
-                label="OM previous observer tokens"
-                description="Quanto do histórico de observations anteriores volta para o observer como contexto. Menor economiza tokens; maior preserva mais continuidade do que já foi observado."
-                tooltip="Se subir demais, o observer fica mais caro; se cair demais, ele perde continuidade."
+                label="OM raw batch tokens"
+                description="Tamanho do batch RAW que precisa se acumular além da reserva recente para virar uma observation."
+                tooltip="É o gatilho de compressão da camada RAW."
               >
                 <AdminInput
                   type="number"
-                  value={runtimeSettings.omObservationPreviousObserverTokens}
+                  value={runtimeSettings.checkpointedOmRawObservationBatchTokens}
                   onChange={(event) =>
                     setRuntimeDraft({
                       ...runtimeSettings,
-                      omObservationPreviousObserverTokens: event.target.value,
+                      checkpointedOmRawObservationBatchTokens: event.target.value,
                     })
                   }
-                  disabled={settingsMutation.isPending}
+                  disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
                 />
               </RuntimeSettingField>
               <RuntimeSettingField
-                label="OM reflection observation tokens"
-                description="Quantidade de material observado necessária antes da fase de reflection consolidar padrões mais altos. Menor faz refletir mais cedo; maior espera mais evidência antes de sintetizar."
-                tooltip="É o limiar principal da etapa de reflexão."
+                label="OM reflection batch tokens"
+                description="Tamanho do batch de observations necessário para gerar uma reflection."
+                tooltip="É o gatilho da segunda camada de compressão."
               >
                 <AdminInput
                   type="number"
-                  value={runtimeSettings.omReflectionObservationTokens}
+                  value={runtimeSettings.checkpointedOmObservationReflectionBatchTokens}
                   onChange={(event) =>
                     setRuntimeDraft({
                       ...runtimeSettings,
-                      omReflectionObservationTokens: event.target.value,
+                      checkpointedOmObservationReflectionBatchTokens: event.target.value,
                     })
                   }
-                  disabled={settingsMutation.isPending}
+                  disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
                 />
               </RuntimeSettingField>
               <RuntimeSettingField
-                label="OM reflection buffer activation"
-                description="Ponto relativo em que a reflection começa a preparar consolidação antes de atingir o limiar total. `0.5` significa começar perto da metade do threshold de reflection."
-                tooltip="Baixar acelera reflexões; subir deixa a reflexão mais conservadora."
+                label="OM observation support tokens"
+                description="Quanto de observation anterior pode entrar como contexto auxiliar ao gerar uma nova observation."
+                tooltip="Serve para continuidade local sem reabrir tudo."
               >
                 <AdminInput
                   type="number"
-                  step="0.01"
-                  value={runtimeSettings.omReflectionBufferActivation}
+                  value={runtimeSettings.checkpointedOmObservationSupportTokens}
                   onChange={(event) =>
                     setRuntimeDraft({
                       ...runtimeSettings,
-                      omReflectionBufferActivation: event.target.value,
+                      checkpointedOmObservationSupportTokens: event.target.value,
                     })
                   }
-                  disabled={settingsMutation.isPending}
+                  disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
+                />
+              </RuntimeSettingField>
+              <RuntimeSettingField
+                label="OM reflection support tokens"
+                description="Quanto de contexto auxiliar pode entrar na geração de uma reflection."
+                tooltip="Mantém alguma continuidade entre blocos refletidos sem diluir o batch principal."
+              >
+                <AdminInput
+                  type="number"
+                  value={runtimeSettings.checkpointedOmReflectionSupportTokens}
+                  onChange={(event) =>
+                    setRuntimeDraft({
+                      ...runtimeSettings,
+                      checkpointedOmReflectionSupportTokens: event.target.value,
+                    })
+                  }
+                  disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
                 />
               </RuntimeSettingField>
             </div>
