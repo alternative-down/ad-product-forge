@@ -189,6 +189,39 @@ function estimateMessagesTokens(messages: MastraDBMessage[]) {
   return messages.reduce((total, message) => total + estimateMessageTokens(message), 0);
 }
 
+async function listAllThreadMessages(input: {
+  memoryStore: Pick<MastraMemoryStore, 'listMessages'>;
+  threadId: string;
+  resourceId: string;
+}) {
+  const perPage = 500;
+  const messages: MastraDBMessage[] = [];
+  let page = 0;
+
+  while (true) {
+    const result = await input.memoryStore.listMessages({
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      page,
+      perPage,
+      orderBy: {
+        field: 'createdAt',
+        direction: 'ASC',
+      },
+    });
+
+    messages.push(...result.messages);
+
+    if (result.messages.length < perPage) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return messages;
+}
+
 export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
@@ -636,17 +669,12 @@ export function createAdminReadModel(input: {
     }
 
     const settings = await systemSettings.getSettings();
-    const threadMessages = await memoryStore.listMessages({
+    const threadMessages = await listAllThreadMessages({
+      memoryStore,
       threadId: mastraAgentId,
       resourceId: mastraAgentId,
-      page: 0,
-      perPage: 1000,
-      orderBy: {
-        field: 'createdAt',
-        direction: 'ASC',
-      },
     });
-    const rawMessages = threadMessages.messages.filter((message: MastraDBMessage) => {
+    const rawMessages = threadMessages.filter((message: MastraDBMessage) => {
       if (!lastObservedAt || !message.createdAt) {
         return true;
       }
@@ -685,15 +713,23 @@ export function createAdminReadModel(input: {
         ? Date.parse(customState.checkpointSummary.updatedAt)
         : null,
       metrics: {
+        rawMessageCount: rawMessages.length,
+        recentRawMessageCount: rawSplit.recent.length,
         recentRawTokenCount,
         recentRawTokenLimit: settings.checkpointedOmRecentRawTokens,
+        overflowMessageCount: rawSplit.overflow.length,
         overflowTokenCount,
         observationTriggerTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
+        activeObservationBlockCount:
+          customState?.observationBlocks.filter((block) => block.reflectedGeneration === null).length ?? 0,
         observationTokenCount,
         reflectionTriggerTokenLimit: settings.checkpointedOmObservationReflectionBatchTokens,
+        activeReflectionBlockCount: customState?.activeReflectionBlocks.length ?? 0,
         reflectionTokenCount,
         reflectionBudget,
         checkpointTokenCount,
+        checkpointSummaryUpToGeneration: customState?.checkpointSummary?.upToGeneration ?? null,
+        latestThreadMessageAt: rawMessages.at(-1)?.createdAt?.getTime?.() ?? null,
       },
     };
   }
