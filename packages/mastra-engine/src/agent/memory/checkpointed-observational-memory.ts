@@ -798,7 +798,6 @@ export class CheckpointedObservationalMemoryProcessor
     }
 
     const thread = await this.store.getThreadById({ threadId: context.threadId });
-    const omMetadata = getThreadOMMetadata(thread?.metadata);
     const customState = getCustomOmState(thread);
     let currentRecord = await this.ensureCurrentRecord(context.threadId, context.resourceId);
     currentRecord = await this.repairCurrentRecordIfNeeded({
@@ -812,73 +811,102 @@ export class CheckpointedObservationalMemoryProcessor
       context.resourceId,
       customState.activeReflectionBlocks,
     );
-    const rawMessages = getMessagesAfterCursor(
-      args.messageList.get.all.db(),
-      currentRecord,
-      this.tokenCounter,
-      this.recentRawTokens,
-    );
-    const { recent, overflow } = splitRawMessagesByRecentReserve(
-      rawMessages,
-      this.recentRawTokens,
-    );
-    const recentRawTokens = recent.reduce((total, unit) => total + unit.tokenCount, 0);
-    const overflowTokens = overflow.reduce((total, unit) => total + unit.tokenCount, 0);
-    const reflectionBudget = buildReflectionBudget({
-      totalContextTokens: this.totalContextTokens,
-      recentRawTokens: this.recentRawTokens,
-      rawObservationBatchTokens: this.rawObservationBatchTokens,
-      observationReflectionBatchTokens: this.observationReflectionBatchTokens,
-    });
+    let previousLoopSignature: string | null = null;
 
-    logOmState('state loaded', {
-      threadId: context.threadId,
-      resourceId: context.resourceId,
-      state: customState,
-      recentRawCount: recent.length,
-      recentRawTokens,
-      overflowCount: overflow.length,
-      overflowTokens,
-      reflectionBudget,
-    });
-
-    if (sumTokens(getActiveObservationBlocks(customState)) >= this.observationReflectionBatchTokens) {
-      forgeDebug('checkpointed-om', 'reflection threshold reached', {
-        threadId: context.threadId,
-        resourceId: context.resourceId,
-        activeObservationTokens: sumTokens(getActiveObservationBlocks(customState)),
-        threshold: this.observationReflectionBatchTokens,
-      });
-      currentRecord = await this.createReflectionGeneration({
+    while (true) {
+      const rawMessages = getMessagesAfterCursor(
+        args.messageList.get.all.db(),
         currentRecord,
-        threadId: context.threadId,
-        resourceId: context.resourceId,
-        state: customState,
-        requestContext: args.requestContext,
-      });
-      activeReflections = await this.loadActiveReflections(
-        context.threadId,
-        context.resourceId,
-        customState.activeReflectionBlocks,
+        this.tokenCounter,
+        this.recentRawTokens,
       );
-    } else if (overflowTokens >= this.rawObservationBatchTokens) {
-      forgeDebug('checkpointed-om', 'observation threshold reached', {
-        threadId: context.threadId,
-        resourceId: context.resourceId,
+      const { recent, overflow } = splitRawMessagesByRecentReserve(
+        rawMessages,
+        this.recentRawTokens,
+      );
+      const recentRawTokens = recent.reduce((total, unit) => total + unit.tokenCount, 0);
+      const overflowTokens = overflow.reduce((total, unit) => total + unit.tokenCount, 0);
+      const reflectionBudget = buildReflectionBudget({
+        totalContextTokens: this.totalContextTokens,
+        recentRawTokens: this.recentRawTokens,
+        rawObservationBatchTokens: this.rawObservationBatchTokens,
+        observationReflectionBatchTokens: this.observationReflectionBatchTokens,
+      });
+      const loopSignature = JSON.stringify({
+        lastObservedAt: currentRecord.lastObservedAt?.toISOString?.() ?? null,
+        observedMessageIds: currentRecord.observedMessageIds ?? [],
+        checkpointGeneration: customState.checkpointGeneration,
+        checkpointSummaryTokens: customState.checkpointSummary?.tokenCount ?? 0,
+        activeObservationBlockCount: getActiveObservationBlocks(customState).length,
+        activeObservationTokens: sumTokens(getActiveObservationBlocks(customState)),
+        activeReflectionBlockCount: customState.activeReflectionBlocks.length,
+        activeReflectionTokens: sumTokens(customState.activeReflectionBlocks),
+        recentRawCount: recent.length,
+        recentRawTokens,
         overflowCount: overflow.length,
         overflowTokens,
-        threshold: this.rawObservationBatchTokens,
       });
-      currentRecord = await this.createObservationBlock({
-        currentRecord,
+
+      if (previousLoopSignature === loopSignature) {
+        throw new Error(`Checkpointed OM loop made no progress: ${loopSignature}`);
+      }
+
+      previousLoopSignature = loopSignature;
+
+      logOmState('state loaded', {
         threadId: context.threadId,
         resourceId: context.resourceId,
         state: customState,
-        overflow,
-        omMetadata,
-        requestContext: args.requestContext,
+        recentRawCount: recent.length,
+        recentRawTokens,
+        overflowCount: overflow.length,
+        overflowTokens,
+        reflectionBudget,
       });
-    } else {
+
+      if (sumTokens(getActiveObservationBlocks(customState)) >= this.observationReflectionBatchTokens) {
+        forgeDebug('checkpointed-om', 'reflection threshold reached', {
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          activeObservationTokens: sumTokens(getActiveObservationBlocks(customState)),
+          threshold: this.observationReflectionBatchTokens,
+        });
+        currentRecord = await this.createReflectionGeneration({
+          currentRecord,
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          state: customState,
+          requestContext: args.requestContext,
+        });
+        await this.persistCustomState(context.threadId, customState);
+        activeReflections = await this.loadActiveReflections(
+          context.threadId,
+          context.resourceId,
+          customState.activeReflectionBlocks,
+        );
+        continue;
+      }
+
+      if (overflowTokens >= this.rawObservationBatchTokens) {
+        forgeDebug('checkpointed-om', 'observation threshold reached', {
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          overflowCount: overflow.length,
+          overflowTokens,
+          threshold: this.rawObservationBatchTokens,
+        });
+        currentRecord = await this.createObservationBlock({
+          currentRecord,
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          state: customState,
+          overflow,
+          requestContext: args.requestContext,
+        });
+        await this.persistCustomState(context.threadId, customState);
+        continue;
+      }
+
       const reflectionTokens = activeReflections.reduce(
         (total, record) => total + this.tokenCounter.countObservations(record.activeObservations),
         0,
@@ -900,12 +928,16 @@ export class CheckpointedObservationalMemoryProcessor
           requestContext: args.requestContext,
         });
         this.pruneArchivedObservationBlocks(customState);
+        await this.persistCustomState(context.threadId, customState);
         activeReflections = await this.loadActiveReflections(
           context.threadId,
           context.resourceId,
           customState.activeReflectionBlocks,
         );
+        continue;
       }
+
+      break;
     }
 
     const finalRawMessages = getMessagesAfterCursor(
@@ -932,14 +964,7 @@ export class CheckpointedObservationalMemoryProcessor
         observationReflectionBatchTokens: this.observationReflectionBatchTokens,
       }),
     });
-
-    if (thread) {
-      await this.store.updateThread({
-        id: thread.id,
-        title: thread.title,
-        metadata: setCustomOmState(thread, customState, omMetadata),
-      });
-    }
+    await this.persistCustomState(context.threadId, customState);
 
     logOmState('state persisted', {
       threadId: context.threadId,
@@ -1037,7 +1062,6 @@ export class CheckpointedObservationalMemoryProcessor
     resourceId: string;
     state: CustomOmState;
     overflow: RawUnit[];
-    omMetadata: ReturnType<typeof getThreadOMMetadata>;
     requestContext: RequestContext | undefined;
   }) {
     const batch = takeMessageBatch(
@@ -1258,6 +1282,21 @@ export class CheckpointedObservationalMemoryProcessor
       remainingObservationBlockCount: getActiveObservationBlocks(input.state).length,
     });
     return currentRecord;
+  }
+
+  private async persistCustomState(threadId: string, state: CustomOmState) {
+    const thread = await this.store.getThreadById({ threadId });
+
+    if (!thread) {
+      return;
+    }
+
+    const omMetadata = getThreadOMMetadata(thread.metadata);
+    await this.store.updateThread({
+      id: thread.id,
+      title: thread.title,
+      metadata: setCustomOmState(thread, state, omMetadata),
+    });
   }
 
   private async loadActiveReflections(
