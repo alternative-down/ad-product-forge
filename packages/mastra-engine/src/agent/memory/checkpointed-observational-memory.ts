@@ -1094,6 +1094,7 @@ export class CheckpointedObservationalMemoryProcessor
       activeObservations: activeObservationText,
       observationTokenCount: this.tokenCounter.countObservations(activeObservationText),
       lastObservedAt: new Date(lastObservedAt),
+      observedMessageIds: batch.selected.map((unit) => unit.id),
       updatedAt: new Date(),
     };
   }
