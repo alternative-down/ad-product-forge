@@ -46,6 +46,48 @@ interface MastraMemoryStore {
   createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
 }
 
+type CustomCheckpointSummary = {
+  text: string;
+  tokenCount: number;
+  upToGeneration: number;
+  updatedAt: string;
+};
+
+type CustomCheckpointedContextState = {
+  checkpointGeneration: number | null;
+  checkpointSummary: CustomCheckpointSummary | null;
+  observationBlocks: Array<{
+    text: string;
+    tokenCount: number;
+    reflectedGeneration: number | null;
+  }>;
+  activeReflectionBlocks: Array<{
+    recordId: string;
+    generationCount: number;
+    tokenCount: number;
+  }>;
+};
+
+type MemoryStoreWithObservationalMemory = MastraMemoryStore & {
+  getThreadById(input: { threadId: string }): Promise<{
+    metadata?: Record<string, unknown>;
+  } | null>;
+  getObservationalMemory(threadId: string | null, resourceId: string): Promise<{
+    activeObservations: string;
+    generationCount: number;
+    updatedAt: Date;
+    lastObservedAt: Date | null;
+  } | null>;
+  getObservationalMemoryHistory(
+    threadId: string | null,
+    resourceId: string,
+    limit?: number,
+  ): Promise<Array<{
+    id: string;
+    activeObservations: string;
+  }>>;
+};
+
 function hasCreateThread(store: unknown): store is MastraMemoryStore {
   return (
     typeof store === 'object' &&
@@ -53,6 +95,43 @@ function hasCreateThread(store: unknown): store is MastraMemoryStore {
     'createThread' in store &&
     typeof (store as MastraMemoryStore).createThread === 'function'
   );
+}
+
+function hasObservationalMemoryAccess(store: unknown): store is MemoryStoreWithObservationalMemory {
+  return (
+    typeof store === 'object' &&
+    store !== null &&
+    'getThreadById' in store &&
+    typeof (store as MemoryStoreWithObservationalMemory).getThreadById === 'function' &&
+    'getObservationalMemory' in store &&
+    typeof (store as MemoryStoreWithObservationalMemory).getObservationalMemory === 'function' &&
+    'getObservationalMemoryHistory' in store &&
+    typeof (store as MemoryStoreWithObservationalMemory).getObservationalMemoryHistory === 'function'
+  );
+}
+
+function getCustomCheckpointedContextState(metadata: Record<string, unknown> | undefined) {
+  const rawMastra = metadata?.mastra;
+  const rawOm = rawMastra && typeof rawMastra === 'object'
+    ? (rawMastra as { om?: Record<string, unknown> }).om
+    : undefined;
+  const custom = rawOm?.customCheckpointedContext;
+
+  if (!custom || typeof custom !== 'object') {
+    return null;
+  }
+
+  const value = custom as Partial<CustomCheckpointedContextState>;
+  return {
+    checkpointGeneration:
+      typeof value.checkpointGeneration === 'number' ? value.checkpointGeneration : null,
+    checkpointSummary:
+      value.checkpointSummary && typeof value.checkpointSummary === 'object'
+        ? value.checkpointSummary as CustomCheckpointSummary
+        : null,
+    observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
+    activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks) ? value.activeReflectionBlocks : [],
+  };
 }
 
 export function createAdminReadModel(input: {
@@ -443,13 +522,47 @@ export function createAdminReadModel(input: {
       threadId: mastraAgentId,
       resourceId: mastraAgentId,
     });
+    const memoryStore = storage.stores.memory;
+    const customState = hasObservationalMemoryAccess(memoryStore)
+      ? getCustomCheckpointedContextState((await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata)
+      : null;
+    let reflection = '';
+    let observations = '';
+    let generationCount = 0;
+    let updatedAt: number | null = null;
+    let lastObservedAt: number | null = null;
+
+    if (hasObservationalMemoryAccess(memoryStore)) {
+      const record = await memoryStore.getObservationalMemory(mastraAgentId, mastraAgentId);
+      if (record) {
+        observations = record.activeObservations ?? '';
+        generationCount = record.generationCount;
+        updatedAt = record.updatedAt?.getTime?.() ?? null;
+        lastObservedAt = record.lastObservedAt?.getTime?.() ?? null;
+      }
+
+      if (customState?.activeReflectionBlocks.length) {
+        const history = await memoryStore.getObservationalMemoryHistory(mastraAgentId, mastraAgentId, 200);
+        const byId = new Map(history.map((item) => [item.id, item.activeObservations]));
+        reflection = customState.activeReflectionBlocks
+          .map((block) => byId.get(block.recordId)?.trim() ?? '')
+          .filter(Boolean)
+          .join('\n\n');
+      }
+    }
+
     return {
       workingMemory: formatWorkingMemoryValue(workingMemory),
-      observations: '',
-      reflection: '',
-      generationCount: 0,
-      updatedAt: null,
-      lastObservedAt: null,
+      observations,
+      reflection,
+      generationCount,
+      updatedAt,
+      lastObservedAt,
+      checkpointGeneration: customState?.checkpointGeneration ?? null,
+      checkpointSummary: customState?.checkpointSummary?.text ?? null,
+      checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
+        ? Date.parse(customState.checkpointSummary.updatedAt)
+        : null,
     };
   }
 

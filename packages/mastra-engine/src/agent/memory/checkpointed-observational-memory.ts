@@ -47,9 +47,17 @@ type ReflectionBlock = {
   createdAt: string;
 };
 
+type CheckpointSummary = {
+  text: string;
+  tokenCount: number;
+  upToGeneration: number;
+  updatedAt: string;
+};
+
 type CustomOmState = {
   version: 1;
   checkpointGeneration: number | null;
+  checkpointSummary: CheckpointSummary | null;
   observationBlocks: ObservationBlock[];
   activeReflectionBlocks: ReflectionBlock[];
 };
@@ -66,6 +74,7 @@ type CheckpointedObservationalMemoryConfig = {
 };
 
 const CUSTOM_OM_TAG_REFLECTIONS = 'custom-om-reflections';
+const CUSTOM_OM_TAG_CHECKPOINT = 'custom-om-checkpoint';
 const CUSTOM_OM_TAG_OBSERVATIONS = 'custom-om-observations';
 const DEFAULT_TOTAL_CONTEXT_TOKENS = 50_000;
 const DEFAULT_RECENT_RAW_TOKENS = 10_000;
@@ -172,6 +181,7 @@ function getCustomOmState(thread: StorageThread | null): CustomOmState {
     return {
       version: 1,
       checkpointGeneration: null,
+      checkpointSummary: null,
       observationBlocks: [],
       activeReflectionBlocks: [],
     };
@@ -182,6 +192,10 @@ function getCustomOmState(thread: StorageThread | null): CustomOmState {
     version: 1,
     checkpointGeneration:
       typeof value.checkpointGeneration === 'number' ? value.checkpointGeneration : null,
+    checkpointSummary:
+      value.checkpointSummary && typeof value.checkpointSummary === 'object'
+        ? value.checkpointSummary as CheckpointSummary
+        : null,
     observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
     activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks)
       ? value.activeReflectionBlocks
@@ -288,6 +302,7 @@ function logOmState(
     threadId: input.threadId,
     resourceId: input.resourceId,
     checkpointGeneration: input.state.checkpointGeneration,
+    checkpointSummaryTokens: input.state.checkpointSummary?.tokenCount ?? 0,
     activeObservationBlockCount: getActiveObservationBlocks(input.state).length,
     activeObservationTokens: sumTokens(getActiveObservationBlocks(input.state)),
     activeReflectionBlockCount: input.state.activeReflectionBlocks.length,
@@ -334,6 +349,15 @@ function renderReflectionSystemText(reflections: ObservationalMemoryRecord[]) {
   }
 
   return ['Active reflections:', content].join('\n');
+}
+
+function renderCheckpointSystemText(summary: CheckpointSummary | null) {
+  const content = summary?.text?.trim();
+  if (!content) {
+    return '';
+  }
+
+  return ['Checkpoint summary:', content].join('\n');
 }
 
 function renderObservationSystemText(blocks: ObservationBlock[]) {
@@ -611,7 +635,14 @@ export class CheckpointedObservationalMemoryProcessor
           reflectionTokens,
           reflectionBudget,
         });
-        this.trimActiveReflections(customState, reflectionBudget);
+        await this.advanceCheckpoint({
+          threadId: context.threadId,
+          resourceId: context.resourceId,
+          state: customState,
+          activeReflections,
+          reflectionBudget,
+          requestContext: args.requestContext,
+        });
         this.pruneArchivedObservationBlocks(customState);
         activeReflections = await this.loadActiveReflections(
           context.threadId,
@@ -641,6 +672,7 @@ export class CheckpointedObservationalMemoryProcessor
     this.rebuildMessageList(args.messageList, {
       record: currentRecord,
       reflections: activeReflections,
+      checkpointSummary: customState.checkpointSummary,
       observationBlocks: customState.observationBlocks.filter(
         (block) => block.reflectedGeneration === null,
       ),
@@ -888,25 +920,95 @@ export class CheckpointedObservationalMemoryProcessor
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
   }
 
-  private trimActiveReflections(state: CustomOmState, reflectionBudget: number) {
-    let currentTokens = sumTokens(state.activeReflectionBlocks);
+  private async advanceCheckpoint(input: {
+    threadId: string;
+    resourceId: string;
+    state: CustomOmState;
+    activeReflections: ObservationalMemoryRecord[];
+    reflectionBudget: number;
+    requestContext?: RequestContext;
+  }) {
+    let currentTokens = sumTokens(input.state.activeReflectionBlocks);
+    const removedBlocks: ReflectionBlock[] = [];
 
-    while (currentTokens > reflectionBudget && state.activeReflectionBlocks.length > 0) {
-      const removed = state.activeReflectionBlocks.shift();
+    while (currentTokens > input.reflectionBudget && input.state.activeReflectionBlocks.length > 0) {
+      const removed = input.state.activeReflectionBlocks.shift();
       if (!removed) {
         break;
       }
 
-      state.checkpointGeneration = removed.generationCount;
+      removedBlocks.push(removed);
+      input.state.checkpointGeneration = removed.generationCount;
       currentTokens -= removed.tokenCount;
       forgeDebug('checkpointed-om', 'checkpoint advanced', {
-        checkpointGeneration: state.checkpointGeneration,
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+        checkpointGeneration: input.state.checkpointGeneration,
         removedReflectionRecordId: removed.recordId,
         removedReflectionTokens: removed.tokenCount,
         remainingReflectionTokens: currentTokens,
-        reflectionBudget,
+        reflectionBudget: input.reflectionBudget,
       });
     }
+
+    if (removedBlocks.length === 0 || input.state.checkpointGeneration === null) {
+      return;
+    }
+
+    const removedRecordIds = new Set(removedBlocks.map((block) => block.recordId));
+    const removedReflectionText = input.activeReflections
+      .filter((record) => removedRecordIds.has(record.id))
+      .map((record) => record.activeObservations.trim())
+      .filter(Boolean)
+      .join('\n\n');
+
+    if (!removedReflectionText) {
+      return;
+    }
+
+    forgeDebug('checkpointed-om', 'creating checkpoint summary', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      removedReflectionCount: removedBlocks.length,
+      removedReflectionTokens: removedBlocks.reduce((total, block) => total + block.tokenCount, 0),
+      previousCheckpointSummaryTokens: input.state.checkpointSummary?.tokenCount ?? 0,
+    });
+
+    const checkpointText = await this.generateOmText({
+      agentId: `custom-checkpoint-${randomUUID()}`,
+      agentName: 'Checkpointed OM checkpoint summarizer',
+      instructions: buildReflectorSystemPrompt(),
+      prompt: buildReflectorPrompt(
+        [input.state.checkpointSummary?.text, removedReflectionText].filter(Boolean).join('\n\n'),
+      ),
+      requestContext: input.requestContext,
+      debugContext: {
+        phase: 'checkpoint',
+        removedReflectionCount: removedBlocks.length,
+        removedReflectionTokens: removedBlocks.reduce((total, block) => total + block.tokenCount, 0),
+        previousCheckpointSummaryTokens: input.state.checkpointSummary?.tokenCount ?? 0,
+      },
+    });
+    const parsed = parseReflectorOutput(checkpointText);
+    const summaryText = parsed.observations.trim();
+
+    if (!summaryText) {
+      throw new Error('Checkpointed OM checkpoint summarizer returned no observations');
+    }
+
+    input.state.checkpointSummary = {
+      text: summaryText,
+      tokenCount: this.tokenCounter.countObservations(summaryText),
+      upToGeneration: input.state.checkpointGeneration,
+      updatedAt: new Date().toISOString(),
+    };
+
+    forgeDebug('checkpointed-om', 'checkpoint summary created', {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      checkpointGeneration: input.state.checkpointGeneration,
+      checkpointSummaryTokens: input.state.checkpointSummary.tokenCount,
+    });
   }
 
   private pruneArchivedObservationBlocks(state: CustomOmState) {
@@ -935,6 +1037,7 @@ export class CheckpointedObservationalMemoryProcessor
     input: {
       record: ObservationalMemoryRecord;
       reflections: ObservationalMemoryRecord[];
+      checkpointSummary: CheckpointSummary | null;
       observationBlocks: ObservationBlock[];
     },
   ) {
@@ -952,8 +1055,14 @@ export class CheckpointedObservationalMemoryProcessor
       }
     }
 
+    messageList.clearSystemMessages(CUSTOM_OM_TAG_CHECKPOINT);
     messageList.clearSystemMessages(CUSTOM_OM_TAG_REFLECTIONS);
     messageList.clearSystemMessages(CUSTOM_OM_TAG_OBSERVATIONS);
+
+    const checkpointText = renderCheckpointSystemText(input.checkpointSummary);
+    if (checkpointText) {
+      messageList.addSystem(checkpointText, CUSTOM_OM_TAG_CHECKPOINT);
+    }
 
     const reflectionsText = renderReflectionSystemText(input.reflections);
     if (reflectionsText) {

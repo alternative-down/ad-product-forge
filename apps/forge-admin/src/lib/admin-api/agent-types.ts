@@ -178,6 +178,9 @@ export type AgentRuntimeMemorySnapshot = {
   generationCount: number;
   updatedAt: number;
   lastObservedAt: number | null;
+  checkpointGeneration: number | null;
+  checkpointSummary: string | null;
+  checkpointUpdatedAt: number | null;
 };
 
 export type HireAgentInput = {
