@@ -1091,6 +1091,8 @@ export class CheckpointedObservationalMemoryProcessor
       prompt: observerPrompt,
       requestContext: input.requestContext,
       debugContext: {
+        threadId: input.threadId,
+        resourceId: input.resourceId,
         phase: 'observe',
         batchMessageCount: batch.selected.length,
         batchTokenCount: batch.usedTokens,
@@ -1173,6 +1175,8 @@ export class CheckpointedObservationalMemoryProcessor
       prompt: buildReflectorPrompt([supportText, selectedText].filter(Boolean).join('\n')),
       requestContext: input.requestContext,
       debugContext: {
+        threadId: input.threadId,
+        resourceId: input.resourceId,
         phase: 'reflect',
         observationBlockCount: batch.selected.length,
         observationBatchTokens: batch.usedTokens,
@@ -1339,6 +1343,8 @@ export class CheckpointedObservationalMemoryProcessor
       ),
       requestContext: input.requestContext,
       debugContext: {
+        threadId: input.threadId,
+        resourceId: input.resourceId,
         phase: 'checkpoint',
         removedReflectionCount: removedBlocks.length,
         removedReflectionTokens: removedBlocks.reduce((total, block) => total + block.tokenCount, 0),
