@@ -47,6 +47,7 @@ type ReflectionBlock = {
 
 type CustomOmState = {
   version: 1;
+  checkpointGeneration: number | null;
   observationBlocks: ObservationBlock[];
   activeReflectionBlocks: ReflectionBlock[];
 };
@@ -167,6 +168,7 @@ function getCustomOmState(thread: StorageThread | null): CustomOmState {
   ) {
     return {
       version: 1,
+      checkpointGeneration: null,
       observationBlocks: [],
       activeReflectionBlocks: [],
     };
@@ -175,6 +177,8 @@ function getCustomOmState(thread: StorageThread | null): CustomOmState {
   const value = custom as Partial<CustomOmState>;
   return {
     version: 1,
+    checkpointGeneration:
+      typeof value.checkpointGeneration === 'number' ? value.checkpointGeneration : null,
     observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
     activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks)
       ? value.activeReflectionBlocks
@@ -209,6 +213,10 @@ function setCustomOmState(
 
 function sumTokens(blocks: Array<{ tokenCount: number }>) {
   return blocks.reduce((total, block) => total + block.tokenCount, 0);
+}
+
+function getActiveObservationBlocks(state: CustomOmState) {
+  return state.observationBlocks.filter((block) => block.reflectedGeneration === null);
 }
 
 function formatObservationBlocks(blocks: ObservationBlock[]) {
@@ -440,8 +448,7 @@ export class CheckpointedObservationalMemoryProcessor
         this.recentRawTokens,
       );
 
-      if (sumTokens(customState.observationBlocks.filter((block) => block.reflectedGeneration === null))
-        >= this.observationReflectionBatchTokens) {
+      if (sumTokens(getActiveObservationBlocks(customState)) >= this.observationReflectionBatchTokens) {
         currentRecord = await this.createReflectionGeneration({
           currentRecord,
           threadId: context.threadId,
@@ -483,6 +490,7 @@ export class CheckpointedObservationalMemoryProcessor
 
       if (reflectionTokens > reflectionBudget && customState.activeReflectionBlocks.length > 0) {
         this.trimActiveReflections(customState, reflectionBudget);
+        this.pruneArchivedObservationBlocks(customState);
         activeReflections = await this.loadActiveReflections(
           context.threadId,
           context.resourceId,
@@ -543,15 +551,12 @@ export class CheckpointedObservationalMemoryProcessor
       this.tokenCounter,
       this.rawObservationBatchTokens,
     );
-    const existingObservationText = formatObservationBlocks(
-      input.state.observationBlocks.filter((block) => block.reflectedGeneration === null),
-    );
+    const activeObservationBlocks = getActiveObservationBlocks(input.state);
     const supportText = takeSupportText(
-      input.state.observationBlocks.filter((block) => block.reflectedGeneration === null),
+      activeObservationBlocks,
       this.tokenCounter,
       this.observationSupportTokens,
     );
-    const promptExisting = [supportText, existingObservationText].filter(Boolean).join('\n');
     const observer = new Agent({
       id: `custom-observer-${randomUUID()}`,
       name: 'Custom Observer',
@@ -559,7 +564,7 @@ export class CheckpointedObservationalMemoryProcessor
       instructions: buildObserverSystemPrompt(false),
     });
     const observerResult = await observer.generate(
-      buildObserverPrompt(promptExisting || undefined, batch.selected),
+      buildObserverPrompt(supportText || undefined, batch.selected),
       {
         maxSteps: 1,
         requestContext: input.requestContext,
@@ -587,7 +592,7 @@ export class CheckpointedObservationalMemoryProcessor
     });
 
     const activeObservationText = formatObservationBlocks(
-      input.state.observationBlocks.filter((block) => block.reflectedGeneration === null),
+      getActiveObservationBlocks(input.state),
     );
 
     await this.store.updateActiveObservations({
@@ -614,9 +619,7 @@ export class CheckpointedObservationalMemoryProcessor
     resourceId: string;
     state: CustomOmState;
   }) {
-    const unreflectedBlocks = input.state.observationBlocks.filter(
-      (block) => block.reflectedGeneration === null,
-    );
+    const unreflectedBlocks = getActiveObservationBlocks(input.state);
     const batch = takeObservationBatch(unreflectedBlocks, this.observationReflectionBatchTokens);
     const selectedText = batch.selected.map((block) => block.text).join('\n');
     const supportText = takeSupportText(unreflectedBlocks.slice(0, -batch.selected.length), this.tokenCounter, this.reflectionSupportTokens);
@@ -676,7 +679,7 @@ export class CheckpointedObservationalMemoryProcessor
     }
 
     const remainingObservationText = formatObservationBlocks(
-      input.state.observationBlocks.filter((block) => block.reflectedGeneration === null),
+      getActiveObservationBlocks(input.state),
     );
     const currentRecord: ObservationalMemoryRecord = {
       ...input.currentRecord,
@@ -729,8 +732,25 @@ export class CheckpointedObservationalMemoryProcessor
         break;
       }
 
+      state.checkpointGeneration = removed.generationCount;
       currentTokens -= removed.tokenCount;
     }
+  }
+
+  private pruneArchivedObservationBlocks(state: CustomOmState) {
+    if (state.checkpointGeneration === null) {
+      return;
+    }
+
+    const checkpointGeneration = state.checkpointGeneration;
+
+    state.observationBlocks = state.observationBlocks.filter((block) => {
+      if (block.reflectedGeneration === null) {
+        return true;
+      }
+
+      return block.reflectedGeneration > checkpointGeneration;
+    });
   }
 
   private rebuildMessageList(

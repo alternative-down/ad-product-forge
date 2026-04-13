@@ -23,12 +23,13 @@ export function createAgentRuntimeMemory(input: {
   memoryLastMessagesCount?: number;
   tokenCountFilterEnabled?: boolean;
   tokenCountFilterLimit?: number;
-  omObservationMessageTokens?: number;
-  omObservationBufferTokens?: number;
-  omObservationBufferActivation?: number;
-  omObservationPreviousObserverTokens?: number;
-  omReflectionObservationTokens?: number;
-  omReflectionBufferActivation?: number;
+  checkpointedOmEnabled?: boolean;
+  checkpointedOmTotalContextTokens?: number;
+  checkpointedOmRecentRawTokens?: number;
+  checkpointedOmRawObservationBatchTokens?: number;
+  checkpointedOmObservationReflectionBatchTokens?: number;
+  checkpointedOmObservationSupportTokens?: number;
+  checkpointedOmReflectionSupportTokens?: number;
 }) {
   const memory = createAgentMemory({
     storage: input.storage,
@@ -38,14 +39,21 @@ export function createAgentRuntimeMemory(input: {
   const inputProcessors: InputProcessorOrWorkflow[] = [];
   const outputProcessors: OutputProcessorOrWorkflow[] = [];
 
-  const checkpointedObservationalMemory = createCheckpointedObservationalMemoryProcessor({
-    storage: input.storage,
-    model: input.omModel ?? input.agentModel,
-    rawObservationBatchTokens: input.omObservationMessageTokens,
-    observationReflectionBatchTokens: input.omReflectionObservationTokens,
-  });
+  if (input.checkpointedOmEnabled) {
+    const checkpointedObservationalMemory = createCheckpointedObservationalMemoryProcessor({
+      storage: input.storage,
+      model: input.omModel ?? input.agentModel,
+      totalContextTokens: input.checkpointedOmTotalContextTokens,
+      recentRawTokens: input.checkpointedOmRecentRawTokens,
+      rawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
+      observationReflectionBatchTokens:
+        input.checkpointedOmObservationReflectionBatchTokens,
+      observationSupportTokens: input.checkpointedOmObservationSupportTokens,
+      reflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+    });
 
-  inputProcessors.push(checkpointedObservationalMemory);
+    inputProcessors.push(checkpointedObservationalMemory);
+  }
 
   if (input.tokenCountFilterEnabled ?? true) {
     inputProcessors.push(new TokenLimiterProcessor(input.tokenCountFilterLimit ?? 100000));

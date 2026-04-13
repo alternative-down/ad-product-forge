@@ -433,12 +433,13 @@ const upsertSystemSettingsSchema = z.object({
   memoryLastMessagesCount: z.coerce.number().int().positive().default(20),
   tokenCountFilterEnabled: z.boolean().default(true),
   tokenCountFilterLimit: z.coerce.number().int().positive().default(100000),
-  omObservationMessageTokens: z.coerce.number().int().positive().default(15000),
-  omObservationBufferTokens: z.coerce.number().positive().default(0.2),
-  omObservationBufferActivation: z.coerce.number().positive().max(1).default(0.8),
-  omObservationPreviousObserverTokens: z.coerce.number().int().nonnegative().default(1000),
-  omReflectionObservationTokens: z.coerce.number().int().positive().default(20000),
-  omReflectionBufferActivation: z.coerce.number().positive().max(1).default(0.5),
+  checkpointedOmEnabled: z.boolean().default(false),
+  checkpointedOmTotalContextTokens: z.coerce.number().int().positive().default(50000),
+  checkpointedOmRecentRawTokens: z.coerce.number().int().positive().default(10000),
+  checkpointedOmRawObservationBatchTokens: z.coerce.number().int().positive().default(5000),
+  checkpointedOmObservationReflectionBatchTokens: z.coerce.number().int().positive().default(5000),
+  checkpointedOmObservationSupportTokens: z.coerce.number().int().nonnegative().default(2000),
+  checkpointedOmReflectionSupportTokens: z.coerce.number().int().nonnegative().default(2000),
 });
 
 const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
@@ -661,12 +662,14 @@ export function registerAdminRoutes(input: {
         memoryLastMessagesCount: body.memoryLastMessagesCount,
         tokenCountFilterEnabled: body.tokenCountFilterEnabled,
         tokenCountFilterLimit: body.tokenCountFilterLimit,
-        omObservationMessageTokens: body.omObservationMessageTokens,
-        omObservationBufferTokens: body.omObservationBufferTokens,
-        omObservationBufferActivation: body.omObservationBufferActivation,
-        omObservationPreviousObserverTokens: body.omObservationPreviousObserverTokens,
-        omReflectionObservationTokens: body.omReflectionObservationTokens,
-        omReflectionBufferActivation: body.omReflectionBufferActivation,
+        checkpointedOmEnabled: body.checkpointedOmEnabled,
+        checkpointedOmTotalContextTokens: body.checkpointedOmTotalContextTokens,
+        checkpointedOmRecentRawTokens: body.checkpointedOmRecentRawTokens,
+        checkpointedOmRawObservationBatchTokens: body.checkpointedOmRawObservationBatchTokens,
+        checkpointedOmObservationReflectionBatchTokens:
+          body.checkpointedOmObservationReflectionBatchTokens,
+        checkpointedOmObservationSupportTokens: body.checkpointedOmObservationSupportTokens,
+        checkpointedOmReflectionSupportTokens: body.checkpointedOmReflectionSupportTokens,
       });
       const registry = getInternalAgentRegistry();
 
