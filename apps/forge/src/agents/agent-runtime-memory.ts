@@ -1,5 +1,6 @@
 import {
   createAgentMemory,
+  createCheckpointedObservationalMemoryProcessor,
 } from '@mastra-engine/core';
 import { TokenLimiterProcessor } from '@mastra/core/processors';
 import type {
@@ -37,8 +38,17 @@ export function createAgentRuntimeMemory(input: {
   const inputProcessors: InputProcessorOrWorkflow[] = [];
   const outputProcessors: OutputProcessorOrWorkflow[] = [];
 
+  const checkpointedObservationalMemory = createCheckpointedObservationalMemoryProcessor({
+    storage: input.storage,
+    model: input.omModel ?? input.agentModel,
+    rawObservationBatchTokens: input.omObservationMessageTokens,
+    observationReflectionBatchTokens: input.omReflectionObservationTokens,
+  });
+
+  inputProcessors.push(checkpointedObservationalMemory);
+
   if (input.tokenCountFilterEnabled ?? true) {
-    inputProcessors.unshift(new TokenLimiterProcessor(input.tokenCountFilterLimit ?? 100000));
+    inputProcessors.push(new TokenLimiterProcessor(input.tokenCountFilterLimit ?? 100000));
   }
 
   return {
