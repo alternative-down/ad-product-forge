@@ -1,25 +1,21 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 
 import {
   AdminButton,
   AdminLoadingState,
   PageHeader,
 } from '@/components/admin';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  createAgentMcpServer,
-  deleteAgentMcpServer,
+  assignAgentMcpServer,
+  detachAgentMcpServer,
   getAgent,
-  updateAgentMcpServer,
-  type AgentMcpServerInput,
+  getSystemMcpServers,
+  setAgentMcpServerActive,
 } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
-
-import { McpDialog } from './-mcp-dialog';
-import { createEmptyMcpForm, createMcpForm, type McpForm } from './-mcp-helpers';
 
 export const Route = createFileRoute('/agents/$agentId/mcp/')({
   component: AgentMcpIndexRoute,
@@ -32,90 +28,59 @@ function AgentMcpIndexRoute() {
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
   });
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [mcpForm, setMcpForm] = useState<McpForm>(createEmptyMcpForm);
-  const mcpMutation = useMutation({
-    mutationFn: async (form: McpForm) => {
-      const baseInput = form.transport === 'stdio'
-        ? {
-            agentId,
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            transport: 'stdio' as const,
-            command: form.command.trim(),
-            argsText: form.argsText.trim() || undefined,
-            envVarsText: form.envVarsText.trim() || undefined,
-            isActive: form.isActive,
-          }
-        : {
-            agentId,
-            name: form.name.trim(),
-            description: form.description.trim() || undefined,
-            transport: 'http_streamable' as const,
-            url: form.url.trim(),
-            headersText: form.headersText.trim() || undefined,
-            isActive: form.isActive,
-          };
-
-      if (form.configId && form.serverId) {
-        return updateAgentMcpServer({
-          ...baseInput,
-          configId: form.configId,
-          serverId: form.serverId,
-        });
-      }
-
-      return createAgentMcpServer(baseInput satisfies AgentMcpServerInput);
-    },
-    onMutate: (form) =>
-      startAdminAction(form.configId ? 'Salvando servidor MCP...' : 'Criando servidor MCP...'),
-    onSuccess: async (_data, form, context) => {
-      succeedAdminAction(context, form.configId ? 'Servidor MCP atualizado.' : 'Servidor MCP criado.');
-      setDialogOpen(false);
-      setMcpForm(createEmptyMcpForm());
+  const systemMcpQuery = useQuery({
+    queryKey: ['admin', 'system-mcp'],
+    queryFn: getSystemMcpServers,
+  });
+  const assignMutation = useMutation({
+    mutationFn: (serverId: string) => assignAgentMcpServer({ agentId, serverId, isActive: true }),
+    onMutate: () => startAdminAction('Vinculando MCP...'),
+    onSuccess: async (_data, _serverId, context) => {
+      succeedAdminAction(context, 'MCP vinculado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
     },
-    onError: (error, _variables, context) => {
-      failAdminAction(context, error);
-    },
+    onError: (error, _serverId, context) => failAdminAction(context, error),
   });
-  const deleteMcpMutation = useMutation({
-    mutationFn: (server: { configId: string; serverId: string }) =>
-      deleteAgentMcpServer({
-        agentId,
-        configId: server.configId,
-        serverId: server.serverId,
-      }),
-    onMutate: () => startAdminAction('Excluindo servidor MCP...'),
-    onSuccess: async (_data, _variables, context) => {
-      succeedAdminAction(context, 'Servidor MCP excluído.');
+  const activeMutation = useMutation({
+    mutationFn: (input: { configId: string; isActive: boolean }) =>
+      setAgentMcpServerActive({ agentId, configId: input.configId, isActive: input.isActive }),
+    onMutate: () => startAdminAction('Atualizando MCP...'),
+    onSuccess: async (_data, _input, context) => {
+      succeedAdminAction(context, 'MCP atualizado.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
     },
-    onError: (error, _variables, context) => {
-      failAdminAction(context, error);
-    },
+    onError: (error, _input, context) => failAdminAction(context, error),
   });
-  const mcpServers = agentQuery.data?.mcpServers ?? [];
+  const detachMutation = useMutation({
+    mutationFn: (configId: string) => detachAgentMcpServer({ agentId, configId }),
+    onMutate: () => startAdminAction('Removendo vínculo MCP...'),
+    onSuccess: async (_data, _configId, context) => {
+      succeedAdminAction(context, 'Vínculo MCP removido.');
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+    },
+    onError: (error, _configId, context) => failAdminAction(context, error),
+  });
+  const assignedByServerId = new Map(
+    (agentQuery.data?.mcpServers ?? []).map((server) => [server.serverId, server]),
+  );
+  const servers = systemMcpQuery.data ?? [];
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando MCP..." /> : null}
+      {(agentQuery.isLoading && !agentQuery.data) || (systemMcpQuery.isLoading && !systemMcpQuery.data)
+        ? <AdminLoadingState label="Carregando MCP..." />
+        : null}
+
       <PageHeader title="MCP" />
 
       <section className="space-y-5">
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-1">
-            <div className="text-lg font-semibold tracking-[-0.03em]">Servidores MCP</div>
+            <div className="text-lg font-semibold tracking-[-0.03em]">Servidores compartilhados</div>
+            <div className="text-sm text-muted-foreground">
+              Gerencie os servidores em <Link to="/settings/mcp" className="underline underline-offset-4">Configurações &gt; MCP</Link> e apenas habilite aqui os que este agente pode usar.
+            </div>
           </div>
-
-          <AdminButton
-            onClick={() => {
-              setMcpForm(createEmptyMcpForm());
-              setDialogOpen(true);
-            }}
-          >
-            Novo
-          </AdminButton>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -124,44 +89,69 @@ function AgentMcpIndexRoute() {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Transporte</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Ativo</TableHead>
                 <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mcpServers.map((server) => (
-                <TableRow key={server.configId}>
-                  <TableCell className="px-4 py-3">{server.name}</TableCell>
-                  <TableCell className="px-4 py-3">{server.transport === 'stdio' ? 'stdio' : 'http'}</TableCell>
-                  <TableCell className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <AdminButton
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setMcpForm(createMcpForm(server));
-                          setDialogOpen(true);
+              {servers.map((server) => {
+                const assigned = assignedByServerId.get(server.serverId) ?? null;
+                const busy =
+                  assignMutation.isPending ||
+                  activeMutation.isPending ||
+                  detachMutation.isPending;
+
+                return (
+                  <TableRow key={server.serverId}>
+                    <TableCell className="px-4 py-3">
+                      <div className="space-y-1">
+                        <div>{server.name}</div>
+                        {server.description ? (
+                          <div className="text-xs text-muted-foreground">{server.description}</div>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">{server.transport === 'stdio' ? 'stdio' : 'http'}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <Switch
+                        checked={assigned?.isActive ?? false}
+                        disabled={!assigned || busy}
+                        onCheckedChange={(checked) => {
+                          if (!assigned) {
+                            return;
+                          }
+
+                          activeMutation.mutate({ configId: assigned.configId, isActive: checked });
                         }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
-                      </AdminButton>
-                      <AdminButton
-                        variant="ghost"
-                        size="icon"
-                        disabled={deleteMcpMutation.isPending}
-                        onClick={() => deleteMcpMutation.mutate({ configId: server.configId, serverId: server.serverId })}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Excluir</span>
-                      </AdminButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {mcpServers.length === 0 ? (
+                      />
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        {assigned ? (
+                          <AdminButton
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => detachMutation.mutate(assigned.configId)}
+                          >
+                            Remover
+                          </AdminButton>
+                        ) : (
+                          <AdminButton
+                            disabled={busy || !server.isActive}
+                            onClick={() => assignMutation.mutate(server.serverId)}
+                          >
+                            Habilitar
+                          </AdminButton>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {servers.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={3}>
-                    Nenhum servidor MCP ainda.
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={4}>
+                    Nenhum servidor MCP cadastrado ainda.
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -170,18 +160,8 @@ function AgentMcpIndexRoute() {
         </div>
 
         {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
-        {mcpMutation.error ? <div className="text-sm text-destructive">{mcpMutation.error.message}</div> : null}
-        {deleteMcpMutation.error ? <div className="text-sm text-destructive">{deleteMcpMutation.error.message}</div> : null}
+        {systemMcpQuery.error ? <div className="text-sm text-destructive">{systemMcpQuery.error.message}</div> : null}
       </section>
-
-      <McpDialog
-        open={dialogOpen}
-        pending={mcpMutation.isPending}
-        form={mcpForm}
-        onOpenChange={setDialogOpen}
-        onFormChange={setMcpForm}
-        onSubmit={() => mcpMutation.mutate(mcpForm)}
-      />
     </div>
   );
 }

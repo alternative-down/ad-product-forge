@@ -17,6 +17,47 @@ export type SystemSettings = {
   checkpointedOmReflectionSupportTokens: number;
 };
 
+export type SystemMcpServer = {
+  serverId: string;
+  name: string;
+  description?: string;
+  transport: 'stdio' | 'http_streamable';
+  command: string;
+  argsText: string;
+  envVarsText: string;
+  url: string;
+  headersText: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UpsertSystemMcpServerInput =
+  | {
+      serverId?: string;
+      name: string;
+      description?: string;
+      transport: 'stdio';
+      command: string;
+      argsText?: string;
+      envVarsText?: string;
+      url?: string;
+      headersText?: string;
+      isActive: boolean;
+    }
+  | {
+      serverId?: string;
+      name: string;
+      description?: string;
+      transport: 'http_streamable';
+      url: string;
+      headersText?: string;
+      command?: string;
+      argsText?: string;
+      envVarsText?: string;
+      isActive: boolean;
+    };
+
 export type SystemOauthState = {
   storePath: string;
   providers: Array<{

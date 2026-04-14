@@ -21,6 +21,7 @@ import { Route as AgentsIndexRouteImport } from './routes/agents/index'
 import { Route as SettingsPricesRouteRouteImport } from './routes/settings/prices/route'
 import { Route as SettingsMinimaxRouteRouteImport } from './routes/settings/minimax/route'
 import { Route as SettingsMigaduRouteRouteImport } from './routes/settings/migadu/route'
+import { Route as SettingsMcpRouteRouteImport } from './routes/settings/mcp/route'
 import { Route as SettingsLlmRouteRouteImport } from './routes/settings/llm/route'
 import { Route as SettingsGithubRouteRouteImport } from './routes/settings/github/route'
 import { Route as SettingsCoolifyRouteRouteImport } from './routes/settings/coolify/route'
@@ -32,6 +33,7 @@ import { Route as AgentsAgentIdRouteRouteImport } from './routes/agents/$agentId
 import { Route as SettingsPricesIndexRouteImport } from './routes/settings/prices/index'
 import { Route as SettingsMinimaxIndexRouteImport } from './routes/settings/minimax/index'
 import { Route as SettingsMigaduIndexRouteImport } from './routes/settings/migadu/index'
+import { Route as SettingsMcpIndexRouteImport } from './routes/settings/mcp/index'
 import { Route as SettingsLlmIndexRouteImport } from './routes/settings/llm/index'
 import { Route as SettingsGithubIndexRouteImport } from './routes/settings/github/index'
 import { Route as SettingsCoolifyIndexRouteImport } from './routes/settings/coolify/index'
@@ -122,6 +124,11 @@ const SettingsMigaduRouteRoute = SettingsMigaduRouteRouteImport.update({
   path: '/migadu',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsMcpRouteRoute = SettingsMcpRouteRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const SettingsLlmRouteRoute = SettingsLlmRouteRouteImport.update({
   id: '/llm',
   path: '/llm',
@@ -176,6 +183,11 @@ const SettingsMigaduIndexRoute = SettingsMigaduIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsMigaduRouteRoute,
+} as any)
+const SettingsMcpIndexRoute = SettingsMcpIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsMcpRouteRoute,
 } as any)
 const SettingsLlmIndexRoute = SettingsLlmIndexRouteImport.update({
   id: '/',
@@ -354,6 +366,7 @@ export interface FileRoutesByFullPath {
   '/settings/coolify': typeof SettingsCoolifyRouteRouteWithChildren
   '/settings/github': typeof SettingsGithubRouteRouteWithChildren
   '/settings/llm': typeof SettingsLlmRouteRouteWithChildren
+  '/settings/mcp': typeof SettingsMcpRouteRouteWithChildren
   '/settings/migadu': typeof SettingsMigaduRouteRouteWithChildren
   '/settings/minimax': typeof SettingsMinimaxRouteRouteWithChildren
   '/settings/prices': typeof SettingsPricesRouteRouteWithChildren
@@ -377,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/settings/coolify/': typeof SettingsCoolifyIndexRoute
   '/settings/github/': typeof SettingsGithubIndexRoute
   '/settings/llm/': typeof SettingsLlmIndexRoute
+  '/settings/mcp/': typeof SettingsMcpIndexRoute
   '/settings/migadu/': typeof SettingsMigaduIndexRoute
   '/settings/minimax/': typeof SettingsMinimaxIndexRoute
   '/settings/prices/': typeof SettingsPricesIndexRoute
@@ -408,6 +422,7 @@ export interface FileRoutesByTo {
   '/settings/coolify': typeof SettingsCoolifyIndexRoute
   '/settings/github': typeof SettingsGithubIndexRoute
   '/settings/llm': typeof SettingsLlmIndexRoute
+  '/settings/mcp': typeof SettingsMcpIndexRoute
   '/settings/migadu': typeof SettingsMigaduIndexRoute
   '/settings/minimax': typeof SettingsMinimaxIndexRoute
   '/settings/prices': typeof SettingsPricesIndexRoute
@@ -438,6 +453,7 @@ export interface FileRoutesById {
   '/settings/coolify': typeof SettingsCoolifyRouteRouteWithChildren
   '/settings/github': typeof SettingsGithubRouteRouteWithChildren
   '/settings/llm': typeof SettingsLlmRouteRouteWithChildren
+  '/settings/mcp': typeof SettingsMcpRouteRouteWithChildren
   '/settings/migadu': typeof SettingsMigaduRouteRouteWithChildren
   '/settings/minimax': typeof SettingsMinimaxRouteRouteWithChildren
   '/settings/prices': typeof SettingsPricesRouteRouteWithChildren
@@ -461,6 +477,7 @@ export interface FileRoutesById {
   '/settings/coolify/': typeof SettingsCoolifyIndexRoute
   '/settings/github/': typeof SettingsGithubIndexRoute
   '/settings/llm/': typeof SettingsLlmIndexRoute
+  '/settings/mcp/': typeof SettingsMcpIndexRoute
   '/settings/migadu/': typeof SettingsMigaduIndexRoute
   '/settings/minimax/': typeof SettingsMinimaxIndexRoute
   '/settings/prices/': typeof SettingsPricesIndexRoute
@@ -494,6 +511,7 @@ export interface FileRouteTypes {
     | '/settings/coolify'
     | '/settings/github'
     | '/settings/llm'
+    | '/settings/mcp'
     | '/settings/migadu'
     | '/settings/minimax'
     | '/settings/prices'
@@ -517,6 +535,7 @@ export interface FileRouteTypes {
     | '/settings/coolify/'
     | '/settings/github/'
     | '/settings/llm/'
+    | '/settings/mcp/'
     | '/settings/migadu/'
     | '/settings/minimax/'
     | '/settings/prices/'
@@ -548,6 +567,7 @@ export interface FileRouteTypes {
     | '/settings/coolify'
     | '/settings/github'
     | '/settings/llm'
+    | '/settings/mcp'
     | '/settings/migadu'
     | '/settings/minimax'
     | '/settings/prices'
@@ -577,6 +597,7 @@ export interface FileRouteTypes {
     | '/settings/coolify'
     | '/settings/github'
     | '/settings/llm'
+    | '/settings/mcp'
     | '/settings/migadu'
     | '/settings/minimax'
     | '/settings/prices'
@@ -600,6 +621,7 @@ export interface FileRouteTypes {
     | '/settings/coolify/'
     | '/settings/github/'
     | '/settings/llm/'
+    | '/settings/mcp/'
     | '/settings/migadu/'
     | '/settings/minimax/'
     | '/settings/prices/'
@@ -712,6 +734,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsMigaduRouteRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/mcp': {
+      id: '/settings/mcp'
+      path: '/mcp'
+      fullPath: '/settings/mcp'
+      preLoaderRoute: typeof SettingsMcpRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/settings/llm': {
       id: '/settings/llm'
       path: '/llm'
@@ -788,6 +817,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/migadu/'
       preLoaderRoute: typeof SettingsMigaduIndexRouteImport
       parentRoute: typeof SettingsMigaduRouteRoute
+    }
+    '/settings/mcp/': {
+      id: '/settings/mcp/'
+      path: '/'
+      fullPath: '/settings/mcp/'
+      preLoaderRoute: typeof SettingsMcpIndexRouteImport
+      parentRoute: typeof SettingsMcpRouteRoute
     }
     '/settings/llm/': {
       id: '/settings/llm/'
@@ -1302,6 +1338,17 @@ const SettingsLlmRouteRouteChildren: SettingsLlmRouteRouteChildren = {
 const SettingsLlmRouteRouteWithChildren =
   SettingsLlmRouteRoute._addFileChildren(SettingsLlmRouteRouteChildren)
 
+interface SettingsMcpRouteRouteChildren {
+  SettingsMcpIndexRoute: typeof SettingsMcpIndexRoute
+}
+
+const SettingsMcpRouteRouteChildren: SettingsMcpRouteRouteChildren = {
+  SettingsMcpIndexRoute: SettingsMcpIndexRoute,
+}
+
+const SettingsMcpRouteRouteWithChildren =
+  SettingsMcpRouteRoute._addFileChildren(SettingsMcpRouteRouteChildren)
+
 interface SettingsMigaduRouteRouteChildren {
   SettingsMigaduIndexRoute: typeof SettingsMigaduIndexRoute
 }
@@ -1339,6 +1386,7 @@ interface SettingsRouteRouteChildren {
   SettingsCoolifyRouteRoute: typeof SettingsCoolifyRouteRouteWithChildren
   SettingsGithubRouteRoute: typeof SettingsGithubRouteRouteWithChildren
   SettingsLlmRouteRoute: typeof SettingsLlmRouteRouteWithChildren
+  SettingsMcpRouteRoute: typeof SettingsMcpRouteRouteWithChildren
   SettingsMigaduRouteRoute: typeof SettingsMigaduRouteRouteWithChildren
   SettingsMinimaxRouteRoute: typeof SettingsMinimaxRouteRouteWithChildren
   SettingsPricesRouteRoute: typeof SettingsPricesRouteRouteWithChildren
@@ -1349,6 +1397,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsCoolifyRouteRoute: SettingsCoolifyRouteRouteWithChildren,
   SettingsGithubRouteRoute: SettingsGithubRouteRouteWithChildren,
   SettingsLlmRouteRoute: SettingsLlmRouteRouteWithChildren,
+  SettingsMcpRouteRoute: SettingsMcpRouteRouteWithChildren,
   SettingsMigaduRouteRoute: SettingsMigaduRouteRouteWithChildren,
   SettingsMinimaxRouteRoute: SettingsMinimaxRouteRouteWithChildren,
   SettingsPricesRouteRoute: SettingsPricesRouteRouteWithChildren,

@@ -59,15 +59,6 @@ Completed items should be removed or moved into changelog/history once they are 
     - bundled/default skills live in the admin skills catalog
     - agents receive them only when assigned
 
-- Expose global/shared MCP management in the admin as a first-class catalog instead of only through the per-agent MCP screen.
-  - Current backend situation:
-    - MCP storage is already split between global server configs and per-agent links
-    - the missing piece is the admin surface and assignment flow
-  - Desired capabilities:
-    - central MCP catalog screen
-    - create/edit/delete shared MCP servers in one place
-    - enable/disable them per agent without duplicating the same config
-
 - Give the future LTM agent read/write access to the skills area so it can:
   - create new skills
   - improve existing skills

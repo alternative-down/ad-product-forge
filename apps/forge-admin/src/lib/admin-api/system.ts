@@ -4,9 +4,11 @@ import type {
   SyncOauthResult,
   SystemIntegration,
   SystemLlmResponse,
+  SystemMcpServer,
   SystemOauthState,
   SystemSettings,
   UpdateLlmDefaultsInput,
+  UpsertSystemMcpServerInput,
   UpsertLlmModelPriceInput,
   UpsertLlmProfileInput,
 } from './types';
@@ -60,6 +62,24 @@ export function updateLlmDefaults(input: UpdateLlmDefaultsInput) {
 
 export function getSystemIntegrations() {
   return request<SystemIntegration[]>('/admin/system/integrations');
+}
+
+export function getSystemMcpServers() {
+  return request<SystemMcpServer[]>('/admin/system/mcp');
+}
+
+export function upsertSystemMcpServer(input: UpsertSystemMcpServerInput) {
+  return request<SystemMcpServer>('/admin/system/mcp/upsert', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteSystemMcpServer(serverId: string) {
+  return request<{ success: true; serverId: string }>('/admin/system/mcp/delete', {
+    method: 'POST',
+    body: JSON.stringify({ serverId }),
+  });
 }
 
 export function upsertSystemIntegration(
