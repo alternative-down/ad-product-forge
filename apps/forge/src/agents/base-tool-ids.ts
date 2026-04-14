@@ -4,6 +4,8 @@ export const AGENT_BASE_TOOL_IDS = [
   'list_conversations',
   'get_messages',
   'send_message',
+  'change_chat_group',
+  'list_agent_notifications',
   'list_self_crons',
   'manage_self_crons',
 ] as const;
