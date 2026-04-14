@@ -31,6 +31,7 @@ export async function createAgentRuntimeMemory(input: {
   checkpointedOmObservationReflectionBatchTokens?: number;
   checkpointedOmObservationSupportTokens?: number;
   checkpointedOmReflectionSupportTokens?: number;
+  agentSystemPrompt?: string;
 }) {
   const memory = createAgentMemory({
     storage: input.storage,
@@ -56,6 +57,7 @@ export async function createAgentRuntimeMemory(input: {
         input.checkpointedOmObservationReflectionBatchTokens,
       observationSupportTokens: input.checkpointedOmObservationSupportTokens,
       reflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+      agentSystemPrompt: input.agentSystemPrompt,
     });
 
     inputProcessors.push(checkpointedObservationalMemory);

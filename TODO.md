@@ -29,12 +29,6 @@ Completed items should be removed or moved into changelog/history once they are 
 
 ## OM / Checkpointed Context
 
-### High priority
-- Pass extra instructions into the OM observer/reflector/checkpoint summarizer based on the main agent system prompt so observations, reflections, and checkpoint summaries stay aligned with the agent’s operational profile.
-  - Goal:
-    - preserve the same “voice” and alignment of the main agent
-    - reduce mismatch between active agent behavior and OM-generated summaries
-
 - Investigate whether the admin OM metrics and “Thread após cursor” snapshot still have edge cases where the displayed numbers do not match the real OM state.
   - Current known concern:
     - user still suspects some snapshots may be misleading in certain states
@@ -44,8 +38,8 @@ Completed items should be removed or moved into changelog/history once they are 
 ### High priority
 - Allow agents to actually manage and improve their own skills.
   - Current issue:
-    - there is no agent-facing skill management path
-    - the default `skills-creator` helper exists but is not wired into runtime behavior
+    - they can now create and edit local skills in their own workspace
+    - what still does not exist is a clean path for agents to publish, promote, or share those improvements into the global catalog intentionally
 
 - Give the future LTM agent read/write access to the skills area so it can:
   - create new skills

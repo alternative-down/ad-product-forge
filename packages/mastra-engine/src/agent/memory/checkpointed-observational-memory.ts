@@ -95,6 +95,7 @@ type CustomOmState = {
 type CheckpointedObservationalMemoryConfig = {
   storage: LibSQLStore;
   model: AgentConfig['model'];
+  agentSystemPrompt?: string;
   totalContextTokens?: number;
   recentRawTokens?: number;
   rawObservationBatchTokens?: number;
@@ -123,6 +124,22 @@ const REFLECTOR_SYSTEM_PROMPT = [
 
 function buildReflectorSystemPrompt() {
   return REFLECTOR_SYSTEM_PROMPT;
+}
+
+function buildAlignedOmInstructions(baseInstructions: string, agentSystemPrompt?: string) {
+  const prompt = agentSystemPrompt?.trim();
+
+  if (!prompt) {
+    return baseInstructions;
+  }
+
+  return [
+    baseInstructions,
+    '<main_agent_system_prompt>',
+    'Use the following main agent system prompt as alignment context. Keep observations, reflections, and checkpoint summaries aligned with the same role, scope, operating style, and priorities.',
+    prompt,
+    '</main_agent_system_prompt>',
+  ].join('\n\n');
 }
 
 function buildReflectorPrompt(observations: string) {
@@ -764,6 +781,7 @@ export class CheckpointedObservationalMemoryProcessor
   private readonly observationReflectionBatchTokens: number;
   private readonly observationSupportTokens: number;
   private readonly reflectionSupportTokens: number;
+  private readonly agentSystemPrompt?: string;
 
   constructor(config: CheckpointedObservationalMemoryConfig) {
     if (!hasObservationalMemoryStore(config.storage.stores.memory!)) {
@@ -781,6 +799,7 @@ export class CheckpointedObservationalMemoryProcessor
       config.observationReflectionBatchTokens ?? DEFAULT_OBSERVATION_REFLECTION_BATCH_TOKENS;
     this.observationSupportTokens = config.observationSupportTokens ?? DEFAULT_SUPPORT_TOKENS;
     this.reflectionSupportTokens = config.reflectionSupportTokens ?? DEFAULT_SUPPORT_TOKENS;
+    this.agentSystemPrompt = config.agentSystemPrompt?.trim() || undefined;
   }
 
   private async generateOmText(input: {
@@ -1220,7 +1239,10 @@ export class CheckpointedObservationalMemoryProcessor
     const observerText = await this.generateOmText({
       agentId: `custom-observer-${randomUUID()}`,
       agentName: 'Checkpointed OM observer',
-      instructions: buildObserverSystemPrompt(false),
+      instructions: buildAlignedOmInstructions(
+        buildObserverSystemPrompt(false),
+        this.agentSystemPrompt,
+      ),
       prompt: observerPrompt,
       requestContext: input.requestContext,
       debugContext: {
@@ -1310,7 +1332,10 @@ export class CheckpointedObservationalMemoryProcessor
     const reflectorText = await this.generateOmText({
       agentId: `custom-reflector-${randomUUID()}`,
       agentName: 'Checkpointed OM reflector',
-      instructions: buildReflectorSystemPrompt(),
+      instructions: buildAlignedOmInstructions(
+        buildReflectorSystemPrompt(),
+        this.agentSystemPrompt,
+      ),
       prompt: buildReflectorPrompt([supportText, selectedText].filter(Boolean).join('\n')),
       requestContext: input.requestContext,
       debugContext: {
@@ -1491,7 +1516,10 @@ export class CheckpointedObservationalMemoryProcessor
     const checkpointText = await this.generateOmText({
       agentId: `custom-checkpoint-${randomUUID()}`,
       agentName: 'Checkpointed OM checkpoint summarizer',
-      instructions: buildReflectorSystemPrompt(),
+      instructions: buildAlignedOmInstructions(
+        buildReflectorSystemPrompt(),
+        this.agentSystemPrompt,
+      ),
       prompt: buildReflectorPrompt(
         [input.state.checkpointSummary?.text, removedReflectionText].filter(Boolean).join('\n\n'),
       ),

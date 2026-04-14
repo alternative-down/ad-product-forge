@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
-export const BUNDLED_SKILL_DIRECTORY_NAMES = ['github-api', 'coolify-api'] as const;
+export const BUNDLED_SKILL_DIRECTORY_NAMES = ['github-api', 'coolify-api', 'skills-creator'] as const;
 
 function parseSkillName(skillContent: string) {
   if (!skillContent.startsWith('---\n')) {
