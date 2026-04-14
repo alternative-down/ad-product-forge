@@ -53,6 +53,7 @@ function AgentLogIndexRoute() {
 
       <AgentRuntimeMemorySection
         workingMemory={runtimeMemoryQuery.data?.workingMemory ?? null}
+        agentContext={runtimeMemoryQuery.data?.agentContext ?? null}
         observations={runtimeMemoryQuery.data?.observations ?? null}
         reflection={runtimeMemoryQuery.data?.reflection ?? null}
         generationCount={runtimeMemoryQuery.data?.generationCount ?? null}
@@ -81,6 +82,7 @@ function AgentLogIndexRoute() {
 
 function AgentRuntimeMemorySection(input: {
   workingMemory: string | null;
+  agentContext: string | null;
   observations: string | null;
   reflection: string | null;
   generationCount: number | null;
@@ -118,7 +120,7 @@ function AgentRuntimeMemorySection(input: {
     return <div className="text-sm text-destructive">{input.error}</div>;
   }
 
-  if (!input.workingMemory && !input.observations && !input.reflection) {
+  if (!input.workingMemory && !input.agentContext && !input.observations && !input.reflection) {
     if (!input.checkpointSummary) {
       return null;
     }
@@ -187,6 +189,10 @@ function AgentRuntimeMemorySection(input: {
       <MemoryDisclosure
         title="Working Memory"
         value={input.workingMemory}
+      />
+      <MemoryDisclosure
+        title="AGENT_CONTEXT.md"
+        value={input.agentContext}
       />
       <MemoryDisclosure
         title="Checkpoint Summary"
