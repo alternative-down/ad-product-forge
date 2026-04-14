@@ -548,6 +548,14 @@ export function createAdminReadModel(input: {
       storage,
       vector,
     });
+    const agentWorkspaceRoot = path.resolve(input.workspaceBasePath, agentId);
+    const agentWorkspaceDir = agent.workspaceFilesystem?.basePath
+      ? path.resolve(agentWorkspaceRoot, agent.workspaceFilesystem.basePath)
+      : path.resolve(agentWorkspaceRoot, 'workspace');
+    const agentContextPath = path.resolve(agentWorkspaceDir, 'AGENT_CONTEXT.md');
+    const agentContext = await readFile(agentContextPath, 'utf8')
+      .then((content) => content.trim() || null)
+      .catch(() => null);
     const workingMemory = await memory.getWorkingMemory({
       threadId: mastraAgentId,
       resourceId: mastraAgentId,
@@ -556,6 +564,7 @@ export function createAdminReadModel(input: {
     if (!memoryStore) {
       return {
         workingMemory: formatWorkingMemoryValue(workingMemory),
+        agentContext,
         observations: '',
         reflection: '',
         generationCount: 0,
@@ -615,6 +624,7 @@ export function createAdminReadModel(input: {
 
     return {
       workingMemory: formatWorkingMemoryValue(workingMemory),
+      agentContext,
       observations,
       reflection,
       generationCount,

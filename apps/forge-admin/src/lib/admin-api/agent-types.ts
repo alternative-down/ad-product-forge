@@ -173,6 +173,7 @@ export type AgentRecentConversation = {
 
 export type AgentRuntimeMemorySnapshot = {
   workingMemory: string | null;
+  agentContext: string | null;
   observations: string | null;
   reflection: string | null;
   generationCount: number;
