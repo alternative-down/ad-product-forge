@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdminButton, AdminLoadingState, HireAgentDialog, PageHeader } from '@/components/admin';
+import { AgentAvatar, AdminButton, AdminLoadingState, HireAgentDialog, PageHeader } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getAgents } from '@/lib/admin-api';
 
@@ -45,7 +45,18 @@ function AgentsIndexRoute() {
             <TableBody>
               {agents.map((agent) => (
                 <TableRow key={agent.agentId}>
-                  <TableCell className="px-4 py-3">{agent.name}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <AgentAvatar
+                        agentId={agent.agentId}
+                        name={agent.name}
+                        size="sm"
+                        className="border border-border bg-muted"
+                        fallbackClassName="bg-muted text-xs font-medium text-foreground"
+                      />
+                      <span>{agent.name}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="px-4 py-3">{agent.roleName ?? 'Sem papel'}</TableCell>
                   <TableCell className="px-4 py-3">{agent.executionState === 'running' ? 'Trabalhando' : 'Ocioso'}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
