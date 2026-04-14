@@ -115,8 +115,8 @@ export function LlmProfileDialog(input: {
               <AdminInput
                 id="llm-contract-multiplier"
                 type="number"
-                min="0.000001"
-                step="0.01"
+                min="0"
+                step="any"
                 value={input.profileForm.contractCostMultiplier}
                 onChange={(event) =>
                   input.onProfileFormChange({

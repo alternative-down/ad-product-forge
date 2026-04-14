@@ -130,11 +130,6 @@ function AgentConversationDetailIndexRoute() {
             {selectedConversation.name ?? selectedConversation.provider}
           </div>
         </div>
-        {selectedConversation.type === 'group' && selectedConversation.participants.length > 1 ? (
-          <div className="text-sm text-muted-foreground">
-            {selectedConversation.participants.join(', ')}
-          </div>
-        ) : null}
       </div>
 
       <div ref={scrollAreaRef} className="h-full min-h-0">
@@ -167,7 +162,7 @@ function AgentConversationDetailIndexRoute() {
                     <span className="font-medium text-foreground">{message.authorDisplayName}</span>
                     <span className="text-xs text-muted-foreground">{formatRecentMessageTime(Date.parse(message.createdAt))}</span>
                   </div>
-                  <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{message.content}</div>
+                  <div className="whitespace-pre-wrap break-all text-sm leading-6 text-foreground">{message.content}</div>
                 </div>
               </article>
             ))}

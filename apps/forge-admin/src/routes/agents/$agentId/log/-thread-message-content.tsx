@@ -161,7 +161,9 @@ function ThreadSection(input: {
   return (
     <div className="space-y-1">
       <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
-      <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{input.children}</div>
+      <div className="whitespace-pre-wrap break-all text-sm leading-6 text-foreground [overflow-wrap:anywhere]">
+        {input.children}
+      </div>
     </div>
   );
 }
@@ -179,7 +181,9 @@ function ThreadDisclosure(input: {
       </summary>
       <div className="space-y-1 pt-3">
         <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
-        <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{input.value}</div>
+        <div className="whitespace-pre-wrap break-all text-sm leading-6 text-foreground [overflow-wrap:anywhere]">
+          {input.value}
+        </div>
       </div>
     </details>
   );
@@ -198,7 +202,7 @@ function ThreadJsonDisclosure(input: {
       </summary>
       <div className="space-y-1 pt-3">
         <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
-        <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-foreground">
+        <pre className="overflow-x-auto whitespace-pre-wrap break-all text-xs leading-6 text-foreground [overflow-wrap:anywhere]">
           {JSON.stringify(input.value, null, 2)}
         </pre>
       </div>

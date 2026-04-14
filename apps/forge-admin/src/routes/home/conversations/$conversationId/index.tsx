@@ -194,7 +194,6 @@ function HomeConversationDetailIndexRoute() {
       <div className="flex h-full min-h-0 flex-col gap-4">
         <ConversationHeader
           conversation={selectedConversation}
-          members={members}
           onBack={() => void navigate({ to: '/home/conversations' })}
           onRenameOpen={() => setRenameDialogOpen(true)}
           onParticipantsOpen={() => setParticipantsDialogOpen(true)}

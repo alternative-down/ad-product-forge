@@ -39,7 +39,7 @@ Completed items should be removed or moved into changelog/history once they are 
   - Current known concern:
     - user still suspects some snapshots may be misleading in certain states
 
-## Skills
+## Skills / MCP
 
 ### High priority
 - Allow agents to actually manage and improve their own skills.
@@ -58,6 +58,15 @@ Completed items should be removed or moved into changelog/history once they are 
   - Desired model:
     - bundled/default skills live in the admin skills catalog
     - agents receive them only when assigned
+
+- Expose global/shared MCP management in the admin as a first-class catalog instead of only through the per-agent MCP screen.
+  - Current backend situation:
+    - MCP storage is already split between global server configs and per-agent links
+    - the missing piece is the admin surface and assignment flow
+  - Desired capabilities:
+    - central MCP catalog screen
+    - create/edit/delete shared MCP servers in one place
+    - enable/disable them per agent without duplicating the same config
 
 - Give the future LTM agent read/write access to the skills area so it can:
   - create new skills
@@ -91,14 +100,6 @@ Completed items should be removed or moved into changelog/history once they are 
   - Intended use:
     - user mostly watches logs and contracts today
     - needs a denser, more executive overview of agent state
-
-### Medium priority
-- Add generated avatars for agents when they do not have one.
-  - Suggested source:
-    - text-based avatar generator or URL-based provider
-    - candidate mentioned by user: `https://getavataaars.com`
-  - Desired behavior:
-    - if an agent has no avatar, one should be deterministically generated when it loads
 
 ## GitHub / Provider Behavior
 

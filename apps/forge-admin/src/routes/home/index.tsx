@@ -33,9 +33,6 @@ function HomeIndexRoute() {
         <h1 className="text-3xl font-semibold tracking-[-0.06em] sm:text-4xl">
           {settingsQuery.data?.companyName?.trim() || 'Empresa'}
         </h1>
-        {settingsQuery.data?.companyContext?.trim() ? (
-          <p className="max-w-3xl text-base text-muted-foreground">{settingsQuery.data.companyContext.trim()}</p>
-        ) : null}
         {settingsQuery.isLoading && !settingsQuery.data ? <AdminLoadingState label="Carregando empresa..." /> : null}
       </section>
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Memory } from '@mastra/memory';
 
 const workingMemoryText = (description: string) =>
   z
@@ -74,4 +75,41 @@ export function appendWorkingMemoryInstructions(instructions: unknown) {
   }
 
   return `${instructions}\n\n${WORKING_MEMORY_INSTRUCTIONS}`;
+}
+
+export async function sanitizeWorkingMemory(input: {
+  memory: Memory;
+  threadId: string;
+  resourceId?: string;
+}) {
+  const currentWorkingMemory = await input.memory.getWorkingMemory({
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+  });
+
+  if (typeof currentWorkingMemory !== 'string' || currentWorkingMemory.trim().length === 0) {
+    return;
+  }
+
+  const parsedCurrentWorkingMemory = parseStoredWorkingMemory(currentWorkingMemory);
+  const sanitizedWorkingMemory = WORKING_MEMORY_SCHEMA.safeParse(parsedCurrentWorkingMemory);
+  const normalizedWorkingMemory = JSON.stringify(sanitizedWorkingMemory.success ? sanitizedWorkingMemory.data : {});
+
+  if (normalizedWorkingMemory === currentWorkingMemory) {
+    return;
+  }
+
+  await input.memory.updateWorkingMemory({
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+    workingMemory: normalizedWorkingMemory,
+  });
+}
+
+function parseStoredWorkingMemory(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
 }
