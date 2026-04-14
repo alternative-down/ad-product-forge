@@ -54,6 +54,12 @@ import {
   deleteAgentWorkspaceSkill,
   installAgentWorkspaceSkillsFromZip,
 } from '../agents/workspace-skills';
+import {
+  deleteGlobalSkill,
+  installGlobalSkillToAgentWorkspace,
+  installGlobalSkillsFromZip,
+  listGlobalSkills,
+} from '../agents/global-skills';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
@@ -383,6 +389,19 @@ const deleteAgentSkillSchema = z.object({
   skillName: z.string().min(1),
 });
 
+const uploadSystemSkillsSchema = z.object({
+  archiveBase64: z.string().min(1),
+});
+
+const deleteSystemSkillSchema = z.object({
+  skillName: z.string().min(1),
+});
+
+const installGlobalSkillForAgentSchema = z.object({
+  agentId: z.string().min(1),
+  skillName: z.string().min(1),
+});
+
 const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
 
 const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
@@ -704,6 +723,12 @@ export function registerAdminRoutes(input: {
   });
 
   input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/skills',
+    handler: async () => jsonResponse(await listGlobalSkills(input.workspaceBasePath)),
+  });
+
+  input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/settings/upsert',
     handler: async (request) => {
@@ -823,6 +848,34 @@ export function registerAdminRoutes(input: {
       }
 
       return jsonResponse({ success: true, serverId: body.serverId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/skills/upload',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, uploadSystemSkillsSchema);
+      const installedSkillNames = await installGlobalSkillsFromZip({
+        workspaceBasePath: input.workspaceBasePath,
+        zipBase64: body.archiveBase64,
+      });
+
+      return jsonResponse({ success: true, installedSkillNames }, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/skills/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteSystemSkillSchema);
+      await deleteGlobalSkill({
+        workspaceBasePath: input.workspaceBasePath,
+        skillName: body.skillName,
+      });
+
+      return jsonResponse({ success: true, skillName: body.skillName });
     },
   });
 
@@ -1721,6 +1774,35 @@ export function registerAdminRoutes(input: {
       // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
       // Reload is acceptable here because skill changes are rare, but this is the place to
       // switch to explicit skill refresh if we want to avoid full runtime recreation later.
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        skillName: body.skillName,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-skills/install-global',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      await installGlobalSkillToAgentWorkspace({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
       return jsonResponse({

@@ -12,6 +12,7 @@ function SettingsLayoutRoute() {
     { value: '/settings/llm', label: 'Perfis' },
     { value: '/settings/prices', label: 'Preços' },
     { value: '/settings/mcp', label: 'MCP' },
+    { value: '/settings/skills', label: 'Skills' },
     { value: '/settings/github', label: 'Github' },
     { value: '/settings/coolify', label: 'Coolify' },
     { value: '/settings/migadu', label: 'Migadu' },

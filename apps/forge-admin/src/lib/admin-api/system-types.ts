@@ -32,6 +32,15 @@ export type SystemMcpServer = {
   updatedAt: string;
 };
 
+export type SystemSkill = {
+  skillName: string;
+  description?: string;
+  fileCount: number;
+  updatedAt: number;
+  source: 'bundled' | 'custom';
+  editable: boolean;
+};
+
 export type UpsertSystemMcpServerInput =
   | {
       serverId?: string;

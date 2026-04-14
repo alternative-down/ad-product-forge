@@ -253,6 +253,16 @@ export function deleteAgentSkill(input: DeleteAgentSkillInput) {
   });
 }
 
+export function installGlobalSkillForAgent(input: {
+  agentId: string;
+  skillName: string;
+}) {
+  return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/install-global', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function createSchedule(input: CreateScheduleInput) {
   return request<AgentSchedule>('/admin/agent-schedule/create', {
     method: 'POST',

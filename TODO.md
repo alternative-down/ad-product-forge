@@ -47,18 +47,6 @@ Completed items should be removed or moved into changelog/history once they are 
     - there is no agent-facing skill management path
     - the default `skills-creator` helper exists but is not wired into runtime behavior
 
-- Build a global skills catalog in the admin.
-  - Required capabilities:
-    - central place to register/manage reusable skills
-    - include existing default/bundled skills there
-    - allow assigning catalog skills to agents
-    - reuse the same source from the agent skills UI instead of maintaining parallel skill sources
-
-- Stop treating bundled/default skills as implicitly copied at agent bootstrap.
-  - Desired model:
-    - bundled/default skills live in the admin skills catalog
-    - agents receive them only when assigned
-
 - Give the future LTM agent read/write access to the skills area so it can:
   - create new skills
   - improve existing skills

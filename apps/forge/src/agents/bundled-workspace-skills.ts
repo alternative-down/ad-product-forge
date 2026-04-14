@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
-const BUNDLED_SKILL_DIRECTORY_NAMES = ['github-api', 'coolify-api'] as const;
+export const BUNDLED_SKILL_DIRECTORY_NAMES = ['github-api', 'coolify-api'] as const;
 
 function parseSkillName(skillContent: string) {
   if (!skillContent.startsWith('---\n')) {
@@ -36,7 +36,7 @@ function parseSkillName(skillContent: string) {
   throw new Error('Bundled skill frontmatter is missing name.');
 }
 
-async function copyDirectoryContents(sourceDirectory: string, targetDirectory: string) {
+export async function copyDirectoryContents(sourceDirectory: string, targetDirectory: string) {
   await fs.mkdir(targetDirectory, { recursive: true });
   const entries = await fs.readdir(sourceDirectory, { withFileTypes: true });
 
@@ -69,7 +69,7 @@ export async function ensureBundledWorkspaceSkills(agentWorkspaceDirectory: stri
   }
 }
 
-async function resolveBundledSkillRoot(sourceDirectoryName: string) {
+export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
   const candidateRoots = [
     path.resolve(MODULE_DIRECTORY, 'skills'),
     path.resolve(MODULE_DIRECTORY, '../src/agents/skills'),

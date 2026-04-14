@@ -6,6 +6,7 @@ import type {
   SystemLlmResponse,
   SystemMcpServer,
   SystemOauthState,
+  SystemSkill,
   SystemSettings,
   UpdateLlmDefaultsInput,
   UpsertSystemMcpServerInput,
@@ -79,6 +80,24 @@ export function deleteSystemMcpServer(serverId: string) {
   return request<{ success: true; serverId: string }>('/admin/system/mcp/delete', {
     method: 'POST',
     body: JSON.stringify({ serverId }),
+  });
+}
+
+export function getSystemSkills() {
+  return request<SystemSkill[]>('/admin/system/skills');
+}
+
+export function uploadSystemSkills(input: { archiveBase64: string }) {
+  return request<{ success: true; installedSkillNames: string[] }>('/admin/system/skills/upload', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteSystemSkill(skillName: string) {
+  return request<{ success: true; skillName: string }>('/admin/system/skills/delete', {
+    method: 'POST',
+    body: JSON.stringify({ skillName }),
   });
 }
 
