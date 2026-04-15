@@ -33,6 +33,22 @@ export type AgentListItem = {
     };
   } | null;
   providerTypes: string[];
+  overview: {
+    lastStepAt: number | null;
+    lastStepTokens: number | null;
+    lastStepCostUsd: number | null;
+    unreadNotificationCount: number;
+    om: {
+      generationCount: number;
+      checkpointGeneration: number | null;
+      recentRawTokenCount: number;
+      recentRawTokenLimit: number;
+      overflowTokenCount: number;
+      observationTokenCount: number;
+      reflectionTokenCount: number;
+      checkpointTokenCount: number;
+    } | null;
+  };
   createdAt: number;
   updatedAt: number;
 };

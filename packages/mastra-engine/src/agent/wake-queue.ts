@@ -10,6 +10,7 @@ export type AgentWakeEvent = {
   timestamp: number;
   text: string;
   idleOnly?: boolean;
+  originIdleOnly?: boolean;
   groupMetadata?: Record<string, string>;
   itemMetadata?: Record<string, string>;
 };

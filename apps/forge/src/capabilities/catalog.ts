@@ -5,6 +5,7 @@ export const forgeCustomToolIds = [
   'get_messages',
   'send_message',
   'change_chat_group',
+  'publish_skill_to_catalog',
   'list_company_cash',
   'get_company_cash',
   'manage_company_cash_movement',

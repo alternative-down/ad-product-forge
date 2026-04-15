@@ -8,6 +8,7 @@ export const BASE_ROLE_TOOL_IDS = [
   'send_message',
   'change_chat_group',
   'list_agent_notifications',
+  'publish_skill_to_catalog',
   'list_self_crons',
   'manage_self_crons',
 ] as const;

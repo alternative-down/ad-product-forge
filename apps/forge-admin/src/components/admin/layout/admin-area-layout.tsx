@@ -54,7 +54,7 @@ export function AdminAreaLayout(input: {
         />
       }
     >
-      <div className="space-y-6 md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8 md:space-y-0">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 md:grid md:grid-cols-[170px_minmax(0,1fr)] md:gap-6 md:space-y-0">
         <div className="md:hidden">
           <Select
             key={pathname}
@@ -90,7 +90,7 @@ export function AdminAreaLayout(input: {
             ))}
           </nav>
         </aside>
-        <div className="min-w-0">{input.children}</div>
+        <div className="flex min-h-0 min-w-0 flex-col">{input.children}</div>
       </div>
     </AppShell>
   );

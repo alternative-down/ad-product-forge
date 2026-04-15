@@ -299,3 +299,39 @@ export async function installGlobalSkillToAgentWorkspace(input: {
   await fs.rm(skillRoot, { recursive: true, force: true });
   await copyDirectoryContents(sourceRoot, skillRoot);
 }
+
+export async function publishAgentWorkspaceSkillToGlobalCatalog(input: {
+  workspaceBasePath: string;
+  agent: Pick<Agent, 'id' | 'workspaceFilesystem'>;
+  skillName: string;
+}) {
+  const skillName = input.skillName.trim();
+
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(skillName)) {
+    throw new Error(`Invalid skill name: ${input.skillName}`);
+  }
+
+  const bundledSkillNames = new Set((await listBundledGlobalSkills()).map((skill) => skill.skillName));
+
+  if (bundledSkillNames.has(skillName)) {
+    throw new Error(`Skill name is reserved by a bundled skill: ${skillName}`);
+  }
+
+  const { skillRoot: sourceRoot } = resolveAgentSkillRoot({
+    workspaceBasePath: input.workspaceBasePath,
+    agent: input.agent,
+    skillName,
+  });
+  const targetRoot = path.resolve(resolveGlobalSkillsRoot(input.workspaceBasePath), skillName);
+  const targetSkillsRoot = resolveGlobalSkillsRoot(input.workspaceBasePath);
+  const relativePath = path.relative(targetSkillsRoot, targetRoot);
+
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error(`Invalid skill name: ${input.skillName}`);
+  }
+
+  await fs.access(path.resolve(sourceRoot, 'SKILL.md'));
+  await fs.mkdir(targetSkillsRoot, { recursive: true });
+  await fs.rm(targetRoot, { recursive: true, force: true });
+  await copyDirectoryContents(sourceRoot, targetRoot);
+}

@@ -7,7 +7,7 @@ import {
   PageHeader,
 } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { deleteAgentSkill, getAgent, getSystemSkills, installGlobalSkillForAgent } from '@/lib/admin-api';
+import { deleteAgentSkill, getAgent, getSystemSkills, installGlobalSkillForAgent, publishAgentSkillToGlobalCatalog } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/skills/')({
@@ -43,8 +43,22 @@ function AgentSkillsIndexRoute() {
     },
     onError: (error, _skillName, context) => failAdminAction(context, error),
   });
+  const publishMutation = useMutation({
+    mutationFn: (skillName: string) => publishAgentSkillToGlobalCatalog({ agentId, skillName }),
+    onMutate: () => startAdminAction('Publicando skill no catálogo...'),
+    onSuccess: async (_data, _skillName, context) => {
+      succeedAdminAction(context, 'Skill publicada no catálogo.');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'system-skills'] }),
+      ]);
+    },
+    onError: (error, _skillName, context) => failAdminAction(context, error),
+  });
+  const localSkills = agentQuery.data?.skills ?? [];
   const installedSkills = new Set((agentQuery.data?.skills ?? []).map((skill) => skill.skillName));
   const skills = systemSkillsQuery.data ?? [];
+  const catalogSkillNames = new Set(skills.map((skill) => skill.skillName));
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -58,6 +72,70 @@ function AgentSkillsIndexRoute() {
       />
 
       <section className="space-y-5">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold tracking-[-0.03em]">Skills locais</div>
+          <div className="text-sm text-muted-foreground">
+            Essas são as skills presentes na workspace do agente. Você pode removê-las localmente ou promovê-las para o catálogo compartilhado.
+          </div>
+        </div>
+
+        <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
+          <Table className="text-sm">
+            <TableHeader className="bg-muted/50 text-left text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Catálogo</TableHead>
+                <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {localSkills.map((skill) => {
+                const busy = installMutation.isPending || deleteMutation.isPending || publishMutation.isPending;
+                const inCatalog = catalogSkillNames.has(skill.skillName);
+
+                return (
+                  <TableRow key={skill.skillName}>
+                    <TableCell className="px-4 py-3">
+                      <div className="space-y-1">
+                        <div>{skill.skillName}</div>
+                        {skill.description ? (
+                          <div className="text-xs text-muted-foreground">{skill.description}</div>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">{inCatalog ? 'Publicada' : 'Somente local'}</TableCell>
+                    <TableCell className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <AdminButton
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => publishMutation.mutate(skill.skillName)}
+                        >
+                          {inCatalog ? 'Atualizar catálogo' : 'Publicar no catálogo'}
+                        </AdminButton>
+                        <AdminButton
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => deleteMutation.mutate(skill.skillName)}
+                        >
+                          Remover local
+                        </AdminButton>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {localSkills.length === 0 ? (
+                <TableRow>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={3}>
+                    Nenhuma skill local na workspace do agente.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </div>
+
         <div className="space-y-1">
           <div className="text-lg font-semibold tracking-[-0.03em]">Catálogo compartilhado</div>
           <div className="text-sm text-muted-foreground">
@@ -77,7 +155,7 @@ function AgentSkillsIndexRoute() {
             <TableBody>
               {skills.map((skill) => {
                 const installed = installedSkills.has(skill.skillName);
-                const busy = installMutation.isPending || deleteMutation.isPending;
+                const busy = installMutation.isPending || deleteMutation.isPending || publishMutation.isPending;
 
                 return (
                   <TableRow key={skill.skillName}>

@@ -273,6 +273,16 @@ export function installGlobalSkillForAgent(input: {
   });
 }
 
+export function publishAgentSkillToGlobalCatalog(input: {
+  agentId: string;
+  skillName: string;
+}) {
+  return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/publish-global', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function createSchedule(input: CreateScheduleInput) {
   return request<AgentSchedule>('/admin/agent-schedule/create', {
     method: 'POST',

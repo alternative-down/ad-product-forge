@@ -59,6 +59,7 @@ import {
   installGlobalSkillToAgentWorkspace,
   installGlobalSkillsFromZip,
   listGlobalSkills,
+  publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
 const agentIdQuerySchema = z.object({
@@ -425,6 +426,11 @@ const deleteSystemSkillSchema = z.object({
 });
 
 const installGlobalSkillForAgentSchema = z.object({
+  agentId: z.string().min(1),
+  skillName: z.string().min(1),
+});
+
+const publishAgentSkillToGlobalSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
@@ -1845,6 +1851,33 @@ export function registerAdminRoutes(input: {
       });
 
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        skillName: body.skillName,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-skills/publish-global',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      await publishAgentWorkspaceSkillToGlobalCatalog({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
 
       return jsonResponse({
         success: true,
