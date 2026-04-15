@@ -802,6 +802,9 @@ export function createAdminReadModel(input: {
     return {
       workingMemory: formatWorkingMemoryValue(workingMemory),
       agentContext,
+      executionState: agent.executionState as 'idle' | 'running' | 'absent',
+      lastExecutionError: agent.lastExecutionError ?? null,
+      lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
       observations,
       reflection,
       generationCount,
