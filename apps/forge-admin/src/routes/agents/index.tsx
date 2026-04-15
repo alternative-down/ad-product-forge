@@ -95,7 +95,7 @@ function AgentsIndexRoute() {
                     <div className="space-y-0.5">
                       <div>{agent.overview.ltm.running ? 'Executando' : agent.overview.ltm.queued ? 'Enfileirada' : 'Ociosa'}</div>
                       <div className="text-xs text-muted-foreground">
-                        {`${formatNullableNumber(agent.overview.ltm.processedPackageCount)}/${formatNullableNumber(agent.overview.ltm.writtenPackageCount)}`}
+                        {`${formatNullableNumber(agent.overview.ltm.packageCount)} pacotes`}
                       </div>
                     </div>
                   </TableCell>

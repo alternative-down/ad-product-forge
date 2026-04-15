@@ -4,11 +4,7 @@ import { useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { PageHeader } from '@/components/admin';
-import {
-  getAgentLongTermMemoryThreadMessages,
-  getAgentRuntimeMemory,
-  getAgentThreadMessages,
-} from '@/lib/admin-api';
+import { getAgentRuntimeMemory, getAgentThreadMessages } from '@/lib/admin-api';
 
 import { ThreadMessageArticle } from './-thread-message-content';
 
@@ -32,15 +28,7 @@ function AgentLogIndexRoute() {
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasMore ? lastPageParam + 1 : undefined,
   });
-  const ltmMessagesQuery = useInfiniteQuery({
-    queryKey: ['admin', 'agent', agentId, 'ltm-thread-messages'],
-    queryFn: ({ pageParam }) => getAgentLongTermMemoryThreadMessages(agentId, pageParam, PAGE_SIZE),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, _pages, lastPageParam) =>
-      lastPage.hasMore ? lastPageParam + 1 : undefined,
-  });
   const messages = messagesQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const ltmMessages = ltmMessagesQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   useEffect(() => {
     const target = sentinelRef.current;
@@ -80,17 +68,6 @@ function AgentLogIndexRoute() {
         error={runtimeMemoryQuery.error?.message ?? null}
       />
 
-      <LtmLogSection
-        messages={ltmMessages}
-        loading={ltmMessagesQuery.isLoading}
-        error={ltmMessagesQuery.error?.message ?? null}
-        hasMore={ltmMessagesQuery.hasNextPage}
-        loadingMore={ltmMessagesQuery.isFetchingNextPage}
-        onLoadMore={() => {
-          void ltmMessagesQuery.fetchNextPage();
-        }}
-      />
-
       {messages.length === 0 ? <div className="text-sm text-muted-foreground">Nenhum log ainda.</div> : null}
 
       {messages.map((message, index) => (
@@ -101,53 +78,6 @@ function AgentLogIndexRoute() {
       {messagesQuery.isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
       {messagesQuery.error ? <div className="text-sm text-destructive">{messagesQuery.error.message}</div> : null}
     </div>
-  );
-}
-
-function LtmLogSection(input: {
-  messages: Array<Parameters<typeof ThreadMessageArticle>[0]['message']>;
-  loading: boolean;
-  error: string | null;
-  hasMore: boolean;
-  loadingMore: boolean;
-  onLoadMore(): void;
-}) {
-  if (input.loading) {
-    return <div className="text-sm text-muted-foreground">Carregando log da LTM...</div>;
-  }
-
-  if (input.error) {
-    return <div className="text-sm text-destructive">{input.error}</div>;
-  }
-
-  return (
-    <section className="space-y-4 border-b border-border pb-6">
-      <header className="space-y-1">
-        <h2 className="text-sm font-medium text-foreground">Log da LTM</h2>
-        <div className="text-xs text-muted-foreground">
-          Thread própria do agente de memória longa.
-        </div>
-      </header>
-
-      {input.messages.length === 0 ? (
-        <div className="text-sm text-muted-foreground">Nenhum log da LTM ainda.</div>
-      ) : (
-        input.messages.map((message, index) => (
-          <ThreadMessageArticle key={`ltm:${message.id}`} message={message} index={index} />
-        ))
-      )}
-
-      {input.hasMore ? (
-        <button
-          type="button"
-          onClick={input.onLoadMore}
-          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-          disabled={input.loadingMore}
-        >
-          {input.loadingMore ? 'Carregando mais...' : 'Carregar mais log da LTM'}
-        </button>
-      ) : null}
-    </section>
   );
 }
 
@@ -165,17 +95,12 @@ function AgentRuntimeMemorySection(input: {
   ltm: {
     running: boolean;
     queued: boolean;
-    nextRunAt: number | null;
     lastRunAt: number | null;
     lastRunError: string | null;
     lastRunErrorAt: number | null;
     lastWrittenPackageId: string | null;
     lastWrittenAt: number | null;
-    lastProcessedPackageId: string | null;
-    lastProcessedAt: number | null;
-    pendingPackageCount: number;
-    writtenPackageCount: number;
-    processedPackageCount: number;
+    packageCount: number;
   } | null;
   metrics: {
     rawMessageCount: number;
@@ -276,29 +201,19 @@ function AgentRuntimeMemorySection(input: {
       {input.ltm ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <MetricTile
-            label="LTM pendente"
-            current={input.ltm.pendingPackageCount}
+            label="LTM pacotes"
+            current={input.ltm.packageCount}
             unit="pacotes"
             detail={input.ltm.running ? 'workflow em execução' : input.ltm.queued ? 'execução enfileirada' : 'workflow ocioso'}
           />
           <MetricTile
             label="LTM escritos"
-            current={input.ltm.writtenPackageCount}
+            current={input.ltm.packageCount}
             unit="pacotes"
             detail={
               input.ltm.lastWrittenAt
                 ? `último write ${formatDateTime(input.ltm.lastWrittenAt)}`
                 : 'nenhum pacote escrito'
-            }
-          />
-          <MetricTile
-            label="LTM processados"
-            current={input.ltm.processedPackageCount}
-            unit="pacotes"
-            detail={
-              input.ltm.lastProcessedAt
-                ? `último processamento ${formatDateTime(input.ltm.lastProcessedAt)}`
-                : 'nenhum pacote processado'
             }
           />
         </div>
@@ -329,14 +244,12 @@ function AgentRuntimeMemorySection(input: {
         value={input.ltm ? [
           `running: ${input.ltm.running ? 'yes' : 'no'}`,
           `queued: ${input.ltm.queued ? 'yes' : 'no'}`,
-          `nextRunAt: ${input.ltm.nextRunAt ? formatDateTime(input.ltm.nextRunAt) : '—'}`,
           `lastRunAt: ${input.ltm.lastRunAt ? formatDateTime(input.ltm.lastRunAt) : '—'}`,
           `lastRunError: ${input.ltm.lastRunError ?? '—'}`,
           `lastRunErrorAt: ${input.ltm.lastRunErrorAt ? formatDateTime(input.ltm.lastRunErrorAt) : '—'}`,
           `lastWrittenPackageId: ${input.ltm.lastWrittenPackageId ?? '—'}`,
           `lastWrittenAt: ${input.ltm.lastWrittenAt ? formatDateTime(input.ltm.lastWrittenAt) : '—'}`,
-          `lastProcessedPackageId: ${input.ltm.lastProcessedPackageId ?? '—'}`,
-          `lastProcessedAt: ${input.ltm.lastProcessedAt ? formatDateTime(input.ltm.lastProcessedAt) : '—'}`,
+          `packageCount: ${formatNumber(input.ltm.packageCount)}`,
         ].join('\n') : null}
       />
     </section>

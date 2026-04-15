@@ -70,32 +70,22 @@ export type InternalAgentRuntime<
     getSnapshot(): {
       running: boolean;
       queued: boolean;
-      nextRunAt: number | null;
       lastRunAt: number | null;
       lastRunError: string | null;
       lastRunErrorAt: number | null;
       lastWrittenPackageId: string | null;
       lastWrittenAt: number | null;
-      lastProcessedPackageId: string | null;
-      lastProcessedAt: number | null;
-      pendingPackageCount: number;
-      writtenPackageCount: number;
-      processedPackageCount: number;
+      packageCount: number;
     };
     readSnapshot(): Promise<{
       running: boolean;
       queued: boolean;
-      nextRunAt: number | null;
       lastRunAt: number | null;
       lastRunError: string | null;
       lastRunErrorAt: number | null;
       lastWrittenPackageId: string | null;
       lastWrittenAt: number | null;
-      lastProcessedPackageId: string | null;
-      lastProcessedAt: number | null;
-      pendingPackageCount: number;
-      writtenPackageCount: number;
-      processedPackageCount: number;
+      packageCount: number;
     }>;
     dispose(): Promise<void>;
   } | null;
