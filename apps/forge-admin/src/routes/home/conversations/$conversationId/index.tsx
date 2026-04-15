@@ -189,11 +189,14 @@ function HomeConversationDetailIndexRoute() {
     return <div className="text-sm text-muted-foreground">Conversa não encontrada.</div>;
   }
 
+  const canManageGroup = selectedConversation.type === 'group' && members.length > 0;
+
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col gap-4">
+      <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
         <ConversationHeader
           conversation={selectedConversation}
+          canManageGroup={canManageGroup}
           onBack={() => void navigate({ to: '/home/conversations' })}
           onRenameOpen={() => setRenameDialogOpen(true)}
           onParticipantsOpen={() => setParticipantsDialogOpen(true)}

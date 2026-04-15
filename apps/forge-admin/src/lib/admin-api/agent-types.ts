@@ -35,8 +35,10 @@ export type AgentListItem = {
   providerTypes: string[];
   overview: {
     lastStepAt: number | null;
+    lastStepContextTokens: number | null;
     lastStepTokens: number | null;
     lastStepCostUsd: number | null;
+    averageStepIntervalMs: number | null;
     unreadNotificationCount: number;
     om: {
       generationCount: number;
@@ -44,8 +46,11 @@ export type AgentListItem = {
       recentRawTokenCount: number;
       recentRawTokenLimit: number;
       overflowTokenCount: number;
+      overflowTokenLimit: number;
       observationTokenCount: number;
+      observationTokenLimit: number;
       reflectionTokenCount: number;
+      reflectionTokenLimit: number;
       checkpointTokenCount: number;
     } | null;
     ltm: {

@@ -304,6 +304,7 @@ export function createAdminReadModel(input: {
     const unreadNotificationCountByAgentId = new Map(
       unreadNotificationRows.map((row) => [row.agentId, row.count]),
     );
+    const recentStepsByAgentId = new Map<string, typeof recentStepRows>();
 
     for (const provider of providerRows) {
       const existingTypes = providerTypesByAgentId.get(provider.agentId) ?? [];
@@ -315,6 +316,10 @@ export function createAdminReadModel(input: {
       if (!lastStepByAgentId.has(step.agentId)) {
         lastStepByAgentId.set(step.agentId, step);
       }
+
+       const existingSteps = recentStepsByAgentId.get(step.agentId) ?? [];
+       existingSteps.push(step);
+       recentStepsByAgentId.set(step.agentId, existingSteps);
     }
 
     const runtimeMemoryByAgentId = new Map(
@@ -335,8 +340,24 @@ export function createAdminReadModel(input: {
       const modelProfile = llmProfileMap.get(agent.modelProfileId);
       const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
       const lastStep = lastStepByAgentId.get(agent.id) ?? null;
+      const recentSteps = recentStepsByAgentId.get(agent.id) ?? [];
       const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
       const longTermMemoryState = longTermMemoryStateByAgentId.get(agent.id) ?? null;
+      const averageStepIntervalMs = recentSteps.length >= 2
+        ? Math.round(
+            recentSteps
+              .slice(0, 6)
+              .map((step, index, items) => {
+                if (index === items.length - 1) {
+                  return null;
+                }
+
+                return Math.max(step.createdAt - items[index + 1].createdAt, 0);
+              })
+              .filter((value): value is number => value !== null)
+              .reduce((total, value, _index, values) => total + value / values.length, 0),
+          )
+        : null;
       const executionState =
         runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
           ? 'running'
@@ -356,10 +377,14 @@ export function createAdminReadModel(input: {
         providerTypes: (providerTypesByAgentId.get(agent.id) ?? []).sort(),
         overview: {
           lastStepAt: lastStep?.createdAt ?? null,
+          lastStepContextTokens: lastStep
+            ? lastStep.inputTokens + lastStep.cachedInputTokens
+            : null,
           lastStepTokens: lastStep
             ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
             : null,
           lastStepCostUsd: lastStep?.costUsd ?? null,
+          averageStepIntervalMs,
           unreadNotificationCount: unreadNotificationCountByAgentId.get(agent.id) ?? 0,
           om: runtimeMemory
             ? {
@@ -368,8 +393,11 @@ export function createAdminReadModel(input: {
                 recentRawTokenCount: runtimeMemory.metrics.recentRawTokenCount,
                 recentRawTokenLimit: runtimeMemory.metrics.recentRawTokenLimit,
                 overflowTokenCount: runtimeMemory.metrics.overflowTokenCount,
+                overflowTokenLimit: runtimeMemory.metrics.observationTriggerTokenLimit,
                 observationTokenCount: runtimeMemory.metrics.observationTokenCount,
+                observationTokenLimit: runtimeMemory.metrics.reflectionTriggerTokenLimit,
                 reflectionTokenCount: runtimeMemory.metrics.reflectionTokenCount,
+                reflectionTokenLimit: runtimeMemory.metrics.reflectionBudget,
                 checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
               }
             : null,

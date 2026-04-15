@@ -15,6 +15,7 @@ const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS;
 const STUCK_LOOP_REPEAT_LIMIT = 6;
 const STEP_HANG_WARNING_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
+const STEP_HANG_RECOVERY_MS = GENERATE_TIMEOUT_MS + (2 * ONE_MINUTE_MS);
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
@@ -424,6 +425,13 @@ export function createAgentRunner(
       );
 
     }, STEP_HANG_WARNING_MS);
+    const stepRecoveryTimer = setTimeout(() => {
+      void recoverStuckStep({
+        runEpoch,
+        stage: lastStepStage,
+        prompt,
+      });
+    }, STEP_HANG_RECOVERY_MS);
 
     try {
       lastStepStage = 'checking-execution-state';
@@ -507,7 +515,7 @@ export function createAgentRunner(
       });
 
       lastStepStage = 'processing-runner-control';
-      const controlDirective = extractRunnerControlDirective(result.text);
+      const controlDirective = extractRunnerControlDirective(result);
       const ignoredTextRequested = controlDirective === 'ignore';
       const stopRequested = controlDirective === 'stop';
       const workingMemoryUpdated = didUpdateWorkingMemory(result);
@@ -624,6 +632,7 @@ export function createAgentRunner(
       schedule(nextBackoff());
     } finally {
       clearTimeout(stepWarningTimer);
+      clearTimeout(stepRecoveryTimer);
       lastStepStartedAt = null;
       lastStepStage = null;
       if (activeStepEpoch === runEpoch) {
@@ -1087,6 +1096,60 @@ export function createAgentRunner(
     currentGenerateAbortController = null;
   }
 
+  async function recoverStuckStep(input: {
+    runEpoch: number;
+    stage: string | null;
+    prompt: string;
+  }) {
+    if (isStaleRun(input.runEpoch) || !executing) {
+      return;
+    }
+
+    console.error(
+      `[AgentRunner] ${runtime.id} auto-recovering stuck step:`,
+      JSON.stringify({
+        agentId: runtime.id,
+        stepStartedAt: lastStepStartedAt,
+        stepStage: input.stage,
+        prompt: input.prompt,
+        snapshot: getSnapshot(),
+        stepHangRecoveryMs: STEP_HANG_RECOVERY_MS,
+      }, null, 2),
+    );
+
+    await withTimeout(
+      notifications.createNotification({
+        agentId: runtime.id,
+        content: [
+          'Step hang auto-recovery triggered.',
+          `Stage: ${input.stage ?? 'unknown'}`,
+          `StartedAt: ${lastStepStartedAt ? new Date(lastStepStartedAt).toISOString() : 'unknown'}`,
+          '',
+          'The runner forced idle and queued an automatic rewakeup because the step exceeded the hang recovery threshold.',
+        ].join('\n'),
+      }),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent stuck-step notification timed out for ${runtime.id}`,
+    ).catch((error) => {
+      console.error(`[AgentRunner] ${runtime.id} failed to create stuck-step notification:`, error);
+    });
+
+    await forceIdle();
+    notifyExternalEvent({
+      type: 'runner-auto-rewakeup',
+      groupKey: `runner-auto-rewakeup:${runtime.id}`,
+      groupMetadata: {
+        Source: 'runner',
+      },
+      idempotencyKey: `runner-auto-rewakeup:${runtime.id}:${Date.now()}`,
+      itemMetadata: {
+        Kind: 'auto-rewakeup',
+      },
+      text: 'Runner auto-rewakeup after a stuck step. Rebuild context from the latest persisted state and continue work.',
+      timestamp: Date.now(),
+    });
+  }
+
   function createGenerateTimeoutPromise(controller: AbortController) {
     let timeoutId: NodeJS.Timeout | null = null;
     const promise = new Promise<never>((_, reject) => {
@@ -1203,16 +1266,68 @@ function serializeUnknown(value: unknown): unknown {
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
 
-function extractRunnerControlDirective(text: string) {
-  const normalizedText = text.trim();
+function extractRunnerControlDirective(result: {
+  text: string;
+  steps?: Array<{
+    response?: {
+      uiMessages?: Array<{
+        parts?: Array<unknown>;
+      }>;
+    };
+  }>;
+}) {
+  const texts = [
+    result.text,
+    ...collectStepTextParts(result.steps ?? []),
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean);
 
-  if (normalizedText.includes(STOP_AND_IDLE_PREFIX)) {
+  if (texts.some((value) => hasExactControlDirective(value, STOP_AND_IDLE_PREFIX))) {
     return 'stop' as const;
   }
 
-  if (normalizedText.includes(NO_ACTION_NEEDED_PREFIX)) {
+  if (texts.some((value) => hasExactControlDirective(value, NO_ACTION_NEEDED_PREFIX))) {
     return 'ignore' as const;
   }
 
   return null;
+}
+
+function collectStepTextParts(steps: Array<{
+  response?: {
+    uiMessages?: Array<{
+      parts?: Array<unknown>;
+    }>;
+  };
+}>) {
+  const texts: string[] = [];
+
+  for (const step of steps) {
+    for (const message of step.response?.uiMessages ?? []) {
+      for (const part of message.parts ?? []) {
+        if (!part || typeof part !== 'object') {
+          continue;
+        }
+
+        if ('type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string') {
+          texts.push(part.text);
+          continue;
+        }
+
+        if ('text' in part && typeof part.text === 'string') {
+          texts.push(part.text);
+        }
+      }
+    }
+  }
+
+  return texts;
+}
+
+function hasExactControlDirective(text: string, directive: string) {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .some((line) => line === directive);
 }
