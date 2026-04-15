@@ -232,6 +232,14 @@ export type AgentRuntimeMemorySnapshot = {
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
+  ltmRecall: {
+    status: 'hit' | 'miss' | 'error';
+    query: string;
+    resultIds: string[];
+    resultCount: number;
+    updatedAt: number;
+    error: string | null;
+  } | null;
   ltm: {
     running: boolean;
     queued: boolean;

@@ -75,6 +75,7 @@ export async function createAgentRuntimeMemory(input: {
         agentId: input.agentId,
         agentWorkspacePath: input.agentWorkspacePath,
         mastraId: input.mastraId,
+        storage: input.storage,
       }),
     );
   }

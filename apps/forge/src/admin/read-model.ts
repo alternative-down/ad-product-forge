@@ -106,6 +106,15 @@ type LongTermMemoryStateSnapshot = {
   lastRunErrorAt: string | null;
 };
 
+type LongTermMemoryRecallSnapshot = {
+  status: 'hit' | 'miss' | 'error';
+  query: string;
+  resultIds: string[];
+  resultCount: number;
+  updatedAt: string;
+  error: string | null;
+};
+
 type MemoryStoreWithObservationalMemory = MastraMemoryStore & {
   getThreadById(input: { threadId: string }): Promise<{
     metadata?: Record<string, unknown>;
@@ -173,6 +182,35 @@ function getCustomCheckpointedContextState(metadata: Record<string, unknown> | u
       value.latestMetrics && typeof value.latestMetrics === 'object'
         ? value.latestMetrics as CustomCheckpointedContextState['latestMetrics']
         : null,
+  };
+}
+
+function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | undefined) {
+  const raw = metadata?.forgeLongTermMemoryRecall;
+
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const value = raw as Partial<LongTermMemoryRecallSnapshot>;
+
+  if (
+    (value.status !== 'hit' && value.status !== 'miss' && value.status !== 'error')
+    || typeof value.query !== 'string'
+    || !Array.isArray(value.resultIds)
+    || typeof value.resultCount !== 'number'
+    || typeof value.updatedAt !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    status: value.status,
+    query: value.query,
+    resultIds: value.resultIds.filter((item): item is string => typeof item === 'string'),
+    resultCount: value.resultCount,
+    updatedAt: value.updatedAt,
+    error: typeof value.error === 'string' ? value.error : null,
   };
 }
 
@@ -726,6 +764,7 @@ export function createAdminReadModel(input: {
         checkpointGeneration: null,
         checkpointSummary: null,
         checkpointUpdatedAt: null,
+        ltmRecall: null,
         ltm: null,
         metrics: {
           recentRawTokenCount: 0,
@@ -740,9 +779,13 @@ export function createAdminReadModel(input: {
         },
       };
     }
+    const threadMetadata = hasObservationalMemoryAccess(memoryStore)
+      ? (await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata
+      : undefined;
     const customState = hasObservationalMemoryAccess(memoryStore)
-      ? getCustomCheckpointedContextState((await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata)
+      ? getCustomCheckpointedContextState(threadMetadata)
       : null;
+    const ltmRecall = getLongTermMemoryRecallSnapshot(threadMetadata);
     let reflection = '';
     const observations = customState
       ? customState.observationBlocks
@@ -814,6 +857,16 @@ export function createAdminReadModel(input: {
       checkpointSummary: customState?.checkpointSummary?.text ?? null,
       checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
         ? Date.parse(customState.checkpointSummary.updatedAt)
+        : null,
+      ltmRecall: ltmRecall
+        ? {
+            status: ltmRecall.status,
+            query: ltmRecall.query,
+            resultIds: ltmRecall.resultIds,
+            resultCount: ltmRecall.resultCount,
+            updatedAt: Date.parse(ltmRecall.updatedAt),
+            error: ltmRecall.error,
+          }
         : null,
       ltm,
       metrics: {

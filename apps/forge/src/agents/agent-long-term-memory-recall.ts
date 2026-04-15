@@ -7,7 +7,7 @@ import type {
   Processor,
 } from '@mastra/core/processors';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
-import { LibSQLVector } from '@mastra/libsql';
+import { LibSQLVector, type LibSQLStore } from '@mastra/libsql';
 
 import { toMastraSafeIdentifier } from '@mastra-engine/core';
 
@@ -20,6 +20,16 @@ type SearchResult = {
 };
 
 const RECALL_TAG = 'agent-long-term-memory-recall';
+const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
+
+type RecallSnapshot = {
+  status: 'hit' | 'miss' | 'error';
+  query: string;
+  resultIds: string[];
+  resultCount: number;
+  updatedAt: string;
+  error: string | null;
+};
 
 function withTimeout<T>(
   promise: Promise<T>,
@@ -58,14 +68,22 @@ export class AgentLongTermMemoryRecallProcessor
   private readonly workspace: WorkspaceRuntime;
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
+  private readonly memoryStore: NonNullable<LibSQLStore['stores']['memory']>;
   private initializationPromise: Promise<void> | null = null;
 
   constructor(input: {
     agentId: string;
     agentWorkspacePath: string;
     mastraId: string;
+    storage: LibSQLStore;
     model?: AgentConfig['model'];
   }) {
+    const memoryStore = input.storage.stores.memory;
+
+    if (!memoryStore) {
+      throw new Error(`LTM recall memory store is not available for agent ${input.agentId}`);
+    }
+
     const vectorStorePath = path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`);
 
     this.vectorStore = new LibSQLVector({
@@ -73,6 +91,7 @@ export class AgentLongTermMemoryRecallProcessor
       url: `file:${vectorStorePath}`,
     });
     this.searchIndexName = `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_search`;
+    this.memoryStore = memoryStore;
     this.workspace = new WorkspaceRuntime({
       autoSync: true,
       bm25: true,
@@ -91,6 +110,8 @@ export class AgentLongTermMemoryRecallProcessor
       return args.messages;
     }
 
+    const threadContext = this.getThreadContext(args.requestContext, args.messageList);
+
     try {
       await this.doInitialize();
       const queryText = this.buildRecallQuery(args);
@@ -99,10 +120,18 @@ export class AgentLongTermMemoryRecallProcessor
         return args.messageList;
       }
 
-      const { formatted } = await this.searchWorkspace(queryText);
+      const { formatted, results } = await this.searchWorkspace(queryText);
       args.messageList.clearSystemMessages(RECALL_TAG);
 
       if (!formatted) {
+        await this.persistRecallSnapshot(threadContext, {
+          status: 'miss',
+          query: queryText,
+          resultIds: [],
+          resultCount: 0,
+          updatedAt: new Date().toISOString(),
+          error: null,
+        });
         return args.messageList;
       }
 
@@ -116,10 +145,27 @@ export class AgentLongTermMemoryRecallProcessor
         RECALL_TAG,
       );
 
+      await this.persistRecallSnapshot(threadContext, {
+        status: 'hit',
+        query: queryText,
+        resultIds: results.map((result) => result.id),
+        resultCount: results.length,
+        updatedAt: new Date().toISOString(),
+        error: null,
+      });
+
       return args.messageList;
     } catch (error) {
       console.error('[AgentLongTermMemoryRecall] recall failed:', error);
       args.messageList.clearSystemMessages(RECALL_TAG);
+      await this.persistRecallSnapshot(threadContext, {
+        status: 'error',
+        query: this.buildRecallQuery(args),
+        resultIds: [],
+        resultCount: 0,
+        updatedAt: new Date().toISOString(),
+        error: error instanceof Error ? error.message : String(error),
+      });
       return args.messageList;
     }
   }
@@ -374,12 +420,37 @@ export class AgentLongTermMemoryRecallProcessor
 
     return null;
   }
+
+  private async persistRecallSnapshot(
+    threadContext: { threadId: string; resourceId?: string } | null,
+    snapshot: RecallSnapshot,
+  ) {
+    if (!threadContext) {
+      return;
+    }
+
+    const thread = await this.memoryStore.getThreadById({
+      threadId: threadContext.threadId,
+    });
+    const metadata = thread?.metadata && typeof thread.metadata === 'object'
+      ? { ...thread.metadata }
+      : {};
+
+    metadata[RECALL_METADATA_KEY] = snapshot;
+
+    await this.memoryStore.updateThread({
+      id: threadContext.threadId,
+      title: thread?.title ?? '',
+      metadata,
+    });
+  }
 }
 
 export function createAgentLongTermMemoryRecallProcessor(input: {
   agentId: string;
   agentWorkspacePath: string;
   mastraId: string;
+  storage: LibSQLStore;
   model?: AgentConfig['model'];
 }) {
   return new AgentLongTermMemoryRecallProcessor(input);
