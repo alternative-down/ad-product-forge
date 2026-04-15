@@ -238,14 +238,19 @@ function getCustomOmState(thread: StorageThread | null): CustomOmState {
   }
 
   const value = custom as Partial<CustomOmState>;
+  const checkpointSummary =
+    value.checkpointSummary && typeof value.checkpointSummary === 'object'
+      ? value.checkpointSummary as CheckpointSummary
+      : null;
+  const checkpointGeneration =
+    checkpointSummary && typeof value.checkpointGeneration === 'number'
+      ? value.checkpointGeneration
+      : null;
+
   return {
     version: 1,
-    checkpointGeneration:
-      typeof value.checkpointGeneration === 'number' ? value.checkpointGeneration : null,
-    checkpointSummary:
-      value.checkpointSummary && typeof value.checkpointSummary === 'object'
-        ? value.checkpointSummary as CheckpointSummary
-        : null,
+    checkpointGeneration,
+    checkpointSummary,
     observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
     activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks)
       ? value.activeReflectionBlocks
@@ -1467,8 +1472,11 @@ export class CheckpointedObservationalMemoryProcessor
     reflectionBudget: number;
     requestContext?: RequestContext;
   }) {
+    const originalActiveReflectionBlocks = [...input.state.activeReflectionBlocks];
+    const originalCheckpointGeneration = input.state.checkpointGeneration;
     let currentTokens = sumTokens(input.state.activeReflectionBlocks);
     const removedBlocks: ReflectionBlock[] = [];
+    let nextCheckpointGeneration: number | null = null;
 
     while (currentTokens > input.reflectionBudget && input.state.activeReflectionBlocks.length > 0) {
       const removed = input.state.activeReflectionBlocks.shift();
@@ -1477,12 +1485,12 @@ export class CheckpointedObservationalMemoryProcessor
       }
 
       removedBlocks.push(removed);
-      input.state.checkpointGeneration = removed.generationCount;
+      nextCheckpointGeneration = removed.generationCount;
       currentTokens -= removed.tokenCount;
       forgeDebug('checkpointed-om', 'checkpoint advanced', {
         threadId: input.threadId,
         resourceId: input.resourceId,
-        checkpointGeneration: input.state.checkpointGeneration,
+        checkpointGeneration: nextCheckpointGeneration,
         removedReflectionRecordId: removed.recordId,
         removedReflectionTokens: removed.tokenCount,
         remainingReflectionTokens: currentTokens,
@@ -1490,7 +1498,7 @@ export class CheckpointedObservationalMemoryProcessor
       });
     }
 
-    if (removedBlocks.length === 0 || input.state.checkpointGeneration === null) {
+    if (removedBlocks.length === 0 || nextCheckpointGeneration === null) {
       return;
     }
 
@@ -1502,6 +1510,13 @@ export class CheckpointedObservationalMemoryProcessor
       .join('\n\n');
 
     if (!removedReflectionText) {
+      input.state.activeReflectionBlocks = originalActiveReflectionBlocks;
+      input.state.checkpointGeneration = originalCheckpointGeneration;
+      forgeDebug('checkpointed-om', 'checkpoint summary skipped without removed text', {
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+        removedReflectionCount: removedBlocks.length,
+      });
       return;
     }
 
@@ -1543,14 +1558,15 @@ export class CheckpointedObservationalMemoryProcessor
     input.state.checkpointSummary = {
       text: summaryText,
       tokenCount: this.tokenCounter.countObservations(summaryText),
-      upToGeneration: input.state.checkpointGeneration,
+      upToGeneration: nextCheckpointGeneration,
       updatedAt: new Date().toISOString(),
     };
+    input.state.checkpointGeneration = nextCheckpointGeneration;
 
     forgeDebug('checkpointed-om', 'checkpoint summary created', {
       threadId: input.threadId,
       resourceId: input.resourceId,
-      checkpointGeneration: input.state.checkpointGeneration,
+      checkpointGeneration: nextCheckpointGeneration,
       checkpointSummaryTokens: input.state.checkpointSummary.tokenCount,
     });
   }
