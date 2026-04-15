@@ -709,7 +709,7 @@ function splitRawMessagesByRecentReserve(
     const unit = units[index];
     const tokenCount = unit.tokenCount;
 
-    if (recentIds.size > 0 && usedTokens + tokenCount > recentRawTokens) {
+    if (usedTokens + tokenCount > recentRawTokens) {
       break;
     }
 
@@ -1454,7 +1454,7 @@ export class CheckpointedObservationalMemoryProcessor
       lastBufferedAtTokens: 0,
       lastBufferedAtTime: null,
       bufferedObservationChunks: [],
-      observedMessageIds: [],
+      observedMessageIds: sanitizeObservedUnitIds(input.currentRecord.observedMessageIds),
     };
 
     await this.store.insertObservationalMemoryRecord(currentRecord);

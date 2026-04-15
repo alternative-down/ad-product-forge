@@ -358,10 +358,7 @@ export function createAdminReadModel(input: {
               .reduce((total, value, _index, values) => total + value / values.length, 0),
           )
         : null;
-      const executionState =
-        runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
-          ? 'running'
-          : agent.executionState;
+      const executionState = agent.executionState;
 
       return {
         agentId: agent.id,
@@ -495,10 +492,7 @@ export function createAdminReadModel(input: {
     const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
     const heartbeat = agentScheduleRows.find((schedule) => schedule.kind === 'heartbeat') ?? null;
     const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
-    const executionState =
-      runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
-        ? 'running'
-        : agent.executionState;
+    const executionState = agent.executionState;
     const contractSpendRows = activeContract
       ? await db
           .select({

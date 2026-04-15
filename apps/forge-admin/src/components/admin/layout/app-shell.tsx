@@ -9,8 +9,8 @@ export function AppShell(input: {
   className?: string;
 }) {
   return (
-    <div className={cn('min-h-screen bg-background text-foreground', input.className)}>
-      <div className="flex min-h-screen min-w-0 flex-col">
+    <div className={cn('h-dvh overflow-hidden bg-background text-foreground', input.className)}>
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
         {input.topbar ? (
           <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
             {input.topbar}
@@ -22,8 +22,8 @@ export function AppShell(input: {
             input.detailPane ? 'xl:grid-cols-[minmax(0,1fr)_340px]' : '',
           )}
         >
-          <main className="flex min-h-0 min-w-0 flex-col">{input.children}</main>
-          {input.detailPane ? <aside className="min-h-0 min-w-0">{input.detailPane}</aside> : null}
+          <main className="flex min-h-0 min-w-0 flex-col overflow-y-auto">{input.children}</main>
+          {input.detailPane ? <aside className="min-h-0 min-w-0 overflow-y-auto">{input.detailPane}</aside> : null}
         </div>
       </div>
     </div>

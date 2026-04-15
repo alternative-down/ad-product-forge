@@ -105,7 +105,21 @@ export function createAgentWakeQueue(config: {
     try {
       await config.execute(queuedEvents);
     } catch (error) {
+      for (const event of queuedEvents) {
+        readyEvents.set(event.idempotencyKey, event);
+      }
+
+      pending = readyEvents.size > 0;
+      firstPendingAt ??= Date.now();
+
       console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to execute:`, error);
+
+      if (!pending) {
+        return;
+      }
+
+      const wakeWindow = getCurrentWakeWindow();
+      scheduleTrigger(wakeWindow.debounceMs);
     }
   }
 
