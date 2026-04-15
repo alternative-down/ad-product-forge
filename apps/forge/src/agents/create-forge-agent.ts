@@ -73,6 +73,7 @@ export async function createInternalAgentRuntime<
         agentWorkspacePath: platform.agentWorkspacePath,
         agentMemoryPath: platform.agentMemoryPath,
         storage: platform.storage,
+        vector: platform.vector,
         threadId: platform.mastraId,
         resourceId: platform.mastraId,
         model: (config.omModel ?? config.model) as CreateAgentConfig['model'],

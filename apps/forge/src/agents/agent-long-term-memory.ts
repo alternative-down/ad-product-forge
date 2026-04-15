@@ -4,13 +4,13 @@ import path from 'node:path';
 
 import { Agent, type AgentConfig } from '@mastra/core/agent';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
-import type { LibSQLStore } from '@mastra/libsql';
+import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import type {
   CheckpointedOmCheckpointPackageInput,
   CheckpointedOmArchivedObservation,
   CheckpointedOmArchivedReflection,
 } from '@mastra-engine/core';
-import { forgeDebug, toMastraSafeIdentifier } from '@mastra-engine/core';
+import { createAgentMemory, forgeDebug, toMastraSafeIdentifier } from '@mastra-engine/core';
 import { z } from 'zod';
 
 import { createAgentContractStore } from './agent-contract-store';
@@ -429,6 +429,7 @@ export function createAgentLongTermMemory(input: {
   agentWorkspacePath: string;
   agentMemoryPath: string;
   storage: LibSQLStore;
+  vector: LibSQLVector;
   threadId: string;
   resourceId: string;
   model: AgentConfig['model'];
@@ -440,6 +441,7 @@ export function createAgentLongTermMemory(input: {
   const checkpointsPath = path.resolve(input.agentMemoryPath, CHECKPOINTS_DIR);
   const memoryPath = path.resolve(input.agentMemoryPath, MEMORY_DIR);
   const statePath = path.resolve(input.agentMemoryPath, LTM_STATE_FILE);
+  const ltmMastraId = toMastraSafeIdentifier(`${input.agentId}_long_term_memory`);
   const workspace = new WorkspaceRuntime({
     autoSync: true,
     filesystem: new LocalFilesystem({
@@ -447,8 +449,13 @@ export function createAgentLongTermMemory(input: {
     }),
     skills: ['workspace/skills/**/SKILL.md'],
   });
+  const memory = createAgentMemory({
+    storage: input.storage,
+    vector: input.vector,
+    lastMessages: 20,
+  });
   const memoryAgent = new Agent({
-    id: toMastraSafeIdentifier(`${input.agentId}_long_term_memory`),
+    id: ltmMastraId,
     name: `${input.agentName} Long-Term Memory`,
     instructions: createMemoryAgentInstructions({
       agentName: input.agentName,
@@ -456,6 +463,7 @@ export function createAgentLongTermMemory(input: {
     }),
     model: input.model,
     workspace,
+    memory,
   });
 
   let initialized = false;
@@ -769,6 +777,10 @@ export function createAgentLongTermMemory(input: {
           memoryAgent.generate(buildMemoryAgentPrompt(pendingPackages), {
             maxSteps: 1,
             abortSignal: controller.signal,
+            memory: {
+              thread: ltmMastraId,
+              resource: ltmMastraId,
+            },
           }),
           GENERATE_TIMEOUT_MS,
           `LTM generate timed out for ${input.agentId}`,
