@@ -163,7 +163,17 @@ export function createAgentRunner(
       `Agent execution state lookup timed out for ${runtime.id}`,
     );
 
-    if (executionState !== 'running') {
+    if (executionState === 'idle') {
+      await currentRuntime.longTermMemory?.onAgentIdle();
+      return;
+    }
+
+    if (executionState === 'absent') {
+      await withTimeout(
+        store.setExecutionState(runtime.id, 'idle'),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent execution state update timed out for ${runtime.id}`,
+      );
       await currentRuntime.longTermMemory?.onAgentIdle();
       return;
     }
@@ -189,7 +199,7 @@ export function createAgentRunner(
     const idleOnlyEvents = events.filter((event) => event.idleOnly);
     const runnableEvents = events.filter((event) => !event.idleOnly);
 
-    if (executionState === 'running' || startingRun) {
+    if (executionState !== 'idle' || startingRun) {
       appendPendingRunMessages(runnableEvents);
 
       for (const event of idleOnlyEvents) {
@@ -432,7 +442,7 @@ export function createAgentRunner(
         `Agent execution state lookup timed out for ${runtime.id}`,
       );
 
-      if (executionState !== 'running' || isStaleRun(runEpoch)) {
+      if (executionState === 'idle' || isStaleRun(runEpoch)) {
         return;
       }
 
@@ -519,8 +529,16 @@ export function createAgentRunner(
         `Agent execution state lookup timed out for ${runtime.id}`,
       );
 
-      if (executionState !== 'running' || isStaleRun(runEpoch)) {
+      if (executionState === 'idle' || isStaleRun(runEpoch)) {
         return;
+      }
+
+      if (executionState === 'absent') {
+        await withTimeout(
+          store.setExecutionState(runtime.id, 'running'),
+          RUNNER_AWAIT_TIMEOUT_MS,
+          `Agent execution state update timed out for ${runtime.id}`,
+        );
       }
 
       lastStepStage = 'loading-runnable-contract';
@@ -696,6 +714,13 @@ export function createAgentRunner(
           error: serializeError(error),
         }, null, 2),
       );
+      await withTimeout(
+        store.setExecutionState(runtime.id, 'absent'),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent execution state update timed out for ${runtime.id}`,
+      ).catch((stateError) => {
+        console.error(`[AgentRunner] ${runtime.id} failed to set absent state:`, stateError);
+      });
       schedule(nextBackoff());
     } finally {
       clearTimeout(stepWarningTimer);

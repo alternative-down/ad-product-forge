@@ -63,7 +63,13 @@ function AgentsIndexRoute() {
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3">{agent.roleName ?? 'Sem papel'}</TableCell>
-                  <TableCell className="px-4 py-3">{agent.executionState === 'running' ? 'Trabalhando' : 'Ocioso'}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {agent.executionState === 'running'
+                      ? 'Trabalhando'
+                      : agent.executionState === 'absent'
+                        ? 'Ausente'
+                        : 'Ocioso'}
+                  </TableCell>
                   <TableCell className="px-4 py-3">
                     {agent.overview.lastStepAt ? (
                       <div className="space-y-0.5">

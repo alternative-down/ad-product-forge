@@ -216,7 +216,7 @@ export function createCapabilityTools(
       description: 'List the current execution status of agents, such as idle or running. You can filter by one agentId or by one executionState.',
       inputSchema: z.object({
         agentId: z.string().optional().describe('Optional agentId if you want to inspect one specific agent.'),
-        executionState: z.enum(['idle', 'running']).optional().describe('Optional execution state filter. Use idle or running.'),
+        executionState: z.enum(['idle', 'running', 'absent']).optional().describe('Optional execution state filter. Use idle, running, or absent.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'list_agent_statuses called', { input });

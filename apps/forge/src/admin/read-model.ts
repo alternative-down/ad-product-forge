@@ -255,6 +255,7 @@ export function createAdminReadModel(input: {
         loadedAgents: loadedAgentIds.size,
         idleAgents: agentRows.filter((agent) => agent.executionState === 'idle').length,
         runningAgents: agentRows.filter((agent) => agent.executionState === 'running').length,
+        absentAgents: agentRows.filter((agent) => agent.executionState === 'absent').length,
         roles: roles.length,
         activeContracts: activeContracts.items.length,
       },

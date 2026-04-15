@@ -12,15 +12,15 @@ export function createAgentContractStore(db: Database) {
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
 
-  async function getExecutionState(agentId: string): Promise<'idle' | 'running'> {
+  async function getExecutionState(agentId: string): Promise<'idle' | 'running' | 'absent'> {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
     });
 
-    return (agent?.executionState as 'idle' | 'running' | undefined) ?? 'idle';
+    return (agent?.executionState as 'idle' | 'running' | 'absent' | undefined) ?? 'idle';
   }
 
-  async function setExecutionState(agentId: string, executionState: 'idle' | 'running') {
+  async function setExecutionState(agentId: string, executionState: 'idle' | 'running' | 'absent') {
     await db
       .update(agents)
       .set({

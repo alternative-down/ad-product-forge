@@ -317,7 +317,7 @@ export function createCapabilityStore(db: Database) {
 
   async function listAgentStatuses(input: {
     agentId?: string;
-    executionState?: 'idle' | 'running';
+    executionState?: 'idle' | 'running' | 'absent';
   }) {
     const rows = await db.query.agents.findMany({
       where: (agent, { and, eq }) => {
@@ -354,7 +354,7 @@ export function createCapabilityStore(db: Database) {
       description: row.description ?? undefined,
       roleName: row.role?.name ?? undefined,
       roleDescription: row.role?.description ?? undefined,
-      executionState: row.executionState as 'idle' | 'running',
+      executionState: row.executionState as 'idle' | 'running' | 'absent',
       updatedAt: row.updatedAt,
     }));
   }
