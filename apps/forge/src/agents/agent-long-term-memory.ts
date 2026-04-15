@@ -941,6 +941,8 @@ export function createAgentLongTermMemory(input: {
     onAgentRunning() {
       idle = false;
       clearTimer();
+      snapshot.queued = false;
+      snapshot.nextRunAt = null;
       currentAbortController?.abort(new Error('LTM run interrupted because main agent resumed running'));
     },
 
