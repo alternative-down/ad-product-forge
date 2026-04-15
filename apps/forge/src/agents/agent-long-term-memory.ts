@@ -124,7 +124,6 @@ function createEmptyLongTermMemoryState(): LongTermMemoryState {
 
 function createMemoryAgentInstructions(input: {
   agentName: string;
-  mainAgentSystemPrompt?: string;
 }) {
   return [
     `You are the long-term memory maintenance agent for ${input.agentName}.`,
@@ -134,18 +133,13 @@ function createMemoryAgentInstructions(input: {
     'You may also create or update reusable skills under `workspace/skills` when repeated evidence justifies durable operational instructions, scripts, or workflows.',
     'Prefer focused documents over one oversized file. Rewrite stale material when newer evidence supersedes it.',
     'Keep checkpoint packages immutable. Put maintained knowledge in `workspace-memory/memory` and reusable procedural assets in `workspace/skills`.',
+    'Do not read, write, or mention `AGENT_CONTEXT.md`.',
+    'Do not read, write, or mention working memory content.',
+    'Do not create files outside `workspace-memory/memory` and `workspace/skills`.',
     'Use workspace-relative paths. The relevant roots are:',
     `- \`${path.posix.join('workspace-memory', CHECKPOINTS_DIR)}\``,
     `- \`${path.posix.join('workspace-memory', MEMORY_DIR)}\``,
     `- \`${SKILLS_DIR.replace(/\\/g, '/')}\``,
-    input.mainAgentSystemPrompt?.trim()
-      ? [
-          '<main_agent_system_prompt>',
-          'Use this as alignment context so the maintained memory and skills stay aligned with the main agent role.',
-          input.mainAgentSystemPrompt.trim(),
-          '</main_agent_system_prompt>',
-        ].join('\n')
-      : '',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -418,7 +412,6 @@ export function createAgentLongTermMemory(input: {
   model: AgentConfig['model'];
   pricingModelKey: string;
   modelProfileId?: string;
-  mainAgentSystemPrompt?: string;
   contractStore: ReturnType<typeof createAgentContractStore>;
 }) {
   const checkpointsPath = path.resolve(input.agentMemoryPath, CHECKPOINTS_DIR);
@@ -442,7 +435,6 @@ export function createAgentLongTermMemory(input: {
     name: `${input.agentName} Long-Term Memory`,
     instructions: createMemoryAgentInstructions({
       agentName: input.agentName,
-      mainAgentSystemPrompt: input.mainAgentSystemPrompt,
     }),
     model: input.model,
     workspace,

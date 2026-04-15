@@ -79,7 +79,6 @@ export async function createInternalAgentRuntime<
         model: (config.omModel ?? config.model) as CreateAgentConfig['model'],
         pricingModelKey: omPricingModelKey,
         modelProfileId: config.omModelProfileId,
-        mainAgentSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
         contractStore: options.contractStore,
       })
     : null;
