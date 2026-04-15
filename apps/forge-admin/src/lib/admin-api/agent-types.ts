@@ -35,8 +35,10 @@ export type AgentListItem = {
   providerTypes: string[];
   overview: {
     lastStepAt: number | null;
+    lastStepContextTokens: number | null;
     lastStepTokens: number | null;
     lastStepCostUsd: number | null;
+    averageStepIntervalMs: number | null;
     unreadNotificationCount: number;
     om: {
       generationCount: number;
@@ -44,10 +46,18 @@ export type AgentListItem = {
       recentRawTokenCount: number;
       recentRawTokenLimit: number;
       overflowTokenCount: number;
+      overflowTokenLimit: number;
       observationTokenCount: number;
+      observationTokenLimit: number;
       reflectionTokenCount: number;
+      reflectionTokenLimit: number;
       checkpointTokenCount: number;
     } | null;
+    ltm: {
+      pendingPackageCount: number;
+      writtenPackageCount: number;
+      processedPackageCount: number;
+    };
   };
   createdAt: number;
   updatedAt: number;
@@ -219,6 +229,21 @@ export type AgentRuntimeMemorySnapshot = {
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
+  ltm: {
+    running: boolean;
+    queued: boolean;
+    nextRunAt: number | null;
+    lastRunAt: number | null;
+    lastRunError: string | null;
+    lastRunErrorAt: number | null;
+    lastWrittenPackageId: string | null;
+    lastWrittenAt: number | null;
+    lastProcessedPackageId: string | null;
+    lastProcessedAt: number | null;
+    pendingPackageCount: number;
+    writtenPackageCount: number;
+    processedPackageCount: number;
+  } | null;
   metrics: {
     rawMessageCount: number;
     recentRawMessageCount: number;

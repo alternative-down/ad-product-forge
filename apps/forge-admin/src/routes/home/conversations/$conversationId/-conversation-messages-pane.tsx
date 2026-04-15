@@ -1,7 +1,7 @@
 import { ArrowDown } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 
-import { AdminButton, AdminScrollArea } from '@/components/admin';
+import { AgentAvatar, AdminButton, AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { HomeInternalChatConversationMessage } from '@/lib/admin-api';
 import { getInitials } from '../-context';
@@ -29,7 +29,7 @@ export function ConversationMessagesPane(input: {
   } = input;
 
   return (
-    <div ref={containerRef} className="relative min-h-0 flex-1">
+    <div ref={containerRef} className="relative min-h-0 flex-1 overflow-hidden">
       <AdminScrollArea className="h-full" contentClassName="space-y-3">
         {messages.map((message) => {
           const authorContact = contactByAccountId.get(message.authorAccountId);
@@ -38,11 +38,12 @@ export function ConversationMessagesPane(input: {
             <article key={message.messageId} className="flex items-start gap-3 py-1">
               {authorContact?.agentId ? (
                 <Link to="/agents/$agentId" params={{ agentId: authorContact.agentId }} className="shrink-0">
-                  <Avatar className="h-9 w-9 border border-border bg-muted">
-                    <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                      {getInitials(message.authorDisplayName)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AgentAvatar
+                    agentId={authorContact.agentId}
+                    name={message.authorDisplayName}
+                    className="h-9 w-9 border border-border bg-muted"
+                    fallbackClassName="bg-muted text-xs font-medium text-foreground"
+                  />
                 </Link>
               ) : (
                 <Avatar className="h-9 w-9 border border-border bg-muted">
@@ -51,7 +52,7 @@ export function ConversationMessagesPane(input: {
                   </AvatarFallback>
                 </Avatar>
               )}
-                  <div className="min-w-0 space-y-2">
+              <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="font-medium text-foreground">{message.authorDisplayName}</span>
                   <span className="text-xs text-muted-foreground">

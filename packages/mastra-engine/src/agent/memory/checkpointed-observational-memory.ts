@@ -83,6 +83,33 @@ type CustomOmMetricsSnapshot = {
   updatedAt: string;
 };
 
+export type CheckpointedOmArchivedReflection = {
+  recordId: string;
+  generationCount: number;
+  tokenCount: number;
+  createdAt: string;
+  text: string;
+};
+
+export type CheckpointedOmArchivedObservation = {
+  blockId: string;
+  tokenCount: number;
+  createdAt: string;
+  lastObservedAt: string;
+  reflectedGeneration: number;
+  text: string;
+};
+
+export type CheckpointedOmCheckpointPackageInput = {
+  threadId: string;
+  resourceId: string;
+  fromGeneration: number | null;
+  toGeneration: number;
+  checkpointSummary: CheckpointSummary;
+  reflections: CheckpointedOmArchivedReflection[];
+  observations: CheckpointedOmArchivedObservation[];
+};
+
 type CustomOmState = {
   version: 1;
   checkpointGeneration: number | null;
@@ -102,6 +129,7 @@ type CheckpointedObservationalMemoryConfig = {
   observationReflectionBatchTokens?: number;
   observationSupportTokens?: number;
   reflectionSupportTokens?: number;
+  onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
 };
 
 const CUSTOM_OM_TAG_REFLECTIONS = 'custom-om-reflections';
@@ -787,6 +815,7 @@ export class CheckpointedObservationalMemoryProcessor
   private readonly observationSupportTokens: number;
   private readonly reflectionSupportTokens: number;
   private readonly agentSystemPrompt?: string;
+  private readonly onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
 
   constructor(config: CheckpointedObservationalMemoryConfig) {
     if (!hasObservationalMemoryStore(config.storage.stores.memory!)) {
@@ -805,6 +834,7 @@ export class CheckpointedObservationalMemoryProcessor
     this.observationSupportTokens = config.observationSupportTokens ?? DEFAULT_SUPPORT_TOKENS;
     this.reflectionSupportTokens = config.reflectionSupportTokens ?? DEFAULT_SUPPORT_TOKENS;
     this.agentSystemPrompt = config.agentSystemPrompt?.trim() || undefined;
+    this.onCheckpointAdvanced = config.onCheckpointAdvanced;
   }
 
   private async generateOmText(input: {
@@ -1568,6 +1598,48 @@ export class CheckpointedObservationalMemoryProcessor
       resourceId: input.resourceId,
       checkpointGeneration: nextCheckpointGeneration,
       checkpointSummaryTokens: input.state.checkpointSummary.tokenCount,
+    });
+
+    if (!this.onCheckpointAdvanced) {
+      return;
+    }
+
+    const archivedReflectionRecordIds = new Set(removedBlocks.map((block) => block.recordId));
+    const archivedReflections = input.activeReflections
+      .filter((record) => archivedReflectionRecordIds.has(record.id))
+      .map((record) => ({
+        recordId: record.id,
+        generationCount: record.generationCount,
+        tokenCount: record.observationTokenCount,
+        createdAt: record.createdAt.toISOString(),
+        text: record.activeObservations.trim(),
+      }))
+      .filter((record) => record.text);
+    const archivedObservations = input.state.observationBlocks
+      .filter((block) =>
+        block.reflectedGeneration !== null
+        && block.reflectedGeneration <= nextCheckpointGeneration
+        && (
+          originalCheckpointGeneration === null
+          || block.reflectedGeneration > originalCheckpointGeneration
+        ))
+      .map((block) => ({
+        blockId: block.id,
+        tokenCount: block.tokenCount,
+        createdAt: block.createdAt,
+        lastObservedAt: block.lastObservedAt,
+        reflectedGeneration: block.reflectedGeneration as number,
+        text: block.text,
+      }));
+
+    await this.onCheckpointAdvanced({
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      fromGeneration: originalCheckpointGeneration,
+      toGeneration: nextCheckpointGeneration,
+      checkpointSummary: input.state.checkpointSummary,
+      reflections: archivedReflections,
+      observations: archivedObservations,
     });
   }
 
