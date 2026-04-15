@@ -30,23 +30,7 @@ export function createAgentRunnerUsage(input: {
       return null;
     }
 
-    const averageStepUsd =
-      recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
-    const pricing = await input.store.getUsagePricing({
-      pricingModelKey: input.runtime.pricingModelKey,
-      profileId: input.runtime.modelProfileId,
-    });
-    const lastStep = recentSteps[0];
-
-    if (!pricing.modelPrice || !lastStep) {
-      return averageStepUsd;
-    }
-
-    const inputEstimatedUsd =
-      (Math.max(lastStep.inputTokens - lastStep.cachedInputTokens, 0) / 1_000_000) *
-      pricing.modelPrice.inputPerMillionUsd *
-      pricing.contractCostMultiplier;
-    return (inputEstimatedUsd + averageStepUsd) / 2;
+    return recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
   }
 
   async function recordAgentStep(
