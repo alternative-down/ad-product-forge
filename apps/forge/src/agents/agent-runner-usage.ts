@@ -105,10 +105,11 @@ export function createAgentRunnerUsage(input: {
 
   function getUsageFromResult(result: { usage?: unknown }) {
     const usage = result.usage as AgentUsage;
-    const inputTokens =
-      usage.inputTokenDetails?.noCacheTokens ?? usage.inputTokens ?? usage.promptTokens ?? 0;
     const cachedInputTokens =
       usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
+    const promptTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
+    const inputTokens =
+      usage.inputTokenDetails?.noCacheTokens ?? Math.max(promptTokens - cachedInputTokens, 0);
     const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0;
 
     return {

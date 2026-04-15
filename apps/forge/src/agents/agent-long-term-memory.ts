@@ -190,10 +190,13 @@ function getUsageFromGenerateResult(result: { usage?: unknown }): LtmUsage {
       cacheReadTokens?: number;
     };
   };
+  const cachedInputTokens =
+    usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
+  const promptTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
 
   return {
-    inputTokens: usage.inputTokenDetails?.noCacheTokens ?? usage.inputTokens ?? usage.promptTokens ?? 0,
-    cachedInputTokens: usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0,
+    inputTokens: usage.inputTokenDetails?.noCacheTokens ?? Math.max(promptTokens - cachedInputTokens, 0),
+    cachedInputTokens,
     outputTokens: usage.outputTokens ?? usage.completionTokens ?? 0,
   };
 }
