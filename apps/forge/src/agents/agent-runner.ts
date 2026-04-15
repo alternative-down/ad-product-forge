@@ -1371,10 +1371,70 @@ function formatAbsentExecutionError(input: {
   const stage = input.stage ?? 'unknown';
 
   if (input.error instanceof Error) {
-    return `Stage: ${stage}\n${input.error.name}: ${input.error.message}`;
+    const details = extractAbsentErrorDetails(input.error);
+
+    return [
+      `Stage: ${stage}`,
+      `${input.error.name}: ${input.error.message}`,
+      ...details,
+    ].join('\n');
   }
 
   return `Stage: ${stage}\n${String(input.error)}`;
+}
+
+function extractAbsentErrorDetails(error: Error) {
+  const record = serializeError(error);
+  const detailLines: string[] = [];
+  const candidateEntries = [
+    ['statusCode', record.statusCode],
+    ['statusText', record.statusText],
+    ['url', record.url],
+    ['responseBody', record.responseBody],
+    ['body', record.body],
+    ['data', record.data],
+    ['value', record.value],
+  ] as const;
+
+  for (const [label, value] of candidateEntries) {
+    const text = formatAbsentErrorDetailValue(value);
+
+    if (!text) {
+      continue;
+    }
+
+    detailLines.push(`${label}: ${text}`);
+  }
+
+  const causeText = formatAbsentErrorDetailValue(record.cause);
+
+  if (causeText) {
+    detailLines.push(`cause: ${causeText}`);
+  }
+
+  return detailLines;
+}
+
+function formatAbsentErrorDetailValue(value: unknown): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed.slice(0, 2_000) : null;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  try {
+    const text = JSON.stringify(value);
+    return text && text !== '{}' ? text.slice(0, 2_000) : null;
+  } catch {
+    return String(value).slice(0, 2_000);
+  }
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
