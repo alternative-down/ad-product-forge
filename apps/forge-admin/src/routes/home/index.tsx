@@ -161,9 +161,13 @@ function OmMetricBar(input: {
   );
 }
 
-function humanizeAgentStatus(executionState: 'idle' | 'running') {
+function humanizeAgentStatus(executionState: 'idle' | 'running' | 'absent') {
   if (executionState === 'running') {
     return 'Trabalhando';
+  }
+
+  if (executionState === 'absent') {
+    return 'Ausente';
   }
 
   return 'Ocioso';

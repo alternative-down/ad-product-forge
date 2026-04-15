@@ -68,6 +68,12 @@ export function getAgentThreadMessages(agentId: string, page: number, perPage: n
   );
 }
 
+export function getAgentLongTermMemoryThreadMessages(agentId: string, page: number, perPage: number) {
+  return request<AgentThreadMessagesResponse>(
+    `/admin/agent/ltm-thread-messages?agentId=${encodeURIComponent(agentId)}&page=${page}&perPage=${perPage}`,
+  );
+}
+
 export function getAgentRuntimeMemory(agentId: string) {
   return request<AgentRuntimeMemorySnapshot>(
     `/admin/agent/runtime-memory?agentId=${encodeURIComponent(agentId)}`,

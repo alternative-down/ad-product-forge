@@ -69,7 +69,7 @@ export function createAgentScheduleManager(input: {
     unreadConversationCount: number;
     unreadMessageCount: number;
   }>;
-  getAgentExecutionState?(agentId: string): Promise<'idle' | 'running'>;
+  getAgentExecutionState?(agentId: string): Promise<'idle' | 'running' | 'absent'>;
   notifyAgent(input: {
     agentId: string;
     scheduleId: string;
@@ -545,7 +545,7 @@ export function createAgentScheduleManager(input: {
     cancelCompletedDateJob(scheduleRecord.scheduleId, remainsActive);
     if (scheduleRecord.kind === 'heartbeat') {
       const executionState =
-        await (input.getAgentExecutionState?.(scheduleRecord.agentId) ?? Promise.resolve<'idle' | 'running'>('idle'));
+        await (input.getAgentExecutionState?.(scheduleRecord.agentId) ?? Promise.resolve<'idle' | 'running' | 'absent'>('idle'));
 
       if (executionState === 'running') {
         await store.markTriggered({

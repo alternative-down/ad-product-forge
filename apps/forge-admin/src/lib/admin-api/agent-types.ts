@@ -2,7 +2,7 @@ export type AgentListItem = {
   agentId: string;
   name: string;
   description?: string;
-  executionState: 'idle' | 'running';
+  executionState: 'idle' | 'running' | 'absent';
   roleId: string | null;
   roleName: string | null;
   modelProfile: {
@@ -88,7 +88,7 @@ export type AgentDetail = {
   name: string;
   description?: string;
   instructions: string;
-  executionState: 'idle' | 'running';
+  executionState: 'idle' | 'running' | 'absent';
   modelProfile: {
     profileId: string;
     name: string;

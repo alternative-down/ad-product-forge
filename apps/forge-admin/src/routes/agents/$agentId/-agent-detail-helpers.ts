@@ -37,8 +37,16 @@ export function getAgentInitials(name: string) {
     .join('');
 }
 
-export function humanizeAgentStatus(executionState: 'idle' | 'running') {
-  return executionState === 'running' ? 'Trabalhando' : 'Ocioso';
+export function humanizeAgentStatus(executionState: 'idle' | 'running' | 'absent') {
+  if (executionState === 'running') {
+    return 'Trabalhando';
+  }
+
+  if (executionState === 'absent') {
+    return 'Ausente';
+  }
+
+  return 'Ocioso';
 }
 
 export function formatUsd(value: number) {

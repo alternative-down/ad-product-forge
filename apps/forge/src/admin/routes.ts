@@ -668,6 +668,26 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'GET',
+    path: '/admin/agent/ltm-thread-messages',
+    handler: async (request) => {
+      const query = agentThreadMessagesQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        page: request.query.get('page') ?? undefined,
+        perPage: request.query.get('perPage') ?? undefined,
+      });
+
+      return jsonResponse(
+        await readModel.listAgentLongTermMemoryThreadMessages({
+          agentId: query.agentId,
+          page: query.page,
+          perPage: query.perPage,
+        }),
+      );
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
     path: '/admin/agent/runtime-memory',
     handler: async (request) => {
       const { agentId } = agentIdQuerySchema.parse({

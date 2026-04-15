@@ -255,6 +255,7 @@ export function createAdminReadModel(input: {
         loadedAgents: loadedAgentIds.size,
         idleAgents: agentRows.filter((agent) => agent.executionState === 'idle').length,
         runningAgents: agentRows.filter((agent) => agent.executionState === 'running').length,
+        absentAgents: agentRows.filter((agent) => agent.executionState === 'absent').length,
         roles: roles.length,
         activeContracts: activeContracts.items.length,
       },
@@ -656,6 +657,23 @@ export function createAdminReadModel(input: {
     const items = await listThreadMessages(input.workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
+    });
+
+    return {
+      items,
+      hasMore: items.length === params.perPage,
+    };
+  }
+
+  async function listAgentLongTermMemoryThreadMessages(params: {
+    agentId: string;
+    page: number;
+    perPage: number;
+  }) {
+    const items = await listThreadMessages(input.workspaceBasePath, params.agentId, {
+      page: params.page,
+      perPage: params.perPage,
+      threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
     });
 
     return {
@@ -1066,6 +1084,7 @@ export function createAdminReadModel(input: {
     listAgentRecentConversations,
     listAgentExecutionSteps,
     listAgentThreadMessages,
+    listAgentLongTermMemoryThreadMessages,
     getAgentRuntimeMemory,
     listAgentConversationMessages,
     listRoles,
@@ -1234,10 +1253,11 @@ async function listThreadMessages(
   input: {
     page: number;
     perPage: number;
+    threadId?: string;
   },
 ) {
   try {
-    const mastraAgentId = toMastraSafeIdentifier(agentId);
+    const mastraAgentId = input.threadId ?? toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
     const client = createClient({
       url: `file:${agentDatabasePath}`,
