@@ -665,6 +665,23 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function listAgentLongTermMemoryThreadMessages(params: {
+    agentId: string;
+    page: number;
+    perPage: number;
+  }) {
+    const items = await listThreadMessages(input.workspaceBasePath, params.agentId, {
+      page: params.page,
+      perPage: params.perPage,
+      threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
+    });
+
+    return {
+      items,
+      hasMore: items.length === params.perPage,
+    };
+  }
+
   async function getAgentRuntimeMemory(agentId: string) {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
@@ -1067,6 +1084,7 @@ export function createAdminReadModel(input: {
     listAgentRecentConversations,
     listAgentExecutionSteps,
     listAgentThreadMessages,
+    listAgentLongTermMemoryThreadMessages,
     getAgentRuntimeMemory,
     listAgentConversationMessages,
     listRoles,
@@ -1235,10 +1253,11 @@ async function listThreadMessages(
   input: {
     page: number;
     perPage: number;
+    threadId?: string;
   },
 ) {
   try {
-    const mastraAgentId = toMastraSafeIdentifier(agentId);
+    const mastraAgentId = input.threadId ?? toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
     const client = createClient({
       url: `file:${agentDatabasePath}`,
