@@ -267,17 +267,13 @@ export function createAdminReadModel(input: {
   }
 
   async function listAgents() {
-    const [agentRows, roleRows, providerRows, llmProfiles, recentStepRows, unreadNotificationRows] = await Promise.all([
+    const [agentRows, roleRows, providerRows, llmProfiles, unreadNotificationRows] = await Promise.all([
       db.query.agents.findMany({
         orderBy: (fields, { asc }) => [asc(fields.name)],
       }),
       capabilities.listRoles(),
       db.query.agentProviders.findMany(),
       llmSettings.listProfiles(),
-      db.query.agentExecutionSteps.findMany({
-        orderBy: [desc(agentExecutionSteps.createdAt)],
-        limit: 500,
-      }),
       db
         .select({
           agentId: agentNotifications.agentId,
@@ -300,26 +296,26 @@ export function createAdminReadModel(input: {
       ]),
     );
     const providerTypesByAgentId = new Map<string, string[]>();
-    const lastStepByAgentId = new Map<string, typeof recentStepRows[number]>();
     const unreadNotificationCountByAgentId = new Map(
       unreadNotificationRows.map((row) => [row.agentId, row.count]),
     );
-    const recentStepsByAgentId = new Map<string, typeof recentStepRows>();
+    const recentStepsByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => [
+          agent.id,
+          await db.query.agentExecutionSteps.findMany({
+            where: eq(agentExecutionSteps.agentId, agent.id),
+            orderBy: [desc(agentExecutionSteps.createdAt)],
+            limit: 6,
+          }),
+        ] as const),
+      ),
+    );
 
     for (const provider of providerRows) {
       const existingTypes = providerTypesByAgentId.get(provider.agentId) ?? [];
       existingTypes.push(provider.providerType);
       providerTypesByAgentId.set(provider.agentId, existingTypes);
-    }
-
-    for (const step of recentStepRows) {
-      if (!lastStepByAgentId.has(step.agentId)) {
-        lastStepByAgentId.set(step.agentId, step);
-      }
-
-       const existingSteps = recentStepsByAgentId.get(step.agentId) ?? [];
-       existingSteps.push(step);
-       recentStepsByAgentId.set(step.agentId, existingSteps);
     }
 
     const runtimeMemoryByAgentId = new Map(
@@ -339,10 +335,11 @@ export function createAdminReadModel(input: {
       const role = agent.roleId ? (roleMap.get(agent.roleId) ?? null) : null;
       const modelProfile = llmProfileMap.get(agent.modelProfileId);
       const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
-      const lastStep = lastStepByAgentId.get(agent.id) ?? null;
       const recentSteps = recentStepsByAgentId.get(agent.id) ?? [];
+      const lastStep = recentSteps[0] ?? null;
       const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
       const longTermMemoryState = longTermMemoryStateByAgentId.get(agent.id) ?? null;
+      const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory?.getSnapshot() ?? null;
       const averageStepIntervalMs = recentSteps.length >= 2
         ? Math.round(
             recentSteps
@@ -378,7 +375,7 @@ export function createAdminReadModel(input: {
         overview: {
           lastStepAt: lastStep?.createdAt ?? null,
           lastStepContextTokens: lastStep
-            ? lastStep.inputTokens + lastStep.cachedInputTokens
+            ? lastStep.inputTokens
             : null,
           lastStepTokens: lastStep
             ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
@@ -402,6 +399,8 @@ export function createAdminReadModel(input: {
               }
             : null,
           ltm: {
+            running: runtimeLtmSnapshot?.running ?? false,
+            queued: runtimeLtmSnapshot?.queued ?? false,
             pendingPackageCount: longTermMemoryState?.packages.filter((entry) => entry.processedAt === null).length ?? 0,
             writtenPackageCount: longTermMemoryState?.packages.length ?? 0,
             processedPackageCount: longTermMemoryState?.packages.filter((entry) => entry.processedAt !== null).length ?? 0,

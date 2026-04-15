@@ -54,6 +54,8 @@ export type AgentListItem = {
       checkpointTokenCount: number;
     } | null;
     ltm: {
+      running: boolean;
+      queued: boolean;
       pendingPackageCount: number;
       writtenPackageCount: number;
       processedPackageCount: number;

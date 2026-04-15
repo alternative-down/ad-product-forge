@@ -64,7 +64,14 @@ function AgentsIndexRoute() {
                   </TableCell>
                   <TableCell className="px-4 py-3">{agent.roleName ?? 'Sem papel'}</TableCell>
                   <TableCell className="px-4 py-3">{agent.executionState === 'running' ? 'Trabalhando' : 'Ocioso'}</TableCell>
-                  <TableCell className="px-4 py-3">{formatRelativeTime(agent.overview.lastStepAt)}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {agent.overview.lastStepAt ? (
+                      <div className="space-y-0.5">
+                        <div>{formatDateTime(agent.overview.lastStepAt)}</div>
+                        <div className="text-xs text-muted-foreground">{formatRelativeTime(agent.overview.lastStepAt)}</div>
+                      </div>
+                    ) : '—'}
+                  </TableCell>
                   <TableCell className="px-4 py-3">
                     {agent.runner?.wake.pending
                       ? 'Pendente'
@@ -79,7 +86,12 @@ function AgentsIndexRoute() {
                       : '—'}
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    {`${formatNullableNumber(agent.overview.ltm.processedPackageCount)}/${formatNullableNumber(agent.overview.ltm.writtenPackageCount)}`}
+                    <div className="space-y-0.5">
+                      <div>{agent.overview.ltm.running ? 'Executando' : agent.overview.ltm.queued ? 'Enfileirada' : 'Ociosa'}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {`${formatNullableNumber(agent.overview.ltm.processedPackageCount)}/${formatNullableNumber(agent.overview.ltm.writtenPackageCount)}`}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
@@ -130,21 +142,20 @@ function formatRelativeTime(value: number | null) {
   }
 
   const diffMs = Math.max(Date.now() - value, 0);
-  const diffMinutes = Math.floor(diffMs / 60_000);
+  const diffSeconds = Math.floor(diffMs / 1_000);
 
-  if (diffMinutes < 1) {
-    return 'agora';
+  if (diffSeconds < 60) {
+    return `${diffSeconds}s`;
   }
 
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min`;
-  }
+  return `${Math.floor(diffSeconds / 60)} min`;
+}
 
-  const diffHours = Math.floor(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `${diffHours} h`;
-  }
-
-  return `${Math.floor(diffHours / 24)} d`;
+function formatDateTime(value: number) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(value);
 }

@@ -4,8 +4,11 @@ import path from 'node:path';
 
 import { Agent, type AgentConfig } from '@mastra/core/agent';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
+import type { LibSQLStore } from '@mastra/libsql';
 import type {
   CheckpointedOmCheckpointPackageInput,
+  CheckpointedOmArchivedObservation,
+  CheckpointedOmArchivedReflection,
 } from '@mastra-engine/core';
 import { forgeDebug, toMastraSafeIdentifier } from '@mastra-engine/core';
 import { z } from 'zod';
@@ -49,6 +52,48 @@ const ltmStateSchema = z.object({
 
 type LongTermMemoryState = z.infer<typeof ltmStateSchema>;
 type CheckpointPackageManifest = z.infer<typeof packageManifestSchema>;
+
+type StorageThread = {
+  metadata?: Record<string, unknown>;
+};
+
+type ObservationalMemoryRecord = {
+  id: string;
+  generationCount: number;
+  activeObservations: string;
+  createdAt: Date;
+};
+
+type CustomCheckpointSummary = {
+  text: string;
+  tokenCount: number;
+  upToGeneration: number;
+  updatedAt: string;
+};
+
+type CustomObservationBlock = {
+  id: string;
+  text: string;
+  tokenCount: number;
+  createdAt: string;
+  lastObservedAt: string;
+  reflectedGeneration: number | null;
+};
+
+type CustomCheckpointedContextState = {
+  checkpointGeneration: number | null;
+  checkpointSummary: CustomCheckpointSummary | null;
+  observationBlocks: CustomObservationBlock[];
+};
+
+type MemoryStoreWithObservationalMemory = NonNullable<LibSQLStore['stores']['memory']> & {
+  getThreadById(input: { threadId: string }): Promise<StorageThread | null>;
+  getObservationalMemoryHistory(
+    threadId: string | null,
+    resourceId: string,
+    limit?: number,
+  ): Promise<ObservationalMemoryRecord[]>;
+};
 
 type LtmUsage = {
   inputTokens: number;
@@ -299,11 +344,92 @@ function renderObservationFile(observation: CheckpointedOmCheckpointPackageInput
   ].join('\n');
 }
 
+function hasObservationalMemoryAccess(
+  store: NonNullable<LibSQLStore['stores']['memory']>,
+): store is MemoryStoreWithObservationalMemory {
+  return (
+    typeof store === 'object' &&
+    store !== null &&
+    'getThreadById' in store &&
+    typeof store.getThreadById === 'function' &&
+    'getObservationalMemoryHistory' in store &&
+    typeof store.getObservationalMemoryHistory === 'function'
+  );
+}
+
+function getCustomCheckpointedContextState(metadata: Record<string, unknown> | undefined) {
+  const rawMastra = metadata?.mastra;
+  const rawOm = rawMastra && typeof rawMastra === 'object'
+    ? (rawMastra as { om?: Record<string, unknown> }).om
+    : undefined;
+  const custom = rawOm?.customCheckpointedContext;
+
+  if (!custom || typeof custom !== 'object') {
+    return null;
+  }
+
+  const value = custom as Partial<CustomCheckpointedContextState>;
+  return {
+    checkpointGeneration:
+      typeof value.checkpointGeneration === 'number' ? value.checkpointGeneration : null,
+    checkpointSummary:
+      value.checkpointSummary && typeof value.checkpointSummary === 'object'
+        ? value.checkpointSummary as CustomCheckpointSummary
+        : null,
+    observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
+  };
+}
+
+function buildBootstrapCheckpointPackage(input: {
+  threadId: string;
+  resourceId: string;
+  checkpointGeneration: number;
+  checkpointSummary: CustomCheckpointSummary;
+  reflectionRecords: ObservationalMemoryRecord[];
+  observationBlocks: CustomObservationBlock[];
+}): CheckpointedOmCheckpointPackageInput {
+  const reflections: CheckpointedOmArchivedReflection[] = input.reflectionRecords
+    .filter((record) => record.generationCount <= input.checkpointGeneration)
+    .map((record) => ({
+      recordId: record.id,
+      generationCount: record.generationCount,
+      tokenCount: 0,
+      createdAt: record.createdAt.toISOString(),
+      text: record.activeObservations,
+    }));
+  const observations: CheckpointedOmArchivedObservation[] = input.observationBlocks
+    .filter((block) =>
+      typeof block.reflectedGeneration === 'number' &&
+      block.reflectedGeneration <= input.checkpointGeneration,
+    )
+    .map((block) => ({
+      blockId: block.id,
+      tokenCount: block.tokenCount,
+      createdAt: block.createdAt,
+      lastObservedAt: block.lastObservedAt,
+      reflectedGeneration: block.reflectedGeneration as number,
+      text: block.text,
+    }));
+
+  return {
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+    fromGeneration: null,
+    toGeneration: input.checkpointGeneration,
+    checkpointSummary: input.checkpointSummary,
+    reflections,
+    observations,
+  };
+}
+
 export function createAgentLongTermMemory(input: {
   agentId: string;
   agentName: string;
   agentWorkspacePath: string;
   agentMemoryPath: string;
+  storage: LibSQLStore;
+  threadId: string;
+  resourceId: string;
   model: AgentConfig['model'];
   pricingModelKey: string;
   modelProfileId?: string;
@@ -353,6 +479,43 @@ export function createAgentLongTermMemory(input: {
     writtenPackageCount: 0,
     processedPackageCount: 0,
   };
+
+  async function backfillCheckpointPackages() {
+    const store = input.storage.stores.memory;
+    if (!store || !hasObservationalMemoryAccess(store)) {
+      return;
+    }
+
+    const state = await readState();
+    const thread = await store.getThreadById({ threadId: input.threadId });
+    const customState = getCustomCheckpointedContextState(thread?.metadata);
+    const checkpointGeneration = customState?.checkpointGeneration ?? null;
+    const checkpointSummary = customState?.checkpointSummary ?? null;
+
+    if (!checkpointSummary || checkpointGeneration === null) {
+      return;
+    }
+
+    if (state.packages.some((entry) => entry.checkpointGeneration === checkpointGeneration)) {
+      return;
+    }
+
+    const reflectionRecords = await store.getObservationalMemoryHistory(
+      input.threadId,
+      input.resourceId,
+      500,
+    );
+    const payload = buildBootstrapCheckpointPackage({
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      checkpointGeneration,
+      checkpointSummary,
+      reflectionRecords,
+      observationBlocks: customState?.observationBlocks ?? [],
+    });
+
+    await writeCheckpointPackage(payload);
+  }
 
   function clearTimer() {
     if (!timer) {
@@ -675,6 +838,7 @@ export function createAgentLongTermMemory(input: {
       await ensureInitialized();
       const state = await readState();
       await writeState(state);
+      await backfillCheckpointPackages();
     },
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
