@@ -24,7 +24,8 @@ export function createAgentRunnerUsage(input: {
       throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
     }
 
-    const recentSteps = await input.store.listRecentSteps(input.runtime.id, RECENT_STEP_LIMIT);
+    const recentSteps = (await input.store.listRecentSteps(input.runtime.id, RECENT_STEP_LIMIT))
+      .filter((step) => step.kind === 'agent-step');
 
     if (recentSteps.length === 0) {
       return null;
@@ -36,7 +37,7 @@ export function createAgentRunnerUsage(input: {
       pricingModelKey: input.runtime.pricingModelKey,
       profileId: input.runtime.modelProfileId,
     });
-    const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
+    const lastAgentStep = recentSteps[0] ?? null;
 
     if (!pricing.modelPrice || !lastAgentStep) {
       return averageStepUsd;
