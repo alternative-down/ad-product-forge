@@ -23,6 +23,10 @@ import {
 
 import { forgeDebug } from '../../debug';
 
+const AUTONOMOUS_CONTEXT_USER_MESSAGE_ID = 'custom-om-autonomous-context-user-message';
+const AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT =
+  'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.';
+
 type StorageThread = {
   id: string;
   title?: string;
@@ -1681,6 +1685,8 @@ export class CheckpointedObservationalMemoryProcessor
       observationBlocks: ObservationBlock[];
     },
   ) {
+    messageList.removeByIds([AUTONOMOUS_CONTEXT_USER_MESSAGE_ID]);
+
     if (input.record.lastObservedAt) {
       const rememberedMessages = messageList.get.remembered.db();
       const rebuiltRememberedMessages = rememberedMessages.flatMap((message) => {
@@ -1743,6 +1749,20 @@ export class CheckpointedObservationalMemoryProcessor
         messageList.add(rebuiltRememberedMessages, 'memory');
       }
     }
+
+    messageList.add([{
+      id: AUTONOMOUS_CONTEXT_USER_MESSAGE_ID,
+      role: 'user',
+      createdAt: new Date(0),
+      content: {
+        format: 2,
+        parts: [{
+          type: 'text',
+          text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
+        }],
+        content: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
+      },
+    } satisfies MastraDBMessage], 'context');
 
     messageList.clearSystemMessages(CUSTOM_OM_TAG_CHECKPOINT);
     messageList.clearSystemMessages(CUSTOM_OM_TAG_REFLECTIONS);

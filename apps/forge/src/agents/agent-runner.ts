@@ -63,6 +63,7 @@ export function createAgentRunner(
   let activeGenerateToken = 0;
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages: number | null = DEFAULT_RUN_LAST_MESSAGES;
+  let completedRunStepCount = 0;
   let flushedRunEventKeys = new Set<string>();
   let currentFlushSettings = {
     communicationDmFlushingEnabled: true,
@@ -392,6 +393,7 @@ export function createAgentRunner(
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
       flushedRunEventKeys = new Set<string>();
+      completedRunStepCount = 0;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
 
@@ -564,9 +566,11 @@ export function createAgentRunner(
       }
 
       lastStepStage = 'flushing-pending-run-messages';
-      prompt = flushPendingRunMessages({
-        allowOriginIdleOnly: true,
-      }) ?? '';
+      prompt = completedRunStepCount === 0
+        ? (flushPendingRunMessages({
+            allowOriginIdleOnly: true,
+          }) ?? '')
+        : '';
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       lastStepStage = 'agent-generate';
@@ -599,6 +603,7 @@ export function createAgentRunner(
         RUNNER_AWAIT_TIMEOUT_MS,
         `Agent usage recording timed out for ${runtime.id}`,
       );
+      completedRunStepCount += 1;
       lastStepStage = 'recording-observational-memory-usage';
       void withTimeout(
         usage.recordObservationalMemorySteps(contractId, result.steps),
