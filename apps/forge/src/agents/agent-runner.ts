@@ -27,10 +27,6 @@ const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
 const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
-const AUTONOMOUS_AGENT_USER_PROMPT = [
-  'You are an autonomous company agent.',
-  'Review the current context, think proactively inside your role, decide the next useful action, and execute it.',
-].join(' ');
 
 export function createAgentRunner(
   db: Database,
@@ -927,7 +923,7 @@ export function createAgentRunner(
   };
 
   async function generateWithTimeoutRetries(promptText: string, runEpoch: number) {
-    const effectivePromptText = promptText.trim() ? promptText : AUTONOMOUS_AGENT_USER_PROMPT;
+    const effectivePromptText = promptText.trim() ? promptText : [];
 
     for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();

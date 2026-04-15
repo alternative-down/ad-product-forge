@@ -703,27 +703,42 @@ export function createAgentLongTermMemory(input: {
   async function estimateNextLtmDelayMs() {
     const contract = await input.contractStore.getRunnableContract(input.agentId);
 
-    if (!contract) {
+    if (!contract || !input.modelProfileId) {
       return 0;
     }
+
+    const pricing = await input.contractStore.getUsagePricing({
+      pricingModelKey: input.pricingModelKey,
+      profileId: input.modelProfileId,
+    });
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
-    if (recentSteps.length === 0) {
+    if (recentSteps.length === 0 || !pricing.modelPrice) {
       return 0;
     }
 
-    const averageStepUsd =
-      recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
+    const averageInputTokens =
+      recentSteps.reduce((total, step) => total + step.inputTokens, 0) / recentSteps.length;
+    const averageCachedInputTokens =
+      recentSteps.reduce((total, step) => total + step.cachedInputTokens, 0) / recentSteps.length;
+    const averageOutputTokens =
+      recentSteps.reduce((total, step) => total + step.outputTokens, 0) / recentSteps.length;
+    const averageUncachedInputTokens = Math.max(averageInputTokens - averageCachedInputTokens, 0);
+    const estimatedStepUsd =
+      ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
+        + (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
+        + (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
+      * pricing.contractCostMultiplier;
 
-    if (averageStepUsd <= 0) {
+    if (estimatedStepUsd <= 0) {
       return 0;
     }
 
     const spentUsd = await input.contractStore.getContractSpend(contract.id);
     const remainingBudgetUsd = contract.budgetUsd - spentUsd;
     const remainingTimeMs = contract.endsAt - Date.now();
-    const stepsPossible = remainingBudgetUsd / averageStepUsd;
+    const stepsPossible = remainingBudgetUsd / estimatedStepUsd;
 
     if (remainingTimeMs <= 0 || stepsPossible <= 0) {
       return 0;

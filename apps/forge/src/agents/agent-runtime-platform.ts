@@ -14,15 +14,28 @@ import {
   type CommunicationProvider,
   toMastraSafeIdentifier,
 } from '@mastra-engine/core';
+import { createId } from '../utils/id';
 
 import type {
   WorkspaceFilesystemConfig,
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
 } from '../database/schema';
+import type { MastraDBMessage } from '@mastra/core/agent';
 
 interface MastraMemoryStore {
   createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
+  listMessages(params: {
+    threadId: string;
+    resourceId?: string;
+    page: number;
+    perPage: number;
+    orderBy?: {
+      field: 'createdAt';
+      direction: 'ASC' | 'DESC';
+    };
+  }): Promise<{ messages: MastraDBMessage[] }>;
+  saveMessages(params: { messages: MastraDBMessage[] }): Promise<unknown>;
 }
 
 function hasCreateThread(store: unknown): store is MastraMemoryStore {
@@ -83,6 +96,7 @@ export async function createAgentRuntimePlatform(input: {
       resourceId: mastraId,
       threadId: mastraId,
     });
+    await ensureAutonomousRunAnchorMessage(storage.stores.memory, mastraId);
   }
 
   const communication = input.communication ?? await createCommunicationModule({
@@ -102,4 +116,42 @@ export async function createAgentRuntimePlatform(input: {
     agentWorkspaceDir,
     agentMemoryPath,
   };
+}
+
+async function ensureAutonomousRunAnchorMessage(
+  memoryStore: MastraMemoryStore,
+  mastraId: string,
+) {
+  const existingMessages = await memoryStore.listMessages({
+    threadId: mastraId,
+    resourceId: mastraId,
+    page: 0,
+    perPage: 1,
+    orderBy: {
+      field: 'createdAt',
+      direction: 'ASC',
+    },
+  });
+
+  if (existingMessages.messages.length > 0) {
+    return;
+  }
+
+  await memoryStore.saveMessages({
+    messages: [{
+      id: createId(),
+      role: 'user',
+      createdAt: new Date(),
+      threadId: mastraId,
+      resourceId: mastraId,
+      content: {
+        format: 2,
+        parts: [{
+          type: 'text',
+          text: 'You are an autonomous company agent. Think proactively, decide the next useful action inside your role, and continue work without waiting for conversational prompting.',
+        }],
+        content: 'You are an autonomous company agent. Think proactively, decide the next useful action inside your role, and continue work without waiting for conversational prompting.',
+      },
+    }],
+  });
 }
