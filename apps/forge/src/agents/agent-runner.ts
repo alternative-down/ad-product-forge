@@ -27,6 +27,10 @@ const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
 const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
+const AUTONOMOUS_AGENT_USER_PROMPT = [
+  'You are an autonomous company agent.',
+  'Review the current context, think proactively inside your role, decide the next useful action, and execute it.',
+].join(' ');
 
 export function createAgentRunner(
   db: Database,
@@ -923,6 +927,8 @@ export function createAgentRunner(
   };
 
   async function generateWithTimeoutRetries(promptText: string, runEpoch: number) {
+    const effectivePromptText = promptText.trim() ? promptText : AUTONOMOUS_AGENT_USER_PROMPT;
+
     for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();
       const generateToken = startGenerateAttempt(controller);
@@ -934,7 +940,7 @@ export function createAgentRunner(
         console.log(`[AgentRunner] ${runtime.id} runtime context ready before generate`);
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await Promise.race([
-          currentRuntime.agent.generate(promptText, {
+          currentRuntime.agent.generate(effectivePromptText, {
             maxSteps: 1,
             abortSignal: controller.signal,
             ...(agentContextInstructions ? { system: agentContextInstructions } : {}),
