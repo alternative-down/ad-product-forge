@@ -54,6 +54,17 @@ export async function createInternalAgentRuntime<
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
+  const agentSystemPrompt = buildAgentSystemPrompt({
+    agentId: config.id,
+    agentSlug: platform.mastraId,
+    agentName: config.name,
+    agentDescription: config.description,
+    roleName: config.roleName,
+    roleDescription: config.roleDescription,
+    instructions: config.instructions,
+    companyName: config.companyName,
+    companyContext: config.companyContext,
+  });
   const runtimeMemory = await createAgentRuntimeMemory({
     storage: platform.storage,
     vector: platform.vector,
@@ -75,23 +86,14 @@ export async function createInternalAgentRuntime<
       config.checkpointedOmObservationReflectionBatchTokens,
     checkpointedOmObservationSupportTokens: config.checkpointedOmObservationSupportTokens,
     checkpointedOmReflectionSupportTokens: config.checkpointedOmReflectionSupportTokens,
+    agentSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
   });
 
   const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({
     id: config.id,
     name: config.name,
     description: config.description,
-    instructions: buildAgentSystemPrompt({
-      agentId: config.id,
-      agentSlug: platform.mastraId,
-      agentName: config.name,
-      agentDescription: config.description,
-      roleName: config.roleName,
-      roleDescription: config.roleDescription,
-      instructions: config.instructions,
-      companyName: config.companyName,
-      companyContext: config.companyContext,
-    }),
+    instructions: agentSystemPrompt,
     model: config.model,
     tools: allAgentTools as TTools,
     workflows: config.workflows,

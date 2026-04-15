@@ -13,7 +13,12 @@ import { agentProviders, agents, type NewAgentProvider } from '../database/schem
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import type { createForgeHttpServer, HttpResponse } from '../http/server';
 import { createAgentNotificationStore } from '../notifications/store';
-import { githubAppCredentialsSchema, type GitHubAppCredentials } from './types';
+import {
+  githubAppCredentialsSchema,
+  githubAppManifestConfigSchema,
+  type GitHubAppCredentials,
+  type GitHubAppManifestConfig,
+} from './types';
 
 const GITHUB_PROVIDER_TYPE = 'github-app';
 const INSTALLATION_READY_ATTEMPTS = 10;
@@ -53,6 +58,43 @@ function normalizeAssignees(assignees?: string[]): string[] | undefined {
     return assignee;
   });
 }
+
+function buildManifestPermissions(manifestConfig: GitHubAppManifestConfig) {
+  return {
+    administration: manifestConfig.permissions.administration ? 'write' : 'read',
+    contents: manifestConfig.permissions.contents ? 'write' : 'read',
+    issues: manifestConfig.permissions.issues ? 'write' : 'read',
+    metadata: 'read',
+    organization_projects: manifestConfig.permissions.organization_projects ? 'write' : 'read',
+    pull_requests: manifestConfig.permissions.pull_requests ? 'write' : 'read',
+    repository_projects: manifestConfig.permissions.repository_projects ? 'write' : 'read',
+    workflows: manifestConfig.permissions.workflows ? 'write' : 'read',
+  };
+}
+
+function buildManifestEvents(manifestConfig: GitHubAppManifestConfig) {
+  return Object.entries(manifestConfig.events)
+    .filter(([, enabled]) => enabled)
+    .map(([event]) => event);
+}
+
+function normalizeManifestConfig(value: unknown) {
+  const parsed = githubAppManifestConfigSchema.safeParse(value);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  return DEFAULT_GITHUB_APP_MANIFEST_CONFIG;
+}
+
+function normalizeGitHubAppCredentials(credentials: Omit<GitHubAppCredentials, 'manifestConfig'> & {
+  manifestConfig?: unknown;
+}): GitHubAppCredentials {
+  return {
+    ...credentials,
+    manifestConfig: normalizeManifestConfig(credentials.manifestConfig),
+  } as GitHubAppCredentials;
+}
 const manifestConversionSchema = z.object({
   id: z.number().int(),
   pem: z.string(),
@@ -64,6 +106,29 @@ export type GitHubAppProvisioning = {
   status: GitHubAppCredentials['status'];
   registrationUrl: string;
   installUrl?: string;
+  manifestConfig: GitHubAppManifestConfig;
+};
+
+const DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig = {
+  permissions: {
+    administration: true,
+    contents: true,
+    issues: true,
+    metadata: true,
+    organization_projects: true,
+    pull_requests: true,
+    repository_projects: true,
+    workflows: false,
+  },
+  events: {
+    push: true,
+    pull_request: true,
+    pull_request_review: true,
+    issues: true,
+    issue_comment: true,
+    repository: true,
+    workflow_run: false,
+  },
 };
 
 export type GitHubAppManager = ReturnType<typeof createGitHubAppManager>;
@@ -112,6 +177,7 @@ export function createGitHubAppManager(config: {
       status: 'pending' as const,
       state: crypto.randomUUID(),
       appName: createAppName(input.agentName, input.agentId),
+      manifestConfig: DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
       createdAt: Date.now(),
     };
 
@@ -139,6 +205,26 @@ export function createGitHubAppManager(config: {
       agentId,
       agentName: agent.name,
     });
+  }
+
+  async function updateAgentManifestConfig(input: {
+    agentId: string;
+    manifestConfig: GitHubAppManifestConfig;
+  }) {
+    const credentials = await getCredentials(input.agentId);
+    const manifestConfig = githubAppManifestConfigSchema.parse(input.manifestConfig);
+
+    if (!credentials) {
+      throw new Error(`GitHub App does not exist for agent ${input.agentId}`);
+    }
+
+    const nextCredentials = {
+      ...credentials,
+      manifestConfig,
+    } satisfies GitHubAppCredentials;
+
+    await saveCredentials(input.agentId, nextCredentials);
+    return buildProvisioning(input.agentId, nextCredentials);
   }
 
   async function loadAllAgents() {
@@ -987,6 +1073,7 @@ export function createGitHubAppManager(config: {
   return {
     isConfigured,
     getAgentProvisioning,
+    updateAgentManifestConfig,
     createAgentApp,
     loadAllAgents,
     unloadAgent,
@@ -1028,6 +1115,7 @@ export function createGitHubAppManager(config: {
 
   function buildProvisioning(agentId: string, credentials: GitHubAppCredentials): GitHubAppProvisioning {
     const registrationUrl = `${config.publicBaseUrl}${getRegisterPath(agentId)}`;
+    const manifestConfig = credentials.manifestConfig;
 
     if (credentials.status === 'created' || credentials.status === 'active') {
       return {
@@ -1035,6 +1123,7 @@ export function createGitHubAppManager(config: {
         status: credentials.status,
         registrationUrl,
         installUrl: `https://github.com/apps/${credentials.appSlug}/installations/new`,
+        manifestConfig,
       };
     }
 
@@ -1042,6 +1131,7 @@ export function createGitHubAppManager(config: {
       agentId,
       status: credentials.status,
       registrationUrl,
+      manifestConfig,
     };
   }
 
@@ -1100,23 +1190,8 @@ export function createGitHubAppManager(config: {
         active: true,
       },
       public: false,
-      default_permissions: {
-        administration: 'write',
-        contents: 'write',
-        issues: 'write',
-        metadata: 'read',
-        organization_projects: 'write',
-        pull_requests: 'write',
-        repository_projects: 'write',
-      },
-      default_events: [
-        'push',
-        'pull_request',
-        'pull_request_review',
-        'issues',
-        'issue_comment',
-        'repository',
-      ],
+      default_permissions: buildManifestPermissions(credentials.manifestConfig),
+      default_events: buildManifestEvents(credentials.manifestConfig),
     });
     const action = `https://github.com/organizations/${encodeURIComponent(githubConfig.organization)}/settings/apps/new?state=${encodeURIComponent(credentials.state)}`;
     const body = `<!doctype html>
@@ -1166,6 +1241,7 @@ export function createGitHubAppManager(config: {
       webhookSecret: conversion.webhook_secret,
       appSlug: 'pending-slug',
       appName: credentials.appName,
+      manifestConfig: credentials.manifestConfig,
       createdAt: credentials.createdAt,
     });
     const appResponse = await app.octokit.request('GET /app');
@@ -1182,6 +1258,7 @@ export function createGitHubAppManager(config: {
       webhookSecret: conversion.webhook_secret,
       appSlug: metadata.slug,
       appName: metadata.name,
+      manifestConfig: credentials.manifestConfig,
       createdAt: credentials.createdAt,
     };
 
@@ -1250,6 +1327,7 @@ export function createGitHubAppManager(config: {
       installationId,
       appSlug: credentials.appSlug,
       appName: credentials.appName,
+      manifestConfig: credentials.manifestConfig,
       createdAt: credentials.createdAt,
     };
 
@@ -1397,7 +1475,8 @@ export function createGitHubAppManager(config: {
 
   function parseCredentials(encryptedCredentials: string) {
     try {
-      return githubAppCredentialsSchema.parse(JSON.parse(decryptSecret(encryptedCredentials)));
+      const raw = JSON.parse(decryptSecret(encryptedCredentials)) as Record<string, unknown>;
+      return githubAppCredentialsSchema.parse(normalizeGitHubAppCredentials(raw as never));
     } catch (error) {
       console.warn('[GitHubAppManager] Failed to parse GitHub credentials:', error);
       return null;

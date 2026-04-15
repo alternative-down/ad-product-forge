@@ -256,7 +256,7 @@ function MemoryDisclosure(input: {
       </summary>
       <div className="pt-3">
         {input.value ? (
-          <div className="overflow-x-auto whitespace-pre-wrap break-words rounded-2xl border border-border/80 bg-background/70 p-4 text-xs leading-6 text-foreground">
+          <div className="max-w-full min-w-0 overflow-x-auto whitespace-pre-wrap break-all rounded-2xl border border-border/80 bg-background/70 p-4 text-xs leading-6 text-foreground [overflow-wrap:anywhere]">
             {input.value}
           </div>
         ) : (

@@ -126,6 +126,16 @@ export function changeAgentRole(input: {
   });
 }
 
+export function updateAgentGitHubManifestConfig(input: {
+  agentId: string;
+  manifestConfig: NonNullable<AgentDetail['githubProvisioning']>['manifestConfig'];
+}) {
+  return request<NonNullable<AgentDetail['githubProvisioning']>>('/admin/agent/github-manifest-config/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function topUpAgentContract(input: TopUpAgentContractInput) {
   return request<{
     agentId: string;
@@ -207,6 +217,38 @@ export function deleteAgentMcpServer(input: {
   });
 }
 
+export function assignAgentMcpServer(input: {
+  agentId: string;
+  serverId: string;
+  isActive?: boolean;
+}) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/assign', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function setAgentMcpServerActive(input: {
+  agentId: string;
+  configId: string;
+  isActive: boolean;
+}) {
+  return request<{ success: true; agentId: string; configId: string; isActive: boolean }>('/admin/agent-mcp/set-active', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function detachAgentMcpServer(input: {
+  agentId: string;
+  configId: string;
+}) {
+  return request<{ success: true; agentId: string; configId: string }>('/admin/agent-mcp/detach', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function uploadAgentSkills(input: UploadAgentSkillsInput) {
   return request<{ success: true; agentId: string; installedSkillNames: string[] }>('/admin/agent-skills/upload', {
     method: 'POST',
@@ -216,6 +258,26 @@ export function uploadAgentSkills(input: UploadAgentSkillsInput) {
 
 export function deleteAgentSkill(input: DeleteAgentSkillInput) {
   return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/delete', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function installGlobalSkillForAgent(input: {
+  agentId: string;
+  skillName: string;
+}) {
+  return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/install-global', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function publishAgentSkillToGlobalCatalog(input: {
+  agentId: string;
+  skillName: string;
+}) {
+  return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/publish-global', {
     method: 'POST',
     body: JSON.stringify(input),
   });

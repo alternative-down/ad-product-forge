@@ -108,11 +108,6 @@ export function ConversationListPane(input: {
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
-                        {conversation.type === 'group' && conversation.participants.length > 1 ? (
-                          <div className="line-clamp-2 text-sm text-muted-foreground">
-                            {conversation.participants.join(', ')}
-                          </div>
-                        ) : null}
                         {latestMessage ? (
                           <div className="space-y-1 pt-2">
                             <div className="truncate text-sm text-foreground">

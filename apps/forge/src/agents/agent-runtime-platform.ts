@@ -20,7 +20,6 @@ import type {
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
 } from '../database/schema';
-import { ensureBundledWorkspaceSkills } from './bundled-workspace-skills';
 
 interface MastraMemoryStore {
   createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
@@ -78,7 +77,6 @@ export async function createAgentRuntimePlatform(input: {
   });
 
   await workspace.init();
-  await ensureBundledWorkspaceSkills(agentWorkspaceDir);
 
   if (hasCreateThread(storage.stores.memory)) {
     await storage.stores.memory.createThread({

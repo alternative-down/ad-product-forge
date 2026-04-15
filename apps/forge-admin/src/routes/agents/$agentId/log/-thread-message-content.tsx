@@ -8,8 +8,8 @@ export function ThreadMessageArticle(input: {
   index: number;
 }) {
   return (
-    <article className={input.index > 0 ? 'border-t border-border pt-5' : ''}>
-      <div className="space-y-3 pb-5">
+    <article className={`min-w-0 overflow-hidden ${input.index > 0 ? 'border-t border-border pt-5' : ''}`}>
+      <div className="min-w-0 space-y-3 pb-5">
         <header className="flex flex-wrap items-center gap-3">
           <Badge variant="outline">{humanizeRole(input.message.role)}</Badge>
           {input.message.type ? <Badge variant="outline">{input.message.type}</Badge> : null}
@@ -32,7 +32,7 @@ function ThreadMessageContent(input: {
   const hasToolInvocationPart = visibleParts.some((part) => getPartType(part) === 'tool-invocation');
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3 overflow-hidden">
       {!hasVisibleTextPart && typeof content.content === 'string' && content.content.trim() ? (
         <ThreadSection label="Response text · content.content">
           {content.content.trim()}
@@ -159,9 +159,11 @@ function ThreadSection(input: {
   children: string;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1 overflow-hidden">
       <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
-      <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{input.children}</div>
+      <div className="min-w-0 overflow-hidden whitespace-pre-wrap break-all text-sm leading-6 text-foreground [overflow-wrap:anywhere]">
+        {input.children}
+      </div>
     </div>
   );
 }
@@ -177,9 +179,11 @@ function ThreadDisclosure(input: {
         <span>{input.summary}</span>
         <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
-      <div className="space-y-1 pt-3">
+      <div className="min-w-0 space-y-1 overflow-hidden pt-3">
         <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
-        <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{input.value}</div>
+        <div className="min-w-0 overflow-hidden whitespace-pre-wrap break-all text-sm leading-6 text-foreground [overflow-wrap:anywhere]">
+          {input.value}
+        </div>
       </div>
     </details>
   );
@@ -196,9 +200,9 @@ function ThreadJsonDisclosure(input: {
         <span>{input.summary}</span>
         <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
-      <div className="space-y-1 pt-3">
+      <div className="min-w-0 space-y-1 overflow-hidden pt-3">
         <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
-        <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-foreground">
+        <pre className="max-w-full min-w-0 overflow-x-auto whitespace-pre-wrap break-all text-xs leading-6 text-foreground [overflow-wrap:anywhere]">
           {JSON.stringify(input.value, null, 2)}
         </pre>
       </div>

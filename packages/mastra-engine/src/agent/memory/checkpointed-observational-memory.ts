@@ -95,6 +95,7 @@ type CustomOmState = {
 type CheckpointedObservationalMemoryConfig = {
   storage: LibSQLStore;
   model: AgentConfig['model'];
+  agentSystemPrompt?: string;
   totalContextTokens?: number;
   recentRawTokens?: number;
   rawObservationBatchTokens?: number;
@@ -123,6 +124,22 @@ const REFLECTOR_SYSTEM_PROMPT = [
 
 function buildReflectorSystemPrompt() {
   return REFLECTOR_SYSTEM_PROMPT;
+}
+
+function buildAlignedOmInstructions(baseInstructions: string, agentSystemPrompt?: string) {
+  const prompt = agentSystemPrompt?.trim();
+
+  if (!prompt) {
+    return baseInstructions;
+  }
+
+  return [
+    baseInstructions,
+    '<main_agent_system_prompt>',
+    'Use the following main agent system prompt as alignment context. Keep observations, reflections, and checkpoint summaries aligned with the same role, scope, operating style, and priorities.',
+    prompt,
+    '</main_agent_system_prompt>',
+  ].join('\n\n');
 }
 
 function buildReflectorPrompt(observations: string) {
@@ -221,14 +238,19 @@ function getCustomOmState(thread: StorageThread | null): CustomOmState {
   }
 
   const value = custom as Partial<CustomOmState>;
+  const checkpointSummary =
+    value.checkpointSummary && typeof value.checkpointSummary === 'object'
+      ? value.checkpointSummary as CheckpointSummary
+      : null;
+  const checkpointGeneration =
+    checkpointSummary && typeof value.checkpointGeneration === 'number'
+      ? value.checkpointGeneration
+      : null;
+
   return {
     version: 1,
-    checkpointGeneration:
-      typeof value.checkpointGeneration === 'number' ? value.checkpointGeneration : null,
-    checkpointSummary:
-      value.checkpointSummary && typeof value.checkpointSummary === 'object'
-        ? value.checkpointSummary as CheckpointSummary
-        : null,
+    checkpointGeneration,
+    checkpointSummary,
     observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
     activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks)
       ? value.activeReflectionBlocks
@@ -764,6 +786,7 @@ export class CheckpointedObservationalMemoryProcessor
   private readonly observationReflectionBatchTokens: number;
   private readonly observationSupportTokens: number;
   private readonly reflectionSupportTokens: number;
+  private readonly agentSystemPrompt?: string;
 
   constructor(config: CheckpointedObservationalMemoryConfig) {
     if (!hasObservationalMemoryStore(config.storage.stores.memory!)) {
@@ -781,6 +804,7 @@ export class CheckpointedObservationalMemoryProcessor
       config.observationReflectionBatchTokens ?? DEFAULT_OBSERVATION_REFLECTION_BATCH_TOKENS;
     this.observationSupportTokens = config.observationSupportTokens ?? DEFAULT_SUPPORT_TOKENS;
     this.reflectionSupportTokens = config.reflectionSupportTokens ?? DEFAULT_SUPPORT_TOKENS;
+    this.agentSystemPrompt = config.agentSystemPrompt?.trim() || undefined;
   }
 
   private async generateOmText(input: {
@@ -1220,7 +1244,10 @@ export class CheckpointedObservationalMemoryProcessor
     const observerText = await this.generateOmText({
       agentId: `custom-observer-${randomUUID()}`,
       agentName: 'Checkpointed OM observer',
-      instructions: buildObserverSystemPrompt(false),
+      instructions: buildAlignedOmInstructions(
+        buildObserverSystemPrompt(false),
+        this.agentSystemPrompt,
+      ),
       prompt: observerPrompt,
       requestContext: input.requestContext,
       debugContext: {
@@ -1310,7 +1337,10 @@ export class CheckpointedObservationalMemoryProcessor
     const reflectorText = await this.generateOmText({
       agentId: `custom-reflector-${randomUUID()}`,
       agentName: 'Checkpointed OM reflector',
-      instructions: buildReflectorSystemPrompt(),
+      instructions: buildAlignedOmInstructions(
+        buildReflectorSystemPrompt(),
+        this.agentSystemPrompt,
+      ),
       prompt: buildReflectorPrompt([supportText, selectedText].filter(Boolean).join('\n')),
       requestContext: input.requestContext,
       debugContext: {
@@ -1442,8 +1472,11 @@ export class CheckpointedObservationalMemoryProcessor
     reflectionBudget: number;
     requestContext?: RequestContext;
   }) {
+    const originalActiveReflectionBlocks = [...input.state.activeReflectionBlocks];
+    const originalCheckpointGeneration = input.state.checkpointGeneration;
     let currentTokens = sumTokens(input.state.activeReflectionBlocks);
     const removedBlocks: ReflectionBlock[] = [];
+    let nextCheckpointGeneration: number | null = null;
 
     while (currentTokens > input.reflectionBudget && input.state.activeReflectionBlocks.length > 0) {
       const removed = input.state.activeReflectionBlocks.shift();
@@ -1452,12 +1485,12 @@ export class CheckpointedObservationalMemoryProcessor
       }
 
       removedBlocks.push(removed);
-      input.state.checkpointGeneration = removed.generationCount;
+      nextCheckpointGeneration = removed.generationCount;
       currentTokens -= removed.tokenCount;
       forgeDebug('checkpointed-om', 'checkpoint advanced', {
         threadId: input.threadId,
         resourceId: input.resourceId,
-        checkpointGeneration: input.state.checkpointGeneration,
+        checkpointGeneration: nextCheckpointGeneration,
         removedReflectionRecordId: removed.recordId,
         removedReflectionTokens: removed.tokenCount,
         remainingReflectionTokens: currentTokens,
@@ -1465,7 +1498,7 @@ export class CheckpointedObservationalMemoryProcessor
       });
     }
 
-    if (removedBlocks.length === 0 || input.state.checkpointGeneration === null) {
+    if (removedBlocks.length === 0 || nextCheckpointGeneration === null) {
       return;
     }
 
@@ -1477,6 +1510,13 @@ export class CheckpointedObservationalMemoryProcessor
       .join('\n\n');
 
     if (!removedReflectionText) {
+      input.state.activeReflectionBlocks = originalActiveReflectionBlocks;
+      input.state.checkpointGeneration = originalCheckpointGeneration;
+      forgeDebug('checkpointed-om', 'checkpoint summary skipped without removed text', {
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+        removedReflectionCount: removedBlocks.length,
+      });
       return;
     }
 
@@ -1491,7 +1531,10 @@ export class CheckpointedObservationalMemoryProcessor
     const checkpointText = await this.generateOmText({
       agentId: `custom-checkpoint-${randomUUID()}`,
       agentName: 'Checkpointed OM checkpoint summarizer',
-      instructions: buildReflectorSystemPrompt(),
+      instructions: buildAlignedOmInstructions(
+        buildReflectorSystemPrompt(),
+        this.agentSystemPrompt,
+      ),
       prompt: buildReflectorPrompt(
         [input.state.checkpointSummary?.text, removedReflectionText].filter(Boolean).join('\n\n'),
       ),
@@ -1515,14 +1558,15 @@ export class CheckpointedObservationalMemoryProcessor
     input.state.checkpointSummary = {
       text: summaryText,
       tokenCount: this.tokenCounter.countObservations(summaryText),
-      upToGeneration: input.state.checkpointGeneration,
+      upToGeneration: nextCheckpointGeneration,
       updatedAt: new Date().toISOString(),
     };
+    input.state.checkpointGeneration = nextCheckpointGeneration;
 
     forgeDebug('checkpointed-om', 'checkpoint summary created', {
       threadId: input.threadId,
       resourceId: input.resourceId,
-      checkpointGeneration: input.state.checkpointGeneration,
+      checkpointGeneration: nextCheckpointGeneration,
       checkpointSummaryTokens: input.state.checkpointSummary.tokenCount,
     });
   }

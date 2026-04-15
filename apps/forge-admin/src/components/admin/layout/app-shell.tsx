@@ -18,12 +18,12 @@ export function AppShell(input: {
         ) : null}
         <div
           className={cn(
-            'grid min-h-0 flex-1 gap-6 p-6',
+            'grid min-h-0 flex-1 gap-4 p-4 md:gap-5 md:p-5',
             input.detailPane ? 'xl:grid-cols-[minmax(0,1fr)_340px]' : '',
           )}
         >
-          <main className="min-w-0">{input.children}</main>
-          {input.detailPane ? <aside className="min-w-0">{input.detailPane}</aside> : null}
+          <main className="flex min-h-0 min-w-0 flex-col">{input.children}</main>
+          {input.detailPane ? <aside className="min-h-0 min-w-0">{input.detailPane}</aside> : null}
         </div>
       </div>
     </div>

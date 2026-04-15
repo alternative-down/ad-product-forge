@@ -1,0 +1,337 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { unzipSync } from 'fflate';
+
+import type { Agent } from '../database/schema';
+import {
+  BUNDLED_SKILL_DIRECTORY_NAMES,
+  copyDirectoryContents,
+  resolveBundledSkillRoot,
+} from './bundled-workspace-skills';
+import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
+
+type GlobalSkillSummary = {
+  skillName: string;
+  description?: string;
+  fileCount: number;
+  updatedAt: number;
+  source: 'bundled' | 'custom';
+  editable: boolean;
+};
+
+function parseSkillMetadata(skillContent: string) {
+  if (!skillContent.startsWith('---\n')) {
+    return {};
+  }
+
+  const endIndex = skillContent.indexOf('\n---\n', 4);
+
+  if (endIndex === -1) {
+    return {};
+  }
+
+  const frontmatter = skillContent.slice(4, endIndex);
+  const lines = frontmatter.split('\n');
+  let description: string | undefined;
+
+  for (const line of lines) {
+    const separatorIndex = line.indexOf(':');
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '');
+
+    if (key === 'description' && value) {
+      description = value;
+    }
+  }
+
+  return { description };
+}
+
+async function countSkillFiles(skillRoot: string): Promise<number> {
+  const entries = await fs.readdir(skillRoot, { withFileTypes: true });
+  let fileCount = 0;
+
+  for (const entry of entries) {
+    const entryPath = path.resolve(skillRoot, entry.name);
+
+    if (entry.isDirectory()) {
+      fileCount += await countSkillFiles(entryPath);
+      continue;
+    }
+
+    if (entry.isFile()) {
+      fileCount += 1;
+    }
+  }
+
+  return fileCount;
+}
+
+function resolveGlobalSkillsRoot(workspaceBasePath: string) {
+  return path.resolve(workspaceBasePath, '_system', 'skills');
+}
+
+function normalizeArchiveEntryPath(entryPath: string) {
+  const normalizedPath = entryPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const isDirectory = normalizedPath.endsWith('/');
+  const withoutSkillsPrefix = normalizedPath.startsWith('skills/')
+    ? normalizedPath.slice('skills/'.length)
+    : normalizedPath;
+  const safePath = path.posix.normalize(isDirectory ? withoutSkillsPrefix.slice(0, -1) : withoutSkillsPrefix);
+
+  if (!safePath || safePath === '.' || safePath.startsWith('../') || safePath.includes('/../')) {
+    throw new Error(`Invalid skill archive entry: ${entryPath}`);
+  }
+
+  return {
+    safePath,
+    isDirectory,
+  };
+}
+
+async function ensureDirectory(targetPath: string) {
+  try {
+    const stat = await fs.stat(targetPath);
+
+    if (stat.isDirectory()) {
+      return;
+    }
+
+    await fs.rm(targetPath, { force: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  await fs.mkdir(targetPath, { recursive: true });
+}
+
+async function ensureParentDirectories(targetPath: string, rootPath: string) {
+  const relativePath = path.relative(rootPath, targetPath);
+  const segments = relativePath.split(path.sep).slice(0, -1);
+  let currentPath = rootPath;
+
+  for (const segment of segments) {
+    currentPath = path.resolve(currentPath, segment);
+    await ensureDirectory(currentPath);
+  }
+}
+
+async function listCustomGlobalSkills(workspaceBasePath: string): Promise<GlobalSkillSummary[]> {
+  const skillsRoot = resolveGlobalSkillsRoot(workspaceBasePath);
+
+  try {
+    const entries = await fs.readdir(skillsRoot, { withFileTypes: true });
+    const skills = await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory())
+        .map(async (entry) => {
+          const skillRoot = path.resolve(skillsRoot, entry.name);
+          const skillFilePath = path.resolve(skillRoot, 'SKILL.md');
+          const [skillContent, stat, fileCount] = await Promise.all([
+            fs.readFile(skillFilePath, 'utf8'),
+            fs.stat(skillFilePath),
+            countSkillFiles(skillRoot),
+          ]);
+          const metadata = parseSkillMetadata(skillContent);
+
+          return {
+            skillName: entry.name,
+            description: metadata.description,
+            fileCount,
+            updatedAt: stat.mtimeMs,
+            source: 'custom' as const,
+            editable: true,
+          };
+        }),
+    );
+
+    return skills.sort((left, right) => left.skillName.localeCompare(right.skillName));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+async function listBundledGlobalSkills(): Promise<GlobalSkillSummary[]> {
+  const skills = await Promise.all(
+    BUNDLED_SKILL_DIRECTORY_NAMES.map(async (sourceDirectoryName) => {
+      const skillRoot = await resolveBundledSkillRoot(sourceDirectoryName);
+      const skillFilePath = path.resolve(skillRoot, 'SKILL.md');
+      const [skillContent, stat, fileCount] = await Promise.all([
+        fs.readFile(skillFilePath, 'utf8'),
+        fs.stat(skillFilePath),
+        countSkillFiles(skillRoot),
+      ]);
+      const metadata = parseSkillMetadata(skillContent);
+
+      return {
+        skillName: sourceDirectoryName,
+        description: metadata.description,
+        fileCount,
+        updatedAt: stat.mtimeMs,
+        source: 'bundled' as const,
+        editable: false,
+      };
+    }),
+  );
+
+  return skills.sort((left, right) => left.skillName.localeCompare(right.skillName));
+}
+
+export async function listGlobalSkills(workspaceBasePath: string): Promise<GlobalSkillSummary[]> {
+  const [bundledSkills, customSkills] = await Promise.all([
+    listBundledGlobalSkills(),
+    listCustomGlobalSkills(workspaceBasePath),
+  ]);
+  const bySkillName = new Map<string, GlobalSkillSummary>();
+
+  for (const bundledSkill of bundledSkills) {
+    bySkillName.set(bundledSkill.skillName, bundledSkill);
+  }
+
+  for (const customSkill of customSkills) {
+    bySkillName.set(customSkill.skillName, customSkill);
+  }
+
+  return Array.from(bySkillName.values()).sort((left, right) => left.skillName.localeCompare(right.skillName));
+}
+
+export async function installGlobalSkillsFromZip(input: {
+  workspaceBasePath: string;
+  zipBase64: string;
+}) {
+  const skillsRoot = resolveGlobalSkillsRoot(input.workspaceBasePath);
+  const bundledSkillNames = new Set((await listBundledGlobalSkills()).map((skill) => skill.skillName));
+  const archive = unzipSync(Buffer.from(input.zipBase64, 'base64'));
+  const writtenSkills = new Set<string>();
+
+  await fs.mkdir(skillsRoot, { recursive: true });
+
+  for (const [entryPath, content] of Object.entries(archive)) {
+    const { safePath, isDirectory } = normalizeArchiveEntryPath(entryPath);
+    const [skillName] = safePath.split('/');
+
+    if (!skillName) {
+      continue;
+    }
+
+    if (bundledSkillNames.has(skillName)) {
+      throw new Error(`Skill name is reserved by a bundled skill: ${skillName}`);
+    }
+
+    const targetPath = path.resolve(skillsRoot, safePath);
+    const relativePath = path.relative(skillsRoot, targetPath);
+
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      throw new Error(`Invalid skill archive entry: ${entryPath}`);
+    }
+
+    if (isDirectory) {
+      await ensureDirectory(targetPath);
+      continue;
+    }
+
+    await ensureParentDirectories(targetPath, skillsRoot);
+    await fs.writeFile(targetPath, Buffer.from(content));
+    writtenSkills.add(skillName);
+  }
+
+  if (writtenSkills.size === 0) {
+    throw new Error('Skill archive did not contain any files');
+  }
+
+  return Array.from(writtenSkills).sort((left, right) => left.localeCompare(right));
+}
+
+export async function deleteGlobalSkill(input: {
+  workspaceBasePath: string;
+  skillName: string;
+}) {
+  const skillName = input.skillName.trim();
+  const skillsRoot = resolveGlobalSkillsRoot(input.workspaceBasePath);
+  const skillRoot = path.resolve(skillsRoot, skillName);
+  const relativePath = path.relative(skillsRoot, skillRoot);
+
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error(`Invalid skill name: ${input.skillName}`);
+  }
+
+  await fs.rm(skillRoot, { recursive: true, force: false });
+}
+
+export async function installGlobalSkillToAgentWorkspace(input: {
+  workspaceBasePath: string;
+  agent: Pick<Agent, 'id' | 'workspaceFilesystem'>;
+  skillName: string;
+}) {
+  const availableSkills = await listGlobalSkills(input.workspaceBasePath);
+  const skill = availableSkills.find((entry) => entry.skillName === input.skillName);
+
+  if (!skill) {
+    throw new Error(`Global skill not found: ${input.skillName}`);
+  }
+
+  const sourceRoot = skill.source === 'bundled'
+    ? await resolveBundledSkillRoot(input.skillName)
+    : path.resolve(resolveGlobalSkillsRoot(input.workspaceBasePath), input.skillName);
+  const { skillRoot } = resolveAgentSkillRoot({
+    workspaceBasePath: input.workspaceBasePath,
+    agent: input.agent,
+    skillName: input.skillName,
+  });
+  const targetSkillsRoot = resolveAgentSkillsRoot(
+    input.workspaceBasePath,
+    input.agent.workspaceFilesystem ?? undefined,
+    input.agent.id,
+  );
+
+  await fs.mkdir(targetSkillsRoot, { recursive: true });
+  await fs.rm(skillRoot, { recursive: true, force: true });
+  await copyDirectoryContents(sourceRoot, skillRoot);
+}
+
+export async function publishAgentWorkspaceSkillToGlobalCatalog(input: {
+  workspaceBasePath: string;
+  agent: Pick<Agent, 'id' | 'workspaceFilesystem'>;
+  skillName: string;
+}) {
+  const skillName = input.skillName.trim();
+
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(skillName)) {
+    throw new Error(`Invalid skill name: ${input.skillName}`);
+  }
+
+  const bundledSkillNames = new Set((await listBundledGlobalSkills()).map((skill) => skill.skillName));
+
+  if (bundledSkillNames.has(skillName)) {
+    throw new Error(`Skill name is reserved by a bundled skill: ${skillName}`);
+  }
+
+  const { skillRoot: sourceRoot } = resolveAgentSkillRoot({
+    workspaceBasePath: input.workspaceBasePath,
+    agent: input.agent,
+    skillName,
+  });
+  const targetRoot = path.resolve(resolveGlobalSkillsRoot(input.workspaceBasePath), skillName);
+  const targetSkillsRoot = resolveGlobalSkillsRoot(input.workspaceBasePath);
+  const relativePath = path.relative(targetSkillsRoot, targetRoot);
+
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error(`Invalid skill name: ${input.skillName}`);
+  }
+
+  await fs.access(path.resolve(sourceRoot, 'SKILL.md'));
+  await fs.mkdir(targetSkillsRoot, { recursive: true });
+  await fs.rm(targetRoot, { recursive: true, force: true });
+  await copyDirectoryContents(sourceRoot, targetRoot);
+}

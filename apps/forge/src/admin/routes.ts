@@ -54,9 +54,43 @@ import {
   deleteAgentWorkspaceSkill,
   installAgentWorkspaceSkillsFromZip,
 } from '../agents/workspace-skills';
+import {
+  deleteGlobalSkill,
+  installGlobalSkillToAgentWorkspace,
+  installGlobalSkillsFromZip,
+  listGlobalSkills,
+  publishAgentWorkspaceSkillToGlobalCatalog,
+} from '../agents/global-skills';
 
 const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
+});
+
+const githubManifestConfigSchema = z.object({
+  permissions: z.object({
+    administration: z.boolean(),
+    contents: z.boolean(),
+    issues: z.boolean(),
+    metadata: z.boolean(),
+    organization_projects: z.boolean(),
+    pull_requests: z.boolean(),
+    repository_projects: z.boolean(),
+    workflows: z.boolean(),
+  }),
+  events: z.object({
+    push: z.boolean(),
+    pull_request: z.boolean(),
+    pull_request_review: z.boolean(),
+    issues: z.boolean(),
+    issue_comment: z.boolean(),
+    repository: z.boolean(),
+    workflow_run: z.boolean(),
+  }),
+});
+
+const updateAgentGitHubManifestConfigSchema = z.object({
+  agentId: z.string().min(1),
+  manifestConfig: githubManifestConfigSchema,
 });
 
 const agentExecutionStepsQuerySchema = z.object({
@@ -343,12 +377,60 @@ const deleteAgentMcpServerSchema = z.object({
   serverId: z.string().min(1),
 });
 
+const upsertSystemMcpServerSchema = z
+  .object({
+    serverId: z.string().min(1).optional(),
+    name: z.string().trim().min(1),
+    description: z.string().trim().optional().default(''),
+    isActive: z.boolean().default(true),
+  })
+  .and(mcpServerFieldsSchema);
+
+const deleteSystemMcpServerSchema = z.object({
+  serverId: z.string().min(1),
+});
+
+const assignAgentMcpServerSchema = z.object({
+  agentId: z.string().min(1),
+  serverId: z.string().min(1),
+  isActive: z.boolean().default(true),
+});
+
+const setAgentMcpServerActiveSchema = z.object({
+  agentId: z.string().min(1),
+  configId: z.string().min(1),
+  isActive: z.boolean(),
+});
+
+const detachAgentMcpServerSchema = z.object({
+  agentId: z.string().min(1),
+  configId: z.string().min(1),
+});
+
 const uploadAgentSkillsSchema = z.object({
   agentId: z.string().min(1),
   archiveBase64: z.string().min(1),
 });
 
 const deleteAgentSkillSchema = z.object({
+  agentId: z.string().min(1),
+  skillName: z.string().min(1),
+});
+
+const uploadSystemSkillsSchema = z.object({
+  archiveBase64: z.string().min(1),
+});
+
+const deleteSystemSkillSchema = z.object({
+  skillName: z.string().min(1),
+});
+
+const installGlobalSkillForAgentSchema = z.object({
+  agentId: z.string().min(1),
+  skillName: z.string().min(1),
+});
+
+const publishAgentSkillToGlobalSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
@@ -643,8 +725,40 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'GET',
+    path: '/admin/system/mcp',
+    handler: async () =>
+      jsonResponse(
+        (
+          await input.db.select().from(mcpServerConfigs)
+        )
+          .map((server) => ({
+            serverId: server.id,
+            name: server.name,
+            description: server.description ?? undefined,
+            transport: server.transport as 'stdio' | 'http_streamable',
+            command: server.command ?? '',
+            argsText: server.args ?? '',
+            envVarsText: server.envVars ?? '',
+            url: server.url ?? '',
+            headersText: server.headers ?? '',
+            isActive: server.isActive === 1,
+            createdAt: server.createdAt,
+            updatedAt: server.updatedAt,
+          }))
+          .sort((left, right) => left.name.localeCompare(right.name)),
+      ),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
     path: '/admin/system/migrations',
     handler: async () => jsonResponse(await readModel.getApplicationMigrations()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/skills',
+    handler: async () => jsonResponse(await listGlobalSkills(input.workspaceBasePath)),
   });
 
   input.httpServer.registerRoute({
@@ -683,6 +797,118 @@ export function registerAdminRoutes(input: {
       }
 
       return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/mcp/upsert',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, upsertSystemMcpServerSchema);
+      const timestamp = new Date().toISOString();
+      const serverId = body.serverId ?? createId();
+
+      const values = {
+        name: body.name,
+        description: normalizeOptionalText(body.description),
+        transport: body.transport,
+        command: body.transport === 'stdio' ? body.command : null,
+        args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
+        envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+        url: body.transport === 'http_streamable' ? body.url : null,
+        headers: body.transport === 'http_streamable'
+          ? normalizeJsonText(body.headersText, 'headersText', 'object')
+          : null,
+        isActive: body.isActive ? 1 : 0,
+        updatedAt: timestamp,
+      };
+
+      if (body.serverId) {
+        await input.db.update(mcpServerConfigs).set(values).where(eq(mcpServerConfigs.id, body.serverId));
+      } else {
+        await input.db.insert(mcpServerConfigs).values({
+          id: serverId,
+          ...values,
+          version: 1,
+          createdAt: timestamp,
+        });
+      }
+
+      await reloadLinkedAgentsForMcpServer(input.db, input.loaderConfig, serverId);
+
+      const server = await input.db.query.mcpServerConfigs.findFirst({
+        where: eq(mcpServerConfigs.id, serverId),
+      });
+
+      return jsonResponse({
+        serverId,
+        name: server?.name ?? body.name,
+        description: server?.description ?? undefined,
+        transport: (server?.transport ?? body.transport) as 'stdio' | 'http_streamable',
+        command: server?.command ?? '',
+        argsText: server?.args ?? '',
+        envVarsText: server?.envVars ?? '',
+        url: server?.url ?? '',
+        headersText: server?.headers ?? '',
+        isActive: (server?.isActive ?? (body.isActive ? 1 : 0)) === 1,
+        createdAt: server?.createdAt ?? timestamp,
+        updatedAt: server?.updatedAt ?? timestamp,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/mcp/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteSystemMcpServerSchema);
+      const linkedConfigs = await input.db.query.agentMcpConfigs.findMany({
+        where: eq(agentMcpConfigs.serverId, body.serverId),
+        columns: {
+          agentId: true,
+          id: true,
+        },
+      });
+
+      for (const linkedConfig of linkedConfigs) {
+        await input.db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, linkedConfig.id));
+      }
+
+      await input.db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
+
+      for (const linkedConfig of linkedConfigs) {
+        await reloadAgentMcp(input.db, input.loaderConfig, linkedConfig.agentId);
+      }
+
+      return jsonResponse({ success: true, serverId: body.serverId });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/skills/upload',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, uploadSystemSkillsSchema);
+      const installedSkillNames = await installGlobalSkillsFromZip({
+        workspaceBasePath: input.workspaceBasePath,
+        zipBase64: body.archiveBase64,
+      });
+
+      return jsonResponse({ success: true, installedSkillNames }, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/skills/delete',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteSystemSkillSchema);
+      await deleteGlobalSkill({
+        workspaceBasePath: input.workspaceBasePath,
+        skillName: body.skillName,
+      });
+
+      return jsonResponse({ success: true, skillName: body.skillName });
     },
   });
 
@@ -1224,6 +1450,20 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
+    path: '/admin/agent/github-manifest-config/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
+      const provisioning = await input.githubApps.updateAgentManifestConfig({
+        agentId: body.agentId,
+        manifestConfig: body.manifestConfig,
+      });
+
+      return jsonResponse(provisioning);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
     path: '/admin/agent/update-config',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
@@ -1431,6 +1671,104 @@ export function registerAdminRoutes(input: {
 
   input.httpServer.registerRoute({
     method: 'POST',
+    path: '/admin/agent-mcp/assign',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
+      const existing = await input.db.query.agentMcpConfigs.findFirst({
+        where: and(
+          eq(agentMcpConfigs.agentId, body.agentId),
+          eq(agentMcpConfigs.serverId, body.serverId),
+        ),
+      });
+
+      if (existing) {
+        await input.db
+          .update(agentMcpConfigs)
+          .set({
+            isActive: body.isActive ? 1 : 0,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(agentMcpConfigs.id, existing.id));
+
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          configId: existing.id,
+          serverId: body.serverId,
+        });
+      }
+
+      const timestamp = new Date().toISOString();
+      const configId = createId();
+
+      await input.db.insert(agentMcpConfigs).values({
+        id: configId,
+        agentId: body.agentId,
+        serverId: body.serverId,
+        isActive: body.isActive ? 1 : 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({ success: true, agentId: body.agentId, configId, serverId: body.serverId }, 201);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/set-active',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
+
+      await input.db
+        .update(agentMcpConfigs)
+        .set({
+          isActive: body.isActive ? 1 : 0,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+        isActive: body.isActive,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/detach',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
+      const config = await input.db.query.agentMcpConfigs.findFirst({
+        where: and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)),
+      });
+
+      if (!config) {
+        return jsonResponse({ error: `Agent MCP config not found: ${body.configId}` }, 404);
+      }
+
+      await input.db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, body.configId));
+      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
     path: '/admin/agent-skills/upload',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
@@ -1484,6 +1822,62 @@ export function registerAdminRoutes(input: {
       // Reload is acceptable here because skill changes are rare, but this is the place to
       // switch to explicit skill refresh if we want to avoid full runtime recreation later.
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        skillName: body.skillName,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-skills/install-global',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      await installGlobalSkillToAgentWorkspace({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        skillName: body.skillName,
+      });
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-skills/publish-global',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
+
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+      }
+
+      await publishAgentWorkspaceSkillToGlobalCatalog({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
 
       return jsonResponse({
         success: true,
@@ -1899,6 +2293,23 @@ export function registerAdminRoutes(input: {
 async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
   clearAgentMCPClient(agentId);
   await reloadAgentIfLoaded(db, loaderConfig, agentId);
+}
+
+async function reloadLinkedAgentsForMcpServer(
+  db: Database,
+  loaderConfig: AgentLoaderConfig,
+  serverId: string,
+) {
+  const linkedConfigs = await db.query.agentMcpConfigs.findMany({
+    where: eq(agentMcpConfigs.serverId, serverId),
+    columns: {
+      agentId: true,
+    },
+  });
+
+  for (const linkedConfig of linkedConfigs) {
+    await reloadAgentMcp(db, loaderConfig, linkedConfig.agentId);
+  }
 }
 
 function normalizeOptionalText(value?: string) {

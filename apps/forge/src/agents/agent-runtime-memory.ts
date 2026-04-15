@@ -1,6 +1,7 @@
 import {
   createAgentMemory,
   createCheckpointedObservationalMemoryProcessor,
+  sanitizeWorkingMemory,
 } from '@mastra-engine/core';
 import { TokenLimiterProcessor } from '@mastra/core/processors';
 import type {
@@ -10,7 +11,7 @@ import type {
 import type { AgentConfig } from '@mastra/core/agent';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 
-export function createAgentRuntimeMemory(input: {
+export async function createAgentRuntimeMemory(input: {
   storage: LibSQLStore;
   vector: LibSQLVector;
   agentId: string;
@@ -30,11 +31,17 @@ export function createAgentRuntimeMemory(input: {
   checkpointedOmObservationReflectionBatchTokens?: number;
   checkpointedOmObservationSupportTokens?: number;
   checkpointedOmReflectionSupportTokens?: number;
+  agentSystemPrompt?: string;
 }) {
   const memory = createAgentMemory({
     storage: input.storage,
     vector: input.vector,
     lastMessages: input.memoryLastMessagesFullEnabled ? undefined : input.memoryLastMessagesCount,
+  });
+  await sanitizeWorkingMemory({
+    memory,
+    threadId: input.mastraId,
+    resourceId: input.mastraId,
   });
   const inputProcessors: InputProcessorOrWorkflow[] = [];
   const outputProcessors: OutputProcessorOrWorkflow[] = [];
@@ -50,6 +57,7 @@ export function createAgentRuntimeMemory(input: {
         input.checkpointedOmObservationReflectionBatchTokens,
       observationSupportTokens: input.checkpointedOmObservationSupportTokens,
       reflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+      agentSystemPrompt: input.agentSystemPrompt,
     });
 
     inputProcessors.push(checkpointedObservationalMemory);

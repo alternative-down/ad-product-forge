@@ -18,6 +18,7 @@ import {
   agentExecutionContracts,
   agentExecutionSteps,
   agentMcpConfigs,
+  agentNotifications,
   agentProviders,
   agentSchedules,
   mcpServerConfigs,
@@ -213,13 +214,25 @@ export function createAdminReadModel(input: {
   }
 
   async function listAgents() {
-    const [agentRows, roleRows, providerRows, llmProfiles] = await Promise.all([
+    const [agentRows, roleRows, providerRows, llmProfiles, recentStepRows, unreadNotificationRows] = await Promise.all([
       db.query.agents.findMany({
         orderBy: (fields, { asc }) => [asc(fields.name)],
       }),
       capabilities.listRoles(),
       db.query.agentProviders.findMany(),
       llmSettings.listProfiles(),
+      db.query.agentExecutionSteps.findMany({
+        orderBy: [desc(agentExecutionSteps.createdAt)],
+        limit: 500,
+      }),
+      db
+        .select({
+          agentId: agentNotifications.agentId,
+          count: sql<number>`count(*)`,
+        })
+        .from(agentNotifications)
+        .where(sql`${agentNotifications.readAt} is null`)
+        .groupBy(agentNotifications.agentId),
     ]);
     const registry = getInternalAgentRegistry();
     const roleMap = new Map(roleRows.map((row) => [row.roleId, row]));
@@ -234,6 +247,10 @@ export function createAdminReadModel(input: {
       ]),
     );
     const providerTypesByAgentId = new Map<string, string[]>();
+    const lastStepByAgentId = new Map<string, typeof recentStepRows[number]>();
+    const unreadNotificationCountByAgentId = new Map(
+      unreadNotificationRows.map((row) => [row.agentId, row.count]),
+    );
 
     for (const provider of providerRows) {
       const existingTypes = providerTypesByAgentId.get(provider.agentId) ?? [];
@@ -241,12 +258,26 @@ export function createAdminReadModel(input: {
       providerTypesByAgentId.set(provider.agentId, existingTypes);
     }
 
+    for (const step of recentStepRows) {
+      if (!lastStepByAgentId.has(step.agentId)) {
+        lastStepByAgentId.set(step.agentId, step);
+      }
+    }
+
+    const runtimeMemoryByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => [agent.id, await getAgentRuntimeMemory(agent.id)] as const),
+      ),
+    );
+
     return agentRows.map((agent) => {
       const loadedAgent = registry.get(agent.id);
       const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
       const role = agent.roleId ? (roleMap.get(agent.roleId) ?? null) : null;
       const modelProfile = llmProfileMap.get(agent.modelProfileId);
       const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
+      const lastStep = lastStepByAgentId.get(agent.id) ?? null;
+      const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
       const executionState =
         runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
           ? 'running'
@@ -264,6 +295,26 @@ export function createAdminReadModel(input: {
         loaded: Boolean(loadedAgent),
         runner: runnerSnapshot,
         providerTypes: (providerTypesByAgentId.get(agent.id) ?? []).sort(),
+        overview: {
+          lastStepAt: lastStep?.createdAt ?? null,
+          lastStepTokens: lastStep
+            ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
+            : null,
+          lastStepCostUsd: lastStep?.costUsd ?? null,
+          unreadNotificationCount: unreadNotificationCountByAgentId.get(agent.id) ?? 0,
+          om: runtimeMemory
+            ? {
+                generationCount: runtimeMemory.generationCount,
+                checkpointGeneration: runtimeMemory.checkpointGeneration,
+                recentRawTokenCount: runtimeMemory.metrics.recentRawTokenCount,
+                recentRawTokenLimit: runtimeMemory.metrics.recentRawTokenLimit,
+                overflowTokenCount: runtimeMemory.metrics.overflowTokenCount,
+                observationTokenCount: runtimeMemory.metrics.observationTokenCount,
+                reflectionTokenCount: runtimeMemory.metrics.reflectionTokenCount,
+                checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
+              }
+            : null,
+        },
         createdAt: agent.createdAt,
         updatedAt: agent.updatedAt,
       };

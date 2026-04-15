@@ -11,8 +11,85 @@ import {
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import type { UpsertSystemMcpServerInput } from '@/lib/admin-api';
 
-import type { McpForm } from './-mcp-helpers';
+type McpForm = {
+  serverId?: string;
+  name: string;
+  description: string;
+  transport: 'stdio' | 'http_streamable';
+  command: string;
+  argsText: string;
+  envVarsText: string;
+  url: string;
+  headersText: string;
+  isActive: boolean;
+};
+
+export function createEmptyMcpForm(): McpForm {
+  return {
+    name: '',
+    description: '',
+    transport: 'stdio',
+    command: '',
+    argsText: '',
+    envVarsText: '',
+    url: '',
+    headersText: '',
+    isActive: true,
+  };
+}
+
+export function createMcpForm(input: {
+  serverId: string;
+  name: string;
+  description?: string;
+  transport: 'stdio' | 'http_streamable';
+  command: string;
+  argsText: string;
+  envVarsText: string;
+  url: string;
+  headersText: string;
+  isActive: boolean;
+}): McpForm {
+  return {
+    serverId: input.serverId,
+    name: input.name,
+    description: input.description ?? '',
+    transport: input.transport,
+    command: input.command,
+    argsText: input.argsText,
+    envVarsText: input.envVarsText,
+    url: input.url,
+    headersText: input.headersText,
+    isActive: input.isActive,
+  };
+}
+
+export function toSystemMcpInput(input: McpForm): UpsertSystemMcpServerInput {
+  if (input.transport === 'stdio') {
+    return {
+      serverId: input.serverId,
+      name: input.name.trim(),
+      description: input.description.trim() || undefined,
+      transport: 'stdio',
+      command: input.command.trim(),
+      argsText: input.argsText.trim() || undefined,
+      envVarsText: input.envVarsText.trim() || undefined,
+      isActive: input.isActive,
+    };
+  }
+
+  return {
+    serverId: input.serverId,
+    name: input.name.trim(),
+    description: input.description.trim() || undefined,
+    transport: 'http_streamable',
+    url: input.url.trim(),
+    headersText: input.headersText.trim() || undefined,
+    isActive: input.isActive,
+  };
+}
 
 export function McpDialog(input: {
   open: boolean;
@@ -26,7 +103,7 @@ export function McpDialog(input: {
     <Dialog open={input.open} onOpenChange={input.onOpenChange}>
       <AdminDialogContent>
         <AdminDialogHeader>
-          <AdminDialogTitle>{input.form.configId ? 'Editar servidor MCP' : 'Novo servidor MCP'}</AdminDialogTitle>
+          <AdminDialogTitle>{input.form.serverId ? 'Editar servidor MCP' : 'Novo servidor MCP'}</AdminDialogTitle>
         </AdminDialogHeader>
 
         <form
@@ -39,11 +116,9 @@ export function McpDialog(input: {
           <AdminDialogBody>
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="mcp-name">
-                  Nome
-                </label>
+                <label className="text-sm font-medium" htmlFor="settings-mcp-name">Nome</label>
                 <AdminInput
-                  id="mcp-name"
+                  id="settings-mcp-name"
                   value={input.form.name}
                   onChange={(event) => input.onFormChange({ ...input.form, name: event.target.value })}
                   disabled={input.pending}
@@ -51,11 +126,9 @@ export function McpDialog(input: {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="mcp-description">
-                  Descrição
-                </label>
+                <label className="text-sm font-medium" htmlFor="settings-mcp-description">Descrição</label>
                 <AdminTextarea
-                  id="mcp-description"
+                  id="settings-mcp-description"
                   rows={4}
                   value={input.form.description}
                   onChange={(event) => input.onFormChange({ ...input.form, description: event.target.value })}
@@ -64,16 +137,16 @@ export function McpDialog(input: {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="mcp-transport">
-                  Transporte
-                </label>
+                <label className="text-sm font-medium" htmlFor="settings-mcp-transport">Transporte</label>
                 <Select
                   value={input.form.transport}
-                  onValueChange={(value: 'stdio' | 'http_streamable') => input.onFormChange({ ...input.form, transport: value })}
+                  onValueChange={(value: 'stdio' | 'http_streamable') =>
+                    input.onFormChange({ ...input.form, transport: value })
+                  }
                   disabled={input.pending}
                 >
-                  <SelectTrigger id="mcp-transport" className="w-full">
-                    <SelectValue>{input.form.transport === 'stdio' ? 'stdio' : 'http_streamable'}</SelectValue>
+                  <SelectTrigger id="settings-mcp-transport" className="w-full">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="stdio">stdio</SelectItem>
@@ -85,36 +158,28 @@ export function McpDialog(input: {
               {input.form.transport === 'stdio' ? (
                 <>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="mcp-command">
-                      Command
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="settings-mcp-command">Command</label>
                     <AdminInput
-                      id="mcp-command"
+                      id="settings-mcp-command"
                       value={input.form.command}
                       onChange={(event) => input.onFormChange({ ...input.form, command: event.target.value })}
                       disabled={input.pending}
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="mcp-args">
-                      Args JSON
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="settings-mcp-args">Args JSON</label>
                     <AdminTextarea
-                      id="mcp-args"
+                      id="settings-mcp-args"
                       rows={4}
                       value={input.form.argsText}
                       onChange={(event) => input.onFormChange({ ...input.form, argsText: event.target.value })}
                       disabled={input.pending}
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="mcp-env">
-                      Env vars JSON
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="settings-mcp-env">Env vars JSON</label>
                     <AdminTextarea
-                      id="mcp-env"
+                      id="settings-mcp-env"
                       rows={4}
                       value={input.form.envVarsText}
                       onChange={(event) => input.onFormChange({ ...input.form, envVarsText: event.target.value })}
@@ -125,23 +190,18 @@ export function McpDialog(input: {
               ) : (
                 <>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="mcp-url">
-                      URL
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="settings-mcp-url">URL</label>
                     <AdminInput
-                      id="mcp-url"
+                      id="settings-mcp-url"
                       value={input.form.url}
                       onChange={(event) => input.onFormChange({ ...input.form, url: event.target.value })}
                       disabled={input.pending}
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="mcp-headers">
-                      Headers JSON
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="settings-mcp-headers">Headers JSON</label>
                     <AdminTextarea
-                      id="mcp-headers"
+                      id="settings-mcp-headers"
                       rows={4}
                       value={input.form.headersText}
                       onChange={(event) => input.onFormChange({ ...input.form, headersText: event.target.value })}

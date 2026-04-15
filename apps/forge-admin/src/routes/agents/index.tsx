@@ -39,6 +39,10 @@ function AgentsIndexRoute() {
                 <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Papel</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Última step</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Wake</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Notificações</TableHead>
+                <TableHead className="px-4 py-3 font-medium">OM</TableHead>
                 <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -59,6 +63,20 @@ function AgentsIndexRoute() {
                   </TableCell>
                   <TableCell className="px-4 py-3">{agent.roleName ?? 'Sem papel'}</TableCell>
                   <TableCell className="px-4 py-3">{agent.executionState === 'running' ? 'Trabalhando' : 'Ocioso'}</TableCell>
+                  <TableCell className="px-4 py-3">{formatRelativeTime(agent.overview.lastStepAt)}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {agent.runner?.wake.pending
+                      ? 'Pendente'
+                      : agent.runner?.wake.waitingForIdle
+                        ? 'Aguardando idle'
+                        : 'Limpa'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">{agent.overview.unreadNotificationCount}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {agent.overview.om
+                      ? `g${agent.overview.om.generationCount} · raw ${formatNullableNumber(agent.overview.om.recentRawTokenCount)}`
+                      : '—'}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <AdminButton
@@ -77,7 +95,7 @@ function AgentsIndexRoute() {
               ))}
               {agents.length === 0 ? (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={4}>
+                  <TableCell className="px-4 py-6 text-muted-foreground" colSpan={8}>
                     Nenhum agente ainda.
                   </TableCell>
                 </TableRow>
@@ -92,4 +110,37 @@ function AgentsIndexRoute() {
       <HireAgentDialog open={hireOpen} onOpenChange={setHireOpen} />
     </div>
   );
+}
+
+function formatNullableNumber(value: number | null) {
+  if (value === null) {
+    return '—';
+  }
+
+  return new Intl.NumberFormat('pt-BR').format(value);
+}
+
+function formatRelativeTime(value: number | null) {
+  if (!value) {
+    return '—';
+  }
+
+  const diffMs = Math.max(Date.now() - value, 0);
+  const diffMinutes = Math.floor(diffMs / 60_000);
+
+  if (diffMinutes < 1) {
+    return 'agora';
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours} h`;
+  }
+
+  return `${Math.floor(diffHours / 24)} d`;
 }
