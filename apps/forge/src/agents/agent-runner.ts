@@ -247,7 +247,7 @@ export function createAgentRunner(
     const allEvents = Array.from(pendingRunMessages.values()).sort(
       (left, right) => left.timestamp - right.timestamp,
     );
-    pendingRunMessages.clear();
+    const deferredEvents: AgentWakeEvent[] = [];
 
     const events = allEvents.filter((event) => {
       if (flushedRunEventKeys.has(event.idempotencyKey)) {
@@ -255,11 +255,18 @@ export function createAgentRunner(
       }
 
       if (event.originIdleOnly && !options.allowOriginIdleOnly) {
+        deferredEvents.push(event);
         return false;
       }
 
       return shouldIncludePendingRunEventInFlush(event);
     });
+
+    pendingRunMessages.clear();
+
+    for (const event of deferredEvents) {
+      pendingRunMessages.set(event.idempotencyKey, event);
+    }
 
     if (events.length === 0) {
       return null;
@@ -287,13 +294,17 @@ export function createAgentRunner(
     flushedRunEventKeys = new Set<string>();
   }
 
-  async function forceIdle() {
+  async function forceIdle(options: {
+    preserveQueuedWork?: boolean;
+  } = {}) {
     const runEpoch = startNewRunEpoch();
     startingRun = false;
     executing = false;
     clearTimer();
-    wakeQueue.stop();
-    pendingRunMessages.clear();
+    if (!options.preserveQueuedWork) {
+      wakeQueue.stop();
+      pendingRunMessages.clear();
+    }
     flushedRunEventKeys = new Set<string>();
     instant = false;
     await resetRunLastMessages();
@@ -347,12 +358,6 @@ export function createAgentRunner(
 
       if (startingRun || executing || timer) {
         return;
-      }
-
-      const wakeSnapshot = wakeQueue.getSnapshot();
-
-      if (wakeSnapshot.waitingForIdle) {
-        await wakeQueue.onRunnerIdle();
       }
 
       await queueNextStep(activeRunEpoch);
@@ -637,12 +642,20 @@ export function createAgentRunner(
         return;
       }
 
-      if (result.toolCalls.length === 0 && stopRequested) {
+      const canStopAfterToolCalls =
+        result.toolCalls.length > 0
+        && result.toolCalls.every((chunk) => chunk.payload.toolName === 'updateWorkingMemory');
+
+      if ((result.toolCalls.length === 0 || canStopAfterToolCalls) && stopRequested) {
         if (pendingRunMessages.size > 0) {
           const lateEvents = Array.from(pendingRunMessages.values());
           pendingRunMessages.clear();
 
           for (const event of lateEvents) {
+            if (event.type.startsWith('runner-')) {
+              continue;
+            }
+
             wakeQueue.notifyExternalEvent({
               ...event,
               idleOnly: event.originIdleOnly ?? false,
@@ -1207,7 +1220,9 @@ export function createAgentRunner(
       console.error(`[AgentRunner] ${runtime.id} failed to create stuck-step notification:`, error);
     });
 
-    await forceIdle();
+    await forceIdle({
+      preserveQueuedWork: true,
+    });
     notifyExternalEvent({
       type: 'runner-auto-rewakeup',
       groupKey: `runner-auto-rewakeup:${runtime.id}`,

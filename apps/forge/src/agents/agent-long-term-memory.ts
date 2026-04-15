@@ -195,7 +195,7 @@ function getUsageFromGenerateResult(result: { usage?: unknown }): LtmUsage {
   const promptTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
 
   return {
-    inputTokens: usage.inputTokenDetails?.noCacheTokens ?? Math.max(promptTokens - cachedInputTokens, 0),
+    inputTokens: promptTokens,
     cachedInputTokens,
     outputTokens: usage.outputTokens ?? usage.completionTokens ?? 0,
   };
@@ -706,8 +706,9 @@ export function createAgentLongTermMemory(input: {
     let costUsd = 0;
 
     if (pricing.modelPrice) {
+      const uncachedInputTokens = Math.max(usage.inputTokens - usage.cachedInputTokens, 0);
       costUsd =
-        ((usage.inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
+        ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
           + (usage.cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
           + (usage.outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
         * pricing.contractCostMultiplier;
@@ -941,6 +942,8 @@ export function createAgentLongTermMemory(input: {
     onAgentRunning() {
       idle = false;
       clearTimer();
+      snapshot.queued = false;
+      snapshot.nextRunAt = null;
       currentAbortController?.abort(new Error('LTM run interrupted because main agent resumed running'));
     },
 

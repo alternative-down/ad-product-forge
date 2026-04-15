@@ -331,6 +331,17 @@ export function createAdminReadModel(input: {
         agentRows.map(async (agent) => [agent.id, await readLongTermMemoryState(input.workspaceBasePath, agent.id)] as const),
       ),
     );
+    const runtimeLtmSnapshotByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => {
+          const loadedAgent = registry.get(agent.id);
+          const snapshot = loadedAgent?.runtime.longTermMemory
+            ? await loadedAgent.runtime.longTermMemory.readSnapshot()
+            : null;
+          return [agent.id, snapshot] as const;
+        }),
+      ),
+    );
 
     return agentRows.map((agent) => {
       const loadedAgent = registry.get(agent.id);
@@ -342,7 +353,7 @@ export function createAdminReadModel(input: {
       const lastStep = recentSteps[0] ?? null;
       const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
       const longTermMemoryState = longTermMemoryStateByAgentId.get(agent.id) ?? null;
-      const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory?.getSnapshot() ?? null;
+      const runtimeLtmSnapshot = runtimeLtmSnapshotByAgentId.get(agent.id) ?? null;
       const averageStepIntervalMs = recentSteps.length >= 2
         ? Math.round(
             recentSteps
@@ -358,10 +369,7 @@ export function createAdminReadModel(input: {
               .reduce((total, value, _index, values) => total + value / values.length, 0),
           )
         : null;
-      const executionState =
-        runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
-          ? 'running'
-          : agent.executionState;
+      const executionState = agent.executionState;
 
       return {
         agentId: agent.id,
@@ -402,8 +410,8 @@ export function createAdminReadModel(input: {
               }
             : null,
           ltm: {
-            running: runtimeLtmSnapshot?.running ?? false,
-            queued: runtimeLtmSnapshot?.queued ?? false,
+            running: executionState === 'idle' ? (runtimeLtmSnapshot?.running ?? false) : false,
+            queued: executionState === 'idle' ? (runtimeLtmSnapshot?.queued ?? false) : false,
             pendingPackageCount: longTermMemoryState?.packages.filter((entry) => entry.processedAt === null).length ?? 0,
             writtenPackageCount: longTermMemoryState?.packages.length ?? 0,
             processedPackageCount: longTermMemoryState?.packages.filter((entry) => entry.processedAt !== null).length ?? 0,
@@ -495,10 +503,7 @@ export function createAdminReadModel(input: {
     const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
     const heartbeat = agentScheduleRows.find((schedule) => schedule.kind === 'heartbeat') ?? null;
     const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
-    const executionState =
-      runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
-        ? 'running'
-        : agent.executionState;
+    const executionState = agent.executionState;
     const contractSpendRows = activeContract
       ? await db
           .select({
@@ -772,7 +777,13 @@ export function createAdminReadModel(input: {
       ? await loadedAgent.runtime.longTermMemory.readSnapshot()
       : null;
     const persistedLtmState = await readLongTermMemoryState(input.workspaceBasePath, agentId);
-    const ltm = runtimeLtmSnapshot ?? (persistedLtmState
+    const ltm = (runtimeLtmSnapshot
+      ? {
+          ...runtimeLtmSnapshot,
+          running: agent.executionState === 'idle' ? runtimeLtmSnapshot.running : false,
+          queued: agent.executionState === 'idle' ? runtimeLtmSnapshot.queued : false,
+        }
+      : null) ?? (persistedLtmState
       ? {
           running: false,
           queued: false,
