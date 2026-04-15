@@ -679,11 +679,6 @@ export function createAgentLongTermMemory(input: {
       checkpointGeneration: payload.toGeneration,
     });
 
-    if (idle) {
-      snapshot.queued = true;
-      await scheduleRun(0);
-    }
-
     return manifest;
   }
 

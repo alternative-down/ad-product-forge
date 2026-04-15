@@ -642,57 +642,38 @@ export function createAgentRunner(
         return;
       }
 
-      const canStopAfterToolCalls =
-        result.toolCalls.length > 0
-        && result.toolCalls.every((chunk) => chunk.payload.toolName === 'updateWorkingMemory');
-
-      if ((result.toolCalls.length === 0 || canStopAfterToolCalls) && stopRequested) {
-        if (pendingRunMessages.size > 0) {
-          const lateEvents = Array.from(pendingRunMessages.values());
-          pendingRunMessages.clear();
-
-          for (const event of lateEvents) {
-            if (event.type.startsWith('runner-')) {
-              continue;
-            }
-
-            wakeQueue.notifyExternalEvent({
-              ...event,
-              idleOnly: event.originIdleOnly ?? false,
-            });
-          }
+      if (result.toolCalls.length === 0) {
+        if (stopRequested && pendingRunMessages.size === 0) {
+          nextStepAt = null;
+          resetLoopDetector();
+          await transitionToIdle(runEpoch, {
+            deferWakeQueueDrain: true,
+          });
+          drainWakeQueueAfterStep = true;
+          return;
         }
 
-        nextStepAt = null;
-        resetLoopDetector();
-        await transitionToIdle(runEpoch, {
-          deferWakeQueueDrain: true,
-        });
-        drainWakeQueueAfterStep = true;
-        return;
-      }
+        if (ignoredTextRequested) {
+          suppressNoToolCallReminder = true;
+        }
 
-      if (result.toolCalls.length === 0 && ignoredTextRequested) {
-        suppressNoToolCallReminder = true;
-      }
-
-      if (result.toolCalls.length === 0 && !suppressNoToolCallReminder) {
-        appendPendingRunMessages([
-          {
-            type: 'runner-reminder',
-            groupKey: `runner-reminder:${runtime.id}`,
-            groupMetadata: {
-              Source: 'runner',
+        if (!stopRequested && !suppressNoToolCallReminder) {
+          appendPendingRunMessages([
+            {
+              type: 'runner-reminder',
+              groupKey: `runner-reminder:${runtime.id}`,
+              groupMetadata: {
+                Source: 'runner',
+              },
+              idempotencyKey: `runner-reminder:${runtime.id}:${Date.now()}`,
+              itemMetadata: {
+                Kind: 'run-stop-reminder',
+              },
+              text: RUN_STOP_REMINDER,
+              timestamp: Date.now(),
             },
-            idempotencyKey: `runner-reminder:${runtime.id}:${Date.now()}`,
-            itemMetadata: {
-              Kind: 'run-stop-reminder',
-            },
-            text: RUN_STOP_REMINDER,
-            timestamp: Date.now(),
-          },
-        ]);
-        instant = true;
+          ]);
+        }
       }
 
       backoffMs = ONE_MINUTE_MS;
