@@ -65,6 +65,7 @@ function AgentLogIndexRoute() {
         checkpointGeneration={runtimeMemoryQuery.data?.checkpointGeneration ?? null}
         checkpointSummary={runtimeMemoryQuery.data?.checkpointSummary ?? null}
         checkpointUpdatedAt={runtimeMemoryQuery.data?.checkpointUpdatedAt ?? null}
+        ltmRecall={runtimeMemoryQuery.data?.ltmRecall ?? null}
         ltm={runtimeMemoryQuery.data?.ltm ?? null}
         metrics={runtimeMemoryQuery.data?.metrics ?? null}
         loading={runtimeMemoryQuery.isLoading}
@@ -98,6 +99,14 @@ function AgentRuntimeMemorySection(input: {
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
+  ltmRecall: {
+    status: 'hit' | 'miss' | 'error';
+    query: string;
+    resultIds: string[];
+    resultCount: number;
+    updatedAt: number;
+    error: string | null;
+  } | null;
   ltm: {
     running: boolean;
     queued: boolean;
@@ -247,6 +256,18 @@ function AgentRuntimeMemorySection(input: {
       <MemoryDisclosure
         title="Checkpoint Summary"
         value={input.checkpointSummary}
+      />
+      <MemoryDisclosure
+        title="LTM Recall"
+        value={input.ltmRecall ? [
+          `status: ${input.ltmRecall.status}`,
+          `updatedAt: ${formatDateTime(input.ltmRecall.updatedAt)}`,
+          `resultCount: ${formatNumber(input.ltmRecall.resultCount)}`,
+          `resultIds: ${input.ltmRecall.resultIds.join(', ') || '—'}`,
+          `error: ${input.ltmRecall.error ?? '—'}`,
+          '',
+          input.ltmRecall.query,
+        ].join('\n') : null}
       />
       <MemoryDisclosure
         title="Observations"
