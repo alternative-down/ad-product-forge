@@ -14,3 +14,4 @@ export { AdminInput } from './forms/admin-input';
 export { AdminTextarea } from './forms/admin-textarea';
 export { PageHeader } from './layout/page-header';
 export { RolesPage } from './pages/roles-page';
+export { AgentAvatar } from './agent-avatar';

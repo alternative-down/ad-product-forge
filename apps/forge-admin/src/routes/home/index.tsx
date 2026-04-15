@@ -3,11 +3,11 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
 import {
+  AgentAvatar,
   AdminButton,
   AdminLoadingState,
   HireAgentDialog,
 } from '@/components/admin';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { getAgents, getSystemSettings } from '@/lib/admin-api';
 
@@ -60,11 +60,12 @@ function HomeIndexRoute() {
             >
               <div className="flex items-start gap-4">
                 <div className="flex flex-col items-center gap-2">
-                  <Avatar className="h-14 w-14 border border-border bg-muted">
-                    <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
-                      {getAgentInitials(agent.name)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AgentAvatar
+                    agentId={agent.agentId}
+                    name={agent.name}
+                    className="h-14 w-14 border border-border bg-muted"
+                    fallbackClassName="bg-muted text-sm font-medium text-foreground"
+                  />
                   <Badge variant="outline" className="rounded-sm">
                     {humanizeAgentStatus(agent.executionState)}
                   </Badge>
@@ -87,19 +88,6 @@ function HomeIndexRoute() {
       <HireAgentDialog open={hireOpen} onOpenChange={setHireOpen} />
     </div>
   );
-}
-
-function getAgentInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-
-  if (parts.length === 0) {
-    return 'AG';
-  }
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
 }
 
 function humanizeAgentStatus(executionState: 'idle' | 'running') {

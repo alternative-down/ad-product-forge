@@ -177,6 +177,7 @@ function AgentRuntimeMemorySection(input: {
           <MetricTile
             label="Thread após cursor"
             current={input.metrics.rawMessageCount}
+            unit="itens"
             detail={
               input.metrics.latestThreadMessageAt
                 ? `última mensagem ${formatDateTime(input.metrics.latestThreadMessageAt)}`
@@ -213,6 +214,7 @@ function AgentRuntimeMemorySection(input: {
 function MetricTile(input: {
   label: string;
   current: number;
+  unit?: string;
   limit?: number;
   detail?: string;
 }) {
@@ -226,7 +228,7 @@ function MetricTile(input: {
         {input.label}
       </div>
       <div className="mt-1 text-sm font-medium text-foreground">
-        {formatNumber(input.current)} tokens
+        {formatNumber(input.current)} {input.unit ?? 'tokens'}
       </div>
       {input.limit ? (
         <div className="mt-1 text-xs text-muted-foreground">

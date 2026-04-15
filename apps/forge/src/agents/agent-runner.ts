@@ -177,7 +177,9 @@ export function createAgentRunner(
     appendPendingRunMessages(runnableEvents);
 
     if (idleOnlyEvents.length > 0) {
-      appendPendingRunMessages(idleOnlyEvents);
+      appendPendingRunMessages(idleOnlyEvents, {
+        allowIdleOnly: true,
+      });
     }
 
     await beginRun({
@@ -187,13 +189,25 @@ export function createAgentRunner(
     });
   }
 
-  function appendPendingRunMessages(events: AgentWakeEvent[]) {
+  function appendPendingRunMessages(
+    events: AgentWakeEvent[],
+    options: {
+      allowIdleOnly?: boolean;
+    } = {},
+  ) {
     for (const event of events) {
+      if (event.idleOnly && !options.allowIdleOnly) {
+        continue;
+      }
+
       if (!event.text.trim()) {
         continue;
       }
 
-      pendingRunMessages.set(event.idempotencyKey, event);
+      pendingRunMessages.set(event.idempotencyKey, {
+        ...event,
+        idleOnly: options.allowIdleOnly ? false : event.idleOnly,
+      });
     }
   }
 
@@ -523,7 +537,6 @@ export function createAgentRunner(
         await transitionToIdle(runEpoch, {
           deferWakeQueueDrain: true,
         });
-        drainWakeQueueAfterStep = true;
         return;
       }
 
@@ -540,7 +553,6 @@ export function createAgentRunner(
         await transitionToIdle(runEpoch, {
           deferWakeQueueDrain: true,
         });
-        drainWakeQueueAfterStep = true;
         return;
       }
 

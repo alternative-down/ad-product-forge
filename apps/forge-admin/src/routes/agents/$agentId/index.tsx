@@ -4,11 +4,11 @@ import { Pencil, RotateCw } from 'lucide-react';
 import { useState } from 'react';
 
 import {
+  AgentAvatar,
   AdminButton,
   AdminLoadingState,
   AdminScrollArea,
 } from '@/components/admin';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   changeAgentRole,
@@ -28,7 +28,6 @@ import {
   formatAverageInterval,
   formatPercent,
   formatUsd,
-  getAgentInitials,
   humanizeAgentStatus,
   type AgentProfileForm,
 } from './-agent-detail-helpers';
@@ -135,11 +134,13 @@ function AgentDetailIndexRoute() {
           <section className="space-y-5">
             <div className="flex items-start gap-5">
               <div className="flex flex-col items-center gap-2">
-                <Avatar className="h-20 w-20 border border-border bg-muted">
-                  <AvatarFallback className="bg-muted text-base font-medium text-foreground">
-                    {getAgentInitials(agent.name)}
-                  </AvatarFallback>
-                </Avatar>
+                <AgentAvatar
+                  agentId={agent.agentId}
+                  name={agent.name}
+                  size="lg"
+                  className="h-20 w-20 border border-border bg-muted"
+                  fallbackClassName="bg-muted text-base font-medium text-foreground"
+                />
                 <Badge variant="outline" className="rounded-sm">
                   {humanizeAgentStatus(agent.executionState)}
                 </Badge>
