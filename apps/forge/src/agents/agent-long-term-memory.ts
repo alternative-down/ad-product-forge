@@ -162,7 +162,9 @@ function createMemoryAgentInstructions(input: {
 function buildMemoryAgentPrompt(packages: CheckpointPackageManifest[]) {
   return [
     'Process every pending checkpoint package listed below.',
-    'Read each package summary first, then inspect reflections and observations only when useful.',
+    'Read each package README first.',
+    'Only inspect `reflections/` when `reflectionCount` is greater than 0.',
+    'Only inspect `observations/` when `observationCount` is greater than 0.',
     'Update or create durable knowledge documents under `workspace-memory/memory`.',
     'Create or improve files under `workspace/skills` only when the evidence supports a reusable operational skill.',
     'Do not edit checkpoint packages.',
@@ -171,6 +173,8 @@ function buildMemoryAgentPrompt(packages: CheckpointPackageManifest[]) {
     ...packages.map((entry) => [
       `- packageId: ${entry.packageId}`,
       `  checkpointGeneration: ${entry.checkpointGeneration}`,
+      `  reflectionCount: ${entry.reflectionCount}`,
+      `  observationCount: ${entry.observationCount}`,
       `  path: workspace-memory/checkpoints/${entry.packageId}`,
     ].join('\n')),
     '</pending_packages>',
@@ -632,8 +636,7 @@ export function createAgentLongTermMemory(input: {
     });
 
     await fs.rm(tempPackagePath, { recursive: true, force: true });
-    await fs.mkdir(path.resolve(tempPackagePath, 'reflections'), { recursive: true });
-    await fs.mkdir(path.resolve(tempPackagePath, 'observations'), { recursive: true });
+    await fs.mkdir(tempPackagePath, { recursive: true });
     await fs.writeFile(
       path.resolve(tempPackagePath, 'README.md'),
       renderCheckpointPackageReadme({
@@ -644,11 +647,19 @@ export function createAgentLongTermMemory(input: {
       }),
     );
 
+    if (payload.reflections.length > 0) {
+      await fs.mkdir(path.resolve(tempPackagePath, 'reflections'), { recursive: true });
+    }
+
     for (const [index, reflection] of payload.reflections.entries()) {
       await fs.writeFile(
         path.resolve(tempPackagePath, 'reflections', `reflection_${String(index + 1).padStart(3, '0')}.md`),
         renderReflectionFile(reflection),
       );
+    }
+
+    if (payload.observations.length > 0) {
+      await fs.mkdir(path.resolve(tempPackagePath, 'observations'), { recursive: true });
     }
 
     for (const [index, observation] of payload.observations.entries()) {
