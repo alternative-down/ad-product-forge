@@ -47,6 +47,8 @@ export const agents = sqliteTable('agents', {
     .references(() => llmProfiles.id, { onDelete: 'restrict' }),
   instructions: text('instructions').notNull(),
   executionState: text('execution_state').notNull().default('idle'),
+  lastExecutionError: text('last_execution_error'),
+  lastExecutionErrorAt: integer('last_execution_error_at'),
   // Workspace configuration
   workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1), // boolean as 0/1
   workspaceBm25: integer('workspace_bm25').notNull().default(1), // boolean as 0/1

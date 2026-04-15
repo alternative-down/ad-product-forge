@@ -712,7 +712,10 @@ export function createAgentRunner(
         }, null, 2),
       );
       await withTimeout(
-        store.setExecutionState(runtime.id, 'absent'),
+        store.setExecutionAbsent(runtime.id, formatAbsentExecutionError({
+          stage: lastStepStage,
+          error,
+        })),
         RUNNER_AWAIT_TIMEOUT_MS,
         `Agent execution state update timed out for ${runtime.id}`,
       ).catch((stateError) => {
@@ -1352,6 +1355,19 @@ function serializeUnknown(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) => [key, serializeUnknown(item)]),
   );
+}
+
+function formatAbsentExecutionError(input: {
+  stage: string | null;
+  error: unknown;
+}) {
+  const stage = input.stage ?? 'unknown';
+
+  if (input.error instanceof Error) {
+    return `Stage: ${stage}\n${input.error.name}: ${input.error.message}`;
+  }
+
+  return `Stage: ${stage}\n${String(input.error)}`;
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

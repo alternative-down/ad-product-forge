@@ -54,6 +54,9 @@ function AgentLogIndexRoute() {
       <AgentRuntimeMemorySection
         workingMemory={runtimeMemoryQuery.data?.workingMemory ?? null}
         agentContext={runtimeMemoryQuery.data?.agentContext ?? null}
+        executionState={runtimeMemoryQuery.data?.executionState ?? 'idle'}
+        lastExecutionError={runtimeMemoryQuery.data?.lastExecutionError ?? null}
+        lastExecutionErrorAt={runtimeMemoryQuery.data?.lastExecutionErrorAt ?? null}
         observations={runtimeMemoryQuery.data?.observations ?? null}
         reflection={runtimeMemoryQuery.data?.reflection ?? null}
         generationCount={runtimeMemoryQuery.data?.generationCount ?? null}
@@ -84,6 +87,9 @@ function AgentLogIndexRoute() {
 function AgentRuntimeMemorySection(input: {
   workingMemory: string | null;
   agentContext: string | null;
+  executionState: 'idle' | 'running' | 'absent';
+  lastExecutionError: string | null;
+  lastExecutionErrorAt: number | null;
   observations: string | null;
   reflection: string | null;
   generationCount: number | null;
@@ -218,6 +224,17 @@ function AgentRuntimeMemorySection(input: {
           />
         </div>
       ) : null}
+
+      <MemoryDisclosure
+        title="Status de ausência"
+        value={input.executionState === 'absent' || input.lastExecutionError
+          ? [
+              `estado: ${input.executionState}`,
+              `motivo: ${input.lastExecutionError ?? '—'}`,
+              `em: ${input.lastExecutionErrorAt ? formatDateTime(input.lastExecutionErrorAt) : '—'}`,
+            ].join('\n')
+          : null}
+      />
 
       <MemoryDisclosure
         title="Working Memory"

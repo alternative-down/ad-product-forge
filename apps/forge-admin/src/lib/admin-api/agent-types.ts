@@ -221,6 +221,9 @@ export type AgentRecentConversation = {
 export type AgentRuntimeMemorySnapshot = {
   workingMemory: string | null;
   agentContext: string | null;
+  executionState: 'idle' | 'running' | 'absent';
+  lastExecutionError: string | null;
+  lastExecutionErrorAt: number | null;
   observations: string | null;
   reflection: string | null;
   generationCount: number;

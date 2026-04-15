@@ -25,6 +25,20 @@ export function createAgentContractStore(db: Database) {
       .update(agents)
       .set({
         executionState,
+        lastExecutionError: executionState === 'absent' ? undefined : null,
+        lastExecutionErrorAt: executionState === 'absent' ? undefined : null,
+        updatedAt: Date.now(),
+      })
+      .where(eq(agents.id, agentId));
+  }
+
+  async function setExecutionAbsent(agentId: string, error: string) {
+    await db
+      .update(agents)
+      .set({
+        executionState: 'absent',
+        lastExecutionError: error,
+        lastExecutionErrorAt: Date.now(),
         updatedAt: Date.now(),
       })
       .where(eq(agents.id, agentId));
@@ -233,6 +247,7 @@ export function createAgentContractStore(db: Database) {
   return {
     getExecutionState,
     setExecutionState,
+    setExecutionAbsent,
     getRunnableContract,
     listRecentSteps,
     getContractSpend,
