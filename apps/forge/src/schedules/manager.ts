@@ -544,19 +544,10 @@ export function createAgentScheduleManager(input: {
   ) {
     cancelCompletedDateJob(scheduleRecord.scheduleId, remainsActive);
     if (scheduleRecord.kind === 'heartbeat') {
-      const [executionState, pendingSummary] = await Promise.all([
-        input.getAgentExecutionState?.(scheduleRecord.agentId) ?? Promise.resolve<'idle' | 'running'>('idle'),
-        input.getAgentPendingSummary?.(scheduleRecord.agentId) ?? Promise.resolve({
-          unreadNotificationCount: 0,
-          unreadConversationCount: 0,
-          unreadMessageCount: 0,
-        }),
-      ]);
-      const hasPendingWork = pendingSummary.unreadNotificationCount > 0
-        || pendingSummary.unreadConversationCount > 0
-        || pendingSummary.unreadMessageCount > 0;
+      const executionState =
+        await (input.getAgentExecutionState?.(scheduleRecord.agentId) ?? Promise.resolve<'idle' | 'running'>('idle'));
 
-      if (executionState === 'running' || hasPendingWork) {
+      if (executionState === 'running') {
         await store.markTriggered({
           scheduleId: scheduleRecord.scheduleId,
           lastTriggeredAt: fireDate.getTime(),
