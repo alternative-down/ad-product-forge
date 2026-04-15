@@ -19,7 +19,6 @@ const LTM_STATE_FILE = '.ltm-state.json';
 const CHECKPOINTS_DIR = 'checkpoints';
 const MEMORY_DIR = 'memory';
 const SKILLS_DIR = path.join('workspace', 'skills');
-const IDLE_PERIODIC_RUN_MS = 15 * 60_000;
 const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
@@ -813,11 +812,10 @@ export function createAgentLongTermMemory(input: {
 
     clearTimer();
     const state = await readState();
-    const pendingPackages = state.packages.filter((entry) => entry.processedAt === null);
+    const availablePackages = state.packages;
 
-    if (pendingPackages.length === 0) {
+    if (availablePackages.length === 0) {
       snapshot.queued = false;
-      await scheduleRun(IDLE_PERIODIC_RUN_MS);
       return;
     }
 
@@ -830,22 +828,23 @@ export function createAgentLongTermMemory(input: {
     try {
       forgeDebug('ltm', 'memory workflow start', {
         agentId: input.agentId,
-        packageIds: pendingPackages.map((entry) => entry.packageId),
-        pendingPackageCount: pendingPackages.length,
+        packageIds: availablePackages.map((entry) => entry.packageId),
+        pendingPackageCount: state.packages.filter((entry) => entry.processedAt === null).length,
       });
 
       const changedFiles = new Set<string>();
 
       while (!stopped && idle) {
         const nextState = await readState();
+        const nextAvailablePackages = nextState.packages;
         const nextPendingPackages = nextState.packages.filter((entry) => entry.processedAt === null);
 
-        if (nextPendingPackages.length === 0) {
+        if (nextAvailablePackages.length === 0) {
           break;
         }
 
         const beforeStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
-        const result = await generateLtmStep(nextPendingPackages);
+        const result = await generateLtmStep(nextAvailablePackages);
         await recordLtmStep(getUsageFromGenerateResult(result));
         const afterStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
@@ -914,10 +913,6 @@ export function createAgentLongTermMemory(input: {
       running = false;
       snapshot.running = false;
       currentAbortController = null;
-
-      if (!stopped && idle) {
-        await scheduleRun(IDLE_PERIODIC_RUN_MS);
-      }
     }
   }
 
