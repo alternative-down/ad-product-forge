@@ -63,7 +63,7 @@ function SettingsSkillsIndexRoute() {
 
       <PageHeader
         title="Skills"
-        description="Mantenha aqui o catálogo compartilhado de skills reutilizáveis. Os agentes apenas recebem vínculo para usar uma skill do catálogo."
+        description="Mantenha aqui o catálogo compartilhado de skills reutilizáveis. Os agentes apenas recebem vínculo para usar uma skill do catálogo. Atualizações do catálogo passam a valer em novos runs dos agentes que usam a skill; use idle + rewakeup se quiser aplicar imediatamente em um agente já carregado."
       />
 
       <section className="space-y-5">

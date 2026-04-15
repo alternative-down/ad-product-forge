@@ -52,7 +52,10 @@ function AgentSkillsIndexRoute() {
         ? <AdminLoadingState label="Carregando skills..." />
         : null}
 
-      <PageHeader title="Skills" />
+      <PageHeader
+        title="Skills"
+        description="Instale ou remova skills do catálogo compartilhado para este agente. Mudanças passam a valer em novos runs; se o agente já estiver carregado, force idle + rewakeup para aplicar imediatamente."
+      />
 
       <section className="space-y-5">
         <div className="space-y-1">

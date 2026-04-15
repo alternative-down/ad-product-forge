@@ -46,12 +46,6 @@ Completed items should be removed or moved into changelog/history once they are 
   - improve existing skills
   - maintain instructions, scripts, and references that the main agent can later use
 
-### Medium priority
-- Document the exact runtime refresh behavior needed after skill changes.
-  - Goal:
-    - skills created/edited by agents or admin should become available predictably
-    - no manual guesswork about reload vs runtime refresh
-
 ## Admin UI
 
 ### High priority
