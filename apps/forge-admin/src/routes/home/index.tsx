@@ -69,7 +69,7 @@ function HomeIndexRoute() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+              <div className="grid grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] gap-4">
                 <div className="space-y-1 text-sm">
                   <InfoRow
                     label="Última step"

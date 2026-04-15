@@ -304,7 +304,10 @@ export function createAdminReadModel(input: {
         agentRows.map(async (agent) => [
           agent.id,
           await db.query.agentExecutionSteps.findMany({
-            where: eq(agentExecutionSteps.agentId, agent.id),
+            where: and(
+              eq(agentExecutionSteps.agentId, agent.id),
+              eq(agentExecutionSteps.kind, 'agent-step'),
+            ),
             orderBy: [desc(agentExecutionSteps.createdAt)],
             limit: 6,
           }),
