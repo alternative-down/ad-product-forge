@@ -56,9 +56,7 @@ export type AgentListItem = {
     ltm: {
       running: boolean;
       queued: boolean;
-      pendingPackageCount: number;
-      writtenPackageCount: number;
-      processedPackageCount: number;
+      packageCount: number;
     };
   };
   createdAt: number;
@@ -234,17 +232,12 @@ export type AgentRuntimeMemorySnapshot = {
   ltm: {
     running: boolean;
     queued: boolean;
-    nextRunAt: number | null;
     lastRunAt: number | null;
     lastRunError: string | null;
     lastRunErrorAt: number | null;
     lastWrittenPackageId: string | null;
     lastWrittenAt: number | null;
-    lastProcessedPackageId: string | null;
-    lastProcessedAt: number | null;
-    pendingPackageCount: number;
-    writtenPackageCount: number;
-    processedPackageCount: number;
+    packageCount: number;
   } | null;
   metrics: {
     rawMessageCount: number;

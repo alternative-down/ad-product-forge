@@ -95,17 +95,12 @@ function AgentRuntimeMemorySection(input: {
   ltm: {
     running: boolean;
     queued: boolean;
-    nextRunAt: number | null;
     lastRunAt: number | null;
     lastRunError: string | null;
     lastRunErrorAt: number | null;
     lastWrittenPackageId: string | null;
     lastWrittenAt: number | null;
-    lastProcessedPackageId: string | null;
-    lastProcessedAt: number | null;
-    pendingPackageCount: number;
-    writtenPackageCount: number;
-    processedPackageCount: number;
+    packageCount: number;
   } | null;
   metrics: {
     rawMessageCount: number;
@@ -206,29 +201,19 @@ function AgentRuntimeMemorySection(input: {
       {input.ltm ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <MetricTile
-            label="LTM pendente"
-            current={input.ltm.pendingPackageCount}
+            label="LTM pacotes"
+            current={input.ltm.packageCount}
             unit="pacotes"
             detail={input.ltm.running ? 'workflow em execução' : input.ltm.queued ? 'execução enfileirada' : 'workflow ocioso'}
           />
           <MetricTile
             label="LTM escritos"
-            current={input.ltm.writtenPackageCount}
+            current={input.ltm.packageCount}
             unit="pacotes"
             detail={
               input.ltm.lastWrittenAt
                 ? `último write ${formatDateTime(input.ltm.lastWrittenAt)}`
                 : 'nenhum pacote escrito'
-            }
-          />
-          <MetricTile
-            label="LTM processados"
-            current={input.ltm.processedPackageCount}
-            unit="pacotes"
-            detail={
-              input.ltm.lastProcessedAt
-                ? `último processamento ${formatDateTime(input.ltm.lastProcessedAt)}`
-                : 'nenhum pacote processado'
             }
           />
         </div>
@@ -259,14 +244,12 @@ function AgentRuntimeMemorySection(input: {
         value={input.ltm ? [
           `running: ${input.ltm.running ? 'yes' : 'no'}`,
           `queued: ${input.ltm.queued ? 'yes' : 'no'}`,
-          `nextRunAt: ${input.ltm.nextRunAt ? formatDateTime(input.ltm.nextRunAt) : '—'}`,
           `lastRunAt: ${input.ltm.lastRunAt ? formatDateTime(input.ltm.lastRunAt) : '—'}`,
           `lastRunError: ${input.ltm.lastRunError ?? '—'}`,
           `lastRunErrorAt: ${input.ltm.lastRunErrorAt ? formatDateTime(input.ltm.lastRunErrorAt) : '—'}`,
           `lastWrittenPackageId: ${input.ltm.lastWrittenPackageId ?? '—'}`,
           `lastWrittenAt: ${input.ltm.lastWrittenAt ? formatDateTime(input.ltm.lastWrittenAt) : '—'}`,
-          `lastProcessedPackageId: ${input.ltm.lastProcessedPackageId ?? '—'}`,
-          `lastProcessedAt: ${input.ltm.lastProcessedAt ? formatDateTime(input.ltm.lastProcessedAt) : '—'}`,
+          `packageCount: ${formatNumber(input.ltm.packageCount)}`,
         ].join('\n') : null}
       />
     </section>

@@ -32,7 +32,6 @@ const packageManifestSchema = z.object({
   checkpointSummaryUpdatedAt: z.string().min(1),
   reflectionCount: z.number().int().nonnegative(),
   observationCount: z.number().int().nonnegative(),
-  processedAt: z.string().min(1).nullable(),
 });
 
 const ltmStateSchema = z.object({
@@ -40,8 +39,6 @@ const ltmStateSchema = z.object({
   packages: z.array(packageManifestSchema),
   lastWrittenPackageId: z.string().min(1).nullable(),
   lastWrittenAt: z.string().min(1).nullable(),
-  lastProcessedPackageId: z.string().min(1).nullable(),
-  lastProcessedAt: z.string().min(1).nullable(),
   lastRunAt: z.string().min(1).nullable(),
   lastRunError: z.string().min(1).nullable(),
   lastRunErrorAt: z.string().min(1).nullable(),
@@ -102,17 +99,12 @@ type LtmUsage = {
 type LtmSnapshot = {
   running: boolean;
   queued: boolean;
-  nextRunAt: number | null;
   lastRunAt: number | null;
   lastRunError: string | null;
   lastRunErrorAt: number | null;
   lastWrittenPackageId: string | null;
   lastWrittenAt: number | null;
-  lastProcessedPackageId: string | null;
-  lastProcessedAt: number | null;
-  pendingPackageCount: number;
-  writtenPackageCount: number;
-  processedPackageCount: number;
+  packageCount: number;
 };
 
 function createEmptyLongTermMemoryState(): LongTermMemoryState {
@@ -123,8 +115,6 @@ function createEmptyLongTermMemoryState(): LongTermMemoryState {
     packages: [],
     lastWrittenPackageId: null,
     lastWrittenAt: null,
-    lastProcessedPackageId: null,
-    lastProcessedAt: null,
     lastRunAt: null,
     lastRunError: null,
     lastRunErrorAt: null,
@@ -159,25 +149,14 @@ function createMemoryAgentInstructions(input: {
   ].filter(Boolean).join('\n\n');
 }
 
-function buildMemoryAgentPrompt(packages: CheckpointPackageManifest[]) {
+function buildMemoryAgentPrompt() {
   return [
-    'Process every pending checkpoint package listed below.',
-    'Read each package README first.',
-    'Only inspect `reflections/` when `reflectionCount` is greater than 0.',
-    'Only inspect `observations/` when `observationCount` is greater than 0.',
+    'Use the checkpoint packages under `workspace-memory/checkpoints` as historical execution evidence.',
+    'Use those records to consolidate durable knowledge, maintain memory documents, and create or improve reusable skills when justified.',
+    'Start from the checkpoint package READMEs, then inspect other files only when they help you understand recurring patterns, decisions, failures, or durable procedures.',
     'Update or create durable knowledge documents under `workspace-memory/memory`.',
     'Create or improve files under `workspace/skills` only when the evidence supports a reusable operational skill.',
     'Do not edit checkpoint packages.',
-    '',
-    '<pending_packages>',
-    ...packages.map((entry) => [
-      `- packageId: ${entry.packageId}`,
-      `  checkpointGeneration: ${entry.checkpointGeneration}`,
-      `  reflectionCount: ${entry.reflectionCount}`,
-      `  observationCount: ${entry.observationCount}`,
-      `  path: workspace-memory/checkpoints/${entry.packageId}`,
-    ].join('\n')),
-    '</pending_packages>',
   ].join('\n');
 }
 
@@ -474,23 +453,17 @@ export function createAgentLongTermMemory(input: {
   let idle = false;
   let running = false;
   let stopped = false;
-  let nextRunAt: number | null = null;
   let timer: NodeJS.Timeout | null = null;
   let currentAbortController: AbortController | null = null;
   let snapshot: LtmSnapshot = {
     running: false,
     queued: false,
-    nextRunAt: null,
     lastRunAt: null,
     lastRunError: null,
     lastRunErrorAt: null,
     lastWrittenPackageId: null,
     lastWrittenAt: null,
-    lastProcessedPackageId: null,
-    lastProcessedAt: null,
-    pendingPackageCount: 0,
-    writtenPackageCount: 0,
-    processedPackageCount: 0,
+    packageCount: 0,
   };
 
   async function backfillCheckpointPackages() {
@@ -537,8 +510,6 @@ export function createAgentLongTermMemory(input: {
 
     clearTimeout(timer);
     timer = null;
-    nextRunAt = null;
-    snapshot.nextRunAt = null;
   }
 
   async function ensureInitialized() {
@@ -586,11 +557,7 @@ export function createAgentLongTermMemory(input: {
       lastRunErrorAt: state.lastRunErrorAt ? Date.parse(state.lastRunErrorAt) : null,
       lastWrittenPackageId: state.lastWrittenPackageId,
       lastWrittenAt: state.lastWrittenAt ? Date.parse(state.lastWrittenAt) : null,
-      lastProcessedPackageId: state.lastProcessedPackageId,
-      lastProcessedAt: state.lastProcessedAt ? Date.parse(state.lastProcessedAt) : null,
-      pendingPackageCount: state.packages.filter((entry) => entry.processedAt === null).length,
-      writtenPackageCount: state.packages.length,
-      processedPackageCount: state.packages.filter((entry) => entry.processedAt !== null).length,
+      packageCount: state.packages.length,
     };
   }
 
@@ -600,13 +567,9 @@ export function createAgentLongTermMemory(input: {
     }
 
     clearTimer();
-    nextRunAt = Date.now() + delayMs;
-    snapshot.nextRunAt = nextRunAt;
     timer = setTimeout(() => {
       timer = null;
-      nextRunAt = null;
-      snapshot.nextRunAt = null;
-      void runPendingPackages();
+      void runMemoryWorkflow();
     }, delayMs);
   }
 
@@ -681,7 +644,6 @@ export function createAgentLongTermMemory(input: {
       checkpointSummaryUpdatedAt: payload.checkpointSummary.updatedAt,
       reflectionCount: payload.reflections.length,
       observationCount: payload.observations.length,
-      processedAt: null,
     };
 
     state.packages.push(manifest);
@@ -776,7 +738,7 @@ export function createAgentLongTermMemory(input: {
     return Math.max(0, Math.round(remainingTimeMs / stepsPossible));
   }
 
-  async function generateLtmStep(pendingPackages: CheckpointPackageManifest[]) {
+  async function generateLtmStep() {
     let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
 
     for (let attempt = 1; attempt <= GENERATE_MAX_ATTEMPTS; attempt += 1) {
@@ -784,7 +746,7 @@ export function createAgentLongTermMemory(input: {
         const controller = new AbortController();
         currentAbortController = controller;
         result = await withTimeout(
-          memoryAgent.generate(buildMemoryAgentPrompt(pendingPackages), {
+          memoryAgent.generate(buildMemoryAgentPrompt(), {
             maxSteps: 1,
             abortSignal: controller.signal,
             memory: {
@@ -822,7 +784,7 @@ export function createAgentLongTermMemory(input: {
     return result;
   }
 
-  async function runPendingPackages() {
+  async function runMemoryWorkflow() {
     if (stopped || !idle || running) {
       return;
     }
@@ -846,7 +808,7 @@ export function createAgentLongTermMemory(input: {
       forgeDebug('ltm', 'memory workflow start', {
         agentId: input.agentId,
         packageIds: availablePackages.map((entry) => entry.packageId),
-        pendingPackageCount: state.packages.filter((entry) => entry.processedAt === null).length,
+        packageCount: state.packages.length,
       });
 
       const changedFiles = new Set<string>();
@@ -854,14 +816,13 @@ export function createAgentLongTermMemory(input: {
       while (!stopped && idle) {
         const nextState = await readState();
         const nextAvailablePackages = nextState.packages;
-        const nextPendingPackages = nextState.packages.filter((entry) => entry.processedAt === null);
 
         if (nextAvailablePackages.length === 0) {
           break;
         }
 
         const beforeStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
-        const result = await generateLtmStep(nextAvailablePackages);
+        const result = await generateLtmStep();
         await recordLtmStep(getUsageFromGenerateResult(result));
         const afterStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
@@ -873,21 +834,13 @@ export function createAgentLongTermMemory(input: {
 
         forgeDebug('ltm', 'memory workflow step complete', {
           agentId: input.agentId,
-          pendingPackageCount: nextPendingPackages.length,
+          packageCount: nextAvailablePackages.length,
           hasToolCalls,
           outputLength: result.text.length,
         });
 
         if (!hasToolCalls) {
           const nowIso = new Date().toISOString();
-
-          for (const pendingPackage of nextPendingPackages) {
-            pendingPackage.processedAt = nowIso;
-          }
-
-          nextState.lastProcessedPackageId =
-            nextPendingPackages.at(-1)?.packageId ?? nextState.lastProcessedPackageId;
-          nextState.lastProcessedAt = nowIso;
           nextState.lastRunAt = nowIso;
           nextState.lastRunError = null;
           nextState.lastRunErrorAt = null;
@@ -910,9 +863,7 @@ export function createAgentLongTermMemory(input: {
 
       forgeDebug('ltm', 'memory workflow complete', {
         agentId: input.agentId,
-        processedPackageIds: state.packages
-          .filter((entry) => entry.processedAt !== null)
-          .map((entry) => entry.packageId),
+        packageIds: state.packages.map((entry) => entry.packageId),
         changedFiles: Array.from(changedFiles).sort(),
       });
     } catch (error) {
@@ -955,7 +906,6 @@ export function createAgentLongTermMemory(input: {
       idle = false;
       clearTimer();
       snapshot.queued = false;
-      snapshot.nextRunAt = null;
       currentAbortController?.abort(new Error('LTM run interrupted because main agent resumed running'));
     },
 
@@ -973,11 +923,7 @@ export function createAgentLongTermMemory(input: {
         lastRunErrorAt: state.lastRunErrorAt ? Date.parse(state.lastRunErrorAt) : null,
         lastWrittenPackageId: state.lastWrittenPackageId,
         lastWrittenAt: state.lastWrittenAt ? Date.parse(state.lastWrittenAt) : null,
-        lastProcessedPackageId: state.lastProcessedPackageId,
-        lastProcessedAt: state.lastProcessedAt ? Date.parse(state.lastProcessedAt) : null,
-        pendingPackageCount: state.packages.filter((entry) => entry.processedAt === null).length,
-        writtenPackageCount: state.packages.length,
-        processedPackageCount: state.packages.filter((entry) => entry.processedAt !== null).length,
+        packageCount: state.packages.length,
       };
     },
 

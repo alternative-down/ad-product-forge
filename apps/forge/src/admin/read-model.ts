@@ -98,12 +98,9 @@ type CustomCheckpointedContextState = {
 type LongTermMemoryStateSnapshot = {
   packages: Array<{
     packageId: string;
-    processedAt: string | null;
   }>;
   lastWrittenPackageId: string | null;
   lastWrittenAt: string | null;
-  lastProcessedPackageId: string | null;
-  lastProcessedAt: string | null;
   lastRunAt: string | null;
   lastRunError: string | null;
   lastRunErrorAt: string | null;
@@ -189,26 +186,16 @@ async function readLongTermMemoryState(workspaceBasePath: string, agentId: strin
 
   try {
     const parsed = JSON.parse(raw) as Partial<LongTermMemoryStateSnapshot> & {
-      packages?: Array<{ packageId?: string; processedAt?: string | null }>;
+      packages?: Array<{ packageId?: string }>;
     };
 
     return {
       packages: Array.isArray(parsed.packages)
-        ? parsed.packages
-          .filter((entry): entry is { packageId: string; processedAt: string | null } =>
-            typeof entry?.packageId === 'string',
-          )
-          .map((entry) => ({
-            packageId: entry.packageId,
-            processedAt: typeof entry.processedAt === 'string' ? entry.processedAt : null,
-          }))
+        ? parsed.packages.filter((entry): entry is { packageId: string } => typeof entry?.packageId === 'string')
         : [],
       lastWrittenPackageId:
         typeof parsed.lastWrittenPackageId === 'string' ? parsed.lastWrittenPackageId : null,
       lastWrittenAt: typeof parsed.lastWrittenAt === 'string' ? parsed.lastWrittenAt : null,
-      lastProcessedPackageId:
-        typeof parsed.lastProcessedPackageId === 'string' ? parsed.lastProcessedPackageId : null,
-      lastProcessedAt: typeof parsed.lastProcessedAt === 'string' ? parsed.lastProcessedAt : null,
       lastRunAt: typeof parsed.lastRunAt === 'string' ? parsed.lastRunAt : null,
       lastRunError: typeof parsed.lastRunError === 'string' ? parsed.lastRunError : null,
       lastRunErrorAt: typeof parsed.lastRunErrorAt === 'string' ? parsed.lastRunErrorAt : null,
@@ -413,9 +400,7 @@ export function createAdminReadModel(input: {
           ltm: {
             running: executionState === 'idle' ? (runtimeLtmSnapshot?.running ?? false) : false,
             queued: executionState === 'idle' ? (runtimeLtmSnapshot?.queued ?? false) : false,
-            pendingPackageCount: longTermMemoryState?.packages.filter((entry) => entry.processedAt === null).length ?? 0,
-            writtenPackageCount: longTermMemoryState?.packages.length ?? 0,
-            processedPackageCount: longTermMemoryState?.packages.filter((entry) => entry.processedAt !== null).length ?? 0,
+            packageCount: longTermMemoryState?.packages.length ?? 0,
           },
         },
         createdAt: agent.createdAt,
@@ -805,17 +790,12 @@ export function createAdminReadModel(input: {
       ? {
           running: false,
           queued: false,
-          nextRunAt: null,
           lastRunAt: persistedLtmState.lastRunAt ? Date.parse(persistedLtmState.lastRunAt) : null,
           lastRunError: persistedLtmState.lastRunError,
           lastRunErrorAt: persistedLtmState.lastRunErrorAt ? Date.parse(persistedLtmState.lastRunErrorAt) : null,
           lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
           lastWrittenAt: persistedLtmState.lastWrittenAt ? Date.parse(persistedLtmState.lastWrittenAt) : null,
-          lastProcessedPackageId: persistedLtmState.lastProcessedPackageId,
-          lastProcessedAt: persistedLtmState.lastProcessedAt ? Date.parse(persistedLtmState.lastProcessedAt) : null,
-          pendingPackageCount: persistedLtmState.packages.filter((entry) => entry.processedAt === null).length,
-          writtenPackageCount: persistedLtmState.packages.length,
-          processedPackageCount: persistedLtmState.packages.filter((entry) => entry.processedAt !== null).length,
+          packageCount: persistedLtmState.packages.length,
         }
       : null);
 
