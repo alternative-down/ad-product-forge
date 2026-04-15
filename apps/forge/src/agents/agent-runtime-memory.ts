@@ -12,11 +12,14 @@ import type {
 import type { AgentConfig } from '@mastra/core/agent';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 
+import { createAgentLongTermMemoryRecallProcessor } from './agent-long-term-memory-recall';
+
 export async function createAgentRuntimeMemory(input: {
   storage: LibSQLStore;
   vector: LibSQLVector;
   agentId: string;
   mastraId: string;
+  agentWorkspacePath: string;
   agentModel: AgentConfig['model'];
   omModel?: AgentConfig['model'];
   agentMemoryPath: string;
@@ -64,6 +67,16 @@ export async function createAgentRuntimeMemory(input: {
     });
 
     inputProcessors.push(checkpointedObservationalMemory);
+  }
+
+  if (input.longTermMemory) {
+    inputProcessors.push(
+      createAgentLongTermMemoryRecallProcessor({
+        agentId: input.agentId,
+        agentWorkspacePath: input.agentWorkspacePath,
+        mastraId: input.mastraId,
+      }),
+    );
   }
 
   if (input.tokenCountFilterEnabled ?? true) {

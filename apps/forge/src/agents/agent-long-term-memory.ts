@@ -23,7 +23,6 @@ const IDLE_PERIODIC_RUN_MS = 15 * 60_000;
 const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
-const MAX_MEMORY_AGENT_STEPS = 120;
 
 const packageManifestSchema = z.object({
   packageId: z.string().min(1),
@@ -191,10 +190,13 @@ function getUsageFromGenerateResult(result: { usage?: unknown }): LtmUsage {
       cacheReadTokens?: number;
     };
   };
+  const cachedInputTokens =
+    usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
+  const promptTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
 
   return {
-    inputTokens: usage.inputTokenDetails?.noCacheTokens ?? usage.inputTokens ?? usage.promptTokens ?? 0,
-    cachedInputTokens: usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0,
+    inputTokens: usage.inputTokenDetails?.noCacheTokens ?? Math.max(promptTokens - cachedInputTokens, 0),
+    cachedInputTokens,
     outputTokens: usage.outputTokens ?? usage.completionTokens ?? 0,
   };
 }
@@ -728,6 +730,81 @@ export function createAgentLongTermMemory(input: {
     });
   }
 
+  async function estimateNextLtmDelayMs() {
+    const contract = await input.contractStore.getRunnableContract(input.agentId);
+
+    if (!contract) {
+      return 0;
+    }
+
+    const recentLtmSteps = (await input.contractStore.listRecentSteps(input.agentId, 10))
+      .filter((step) => step.kind === 'ltm');
+
+    if (recentLtmSteps.length === 0) {
+      return 0;
+    }
+
+    const averageStepUsd =
+      recentLtmSteps.reduce((total, step) => total + step.costUsd, 0) / recentLtmSteps.length;
+
+    if (averageStepUsd <= 0) {
+      return 0;
+    }
+
+    const spentUsd = await input.contractStore.getContractSpend(contract.id);
+    const remainingBudgetUsd = contract.budgetUsd - spentUsd;
+    const remainingTimeMs = contract.endsAt - Date.now();
+    const stepsPossible = remainingBudgetUsd / averageStepUsd;
+
+    if (remainingTimeMs <= 0 || stepsPossible <= 0) {
+      return 0;
+    }
+
+    return Math.max(0, Math.round(remainingTimeMs / stepsPossible));
+  }
+
+  async function generateLtmStep(pendingPackages: CheckpointPackageManifest[]) {
+    let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
+
+    for (let attempt = 1; attempt <= GENERATE_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const controller = new AbortController();
+        currentAbortController = controller;
+        result = await withTimeout(
+          memoryAgent.generate(buildMemoryAgentPrompt(pendingPackages), {
+            maxSteps: 1,
+            abortSignal: controller.signal,
+          }),
+          GENERATE_TIMEOUT_MS,
+          `LTM generate timed out for ${input.agentId}`,
+          () => controller.abort(),
+        );
+        break;
+      } catch (error) {
+        forgeDebug('ltm', 'memory workflow attempt failed', {
+          agentId: input.agentId,
+          attempt,
+          maxAttempts: GENERATE_MAX_ATTEMPTS,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        if (attempt >= GENERATE_MAX_ATTEMPTS) {
+          throw error;
+        }
+
+        await sleep(GENERATE_RETRY_BACKOFF_MS);
+      } finally {
+        currentAbortController = null;
+      }
+    }
+
+    if (!result) {
+      throw new Error(`LTM generate produced no result for ${input.agentId}`);
+    }
+
+    return result;
+  }
+
   async function runPendingPackages() {
     if (stopped || !idle || running) {
       return;
@@ -756,60 +833,70 @@ export function createAgentLongTermMemory(input: {
         pendingPackageCount: pendingPackages.length,
       });
 
-      let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
+      const changedFiles = new Set<string>();
 
-      for (let attempt = 1; attempt <= GENERATE_MAX_ATTEMPTS; attempt += 1) {
-        try {
-          result = await withTimeout(
-            memoryAgent.generate(buildMemoryAgentPrompt(pendingPackages), {
-              maxSteps: MAX_MEMORY_AGENT_STEPS,
-              abortSignal: currentAbortController.signal,
-            }),
-            GENERATE_TIMEOUT_MS,
-            `LTM generate timed out for ${input.agentId}`,
-            () => currentAbortController?.abort(),
-          );
+      while (!stopped && idle) {
+        const nextState = await readState();
+        const nextPendingPackages = nextState.packages.filter((entry) => entry.processedAt === null);
+
+        if (nextPendingPackages.length === 0) {
           break;
-        } catch (error) {
-          forgeDebug('ltm', 'memory workflow attempt failed', {
-            agentId: input.agentId,
-            attempt,
-            maxAttempts: GENERATE_MAX_ATTEMPTS,
-            error: error instanceof Error ? error.message : String(error),
-          });
+        }
 
-          if (attempt >= GENERATE_MAX_ATTEMPTS) {
-            throw error;
+        const beforeStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
+        const result = await generateLtmStep(nextPendingPackages);
+        await recordLtmStep(getUsageFromGenerateResult(result));
+        const afterStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
+
+        for (const filePath of diffTrackedFiles(beforeStepSnapshot, afterStepSnapshot)) {
+          changedFiles.add(filePath);
+        }
+
+        const hasToolCalls = result.toolCalls.length > 0;
+
+        forgeDebug('ltm', 'memory workflow step complete', {
+          agentId: input.agentId,
+          pendingPackageCount: nextPendingPackages.length,
+          hasToolCalls,
+          outputLength: result.text.length,
+        });
+
+        if (!hasToolCalls) {
+          const nowIso = new Date().toISOString();
+
+          for (const pendingPackage of nextPendingPackages) {
+            pendingPackage.processedAt = nowIso;
           }
 
-          await sleep(GENERATE_RETRY_BACKOFF_MS);
+          nextState.lastProcessedPackageId =
+            nextPendingPackages.at(-1)?.packageId ?? nextState.lastProcessedPackageId;
+          nextState.lastProcessedAt = nowIso;
+          nextState.lastRunAt = nowIso;
+          nextState.lastRunError = null;
+          nextState.lastRunErrorAt = null;
+          await writeState(nextState);
+          break;
+        }
+
+        const nextDelayMs = await estimateNextLtmDelayMs();
+
+        if (nextDelayMs > 0) {
+          await sleep(nextDelayMs);
         }
       }
 
-      if (!result) {
-        throw new Error(`LTM generate produced no result for ${input.agentId}`);
-      }
-
       const afterSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
-      const changedFiles = diffTrackedFiles(beforeSnapshot, afterSnapshot);
-      const nowIso = new Date().toISOString();
 
-      for (const pendingPackage of pendingPackages) {
-        pendingPackage.processedAt = nowIso;
+      for (const filePath of diffTrackedFiles(beforeSnapshot, afterSnapshot)) {
+        changedFiles.add(filePath);
       }
-
-      state.lastProcessedPackageId = pendingPackages.at(-1)?.packageId ?? state.lastProcessedPackageId;
-      state.lastProcessedAt = nowIso;
-      state.lastRunAt = nowIso;
-      state.lastRunError = null;
-      state.lastRunErrorAt = null;
-      await writeState(state);
-      await recordLtmStep(getUsageFromGenerateResult(result));
 
       forgeDebug('ltm', 'memory workflow complete', {
         agentId: input.agentId,
-        processedPackageIds: pendingPackages.map((entry) => entry.packageId),
-        changedFiles,
+        processedPackageIds: state.packages
+          .filter((entry) => entry.processedAt !== null)
+          .map((entry) => entry.packageId),
+        changedFiles: Array.from(changedFiles).sort(),
       });
     } catch (error) {
       const nowIso = new Date().toISOString();

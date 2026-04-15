@@ -1,0 +1,380 @@
+import path from 'node:path';
+
+import type { AgentConfig, MastraDBMessage, MastraMessagePart, MessageList } from '@mastra/core/agent';
+import type {
+  ProcessInputArgs,
+  ProcessInputStepArgs,
+  Processor,
+} from '@mastra/core/processors';
+import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
+import { LibSQLVector } from '@mastra/libsql';
+
+import { toMastraSafeIdentifier } from '@mastra-engine/core';
+
+import { embedTextWithFastembed } from '@mastra-engine/core';
+
+type SearchResult = {
+  id: string;
+  content: string;
+  score?: number;
+};
+
+const RECALL_TAG = 'agent-long-term-memory-recall';
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+  onTimeout?: () => void,
+) {
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        onTimeout?.();
+        reject(new Error(message));
+      }, timeoutMs);
+    }),
+  ]).finally(() => {
+    if (!timeoutId) {
+      return;
+    }
+
+    clearTimeout(timeoutId);
+  });
+}
+
+export class AgentLongTermMemoryRecallProcessor
+  implements Processor<'agent-long-term-memory-recall'>
+{
+  readonly id = 'agent-long-term-memory-recall' as const;
+  readonly name = 'Agent Long-Term Memory Recall';
+
+  private readonly maxRecentRecallMessages = 8;
+  private readonly initTimeoutMs = 5_000;
+  private readonly recallTimeoutMs = 8_000;
+  private readonly workspace: WorkspaceRuntime;
+  private readonly vectorStore: LibSQLVector;
+  private readonly searchIndexName: string;
+  private initializationPromise: Promise<void> | null = null;
+
+  constructor(input: {
+    agentId: string;
+    agentWorkspacePath: string;
+    mastraId: string;
+    model?: AgentConfig['model'];
+  }) {
+    const vectorStorePath = path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`);
+
+    this.vectorStore = new LibSQLVector({
+      id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
+      url: `file:${vectorStorePath}`,
+    });
+    this.searchIndexName = `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_search`;
+    this.workspace = new WorkspaceRuntime({
+      autoSync: true,
+      bm25: true,
+      autoIndexPaths: ['/workspace-memory/memory'],
+      embedder: embedTextWithFastembed,
+      filesystem: new LocalFilesystem({
+        basePath: input.agentWorkspacePath,
+      }),
+      vectorStore: this.vectorStore,
+      searchIndexName: this.searchIndexName,
+    });
+  }
+
+  async processInputStep(args: ProcessInputStepArgs<unknown>) {
+    if (!args.messageList) {
+      return args.messages;
+    }
+
+    await this.doInitialize();
+    const queryText = this.buildRecallQuery(args);
+
+    if (!queryText) {
+      return args.messageList;
+    }
+
+    const { formatted } = await this.searchWorkspace(queryText);
+    args.messageList.clearSystemMessages(RECALL_TAG);
+
+    if (!formatted) {
+      return args.messageList;
+    }
+
+    args.messageList.addSystem(
+      [
+        'These are retrieved documents from your maintained long-term memory.',
+        'Treat them as useful background context, but still verify against newer thread context and current workspace state when needed.',
+        '',
+        formatted,
+      ].join('\n'),
+      RECALL_TAG,
+    );
+
+    return args.messageList;
+  }
+
+  private async doInitialize() {
+    if (!this.initializationPromise) {
+      this.initializationPromise = (async () => {
+        await withTimeout(
+          this.workspace.init(),
+          this.initTimeoutMs,
+          'ltm recall workspace init timed out',
+        );
+        await withTimeout(
+          this.createWorkspaceVectorIndexIfMissing(),
+          this.initTimeoutMs,
+          'ltm recall vector index initialization timed out',
+        );
+      })().catch((error) => {
+        this.initializationPromise = null;
+        throw error;
+      });
+    }
+
+    await this.initializationPromise;
+  }
+
+  private async createWorkspaceVectorIndexIfMissing() {
+    try {
+      await this.vectorStore.describeIndex({ indexName: this.searchIndexName });
+    } catch {
+      const sampleEmbedding = await embedTextWithFastembed('memory-bootstrap');
+      const dimension = sampleEmbedding.length;
+
+      await this.vectorStore.createIndex({
+        indexName: this.searchIndexName,
+        dimension,
+        metric: 'cosine',
+      });
+    }
+  }
+
+  private async searchWorkspace(queryText: string): Promise<{ formatted: string; results: SearchResult[] }> {
+    try {
+      const results = await withTimeout(
+        this.workspace.search(queryText, {
+          topK: 4,
+          mode: 'hybrid',
+        }),
+        this.recallTimeoutMs,
+        'ltm recall workspace search timed out',
+      );
+
+      if (results.length === 0) {
+        return { formatted: '', results: [] };
+      }
+
+      const searchResults: SearchResult[] = results.map((result) => ({
+        id: result.id,
+        content: String(result.content).trim(),
+        score: result.score,
+      }));
+      const formatted = searchResults
+        .map((result) => `${result.id}\n${result.content}`)
+        .join('\n\n');
+
+      return { formatted, results: searchResults };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
+        return { formatted: '', results: [] };
+      }
+
+      throw error;
+    }
+  }
+
+  private extractValueText(value: unknown): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => this.extractValueText(item))
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    if (!value || typeof value !== 'object') {
+      return '';
+    }
+
+    return Object.values(value)
+      .map((item) => this.extractValueText(item))
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  private buildRecallQuery(args: ProcessInputStepArgs<unknown>) {
+    const recentMessages = args.messages
+      .filter((message) => message.role !== 'system')
+      .slice(-this.maxRecentRecallMessages)
+      .map((message) => this.extractMessageRecallText(message));
+    const recentSteps = args.steps.slice(-this.maxRecentRecallMessages).map((step) =>
+      [
+        step.text,
+        step.reasoningText ?? '',
+        step.toolCalls.map((toolCall) => this.extractValueText(toolCall.input)).filter(Boolean).join(' '),
+        step.toolResults.map((toolResult) => this.extractValueText(toolResult.output)).filter(Boolean).join(' '),
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+
+    return [...recentMessages, ...recentSteps].filter(Boolean).join('\n');
+  }
+
+  private extractMessageRecallText(message: MastraDBMessage) {
+    const sections = [
+      this.extractMessageContentText(message),
+      this.extractMessageReasoningText(message),
+      this.extractMessageToolText(message),
+    ].filter(Boolean);
+
+    return sections.join('\n').trim();
+  }
+
+  private extractMessageContentText(message: MastraDBMessage) {
+    if (typeof message.content.content === 'string' && message.content.content.trim()) {
+      return message.content.content;
+    }
+
+    const parts = message.content.parts.flatMap((part) => {
+      if (this.isTextMessagePart(part)) {
+        return [part.text];
+      }
+
+      return [];
+    });
+
+    return parts.join('\n').trim();
+  }
+
+  private extractMessageReasoningText(message: MastraDBMessage) {
+    const topLevelReasoning =
+      typeof message.content.reasoning === 'string' ? message.content.reasoning.trim() : '';
+    const partReasoning = message.content.parts
+      .flatMap((part) => {
+        if (!this.isReasoningMessagePart(part)) {
+          return [];
+        }
+
+        const detailText = part.details
+          .filter(
+            (
+              detail,
+            ): detail is Extract<typeof part.details[number], { type: 'text'; text: string }> =>
+              detail.type === 'text'
+              && typeof detail.text === 'string'
+              && detail.text.trim().length > 0,
+          )
+          .map((detail) => detail.text.trim())
+          .join('\n')
+          .trim();
+        const reasoningText = part.reasoning.trim();
+
+        return [reasoningText || detailText].filter(Boolean);
+      })
+      .join('\n')
+      .trim();
+
+    return [topLevelReasoning, partReasoning].filter(Boolean).join('\n').trim();
+  }
+
+  private extractMessageToolText(message: MastraDBMessage) {
+    const partInvocations = message.content.parts
+      .flatMap((part) => {
+        if (!this.isToolInvocationMessagePart(part)) {
+          return [];
+        }
+
+        const invocation = part.toolInvocation;
+        const sections = [
+          invocation.toolName,
+          this.extractValueText('args' in invocation ? invocation.args : null),
+          invocation.state === 'result' ? this.extractValueText(invocation.result) : '',
+        ].filter(Boolean);
+
+        return sections.length > 0 ? [sections.join('\n')] : [];
+      })
+      .join('\n')
+      .trim();
+    const topLevelInvocations = (message.content.toolInvocations ?? [])
+      .flatMap((invocation) => {
+        const sections = [
+          invocation.toolName,
+          this.extractValueText('args' in invocation ? invocation.args : null),
+          invocation.state === 'result' ? this.extractValueText(invocation.result) : '',
+        ].filter(Boolean);
+
+        return sections.length > 0 ? [sections.join('\n')] : [];
+      })
+      .join('\n')
+      .trim();
+
+    return [partInvocations, topLevelInvocations].filter(Boolean).join('\n').trim();
+  }
+
+  private isTextMessagePart(part: MastraMessagePart): part is MastraMessagePart & { type: 'text'; text: string } {
+    return part.type === 'text' && typeof part.text === 'string';
+  }
+
+  private isReasoningMessagePart(
+    part: MastraMessagePart,
+  ): part is Extract<MastraMessagePart, { type: 'reasoning'; reasoning: string; details: Array<{ type: string }> }> {
+    return part.type === 'reasoning';
+  }
+
+  private isToolInvocationMessagePart(
+    part: MastraMessagePart,
+  ): part is Extract<MastraMessagePart, { type: 'tool-invocation' }> {
+    return part.type === 'tool-invocation';
+  }
+
+  private getThreadContext(
+    requestContext: ProcessInputArgs['requestContext'],
+    messageList: MessageList,
+  ) {
+    const memoryContext = requestContext?.get('MastraMemory') as
+      | { thread?: { id: string }; resourceId?: string }
+      | undefined;
+
+    if (memoryContext?.thread?.id) {
+      return {
+        threadId: memoryContext.thread.id,
+        resourceId: memoryContext.resourceId,
+      };
+    }
+
+    const serialized = messageList.serialize();
+    if (serialized.memoryInfo?.threadId) {
+      return {
+        threadId: serialized.memoryInfo.threadId,
+        resourceId: serialized.memoryInfo.resourceId,
+      };
+    }
+
+    return null;
+  }
+}
+
+export function createAgentLongTermMemoryRecallProcessor(input: {
+  agentId: string;
+  agentWorkspacePath: string;
+  mastraId: string;
+  model?: AgentConfig['model'];
+}) {
+  return new AgentLongTermMemoryRecallProcessor(input);
+}
