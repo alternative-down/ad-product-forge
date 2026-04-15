@@ -8,6 +8,7 @@ import {
   createExternalAccountTools,
 } from '@mastra-engine/core';
 import { createAgentRuntimePlatform } from './agent-runtime-platform';
+import { createAgentLongTermMemory } from './agent-long-term-memory';
 import { createAgentRuntimeMemory } from './agent-runtime-memory';
 import { buildAgentSystemPrompt } from './agent-runtime-prompt';
 import type {
@@ -65,6 +66,20 @@ export async function createInternalAgentRuntime<
     companyName: config.companyName,
     companyContext: config.companyContext,
   });
+  const longTermMemory = options.longTermMemory && options.contractStore
+      ? createAgentLongTermMemory({
+        agentId: config.id,
+        agentName: config.name,
+        agentWorkspacePath: platform.agentWorkspacePath,
+        agentMemoryPath: platform.agentMemoryPath,
+        model: (config.omModel ?? config.model) as CreateAgentConfig['model'],
+        pricingModelKey: omPricingModelKey,
+        modelProfileId: config.omModelProfileId,
+        mainAgentSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
+        contractStore: options.contractStore,
+      })
+    : null;
+
   const runtimeMemory = await createAgentRuntimeMemory({
     storage: platform.storage,
     vector: platform.vector,
@@ -87,6 +102,7 @@ export async function createInternalAgentRuntime<
     checkpointedOmObservationSupportTokens: config.checkpointedOmObservationSupportTokens,
     checkpointedOmReflectionSupportTokens: config.checkpointedOmReflectionSupportTokens,
     agentSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
+    onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
   });
 
   const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({
@@ -104,6 +120,8 @@ export async function createInternalAgentRuntime<
     outputProcessors: runtimeMemory.outputProcessors as OutputProcessorOrWorkflow[],
   });
 
+  await longTermMemory?.start();
+
   return {
     id: config.id,
     mastraId: platform.mastraId,
@@ -114,8 +132,10 @@ export async function createInternalAgentRuntime<
     agent,
     workspace: platform.workspace,
     communication: platform.communication,
+    longTermMemory,
     onReceiveMessage: platform.communication.onReceiveMessage,
     async dispose() {
+      await longTermMemory?.dispose();
       await platform.communication.dispose();
     },
   };

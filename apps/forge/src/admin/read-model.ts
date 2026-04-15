@@ -95,6 +95,20 @@ type CustomCheckpointedContextState = {
   } | null;
 };
 
+type LongTermMemoryStateSnapshot = {
+  packages: Array<{
+    packageId: string;
+    processedAt: string | null;
+  }>;
+  lastWrittenPackageId: string | null;
+  lastWrittenAt: string | null;
+  lastProcessedPackageId: string | null;
+  lastProcessedAt: string | null;
+  lastRunAt: string | null;
+  lastRunError: string | null;
+  lastRunErrorAt: string | null;
+};
+
 type MemoryStoreWithObservationalMemory = MastraMemoryStore & {
   getThreadById(input: { threadId: string }): Promise<{
     metadata?: Record<string, unknown>;
@@ -163,6 +177,45 @@ function getCustomCheckpointedContextState(metadata: Record<string, unknown> | u
         ? value.latestMetrics as CustomCheckpointedContextState['latestMetrics']
         : null,
   };
+}
+
+async function readLongTermMemoryState(workspaceBasePath: string, agentId: string) {
+  const statePath = path.resolve(workspaceBasePath, agentId, 'workspace-memory', '.ltm-state.json');
+  const raw = await readFile(statePath, 'utf8').catch(() => null);
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<LongTermMemoryStateSnapshot> & {
+      packages?: Array<{ packageId?: string; processedAt?: string | null }>;
+    };
+
+    return {
+      packages: Array.isArray(parsed.packages)
+        ? parsed.packages
+          .filter((entry): entry is { packageId: string; processedAt: string | null } =>
+            typeof entry?.packageId === 'string',
+          )
+          .map((entry) => ({
+            packageId: entry.packageId,
+            processedAt: typeof entry.processedAt === 'string' ? entry.processedAt : null,
+          }))
+        : [],
+      lastWrittenPackageId:
+        typeof parsed.lastWrittenPackageId === 'string' ? parsed.lastWrittenPackageId : null,
+      lastWrittenAt: typeof parsed.lastWrittenAt === 'string' ? parsed.lastWrittenAt : null,
+      lastProcessedPackageId:
+        typeof parsed.lastProcessedPackageId === 'string' ? parsed.lastProcessedPackageId : null,
+      lastProcessedAt: typeof parsed.lastProcessedAt === 'string' ? parsed.lastProcessedAt : null,
+      lastRunAt: typeof parsed.lastRunAt === 'string' ? parsed.lastRunAt : null,
+      lastRunError: typeof parsed.lastRunError === 'string' ? parsed.lastRunError : null,
+      lastRunErrorAt: typeof parsed.lastRunErrorAt === 'string' ? parsed.lastRunErrorAt : null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function createAdminReadModel(input: {
@@ -269,6 +322,11 @@ export function createAdminReadModel(input: {
         agentRows.map(async (agent) => [agent.id, await getAgentRuntimeMemory(agent.id)] as const),
       ),
     );
+    const longTermMemoryStateByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => [agent.id, await readLongTermMemoryState(input.workspaceBasePath, agent.id)] as const),
+      ),
+    );
 
     return agentRows.map((agent) => {
       const loadedAgent = registry.get(agent.id);
@@ -278,6 +336,7 @@ export function createAdminReadModel(input: {
       const omModelProfile = llmProfileMap.get(agent.omModelProfileId);
       const lastStep = lastStepByAgentId.get(agent.id) ?? null;
       const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
+      const longTermMemoryState = longTermMemoryStateByAgentId.get(agent.id) ?? null;
       const executionState =
         runnerSnapshot && (runnerSnapshot.executing || runnerSnapshot.scheduled || runnerSnapshot.wake.pending)
           ? 'running'
@@ -314,6 +373,11 @@ export function createAdminReadModel(input: {
                 checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
               }
             : null,
+          ltm: {
+            pendingPackageCount: longTermMemoryState?.packages.filter((entry) => entry.processedAt === null).length ?? 0,
+            writtenPackageCount: longTermMemoryState?.packages.length ?? 0,
+            processedPackageCount: longTermMemoryState?.packages.filter((entry) => entry.processedAt !== null).length ?? 0,
+          },
         },
         createdAt: agent.createdAt,
         updatedAt: agent.updatedAt,
@@ -624,6 +688,7 @@ export function createAdminReadModel(input: {
         checkpointGeneration: null,
         checkpointSummary: null,
         checkpointUpdatedAt: null,
+        ltm: null,
         metrics: {
           recentRawTokenCount: 0,
           recentRawTokenLimit: 0,
@@ -672,6 +737,28 @@ export function createAdminReadModel(input: {
 
     const settings = await systemSettings.getSettings();
     const metricsSnapshot = customState?.latestMetrics;
+    const loadedAgent = getInternalAgentRegistry().get(agentId);
+    const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
+      ? await loadedAgent.runtime.longTermMemory.readSnapshot()
+      : null;
+    const persistedLtmState = await readLongTermMemoryState(input.workspaceBasePath, agentId);
+    const ltm = runtimeLtmSnapshot ?? (persistedLtmState
+      ? {
+          running: false,
+          queued: false,
+          nextRunAt: null,
+          lastRunAt: persistedLtmState.lastRunAt ? Date.parse(persistedLtmState.lastRunAt) : null,
+          lastRunError: persistedLtmState.lastRunError,
+          lastRunErrorAt: persistedLtmState.lastRunErrorAt ? Date.parse(persistedLtmState.lastRunErrorAt) : null,
+          lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
+          lastWrittenAt: persistedLtmState.lastWrittenAt ? Date.parse(persistedLtmState.lastWrittenAt) : null,
+          lastProcessedPackageId: persistedLtmState.lastProcessedPackageId,
+          lastProcessedAt: persistedLtmState.lastProcessedAt ? Date.parse(persistedLtmState.lastProcessedAt) : null,
+          pendingPackageCount: persistedLtmState.packages.filter((entry) => entry.processedAt === null).length,
+          writtenPackageCount: persistedLtmState.packages.length,
+          processedPackageCount: persistedLtmState.packages.filter((entry) => entry.processedAt !== null).length,
+        }
+      : null);
 
     return {
       workingMemory: formatWorkingMemoryValue(workingMemory),
@@ -686,6 +773,7 @@ export function createAdminReadModel(input: {
       checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
         ? Date.parse(customState.checkpointSummary.updatedAt)
         : null,
+      ltm,
       metrics: {
         rawMessageCount: metricsSnapshot?.rawMessageCount ?? 0,
         recentRawMessageCount: metricsSnapshot?.recentRawMessageCount ?? 0,

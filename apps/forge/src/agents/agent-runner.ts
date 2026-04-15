@@ -141,6 +141,7 @@ export function createAgentRunner(
     );
 
     if (executionState !== 'running') {
+      await currentRuntime.longTermMemory?.onAgentIdle();
       return;
     }
 
@@ -274,6 +275,7 @@ export function createAgentRunner(
     await resetRunLastMessages();
     resetLoopDetector();
     await store.setExecutionState(runtime.id, 'idle');
+    await currentRuntime.longTermMemory?.onAgentIdle();
 
     if (isStaleRun(runEpoch)) {
       return;
@@ -313,6 +315,8 @@ export function createAgentRunner(
       if (isStaleRun(runEpoch)) {
         return;
       }
+
+      currentRuntime.longTermMemory?.onAgentRunning();
 
       if (input.markRunning) {
         await withTimeout(
@@ -1048,6 +1052,7 @@ export function createAgentRunner(
       RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state update timed out for ${runtime.id}`,
     );
+    await currentRuntime.longTermMemory?.onAgentIdle();
 
     if (isStaleRun(runEpoch)) {
       return;

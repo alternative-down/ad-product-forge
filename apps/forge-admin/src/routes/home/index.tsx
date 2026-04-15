@@ -112,6 +112,10 @@ function HomeIndexRoute() {
                         ? `${formatNullableNumber(agent.overview.om.observationTokenCount)} / ${formatNullableNumber(agent.overview.om.reflectionTokenCount)}`
                         : '—'}
                     />
+                    <AgentMetric
+                      label="LTM"
+                      value={`${formatNullableNumber(agent.overview.ltm.processedPackageCount)} / ${formatNullableNumber(agent.overview.ltm.writtenPackageCount)}`}
+                    />
                   </div>
                 </div>
               </div>

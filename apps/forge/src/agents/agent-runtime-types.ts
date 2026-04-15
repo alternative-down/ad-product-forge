@@ -7,6 +7,7 @@ import type {
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
 } from '../database/schema';
+import type { createAgentContractStore } from './agent-contract-store';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -45,6 +46,7 @@ export type CreateForgeAgentConfig<
 
 export type CreateAgentOptions = {
   longTermMemory?: boolean;
+  contractStore?: ReturnType<typeof createAgentContractStore>;
 };
 
 export type InternalAgentRuntime<
@@ -62,6 +64,41 @@ export type InternalAgentRuntime<
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
   workspace: WorkspaceRuntime;
   communication: CommunicationModule;
+  longTermMemory: {
+    onAgentIdle(): Promise<void>;
+    onAgentRunning(): void;
+    getSnapshot(): {
+      running: boolean;
+      queued: boolean;
+      nextRunAt: number | null;
+      lastRunAt: number | null;
+      lastRunError: string | null;
+      lastRunErrorAt: number | null;
+      lastWrittenPackageId: string | null;
+      lastWrittenAt: number | null;
+      lastProcessedPackageId: string | null;
+      lastProcessedAt: number | null;
+      pendingPackageCount: number;
+      writtenPackageCount: number;
+      processedPackageCount: number;
+    };
+    readSnapshot(): Promise<{
+      running: boolean;
+      queued: boolean;
+      nextRunAt: number | null;
+      lastRunAt: number | null;
+      lastRunError: string | null;
+      lastRunErrorAt: number | null;
+      lastWrittenPackageId: string | null;
+      lastWrittenAt: number | null;
+      lastProcessedPackageId: string | null;
+      lastProcessedAt: number | null;
+      pendingPackageCount: number;
+      writtenPackageCount: number;
+      processedPackageCount: number;
+    }>;
+    dispose(): Promise<void>;
+  } | null;
   onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
   dispose(): Promise<void>;
 };

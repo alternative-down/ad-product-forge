@@ -1,6 +1,7 @@
 import {
   createAgentMemory,
   createCheckpointedObservationalMemoryProcessor,
+  type CheckpointedOmCheckpointPackageInput,
   sanitizeWorkingMemory,
 } from '@mastra-engine/core';
 import { TokenLimiterProcessor } from '@mastra/core/processors';
@@ -32,6 +33,7 @@ export async function createAgentRuntimeMemory(input: {
   checkpointedOmObservationSupportTokens?: number;
   checkpointedOmReflectionSupportTokens?: number;
   agentSystemPrompt?: string;
+  onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
 }) {
   const memory = createAgentMemory({
     storage: input.storage,
@@ -58,6 +60,7 @@ export async function createAgentRuntimeMemory(input: {
       observationSupportTokens: input.checkpointedOmObservationSupportTokens,
       reflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
       agentSystemPrompt: input.agentSystemPrompt,
+      onCheckpointAdvanced: input.onCheckpointAdvanced,
     });
 
     inputProcessors.push(checkpointedObservationalMemory);
