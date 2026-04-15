@@ -22,6 +22,7 @@ const SKILLS_DIR = path.join('workspace', 'skills');
 const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
+const INITIAL_RUN_LAST_MESSAGES = 10;
 
 const packageManifestSchema = z.object({
   packageId: z.string().min(1),
@@ -447,6 +448,7 @@ export function createAgentLongTermMemory(input: {
   let stopped = false;
   let timer: NodeJS.Timeout | null = null;
   let currentAbortController: AbortController | null = null;
+  let runLastMessages = INITIAL_RUN_LAST_MESSAGES;
   let snapshot: LtmSnapshot = {
     running: false,
     queued: false,
@@ -744,6 +746,9 @@ export function createAgentLongTermMemory(input: {
             memory: {
               thread: ltmMastraId,
               resource: ltmMastraId,
+              options: {
+                lastMessages: runLastMessages,
+              },
             },
           }),
           GENERATE_TIMEOUT_MS,
@@ -793,6 +798,7 @@ export function createAgentLongTermMemory(input: {
     running = true;
     snapshot.running = true;
     snapshot.queued = false;
+    runLastMessages = INITIAL_RUN_LAST_MESSAGES;
     currentAbortController = new AbortController();
     const beforeSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
@@ -819,6 +825,7 @@ export function createAgentLongTermMemory(input: {
         await recordLtmStep(getUsageFromGenerateResult(result));
         const afterStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
         isFirstStep = false;
+        runLastMessages += 1;
 
         for (const filePath of diffTrackedFiles(beforeStepSnapshot, afterStepSnapshot)) {
           changedFiles.add(filePath);
@@ -875,6 +882,7 @@ export function createAgentLongTermMemory(input: {
       running = false;
       snapshot.running = false;
       currentAbortController = null;
+      runLastMessages = INITIAL_RUN_LAST_MESSAGES;
     }
   }
 
