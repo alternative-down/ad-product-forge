@@ -22,6 +22,7 @@ const SKILLS_DIR = path.join('workspace', 'skills');
 const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
+const INITIAL_RUN_LAST_MESSAGES = 10;
 
 const packageManifestSchema = z.object({
   packageId: z.string().min(1),
@@ -447,6 +448,7 @@ export function createAgentLongTermMemory(input: {
   let stopped = false;
   let timer: NodeJS.Timeout | null = null;
   let currentAbortController: AbortController | null = null;
+  let runLastMessages = INITIAL_RUN_LAST_MESSAGES;
   let snapshot: LtmSnapshot = {
     running: false,
     queued: false,
@@ -730,7 +732,7 @@ export function createAgentLongTermMemory(input: {
     return Math.max(0, Math.round(remainingTimeMs / stepsPossible));
   }
 
-  async function generateLtmStep() {
+  async function generateLtmStep(prompt: string) {
     let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
 
     for (let attempt = 1; attempt <= GENERATE_MAX_ATTEMPTS; attempt += 1) {
@@ -738,12 +740,15 @@ export function createAgentLongTermMemory(input: {
         const controller = new AbortController();
         currentAbortController = controller;
         result = await withTimeout(
-          memoryAgent.generate(buildMemoryAgentPrompt(), {
+          memoryAgent.generate(prompt, {
             maxSteps: 1,
             abortSignal: controller.signal,
             memory: {
               thread: ltmMastraId,
               resource: ltmMastraId,
+              options: {
+                lastMessages: runLastMessages,
+              },
             },
           }),
           GENERATE_TIMEOUT_MS,
@@ -793,6 +798,7 @@ export function createAgentLongTermMemory(input: {
     running = true;
     snapshot.running = true;
     snapshot.queued = false;
+    runLastMessages = INITIAL_RUN_LAST_MESSAGES;
     currentAbortController = new AbortController();
     const beforeSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
@@ -804,6 +810,7 @@ export function createAgentLongTermMemory(input: {
       });
 
       const changedFiles = new Set<string>();
+      let isFirstStep = true;
 
       while (!stopped && idle) {
         const nextState = await readState();
@@ -814,9 +821,11 @@ export function createAgentLongTermMemory(input: {
         }
 
         const beforeStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
-        const result = await generateLtmStep();
+        const result = await generateLtmStep(isFirstStep ? buildMemoryAgentPrompt() : '');
         await recordLtmStep(getUsageFromGenerateResult(result));
         const afterStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
+        isFirstStep = false;
+        runLastMessages += 1;
 
         for (const filePath of diffTrackedFiles(beforeStepSnapshot, afterStepSnapshot)) {
           changedFiles.add(filePath);
