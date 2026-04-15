@@ -730,7 +730,7 @@ export function createAgentLongTermMemory(input: {
     return Math.max(0, Math.round(remainingTimeMs / stepsPossible));
   }
 
-  async function generateLtmStep() {
+  async function generateLtmStep(prompt: string) {
     let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
 
     for (let attempt = 1; attempt <= GENERATE_MAX_ATTEMPTS; attempt += 1) {
@@ -738,7 +738,7 @@ export function createAgentLongTermMemory(input: {
         const controller = new AbortController();
         currentAbortController = controller;
         result = await withTimeout(
-          memoryAgent.generate(buildMemoryAgentPrompt(), {
+          memoryAgent.generate(prompt, {
             maxSteps: 1,
             abortSignal: controller.signal,
             memory: {
@@ -804,6 +804,7 @@ export function createAgentLongTermMemory(input: {
       });
 
       const changedFiles = new Set<string>();
+      let isFirstStep = true;
 
       while (!stopped && idle) {
         const nextState = await readState();
@@ -814,9 +815,10 @@ export function createAgentLongTermMemory(input: {
         }
 
         const beforeStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
-        const result = await generateLtmStep();
+        const result = await generateLtmStep(isFirstStep ? buildMemoryAgentPrompt() : '');
         await recordLtmStep(getUsageFromGenerateResult(result));
         const afterStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
+        isFirstStep = false;
 
         for (const filePath of diffTrackedFiles(beforeStepSnapshot, afterStepSnapshot)) {
           changedFiles.add(filePath);
