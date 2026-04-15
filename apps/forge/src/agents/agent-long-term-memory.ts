@@ -740,15 +740,14 @@ export function createAgentLongTermMemory(input: {
       return 0;
     }
 
-    const recentLtmSteps = (await input.contractStore.listRecentSteps(input.agentId, 10))
-      .filter((step) => step.kind === 'ltm');
+    const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
-    if (recentLtmSteps.length === 0) {
+    if (recentSteps.length === 0) {
       return 0;
     }
 
     const averageStepUsd =
-      recentLtmSteps.reduce((total, step) => total + step.costUsd, 0) / recentLtmSteps.length;
+      recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
 
     if (averageStepUsd <= 0) {
       return 0;

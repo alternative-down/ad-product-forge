@@ -36,14 +36,14 @@ export function createAgentRunnerUsage(input: {
       pricingModelKey: input.runtime.pricingModelKey,
       profileId: input.runtime.modelProfileId,
     });
-    const lastAgentStep = recentSteps.find((step) => step.kind === 'agent-step');
+    const lastStep = recentSteps[0];
 
-    if (!pricing.modelPrice || !lastAgentStep) {
+    if (!pricing.modelPrice || !lastStep) {
       return averageStepUsd;
     }
 
     const inputEstimatedUsd =
-      (Math.max(lastAgentStep.inputTokens - lastAgentStep.cachedInputTokens, 0) / 1_000_000) *
+      (Math.max(lastStep.inputTokens - lastStep.cachedInputTokens, 0) / 1_000_000) *
       pricing.modelPrice.inputPerMillionUsd *
       pricing.contractCostMultiplier;
     return (inputEstimatedUsd + averageStepUsd) / 2;
