@@ -20,6 +20,7 @@ const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
+const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
 const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
@@ -45,6 +46,7 @@ export function createAgentRunner(
     execute,
   });
   let timer: NodeJS.Timeout | null = null;
+  let healthcheckTimer: NodeJS.Timeout | null = null;
   let stopped = false;
   let instant = false;
   let startingRun = false;
@@ -112,6 +114,25 @@ export function createAgentRunner(
     nextStepAt = null;
   }
 
+  function startHealthcheck() {
+    if (healthcheckTimer) {
+      return;
+    }
+
+    healthcheckTimer = setInterval(() => {
+      void runHealthcheck();
+    }, RUNNER_HEALTHCHECK_INTERVAL_MS);
+  }
+
+  function clearHealthcheck() {
+    if (!healthcheckTimer) {
+      return;
+    }
+
+    clearInterval(healthcheckTimer);
+    healthcheckTimer = null;
+  }
+
   function schedule(delayMs: number) {
     if (stopped || timer) {
       return;
@@ -133,6 +154,7 @@ export function createAgentRunner(
       return;
     }
 
+    startHealthcheck();
     await refreshRunFlushSettings();
 
     const executionState = await withTimeout(
@@ -259,6 +281,7 @@ export function createAgentRunner(
     invalidateInFlightGenerate();
     executing = false;
     clearTimer();
+    clearHealthcheck();
     wakeQueue.stop();
     runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
     flushedRunEventKeys = new Set<string>();
@@ -286,6 +309,56 @@ export function createAgentRunner(
     lastStepStartedAt = null;
     lastStepStage = null;
     nextStepAt = null;
+  }
+
+  async function runHealthcheck() {
+    if (stopped) {
+      return;
+    }
+
+    try {
+      const executionState = await withTimeout(
+        store.getExecutionState(runtime.id),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent execution state lookup timed out for ${runtime.id}`,
+      );
+
+      if (executionState === 'idle') {
+        if (!isLocallyIdle()) {
+          return;
+        }
+
+        if (pendingRunMessages.size > 0) {
+          await beginRun({
+            reloadRuntime: true,
+            wakeStartedAt: Date.now(),
+            markRunning: true,
+          });
+          return;
+        }
+
+        const wakeSnapshot = wakeQueue.getSnapshot();
+        if (wakeSnapshot.pending || wakeSnapshot.waitingForIdle) {
+          await wakeQueue.onRunnerIdle();
+        }
+
+        return;
+      }
+
+      if (startingRun || executing || timer) {
+        return;
+      }
+
+      const wakeSnapshot = wakeQueue.getSnapshot();
+
+      if (wakeSnapshot.waitingForIdle) {
+        await wakeQueue.onRunnerIdle();
+      }
+
+      await queueNextStep(activeRunEpoch);
+    } catch (error) {
+      console.error(`[AgentRunner] ${runtime.id} healthcheck failed:`, error);
+    }
   }
 
   async function beginRun(input: {

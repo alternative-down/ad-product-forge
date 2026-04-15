@@ -154,7 +154,7 @@ function HomeConversationsLayoutRoute() {
 
   return (
     <HomeConversationsProvider value={contextValue}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:grid md:grid-cols-[300px_minmax(0,1fr)] md:gap-5">
+      <div className="flex h-[calc(100dvh-10.5rem)] min-h-0 flex-1 flex-col overflow-hidden md:grid md:grid-cols-[300px_minmax(0,1fr)] md:gap-5">
         <ConversationListPane
           accounts={accounts}
           selectedAccountId={selectedAccountId}
