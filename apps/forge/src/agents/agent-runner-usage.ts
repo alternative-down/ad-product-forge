@@ -43,7 +43,7 @@ export function createAgentRunnerUsage(input: {
     }
 
     const inputEstimatedUsd =
-      (lastAgentStep.inputTokens / 1_000_000) *
+      (Math.max(lastAgentStep.inputTokens - lastAgentStep.cachedInputTokens, 0) / 1_000_000) *
       pricing.modelPrice.inputPerMillionUsd *
       pricing.contractCostMultiplier;
     return (inputEstimatedUsd + averageStepUsd) / 2;
@@ -66,8 +66,9 @@ export function createAgentRunnerUsage(input: {
     let costUsd = 0;
 
     if (pricing.modelPrice) {
+      const uncachedInputTokens = Math.max(inputTokens - cachedInputTokens, 0);
       costUsd =
-        ((inputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+        ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
           (cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
           (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
         pricing.contractCostMultiplier;
@@ -108,12 +109,10 @@ export function createAgentRunnerUsage(input: {
     const cachedInputTokens =
       usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
     const promptTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
-    const inputTokens =
-      usage.inputTokenDetails?.noCacheTokens ?? Math.max(promptTokens - cachedInputTokens, 0);
     const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0;
 
     return {
-      inputTokens,
+      inputTokens: promptTokens,
       cachedInputTokens,
       outputTokens,
     };
