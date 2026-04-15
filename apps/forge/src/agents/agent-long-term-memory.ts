@@ -882,7 +882,6 @@ export function createAgentLongTermMemory(input: {
       running = false;
       snapshot.running = false;
       currentAbortController = null;
-      runLastMessages = INITIAL_RUN_LAST_MESSAGES;
     }
   }
 

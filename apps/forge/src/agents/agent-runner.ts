@@ -300,7 +300,6 @@ export function createAgentRunner(
     clearTimer();
     clearHealthcheck();
     wakeQueue.stop();
-    runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
     flushedRunEventKeys = new Set<string>();
   }
 
@@ -317,7 +316,6 @@ export function createAgentRunner(
     }
     flushedRunEventKeys = new Set<string>();
     instant = false;
-    await resetRunLastMessages();
     resetLoopDetector();
     await store.setExecutionState(runtime.id, 'idle');
     await currentRuntime.longTermMemory?.onAgentIdle();
@@ -652,7 +650,6 @@ export function createAgentRunner(
           `Agent notification creation timed out for ${runtime.id}`,
         );
         nextStepAt = null;
-        await resetRunLastMessages();
         resetLoopDetector();
         await transitionToIdle(runEpoch, {
           deferWakeQueueDrain: true,
@@ -1146,7 +1143,6 @@ export function createAgentRunner(
     clearTimer();
     invalidateInFlightGenerate();
     instant = false;
-    await resetRunLastMessages();
     resetLoopDetector();
     await withTimeout(
       store.setExecutionState(runtime.id, 'idle'),
