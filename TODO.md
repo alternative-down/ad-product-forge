@@ -68,15 +68,6 @@ Completed items should be removed or moved into changelog/history once they are 
     - user mostly watches logs and contracts today
     - needs a denser, more executive overview of agent state
 
-## GitHub / Provider Behavior
-
-### Medium priority
-- Support cases where an agent can use GitHub tools/access but should not receive GitHub events.
-  - Need to determine whether this should be solved by:
-    - GitHub installation / subscription configuration only
-    - system-level agent/provider setting
-    - or both
-
 ## Agent Architecture
 
 ### Document only for now

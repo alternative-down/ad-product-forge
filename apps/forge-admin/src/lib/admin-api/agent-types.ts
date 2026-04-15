@@ -117,6 +117,27 @@ export type AgentDetail = {
     status: 'pending' | 'created' | 'active';
     registrationUrl: string;
     installUrl?: string;
+    manifestConfig: {
+      permissions: {
+        administration: boolean;
+        contents: boolean;
+        issues: boolean;
+        metadata: boolean;
+        organization_projects: boolean;
+        pull_requests: boolean;
+        repository_projects: boolean;
+        workflows: boolean;
+      };
+      events: {
+        push: boolean;
+        pull_request: boolean;
+        pull_request_review: boolean;
+        issues: boolean;
+        issue_comment: boolean;
+        repository: boolean;
+        workflow_run: boolean;
+      };
+    };
   } | null;
   activeContract: {
     contractId: string;

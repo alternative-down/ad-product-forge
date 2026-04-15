@@ -126,6 +126,16 @@ export function changeAgentRole(input: {
   });
 }
 
+export function updateAgentGitHubManifestConfig(input: {
+  agentId: string;
+  manifestConfig: NonNullable<AgentDetail['githubProvisioning']>['manifestConfig'];
+}) {
+  return request<NonNullable<AgentDetail['githubProvisioning']>>('/admin/agent/github-manifest-config/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function topUpAgentContract(input: TopUpAgentContractInput) {
   return request<{
     agentId: string;

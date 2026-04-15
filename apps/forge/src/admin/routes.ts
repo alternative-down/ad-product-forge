@@ -65,6 +65,33 @@ const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
 });
 
+const githubManifestConfigSchema = z.object({
+  permissions: z.object({
+    administration: z.boolean(),
+    contents: z.boolean(),
+    issues: z.boolean(),
+    metadata: z.boolean(),
+    organization_projects: z.boolean(),
+    pull_requests: z.boolean(),
+    repository_projects: z.boolean(),
+    workflows: z.boolean(),
+  }),
+  events: z.object({
+    push: z.boolean(),
+    pull_request: z.boolean(),
+    pull_request_review: z.boolean(),
+    issues: z.boolean(),
+    issue_comment: z.boolean(),
+    repository: z.boolean(),
+    workflow_run: z.boolean(),
+  }),
+});
+
+const updateAgentGitHubManifestConfigSchema = z.object({
+  agentId: z.string().min(1),
+  manifestConfig: githubManifestConfigSchema,
+});
+
 const agentExecutionStepsQuerySchema = z.object({
   agentId: z.string().min(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -1412,6 +1439,20 @@ export function registerAdminRoutes(input: {
       });
 
       return jsonResponse(result);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/github-manifest-config/update',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
+      const provisioning = await input.githubApps.updateAgentManifestConfig({
+        agentId: body.agentId,
+        manifestConfig: body.manifestConfig,
+      });
+
+      return jsonResponse(provisioning);
     },
   });
 
