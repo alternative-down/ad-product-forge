@@ -623,9 +623,17 @@ function getCursorObservedIds(input: {
   }
 
   return Array.from(new Set([
-    ...(input.previousRecord.observedMessageIds ?? []),
+    ...sanitizeObservedUnitIds(input.previousRecord.observedMessageIds),
     ...selectedIdsAtCursor,
   ]));
+}
+
+function isRawUnitId(value: string) {
+  return value.includes(':part:');
+}
+
+function sanitizeObservedUnitIds(value: string[] | undefined) {
+  return (value ?? []).filter(isRawUnitId);
 }
 
 function createMetricsSnapshot(input: {
@@ -660,7 +668,7 @@ function isObservedRawUnit(record: ObservationalMemoryRecord, unit: RawUnit) {
     return false;
   }
 
-  const observedMessageIds = record.observedMessageIds ?? [];
+  const observedMessageIds = sanitizeObservedUnitIds(record.observedMessageIds);
   const cursorTime = new Date(record.lastObservedAt).getTime();
   const unitTime = unit.createdAt.getTime();
 
@@ -672,7 +680,7 @@ function isObservedRawUnit(record: ObservationalMemoryRecord, unit: RawUnit) {
     return false;
   }
 
-  return observedMessageIds.includes(unit.id) || observedMessageIds.includes(unit.parentMessageId);
+  return observedMessageIds.includes(unit.id);
 }
 
 function getMessagesAfterCursor(
@@ -1205,7 +1213,7 @@ export class CheckpointedObservationalMemoryProcessor
       lastBufferedAtTokens: 0,
       lastBufferedAtTime: null,
       bufferedObservationChunks: [],
-      observedMessageIds: input.currentRecord.observedMessageIds ?? [],
+      observedMessageIds: sanitizeObservedUnitIds(input.currentRecord.observedMessageIds),
     };
 
     await this.store.insertObservationalMemoryRecord(repairedRecord);
@@ -1410,7 +1418,7 @@ export class CheckpointedObservationalMemoryProcessor
       lastBufferedAtTokens: 0,
       lastBufferedAtTime: null,
       bufferedObservationChunks: [],
-      observedMessageIds: input.currentRecord.observedMessageIds ?? [],
+      observedMessageIds: sanitizeObservedUnitIds(input.currentRecord.observedMessageIds),
     };
 
     await this.store.insertObservationalMemoryRecord(reflectionRecord);

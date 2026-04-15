@@ -375,7 +375,7 @@ export function createAdminReadModel(input: {
         overview: {
           lastStepAt: lastStep?.createdAt ?? null,
           lastStepContextTokens: lastStep
-            ? lastStep.inputTokens + lastStep.cachedInputTokens
+            ? lastStep.inputTokens
             : null,
           lastStepTokens: lastStep
             ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens

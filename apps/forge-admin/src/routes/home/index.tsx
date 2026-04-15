@@ -23,6 +23,7 @@ function HomeIndexRoute() {
   const agentsQuery = useQuery({
     queryKey: ['admin', 'agents'],
     queryFn: getAgents,
+    refetchInterval: 60_000,
   });
   const [hireOpen, setHireOpen] = useState(false);
   const agents = agentsQuery.data ?? [];
@@ -49,7 +50,7 @@ function HomeIndexRoute() {
             params={{ agentId: agent.agentId }}
             className="block rounded-sm border border-border bg-background px-5 py-4 transition-colors hover:bg-muted/30"
           >
-              <div className="space-y-4">
+            <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <AgentAvatar
                   agentId={agent.agentId}
