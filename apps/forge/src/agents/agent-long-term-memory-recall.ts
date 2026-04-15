@@ -91,31 +91,37 @@ export class AgentLongTermMemoryRecallProcessor
       return args.messages;
     }
 
-    await this.doInitialize();
-    const queryText = this.buildRecallQuery(args);
+    try {
+      await this.doInitialize();
+      const queryText = this.buildRecallQuery(args);
 
-    if (!queryText) {
+      if (!queryText) {
+        return args.messageList;
+      }
+
+      const { formatted } = await this.searchWorkspace(queryText);
+      args.messageList.clearSystemMessages(RECALL_TAG);
+
+      if (!formatted) {
+        return args.messageList;
+      }
+
+      args.messageList.addSystem(
+        [
+          'These are retrieved documents from your maintained long-term memory.',
+          'Treat them as useful background context, but still verify against newer thread context and current workspace state when needed.',
+          '',
+          formatted,
+        ].join('\n'),
+        RECALL_TAG,
+      );
+
+      return args.messageList;
+    } catch (error) {
+      console.error('[AgentLongTermMemoryRecall] recall failed:', error);
+      args.messageList.clearSystemMessages(RECALL_TAG);
       return args.messageList;
     }
-
-    const { formatted } = await this.searchWorkspace(queryText);
-    args.messageList.clearSystemMessages(RECALL_TAG);
-
-    if (!formatted) {
-      return args.messageList;
-    }
-
-    args.messageList.addSystem(
-      [
-        'These are retrieved documents from your maintained long-term memory.',
-        'Treat them as useful background context, but still verify against newer thread context and current workspace state when needed.',
-        '',
-        formatted,
-      ].join('\n'),
-      RECALL_TAG,
-    );
-
-    return args.messageList;
   }
 
   private async doInitialize() {
