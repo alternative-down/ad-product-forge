@@ -682,10 +682,6 @@ export function createAgentRunner(
         instant = true;
       }
 
-      if (result.toolCalls.length > 0) {
-        instant = true;
-      }
-
       backoffMs = ONE_MINUTE_MS;
       continueRunning = true;
     } catch (error) {
