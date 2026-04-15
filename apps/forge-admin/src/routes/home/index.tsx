@@ -49,7 +49,7 @@ function HomeIndexRoute() {
             params={{ agentId: agent.agentId }}
             className="block rounded-sm border border-border bg-background px-5 py-4 transition-colors hover:bg-muted/30"
           >
-            <div className="space-y-4">
+              <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <AgentAvatar
                   agentId={agent.agentId}
@@ -68,45 +68,51 @@ function HomeIndexRoute() {
                 </div>
               </div>
 
-              <div className="space-y-1 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Última step</span>
-                  <span className="font-medium text-foreground">{formatRelativeTime(agent.overview.lastStepAt)}</span>
+              <div className="grid gap-4 md:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+                <div className="space-y-1 text-sm">
+                  <InfoRow
+                    label="Última step"
+                    value={agent.overview.lastStepAt ? `${formatDateTime(agent.overview.lastStepAt)} · ${formatRelativeTime(agent.overview.lastStepAt)}` : '—'}
+                  />
+                  <InfoRow
+                    label="Contexto da step"
+                    value={formatTokenCount(agent.overview.lastStepContextTokens)}
+                  />
+                  <InfoRow
+                    label="Média entre steps"
+                    value={formatDuration(agent.overview.averageStepIntervalMs)}
+                  />
+                  <InfoRow
+                    label="LTM"
+                    value={agent.overview.ltm.running ? 'Executando' : agent.overview.ltm.queued ? 'Enfileirada' : 'Ociosa'}
+                  />
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Contexto da step</span>
-                  <span className="font-medium text-foreground">{formatNullableNumber(agent.overview.lastStepContextTokens)} tokens</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Média entre steps</span>
-                  <span className="font-medium text-foreground">{formatDuration(agent.overview.averageStepIntervalMs)}</span>
-                </div>
-              </div>
 
-              {agent.overview.om ? (
-                <div className="space-y-2">
-                  <OmMetricBar
-                    label="RAW"
-                    current={agent.overview.om.recentRawTokenCount}
-                    limit={agent.overview.om.recentRawTokenLimit}
-                  />
-                  <OmMetricBar
-                    label="Overflow"
-                    current={agent.overview.om.overflowTokenCount}
-                    limit={agent.overview.om.overflowTokenLimit}
-                  />
-                  <OmMetricBar
-                    label="Obs"
-                    current={agent.overview.om.observationTokenCount}
-                    limit={agent.overview.om.observationTokenLimit}
-                  />
-                  <OmMetricBar
-                    label="Ref"
-                    current={agent.overview.om.reflectionTokenCount}
-                    limit={agent.overview.om.reflectionTokenLimit}
-                  />
-                </div>
-              ) : null}
+                {agent.overview.om ? (
+                  <div className="space-y-1.5">
+                    <OmMetricBar
+                      label="RAW"
+                      current={agent.overview.om.recentRawTokenCount}
+                      limit={agent.overview.om.recentRawTokenLimit}
+                    />
+                    <OmMetricBar
+                      label="Overflow"
+                      current={agent.overview.om.overflowTokenCount}
+                      limit={agent.overview.om.overflowTokenLimit}
+                    />
+                    <OmMetricBar
+                      label="Obs"
+                      current={agent.overview.om.observationTokenCount}
+                      limit={agent.overview.om.observationTokenLimit}
+                    />
+                    <OmMetricBar
+                      label="Ref"
+                      current={agent.overview.om.reflectionTokenCount}
+                      limit={agent.overview.om.reflectionTokenLimit}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
           </Link>
         ))}
@@ -117,6 +123,15 @@ function HomeIndexRoute() {
       {agentsQuery.error ? <div className="text-sm text-destructive">{agentsQuery.error.message}</div> : null}
 
       <HireAgentDialog open={hireOpen} onOpenChange={setHireOpen} />
+    </div>
+  );
+}
+
+function InfoRow(input: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-muted-foreground">{input.label}</span>
+      <span className="text-right font-medium text-foreground">{input.value}</span>
     </div>
   );
 }
@@ -138,7 +153,7 @@ function OmMetricBar(input: {
           {formatNullableNumber(input.current)} / {formatNullableNumber(input.limit)}
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className="h-1 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-foreground/70 transition-[width]" style={{ width: `${percent}%` }} />
       </div>
     </div>
@@ -161,29 +176,27 @@ function formatNullableNumber(value: number | null) {
   return new Intl.NumberFormat('pt-BR').format(value);
 }
 
+function formatTokenCount(value: number | null) {
+  if (value === null) {
+    return '—';
+  }
+
+  return `${formatNullableNumber(value)} tokens`;
+}
+
 function formatRelativeTime(value: number | null) {
   if (!value) {
     return '—';
   }
 
   const diffMs = Math.max(Date.now() - value, 0);
-  const diffMinutes = Math.floor(diffMs / 60_000);
+  const diffSeconds = Math.floor(diffMs / 1_000);
 
-  if (diffMinutes < 1) {
-    return 'agora';
+  if (diffSeconds < 60) {
+    return `${diffSeconds}s`;
   }
 
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `${diffHours} h`;
-  }
-
-  return `${Math.floor(diffHours / 24)} d`;
+  return `${Math.floor(diffSeconds / 60)} min`;
 }
 
 function formatDuration(value: number | null) {
@@ -191,22 +204,20 @@ function formatDuration(value: number | null) {
     return '—';
   }
 
-  const minutes = Math.round(value / 60_000);
+  const seconds = Math.max(1, Math.round(value / 1_000));
 
-  if (minutes < 1) {
-    return '<1 min';
+  if (seconds < 60) {
+    return `${seconds}s`;
   }
 
-  if (minutes < 60) {
-    return `${minutes} min`;
-  }
+  return `${Math.round(seconds / 60)} min`;
+}
 
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-
-  if (remainingMinutes === 0) {
-    return `${hours} h`;
-  }
-
-  return `${hours} h ${remainingMinutes} min`;
+function formatDateTime(value: number) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(value);
 }
