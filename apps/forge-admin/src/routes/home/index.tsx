@@ -66,6 +66,11 @@ function HomeIndexRoute() {
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">{agent.roleName ?? 'Sem papel'}</div>
+                  {agent.overview.lastStepPreview ? (
+                    <div className="truncate text-xs text-muted-foreground">
+                      {agent.overview.lastStepPreview}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
