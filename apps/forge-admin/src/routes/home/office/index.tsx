@@ -93,7 +93,7 @@ function HomeOfficeRoute() {
   const agentsQuery = useQuery({
     queryKey: ['admin', 'agents'],
     queryFn: getAgents,
-    refetchInterval: 60_000,
+    refetchInterval: 10_000,
   });
   const [hireOpen, setHireOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -108,7 +108,7 @@ function HomeOfficeRoute() {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="flex min-h-0 flex-1 flex-col gap-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground shadow-sm">
@@ -142,12 +142,12 @@ function HomeOfficeRoute() {
         </div>
       </section>
 
-      <section className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1.42fr)_minmax(20rem,0.58fr)]">
-        <div className="relative overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(250,250,249,0.94))] p-3 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:p-4">
+      <section className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1.42fr)_minmax(19rem,0.58fr)]">
+        <div className="relative overflow-hidden rounded-[1.75rem] border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(249,248,246,0.96))] p-3 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:p-4">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(254,240,138,0.18),transparent_30%),radial-gradient(circle_at_top_right,rgba(186,230,253,0.18),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(216,180,254,0.14),transparent_30%)]" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,transparent,rgba(226,232,240,0.55))]" />
 
-          <div className="relative min-h-[36rem] rounded-[1.6rem] border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.64),rgba(255,255,255,0.82))]">
+          <div className="relative min-h-[36rem] rounded-[1.45rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.88))]">
             <div className="pointer-events-none absolute inset-x-[8%] top-[53%] h-px bg-border/60" />
             <div className="pointer-events-none absolute bottom-[14%] left-[58%] top-[12%] w-px bg-border/50" />
 
@@ -178,7 +178,7 @@ function HomeOfficeRoute() {
           </div>
         </div>
 
-        <aside className="flex min-h-0 flex-col gap-4">
+        <aside className="flex min-h-0 flex-col gap-3">
           <OfficeInspector agent={selectedAgent} />
           <OfficeRoster
             agents={agents}
@@ -198,7 +198,7 @@ function OfficeZoneBlock(input: { zone: OfficeZone }) {
   const Icon = input.zone.icon;
 
   return (
-    <div className={cn('absolute overflow-hidden rounded-[1.7rem] border p-4', input.zone.className)}>
+    <div className={cn('absolute overflow-hidden rounded-[1.4rem] border p-4', input.zone.className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="text-sm font-semibold tracking-[-0.03em] text-foreground">
@@ -230,20 +230,20 @@ function OfficeAgentMarker(input: {
       type="button"
       onClick={input.onSelect}
       className={cn(
-        'group absolute flex w-[7.4rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-[1.4rem] px-2 py-2 text-center transition duration-300',
-        'hover:scale-[1.03] hover:bg-background/55 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
-        input.selected ? 'scale-[1.04] bg-background/70 shadow-[0_16px_36px_rgba(15,23,42,0.12)]' : '',
+        'group absolute flex w-[7.3rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-[1.2rem] px-2 py-2 text-center transition duration-300',
+        'hover:scale-[1.02] hover:bg-background/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
+        input.selected ? 'scale-[1.03] bg-background/55 shadow-[0_12px_28px_rgba(15,23,42,0.08)]' : '',
       )}
       style={style}
     >
       <div
         className={cn(
-          'absolute inset-0 rounded-[1.4rem] border transition-colors',
+          'absolute inset-0 rounded-[1.2rem] border transition-colors',
           urgency === 'high'
-            ? 'border-rose-300/80 bg-rose-50/30'
+            ? 'border-rose-300/70 bg-rose-50/24'
             : urgency === 'medium'
-              ? 'border-amber-300/70 bg-amber-50/25'
-              : 'border-border/60 bg-background/20',
+              ? 'border-amber-300/60 bg-amber-50/20'
+              : 'border-border/45 bg-background/16',
         )}
       />
       <AgentAvatar
@@ -258,8 +258,8 @@ function OfficeAgentMarker(input: {
       <div className="relative line-clamp-1 text-[11px] text-muted-foreground">
         {status}
       </div>
-      <div className="relative max-w-full rounded-full bg-foreground px-2 py-1 text-[10px] leading-none text-background shadow-sm">
-        {getAgentActivityLabel(input.placement.agent)}
+      <div className="relative max-w-full rounded-full border border-border/60 bg-background/90 px-2 py-1 text-[10px] leading-none text-muted-foreground shadow-sm">
+        {status}
       </div>
     </button>
   );
@@ -268,7 +268,7 @@ function OfficeAgentMarker(input: {
 function OfficeInspector(input: { agent: AgentListItem | null }) {
   if (!input.agent) {
     return (
-      <section className="rounded-[1.8rem] border border-border/70 bg-background/90 p-5 text-sm text-muted-foreground shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+      <section className="rounded-[1.45rem] border border-border/60 bg-background/94 p-5 text-sm text-muted-foreground shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
         Selecione um agente no escritório.
       </section>
     );
@@ -277,7 +277,7 @@ function OfficeInspector(input: { agent: AgentListItem | null }) {
   const om = input.agent.overview.om;
 
   return (
-    <section className="space-y-4 rounded-[1.8rem] border border-border/70 bg-background/95 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+    <section className="space-y-4 rounded-[1.45rem] border border-border/60 bg-background/96 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
       <div className="flex items-start gap-4">
         <AgentAvatar
           agentId={input.agent.agentId}
@@ -300,7 +300,7 @@ function OfficeInspector(input: { agent: AgentListItem | null }) {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-2.5 sm:grid-cols-2">
         <InspectorRow
           icon={Clock3}
           label="Última step"
@@ -324,6 +324,17 @@ function OfficeInspector(input: { agent: AgentListItem | null }) {
           value={input.agent.overview.ltm.running ? 'Executando' : input.agent.overview.ltm.queued ? 'Enfileirada' : 'Ociosa'}
         />
       </div>
+
+      {input.agent.overview.lastStepPreview ? (
+        <div className="space-y-1.5">
+          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            Último thinking / texto
+          </div>
+          <div className="rounded-[1rem] bg-muted/35 px-3 py-3 text-sm leading-6 text-foreground">
+            {input.agent.overview.lastStepPreview}
+          </div>
+        </div>
+      ) : null}
 
       {om ? (
         <div className="space-y-2.5">
@@ -350,14 +361,16 @@ function OfficeInspector(input: { agent: AgentListItem | null }) {
         </div>
       ) : null}
 
-      <Link
-        to="/agents/$agentId"
-        params={{ agentId: input.agent.agentId }}
-        className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-foreground/80"
-      >
-        Abrir detalhes do agente
-        <ArrowUpRight className="h-4 w-4" />
-      </Link>
+      <div>
+        <Link
+          to="/agents/$agentId"
+          params={{ agentId: input.agent.agentId }}
+          className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-foreground/80"
+        >
+          Abrir detalhes do agente
+          <ArrowUpRight className="h-4 w-4" />
+        </Link>
+      </div>
     </section>
   );
 }
@@ -368,7 +381,7 @@ function OfficeRoster(input: {
   onSelect(agentId: string): void;
 }) {
   return (
-    <section className="min-h-0 rounded-[1.8rem] border border-border/70 bg-background/95 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+    <section className="min-h-0 rounded-[1.45rem] border border-border/60 bg-background/96 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
       <div className="mb-3 text-sm font-medium tracking-[-0.03em] text-foreground">
         Equipe no escritório
       </div>
@@ -380,10 +393,10 @@ function OfficeRoster(input: {
             type="button"
             onClick={() => input.onSelect(agent.agentId)}
             className={cn(
-              'flex items-center gap-3 rounded-[1.2rem] border px-3 py-2 text-left transition-colors',
+              'flex items-center gap-3 rounded-[1rem] px-3 py-2 text-left transition-colors',
               input.selectedAgentId === agent.agentId
-                ? 'border-foreground/20 bg-muted/50'
-                : 'border-border/60 bg-background hover:bg-muted/35',
+                ? 'bg-muted/50'
+                : 'bg-transparent hover:bg-muted/28',
             )}
           >
             <AgentAvatar
@@ -395,10 +408,10 @@ function OfficeRoster(input: {
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium text-foreground">{agent.name}</div>
               <div className="truncate text-xs text-muted-foreground">
-                {getAgentActivityLabel(agent)}
+                {agent.overview.lastStepPreview ?? humanizeAgentStatus(agent.executionState)}
               </div>
             </div>
-            <Badge variant="outline" className="rounded-full">
+            <Badge variant="outline" className="rounded-full bg-background/90">
               {humanizeAgentStatus(agent.executionState)}
             </Badge>
           </button>
@@ -416,7 +429,7 @@ function InspectorRow(input: {
   const Icon = input.icon;
 
   return (
-    <div className="rounded-[1.2rem] border border-border/60 bg-muted/20 px-3 py-3">
+    <div className="rounded-[0.95rem] bg-muted/30 px-3 py-3">
       <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
         <Icon className="h-3.5 w-3.5" />
         {input.label}
@@ -533,32 +546,6 @@ function getPlacementStyle(placement: OfficePlacement) {
     left: `${zoneLayout.baseLeft + placement.column * zoneLayout.columnGap}%`,
     top: `${zoneLayout.baseTop + placement.row * zoneLayout.rowGap}%`,
   };
-}
-
-function getAgentActivityLabel(agent: AgentListItem) {
-  if (agent.executionState === 'absent') {
-    return 'Retry / exceção';
-  }
-
-  if (agent.overview.ltm.running) {
-    return 'Consolidando memória';
-  }
-
-  if (agent.executionState === 'idle') {
-    return 'Aguardando contexto';
-  }
-
-  if (agent.overview.om) {
-    if (agent.overview.om.overflowTokenCount > 0) {
-      return 'Lendo overflow';
-    }
-
-    if (agent.overview.om.reflectionTokenCount > agent.overview.om.reflectionTokenLimit * 0.7) {
-      return 'Refletindo';
-    }
-  }
-
-  return 'Executando';
 }
 
 function getAgentUrgency(agent: AgentListItem) {
