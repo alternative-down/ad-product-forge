@@ -170,6 +170,79 @@ function extractLatestMessagePreview(content: unknown) {
   return null;
 }
 
+function extractLatestMessageToolBadge(content: unknown) {
+  if (!content || typeof content !== 'object') {
+    return null;
+  }
+
+  const record = content as {
+    parts?: unknown;
+    toolInvocations?: unknown;
+  };
+  const parts = Array.isArray(record.parts) ? record.parts : [];
+  const topLevelToolInvocations = Array.isArray(record.toolInvocations) ? record.toolInvocations : [];
+
+  for (const part of [...parts].reverse()) {
+    if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'tool-invocation') {
+      continue;
+    }
+
+    if (!('toolInvocation' in part) || !part.toolInvocation || typeof part.toolInvocation !== 'object') {
+      continue;
+    }
+
+    const toolName = 'toolName' in part.toolInvocation && typeof part.toolInvocation.toolName === 'string'
+      ? part.toolInvocation.toolName
+      : null;
+
+    if (toolName) {
+      return toToolBadge(toolName);
+    }
+  }
+
+  for (const invocation of [...topLevelToolInvocations].reverse()) {
+    if (!invocation || typeof invocation !== 'object' || !('toolName' in invocation) || typeof invocation.toolName !== 'string') {
+      continue;
+    }
+
+    return toToolBadge(invocation.toolName);
+  }
+
+  return null;
+}
+
+function toToolBadge(toolName: string) {
+  const normalizedToolName = toolName.toLowerCase();
+
+  if (
+    normalizedToolName.includes('workspace_execute_command') ||
+    normalizedToolName.includes('workspace_read_file') ||
+    normalizedToolName.includes('workspace_write_file') ||
+    normalizedToolName.includes('workspace_list_files')
+  ) {
+    return { icon: '🛠', label: 'Workspace' };
+  }
+
+  if (normalizedToolName.includes('github')) {
+    return { icon: '🐙', label: 'GitHub' };
+  }
+
+  if (
+    normalizedToolName.includes('conversation') ||
+    normalizedToolName.includes('chat') ||
+    normalizedToolName.includes('message') ||
+    normalizedToolName.includes('notification')
+  ) {
+    return { icon: '💬', label: 'Chat' };
+  }
+
+  if (normalizedToolName.includes('search') || normalizedToolName.includes('web')) {
+    return { icon: '🔎', label: 'Busca' };
+  }
+
+  return null;
+}
+
 function truncatePreview(value: string) {
   return value.length > 220 ? `${value.slice(0, 217).trimEnd()}...` : value;
 }
@@ -430,14 +503,20 @@ export function createAdminReadModel(input: {
         agentRows.map(async (agent) => [agent.id, await getAgentRuntimeMemory(agent.id)] as const),
       ),
     );
-    const latestThreadPreviewByAgentId = new Map(
+    const latestThreadDetailsByAgentId = new Map(
       await Promise.all(
         agentRows.map(async (agent) => {
           const messages = await listThreadMessages(input.workspaceBasePath, agent.id, {
             page: 0,
             perPage: 1,
           });
-          return [agent.id, extractLatestMessagePreview(messages[0]?.content)] as const;
+          return [
+            agent.id,
+            {
+              preview: extractLatestMessagePreview(messages[0]?.content),
+              toolBadge: extractLatestMessageToolBadge(messages[0]?.content),
+            },
+          ] as const;
         }),
       ),
     );
@@ -469,6 +548,7 @@ export function createAdminReadModel(input: {
       const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
       const longTermMemoryState = longTermMemoryStateByAgentId.get(agent.id) ?? null;
       const runtimeLtmSnapshot = runtimeLtmSnapshotByAgentId.get(agent.id) ?? null;
+      const latestThreadDetails = latestThreadDetailsByAgentId.get(agent.id) ?? null;
       const averageStepIntervalMs = recentSteps.length >= 2
         ? Math.round(
             recentSteps
@@ -503,7 +583,8 @@ export function createAdminReadModel(input: {
           lastStepContextTokens: lastStep
             ? lastStep.inputTokens
             : null,
-          lastStepPreview: latestThreadPreviewByAgentId.get(agent.id) ?? null,
+          lastStepPreview: latestThreadDetails?.preview ?? null,
+          lastToolBadge: latestThreadDetails?.toolBadge ?? null,
           lastStepTokens: lastStep
             ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
             : null,

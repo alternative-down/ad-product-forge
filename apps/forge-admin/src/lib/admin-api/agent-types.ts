@@ -37,6 +37,10 @@ export type AgentListItem = {
     lastStepAt: number | null;
     lastStepContextTokens: number | null;
     lastStepPreview: string | null;
+    lastToolBadge: {
+      icon: string;
+      label: string;
+    } | null;
     lastStepTokens: number | null;
     lastStepCostUsd: number | null;
     averageStepIntervalMs: number | null;

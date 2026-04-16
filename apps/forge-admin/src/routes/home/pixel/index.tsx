@@ -50,6 +50,7 @@ type SceneAgent = {
   y: number;
   dir: 'down' | 'up' | 'right' | 'left';
   frame: number;
+  toolBubble: AgentListItem['overview']['lastToolBadge'];
   bubble: string | null;
 };
 
@@ -256,10 +257,27 @@ function HomePixelRoute() {
                     top: `${((sceneAgent.y - 34) / (SCENE_ROWS * TILE_SIZE)) * 100}%`,
                   }}
                 >
-                  <div className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                    {sceneAgent.agent.name}
+                  <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    {sceneAgent.toolBubble ? <span>{sceneAgent.toolBubble.icon}</span> : null}
+                    <span>{sceneAgent.agent.name}</span>
                   </div>
                   <div className="line-clamp-2">{sceneAgent.bubble}</div>
+                </div>
+              ) : null
+            ))}
+
+            {sceneAgents.map((sceneAgent) => (
+              !sceneAgent.bubble && sceneAgent.toolBubble ? (
+                <div
+                  key={`${sceneAgent.agent.agentId}:tool-bubble`}
+                  className="pointer-events-none absolute flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-background/96 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                  style={{
+                    left: `${(sceneAgent.x / (SCENE_COLS * TILE_SIZE)) * 100}%`,
+                    top: `${((sceneAgent.y - 20) / (SCENE_ROWS * TILE_SIZE)) * 100}%`,
+                  }}
+                  title={sceneAgent.toolBubble.label}
+                >
+                  {sceneAgent.toolBubble.icon}
                 </div>
               ) : null
             ))}
@@ -325,6 +343,7 @@ function buildSceneAgents(input: {
       y: slot.y + bob,
       dir: slot.dir,
       frame: isAnimating ? 3 + (input.tick + index) % 2 : 1,
+      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
@@ -338,6 +357,7 @@ function buildSceneAgents(input: {
       y: slot.y + (isAnimating ? Math.cos(input.tick / 5 + index) * 3 : 0),
       dir: index % 2 === 0 ? slot.dir : 'down',
       frame: isAnimating ? 5 + (input.tick + index) % 2 : 5,
+      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
@@ -353,6 +373,7 @@ function buildSceneAgents(input: {
       frame: isAnimating
         ? (index % 3 === 0 ? 5 + (input.tick + index) % 2 : 1 + ((input.tick + index) % 2))
         : index % 3 === 0 ? 5 : 1,
+      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
@@ -366,6 +387,7 @@ function buildSceneAgents(input: {
       y: slot.y,
       dir: isAnimating && Math.sin(input.tick / 3 + index) > 0 ? 'left' : 'right',
       frame: isAnimating ? (input.tick + index) % 4 : 0,
+      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? (agent.overview.lastStepPreview ?? 'Ausente / retry') : null,
     });
   }
