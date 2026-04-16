@@ -87,6 +87,8 @@ function HomePixelRoute() {
   const [displaySceneAgents, setDisplaySceneAgents] = useState<SceneAgent[]>([]);
   const [camera, setCamera] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [canvasLayout, setCanvasLayout] = useState({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, left: 0, top: 0 });
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const dragOriginRef = useRef<{ pointerId: number; x: number; y: number; cameraX: number; cameraY: number } | null>(null);
   const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
@@ -207,6 +209,41 @@ function HomePixelRoute() {
       zoom,
     });
   }, [camera, images, visibleSceneAgents, zoom]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const viewport = viewportRef.current;
+
+    if (!canvas || !viewport) {
+      return;
+    }
+
+    function updateCanvasLayout() {
+      const canvasRect = canvas.getBoundingClientRect();
+      const viewportRect = viewport.getBoundingClientRect();
+      setCanvasLayout({
+        width: canvasRect.width,
+        height: canvasRect.height,
+        left: canvasRect.left - viewportRect.left,
+        top: canvasRect.top - viewportRect.top,
+      });
+    }
+
+    updateCanvasLayout();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateCanvasLayout();
+    });
+
+    resizeObserver.observe(canvas);
+    resizeObserver.observe(viewport);
+    window.addEventListener('resize', updateCanvasLayout);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateCanvasLayout);
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -397,7 +434,7 @@ function HomePixelRoute() {
 
       <section className="min-h-0 flex-1 overflow-hidden">
         <div className="flex h-full min-h-0 rounded-[1.5rem] bg-[#f4efe7] p-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-          <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[1.25rem] bg-[#ddd4c7]">
+          <div ref={viewportRef} className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[1.25rem] bg-[#ddd4c7]">
             <canvas
               ref={canvasRef}
               width={CANVAS_WIDTH}
@@ -411,15 +448,17 @@ function HomePixelRoute() {
                 return null;
               }
 
-              const visibleWidth = (VIEWPORT_COLS * TILE_SIZE) / zoom;
-              const visibleHeight = (VIEWPORT_ROWS * TILE_SIZE) / zoom;
-              const bubbleXPercent = ((sceneAgent.x - camera.x) / visibleWidth) * 100;
-              const bubbleYPercent = ((sceneAgent.y - 44 - camera.y) / visibleHeight) * 100;
               const bubbleScale = Number(Math.min(Math.max(zoom * 0.42, 0.34), 0.72).toFixed(2));
-              const bubbleAnchorLeft = sceneAgent.x < camera.x + visibleWidth / 2;
-              const bubbleOffsetPx = bubbleAnchorLeft ? 44 : -44;
+              const bubbleGapPx = 8;
+              const bubbleX = canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom;
+              const bubbleY = canvasLayout.top + (sceneAgent.y - 26 - camera.y) * SCALE * zoom;
 
-              if (bubbleXPercent < -20 || bubbleXPercent > 120 || bubbleYPercent < -20 || bubbleYPercent > 120) {
+              if (
+                bubbleX < -80 ||
+                bubbleX > canvasLayout.left + canvasLayout.width + 80 ||
+                bubbleY < -80 ||
+                bubbleY > canvasLayout.top + canvasLayout.height + 80
+              ) {
                 return null;
               }
 
@@ -428,10 +467,10 @@ function HomePixelRoute() {
                   key={`${sceneAgent.agentId}:bubble`}
                   className="pointer-events-none absolute max-w-[9rem] rounded-[1rem] bg-background/96 px-3 py-2 text-xs leading-5 text-foreground shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                   style={{
-                    left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
-                    top: `${bubbleYPercent}%`,
-                    transform: `${bubbleAnchorLeft ? 'translateX(0)' : 'translateX(-100%)'} scale(${bubbleScale})`,
-                    transformOrigin: bubbleAnchorLeft ? 'left bottom' : 'right bottom',
+                    left: `${bubbleX}px`,
+                    top: `${bubbleY}px`,
+                    transform: `translate(-50%, calc(-100% - ${bubbleGapPx}px)) scale(${bubbleScale})`,
+                    transformOrigin: 'center bottom',
                   }}
                 >
                   <div
@@ -449,15 +488,17 @@ function HomePixelRoute() {
                 return null;
               }
 
-              const visibleWidth = (VIEWPORT_COLS * TILE_SIZE) / zoom;
-              const visibleHeight = (VIEWPORT_ROWS * TILE_SIZE) / zoom;
-              const bubbleXPercent = ((sceneAgent.x - camera.x) / visibleWidth) * 100;
-              const bubbleYPercent = ((sceneAgent.y - 28 - camera.y) / visibleHeight) * 100;
               const bubbleScale = Number(Math.min(Math.max(zoom * 0.42, 0.34), 0.72).toFixed(2));
-              const bubbleAnchorLeft = sceneAgent.x < camera.x + visibleWidth / 2;
-              const bubbleOffsetPx = bubbleAnchorLeft ? 34 : -34;
+              const bubbleGapPx = 7;
+              const bubbleX = canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom;
+              const bubbleY = canvasLayout.top + (sceneAgent.y - 24 - camera.y) * SCALE * zoom;
 
-              if (bubbleXPercent < -20 || bubbleXPercent > 120 || bubbleYPercent < -20 || bubbleYPercent > 120) {
+              if (
+                bubbleX < -80 ||
+                bubbleX > canvasLayout.left + canvasLayout.width + 80 ||
+                bubbleY < -80 ||
+                bubbleY > canvasLayout.top + canvasLayout.height + 80
+              ) {
                 return null;
               }
 
@@ -466,10 +507,10 @@ function HomePixelRoute() {
                   key={`${sceneAgent.agentId}:tool-bubble`}
                   className="pointer-events-none absolute flex h-8 w-8 items-center justify-center rounded-full bg-background/96 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                   style={{
-                    left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
-                    top: `${bubbleYPercent}%`,
-                    transform: `${bubbleAnchorLeft ? 'translateX(0)' : 'translateX(-100%)'} scale(${bubbleScale})`,
-                    transformOrigin: bubbleAnchorLeft ? 'left bottom' : 'right bottom',
+                    left: `${bubbleX}px`,
+                    top: `${bubbleY}px`,
+                    transform: `translate(-50%, calc(-100% - ${bubbleGapPx}px)) scale(${bubbleScale})`,
+                    transformOrigin: 'center bottom',
                   }}
                   title={sceneAgent.toolBubble.label}
                 >
