@@ -13,10 +13,14 @@ export const Route = createFileRoute('/home/pixel/')({
 
 const TILE_SIZE = 16;
 const SCALE = 3;
-const SCENE_COLS = 21;
-const SCENE_ROWS = 14;
-const CANVAS_WIDTH = SCENE_COLS * TILE_SIZE * SCALE;
-const CANVAS_HEIGHT = SCENE_ROWS * TILE_SIZE * SCALE;
+const VIEWPORT_COLS = 21;
+const VIEWPORT_ROWS = 14;
+const WORLD_COLS = 27;
+const WORLD_ROWS = 18;
+const WORLD_OFFSET_X = 3 * TILE_SIZE;
+const WORLD_OFFSET_Y = 2 * TILE_SIZE;
+const CANVAS_WIDTH = VIEWPORT_COLS * TILE_SIZE * SCALE;
+const CANVAS_HEIGHT = VIEWPORT_ROWS * TILE_SIZE * SCALE;
 
 const ASSET_URLS = {
   floorCool: '/pixel-agents/assets/floors/floor_1.png',
@@ -24,6 +28,7 @@ const ASSET_URLS = {
   floorLounge: '/pixel-agents/assets/floors/floor_0.png',
   desk: '/pixel-agents/assets/furniture/DESK/DESK_FRONT.png',
   deskSide: '/pixel-agents/assets/furniture/DESK/DESK_SIDE.png',
+  chairFront: '/pixel-agents/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_FRONT.png',
   chairBack: '/pixel-agents/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_BACK.png',
   chairSide: '/pixel-agents/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png',
   pcBack: '/pixel-agents/assets/furniture/PC/PC_BACK.png',
@@ -77,7 +82,9 @@ function HomePixelRoute() {
   const [images, setImages] = useState<LoadedImages | null>(null);
   const [bubbleDeadlines, setBubbleDeadlines] = useState<Record<string, number>>({});
   const [animationDeadlines, setAnimationDeadlines] = useState<Record<string, number>>({});
+  const [camera, setCamera] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const dragOriginRef = useRef<{ x: number; y: number; cameraX: number; cameraY: number } | null>(null);
   const previousPreviewByAgentIdRef = useRef<Record<string, string | null>>({});
   const previousStepAtByAgentIdRef = useRef<Record<string, number | null>>({});
   const agents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data]);
@@ -179,8 +186,9 @@ function HomePixelRoute() {
       canvas: canvasRef.current,
       images,
       sceneAgents,
+      camera,
     });
-  }, [images, sceneAgents]);
+  }, [camera, images, sceneAgents]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -191,8 +199,8 @@ function HomePixelRoute() {
 
     function handleClick(event: MouseEvent) {
       const rect = canvas.getBoundingClientRect();
-      const normalizedX = ((event.clientX - rect.left) / rect.width) * (SCENE_COLS * TILE_SIZE);
-      const normalizedY = ((event.clientY - rect.top) / rect.height) * (SCENE_ROWS * TILE_SIZE);
+      const normalizedX = ((event.clientX - rect.left) / rect.width) * (VIEWPORT_COLS * TILE_SIZE) + camera.x;
+      const normalizedY = ((event.clientY - rect.top) / rect.height) * (VIEWPORT_ROWS * TILE_SIZE) + camera.y;
 
       const hitAgent = [...sceneAgents]
         .reverse()
@@ -213,10 +221,65 @@ function HomePixelRoute() {
       }));
     }
 
-    canvas.addEventListener('click', handleClick);
+    function handlePointerDown(event: PointerEvent) {
+      dragOriginRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        cameraX: camera.x,
+        cameraY: camera.y,
+      };
+    }
 
-    return () => canvas.removeEventListener('click', handleClick);
-  }, [sceneAgents]);
+    function handlePointerMove(event: PointerEvent) {
+      if (!dragOriginRef.current) {
+        return;
+      }
+
+      const nextCameraX = dragOriginRef.current.cameraX - ((event.clientX - dragOriginRef.current.x) / SCALE);
+      const nextCameraY = dragOriginRef.current.cameraY - ((event.clientY - dragOriginRef.current.y) / SCALE);
+      setCamera(clampCamera({ x: nextCameraX, y: nextCameraY }));
+    }
+
+    function handlePointerUp() {
+      dragOriginRef.current = null;
+    }
+
+    canvas.addEventListener('click', handleClick);
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      canvas.removeEventListener('click', handleClick);
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [camera.x, camera.y, sceneAgents]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const step = 14;
+
+      if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
+        setCamera((currentCamera) => clampCamera({ x: currentCamera.x - step, y: currentCamera.y }));
+      } else if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') {
+        setCamera((currentCamera) => clampCamera({ x: currentCamera.x + step, y: currentCamera.y }));
+      } else if (event.key === 'ArrowUp' || event.key.toLowerCase() === 'w') {
+        setCamera((currentCamera) => clampCamera({ x: currentCamera.x, y: currentCamera.y - step }));
+      } else if (event.key === 'ArrowDown' || event.key.toLowerCase() === 's') {
+        setCamera((currentCamera) => clampCamera({ x: currentCamera.x, y: currentCamera.y + step }));
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -259,9 +322,13 @@ function HomePixelRoute() {
                 return null;
               }
 
-              const bubbleXPercent = (sceneAgent.x / (SCENE_COLS * TILE_SIZE)) * 100;
-              const bubbleYPercent = ((sceneAgent.y - 44) / (SCENE_ROWS * TILE_SIZE)) * 100;
-              const bubbleOffsetPx = sceneAgent.x < (SCENE_COLS * TILE_SIZE) / 2 ? 42 : -42;
+              const bubbleXPercent = ((sceneAgent.x - camera.x) / (VIEWPORT_COLS * TILE_SIZE)) * 100;
+              const bubbleYPercent = ((sceneAgent.y - 44 - camera.y) / (VIEWPORT_ROWS * TILE_SIZE)) * 100;
+              const bubbleOffsetPx = sceneAgent.x < camera.x + (VIEWPORT_COLS * TILE_SIZE) / 2 ? 42 : -42;
+
+              if (bubbleXPercent < -20 || bubbleXPercent > 120 || bubbleYPercent < -20 || bubbleYPercent > 120) {
+                return null;
+              }
 
               return (
                 <div
@@ -270,7 +337,7 @@ function HomePixelRoute() {
                   style={{
                     left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
                     top: `${bubbleYPercent}%`,
-                    transform: sceneAgent.x < (SCENE_COLS * TILE_SIZE) / 2 ? 'translateX(0)' : 'translateX(-100%)',
+                    transform: sceneAgent.x < camera.x + (VIEWPORT_COLS * TILE_SIZE) / 2 ? 'translateX(0)' : 'translateX(-100%)',
                   }}
                 >
                   <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
@@ -287,9 +354,13 @@ function HomePixelRoute() {
                 return null;
               }
 
-              const bubbleXPercent = (sceneAgent.x / (SCENE_COLS * TILE_SIZE)) * 100;
-              const bubbleYPercent = ((sceneAgent.y - 28) / (SCENE_ROWS * TILE_SIZE)) * 100;
-              const bubbleOffsetPx = sceneAgent.x < (SCENE_COLS * TILE_SIZE) / 2 ? 34 : -34;
+              const bubbleXPercent = ((sceneAgent.x - camera.x) / (VIEWPORT_COLS * TILE_SIZE)) * 100;
+              const bubbleYPercent = ((sceneAgent.y - 28 - camera.y) / (VIEWPORT_ROWS * TILE_SIZE)) * 100;
+              const bubbleOffsetPx = sceneAgent.x < camera.x + (VIEWPORT_COLS * TILE_SIZE) / 2 ? 34 : -34;
+
+              if (bubbleXPercent < -20 || bubbleXPercent > 120 || bubbleYPercent < -20 || bubbleYPercent > 120) {
+                return null;
+              }
 
               return (
                 <div
@@ -298,7 +369,7 @@ function HomePixelRoute() {
                   style={{
                     left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
                     top: `${bubbleYPercent}%`,
-                    transform: sceneAgent.x < (SCENE_COLS * TILE_SIZE) / 2 ? 'translateX(0)' : 'translateX(-100%)',
+                    transform: sceneAgent.x < camera.x + (VIEWPORT_COLS * TILE_SIZE) / 2 ? 'translateX(0)' : 'translateX(-100%)',
                   }}
                   title={sceneAgent.toolBubble.label}
                 >
@@ -324,28 +395,28 @@ function buildSceneAgents(input: {
   bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
-    { x: 4 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'down' as const },
-    { x: 8 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'down' as const },
-    { x: 4 * TILE_SIZE, y: 10.6 * TILE_SIZE, dir: 'down' as const },
-    { x: 8 * TILE_SIZE, y: 10.6 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.2 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.2 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.6 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.6 * TILE_SIZE, dir: 'down' as const },
   ];
   const memorySlots = [
-    { x: 14.8 * TILE_SIZE, y: 5.8 * TILE_SIZE, dir: 'left' as const },
-    { x: 17.4 * TILE_SIZE, y: 5.8 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 14.8 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.8 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 17.4 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.8 * TILE_SIZE, dir: 'left' as const },
   ];
   const focusSlots = [
-    { x: 13.5 * TILE_SIZE, y: 11.2 * TILE_SIZE, dir: 'right' as const },
-    { x: 15.4 * TILE_SIZE, y: 12.2 * TILE_SIZE, dir: 'left' as const },
-    { x: 17.4 * TILE_SIZE, y: 11.4 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 13.5 * TILE_SIZE, y: WORLD_OFFSET_Y + 11.2 * TILE_SIZE, dir: 'right' as const },
+    { x: WORLD_OFFSET_X + 15.4 * TILE_SIZE, y: WORLD_OFFSET_Y + 12.2 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 17.4 * TILE_SIZE, y: WORLD_OFFSET_Y + 11.4 * TILE_SIZE, dir: 'left' as const },
   ];
   const sofaRecoverySlots = [
-    { x: 14.25 * TILE_SIZE, y: 10.55 * TILE_SIZE, dir: 'down' as const },
-    { x: 16.35 * TILE_SIZE, y: 10.55 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 14.25 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.55 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 16.35 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.55 * TILE_SIZE, dir: 'down' as const },
   ];
   const roamLane = [
-    { x: 11.2 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'right' as const },
-    { x: 11.8 * TILE_SIZE, y: 9.4 * TILE_SIZE, dir: 'left' as const },
-    { x: 11.2 * TILE_SIZE, y: 12.1 * TILE_SIZE, dir: 'right' as const },
+    { x: WORLD_OFFSET_X + 11.2 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.2 * TILE_SIZE, dir: 'right' as const },
+    { x: WORLD_OFFSET_X + 11.8 * TILE_SIZE, y: WORLD_OFFSET_Y + 9.4 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 11.2 * TILE_SIZE, y: WORLD_OFFSET_Y + 12.1 * TILE_SIZE, dir: 'right' as const },
   ];
 
   const runningAgents = input.agents.filter((agent) => agent.executionState === 'running' && !agent.overview.ltm.running);
@@ -446,6 +517,10 @@ function renderScene(input: {
   canvas: HTMLCanvasElement;
   images: LoadedImages;
   sceneAgents: SceneAgent[];
+  camera: {
+    x: number;
+    y: number;
+  };
 }) {
   const context = input.canvas.getContext('2d');
 
@@ -456,13 +531,20 @@ function renderScene(input: {
   context.imageSmoothingEnabled = false;
   context.clearRect(0, 0, input.canvas.width, input.canvas.height);
 
-  drawFloor(context, input.images);
-  drawFurnitureBackground(context, input.images);
-  drawSceneAgents(context, input.images, input.sceneAgents);
-  drawFurnitureForeground(context, input.images);
+  drawFloor(context, input.images, input.camera);
+  drawFurnitureBackground(context, input.images, input.camera);
+  drawSceneAgents(context, input.images, input.sceneAgents, input.camera);
+  drawFurnitureForeground(context, input.images, input.camera);
 }
 
-function drawFloor(context: CanvasRenderingContext2D, images: LoadedImages) {
+function drawFloor(
+  context: CanvasRenderingContext2D,
+  images: LoadedImages,
+  camera: {
+    x: number;
+    y: number;
+  },
+) {
   const warmTile = images[ASSET_URLS.floorWarm];
   const coolTile = images[ASSET_URLS.floorCool];
   const loungeTile = images[ASSET_URLS.floorLounge];
@@ -474,10 +556,10 @@ function drawFloor(context: CanvasRenderingContext2D, images: LoadedImages) {
   context.fillStyle = '#ddd4c7';
   context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  for (let row = 0; row < SCENE_ROWS; row += 1) {
-    for (let col = 0; col < SCENE_COLS; col += 1) {
-      const dx = col * TILE_SIZE * SCALE;
-      const dy = row * TILE_SIZE * SCALE;
+  for (let row = 0; row < WORLD_ROWS; row += 1) {
+    for (let col = 0; col < WORLD_COLS; col += 1) {
+      const dx = (col * TILE_SIZE - camera.x) * SCALE;
+      const dy = (row * TILE_SIZE - camera.y) * SCALE;
 
       if (row < 2) {
         context.fillStyle = '#d2c8ba';
@@ -500,58 +582,76 @@ function drawFloor(context: CanvasRenderingContext2D, images: LoadedImages) {
   }
 
   context.fillStyle = '#cabda8';
-  context.fillRect(0, 0, CANVAS_WIDTH, TILE_SIZE * SCALE * 2);
+  context.fillRect(0, -camera.y * SCALE, CANVAS_WIDTH, TILE_SIZE * SCALE * 2);
 }
 
-function drawFurnitureBackground(context: CanvasRenderingContext2D, images: LoadedImages) {
+function drawFurnitureBackground(
+  context: CanvasRenderingContext2D,
+  images: LoadedImages,
+  camera: {
+    x: number;
+    y: number;
+  },
+) {
   const items = [
-    { key: ASSET_URLS.painting, x: 12.1, y: 1.2 },
-    { key: ASSET_URLS.whiteboard, x: 15.4, y: 1.3 },
-    { key: ASSET_URLS.shelf, x: 18.1, y: 1.25 },
-    { key: ASSET_URLS.plantLarge, x: 13.1, y: 1.55 },
-    { key: ASSET_URLS.plant, x: 19.2, y: 1.55 },
-    { key: ASSET_URLS.desk, x: 2.6, y: 4.5 },
-    { key: ASSET_URLS.desk, x: 6.6, y: 4.5 },
-    { key: ASSET_URLS.desk, x: 2.6, y: 8.9 },
-    { key: ASSET_URLS.desk, x: 6.6, y: 8.9 },
-    { key: ASSET_URLS.pcBack, x: 3.45, y: 4.15 },
-    { key: ASSET_URLS.pcBack, x: 7.45, y: 4.15 },
-    { key: ASSET_URLS.pcBack, x: 3.45, y: 8.55 },
-    { key: ASSET_URLS.pcBack, x: 7.45, y: 8.55 },
-    { key: ASSET_URLS.pcSide, x: 13.8, y: 5.0 },
-    { key: ASSET_URLS.pcSide, x: 16.5, y: 5.0 },
-    { key: ASSET_URLS.deskSide, x: 13.2, y: 5.35 },
-    { key: ASSET_URLS.deskSide, x: 15.9, y: 5.35 },
-    { key: ASSET_URLS.sofaBack, x: 13.15, y: 10.05 },
-    { key: ASSET_URLS.sofaBack, x: 15.25, y: 10.05 },
-    { key: ASSET_URLS.coffeeTable, x: 14.45, y: 11.2 },
-    { key: ASSET_URLS.bin, x: 10.9, y: 4.8 },
-    { key: ASSET_URLS.bin, x: 10.9, y: 9.2 },
+    { key: ASSET_URLS.painting, x: WORLD_OFFSET_X / TILE_SIZE + 12.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.2 },
+    { key: ASSET_URLS.whiteboard, x: WORLD_OFFSET_X / TILE_SIZE + 15.4, y: WORLD_OFFSET_Y / TILE_SIZE + 1.3 },
+    { key: ASSET_URLS.shelf, x: WORLD_OFFSET_X / TILE_SIZE + 18.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.25 },
+    { key: ASSET_URLS.plantLarge, x: WORLD_OFFSET_X / TILE_SIZE + 13.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.55 },
+    { key: ASSET_URLS.plant, x: WORLD_OFFSET_X / TILE_SIZE + 19.2, y: WORLD_OFFSET_Y / TILE_SIZE + 1.55 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 4.5 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 4.5 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 8.9 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 8.9 },
+    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 3.45, y: WORLD_OFFSET_Y / TILE_SIZE + 4.15 },
+    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 7.45, y: WORLD_OFFSET_Y / TILE_SIZE + 4.15 },
+    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 3.45, y: WORLD_OFFSET_Y / TILE_SIZE + 8.55 },
+    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 7.45, y: WORLD_OFFSET_Y / TILE_SIZE + 8.55 },
+    { key: ASSET_URLS.pcSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.8, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
+    { key: ASSET_URLS.pcSide, x: WORLD_OFFSET_X / TILE_SIZE + 16.5, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
+    { key: ASSET_URLS.deskSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.2, y: WORLD_OFFSET_Y / TILE_SIZE + 5.35 },
+    { key: ASSET_URLS.deskSide, x: WORLD_OFFSET_X / TILE_SIZE + 15.9, y: WORLD_OFFSET_Y / TILE_SIZE + 5.35 },
+    { key: ASSET_URLS.sofaBack, x: WORLD_OFFSET_X / TILE_SIZE + 13.15, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
+    { key: ASSET_URLS.sofaBack, x: WORLD_OFFSET_X / TILE_SIZE + 15.25, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
+    { key: ASSET_URLS.coffeeTable, x: WORLD_OFFSET_X / TILE_SIZE + 14.45, y: WORLD_OFFSET_Y / TILE_SIZE + 11.2 },
+    { key: ASSET_URLS.bin, x: WORLD_OFFSET_X / TILE_SIZE + 10.9, y: WORLD_OFFSET_Y / TILE_SIZE + 4.8 },
+    { key: ASSET_URLS.bin, x: WORLD_OFFSET_X / TILE_SIZE + 10.9, y: WORLD_OFFSET_Y / TILE_SIZE + 9.2 },
   ];
 
-  drawFurnitureLayer(context, images, items);
+  drawFurnitureLayer(context, images, items, camera);
 }
 
-function drawFurnitureForeground(context: CanvasRenderingContext2D, images: LoadedImages) {
+function drawFurnitureForeground(
+  context: CanvasRenderingContext2D,
+  images: LoadedImages,
+  camera: {
+    x: number;
+    y: number;
+  },
+) {
   const items = [
-    { key: ASSET_URLS.chairBack, x: 3.5, y: 6.75 },
-    { key: ASSET_URLS.chairBack, x: 7.5, y: 6.75 },
-    { key: ASSET_URLS.chairBack, x: 3.5, y: 11.15 },
-    { key: ASSET_URLS.chairBack, x: 7.5, y: 11.15 },
-    { key: ASSET_URLS.chairSide, x: 13.55, y: 6.05 },
-    { key: ASSET_URLS.chairSide, x: 16.25, y: 6.05 },
-    { key: ASSET_URLS.sofa, x: 13.15, y: 10.05 },
-    { key: ASSET_URLS.sofa, x: 15.25, y: 10.05 },
-    { key: ASSET_URLS.plant, x: 18.35, y: 11.0 },
+    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.5, y: WORLD_OFFSET_Y / TILE_SIZE + 6.75 },
+    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.5, y: WORLD_OFFSET_Y / TILE_SIZE + 6.75 },
+    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.5, y: WORLD_OFFSET_Y / TILE_SIZE + 11.15 },
+    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.5, y: WORLD_OFFSET_Y / TILE_SIZE + 11.15 },
+    { key: ASSET_URLS.chairSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.55, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
+    { key: ASSET_URLS.chairSide, x: WORLD_OFFSET_X / TILE_SIZE + 16.25, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
+    { key: ASSET_URLS.sofa, x: WORLD_OFFSET_X / TILE_SIZE + 13.15, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
+    { key: ASSET_URLS.sofa, x: WORLD_OFFSET_X / TILE_SIZE + 15.25, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
+    { key: ASSET_URLS.plant, x: WORLD_OFFSET_X / TILE_SIZE + 18.35, y: WORLD_OFFSET_Y / TILE_SIZE + 11.0 },
   ];
 
-  drawFurnitureLayer(context, images, items);
+  drawFurnitureLayer(context, images, items, camera);
 }
 
 function drawFurnitureLayer(
   context: CanvasRenderingContext2D,
   images: LoadedImages,
   items: Array<{ key: string; x: number; y: number }>,
+  camera: {
+    x: number;
+    y: number;
+  },
 ) {
 
   for (const item of items) {
@@ -563,15 +663,23 @@ function drawFurnitureLayer(
 
     context.drawImage(
       image,
-      Math.round(item.x * TILE_SIZE * SCALE),
-      Math.round(item.y * TILE_SIZE * SCALE),
+      Math.round((item.x * TILE_SIZE - camera.x) * SCALE),
+      Math.round((item.y * TILE_SIZE - camera.y) * SCALE),
       image.width * SCALE,
       image.height * SCALE,
     );
   }
 }
 
-function drawSceneAgents(context: CanvasRenderingContext2D, images: LoadedImages, sceneAgents: SceneAgent[]) {
+function drawSceneAgents(
+  context: CanvasRenderingContext2D,
+  images: LoadedImages,
+  sceneAgents: SceneAgent[],
+  camera: {
+    x: number;
+    y: number;
+  },
+) {
   const sortedAgents = [...sceneAgents].sort((left, right) => left.y - right.y);
 
   for (const sceneAgent of sortedAgents) {
@@ -585,12 +693,19 @@ function drawSceneAgents(context: CanvasRenderingContext2D, images: LoadedImages
     drawCharacterFrame({
       context,
       image,
-      x: sceneAgent.x * SCALE,
-      y: sceneAgent.y * SCALE,
+      x: (sceneAgent.x - camera.x) * SCALE,
+      y: (sceneAgent.y - camera.y) * SCALE,
       dir: sceneAgent.dir,
       frame: sceneAgent.frame,
     });
   }
+}
+
+function clampCamera(input: { x: number; y: number }) {
+  return {
+    x: Math.min(Math.max(Math.round(input.x), 0), (WORLD_COLS - VIEWPORT_COLS) * TILE_SIZE),
+    y: Math.min(Math.max(Math.round(input.y), 0), (WORLD_ROWS - VIEWPORT_ROWS) * TILE_SIZE),
+  };
 }
 
 function drawCharacterFrame(input: {
