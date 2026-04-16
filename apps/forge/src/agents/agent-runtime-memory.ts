@@ -12,7 +12,7 @@ import type {
 import type { AgentConfig } from '@mastra/core/agent';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 
-import { createAgentLongTermMemoryRecallProcessor } from './agent-long-term-memory-recall';
+import { createAgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
 
 export async function createAgentRuntimeMemory(input: {
   storage: LibSQLStore;
@@ -50,6 +50,14 @@ export async function createAgentRuntimeMemory(input: {
   });
   const inputProcessors: InputProcessorOrWorkflow[] = [];
   const outputProcessors: OutputProcessorOrWorkflow[] = [];
+  const longTermMemoryRecall = input.longTermMemory
+    ? createAgentLongTermMemoryRecall({
+        agentId: input.agentId,
+        agentWorkspacePath: input.agentWorkspacePath,
+        mastraId: input.mastraId,
+        storage: input.storage,
+      })
+    : null;
 
   if (input.checkpointedOmEnabled) {
     const checkpointedObservationalMemory = createCheckpointedObservationalMemoryProcessor({
@@ -69,17 +77,6 @@ export async function createAgentRuntimeMemory(input: {
     inputProcessors.push(checkpointedObservationalMemory);
   }
 
-  if (input.longTermMemory) {
-    inputProcessors.push(
-      createAgentLongTermMemoryRecallProcessor({
-        agentId: input.agentId,
-        agentWorkspacePath: input.agentWorkspacePath,
-        mastraId: input.mastraId,
-        storage: input.storage,
-      }),
-    );
-  }
-
   if (input.tokenCountFilterEnabled ?? true) {
     inputProcessors.push(new TokenLimiterProcessor(input.tokenCountFilterLimit ?? 100000));
   }
@@ -88,5 +85,6 @@ export async function createAgentRuntimeMemory(input: {
     memory,
     inputProcessors,
     outputProcessors,
+    longTermMemoryRecall,
   };
 }

@@ -64,6 +64,14 @@ export type InternalAgentRuntime<
   agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
   workspace: WorkspaceRuntime;
   communication: CommunicationModule;
+  longTermMemoryRecall: {
+    recallFromStep(input: {
+      step: unknown;
+      steps: unknown[];
+      threadId: string | null;
+      resourceId?: string;
+    }): Promise<string | null>;
+  } | null;
   longTermMemory: {
     onAgentIdle(): Promise<void>;
     onAgentRunning(): void;
