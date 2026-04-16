@@ -50,6 +50,7 @@ type SceneAgent = {
   y: number;
   dir: 'down' | 'up' | 'right' | 'left';
   frame: number;
+  toolBubble: AgentListItem['overview']['lastToolBadge'];
   bubble: string | null;
 };
 
@@ -67,8 +68,10 @@ function HomePixelRoute() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [images, setImages] = useState<LoadedImages | null>(null);
   const [bubbleDeadlines, setBubbleDeadlines] = useState<Record<string, number>>({});
+  const [animationDeadlines, setAnimationDeadlines] = useState<Record<string, number>>({});
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const previousPreviewByAgentIdRef = useRef<Record<string, string | null>>({});
+  const previousStepAtByAgentIdRef = useRef<Record<string, number | null>>({});
   const agents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data]);
 
   useEffect(() => {
@@ -126,14 +129,37 @@ function HomePixelRoute() {
     });
   }, [agents, nowMs]);
 
+  useEffect(() => {
+    setAnimationDeadlines((currentDeadlines) => {
+      const nextDeadlines: Record<string, number> = {};
+
+      for (const agent of agents) {
+        const previousStepAt = previousStepAtByAgentIdRef.current[agent.agentId] ?? null;
+        const currentStepAt = agent.overview.lastStepAt ?? null;
+        const existingDeadline = currentDeadlines[agent.agentId] ?? 0;
+
+        if (currentStepAt && currentStepAt !== previousStepAt) {
+          nextDeadlines[agent.agentId] = nowMs + 3_600;
+        } else if (existingDeadline > nowMs) {
+          nextDeadlines[agent.agentId] = existingDeadline;
+        }
+
+        previousStepAtByAgentIdRef.current[agent.agentId] = currentStepAt;
+      }
+
+      return nextDeadlines;
+    });
+  }, [agents, nowMs]);
+
   const sceneAgents = useMemo(
     () => buildSceneAgents({
       agents,
       tick,
       nowMs,
+      animationDeadlines,
       bubbleDeadlines,
     }),
-    [agents, bubbleDeadlines, nowMs, tick],
+    [agents, animationDeadlines, bubbleDeadlines, nowMs, tick],
   );
 
   useEffect(() => {
@@ -231,10 +257,27 @@ function HomePixelRoute() {
                     top: `${((sceneAgent.y - 34) / (SCENE_ROWS * TILE_SIZE)) * 100}%`,
                   }}
                 >
-                  <div className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                    {sceneAgent.agent.name}
+                  <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    {sceneAgent.toolBubble ? <span>{sceneAgent.toolBubble.icon}</span> : null}
+                    <span>{sceneAgent.agent.name}</span>
                   </div>
                   <div className="line-clamp-2">{sceneAgent.bubble}</div>
+                </div>
+              ) : null
+            ))}
+
+            {sceneAgents.map((sceneAgent) => (
+              !sceneAgent.bubble && sceneAgent.toolBubble ? (
+                <div
+                  key={`${sceneAgent.agent.agentId}:tool-bubble`}
+                  className="pointer-events-none absolute flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-background/96 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                  style={{
+                    left: `${(sceneAgent.x / (SCENE_COLS * TILE_SIZE)) * 100}%`,
+                    top: `${((sceneAgent.y - 20) / (SCENE_ROWS * TILE_SIZE)) * 100}%`,
+                  }}
+                  title={sceneAgent.toolBubble.label}
+                >
+                  {sceneAgent.toolBubble.icon}
                 </div>
               ) : null
             ))}
@@ -252,6 +295,7 @@ function buildSceneAgents(input: {
   agents: AgentListItem[];
   tick: number;
   nowMs: number;
+  animationDeadlines: Record<string, number>;
   bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
@@ -287,49 +331,63 @@ function buildSceneAgents(input: {
 
   for (const [index, agent] of runningAgents.entries()) {
     const slot = runningSlots[index % runningSlots.length] ?? roamLane[index % roamLane.length];
-    const bob = Math.sin(input.tick / 5 + index) * 1.2;
+    const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
+    const bob = isAnimating ? Math.sin(input.tick / 5 + index) * 1.2 : 0;
     sceneAgents.push({
       agent,
-      x: slot.x + (index >= runningSlots.length ? Math.sin(input.tick / 4 + index) * 6 : 0),
+      x: slot.x + (
+        isAnimating && index >= runningSlots.length
+          ? Math.sin(input.tick / 4 + index) * 6
+          : 0
+      ),
       y: slot.y + bob,
       dir: slot.dir,
-      frame: 3 + (input.tick + index) % 2,
+      frame: isAnimating ? 3 + (input.tick + index) % 2 : 1,
+      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
 
   for (const [index, agent] of memoryAgents.entries()) {
     const slot = memorySlots[index % memorySlots.length];
+    const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     sceneAgents.push({
       agent,
-      x: slot.x + Math.sin(input.tick / 6 + index) * 3,
-      y: slot.y + Math.cos(input.tick / 5 + index) * 3,
+      x: slot.x + (isAnimating ? Math.sin(input.tick / 6 + index) * 3 : 0),
+      y: slot.y + (isAnimating ? Math.cos(input.tick / 5 + index) * 3 : 0),
       dir: index % 2 === 0 ? slot.dir : 'down',
-      frame: 5 + (input.tick + index) % 2,
+      frame: isAnimating ? 5 + (input.tick + index) % 2 : 5,
+      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
 
   for (const [index, agent] of idleAgents.entries()) {
     const slot = focusSlots[index % focusSlots.length] ?? roamLane[index % roamLane.length];
+    const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     sceneAgents.push({
       agent,
-      x: slot.x + Math.sin(input.tick / 8 + index) * 5,
-      y: slot.y + Math.cos(input.tick / 9 + index) * 2,
+      x: slot.x + (isAnimating ? Math.sin(input.tick / 8 + index) * 5 : 0),
+      y: slot.y + (isAnimating ? Math.cos(input.tick / 9 + index) * 2 : 0),
       dir: index % 2 === 0 ? slot.dir : 'right',
-      frame: index % 3 === 0 ? 5 + (input.tick + index) % 2 : 1,
+      frame: isAnimating
+        ? (index % 3 === 0 ? 5 + (input.tick + index) % 2 : 1 + ((input.tick + index) % 2))
+        : index % 3 === 0 ? 5 : 1,
+      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
 
   for (const [index, agent] of absentAgents.entries()) {
     const slot = recoverySlots[index % recoverySlots.length];
+    const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     sceneAgents.push({
       agent,
-      x: slot.x + Math.sin(input.tick / 3 + index) * 6,
+      x: slot.x + (isAnimating ? Math.sin(input.tick / 3 + index) * 6 : 0),
       y: slot.y,
-      dir: Math.sin(input.tick / 3 + index) > 0 ? 'left' : 'right',
-      frame: (input.tick + index) % 4,
+      dir: isAnimating && Math.sin(input.tick / 3 + index) > 0 ? 'left' : 'right',
+      frame: isAnimating ? (input.tick + index) % 4 : 0,
+      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? (agent.overview.lastStepPreview ?? 'Ausente / retry') : null,
     });
   }
