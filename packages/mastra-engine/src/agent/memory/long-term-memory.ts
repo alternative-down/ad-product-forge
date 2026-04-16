@@ -10,7 +10,6 @@ import type {
   Processor,
 } from '@mastra/core/processors';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
-import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
 import type { MastraToolInvocationOptions } from '@mastra/core/tools';
@@ -18,7 +17,7 @@ import { ObservationalMemory } from '@mastra/memory/processors';
 
 import { forgeDebug } from '../../debug';
 import { toMastraSafeIdentifier } from '../../mastra-id';
-import { embedTextWithFastembed } from './embedder';
+import { embedTextWithFastembed, getFastembedSingleton } from './embedder';
 
 
 export type LongTermMemoryConfig = {
@@ -325,7 +324,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
         indexName: this.searchIndexName,
-        model: fastembed,
+        model: getFastembedSingleton(),
         graphOptions: {
           threshold: 0.7,
           randomWalkSteps: 50,
