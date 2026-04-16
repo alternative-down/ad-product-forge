@@ -179,9 +179,8 @@ function HomePixelRoute() {
       canvas: canvasRef.current,
       images,
       sceneAgents,
-      tick,
     });
-  }, [images, sceneAgents, tick]);
+  }, [images, sceneAgents]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -325,10 +324,10 @@ function buildSceneAgents(input: {
   bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
-    { x: 4 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'up' as const },
-    { x: 8 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'up' as const },
-    { x: 4 * TILE_SIZE, y: 10.6 * TILE_SIZE, dir: 'up' as const },
-    { x: 8 * TILE_SIZE, y: 10.6 * TILE_SIZE, dir: 'up' as const },
+    { x: 4 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'down' as const },
+    { x: 8 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'down' as const },
+    { x: 4 * TILE_SIZE, y: 10.6 * TILE_SIZE, dir: 'down' as const },
+    { x: 8 * TILE_SIZE, y: 10.6 * TILE_SIZE, dir: 'down' as const },
   ];
   const memorySlots = [
     { x: 14.8 * TILE_SIZE, y: 5.8 * TILE_SIZE, dir: 'left' as const },
@@ -447,7 +446,6 @@ function renderScene(input: {
   canvas: HTMLCanvasElement;
   images: LoadedImages;
   sceneAgents: SceneAgent[];
-  tick: number;
 }) {
   const context = input.canvas.getContext('2d');
 
@@ -459,7 +457,7 @@ function renderScene(input: {
   context.clearRect(0, 0, input.canvas.width, input.canvas.height);
 
   drawFloor(context, input.images);
-  drawFurnitureBackground(context, input.images, input.tick);
+  drawFurnitureBackground(context, input.images);
   drawSceneAgents(context, input.images, input.sceneAgents);
   drawFurnitureForeground(context, input.images);
 }
@@ -505,7 +503,7 @@ function drawFloor(context: CanvasRenderingContext2D, images: LoadedImages) {
   context.fillRect(0, 0, CANVAS_WIDTH, TILE_SIZE * SCALE * 2);
 }
 
-function drawFurnitureBackground(context: CanvasRenderingContext2D, images: LoadedImages, tick: number) {
+function drawFurnitureBackground(context: CanvasRenderingContext2D, images: LoadedImages) {
   const items = [
     { key: ASSET_URLS.painting, x: 12.1, y: 1.2 },
     { key: ASSET_URLS.whiteboard, x: 15.4, y: 1.3 },
@@ -520,8 +518,8 @@ function drawFurnitureBackground(context: CanvasRenderingContext2D, images: Load
     { key: ASSET_URLS.pcBack, x: 7.45, y: 4.15 },
     { key: ASSET_URLS.pcBack, x: 3.45, y: 8.55 },
     { key: ASSET_URLS.pcBack, x: 7.45, y: 8.55 },
-    { key: tick % 2 === 0 ? ASSET_URLS.pcSide : ASSET_URLS.pc1, x: 13.8, y: 5.0 },
-    { key: tick % 2 === 0 ? ASSET_URLS.pcSide : ASSET_URLS.pc2, x: 16.5, y: 5.0 },
+    { key: ASSET_URLS.pcSide, x: 13.8, y: 5.0 },
+    { key: ASSET_URLS.pcSide, x: 16.5, y: 5.0 },
     { key: ASSET_URLS.deskSide, x: 13.2, y: 5.35 },
     { key: ASSET_URLS.deskSide, x: 15.9, y: 5.35 },
     { key: ASSET_URLS.sofaBack, x: 13.15, y: 10.05 },
