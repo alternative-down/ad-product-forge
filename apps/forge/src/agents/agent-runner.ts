@@ -959,7 +959,7 @@ export function createAgentRunner(
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await Promise.race([
           currentRuntime.agent.generate(effectivePromptText, {
-            maxSteps: 3,
+            maxSteps: 1,
             abortSignal: controller.signal,
             ...(systemPrompt ? { system: systemPrompt } : {}),
             memory: {
