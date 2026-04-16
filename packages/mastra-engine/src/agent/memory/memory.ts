@@ -1,8 +1,8 @@
 import type { AgentConfig } from '@mastra/core/agent';
-import { fastembed } from '@mastra/fastembed';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { Memory } from '@mastra/memory';
 
+import { getFastembedSingleton } from './embedder';
 import { WORKING_MEMORY_SCHEMA } from './working-memory';
 
 export function createAgentMemory(config: {
@@ -33,7 +33,7 @@ export function createAgentMemory(config: {
     : false;
 
   return new Memory({
-    embedder: fastembed,
+    embedder: getFastembedSingleton(),
     storage: config.storage,
     vector: config.vector,
     options: {

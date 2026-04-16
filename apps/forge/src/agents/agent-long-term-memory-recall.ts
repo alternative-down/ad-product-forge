@@ -4,13 +4,12 @@ import fs from 'node:fs/promises';
 import type { AgentConfig } from '@mastra/core/agent';
 import type { MastraToolInvocationOptions } from '@mastra/core/tools';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
-import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector, type LibSQLStore } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
 
 import { toMastraSafeIdentifier } from '@mastra-engine/core';
 
-import { embedTextWithFastembed } from '@mastra-engine/core';
+import { embedTextWithFastembed, getFastembedSingleton } from '@mastra-engine/core';
 
 type SearchResult = {
   id: string;
@@ -361,7 +360,7 @@ export class AgentLongTermMemoryRecall {
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
         indexName: this.searchIndexName,
-        model: fastembed,
+        model: getFastembedSingleton(),
         graphOptions: {
           threshold: RECALL_GRAPH_THRESHOLD,
           randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
