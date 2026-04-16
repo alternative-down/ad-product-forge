@@ -97,11 +97,15 @@ function LongTermMemorySection(input: {
     resultIds: string[];
     resultCount: number;
     resultScores: number[];
+    graphHit: boolean;
     stepsJson: string;
     updatedAt: number;
     lastInitAt: number | null;
     searchMode: string;
     topK: number;
+    graphTopK: number;
+    graphThreshold: number;
+    graphRandomWalkSteps: number;
     indexPaths: string[];
     workspaceFileCount: number;
     memoryFileCount: number;
@@ -167,6 +171,10 @@ function LongTermMemorySection(input: {
           `lastInitAt: ${input.ltmRecall.lastInitAt ? formatDateTime(input.ltmRecall.lastInitAt) : '—'}`,
           `searchMode: ${input.ltmRecall.searchMode}`,
           `topK: ${formatNumber(input.ltmRecall.topK)}`,
+          `graphTopK: ${formatNumber(input.ltmRecall.graphTopK)}`,
+          `graphThreshold: ${input.ltmRecall.graphThreshold}`,
+          `graphRandomWalkSteps: ${formatNumber(input.ltmRecall.graphRandomWalkSteps)}`,
+          `graphHit: ${input.ltmRecall.graphHit ? 'yes' : 'no'}`,
           `indexPaths: ${input.ltmRecall.indexPaths.join(', ') || '—'}`,
           `workspaceFileCount: ${formatNumber(input.ltmRecall.workspaceFileCount)}`,
           `memoryFileCount: ${formatNumber(input.ltmRecall.memoryFileCount)}`,

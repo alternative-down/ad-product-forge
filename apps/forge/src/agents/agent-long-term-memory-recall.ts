@@ -2,8 +2,11 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 
 import type { AgentConfig } from '@mastra/core/agent';
+import type { MastraToolInvocationOptions } from '@mastra/core/tools';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
+import { fastembed } from '@mastra/fastembed';
 import { LibSQLVector, type LibSQLStore } from '@mastra/libsql';
+import { createGraphRAGTool } from '@mastra/rag';
 
 import { toMastraSafeIdentifier } from '@mastra-engine/core';
 
@@ -17,8 +20,11 @@ type SearchResult = {
 
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
 const RECALL_AUTO_INDEX_PATHS = ['/workspace-memory', '/workspace-memory/memory'] as const;
-const RECALL_SEARCH_TOP_K = 4;
+const RECALL_SEARCH_TOP_K = 3;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
+const RECALL_GRAPH_TOP_K = 3;
+const RECALL_GRAPH_THRESHOLD = 0.7;
+const RECALL_GRAPH_RANDOM_WALK_STEPS = 50;
 
 type RecallSnapshot = {
   status: 'hit' | 'miss' | 'error';
@@ -26,11 +32,15 @@ type RecallSnapshot = {
   resultIds: string[];
   resultCount: number;
   resultScores: number[];
+  graphHit: boolean;
   stepsJson: string;
   updatedAt: string;
   lastInitAt: string | null;
   searchMode: string;
   topK: number;
+  graphTopK: number;
+  graphThreshold: number;
+  graphRandomWalkSteps: number;
   indexPaths: string[];
   workspaceFileCount: number;
   memoryFileCount: number;
@@ -156,11 +166,15 @@ export class AgentLongTermMemoryRecall {
           resultIds: [],
           resultCount: 0,
           resultScores: [],
+          graphHit: false,
           stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
           lastInitAt: this.lastInitAt,
           searchMode: RECALL_SEARCH_MODE,
           topK: RECALL_SEARCH_TOP_K,
+          graphTopK: RECALL_GRAPH_TOP_K,
+          graphThreshold: RECALL_GRAPH_THRESHOLD,
+          graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
           indexPaths: [...RECALL_AUTO_INDEX_PATHS],
           workspaceFileCount: indexStats.workspaceFileCount,
           memoryFileCount: indexStats.memoryFileCount,
@@ -171,8 +185,10 @@ export class AgentLongTermMemoryRecall {
       }
 
       const { formatted, results } = await this.searchWorkspace(queryText);
+      const graphContext = await this.searchGraph(queryText, results);
+      const recallText = [formatted, graphContext].filter(Boolean).join('\n\n');
 
-      if (!formatted) {
+      if (!recallText) {
         await this.persistRecallSnapshot({
           threadId: input.threadId,
           resourceId: input.resourceId,
@@ -182,11 +198,15 @@ export class AgentLongTermMemoryRecall {
           resultIds: [],
           resultCount: 0,
           resultScores: [],
+          graphHit: false,
           stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
           lastInitAt: this.lastInitAt,
           searchMode: RECALL_SEARCH_MODE,
           topK: RECALL_SEARCH_TOP_K,
+          graphTopK: RECALL_GRAPH_TOP_K,
+          graphThreshold: RECALL_GRAPH_THRESHOLD,
+          graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
           indexPaths: [...RECALL_AUTO_INDEX_PATHS],
           workspaceFileCount: indexStats.workspaceFileCount,
           memoryFileCount: indexStats.memoryFileCount,
@@ -205,11 +225,15 @@ export class AgentLongTermMemoryRecall {
         resultIds: results.map((result) => result.id),
         resultCount: results.length,
         resultScores: results.map((result) => result.score ?? 0),
+        graphHit: Boolean(graphContext),
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         lastInitAt: this.lastInitAt,
         searchMode: RECALL_SEARCH_MODE,
         topK: RECALL_SEARCH_TOP_K,
+        graphTopK: RECALL_GRAPH_TOP_K,
+        graphThreshold: RECALL_GRAPH_THRESHOLD,
+        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
         indexPaths: [...RECALL_AUTO_INDEX_PATHS],
         workspaceFileCount: indexStats.workspaceFileCount,
         memoryFileCount: indexStats.memoryFileCount,
@@ -221,7 +245,7 @@ export class AgentLongTermMemoryRecall {
         'These are retrieved documents from your maintained long-term memory.',
         'Treat them as useful background context, but still verify against newer thread context and current workspace state when needed.',
         '',
-        formatted,
+        recallText,
       ].join('\n');
     } catch (error) {
       console.error('[AgentLongTermMemoryRecall] recall failed:', error);
@@ -234,11 +258,15 @@ export class AgentLongTermMemoryRecall {
         resultIds: [],
         resultCount: 0,
         resultScores: [],
+        graphHit: false,
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         lastInitAt: this.lastInitAt,
         searchMode: RECALL_SEARCH_MODE,
         topK: RECALL_SEARCH_TOP_K,
+        graphTopK: RECALL_GRAPH_TOP_K,
+        graphThreshold: RECALL_GRAPH_THRESHOLD,
+        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
         indexPaths: [...RECALL_AUTO_INDEX_PATHS],
         workspaceFileCount: 0,
         memoryFileCount: 0,
@@ -328,6 +356,45 @@ export class AgentLongTermMemoryRecall {
     }
   }
 
+  private async searchGraph(queryText: string, workspaceResults: SearchResult[]) {
+    try {
+      const graphTool = createGraphRAGTool({
+        vectorStore: this.vectorStore,
+        indexName: this.searchIndexName,
+        model: fastembed,
+        graphOptions: {
+          threshold: RECALL_GRAPH_THRESHOLD,
+          randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+        },
+      });
+
+      const workspaceContext = workspaceResults
+        .map((result) => result.content)
+        .filter(Boolean)
+        .join('\n');
+
+      const graphResult = await withTimeout(
+        graphTool.execute(
+          {
+            queryText: workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText,
+            topK: RECALL_GRAPH_TOP_K,
+          },
+          {} as MastraToolInvocationOptions,
+        ),
+        this.recallTimeoutMs,
+        'ltm graph search timed out',
+      );
+
+      const relevantContext = typeof graphResult?.relevantContext === 'string'
+        ? graphResult.relevantContext
+        : '';
+
+      return relevantContext.trim();
+    } catch {
+      return '';
+    }
+  }
+
   private async getIndexStats() {
     const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
       countFiles(this.agentWorkspacePath, '/workspace-memory'),
@@ -384,7 +451,10 @@ export class AgentLongTermMemoryRecall {
         .map((toolCall) =>
           this.extractValueText(
             typeof toolCall === 'object' && toolCall !== null
-              ? (toolCall as Record<string, unknown>).input
+              ? (
+                (toolCall as Record<string, unknown>).args
+                ?? (toolCall as Record<string, unknown>).input
+              )
               : null,
           ),
         )
@@ -394,7 +464,10 @@ export class AgentLongTermMemoryRecall {
         .map((toolResult) =>
           this.extractValueText(
             typeof toolResult === 'object' && toolResult !== null
-              ? (toolResult as Record<string, unknown>).output
+              ? (
+                (toolResult as Record<string, unknown>).result
+                ?? (toolResult as Record<string, unknown>).output
+              )
               : null,
           ),
         )
