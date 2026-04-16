@@ -520,12 +520,27 @@ function cloneMessageWithParts(
   message: MastraDBMessage,
   parts: MastraDBMessage['content']['parts'],
 ) {
+  const plainContent = parts
+    .flatMap((part) => {
+      if (part.type === 'text' && typeof part.text === 'string') {
+        return [part.text.trim()];
+      }
+
+      if (part.type === 'reasoning' && typeof part.reasoning === 'string') {
+        return [part.reasoning.trim()];
+      }
+
+      return [];
+    })
+    .filter(Boolean)
+    .join('\n');
+
   return {
     ...message,
     content: {
       ...message.content,
       parts,
-      content: undefined,
+      content: plainContent || undefined,
       toolInvocations: undefined,
       reasoning: undefined,
     },
@@ -1716,22 +1731,36 @@ export class CheckpointedObservationalMemoryProcessor
             }
 
             if (part.type === 'text' && typeof part.text === 'string') {
+              const text = remainingPartUnits
+                .map(getUnitText)
+                .filter((value): value is string => Boolean(value))
+                .join('\n')
+                .trim();
+
+              if (!text) {
+                return [];
+              }
+
               return [{
                 ...part,
-                text: remainingPartUnits
-                  .map(getUnitText)
-                  .filter((value): value is string => Boolean(value))
-                  .join('\n'),
+                text,
               }];
             }
 
             if (part.type === 'reasoning' && typeof part.reasoning === 'string') {
+              const reasoning = remainingPartUnits
+                .map(getUnitReasoning)
+                .filter((value): value is string => Boolean(value))
+                .join('\n')
+                .trim();
+
+              if (!reasoning) {
+                return [];
+              }
+
               return [{
                 ...part,
-                reasoning: remainingPartUnits
-                  .map(getUnitReasoning)
-                  .filter((value): value is string => Boolean(value))
-                  .join('\n'),
+                reasoning,
                 details: [],
               }];
             }
