@@ -24,7 +24,7 @@
     "dotenv": "^17.4.1",
     "fflate": "^0.8.2",
     "imapflow": "^1.3.1",
-    "nanoid": "^5.1.7",
+    "nanoid": "^5.1.9",
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.5",
     "octokit": "^5.0.3",
