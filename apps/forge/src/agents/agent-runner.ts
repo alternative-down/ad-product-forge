@@ -170,12 +170,11 @@ export function createAgentRunner(
     }
 
     if (executionState === 'absent') {
-      await withTimeout(
-        store.setExecutionState(runtime.id, 'idle'),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent execution state update timed out for ${runtime.id}`,
-      );
-      await currentRuntime.longTermMemory?.onAgentIdle();
+      await beginRun({
+        reloadRuntime: false,
+        wakeStartedAt: Date.now(),
+        markRunning: true,
+      });
       return;
     }
 
