@@ -1,4 +1,5 @@
 import path from 'node:path';
+import fs from 'node:fs/promises';
 
 import type { AgentConfig } from '@mastra/core/agent';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
@@ -15,16 +16,53 @@ type SearchResult = {
 };
 
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
+const RECALL_AUTO_INDEX_PATHS = ['/workspace-memory', '/workspace-memory/memory'] as const;
+const RECALL_SEARCH_TOP_K = 4;
+const RECALL_SEARCH_MODE = 'hybrid' as const;
 
 type RecallSnapshot = {
   status: 'hit' | 'miss' | 'error';
   query: string;
   resultIds: string[];
   resultCount: number;
+  resultScores: number[];
   stepsJson: string;
   updatedAt: string;
+  lastInitAt: string | null;
+  searchMode: string;
+  topK: number;
+  indexPaths: string[];
+  workspaceFileCount: number;
+  memoryFileCount: number;
+  checkpointFileCount: number;
   error: string | null;
 };
+
+async function countFiles(rootPath: string, relativePath: string): Promise<number> {
+  const absolutePath = path.resolve(rootPath, relativePath.replace(/^\//, ''));
+  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch(() => null);
+
+  if (!entries) {
+    return 0;
+  }
+
+  let total = 0;
+
+  for (const entry of entries) {
+    if (entry.isFile()) {
+      total += 1;
+      continue;
+    }
+
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    total += await countFiles(rootPath, path.posix.join(relativePath, entry.name));
+  }
+
+  return total;
+}
 
 function withTimeout<T>(
   promise: Promise<T>,
@@ -58,7 +96,9 @@ export class AgentLongTermMemoryRecall {
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
   private readonly memoryStore: NonNullable<LibSQLStore['stores']['memory']>;
-  private initializationPromise: Promise<void> | null = null;
+  private readonly agentWorkspacePath: string;
+  private vectorIndexReadyPromise: Promise<void> | null = null;
+  private lastInitAt: string | null = null;
 
   constructor(input: {
     agentId: string;
@@ -75,6 +115,7 @@ export class AgentLongTermMemoryRecall {
 
     const vectorStorePath = path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`);
 
+    this.agentWorkspacePath = input.agentWorkspacePath;
     this.vectorStore = new LibSQLVector({
       id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
       url: `file:${vectorStorePath}`,
@@ -84,7 +125,7 @@ export class AgentLongTermMemoryRecall {
     this.workspace = new WorkspaceRuntime({
       autoSync: true,
       bm25: true,
-      autoIndexPaths: ['/workspace-memory/memory'],
+      autoIndexPaths: [...RECALL_AUTO_INDEX_PATHS],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({
         basePath: input.agentWorkspacePath,
@@ -101,8 +142,9 @@ export class AgentLongTermMemoryRecall {
     resourceId?: string;
   }) {
     try {
-      await this.doInitialize();
+      await this.refreshWorkspaceIndex();
       const queryText = this.buildRecallQueryFromStep(input.step);
+      const indexStats = await this.getIndexStats();
 
       if (!queryText) {
         await this.persistRecallSnapshot({
@@ -113,8 +155,16 @@ export class AgentLongTermMemoryRecall {
           query: '',
           resultIds: [],
           resultCount: 0,
+          resultScores: [],
           stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
+          lastInitAt: this.lastInitAt,
+          searchMode: RECALL_SEARCH_MODE,
+          topK: RECALL_SEARCH_TOP_K,
+          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+          workspaceFileCount: indexStats.workspaceFileCount,
+          memoryFileCount: indexStats.memoryFileCount,
+          checkpointFileCount: indexStats.checkpointFileCount,
           error: 'No current step content was available for the recall query.',
         });
         return null;
@@ -131,8 +181,16 @@ export class AgentLongTermMemoryRecall {
           query: queryText,
           resultIds: [],
           resultCount: 0,
+          resultScores: [],
           stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
+          lastInitAt: this.lastInitAt,
+          searchMode: RECALL_SEARCH_MODE,
+          topK: RECALL_SEARCH_TOP_K,
+          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+          workspaceFileCount: indexStats.workspaceFileCount,
+          memoryFileCount: indexStats.memoryFileCount,
+          checkpointFileCount: indexStats.checkpointFileCount,
           error: null,
         });
         return null;
@@ -146,8 +204,16 @@ export class AgentLongTermMemoryRecall {
         query: queryText,
         resultIds: results.map((result) => result.id),
         resultCount: results.length,
+        resultScores: results.map((result) => result.score ?? 0),
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
+        lastInitAt: this.lastInitAt,
+        searchMode: RECALL_SEARCH_MODE,
+        topK: RECALL_SEARCH_TOP_K,
+        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+        workspaceFileCount: indexStats.workspaceFileCount,
+        memoryFileCount: indexStats.memoryFileCount,
+        checkpointFileCount: indexStats.checkpointFileCount,
         error: null,
       });
 
@@ -167,57 +233,71 @@ export class AgentLongTermMemoryRecall {
         query: this.buildRecallQueryFromStep(input.step),
         resultIds: [],
         resultCount: 0,
+        resultScores: [],
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
+        lastInitAt: this.lastInitAt,
+        searchMode: RECALL_SEARCH_MODE,
+        topK: RECALL_SEARCH_TOP_K,
+        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+        workspaceFileCount: 0,
+        memoryFileCount: 0,
+        checkpointFileCount: 0,
         error: error instanceof Error ? error.message : String(error),
       });
       return null;
     }
   }
 
-  private async doInitialize() {
-    if (!this.initializationPromise) {
-      this.initializationPromise = (async () => {
-        await withTimeout(
-          this.workspace.init(),
-          this.initTimeoutMs,
-          'ltm recall workspace init timed out',
-        );
-        await withTimeout(
-          this.createWorkspaceVectorIndexIfMissing(),
-          this.initTimeoutMs,
-          'ltm recall vector index initialization timed out',
-        );
-      })().catch((error) => {
-        this.initializationPromise = null;
+  private async refreshWorkspaceIndex() {
+    await this.ensureVectorIndexReady();
+    await withTimeout(
+      this.workspace.init(),
+      this.initTimeoutMs,
+      'ltm recall workspace init timed out',
+    );
+    this.lastInitAt = new Date().toISOString();
+  }
+
+  private async ensureVectorIndexReady() {
+    if (!this.vectorIndexReadyPromise) {
+      this.vectorIndexReadyPromise = withTimeout(
+        this.createWorkspaceVectorIndexIfMissing(),
+        this.initTimeoutMs,
+        'ltm recall vector index initialization timed out',
+      ).catch((error) => {
+        this.vectorIndexReadyPromise = null;
         throw error;
       });
     }
 
-    await this.initializationPromise;
+    await this.vectorIndexReadyPromise;
   }
 
   private async createWorkspaceVectorIndexIfMissing() {
     try {
       await this.vectorStore.describeIndex({ indexName: this.searchIndexName });
+      return;
     } catch {
-      const sampleEmbedding = await embedTextWithFastembed('memory-bootstrap');
-      const dimension = sampleEmbedding.length;
-
-      await this.vectorStore.createIndex({
-        indexName: this.searchIndexName,
-        dimension,
-        metric: 'cosine',
-      });
+      // Index does not exist yet. Create it below.
     }
+
+    const sampleEmbedding = await embedTextWithFastembed('memory-bootstrap');
+    const dimension = sampleEmbedding.length;
+
+    await this.vectorStore.createIndex({
+      indexName: this.searchIndexName,
+      dimension,
+      metric: 'cosine',
+    });
   }
 
   private async searchWorkspace(queryText: string): Promise<{ formatted: string; results: SearchResult[] }> {
     try {
       const results = await withTimeout(
         this.workspace.search(queryText, {
-          topK: 4,
-          mode: 'hybrid',
+          topK: RECALL_SEARCH_TOP_K,
+          mode: RECALL_SEARCH_MODE,
         }),
         this.recallTimeoutMs,
         'ltm recall workspace search timed out',
@@ -246,6 +326,20 @@ export class AgentLongTermMemoryRecall {
 
       throw error;
     }
+  }
+
+  private async getIndexStats() {
+    const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
+      countFiles(this.agentWorkspacePath, '/workspace-memory'),
+      countFiles(this.agentWorkspacePath, '/workspace-memory/memory'),
+      countFiles(this.agentWorkspacePath, '/workspace-memory/checkpoints'),
+    ]);
+
+    return {
+      workspaceFileCount,
+      memoryFileCount,
+      checkpointFileCount,
+    };
   }
 
   private extractValueText(value: unknown): string {

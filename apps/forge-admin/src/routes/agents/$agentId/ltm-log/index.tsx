@@ -96,8 +96,16 @@ function LongTermMemorySection(input: {
     query: string;
     resultIds: string[];
     resultCount: number;
+    resultScores: number[];
     stepsJson: string;
     updatedAt: number;
+    lastInitAt: number | null;
+    searchMode: string;
+    topK: number;
+    indexPaths: string[];
+    workspaceFileCount: number;
+    memoryFileCount: number;
+    checkpointFileCount: number;
     error: string | null;
   } | null;
   loading: boolean;
@@ -156,8 +164,16 @@ function LongTermMemorySection(input: {
         value={input.ltmRecall ? [
           `status: ${input.ltmRecall.status}`,
           `updatedAt: ${formatDateTime(input.ltmRecall.updatedAt)}`,
+          `lastInitAt: ${input.ltmRecall.lastInitAt ? formatDateTime(input.ltmRecall.lastInitAt) : '—'}`,
+          `searchMode: ${input.ltmRecall.searchMode}`,
+          `topK: ${formatNumber(input.ltmRecall.topK)}`,
+          `indexPaths: ${input.ltmRecall.indexPaths.join(', ') || '—'}`,
+          `workspaceFileCount: ${formatNumber(input.ltmRecall.workspaceFileCount)}`,
+          `memoryFileCount: ${formatNumber(input.ltmRecall.memoryFileCount)}`,
+          `checkpointFileCount: ${formatNumber(input.ltmRecall.checkpointFileCount)}`,
           `resultCount: ${formatNumber(input.ltmRecall.resultCount)}`,
           `resultIds: ${input.ltmRecall.resultIds.join(', ') || '—'}`,
+          `resultScores: ${input.ltmRecall.resultScores.map((score) => score.toFixed(4)).join(', ') || '—'}`,
           `error: ${input.ltmRecall.error ?? '—'}`,
           '',
           input.ltmRecall.query,
