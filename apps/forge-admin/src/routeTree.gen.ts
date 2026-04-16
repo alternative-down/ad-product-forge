@@ -39,6 +39,7 @@ import { Route as SettingsMcpIndexRouteImport } from './routes/settings/mcp/inde
 import { Route as SettingsLlmIndexRouteImport } from './routes/settings/llm/index'
 import { Route as SettingsGithubIndexRouteImport } from './routes/settings/github/index'
 import { Route as SettingsCoolifyIndexRouteImport } from './routes/settings/coolify/index'
+import { Route as HomeOfficeIndexRouteImport } from './routes/home/office/index'
 import { Route as HomeConversationsIndexRouteImport } from './routes/home/conversations/index'
 import { Route as FinanceContractsIndexRouteImport } from './routes/finance/contracts/index'
 import { Route as FinanceAccountsIndexRouteImport } from './routes/finance/accounts/index'
@@ -217,6 +218,11 @@ const SettingsCoolifyIndexRoute = SettingsCoolifyIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsCoolifyRouteRoute,
+} as any)
+const HomeOfficeIndexRoute = HomeOfficeIndexRouteImport.update({
+  id: '/office/',
+  path: '/office/',
+  getParentRoute: () => HomeRouteRoute,
 } as any)
 const HomeConversationsIndexRoute = HomeConversationsIndexRouteImport.update({
   id: '/',
@@ -415,6 +421,7 @@ export interface FileRoutesByFullPath {
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/conversations/': typeof HomeConversationsIndexRoute
+  '/home/office/': typeof HomeOfficeIndexRoute
   '/settings/coolify/': typeof SettingsCoolifyIndexRoute
   '/settings/github/': typeof SettingsGithubIndexRoute
   '/settings/llm/': typeof SettingsLlmIndexRoute
@@ -449,6 +456,7 @@ export interface FileRoutesByTo {
   '/finance/accounts': typeof FinanceAccountsIndexRoute
   '/finance/contracts': typeof FinanceContractsIndexRoute
   '/home/conversations': typeof HomeConversationsIndexRoute
+  '/home/office': typeof HomeOfficeIndexRoute
   '/settings/coolify': typeof SettingsCoolifyIndexRoute
   '/settings/github': typeof SettingsGithubIndexRoute
   '/settings/llm': typeof SettingsLlmIndexRoute
@@ -508,6 +516,7 @@ export interface FileRoutesById {
   '/finance/accounts/': typeof FinanceAccountsIndexRoute
   '/finance/contracts/': typeof FinanceContractsIndexRoute
   '/home/conversations/': typeof HomeConversationsIndexRoute
+  '/home/office/': typeof HomeOfficeIndexRoute
   '/settings/coolify/': typeof SettingsCoolifyIndexRoute
   '/settings/github/': typeof SettingsGithubIndexRoute
   '/settings/llm/': typeof SettingsLlmIndexRoute
@@ -570,6 +579,7 @@ export interface FileRouteTypes {
     | '/finance/accounts/'
     | '/finance/contracts/'
     | '/home/conversations/'
+    | '/home/office/'
     | '/settings/coolify/'
     | '/settings/github/'
     | '/settings/llm/'
@@ -604,6 +614,7 @@ export interface FileRouteTypes {
     | '/finance/accounts'
     | '/finance/contracts'
     | '/home/conversations'
+    | '/home/office'
     | '/settings/coolify'
     | '/settings/github'
     | '/settings/llm'
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
     | '/finance/accounts/'
     | '/finance/contracts/'
     | '/home/conversations/'
+    | '/home/office/'
     | '/settings/coolify/'
     | '/settings/github/'
     | '/settings/llm/'
@@ -905,6 +917,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/coolify/'
       preLoaderRoute: typeof SettingsCoolifyIndexRouteImport
       parentRoute: typeof SettingsCoolifyRouteRoute
+    }
+    '/home/office/': {
+      id: '/home/office/'
+      path: '/office'
+      fullPath: '/home/office/'
+      preLoaderRoute: typeof HomeOfficeIndexRouteImport
+      parentRoute: typeof HomeRouteRoute
     }
     '/home/conversations/': {
       id: '/home/conversations/'
@@ -1384,11 +1403,13 @@ const HomeConversationsRouteRouteWithChildren =
 interface HomeRouteRouteChildren {
   HomeConversationsRouteRoute: typeof HomeConversationsRouteRouteWithChildren
   HomeIndexRoute: typeof HomeIndexRoute
+  HomeOfficeIndexRoute: typeof HomeOfficeIndexRoute
 }
 
 const HomeRouteRouteChildren: HomeRouteRouteChildren = {
   HomeConversationsRouteRoute: HomeConversationsRouteRouteWithChildren,
   HomeIndexRoute: HomeIndexRoute,
+  HomeOfficeIndexRoute: HomeOfficeIndexRoute,
 }
 
 const HomeRouteRouteWithChildren = HomeRouteRoute._addFileChildren(
