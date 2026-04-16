@@ -3,10 +3,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 
-import { AgentAvatar, AdminButton, AdminLoadingState } from '@/components/admin';
-import { Badge } from '@/components/ui/badge';
+import { AdminButton, AdminLoadingState } from '@/components/admin';
 import { getAgents, getSystemSettings } from '@/lib/admin-api';
-import { cn } from '@/lib/utils';
 import type { AgentListItem } from '@/lib/admin-api/types';
 
 export const Route = createFileRoute('/home/pixel/')({
@@ -66,14 +64,17 @@ function HomePixelRoute() {
     refetchInterval: 10_000,
   });
   const [tick, setTick] = useState(0);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [images, setImages] = useState<LoadedImages | null>(null);
+  const [bubbleDeadlines, setBubbleDeadlines] = useState<Record<string, number>>({});
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const previousPreviewByAgentIdRef = useRef<Record<string, string | null>>({});
   const agents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       setTick((value) => value + 1);
+      setNowMs(Date.now());
     }, 180);
 
     return () => window.clearInterval(timer);
@@ -103,22 +104,36 @@ function HomePixelRoute() {
     };
   }, []);
 
-  const activeSelectedAgentId = selectedAgentId && agents.some((agent) => agent.agentId === selectedAgentId)
-    ? selectedAgentId
-    : agents[0]?.agentId ?? null;
+  useEffect(() => {
+    setBubbleDeadlines((currentDeadlines) => {
+      const nextDeadlines: Record<string, number> = {};
 
-  const selectedAgent = useMemo(
-    () => agents.find((agent) => agent.agentId === activeSelectedAgentId) ?? null,
-    [activeSelectedAgentId, agents],
-  );
+      for (const agent of agents) {
+        const previousPreview = previousPreviewByAgentIdRef.current[agent.agentId] ?? null;
+        const currentPreview = agent.overview.lastStepPreview ?? null;
+        const existingDeadline = currentDeadlines[agent.agentId] ?? 0;
+
+        if (currentPreview && currentPreview !== previousPreview) {
+          nextDeadlines[agent.agentId] = nowMs + 4_500;
+        } else if (existingDeadline > nowMs) {
+          nextDeadlines[agent.agentId] = existingDeadline;
+        }
+
+        previousPreviewByAgentIdRef.current[agent.agentId] = currentPreview;
+      }
+
+      return nextDeadlines;
+    });
+  }, [agents, nowMs]);
 
   const sceneAgents = useMemo(
     () => buildSceneAgents({
       agents,
       tick,
-      selectedAgentId: activeSelectedAgentId,
+      nowMs,
+      bubbleDeadlines,
     }),
-    [activeSelectedAgentId, agents, tick],
+    [agents, bubbleDeadlines, nowMs, tick],
   );
 
   useEffect(() => {
@@ -134,6 +149,42 @@ function HomePixelRoute() {
     });
   }, [images, sceneAgents, tick]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
+    function handleClick(event: MouseEvent) {
+      const rect = canvas.getBoundingClientRect();
+      const normalizedX = ((event.clientX - rect.left) / rect.width) * (SCENE_COLS * TILE_SIZE);
+      const normalizedY = ((event.clientY - rect.top) / rect.height) * (SCENE_ROWS * TILE_SIZE);
+
+      const hitAgent = [...sceneAgents]
+        .reverse()
+        .find((sceneAgent) => (
+          normalizedX >= sceneAgent.x - 8 &&
+          normalizedX <= sceneAgent.x + 8 &&
+          normalizedY >= sceneAgent.y - 24 &&
+          normalizedY <= sceneAgent.y + 8
+        ));
+
+      if (!hitAgent) {
+        return;
+      }
+
+      setBubbleDeadlines((currentDeadlines) => ({
+        ...currentDeadlines,
+        [hitAgent.agent.agentId]: Date.now() + 4_500,
+      }));
+    }
+
+    canvas.addEventListener('click', handleClick);
+
+    return () => canvas.removeEventListener('click', handleClick);
+  }, [sceneAgents]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <section className="flex flex-wrap items-start justify-between gap-4">
@@ -144,9 +195,6 @@ function HomePixelRoute() {
           <h1 className="text-3xl font-semibold tracking-[-0.06em] text-foreground sm:text-4xl">
             {settingsQuery.data?.companyName?.trim() || 'Empresa'}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Canvas 2D com assets portados do pixel-agents para testar a linguagem visual.
-          </p>
           {settingsQuery.isLoading && !settingsQuery.data ? <AdminLoadingState label="Carregando empresa..." /> : null}
         </div>
 
@@ -163,7 +211,7 @@ function HomePixelRoute() {
         </AdminButton>
       </section>
 
-      <section className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <section className="min-h-0 flex-1">
         <div className="rounded-[1.5rem] bg-[#f4efe7] p-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
           <div className="relative overflow-hidden rounded-[1.25rem] bg-[#ddd4c7]">
             <canvas
@@ -183,57 +231,15 @@ function HomePixelRoute() {
                     top: `${((sceneAgent.y - 34) / (SCENE_ROWS * TILE_SIZE)) * 100}%`,
                   }}
                 >
+                  <div className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    {sceneAgent.agent.name}
+                  </div>
                   <div className="line-clamp-2">{sceneAgent.bubble}</div>
                 </div>
               ) : null
             ))}
           </div>
         </div>
-
-        <aside className="flex min-h-0 flex-col rounded-[1.4rem] bg-background/80 p-3">
-          <div className="px-2 pb-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-            Equipe
-          </div>
-          <div className="flex min-h-0 flex-col gap-1 overflow-y-auto">
-            {agents.map((agent) => (
-              <button
-                key={agent.agentId}
-                type="button"
-                onClick={() => setSelectedAgentId(agent.agentId)}
-                className={cn(
-                  'flex items-center gap-3 rounded-[1rem] px-3 py-2 text-left transition-colors',
-                  activeSelectedAgentId === agent.agentId ? 'bg-muted/60' : 'hover:bg-muted/35',
-                )}
-              >
-                <AgentAvatar
-                  agentId={agent.agentId}
-                  name={agent.name}
-                  className="h-10 w-10 border border-border/60 bg-muted"
-                  fallbackClassName="bg-muted text-xs font-medium text-foreground"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-foreground">{agent.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {agent.overview.lastStepPreview ?? humanizeAgentState(agent)}
-                  </div>
-                </div>
-                <Badge variant="outline" className="rounded-full bg-background/90">
-                  {humanizeAgentState(agent)}
-                </Badge>
-              </button>
-            ))}
-          </div>
-
-          {selectedAgent ? (
-            <div className="mt-3 rounded-[1.1rem] bg-muted/30 p-3">
-              <div className="mb-1 text-sm font-medium text-foreground">{selectedAgent.name}</div>
-              <div className="mb-2 text-xs text-muted-foreground">{selectedAgent.roleName ?? 'Sem papel'}</div>
-              <div className="text-xs leading-5 text-foreground">
-                {selectedAgent.overview.lastStepPreview ?? 'Sem preview recente.'}
-              </div>
-            </div>
-          ) : null}
-        </aside>
       </section>
 
       {agents.length === 0 && agentsQuery.isLoading ? <AdminLoadingState label="Carregando agentes..." /> : null}
@@ -245,7 +251,8 @@ function HomePixelRoute() {
 function buildSceneAgents(input: {
   agents: AgentListItem[];
   tick: number;
-  selectedAgentId: string | null;
+  nowMs: number;
+  bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
     { x: 4.5 * TILE_SIZE, y: 8.2 * TILE_SIZE, dir: 'down' as const },
@@ -280,13 +287,14 @@ function buildSceneAgents(input: {
 
   for (const [index, agent] of runningAgents.entries()) {
     const slot = runningSlots[index % runningSlots.length] ?? roamLane[index % roamLane.length];
+    const bob = Math.sin(input.tick / 5 + index) * 1.2;
     sceneAgents.push({
       agent,
-      x: slot.x + (index >= runningSlots.length ? Math.sin(input.tick / 5 + index) * 6 : 0),
-      y: slot.y,
+      x: slot.x + (index >= runningSlots.length ? Math.sin(input.tick / 4 + index) * 6 : 0),
+      y: slot.y + bob,
       dir: slot.dir,
       frame: 3 + (input.tick + index) % 2,
-      bubble: agent.agentId === input.selectedAgentId ? agent.overview.lastStepPreview : null,
+      bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
 
@@ -294,11 +302,11 @@ function buildSceneAgents(input: {
     const slot = memorySlots[index % memorySlots.length];
     sceneAgents.push({
       agent,
-      x: slot.x,
-      y: slot.y + Math.sin(input.tick / 5 + index) * 2,
-      dir: slot.dir,
+      x: slot.x + Math.sin(input.tick / 6 + index) * 3,
+      y: slot.y + Math.cos(input.tick / 5 + index) * 3,
+      dir: index % 2 === 0 ? slot.dir : 'down',
       frame: 5 + (input.tick + index) % 2,
-      bubble: agent.agentId === input.selectedAgentId ? agent.overview.lastStepPreview : 'LTM ativa',
+      bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
 
@@ -306,11 +314,11 @@ function buildSceneAgents(input: {
     const slot = focusSlots[index % focusSlots.length] ?? roamLane[index % roamLane.length];
     sceneAgents.push({
       agent,
-      x: slot.x + Math.sin(input.tick / 7 + index) * 4,
-      y: slot.y,
-      dir: slot.dir,
-      frame: 1,
-      bubble: agent.agentId === input.selectedAgentId ? agent.overview.lastStepPreview : null,
+      x: slot.x + Math.sin(input.tick / 8 + index) * 5,
+      y: slot.y + Math.cos(input.tick / 9 + index) * 2,
+      dir: index % 2 === 0 ? slot.dir : 'right',
+      frame: index % 3 === 0 ? 5 + (input.tick + index) % 2 : 1,
+      bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
   }
 
@@ -318,11 +326,11 @@ function buildSceneAgents(input: {
     const slot = recoverySlots[index % recoverySlots.length];
     sceneAgents.push({
       agent,
-      x: slot.x,
+      x: slot.x + Math.sin(input.tick / 3 + index) * 6,
       y: slot.y,
-      dir: slot.dir,
-      frame: 6,
-      bubble: agent.agentId === input.selectedAgentId ? agent.overview.lastStepPreview : 'Ausente / retry',
+      dir: Math.sin(input.tick / 3 + index) > 0 ? 'left' : 'right',
+      frame: (input.tick + index) % 4,
+      bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? (agent.overview.lastStepPreview ?? 'Ausente / retry') : null,
     });
   }
 
@@ -494,20 +502,4 @@ function drawCharacterFrame(input: {
     16 * SCALE,
     32 * SCALE,
   );
-}
-
-function humanizeAgentState(agent: AgentListItem) {
-  if (agent.overview.ltm.running) {
-    return 'LTM';
-  }
-
-  if (agent.executionState === 'running') {
-    return 'Trabalhando';
-  }
-
-  if (agent.executionState === 'absent') {
-    return 'Ausente';
-  }
-
-  return 'Ocioso';
 }
