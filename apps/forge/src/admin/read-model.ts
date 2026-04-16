@@ -111,6 +111,7 @@ type LongTermMemoryRecallSnapshot = {
   query: string;
   resultIds: string[];
   resultCount: number;
+  stepsJson: string;
   updatedAt: string;
   error: string | null;
 };
@@ -199,6 +200,7 @@ function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | und
     || typeof value.query !== 'string'
     || !Array.isArray(value.resultIds)
     || typeof value.resultCount !== 'number'
+    || typeof value.stepsJson !== 'string'
     || typeof value.updatedAt !== 'string'
   ) {
     return null;
@@ -209,6 +211,7 @@ function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | und
     query: value.query,
     resultIds: value.resultIds.filter((item): item is string => typeof item === 'string'),
     resultCount: value.resultCount,
+    stepsJson: value.stepsJson,
     updatedAt: value.updatedAt,
     error: typeof value.error === 'string' ? value.error : null,
   };
@@ -864,6 +867,7 @@ export function createAdminReadModel(input: {
             query: ltmRecall.query,
             resultIds: ltmRecall.resultIds,
             resultCount: ltmRecall.resultCount,
+            stepsJson: ltmRecall.stepsJson,
             updatedAt: Date.parse(ltmRecall.updatedAt),
             error: ltmRecall.error,
           }
