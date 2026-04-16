@@ -116,6 +116,14 @@ export class AgentLongTermMemoryRecallProcessor
       const queryText = this.buildRecallQuery(args);
 
       if (!queryText) {
+        await this.persistRecallSnapshot(threadContext, {
+          status: 'miss',
+          query: '',
+          resultIds: [],
+          resultCount: 0,
+          updatedAt: new Date().toISOString(),
+          error: 'No current step content was available for the recall query.',
+        });
         return args.messageList;
       }
 
