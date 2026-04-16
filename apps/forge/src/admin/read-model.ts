@@ -139,43 +139,24 @@ function extractLatestMessagePreview(content: unknown) {
     parts?: unknown;
   };
   const parts = Array.isArray(record.parts) ? record.parts : [];
-  let lastText: string | null = null;
-  let lastReasoning: string | null = null;
 
-  for (const part of parts) {
+  for (const part of [...parts].reverse()) {
     if (!part || typeof part !== 'object') {
       continue;
     }
 
-    if ('type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string') {
+    if (
+      'type' in part &&
+      (part.type === 'text' || part.type === 'reasoning') &&
+      'text' in part &&
+      typeof part.text === 'string'
+    ) {
       const text = part.text.trim();
 
       if (text) {
-        lastText = text;
+        return truncatePreview(text);
       }
     }
-  }
-
-  for (const part of parts) {
-    if (!part || typeof part !== 'object') {
-      continue;
-    }
-
-    if ('type' in part && part.type === 'reasoning' && 'text' in part && typeof part.text === 'string') {
-      const text = part.text.trim();
-
-      if (text) {
-        lastReasoning = text;
-      }
-    }
-  }
-
-  if (lastText) {
-    return truncatePreview(lastText);
-  }
-
-  if (lastReasoning) {
-    return truncatePreview(lastReasoning);
   }
 
   if (typeof record.content === 'string' && record.content.trim()) {

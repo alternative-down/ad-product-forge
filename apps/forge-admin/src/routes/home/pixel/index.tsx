@@ -211,14 +211,14 @@ function HomePixelRoute() {
         </AdminButton>
       </section>
 
-      <section className="min-h-0 flex-1">
-        <div className="rounded-[1.5rem] bg-[#f4efe7] p-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-          <div className="relative overflow-hidden rounded-[1.25rem] bg-[#ddd4c7]">
+      <section className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex h-full min-h-0 rounded-[1.5rem] bg-[#f4efe7] p-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+          <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[1.25rem] bg-[#ddd4c7]">
             <canvas
               ref={canvasRef}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
-              className="block h-auto w-full bg-[#ddd4c7]"
+              className="block h-full max-h-full w-auto max-w-full bg-[#ddd4c7]"
             />
 
             {sceneAgents.map((sceneAgent) => (
