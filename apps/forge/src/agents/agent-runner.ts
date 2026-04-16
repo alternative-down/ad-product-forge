@@ -64,6 +64,7 @@ export function createAgentRunner(
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages: number | null = DEFAULT_RUN_LAST_MESSAGES;
   let completedRunStepCount = 0;
+  let pendingLongTermMemoryRecallSystemText: string | null = null;
   let flushedRunEventKeys = new Set<string>();
   let currentFlushSettings = {
     communicationDmFlushingEnabled: true,
@@ -393,6 +394,7 @@ export function createAgentRunner(
       resetLoopDetector();
       flushedRunEventKeys = new Set<string>();
       completedRunStepCount = 0;
+      pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
 
@@ -564,6 +566,8 @@ export function createAgentRunner(
         return;
       }
 
+      const stepLongTermMemoryRecallSystemText = pendingLongTermMemoryRecallSystemText;
+      pendingLongTermMemoryRecallSystemText = null;
       lastStepStage = 'flushing-pending-run-messages';
       prompt = completedRunStepCount === 0
         ? (flushPendingRunMessages({
@@ -573,7 +577,7 @@ export function createAgentRunner(
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       lastStepStage = 'agent-generate';
-      const result = await generateWithTimeoutRetries(prompt, runEpoch);
+      const result = await generateWithTimeoutRetries(prompt, runEpoch, stepLongTermMemoryRecallSystemText);
 
       if (isStaleRun(runEpoch)) {
         return;
@@ -695,6 +699,12 @@ export function createAgentRunner(
         }
       }
 
+      pendingLongTermMemoryRecallSystemText = await currentRuntime.longTermMemoryRecall?.recallFromStep({
+        step: result.steps.at(-1) ?? null,
+        steps: result.steps,
+        threadId: currentRuntime.mastraId,
+        resourceId: currentRuntime.mastraId,
+      }) ?? null;
       backoffMs = ONE_MINUTE_MS;
       continueRunning = true;
     } catch (error) {
@@ -926,7 +936,11 @@ export function createAgentRunner(
     notifyExternalEvent,
   };
 
-  async function generateWithTimeoutRetries(promptText: string, runEpoch: number) {
+  async function generateWithTimeoutRetries(
+    promptText: string,
+    runEpoch: number,
+    longTermMemoryRecallSystemText: string | null,
+  ) {
     const effectivePromptText = promptText.trim() ? promptText : [];
 
     for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
@@ -937,13 +951,17 @@ export function createAgentRunner(
       try {
         console.log(`[AgentRunner] ${runtime.id} preparing runtime context before generate`);
         const agentContextInstructions = await loadAgentContextInstructions();
+        const systemPrompt = buildStepSystemPrompt({
+          agentContextInstructions,
+          longTermMemoryRecallSystemText,
+        });
         console.log(`[AgentRunner] ${runtime.id} runtime context ready before generate`);
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await Promise.race([
           currentRuntime.agent.generate(effectivePromptText, {
             maxSteps: 3,
             abortSignal: controller.signal,
-            ...(agentContextInstructions ? { system: agentContextInstructions } : {}),
+            ...(systemPrompt ? { system: systemPrompt } : {}),
             memory: {
               thread: currentRuntime.mastraId,
               resource: currentRuntime.mastraId,
@@ -1434,6 +1452,22 @@ function formatAbsentErrorDetailValue(value: unknown): string | null {
   } catch {
     return String(value).slice(0, 2_000);
   }
+}
+
+function buildStepSystemPrompt(input: {
+  agentContextInstructions: string | null | undefined;
+  longTermMemoryRecallSystemText: string | null;
+}) {
+  const sections = [
+    input.agentContextInstructions?.trim() || null,
+    input.longTermMemoryRecallSystemText?.trim() || null,
+  ].filter((value): value is string => Boolean(value));
+
+  if (sections.length === 0) {
+    return null;
+  }
+
+  return sections.join('\n\n');
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

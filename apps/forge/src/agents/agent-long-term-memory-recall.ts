@@ -111,74 +111,101 @@ export class AgentLongTermMemoryRecallProcessor
     }
 
     const threadContext = this.getThreadContext(args.requestContext, args.messageList);
+    const systemText = await this.recallFromStep({
+      step: args.steps.at(-1) ?? null,
+      steps: args.steps,
+      threadId: threadContext?.threadId ?? null,
+      resourceId: threadContext?.resourceId,
+    });
 
+    args.messageList.clearSystemMessages(RECALL_TAG);
+
+    if (!systemText) {
+      return args.messageList;
+    }
+
+    args.messageList.addSystem(systemText, RECALL_TAG);
+    return args.messageList;
+  }
+
+  async recallFromStep(input: {
+    step: unknown;
+    steps: unknown[];
+    threadId: string | null;
+    resourceId?: string;
+  }) {
     try {
       await this.doInitialize();
-      const queryText = this.buildRecallQuery(args);
+      const queryText = this.buildRecallQueryFromStep(input.step);
 
       if (!queryText) {
-        await this.persistRecallSnapshot(threadContext, {
+        await this.persistRecallSnapshot({
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+        }, {
           status: 'miss',
           query: '',
           resultIds: [],
           resultCount: 0,
-          stepsJson: safeSerializeRecallSteps(args.steps),
+          stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
           error: 'No current step content was available for the recall query.',
         });
-        return args.messageList;
+        return null;
       }
 
       const { formatted, results } = await this.searchWorkspace(queryText);
-      args.messageList.clearSystemMessages(RECALL_TAG);
 
       if (!formatted) {
-      await this.persistRecallSnapshot(threadContext, {
-        status: 'miss',
-        query: queryText,
-        resultIds: [],
-        resultCount: 0,
-        stepsJson: safeSerializeRecallSteps(args.steps),
-        updatedAt: new Date().toISOString(),
-        error: null,
-      });
-        return args.messageList;
+        await this.persistRecallSnapshot({
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+        }, {
+          status: 'miss',
+          query: queryText,
+          resultIds: [],
+          resultCount: 0,
+          stepsJson: safeSerializeRecallSteps(input.steps),
+          updatedAt: new Date().toISOString(),
+          error: null,
+        });
+        return null;
       }
 
-      args.messageList.addSystem(
-        [
-          'These are retrieved documents from your maintained long-term memory.',
-          'Treat them as useful background context, but still verify against newer thread context and current workspace state when needed.',
-          '',
-          formatted,
-        ].join('\n'),
-        RECALL_TAG,
-      );
-
-      await this.persistRecallSnapshot(threadContext, {
+      await this.persistRecallSnapshot({
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+      }, {
         status: 'hit',
         query: queryText,
         resultIds: results.map((result) => result.id),
         resultCount: results.length,
-        stepsJson: safeSerializeRecallSteps(args.steps),
+        stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         error: null,
       });
 
-      return args.messageList;
+      return [
+        'These are retrieved documents from your maintained long-term memory.',
+        'Treat them as useful background context, but still verify against newer thread context and current workspace state when needed.',
+        '',
+        formatted,
+      ].join('\n');
     } catch (error) {
       console.error('[AgentLongTermMemoryRecall] recall failed:', error);
-      args.messageList.clearSystemMessages(RECALL_TAG);
-      await this.persistRecallSnapshot(threadContext, {
+      await this.persistRecallSnapshot({
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+      }, {
         status: 'error',
-        query: this.buildRecallQuery(args),
+        query: this.buildRecallQueryFromStep(input.step),
         resultIds: [],
         resultCount: 0,
-        stepsJson: safeSerializeRecallSteps(args.steps),
+        stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         error: error instanceof Error ? error.message : String(error),
       });
-      return args.messageList;
+      return null;
     }
   }
 
@@ -281,18 +308,38 @@ export class AgentLongTermMemoryRecallProcessor
       .join(' ');
   }
 
-  private buildRecallQuery(args: ProcessInputStepArgs<unknown>) {
-    const currentStep = args.steps.at(-1);
-
-    if (!currentStep) {
+  private buildRecallQueryFromStep(step: unknown) {
+    if (!step || typeof step !== 'object') {
       return '';
     }
 
+    const record = step as Record<string, unknown>;
+    const toolCalls = Array.isArray(record.toolCalls) ? record.toolCalls : [];
+    const toolResults = Array.isArray(record.toolResults) ? record.toolResults : [];
+
     return [
-      currentStep.text,
-      currentStep.reasoningText ?? '',
-      currentStep.toolCalls.map((toolCall) => this.extractValueText(toolCall.input)).filter(Boolean).join(' '),
-      currentStep.toolResults.map((toolResult) => this.extractValueText(toolResult.output)).filter(Boolean).join(' '),
+      typeof record.text === 'string' ? record.text : '',
+      typeof record.reasoningText === 'string' ? record.reasoningText : '',
+      toolCalls
+        .map((toolCall) =>
+          this.extractValueText(
+            typeof toolCall === 'object' && toolCall !== null
+              ? (toolCall as Record<string, unknown>).input
+              : null,
+          ),
+        )
+        .filter(Boolean)
+        .join(' '),
+      toolResults
+        .map((toolResult) =>
+          this.extractValueText(
+            typeof toolResult === 'object' && toolResult !== null
+              ? (toolResult as Record<string, unknown>).output
+              : null,
+          ),
+        )
+        .filter(Boolean)
+        .join(' '),
     ]
       .filter(Boolean)
       .join('\n')
@@ -326,10 +373,10 @@ export class AgentLongTermMemoryRecallProcessor
   }
 
   private async persistRecallSnapshot(
-    threadContext: { threadId: string; resourceId?: string } | null,
+    threadContext: { threadId: string | null; resourceId?: string },
     snapshot: RecallSnapshot,
   ) {
-    if (!threadContext) {
+    if (!threadContext.threadId) {
       return;
     }
 
@@ -350,7 +397,7 @@ export class AgentLongTermMemoryRecallProcessor
   }
 }
 
-function safeSerializeRecallSteps(steps: ProcessInputStepArgs<unknown>['steps']) {
+function safeSerializeRecallSteps(steps: unknown[]) {
   try {
     return JSON.stringify(steps, null, 2);
   } catch {

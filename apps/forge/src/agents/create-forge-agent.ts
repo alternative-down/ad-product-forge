@@ -136,6 +136,7 @@ export async function createInternalAgentRuntime<
     agent,
     workspace: platform.workspace,
     communication: platform.communication,
+    longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
     longTermMemory,
     onReceiveMessage: platform.communication.onReceiveMessage,
     async dispose() {
