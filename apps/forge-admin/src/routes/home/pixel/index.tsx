@@ -332,7 +332,7 @@ function buildSceneAgents(input: {
   for (const [index, agent] of runningAgents.entries()) {
     const slot = runningSlots[index % runningSlots.length] ?? roamLane[index % roamLane.length];
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
-    const bob = isAnimating ? Math.sin(input.tick / 5 + index) * 1.2 : 0;
+    const bob = isAnimating ? Math.sin(input.tick / 5 + index) * 1.2 : Math.sin(input.tick / 14 + index) * 0.35;
     sceneAgents.push({
       agent,
       x: slot.x + (
@@ -353,8 +353,8 @@ function buildSceneAgents(input: {
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     sceneAgents.push({
       agent,
-      x: slot.x + (isAnimating ? Math.sin(input.tick / 6 + index) * 3 : 0),
-      y: slot.y + (isAnimating ? Math.cos(input.tick / 5 + index) * 3 : 0),
+      x: slot.x + (isAnimating ? Math.sin(input.tick / 6 + index) * 3 : Math.sin(input.tick / 18 + index) * 0.45),
+      y: slot.y + (isAnimating ? Math.cos(input.tick / 5 + index) * 3 : Math.cos(input.tick / 17 + index) * 0.45),
       dir: index % 2 === 0 ? slot.dir : 'down',
       frame: isAnimating ? 5 + (input.tick + index) % 2 : 5,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
@@ -367,8 +367,8 @@ function buildSceneAgents(input: {
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     sceneAgents.push({
       agent,
-      x: slot.x + (isAnimating ? Math.sin(input.tick / 8 + index) * 5 : 0),
-      y: slot.y + (isAnimating ? Math.cos(input.tick / 9 + index) * 2 : 0),
+      x: slot.x + (isAnimating ? Math.sin(input.tick / 8 + index) * 5 : Math.sin(input.tick / 18 + index) * 1.4),
+      y: slot.y + (isAnimating ? Math.cos(input.tick / 9 + index) * 2 : Math.cos(input.tick / 20 + index) * 0.8),
       dir: index % 2 === 0 ? slot.dir : 'right',
       frame: isAnimating
         ? (index % 3 === 0 ? 5 + (input.tick + index) % 2 : 1 + ((input.tick + index) % 2))
@@ -384,7 +384,7 @@ function buildSceneAgents(input: {
     sceneAgents.push({
       agent,
       x: slot.x + (isAnimating ? Math.sin(input.tick / 3 + index) * 6 : 0),
-      y: slot.y,
+      y: slot.y + (isAnimating ? 0 : Math.sin(input.tick / 14 + index) * 0.3),
       dir: isAnimating && Math.sin(input.tick / 3 + index) > 0 ? 'left' : 'right',
       frame: isAnimating ? (input.tick + index) % 4 : 0,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
