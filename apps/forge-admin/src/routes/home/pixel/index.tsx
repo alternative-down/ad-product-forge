@@ -438,11 +438,10 @@ function HomePixelRoute() {
                   }}
                 >
                   <div
-                    className="mb-1 flex items-center gap-1.5 uppercase tracking-[0.08em] text-[#7f674e]"
+                    className="mb-1 uppercase tracking-[0.08em] text-[#7f674e]"
                     style={{ fontSize: `${9 * bubbleScale}px` }}
                   >
-                    {sceneAgent.toolBubble ? <span>{sceneAgent.toolBubble.icon}</span> : null}
-                    <span>{sceneAgent.agent.name}</span>
+                    {sceneAgent.agent.name}
                   </div>
                   <div className="line-clamp-2">{sceneAgent.bubble}</div>
                 </div>
