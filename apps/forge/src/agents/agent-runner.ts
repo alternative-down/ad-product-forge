@@ -665,17 +665,17 @@ export function createAgentRunner(
         return;
       }
 
-      if (result.toolCalls.length === 0) {
-        if (stopRequested && pendingRunMessages.size === 0) {
-          nextStepAt = null;
-          resetLoopDetector();
-          await transitionToIdle(runEpoch, {
-            deferWakeQueueDrain: true,
-          });
-          drainWakeQueueAfterStep = true;
-          return;
-        }
+      if (stopRequested && pendingRunMessages.size === 0) {
+        nextStepAt = null;
+        resetLoopDetector();
+        await transitionToIdle(runEpoch, {
+          deferWakeQueueDrain: true,
+        });
+        drainWakeQueueAfterStep = true;
+        return;
+      }
 
+      if (result.toolCalls.length === 0) {
         if (ignoredTextRequested) {
           suppressNoToolCallReminder = true;
         }
