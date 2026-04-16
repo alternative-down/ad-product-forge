@@ -82,16 +82,22 @@ function HomePixelRoute() {
   const [images, setImages] = useState<LoadedImages | null>(null);
   const [bubbleDeadlines, setBubbleDeadlines] = useState<Record<string, number>>({});
   const [animationDeadlines, setAnimationDeadlines] = useState<Record<string, number>>({});
+  const [displaySceneAgents, setDisplaySceneAgents] = useState<SceneAgent[]>([]);
   const [camera, setCamera] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const dragOriginRef = useRef<{ x: number; y: number; cameraX: number; cameraY: number } | null>(null);
   const previousPreviewByAgentIdRef = useRef<Record<string, string | null>>({});
   const previousStepAtByAgentIdRef = useRef<Record<string, number | null>>({});
+  const targetSceneAgentsRef = useRef<SceneAgent[]>([]);
   const agents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setTick((value) => value + 1);
+      setTick((value) => {
+        const nextValue = value + 1;
+        setDisplaySceneAgents((currentAgents) => interpolateSceneAgents(currentAgents, targetSceneAgentsRef.current, nextValue));
+        return nextValue;
+      });
       setNowMs(Date.now());
     }, 180);
 
@@ -166,7 +172,7 @@ function HomePixelRoute() {
     });
   }, [agents, nowMs]);
 
-  const sceneAgents = useMemo(
+  const targetSceneAgents = useMemo(
     () => buildSceneAgents({
       agents,
       tick,
@@ -178,6 +184,12 @@ function HomePixelRoute() {
   );
 
   useEffect(() => {
+    targetSceneAgentsRef.current = targetSceneAgents;
+  }, [targetSceneAgents]);
+
+  const visibleSceneAgents = displaySceneAgents.length === 0 ? targetSceneAgents : displaySceneAgents;
+
+  useEffect(() => {
     if (!images || !canvasRef.current) {
       return;
     }
@@ -185,10 +197,10 @@ function HomePixelRoute() {
     renderScene({
       canvas: canvasRef.current,
       images,
-      sceneAgents,
+      sceneAgents: visibleSceneAgents,
       camera,
     });
-  }, [camera, images, sceneAgents]);
+  }, [camera, images, visibleSceneAgents]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -202,7 +214,7 @@ function HomePixelRoute() {
       const normalizedX = ((event.clientX - rect.left) / rect.width) * (VIEWPORT_COLS * TILE_SIZE) + camera.x;
       const normalizedY = ((event.clientY - rect.top) / rect.height) * (VIEWPORT_ROWS * TILE_SIZE) + camera.y;
 
-      const hitAgent = [...sceneAgents]
+      const hitAgent = [...visibleSceneAgents]
         .reverse()
         .find((sceneAgent) => (
           normalizedX >= sceneAgent.x - 8 &&
@@ -255,7 +267,7 @@ function HomePixelRoute() {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [camera.x, camera.y, sceneAgents]);
+  }, [camera.x, camera.y, visibleSceneAgents]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -317,7 +329,7 @@ function HomePixelRoute() {
               className="block h-full max-h-full w-auto max-w-full bg-[#ddd4c7]"
             />
 
-            {sceneAgents.map((sceneAgent) => {
+            {visibleSceneAgents.map((sceneAgent) => {
               if (!sceneAgent.bubble) {
                 return null;
               }
@@ -349,7 +361,7 @@ function HomePixelRoute() {
               );
             })}
 
-            {sceneAgents.map((sceneAgent) => {
+            {visibleSceneAgents.map((sceneAgent) => {
               if (sceneAgent.bubble || !sceneAgent.toolBubble) {
                 return null;
               }
@@ -395,10 +407,10 @@ function buildSceneAgents(input: {
   bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
-    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.2 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.2 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.6 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.6 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.9 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.9 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.3 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.3 * TILE_SIZE, dir: 'down' as const },
   ];
   const memorySlots = [
     { x: WORLD_OFFSET_X + 14.8 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.8 * TILE_SIZE, dir: 'left' as const },
@@ -497,16 +509,15 @@ function buildSceneAgents(input: {
 
   for (const [index, agent] of absentAgents.entries()) {
     const slot = sofaRecoverySlots[index % sofaRecoverySlots.length];
-    const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     const restingPhase = Math.floor((input.tick + index * 29) / 22) % 4;
     sceneAgents.push({
       agent,
-      x: slot.x + (isAnimating ? Math.sin(input.tick / 3 + index) * 3 : Math.sin(input.tick / 18 + index) * 0.35),
-      y: slot.y + Math.sin(input.tick / 16 + index) * 0.35,
+      x: slot.x,
+      y: slot.y,
       dir: restingPhase === 1 ? 'left' : restingPhase === 2 ? 'right' : 'down',
       frame: restingPhase === 3 ? 0 : 1,
-      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
-      bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? (agent.overview.lastStepPreview ?? 'Ausente / retry') : null,
+      toolBubble: null,
+      bubble: null,
     });
   }
 
@@ -599,14 +610,14 @@ function drawFurnitureBackground(
     { key: ASSET_URLS.shelf, x: WORLD_OFFSET_X / TILE_SIZE + 18.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.25 },
     { key: ASSET_URLS.plantLarge, x: WORLD_OFFSET_X / TILE_SIZE + 13.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.55 },
     { key: ASSET_URLS.plant, x: WORLD_OFFSET_X / TILE_SIZE + 19.2, y: WORLD_OFFSET_Y / TILE_SIZE + 1.55 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 4.5 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 4.5 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 8.9 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 8.9 },
-    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 3.45, y: WORLD_OFFSET_Y / TILE_SIZE + 4.15 },
-    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 7.45, y: WORLD_OFFSET_Y / TILE_SIZE + 4.15 },
-    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 3.45, y: WORLD_OFFSET_Y / TILE_SIZE + 8.55 },
-    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 7.45, y: WORLD_OFFSET_Y / TILE_SIZE + 8.55 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 4.7 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 4.7 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 9.1 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 9.1 },
+    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
+    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
+    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 9.4 },
+    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 9.4 },
     { key: ASSET_URLS.pcSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.8, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
     { key: ASSET_URLS.pcSide, x: WORLD_OFFSET_X / TILE_SIZE + 16.5, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
     { key: ASSET_URLS.deskSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.2, y: WORLD_OFFSET_Y / TILE_SIZE + 5.35 },
@@ -630,10 +641,10 @@ function drawFurnitureForeground(
   },
 ) {
   const items = [
-    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.5, y: WORLD_OFFSET_Y / TILE_SIZE + 6.75 },
-    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.5, y: WORLD_OFFSET_Y / TILE_SIZE + 6.75 },
-    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.5, y: WORLD_OFFSET_Y / TILE_SIZE + 11.15 },
-    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.5, y: WORLD_OFFSET_Y / TILE_SIZE + 11.15 },
+    { key: ASSET_URLS.pc1, x: WORLD_OFFSET_X / TILE_SIZE + 3.5, y: WORLD_OFFSET_Y / TILE_SIZE + 6.85 },
+    { key: ASSET_URLS.pc2, x: WORLD_OFFSET_X / TILE_SIZE + 7.5, y: WORLD_OFFSET_Y / TILE_SIZE + 6.85 },
+    { key: ASSET_URLS.pc3, x: WORLD_OFFSET_X / TILE_SIZE + 3.5, y: WORLD_OFFSET_Y / TILE_SIZE + 11.25 },
+    { key: ASSET_URLS.pc1, x: WORLD_OFFSET_X / TILE_SIZE + 7.5, y: WORLD_OFFSET_Y / TILE_SIZE + 11.25 },
     { key: ASSET_URLS.chairSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.55, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
     { key: ASSET_URLS.chairSide, x: WORLD_OFFSET_X / TILE_SIZE + 16.25, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
     { key: ASSET_URLS.sofa, x: WORLD_OFFSET_X / TILE_SIZE + 13.15, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
@@ -706,6 +717,37 @@ function clampCamera(input: { x: number; y: number }) {
     x: Math.min(Math.max(Math.round(input.x), 0), (WORLD_COLS - VIEWPORT_COLS) * TILE_SIZE),
     y: Math.min(Math.max(Math.round(input.y), 0), (WORLD_ROWS - VIEWPORT_ROWS) * TILE_SIZE),
   };
+}
+
+function interpolateSceneAgents(currentAgents: SceneAgent[], targetAgents: SceneAgent[], tick: number) {
+  return targetAgents.map((targetAgent) => {
+    const currentAgent = currentAgents.find((agent) => agent.agent.agentId === targetAgent.agent.agentId);
+
+    if (!currentAgent) {
+      return targetAgent;
+    }
+
+    const deltaX = targetAgent.x - currentAgent.x;
+    const deltaY = targetAgent.y - currentAgent.y;
+    const distance = Math.abs(deltaX) + Math.abs(deltaY);
+
+    if (distance < 0.6) {
+      return targetAgent;
+    }
+
+    const movingDir = Math.abs(deltaX) > Math.abs(deltaY)
+      ? deltaX > 0 ? 'right' : 'left'
+      : deltaY > 0 ? 'down' : 'up';
+    const travelFrame = Math.floor((tick + Number.parseInt(targetAgent.agent.agentId.slice(-1), 16)) / 2) % 4;
+
+    return {
+      ...targetAgent,
+      x: currentAgent.x + deltaX * 0.32,
+      y: currentAgent.y + deltaY * 0.32,
+      dir: movingDir,
+      frame: travelFrame,
+    };
+  });
 }
 
 function drawCharacterFrame(input: {
