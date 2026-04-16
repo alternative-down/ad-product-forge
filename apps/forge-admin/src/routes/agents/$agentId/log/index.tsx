@@ -65,8 +65,6 @@ function AgentLogIndexRoute() {
         checkpointGeneration={runtimeMemoryQuery.data?.checkpointGeneration ?? null}
         checkpointSummary={runtimeMemoryQuery.data?.checkpointSummary ?? null}
         checkpointUpdatedAt={runtimeMemoryQuery.data?.checkpointUpdatedAt ?? null}
-        ltmRecall={runtimeMemoryQuery.data?.ltmRecall ?? null}
-        ltm={runtimeMemoryQuery.data?.ltm ?? null}
         metrics={runtimeMemoryQuery.data?.metrics ?? null}
         loading={runtimeMemoryQuery.isLoading}
         error={runtimeMemoryQuery.error?.message ?? null}
@@ -99,25 +97,6 @@ function AgentRuntimeMemorySection(input: {
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
-  ltmRecall: {
-    status: 'hit' | 'miss' | 'error';
-    query: string;
-    resultIds: string[];
-    resultCount: number;
-    stepsJson: string;
-    updatedAt: number;
-    error: string | null;
-  } | null;
-  ltm: {
-    running: boolean;
-    queued: boolean;
-    lastRunAt: number | null;
-    lastRunError: string | null;
-    lastRunErrorAt: number | null;
-    lastWrittenPackageId: string | null;
-    lastWrittenAt: number | null;
-    packageCount: number;
-  } | null;
   metrics: {
     rawMessageCount: number;
     recentRawMessageCount: number;
@@ -214,27 +193,6 @@ function AgentRuntimeMemorySection(input: {
         </div>
       ) : null}
 
-      {input.ltm ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <MetricTile
-            label="LTM pacotes"
-            current={input.ltm.packageCount}
-            unit="pacotes"
-            detail={input.ltm.running ? 'workflow em execução' : input.ltm.queued ? 'execução enfileirada' : 'workflow ocioso'}
-          />
-          <MetricTile
-            label="LTM escritos"
-            current={input.ltm.packageCount}
-            unit="pacotes"
-            detail={
-              input.ltm.lastWrittenAt
-                ? `último write ${formatDateTime(input.ltm.lastWrittenAt)}`
-                : 'nenhum pacote escrito'
-            }
-          />
-        </div>
-      ) : null}
-
       <MemoryDisclosure
         title="Status de ausência"
         value={input.executionState === 'absent' || input.lastExecutionError
@@ -259,41 +217,12 @@ function AgentRuntimeMemorySection(input: {
         value={input.checkpointSummary}
       />
       <MemoryDisclosure
-        title="LTM Recall"
-        value={input.ltmRecall ? [
-          `status: ${input.ltmRecall.status}`,
-          `updatedAt: ${formatDateTime(input.ltmRecall.updatedAt)}`,
-          `resultCount: ${formatNumber(input.ltmRecall.resultCount)}`,
-          `resultIds: ${input.ltmRecall.resultIds.join(', ') || '—'}`,
-          `error: ${input.ltmRecall.error ?? '—'}`,
-          '',
-          input.ltmRecall.query,
-        ].join('\n') : null}
-      />
-      <MemoryDisclosure
-        title="LTM Recall Steps JSON"
-        value={input.ltmRecall?.stepsJson ?? null}
-      />
-      <MemoryDisclosure
         title="Observations"
         value={input.observations}
       />
       <MemoryDisclosure
         title="Reflection"
         value={input.reflection}
-      />
-      <MemoryDisclosure
-        title="LTM status"
-        value={input.ltm ? [
-          `running: ${input.ltm.running ? 'yes' : 'no'}`,
-          `queued: ${input.ltm.queued ? 'yes' : 'no'}`,
-          `lastRunAt: ${input.ltm.lastRunAt ? formatDateTime(input.ltm.lastRunAt) : '—'}`,
-          `lastRunError: ${input.ltm.lastRunError ?? '—'}`,
-          `lastRunErrorAt: ${input.ltm.lastRunErrorAt ? formatDateTime(input.ltm.lastRunErrorAt) : '—'}`,
-          `lastWrittenPackageId: ${input.ltm.lastWrittenPackageId ?? '—'}`,
-          `lastWrittenAt: ${input.ltm.lastWrittenAt ? formatDateTime(input.ltm.lastWrittenAt) : '—'}`,
-          `packageCount: ${formatNumber(input.ltm.packageCount)}`,
-        ].join('\n') : null}
       />
     </section>
   );
