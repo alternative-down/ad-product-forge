@@ -593,8 +593,6 @@ function buildHiringPrompt(input: {
     'The professional profile, backstory, and goals must be grounded in the real-world role and how that role operates in practice.',
     'Write the prompt with exactly these sections and no others: Primary Goal, Secondary Goals, Backstory.',
     'Keep the structure simple and direct, in a CrewAI-like style.',
-    'Do not add sections about tools, internal systems, platform mechanics, safety rules, constraints, communication channels, execution control, or environment disclaimers.',
-    'Do not mention tool ids, workflow ids, capability ids, internal chats, or operational platform details anywhere in the generated agent text.',
     'Do not turn the backstory into fiction, lore, or theatrical character writing.',
     'Make it explicit in the generated text that the collaborator is operating in a real company through software, not in a simulation, game, or roleplay.',
     'Use the backstory to give realistic vocational context to the agent, like a concise professional biography.',
