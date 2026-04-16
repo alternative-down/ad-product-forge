@@ -27,6 +27,7 @@ type RecallSnapshot = {
   query: string;
   resultIds: string[];
   resultCount: number;
+  stepsJson: string;
   updatedAt: string;
   error: string | null;
 };
@@ -121,6 +122,7 @@ export class AgentLongTermMemoryRecallProcessor
           query: '',
           resultIds: [],
           resultCount: 0,
+          stepsJson: safeSerializeRecallSteps(args.steps),
           updatedAt: new Date().toISOString(),
           error: 'No current step content was available for the recall query.',
         });
@@ -131,14 +133,15 @@ export class AgentLongTermMemoryRecallProcessor
       args.messageList.clearSystemMessages(RECALL_TAG);
 
       if (!formatted) {
-        await this.persistRecallSnapshot(threadContext, {
-          status: 'miss',
-          query: queryText,
-          resultIds: [],
-          resultCount: 0,
-          updatedAt: new Date().toISOString(),
-          error: null,
-        });
+      await this.persistRecallSnapshot(threadContext, {
+        status: 'miss',
+        query: queryText,
+        resultIds: [],
+        resultCount: 0,
+        stepsJson: safeSerializeRecallSteps(args.steps),
+        updatedAt: new Date().toISOString(),
+        error: null,
+      });
         return args.messageList;
       }
 
@@ -157,6 +160,7 @@ export class AgentLongTermMemoryRecallProcessor
         query: queryText,
         resultIds: results.map((result) => result.id),
         resultCount: results.length,
+        stepsJson: safeSerializeRecallSteps(args.steps),
         updatedAt: new Date().toISOString(),
         error: null,
       });
@@ -170,6 +174,7 @@ export class AgentLongTermMemoryRecallProcessor
         query: this.buildRecallQuery(args),
         resultIds: [],
         resultCount: 0,
+        stepsJson: safeSerializeRecallSteps(args.steps),
         updatedAt: new Date().toISOString(),
         error: error instanceof Error ? error.message : String(error),
       });
@@ -342,6 +347,14 @@ export class AgentLongTermMemoryRecallProcessor
       title: thread?.title ?? '',
       metadata,
     });
+  }
+}
+
+function safeSerializeRecallSteps(steps: ProcessInputStepArgs<unknown>['steps']) {
+  try {
+    return JSON.stringify(steps, null, 2);
+  } catch {
+    return '[unserializable steps payload]';
   }
 }
 

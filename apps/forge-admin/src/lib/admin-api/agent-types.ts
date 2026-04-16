@@ -237,6 +237,7 @@ export type AgentRuntimeMemorySnapshot = {
     query: string;
     resultIds: string[];
     resultCount: number;
+    stepsJson: string;
     updatedAt: number;
     error: string | null;
   } | null;

@@ -104,6 +104,7 @@ function AgentRuntimeMemorySection(input: {
     query: string;
     resultIds: string[];
     resultCount: number;
+    stepsJson: string;
     updatedAt: number;
     error: string | null;
   } | null;
@@ -268,6 +269,10 @@ function AgentRuntimeMemorySection(input: {
           '',
           input.ltmRecall.query,
         ].join('\n') : null}
+      />
+      <MemoryDisclosure
+        title="LTM Recall Steps JSON"
+        value={input.ltmRecall?.stepsJson ?? null}
       />
       <MemoryDisclosure
         title="Observations"
