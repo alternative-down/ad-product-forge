@@ -333,15 +333,15 @@ function buildSceneAgents(input: {
   for (const [index, agent] of runningAgents.entries()) {
     const slot = runningSlots[index % runningSlots.length] ?? roamLane[index % roamLane.length];
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
-    const bob = isAnimating ? Math.sin(input.tick / 5 + index) * 1.2 : Math.sin(input.tick / 14 + index) * 0.35;
+    const isRoaming = index >= runningSlots.length;
     sceneAgents.push({
       agent,
       x: slot.x + (
-        isAnimating && index >= runningSlots.length
+        isAnimating && isRoaming
           ? Math.sin(input.tick / 4 + index) * 6
           : 0
       ),
-      y: slot.y + bob,
+      y: slot.y,
       dir: slot.dir,
       frame: isAnimating ? 3 + (input.tick + index) % 2 : 1,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
@@ -354,8 +354,8 @@ function buildSceneAgents(input: {
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     sceneAgents.push({
       agent,
-      x: slot.x + (isAnimating ? Math.sin(input.tick / 6 + index) * 3 : Math.sin(input.tick / 18 + index) * 0.45),
-      y: slot.y + (isAnimating ? Math.cos(input.tick / 5 + index) * 3 : Math.cos(input.tick / 17 + index) * 0.45),
+      x: slot.x,
+      y: slot.y,
       dir: index % 2 === 0 ? slot.dir : 'down',
       frame: isAnimating ? 5 + (input.tick + index) % 2 : 5,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
