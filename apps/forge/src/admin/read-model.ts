@@ -128,6 +128,61 @@ type LongTermMemoryRecallSnapshot = {
   error: string | null;
 };
 
+function extractLatestMessagePreview(content: unknown) {
+  if (!content || typeof content !== 'object') {
+    return null;
+  }
+
+  const record = content as {
+    content?: unknown;
+    reasoning?: unknown;
+    parts?: unknown;
+  };
+  const parts = Array.isArray(record.parts) ? record.parts : [];
+
+  for (const part of parts) {
+    if (!part || typeof part !== 'object') {
+      continue;
+    }
+
+    if ('type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string') {
+      const text = part.text.trim();
+
+      if (text) {
+        return truncatePreview(text);
+      }
+    }
+  }
+
+  for (const part of parts) {
+    if (!part || typeof part !== 'object') {
+      continue;
+    }
+
+    if ('type' in part && part.type === 'reasoning' && 'text' in part && typeof part.text === 'string') {
+      const text = part.text.trim();
+
+      if (text) {
+        return truncatePreview(text);
+      }
+    }
+  }
+
+  if (typeof record.content === 'string' && record.content.trim()) {
+    return truncatePreview(record.content.trim());
+  }
+
+  if (typeof record.reasoning === 'string' && record.reasoning.trim()) {
+    return truncatePreview(record.reasoning.trim());
+  }
+
+  return null;
+}
+
+function truncatePreview(value: string) {
+  return value.length > 220 ? `${value.slice(0, 217).trimEnd()}...` : value;
+}
+
 type MemoryStoreWithObservationalMemory = MastraMemoryStore & {
   getThreadById(input: { threadId: string }): Promise<{
     metadata?: Record<string, unknown>;
@@ -384,6 +439,17 @@ export function createAdminReadModel(input: {
         agentRows.map(async (agent) => [agent.id, await getAgentRuntimeMemory(agent.id)] as const),
       ),
     );
+    const latestThreadPreviewByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => {
+          const messages = await listThreadMessages(input.workspaceBasePath, agent.id, {
+            page: 0,
+            perPage: 1,
+          });
+          return [agent.id, extractLatestMessagePreview(messages[0]?.content)] as const;
+        }),
+      ),
+    );
     const longTermMemoryStateByAgentId = new Map(
       await Promise.all(
         agentRows.map(async (agent) => [agent.id, await readLongTermMemoryState(input.workspaceBasePath, agent.id)] as const),
@@ -446,6 +512,7 @@ export function createAdminReadModel(input: {
           lastStepContextTokens: lastStep
             ? lastStep.inputTokens
             : null,
+          lastStepPreview: latestThreadPreviewByAgentId.get(agent.id) ?? null,
           lastStepTokens: lastStep
             ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
             : null,
