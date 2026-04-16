@@ -58,13 +58,15 @@ const ASSET_URLS = {
 type LoadedImages = Record<string, HTMLImageElement>;
 
 type SceneAgent = {
-  agent: AgentListItem;
+  agentId: string;
+  name: string;
   x: number;
   y: number;
   dir: 'down' | 'up' | 'right' | 'left';
   frame: number;
   toolBubble: AgentListItem['overview']['lastToolBadge'];
   bubble: string | null;
+  spriteSeed?: number;
 };
 
 function HomePixelRoute() {
@@ -235,7 +237,7 @@ function HomePixelRoute() {
 
       setBubbleDeadlines((currentDeadlines) => ({
         ...currentDeadlines,
-        [hitAgent.agent.agentId]: Date.now() + 4_500,
+        [hitAgent.agentId]: Date.now() + 4_500,
       }));
     }
 
@@ -423,25 +425,19 @@ function HomePixelRoute() {
 
               return (
                 <div
-                  key={`${sceneAgent.agent.agentId}:bubble`}
-                  className="pointer-events-none absolute max-w-[13rem] border-2 border-[#4a3c2c] bg-[#fff5d8] px-2 py-1 font-mono text-[10px] leading-4 text-[#2f261d] shadow-[4px_4px_0_rgba(74,60,44,0.16)]"
+                  key={`${sceneAgent.agentId}:bubble`}
+                  className="pointer-events-none absolute max-w-[15rem] rounded-[1rem] bg-background/96 px-3 py-2 text-xs leading-5 text-foreground shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                   style={{
                     left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
                     top: `${bubbleYPercent}%`,
                     transform: `${bubbleAnchorLeft ? 'translateX(0)' : 'translateX(-100%)'} scale(${bubbleScale})`,
                     transformOrigin: bubbleAnchorLeft ? 'left bottom' : 'right bottom',
-                    fontSize: `${10 * bubbleScale}px`,
-                    lineHeight: `${16 * bubbleScale}px`,
-                    padding: `${4 * bubbleScale}px ${8 * bubbleScale}px`,
-                    borderWidth: `${Math.max(1, Math.round(2 * bubbleScale))}px`,
-                    boxShadow: `${4 * bubbleScale}px ${4 * bubbleScale}px 0 rgba(74,60,44,0.16)`,
                   }}
                 >
                   <div
-                    className="mb-1 uppercase tracking-[0.08em] text-[#7f674e]"
-                    style={{ fontSize: `${9 * bubbleScale}px` }}
+                    className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
                   >
-                    {sceneAgent.agent.name}
+                    {sceneAgent.name}
                   </div>
                   <div className="line-clamp-2">{sceneAgent.bubble}</div>
                 </div>
@@ -467,18 +463,13 @@ function HomePixelRoute() {
 
               return (
                 <div
-                  key={`${sceneAgent.agent.agentId}:tool-bubble`}
-                  className="pointer-events-none absolute flex h-8 w-8 items-center justify-center border-2 border-[#4a3c2c] bg-[#fff5d8] text-sm text-[#2f261d] shadow-[4px_4px_0_rgba(74,60,44,0.16)]"
+                  key={`${sceneAgent.agentId}:tool-bubble`}
+                  className="pointer-events-none absolute flex h-8 w-8 items-center justify-center rounded-full bg-background/96 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                   style={{
                     left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
                     top: `${bubbleYPercent}%`,
                     transform: `${bubbleAnchorLeft ? 'translateX(0)' : 'translateX(-100%)'} scale(${bubbleScale})`,
                     transformOrigin: bubbleAnchorLeft ? 'left bottom' : 'right bottom',
-                    width: `${32 * bubbleScale}px`,
-                    height: `${32 * bubbleScale}px`,
-                    fontSize: `${14 * bubbleScale}px`,
-                    borderWidth: `${Math.max(1, Math.round(2 * bubbleScale))}px`,
-                    boxShadow: `${4 * bubbleScale}px ${4 * bubbleScale}px 0 rgba(74,60,44,0.16)`,
                   }}
                   title={sceneAgent.toolBubble.label}
                 >
@@ -504,10 +495,10 @@ function buildSceneAgents(input: {
   bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
-    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.1 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.1 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.5 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.5 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.35 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.35 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.75 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.75 * TILE_SIZE, dir: 'down' as const },
   ];
   const memorySlots = [
     { x: WORLD_OFFSET_X + 14.6 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.9 * TILE_SIZE, dir: 'left' as const },
@@ -543,6 +534,8 @@ function buildSceneAgents(input: {
     const restingPhase = Math.floor((input.tick + index * 19) / 18) % 4;
     sceneAgents.push({
       agent,
+      agentId: agent.agentId,
+      name: agent.name,
       x: slot.x + (
         isAnimating && isRoaming
           ? Math.sin(input.tick / 4 + index) * 6
@@ -569,6 +562,8 @@ function buildSceneAgents(input: {
     const restingPhase = Math.floor((input.tick + index * 11) / 20) % 4;
     sceneAgents.push({
       agent,
+      agentId: agent.agentId,
+      name: agent.name,
       x: slot.x,
       y: slot.y,
       dir: isAnimating
@@ -591,6 +586,8 @@ function buildSceneAgents(input: {
     const idlePhase = Math.floor((input.tick + index * 23) / 16) % 5;
     sceneAgents.push({
       agent,
+      agentId: agent.agentId,
+      name: agent.name,
       x: slot.x + (isAnimating ? Math.sin(input.tick / 8 + index) * 5 : Math.sin(roamPhase) * 4.5),
       y: slot.y + (isAnimating ? Math.cos(input.tick / 9 + index) * 2 : Math.cos(roamPhase * 0.8) * 2.2),
       dir: isAnimating
@@ -609,6 +606,8 @@ function buildSceneAgents(input: {
     const restingPhase = Math.floor((input.tick + index * 29) / 22) % 4;
     sceneAgents.push({
       agent,
+      agentId: agent.agentId,
+      name: agent.name,
       x: slot.x,
       y: slot.y,
       dir: restingPhase === 1 ? 'left' : restingPhase === 2 ? 'right' : 'down',
@@ -617,6 +616,26 @@ function buildSceneAgents(input: {
       bubble: null,
     });
   }
+
+  const hiringPhase = Math.floor(input.tick / 10) % 12;
+  const hiringWaypoint = hiringPhase < 4 ? 0 : hiringPhase < 8 ? 1 : 2;
+  const hiringPositions = [
+    { x: WORLD_OFFSET_X + 13.9 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.3 * TILE_SIZE, dir: 'left' as const, frame: 5 },
+    { x: WORLD_OFFSET_X + 15.4 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.7 * TILE_SIZE, dir: 'right' as const, frame: 1 },
+    { x: WORLD_OFFSET_X + 17.1 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.4 * TILE_SIZE, dir: 'left' as const, frame: 5 },
+  ];
+  const hiringPosition = hiringPositions[hiringWaypoint];
+  sceneAgents.push({
+    agentId: 'npc-rh',
+    name: 'RH',
+    x: hiringPosition.x,
+    y: hiringPosition.y,
+    dir: hiringPosition.dir,
+    frame: hiringPhase % 2 === 0 ? hiringPosition.frame : 1,
+    toolBubble: null,
+    bubble: null,
+    spriteSeed: 4,
+  });
 
   return sceneAgents;
 }
@@ -793,7 +812,7 @@ function drawSceneAgents(
   const sortedAgents = [...sceneAgents].sort((left, right) => left.y - right.y);
 
   for (const sceneAgent of sortedAgents) {
-    const image = images[ASSET_URLS.characters[Number.parseInt(sceneAgent.agent.agentId.slice(-1), 16) % ASSET_URLS.characters.length]]
+    const image = images[ASSET_URLS.characters[resolveSpriteSeed(sceneAgent) % ASSET_URLS.characters.length]]
       ?? images[ASSET_URLS.characters[0]];
 
     if (!image) {
@@ -824,7 +843,7 @@ function clampCamera(input: { x: number; y: number }, zoom: number) {
 
 function interpolateSceneAgents(currentAgents: SceneAgent[], targetAgents: SceneAgent[], tick: number) {
   return targetAgents.map((targetAgent) => {
-    const currentAgent = currentAgents.find((agent) => agent.agent.agentId === targetAgent.agent.agentId);
+    const currentAgent = currentAgents.find((agent) => agent.agentId === targetAgent.agentId);
 
     if (!currentAgent) {
       return targetAgent;
@@ -841,7 +860,7 @@ function interpolateSceneAgents(currentAgents: SceneAgent[], targetAgents: Scene
     const movingDir = Math.abs(deltaX) > Math.abs(deltaY)
       ? deltaX > 0 ? 'right' : 'left'
       : deltaY > 0 ? 'down' : 'up';
-    const travelFrame = Math.floor((tick + Number.parseInt(targetAgent.agent.agentId.slice(-1), 16)) / 2) % 4;
+    const travelFrame = Math.floor((tick + resolveSpriteSeed(targetAgent)) / 2) % 4;
 
     return {
       ...targetAgent,
@@ -901,4 +920,18 @@ function drawCharacterFrame(input: {
 
 function clampZoom(value: number) {
   return Math.min(Math.max(Number(value.toFixed(2)), 0.8), 2);
+}
+
+function resolveSpriteSeed(sceneAgent: Pick<SceneAgent, 'agentId' | 'spriteSeed'>) {
+  if (typeof sceneAgent.spriteSeed === 'number') {
+    return sceneAgent.spriteSeed;
+  }
+
+  const fallback = Number.parseInt(sceneAgent.agentId.slice(-1), 16);
+
+  if (Number.isFinite(fallback)) {
+    return fallback;
+  }
+
+  return sceneAgent.agentId.length;
 }
