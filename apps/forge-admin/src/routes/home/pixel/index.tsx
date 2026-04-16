@@ -84,8 +84,11 @@ function HomePixelRoute() {
   const [animationDeadlines, setAnimationDeadlines] = useState<Record<string, number>>({});
   const [displaySceneAgents, setDisplaySceneAgents] = useState<SceneAgent[]>([]);
   const [camera, setCamera] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const dragOriginRef = useRef<{ pointerId: number; x: number; y: number; cameraX: number; cameraY: number } | null>(null);
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchDistanceRef = useRef<number | null>(null);
   const previousPreviewByAgentIdRef = useRef<Record<string, string | null>>({});
   const previousStepAtByAgentIdRef = useRef<Record<string, number | null>>({});
   const targetSceneAgentsRef = useRef<SceneAgent[]>([]);
@@ -199,8 +202,9 @@ function HomePixelRoute() {
       images,
       sceneAgents: visibleSceneAgents,
       camera,
+      zoom,
     });
-  }, [camera, images, visibleSceneAgents]);
+  }, [camera, images, visibleSceneAgents, zoom]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -211,8 +215,10 @@ function HomePixelRoute() {
 
     function handleClick(event: MouseEvent) {
       const rect = canvas.getBoundingClientRect();
-      const normalizedX = ((event.clientX - rect.left) / rect.width) * (VIEWPORT_COLS * TILE_SIZE) + camera.x;
-      const normalizedY = ((event.clientY - rect.top) / rect.height) * (VIEWPORT_ROWS * TILE_SIZE) + camera.y;
+      const visibleWidth = (VIEWPORT_COLS * TILE_SIZE) / zoom;
+      const visibleHeight = (VIEWPORT_ROWS * TILE_SIZE) / zoom;
+      const normalizedX = ((event.clientX - rect.left) / rect.width) * visibleWidth + camera.x;
+      const normalizedY = ((event.clientY - rect.top) / rect.height) * visibleHeight + camera.y;
 
       const hitAgent = [...visibleSceneAgents]
         .reverse()
@@ -236,30 +242,88 @@ function HomePixelRoute() {
     function handlePointerDown(event: PointerEvent) {
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
-      dragOriginRef.current = {
-        pointerId: event.pointerId,
+      activePointersRef.current.set(event.pointerId, {
         x: event.clientX,
         y: event.clientY,
-        cameraX: camera.x,
-        cameraY: camera.y,
-      };
+      });
+
+      if (activePointersRef.current.size === 1) {
+        dragOriginRef.current = {
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          cameraX: camera.x,
+          cameraY: camera.y,
+        };
+        return;
+      }
+
+      dragOriginRef.current = null;
     }
 
     function handlePointerMove(event: PointerEvent) {
+      activePointersRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      if (activePointersRef.current.size === 2) {
+        const pointers = [...activePointersRef.current.values()];
+        const pinchDistance = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
+
+        if (pinchDistanceRef.current !== null) {
+          const nextZoom = clampZoom(zoom * (pinchDistance / pinchDistanceRef.current));
+          setZoom(nextZoom);
+          setCamera((currentCamera) => clampCamera(currentCamera, nextZoom));
+        }
+
+        pinchDistanceRef.current = pinchDistance;
+        return;
+      }
+
       if (!dragOriginRef.current || dragOriginRef.current.pointerId !== event.pointerId) {
         return;
       }
 
-      const nextCameraX = dragOriginRef.current.cameraX - ((event.clientX - dragOriginRef.current.x) / SCALE);
-      const nextCameraY = dragOriginRef.current.cameraY - ((event.clientY - dragOriginRef.current.y) / SCALE);
-      setCamera(clampCamera({ x: nextCameraX, y: nextCameraY }));
+      const nextCameraX = dragOriginRef.current.cameraX - ((event.clientX - dragOriginRef.current.x) / (SCALE * zoom));
+      const nextCameraY = dragOriginRef.current.cameraY - ((event.clientY - dragOriginRef.current.y) / (SCALE * zoom));
+      setCamera(() => clampCamera(
+        { x: nextCameraX, y: nextCameraY },
+        zoom,
+      ));
     }
 
     function handlePointerUp(event: PointerEvent) {
       if (dragOriginRef.current?.pointerId === event.pointerId) {
         canvas.releasePointerCapture(event.pointerId);
       }
+
+      activePointersRef.current.delete(event.pointerId);
+      if (activePointersRef.current.size < 2) {
+        pinchDistanceRef.current = null;
+      }
+
+      if (activePointersRef.current.size === 1) {
+        const [remainingPointerId, remainingPointer] = [...activePointersRef.current.entries()][0];
+        dragOriginRef.current = {
+          pointerId: remainingPointerId,
+          x: remainingPointer.x,
+          y: remainingPointer.y,
+          cameraX: camera.x,
+          cameraY: camera.y,
+        };
+        return;
+      }
+
       dragOriginRef.current = null;
+    }
+
+    function handleWheel(event: WheelEvent) {
+      event.preventDefault();
+      const direction = event.deltaY > 0 ? -0.12 : 0.12;
+      const nextZoom = clampZoom(zoom + direction);
+      setZoom(nextZoom);
+      setCamera((currentCamera) => clampCamera(currentCamera, nextZoom));
     }
 
     canvas.addEventListener('click', handleClick);
@@ -267,6 +331,7 @@ function HomePixelRoute() {
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerUp);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       canvas.removeEventListener('click', handleClick);
@@ -274,21 +339,22 @@ function HomePixelRoute() {
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerup', handlePointerUp);
       canvas.removeEventListener('pointercancel', handlePointerUp);
+      canvas.removeEventListener('wheel', handleWheel);
     };
-  }, [camera.x, camera.y, visibleSceneAgents]);
+  }, [camera.x, camera.y, visibleSceneAgents, zoom]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       const step = 14;
 
       if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
-        setCamera((currentCamera) => clampCamera({ x: currentCamera.x - step, y: currentCamera.y }));
+        setCamera((currentCamera) => clampCamera({ x: currentCamera.x - step, y: currentCamera.y }, zoom));
       } else if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') {
-        setCamera((currentCamera) => clampCamera({ x: currentCamera.x + step, y: currentCamera.y }));
+        setCamera((currentCamera) => clampCamera({ x: currentCamera.x + step, y: currentCamera.y }, zoom));
       } else if (event.key === 'ArrowUp' || event.key.toLowerCase() === 'w') {
-        setCamera((currentCamera) => clampCamera({ x: currentCamera.x, y: currentCamera.y - step }));
+        setCamera((currentCamera) => clampCamera({ x: currentCamera.x, y: currentCamera.y - step }, zoom));
       } else if (event.key === 'ArrowDown' || event.key.toLowerCase() === 's') {
-        setCamera((currentCamera) => clampCamera({ x: currentCamera.x, y: currentCamera.y + step }));
+        setCamera((currentCamera) => clampCamera({ x: currentCamera.x, y: currentCamera.y + step }, zoom));
       } else {
         return;
       }
@@ -299,7 +365,7 @@ function HomePixelRoute() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [zoom]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -343,9 +409,13 @@ function HomePixelRoute() {
                 return null;
               }
 
-              const bubbleXPercent = ((sceneAgent.x - camera.x) / (VIEWPORT_COLS * TILE_SIZE)) * 100;
-              const bubbleYPercent = ((sceneAgent.y - 44 - camera.y) / (VIEWPORT_ROWS * TILE_SIZE)) * 100;
-              const bubbleOffsetPx = sceneAgent.x < camera.x + (VIEWPORT_COLS * TILE_SIZE) / 2 ? 42 : -42;
+              const visibleWidth = (VIEWPORT_COLS * TILE_SIZE) / zoom;
+              const visibleHeight = (VIEWPORT_ROWS * TILE_SIZE) / zoom;
+              const bubbleXPercent = ((sceneAgent.x - camera.x) / visibleWidth) * 100;
+              const bubbleYPercent = ((sceneAgent.y - 44 - camera.y) / visibleHeight) * 100;
+              const bubbleScale = clampZoom(0.88 + zoom * 0.4);
+              const bubbleAnchorLeft = sceneAgent.x < camera.x + visibleWidth / 2;
+              const bubbleOffsetPx = bubbleAnchorLeft ? 44 : -44;
 
               if (bubbleXPercent < -20 || bubbleXPercent > 120 || bubbleYPercent < -20 || bubbleYPercent > 120) {
                 return null;
@@ -354,16 +424,24 @@ function HomePixelRoute() {
               return (
                 <div
                   key={`${sceneAgent.agent.agentId}:bubble`}
-                  className="pointer-events-none absolute max-w-[15rem] rounded-[1rem] bg-background/96 px-3 py-2 text-xs leading-5 text-foreground shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                  className="pointer-events-none absolute max-w-[13rem] border-2 border-[#4a3c2c] bg-[#fff5d8] px-2 py-1 font-mono text-[10px] leading-4 text-[#2f261d] shadow-[4px_4px_0_rgba(74,60,44,0.16)]"
                   style={{
                     left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
                     top: `${bubbleYPercent}%`,
-                    transform: sceneAgent.x < camera.x + (VIEWPORT_COLS * TILE_SIZE) / 2 ? 'translateX(0)' : 'translateX(-100%)',
+                    transform: `${bubbleAnchorLeft ? 'translateX(0)' : 'translateX(-100%)'} scale(${bubbleScale})`,
+                    transformOrigin: bubbleAnchorLeft ? 'left bottom' : 'right bottom',
+                    fontSize: `${10 * bubbleScale}px`,
+                    lineHeight: `${16 * bubbleScale}px`,
+                    padding: `${4 * bubbleScale}px ${8 * bubbleScale}px`,
+                    borderWidth: `${Math.max(1, Math.round(2 * bubbleScale))}px`,
+                    boxShadow: `${4 * bubbleScale}px ${4 * bubbleScale}px 0 rgba(74,60,44,0.16)`,
                   }}
                 >
-                  <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                    {sceneAgent.toolBubble ? <span>{sceneAgent.toolBubble.icon}</span> : null}
-                    <span>{sceneAgent.agent.name}</span>
+                  <div
+                    className="mb-1 uppercase tracking-[0.08em] text-[#7f674e]"
+                    style={{ fontSize: `${9 * bubbleScale}px` }}
+                  >
+                    {sceneAgent.agent.name}
                   </div>
                   <div className="line-clamp-2">{sceneAgent.bubble}</div>
                 </div>
@@ -375,9 +453,13 @@ function HomePixelRoute() {
                 return null;
               }
 
-              const bubbleXPercent = ((sceneAgent.x - camera.x) / (VIEWPORT_COLS * TILE_SIZE)) * 100;
-              const bubbleYPercent = ((sceneAgent.y - 28 - camera.y) / (VIEWPORT_ROWS * TILE_SIZE)) * 100;
-              const bubbleOffsetPx = sceneAgent.x < camera.x + (VIEWPORT_COLS * TILE_SIZE) / 2 ? 34 : -34;
+              const visibleWidth = (VIEWPORT_COLS * TILE_SIZE) / zoom;
+              const visibleHeight = (VIEWPORT_ROWS * TILE_SIZE) / zoom;
+              const bubbleXPercent = ((sceneAgent.x - camera.x) / visibleWidth) * 100;
+              const bubbleYPercent = ((sceneAgent.y - 28 - camera.y) / visibleHeight) * 100;
+              const bubbleScale = clampZoom(0.88 + zoom * 0.4);
+              const bubbleAnchorLeft = sceneAgent.x < camera.x + visibleWidth / 2;
+              const bubbleOffsetPx = bubbleAnchorLeft ? 34 : -34;
 
               if (bubbleXPercent < -20 || bubbleXPercent > 120 || bubbleYPercent < -20 || bubbleYPercent > 120) {
                 return null;
@@ -386,11 +468,17 @@ function HomePixelRoute() {
               return (
                 <div
                   key={`${sceneAgent.agent.agentId}:tool-bubble`}
-                  className="pointer-events-none absolute flex h-8 w-8 items-center justify-center rounded-full bg-background/96 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                  className="pointer-events-none absolute flex h-8 w-8 items-center justify-center border-2 border-[#4a3c2c] bg-[#fff5d8] text-sm text-[#2f261d] shadow-[4px_4px_0_rgba(74,60,44,0.16)]"
                   style={{
                     left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
                     top: `${bubbleYPercent}%`,
-                    transform: sceneAgent.x < camera.x + (VIEWPORT_COLS * TILE_SIZE) / 2 ? 'translateX(0)' : 'translateX(-100%)',
+                    transform: `${bubbleAnchorLeft ? 'translateX(0)' : 'translateX(-100%)'} scale(${bubbleScale})`,
+                    transformOrigin: bubbleAnchorLeft ? 'left bottom' : 'right bottom',
+                    width: `${32 * bubbleScale}px`,
+                    height: `${32 * bubbleScale}px`,
+                    fontSize: `${14 * bubbleScale}px`,
+                    borderWidth: `${Math.max(1, Math.round(2 * bubbleScale))}px`,
+                    boxShadow: `${4 * bubbleScale}px ${4 * bubbleScale}px 0 rgba(74,60,44,0.16)`,
                   }}
                   title={sceneAgent.toolBubble.label}
                 >
@@ -541,6 +629,7 @@ function renderScene(input: {
     x: number;
     y: number;
   };
+  zoom: number;
 }) {
   const context = input.canvas.getContext('2d');
 
@@ -551,10 +640,10 @@ function renderScene(input: {
   context.imageSmoothingEnabled = false;
   context.clearRect(0, 0, input.canvas.width, input.canvas.height);
 
-  drawFloor(context, input.images, input.camera);
-  drawFurnitureBackground(context, input.images, input.camera);
-  drawSceneAgents(context, input.images, input.sceneAgents, input.camera);
-  drawFurnitureForeground(context, input.images, input.camera);
+  drawFloor(context, input.images, input.camera, input.zoom);
+  drawFurnitureBackground(context, input.images, input.camera, input.zoom);
+  drawSceneAgents(context, input.images, input.sceneAgents, input.camera, input.zoom);
+  drawFurnitureForeground(context, input.images, input.camera, input.zoom);
 }
 
 function drawFloor(
@@ -564,6 +653,7 @@ function drawFloor(
     x: number;
     y: number;
   },
+  zoom: number,
 ) {
   const warmTile = images[ASSET_URLS.floorWarm];
   const coolTile = images[ASSET_URLS.floorCool];
@@ -575,34 +665,35 @@ function drawFloor(
 
   context.fillStyle = '#ddd4c7';
   context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  const renderScale = SCALE * zoom;
 
   for (let row = 0; row < WORLD_ROWS; row += 1) {
     for (let col = 0; col < WORLD_COLS; col += 1) {
-      const dx = (col * TILE_SIZE - camera.x) * SCALE;
-      const dy = (row * TILE_SIZE - camera.y) * SCALE;
+      const dx = (col * TILE_SIZE - camera.x) * renderScale;
+      const dy = (row * TILE_SIZE - camera.y) * renderScale;
 
       if (row < 2) {
         context.fillStyle = '#d2c8ba';
-        context.fillRect(dx, dy, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+        context.fillRect(dx, dy, TILE_SIZE * renderScale, TILE_SIZE * renderScale);
         continue;
       }
 
       if (col < 10) {
-        context.drawImage(warmTile, dx, dy, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+        context.drawImage(warmTile, dx, dy, TILE_SIZE * renderScale, TILE_SIZE * renderScale);
         continue;
       }
 
       if (row > 9 && col > 10) {
-        context.drawImage(loungeTile, dx, dy, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+        context.drawImage(loungeTile, dx, dy, TILE_SIZE * renderScale, TILE_SIZE * renderScale);
         continue;
       }
 
-      context.drawImage(coolTile, dx, dy, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+      context.drawImage(coolTile, dx, dy, TILE_SIZE * renderScale, TILE_SIZE * renderScale);
     }
   }
 
   context.fillStyle = '#cabda8';
-  context.fillRect(0, -camera.y * SCALE, CANVAS_WIDTH, TILE_SIZE * SCALE * 2);
+  context.fillRect(0, -camera.y * renderScale, CANVAS_WIDTH, TILE_SIZE * renderScale * 2);
 }
 
 function drawFurnitureBackground(
@@ -612,6 +703,7 @@ function drawFurnitureBackground(
     x: number;
     y: number;
   },
+  zoom: number,
 ) {
   const items = [
     { key: ASSET_URLS.painting, x: WORLD_OFFSET_X / TILE_SIZE + 12.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.2 },
@@ -630,7 +722,7 @@ function drawFurnitureBackground(
     { key: ASSET_URLS.bin, x: WORLD_OFFSET_X / TILE_SIZE + 10.9, y: WORLD_OFFSET_Y / TILE_SIZE + 9.2 },
   ];
 
-  drawFurnitureLayer(context, images, items, camera);
+  drawFurnitureLayer(context, images, items, camera, zoom);
 }
 
 function drawFurnitureForeground(
@@ -640,6 +732,7 @@ function drawFurnitureForeground(
     x: number;
     y: number;
   },
+  zoom: number,
 ) {
   const items = [
     { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 6.3 },
@@ -655,7 +748,7 @@ function drawFurnitureForeground(
     { key: ASSET_URLS.plant, x: WORLD_OFFSET_X / TILE_SIZE + 18.35, y: WORLD_OFFSET_Y / TILE_SIZE + 11.0 },
   ];
 
-  drawFurnitureLayer(context, images, items, camera);
+  drawFurnitureLayer(context, images, items, camera, zoom);
 }
 
 function drawFurnitureLayer(
@@ -666,7 +759,9 @@ function drawFurnitureLayer(
     x: number;
     y: number;
   },
+  zoom: number,
 ) {
+  const renderScale = SCALE * zoom;
 
   for (const item of items) {
     const image = images[item.key];
@@ -677,10 +772,10 @@ function drawFurnitureLayer(
 
     context.drawImage(
       image,
-      Math.round((item.x * TILE_SIZE - camera.x) * SCALE),
-      Math.round((item.y * TILE_SIZE - camera.y) * SCALE),
-      image.width * SCALE,
-      image.height * SCALE,
+      Math.round((item.x * TILE_SIZE - camera.x) * renderScale),
+      Math.round((item.y * TILE_SIZE - camera.y) * renderScale),
+      image.width * renderScale,
+      image.height * renderScale,
     );
   }
 }
@@ -693,6 +788,7 @@ function drawSceneAgents(
     x: number;
     y: number;
   },
+  zoom: number,
 ) {
   const sortedAgents = [...sceneAgents].sort((left, right) => left.y - right.y);
 
@@ -707,18 +803,22 @@ function drawSceneAgents(
     drawCharacterFrame({
       context,
       image,
-      x: (sceneAgent.x - camera.x) * SCALE,
-      y: (sceneAgent.y - camera.y) * SCALE,
+      x: (sceneAgent.x - camera.x) * SCALE * zoom,
+      y: (sceneAgent.y - camera.y) * SCALE * zoom,
       dir: sceneAgent.dir,
       frame: sceneAgent.frame,
+      zoom,
     });
   }
 }
 
-function clampCamera(input: { x: number; y: number }) {
+function clampCamera(input: { x: number; y: number }, zoom: number) {
+  const visibleWidth = (VIEWPORT_COLS * TILE_SIZE) / zoom;
+  const visibleHeight = (VIEWPORT_ROWS * TILE_SIZE) / zoom;
+
   return {
-    x: Math.min(Math.max(Math.round(input.x), 0), (WORLD_COLS - VIEWPORT_COLS) * TILE_SIZE),
-    y: Math.min(Math.max(Math.round(input.y), 0), (WORLD_ROWS - VIEWPORT_ROWS) * TILE_SIZE),
+    x: Math.min(Math.max(Math.round(input.x), 0), WORLD_COLS * TILE_SIZE - visibleWidth),
+    y: Math.min(Math.max(Math.round(input.y), 0), WORLD_ROWS * TILE_SIZE - visibleHeight),
   };
 }
 
@@ -760,11 +860,13 @@ function drawCharacterFrame(input: {
   y: number;
   dir: 'down' | 'up' | 'right' | 'left';
   frame: number;
+  zoom: number;
 }) {
+  const renderScale = SCALE * input.zoom;
   const sourceX = input.frame * 16;
   const sourceY = input.dir === 'down' ? 0 : input.dir === 'up' ? 32 : 64;
-  const targetX = Math.round(input.x - (16 * SCALE) / 2);
-  const targetY = Math.round(input.y - 32 * SCALE + 10);
+  const targetX = Math.round(input.x - (16 * renderScale) / 2);
+  const targetY = Math.round(input.y - 32 * renderScale + 10 * input.zoom);
 
   if (input.dir === 'left') {
     input.context.save();
@@ -775,10 +877,10 @@ function drawCharacterFrame(input: {
       64,
       16,
       32,
-      -(targetX + 16 * SCALE),
+      -(targetX + 16 * renderScale),
       targetY,
-      16 * SCALE,
-      32 * SCALE,
+      16 * renderScale,
+      32 * renderScale,
     );
     input.context.restore();
     return;
@@ -792,7 +894,11 @@ function drawCharacterFrame(input: {
     32,
     targetX,
     targetY,
-    16 * SCALE,
-    32 * SCALE,
+    16 * renderScale,
+    32 * renderScale,
   );
+}
+
+function clampZoom(value: number) {
+  return Math.min(Math.max(Number(value.toFixed(2)), 0.8), 2);
 }
