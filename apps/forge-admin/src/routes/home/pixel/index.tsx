@@ -554,6 +554,14 @@ function buildSceneAgents(input: {
     { x: WORLD_OFFSET_X + 15.4 * TILE_SIZE, y: WORLD_OFFSET_Y + 12.2 * TILE_SIZE, dir: 'left' as const },
     { x: WORLD_OFFSET_X + 17.4 * TILE_SIZE, y: WORLD_OFFSET_Y + 11.4 * TILE_SIZE, dir: 'left' as const },
   ];
+  const idleWanderPath = [
+    { x: WORLD_OFFSET_X + 12.1 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.1 * TILE_SIZE, dir: 'right' as const },
+    { x: WORLD_OFFSET_X + 16.9 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.6 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 19.1 * TILE_SIZE, y: WORLD_OFFSET_Y + 9.4 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 17.6 * TILE_SIZE, y: WORLD_OFFSET_Y + 12.1 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 14.1 * TILE_SIZE, y: WORLD_OFFSET_Y + 12.8 * TILE_SIZE, dir: 'right' as const },
+    { x: WORLD_OFFSET_X + 11.8 * TILE_SIZE, y: WORLD_OFFSET_Y + 9.8 * TILE_SIZE, dir: 'right' as const },
+  ];
   const sofaRecoverySlots = [
     { x: WORLD_OFFSET_X + 14.25 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.55 * TILE_SIZE, dir: 'down' as const },
     { x: WORLD_OFFSET_X + 16.35 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.55 * TILE_SIZE, dir: 'down' as const },
@@ -576,10 +584,9 @@ function buildSceneAgents(input: {
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     const isRoaming = index >= runningSlots.length;
     const workPhase = Math.floor((input.tick + index * 17) / 7) % 8;
-    const ambientPose = resolveAmbientPose({
+    const ambientDeskPose = resolveDeskAmbientPose({
       agentId: agent.agentId,
       tick: input.tick,
-      mode: 'desk',
       baseDir: slot.dir,
     });
     sceneAgents.push({
@@ -594,12 +601,12 @@ function buildSceneAgents(input: {
       y: slot.y,
       dir: isAnimating
         ? workPhase === 3 ? 'left' : workPhase === 5 ? 'right' : slot.dir
-        : ambientPose.dir,
+        : ambientDeskPose?.dir ?? slot.dir,
       frame: isAnimating
         ? workPhase === 0 || workPhase === 1 || workPhase === 6
           ? 3 + (input.tick + index) % 2
           : 1
-        : ambientPose.frame,
+        : ambientDeskPose?.frame ?? 3 + ((input.tick + index) % 2),
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
@@ -635,27 +642,22 @@ function buildSceneAgents(input: {
   }
 
   for (const [index, agent] of idleAgents.entries()) {
-    const slot = focusSlots[index % focusSlots.length] ?? roamLane[index % roamLane.length];
+    const seed = hashText(agent.agentId);
+    const idleBucket = Math.floor(input.tick / 20);
+    const slot = idleWanderPath[(idleBucket + seed) % idleWanderPath.length] ?? focusSlots[index % focusSlots.length];
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
-    const roamPhase = input.tick / 12 + index * 1.7;
-    const ambientPose = resolveAmbientPose({
-      agentId: agent.agentId,
-      tick: input.tick,
-      mode: 'idle',
-      baseDir: slot.dir,
-    });
     sceneAgents.push({
       agent,
       agentId: agent.agentId,
       name: agent.name,
-      x: slot.x + (isAnimating ? Math.sin(input.tick / 8 + index) * 5 : Math.sin(roamPhase) * 4.5),
-      y: slot.y + (isAnimating ? Math.cos(input.tick / 9 + index) * 2 : Math.cos(roamPhase * 0.8) * 2.2),
+      x: slot.x,
+      y: slot.y,
       dir: isAnimating
         ? index % 2 === 0 ? slot.dir : 'right'
-        : ambientPose.dir,
+        : slot.dir,
       frame: isAnimating
         ? (index % 3 === 0 ? 5 + (input.tick + index) % 2 : 1 + ((input.tick + index) % 2))
-        : ambientPose.frame,
+        : 1,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
@@ -663,15 +665,14 @@ function buildSceneAgents(input: {
 
   for (const [index, agent] of absentAgents.entries()) {
     const slot = sofaRecoverySlots[index % sofaRecoverySlots.length];
-    const restingPhase = Math.floor((input.tick + index * 29) / 22) % 4;
     sceneAgents.push({
       agent,
       agentId: agent.agentId,
       name: agent.name,
       x: slot.x,
       y: slot.y,
-      dir: restingPhase === 1 ? 'left' : restingPhase === 2 ? 'right' : 'down',
-      frame: restingPhase === 3 ? 0 : 1,
+      dir: 'down',
+      frame: 0,
       toolBubble: null,
       bubble: null,
     });
@@ -999,64 +1000,48 @@ function resolveSpriteSeed(sceneAgent: Pick<SceneAgent, 'agentId' | 'spriteSeed'
 function resolveAmbientPose(input: {
   agentId: string;
   tick: number;
-  mode: 'desk' | 'memory' | 'idle';
+  mode: 'memory';
   baseDir: SceneAgent['dir'];
 }) {
   const bucket = Math.floor(input.tick / 24);
   const variant = hashText(`${input.agentId}:${input.mode}:${bucket}`) % 6;
 
-  if (input.mode === 'desk') {
-    if (variant === 0) {
-      return { dir: input.baseDir, frame: 1 };
-    }
-
-    if (variant === 1) {
-      return { dir: 'left' as const, frame: 1 };
-    }
-
-    if (variant === 2) {
-      return { dir: 'right' as const, frame: 1 };
-    }
-
-    return {
-      dir: input.baseDir,
-      frame: 3 + (bucket % 2),
-    };
-  }
-
-  if (input.mode === 'memory') {
-    if (variant <= 1) {
-      return { dir: input.baseDir, frame: 5 };
-    }
-
-    if (variant === 2) {
-      return { dir: 'down' as const, frame: 1 };
-    }
-
-    if (variant === 3) {
-      return { dir: 'left' as const, frame: 1 };
-    }
-
-    return { dir: input.baseDir, frame: 1 };
-  }
-
-  if (variant === 0) {
-    return { dir: 'down' as const, frame: 1 };
-  }
-
-  if (variant === 1) {
-    return { dir: 'left' as const, frame: 1 };
+  if (variant <= 1) {
+    return { dir: input.baseDir, frame: 5 };
   }
 
   if (variant === 2) {
-    return { dir: 'right' as const, frame: 1 };
+    return { dir: 'down' as const, frame: 1 };
   }
 
   if (variant === 3) {
-    return { dir: input.baseDir, frame: 0 };
+    return { dir: 'left' as const, frame: 1 };
   }
 
-  return { dir: input.baseDir, frame: 2 };
+  return { dir: input.baseDir, frame: 1 };
+}
+
+function resolveDeskAmbientPose(input: {
+  agentId: string;
+  tick: number;
+  baseDir: SceneAgent['dir'];
+}) {
+  const bucket = Math.floor(input.tick / 30);
+  const variant = hashText(`${input.agentId}:desk:${bucket}`) % 10;
+
+  if (variant === 0) {
+    return { dir: 'left' as const, frame: 1 };
+  }
+
+  if (variant === 1) {
+    return { dir: 'right' as const, frame: 1 };
+  }
+
+  if (variant === 2) {
+    return { dir: input.baseDir, frame: 1 };
+  }
+
+  return null;
 }
 
 function hashText(value: string) {
