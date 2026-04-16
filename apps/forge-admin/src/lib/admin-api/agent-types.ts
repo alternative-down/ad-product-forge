@@ -237,8 +237,16 @@ export type AgentRuntimeMemorySnapshot = {
     query: string;
     resultIds: string[];
     resultCount: number;
+    resultScores: number[];
     stepsJson: string;
     updatedAt: number;
+    lastInitAt: number | null;
+    searchMode: string;
+    topK: number;
+    indexPaths: string[];
+    workspaceFileCount: number;
+    memoryFileCount: number;
+    checkpointFileCount: number;
     error: string | null;
   } | null;
   ltm: {

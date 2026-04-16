@@ -111,8 +111,16 @@ type LongTermMemoryRecallSnapshot = {
   query: string;
   resultIds: string[];
   resultCount: number;
+  resultScores: number[];
   stepsJson: string;
   updatedAt: string;
+  lastInitAt: string | null;
+  searchMode: string;
+  topK: number;
+  indexPaths: string[];
+  workspaceFileCount: number;
+  memoryFileCount: number;
+  checkpointFileCount: number;
   error: string | null;
 };
 
@@ -211,8 +219,20 @@ function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | und
     query: value.query,
     resultIds: value.resultIds.filter((item): item is string => typeof item === 'string'),
     resultCount: value.resultCount,
+    resultScores: Array.isArray(value.resultScores)
+      ? value.resultScores.filter((item): item is number => typeof item === 'number')
+      : [],
     stepsJson: value.stepsJson,
     updatedAt: value.updatedAt,
+    lastInitAt: typeof value.lastInitAt === 'string' ? value.lastInitAt : null,
+    searchMode: typeof value.searchMode === 'string' ? value.searchMode : 'hybrid',
+    topK: typeof value.topK === 'number' ? value.topK : 4,
+    indexPaths: Array.isArray(value.indexPaths)
+      ? value.indexPaths.filter((item): item is string => typeof item === 'string')
+      : [],
+    workspaceFileCount: typeof value.workspaceFileCount === 'number' ? value.workspaceFileCount : 0,
+    memoryFileCount: typeof value.memoryFileCount === 'number' ? value.memoryFileCount : 0,
+    checkpointFileCount: typeof value.checkpointFileCount === 'number' ? value.checkpointFileCount : 0,
     error: typeof value.error === 'string' ? value.error : null,
   };
 }
@@ -867,8 +887,16 @@ export function createAdminReadModel(input: {
             query: ltmRecall.query,
             resultIds: ltmRecall.resultIds,
             resultCount: ltmRecall.resultCount,
+            resultScores: ltmRecall.resultScores,
             stepsJson: ltmRecall.stepsJson,
             updatedAt: Date.parse(ltmRecall.updatedAt),
+            lastInitAt: ltmRecall.lastInitAt ? Date.parse(ltmRecall.lastInitAt) : null,
+            searchMode: ltmRecall.searchMode,
+            topK: ltmRecall.topK,
+            indexPaths: ltmRecall.indexPaths,
+            workspaceFileCount: ltmRecall.workspaceFileCount,
+            memoryFileCount: ltmRecall.memoryFileCount,
+            checkpointFileCount: ltmRecall.checkpointFileCount,
             error: ltmRecall.error,
           }
         : null,
