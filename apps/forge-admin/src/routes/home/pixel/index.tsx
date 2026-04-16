@@ -23,15 +23,23 @@ const ASSET_URLS = {
   floorWarm: '/pixel-agents/assets/floors/floor_7.png',
   floorLounge: '/pixel-agents/assets/floors/floor_0.png',
   desk: '/pixel-agents/assets/furniture/DESK/DESK_FRONT.png',
-  chair: '/pixel-agents/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_FRONT.png',
+  deskSide: '/pixel-agents/assets/furniture/DESK/DESK_SIDE.png',
+  chairBack: '/pixel-agents/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_BACK.png',
+  chairSide: '/pixel-agents/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png',
+  pcBack: '/pixel-agents/assets/furniture/PC/PC_BACK.png',
+  pcSide: '/pixel-agents/assets/furniture/PC/PC_SIDE.png',
   pc1: '/pixel-agents/assets/furniture/PC/PC_FRONT_ON_1.png',
   pc2: '/pixel-agents/assets/furniture/PC/PC_FRONT_ON_2.png',
   pc3: '/pixel-agents/assets/furniture/PC/PC_FRONT_ON_3.png',
   shelf: '/pixel-agents/assets/furniture/DOUBLE_BOOKSHELF/DOUBLE_BOOKSHELF.png',
+  whiteboard: '/pixel-agents/assets/furniture/WHITEBOARD/WHITEBOARD.png',
   plant: '/pixel-agents/assets/furniture/PLANT/PLANT.png',
+  plantLarge: '/pixel-agents/assets/furniture/LARGE_PLANT/LARGE_PLANT.png',
   painting: '/pixel-agents/assets/furniture/LARGE_PAINTING/LARGE_PAINTING.png',
   coffeeTable: '/pixel-agents/assets/furniture/COFFEE_TABLE/COFFEE_TABLE.png',
   sofa: '/pixel-agents/assets/furniture/SOFA/SOFA_FRONT.png',
+  sofaBack: '/pixel-agents/assets/furniture/SOFA/SOFA_BACK.png',
+  bin: '/pixel-agents/assets/furniture/BIN/BIN.png',
   characters: [
     '/pixel-agents/assets/characters/char_0.png',
     '/pixel-agents/assets/characters/char_1.png',
@@ -299,28 +307,28 @@ function buildSceneAgents(input: {
   bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
-    { x: 4.5 * TILE_SIZE, y: 8.2 * TILE_SIZE, dir: 'down' as const },
-    { x: 8.5 * TILE_SIZE, y: 8.2 * TILE_SIZE, dir: 'down' as const },
-    { x: 4.5 * TILE_SIZE, y: 12.2 * TILE_SIZE, dir: 'down' as const },
-    { x: 8.5 * TILE_SIZE, y: 12.2 * TILE_SIZE, dir: 'down' as const },
+    { x: 4 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'up' as const },
+    { x: 8 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'up' as const },
+    { x: 4 * TILE_SIZE, y: 10.6 * TILE_SIZE, dir: 'up' as const },
+    { x: 8 * TILE_SIZE, y: 10.6 * TILE_SIZE, dir: 'up' as const },
   ];
   const memorySlots = [
-    { x: 14.5 * TILE_SIZE, y: 7.4 * TILE_SIZE, dir: 'left' as const },
-    { x: 16.5 * TILE_SIZE, y: 7.4 * TILE_SIZE, dir: 'left' as const },
+    { x: 14.8 * TILE_SIZE, y: 5.8 * TILE_SIZE, dir: 'left' as const },
+    { x: 17.4 * TILE_SIZE, y: 5.8 * TILE_SIZE, dir: 'left' as const },
   ];
   const focusSlots = [
-    { x: 13.6 * TILE_SIZE, y: 11.5 * TILE_SIZE, dir: 'right' as const },
-    { x: 15.1 * TILE_SIZE, y: 12.2 * TILE_SIZE, dir: 'left' as const },
-    { x: 16.9 * TILE_SIZE, y: 11.6 * TILE_SIZE, dir: 'left' as const },
+    { x: 13.5 * TILE_SIZE, y: 11.2 * TILE_SIZE, dir: 'right' as const },
+    { x: 15.4 * TILE_SIZE, y: 12.2 * TILE_SIZE, dir: 'left' as const },
+    { x: 17.4 * TILE_SIZE, y: 11.4 * TILE_SIZE, dir: 'left' as const },
   ];
   const sofaRecoverySlots = [
-    { x: 14.15 * TILE_SIZE, y: 10.7 * TILE_SIZE, dir: 'down' as const },
-    { x: 16.25 * TILE_SIZE, y: 10.7 * TILE_SIZE, dir: 'down' as const },
+    { x: 14.25 * TILE_SIZE, y: 10.55 * TILE_SIZE, dir: 'down' as const },
+    { x: 16.35 * TILE_SIZE, y: 10.55 * TILE_SIZE, dir: 'down' as const },
   ];
   const roamLane = [
-    { x: 10.5 * TILE_SIZE, y: 9.5 * TILE_SIZE, dir: 'right' as const },
-    { x: 11.8 * TILE_SIZE, y: 9.5 * TILE_SIZE, dir: 'left' as const },
-    { x: 10.5 * TILE_SIZE, y: 12.5 * TILE_SIZE, dir: 'right' as const },
+    { x: 11.2 * TILE_SIZE, y: 6.2 * TILE_SIZE, dir: 'right' as const },
+    { x: 11.8 * TILE_SIZE, y: 9.4 * TILE_SIZE, dir: 'left' as const },
+    { x: 11.2 * TILE_SIZE, y: 12.1 * TILE_SIZE, dir: 'right' as const },
   ];
 
   const runningAgents = input.agents.filter((agent) => agent.executionState === 'running' && !agent.overview.ltm.running);
@@ -415,8 +423,9 @@ function renderScene(input: {
   context.clearRect(0, 0, input.canvas.width, input.canvas.height);
 
   drawFloor(context, input.images);
-  drawFurniture(context, input.images, input.tick);
+  drawFurnitureBackground(context, input.images, input.tick);
   drawSceneAgents(context, input.images, input.sceneAgents);
+  drawFurnitureForeground(context, input.images);
 }
 
 function drawFloor(context: CanvasRenderingContext2D, images: LoadedImages) {
@@ -460,28 +469,56 @@ function drawFloor(context: CanvasRenderingContext2D, images: LoadedImages) {
   context.fillRect(0, 0, CANVAS_WIDTH, TILE_SIZE * SCALE * 2);
 }
 
-function drawFurniture(context: CanvasRenderingContext2D, images: LoadedImages, tick: number) {
+function drawFurnitureBackground(context: CanvasRenderingContext2D, images: LoadedImages, tick: number) {
   const items = [
-    { key: ASSET_URLS.painting, x: 12, y: 1.3, w: 3, h: 2 },
-    { key: ASSET_URLS.shelf, x: 15.5, y: 1.2, w: 2, h: 2 },
-    { key: ASSET_URLS.plant, x: 18.4, y: 1.6, w: 1, h: 1 },
-    { key: ASSET_URLS.desk, x: 3, y: 5, w: 3, h: 2 },
-    { key: ASSET_URLS.desk, x: 7, y: 5, w: 3, h: 2 },
-    { key: ASSET_URLS.desk, x: 3, y: 9, w: 3, h: 2 },
-    { key: ASSET_URLS.desk, x: 7, y: 9, w: 3, h: 2 },
-    { key: ASSET_URLS.chair, x: 4, y: 6.15, w: 1, h: 2 },
-    { key: ASSET_URLS.chair, x: 8, y: 6.15, w: 1, h: 2 },
-    { key: ASSET_URLS.chair, x: 4, y: 10.15, w: 1, h: 2 },
-    { key: ASSET_URLS.chair, x: 8, y: 10.15, w: 1, h: 2 },
-    { key: [ASSET_URLS.pc1, ASSET_URLS.pc2, ASSET_URLS.pc3][tick % 3], x: 4, y: 5.1, w: 1, h: 2 },
-    { key: [ASSET_URLS.pc1, ASSET_URLS.pc2, ASSET_URLS.pc3][(tick + 1) % 3], x: 8, y: 5.1, w: 1, h: 2 },
-    { key: [ASSET_URLS.pc1, ASSET_URLS.pc2, ASSET_URLS.pc3][(tick + 2) % 3], x: 4, y: 9.1, w: 1, h: 2 },
-    { key: [ASSET_URLS.pc1, ASSET_URLS.pc2, ASSET_URLS.pc3][tick % 3], x: 8, y: 9.1, w: 1, h: 2 },
-    { key: ASSET_URLS.sofa, x: 13.2, y: 10, w: 2, h: 2 },
-    { key: ASSET_URLS.sofa, x: 15.3, y: 10, w: 2, h: 2 },
-    { key: ASSET_URLS.coffeeTable, x: 14.4, y: 11.2, w: 1, h: 1 },
-    { key: ASSET_URLS.plant, x: 18.3, y: 11.1, w: 1, h: 1 },
+    { key: ASSET_URLS.painting, x: 12.1, y: 1.2 },
+    { key: ASSET_URLS.whiteboard, x: 15.4, y: 1.3 },
+    { key: ASSET_URLS.shelf, x: 18.1, y: 1.25 },
+    { key: ASSET_URLS.plantLarge, x: 13.1, y: 1.55 },
+    { key: ASSET_URLS.plant, x: 19.2, y: 1.55 },
+    { key: ASSET_URLS.desk, x: 2.6, y: 4.5 },
+    { key: ASSET_URLS.desk, x: 6.6, y: 4.5 },
+    { key: ASSET_URLS.desk, x: 2.6, y: 8.9 },
+    { key: ASSET_URLS.desk, x: 6.6, y: 8.9 },
+    { key: ASSET_URLS.pcBack, x: 3.45, y: 4.15 },
+    { key: ASSET_URLS.pcBack, x: 7.45, y: 4.15 },
+    { key: ASSET_URLS.pcBack, x: 3.45, y: 8.55 },
+    { key: ASSET_URLS.pcBack, x: 7.45, y: 8.55 },
+    { key: tick % 2 === 0 ? ASSET_URLS.pcSide : ASSET_URLS.pc1, x: 13.8, y: 5.0 },
+    { key: tick % 2 === 0 ? ASSET_URLS.pcSide : ASSET_URLS.pc2, x: 16.5, y: 5.0 },
+    { key: ASSET_URLS.deskSide, x: 13.2, y: 5.35 },
+    { key: ASSET_URLS.deskSide, x: 15.9, y: 5.35 },
+    { key: ASSET_URLS.sofaBack, x: 13.15, y: 10.05 },
+    { key: ASSET_URLS.sofaBack, x: 15.25, y: 10.05 },
+    { key: ASSET_URLS.coffeeTable, x: 14.45, y: 11.2 },
+    { key: ASSET_URLS.bin, x: 10.9, y: 4.8 },
+    { key: ASSET_URLS.bin, x: 10.9, y: 9.2 },
   ];
+
+  drawFurnitureLayer(context, images, items);
+}
+
+function drawFurnitureForeground(context: CanvasRenderingContext2D, images: LoadedImages) {
+  const items = [
+    { key: ASSET_URLS.chairBack, x: 3.5, y: 6.75 },
+    { key: ASSET_URLS.chairBack, x: 7.5, y: 6.75 },
+    { key: ASSET_URLS.chairBack, x: 3.5, y: 11.15 },
+    { key: ASSET_URLS.chairBack, x: 7.5, y: 11.15 },
+    { key: ASSET_URLS.chairSide, x: 13.55, y: 6.05 },
+    { key: ASSET_URLS.chairSide, x: 16.25, y: 6.05 },
+    { key: ASSET_URLS.sofa, x: 13.15, y: 10.05 },
+    { key: ASSET_URLS.sofa, x: 15.25, y: 10.05 },
+    { key: ASSET_URLS.plant, x: 18.35, y: 11.0 },
+  ];
+
+  drawFurnitureLayer(context, images, items);
+}
+
+function drawFurnitureLayer(
+  context: CanvasRenderingContext2D,
+  images: LoadedImages,
+  items: Array<{ key: string; x: number; y: number }>,
+) {
 
   for (const item of items) {
     const image = images[item.key];
