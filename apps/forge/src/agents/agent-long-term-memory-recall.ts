@@ -1,11 +1,6 @@
 import path from 'node:path';
 
-import type { AgentConfig, MessageList } from '@mastra/core/agent';
-import type {
-  ProcessInputArgs,
-  ProcessInputStepArgs,
-  Processor,
-} from '@mastra/core/processors';
+import type { AgentConfig } from '@mastra/core/agent';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { LibSQLVector, type LibSQLStore } from '@mastra/libsql';
 
@@ -19,7 +14,6 @@ type SearchResult = {
   score?: number;
 };
 
-const RECALL_TAG = 'agent-long-term-memory-recall';
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
 
 type RecallSnapshot = {
@@ -57,12 +51,7 @@ function withTimeout<T>(
   });
 }
 
-export class AgentLongTermMemoryRecallProcessor
-  implements Processor<'agent-long-term-memory-recall'>
-{
-  readonly id = 'agent-long-term-memory-recall' as const;
-  readonly name = 'Agent Long-Term Memory Recall';
-
+export class AgentLongTermMemoryRecall {
   private readonly initTimeoutMs = 5_000;
   private readonly recallTimeoutMs = 8_000;
   private readonly workspace: WorkspaceRuntime;
@@ -103,29 +92,6 @@ export class AgentLongTermMemoryRecallProcessor
       vectorStore: this.vectorStore,
       searchIndexName: this.searchIndexName,
     });
-  }
-
-  async processInputStep(args: ProcessInputStepArgs<unknown>) {
-    if (!args.messageList) {
-      return args.messages;
-    }
-
-    const threadContext = this.getThreadContext(args.requestContext, args.messageList);
-    const systemText = await this.recallFromStep({
-      step: args.steps.at(-1) ?? null,
-      steps: args.steps,
-      threadId: threadContext?.threadId ?? null,
-      resourceId: threadContext?.resourceId,
-    });
-
-    args.messageList.clearSystemMessages(RECALL_TAG);
-
-    if (!systemText) {
-      return args.messageList;
-    }
-
-    args.messageList.addSystem(systemText, RECALL_TAG);
-    return args.messageList;
   }
 
   async recallFromStep(input: {
@@ -346,32 +312,6 @@ export class AgentLongTermMemoryRecallProcessor
       .trim();
   }
 
-  private getThreadContext(
-    requestContext: ProcessInputArgs['requestContext'],
-    messageList: MessageList,
-  ) {
-    const memoryContext = requestContext?.get('MastraMemory') as
-      | { thread?: { id: string }; resourceId?: string }
-      | undefined;
-
-    if (memoryContext?.thread?.id) {
-      return {
-        threadId: memoryContext.thread.id,
-        resourceId: memoryContext.resourceId,
-      };
-    }
-
-    const serialized = messageList.serialize();
-    if (serialized.memoryInfo?.threadId) {
-      return {
-        threadId: serialized.memoryInfo.threadId,
-        resourceId: serialized.memoryInfo.resourceId,
-      };
-    }
-
-    return null;
-  }
-
   private async persistRecallSnapshot(
     threadContext: { threadId: string | null; resourceId?: string },
     snapshot: RecallSnapshot,
@@ -405,12 +345,12 @@ function safeSerializeRecallSteps(steps: unknown[]) {
   }
 }
 
-export function createAgentLongTermMemoryRecallProcessor(input: {
+export function createAgentLongTermMemoryRecall(input: {
   agentId: string;
   agentWorkspacePath: string;
   mastraId: string;
   storage: LibSQLStore;
   model?: AgentConfig['model'];
 }) {
-  return new AgentLongTermMemoryRecallProcessor(input);
+  return new AgentLongTermMemoryRecall(input);
 }

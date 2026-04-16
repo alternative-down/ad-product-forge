@@ -12,7 +12,7 @@ import type {
 import type { AgentConfig } from '@mastra/core/agent';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 
-import { createAgentLongTermMemoryRecallProcessor } from './agent-long-term-memory-recall';
+import { createAgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
 
 export async function createAgentRuntimeMemory(input: {
   storage: LibSQLStore;
@@ -51,7 +51,7 @@ export async function createAgentRuntimeMemory(input: {
   const inputProcessors: InputProcessorOrWorkflow[] = [];
   const outputProcessors: OutputProcessorOrWorkflow[] = [];
   const longTermMemoryRecall = input.longTermMemory
-    ? createAgentLongTermMemoryRecallProcessor({
+    ? createAgentLongTermMemoryRecall({
         agentId: input.agentId,
         agentWorkspacePath: input.agentWorkspacePath,
         mastraId: input.mastraId,
