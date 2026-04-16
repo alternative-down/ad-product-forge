@@ -112,11 +112,15 @@ type LongTermMemoryRecallSnapshot = {
   resultIds: string[];
   resultCount: number;
   resultScores: number[];
+  graphHit: boolean;
   stepsJson: string;
   updatedAt: string;
   lastInitAt: string | null;
   searchMode: string;
   topK: number;
+  graphTopK: number;
+  graphThreshold: number;
+  graphRandomWalkSteps: number;
   indexPaths: string[];
   workspaceFileCount: number;
   memoryFileCount: number;
@@ -222,11 +226,16 @@ function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | und
     resultScores: Array.isArray(value.resultScores)
       ? value.resultScores.filter((item): item is number => typeof item === 'number')
       : [],
+    graphHit: value.graphHit === true,
     stepsJson: value.stepsJson,
     updatedAt: value.updatedAt,
     lastInitAt: typeof value.lastInitAt === 'string' ? value.lastInitAt : null,
     searchMode: typeof value.searchMode === 'string' ? value.searchMode : 'hybrid',
     topK: typeof value.topK === 'number' ? value.topK : 4,
+    graphTopK: typeof value.graphTopK === 'number' ? value.graphTopK : 3,
+    graphThreshold: typeof value.graphThreshold === 'number' ? value.graphThreshold : 0.7,
+    graphRandomWalkSteps:
+      typeof value.graphRandomWalkSteps === 'number' ? value.graphRandomWalkSteps : 50,
     indexPaths: Array.isArray(value.indexPaths)
       ? value.indexPaths.filter((item): item is string => typeof item === 'string')
       : [],
@@ -888,11 +897,15 @@ export function createAdminReadModel(input: {
             resultIds: ltmRecall.resultIds,
             resultCount: ltmRecall.resultCount,
             resultScores: ltmRecall.resultScores,
+            graphHit: ltmRecall.graphHit,
             stepsJson: ltmRecall.stepsJson,
             updatedAt: Date.parse(ltmRecall.updatedAt),
             lastInitAt: ltmRecall.lastInitAt ? Date.parse(ltmRecall.lastInitAt) : null,
             searchMode: ltmRecall.searchMode,
             topK: ltmRecall.topK,
+            graphTopK: ltmRecall.graphTopK,
+            graphThreshold: ltmRecall.graphThreshold,
+            graphRandomWalkSteps: ltmRecall.graphRandomWalkSteps,
             indexPaths: ltmRecall.indexPaths,
             workspaceFileCount: ltmRecall.workspaceFileCount,
             memoryFileCount: ltmRecall.memoryFileCount,

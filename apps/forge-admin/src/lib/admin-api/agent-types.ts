@@ -238,11 +238,15 @@ export type AgentRuntimeMemorySnapshot = {
     resultIds: string[];
     resultCount: number;
     resultScores: number[];
+    graphHit: boolean;
     stepsJson: string;
     updatedAt: number;
     lastInitAt: number | null;
     searchMode: string;
     topK: number;
+    graphTopK: number;
+    graphThreshold: number;
+    graphRandomWalkSteps: number;
     indexPaths: string[];
     workspaceFileCount: number;
     memoryFileCount: number;
