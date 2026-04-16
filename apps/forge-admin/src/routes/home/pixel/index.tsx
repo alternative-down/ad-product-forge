@@ -255,14 +255,23 @@ function HomePixelRoute() {
               className="block h-full max-h-full w-auto max-w-full bg-[#ddd4c7]"
             />
 
-            {sceneAgents.map((sceneAgent) => (
-              sceneAgent.bubble ? (
+            {sceneAgents.map((sceneAgent) => {
+              if (!sceneAgent.bubble) {
+                return null;
+              }
+
+              const bubbleXPercent = (sceneAgent.x / (SCENE_COLS * TILE_SIZE)) * 100;
+              const bubbleYPercent = ((sceneAgent.y - 44) / (SCENE_ROWS * TILE_SIZE)) * 100;
+              const bubbleOffsetPx = sceneAgent.x < (SCENE_COLS * TILE_SIZE) / 2 ? 42 : -42;
+
+              return (
                 <div
                   key={`${sceneAgent.agent.agentId}:bubble`}
-                  className="pointer-events-none absolute max-w-[15rem] -translate-x-1/2 rounded-[1rem] bg-background/96 px-3 py-2 text-xs leading-5 text-foreground shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                  className="pointer-events-none absolute max-w-[15rem] rounded-[1rem] bg-background/96 px-3 py-2 text-xs leading-5 text-foreground shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                   style={{
-                    left: `${(sceneAgent.x / (SCENE_COLS * TILE_SIZE)) * 100}%`,
-                    top: `${((sceneAgent.y - 34) / (SCENE_ROWS * TILE_SIZE)) * 100}%`,
+                    left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
+                    top: `${bubbleYPercent}%`,
+                    transform: sceneAgent.x < (SCENE_COLS * TILE_SIZE) / 2 ? 'translateX(0)' : 'translateX(-100%)',
                   }}
                 >
                   <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
@@ -271,24 +280,33 @@ function HomePixelRoute() {
                   </div>
                   <div className="line-clamp-2">{sceneAgent.bubble}</div>
                 </div>
-              ) : null
-            ))}
+              );
+            })}
 
-            {sceneAgents.map((sceneAgent) => (
-              !sceneAgent.bubble && sceneAgent.toolBubble ? (
+            {sceneAgents.map((sceneAgent) => {
+              if (sceneAgent.bubble || !sceneAgent.toolBubble) {
+                return null;
+              }
+
+              const bubbleXPercent = (sceneAgent.x / (SCENE_COLS * TILE_SIZE)) * 100;
+              const bubbleYPercent = ((sceneAgent.y - 28) / (SCENE_ROWS * TILE_SIZE)) * 100;
+              const bubbleOffsetPx = sceneAgent.x < (SCENE_COLS * TILE_SIZE) / 2 ? 34 : -34;
+
+              return (
                 <div
                   key={`${sceneAgent.agent.agentId}:tool-bubble`}
-                  className="pointer-events-none absolute flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-background/96 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                  className="pointer-events-none absolute flex h-8 w-8 items-center justify-center rounded-full bg-background/96 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                   style={{
-                    left: `${(sceneAgent.x / (SCENE_COLS * TILE_SIZE)) * 100}%`,
-                    top: `${((sceneAgent.y - 20) / (SCENE_ROWS * TILE_SIZE)) * 100}%`,
+                    left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
+                    top: `${bubbleYPercent}%`,
+                    transform: sceneAgent.x < (SCENE_COLS * TILE_SIZE) / 2 ? 'translateX(0)' : 'translateX(-100%)',
                   }}
                   title={sceneAgent.toolBubble.label}
                 >
                   {sceneAgent.toolBubble.icon}
                 </div>
-              ) : null
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
