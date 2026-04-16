@@ -450,8 +450,10 @@ function HomePixelRoute() {
 
               const bubbleScale = Number(Math.min(Math.max(zoom * 0.42, 0.34), 0.72).toFixed(2));
               const bubbleGapPx = 8;
-              const bubbleX = canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom;
-              const bubbleY = canvasLayout.top + (sceneAgent.y - 26 - camera.y) * SCALE * zoom;
+              const canvasScaleX = canvasLayout.width / CANVAS_WIDTH;
+              const canvasScaleY = canvasLayout.height / CANVAS_HEIGHT;
+              const bubbleX = canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom * canvasScaleX;
+              const bubbleY = canvasLayout.top + (sceneAgent.y - 26 - camera.y) * SCALE * zoom * canvasScaleY;
 
               if (
                 bubbleX < -80 ||
@@ -490,8 +492,10 @@ function HomePixelRoute() {
 
               const bubbleScale = Number(Math.min(Math.max(zoom * 0.42, 0.34), 0.72).toFixed(2));
               const bubbleGapPx = 7;
-              const bubbleX = canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom;
-              const bubbleY = canvasLayout.top + (sceneAgent.y - 24 - camera.y) * SCALE * zoom;
+              const canvasScaleX = canvasLayout.width / CANVAS_WIDTH;
+              const canvasScaleY = canvasLayout.height / CANVAS_HEIGHT;
+              const bubbleX = canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom * canvasScaleX;
+              const bubbleY = canvasLayout.top + (sceneAgent.y - 24 - camera.y) * SCALE * zoom * canvasScaleY;
 
               if (
                 bubbleX < -80 ||
@@ -572,7 +576,12 @@ function buildSceneAgents(input: {
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     const isRoaming = index >= runningSlots.length;
     const workPhase = Math.floor((input.tick + index * 17) / 7) % 8;
-    const restingPhase = Math.floor((input.tick + index * 19) / 18) % 4;
+    const ambientPose = resolveAmbientPose({
+      agentId: agent.agentId,
+      tick: input.tick,
+      mode: 'desk',
+      baseDir: slot.dir,
+    });
     sceneAgents.push({
       agent,
       agentId: agent.agentId,
@@ -585,12 +594,12 @@ function buildSceneAgents(input: {
       y: slot.y,
       dir: isAnimating
         ? workPhase === 3 ? 'left' : workPhase === 5 ? 'right' : slot.dir
-        : restingPhase === 1 ? 'left' : restingPhase === 2 ? 'right' : slot.dir,
+        : ambientPose.dir,
       frame: isAnimating
         ? workPhase === 0 || workPhase === 1 || workPhase === 6
           ? 3 + (input.tick + index) % 2
           : 1
-        : 1,
+        : ambientPose.frame,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
@@ -600,7 +609,12 @@ function buildSceneAgents(input: {
     const slot = memorySlots[index % memorySlots.length];
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     const workPhase = Math.floor((input.tick + index * 13) / 8) % 6;
-    const restingPhase = Math.floor((input.tick + index * 11) / 20) % 4;
+    const ambientPose = resolveAmbientPose({
+      agentId: agent.agentId,
+      tick: input.tick,
+      mode: 'memory',
+      baseDir: slot.dir,
+    });
     sceneAgents.push({
       agent,
       agentId: agent.agentId,
@@ -609,12 +623,12 @@ function buildSceneAgents(input: {
       y: slot.y,
       dir: isAnimating
         ? workPhase === 2 ? 'down' : slot.dir
-        : restingPhase === 1 ? 'down' : restingPhase === 2 ? 'left' : slot.dir,
+        : ambientPose.dir,
       frame: isAnimating
         ? workPhase === 0 || workPhase === 1 || workPhase === 4
           ? 5 + (input.tick + index) % 2
           : 1
-        : restingPhase === 0 ? 5 : 1,
+        : ambientPose.frame,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
@@ -624,7 +638,12 @@ function buildSceneAgents(input: {
     const slot = focusSlots[index % focusSlots.length] ?? roamLane[index % roamLane.length];
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     const roamPhase = input.tick / 12 + index * 1.7;
-    const idlePhase = Math.floor((input.tick + index * 23) / 16) % 5;
+    const ambientPose = resolveAmbientPose({
+      agentId: agent.agentId,
+      tick: input.tick,
+      mode: 'idle',
+      baseDir: slot.dir,
+    });
     sceneAgents.push({
       agent,
       agentId: agent.agentId,
@@ -633,10 +652,10 @@ function buildSceneAgents(input: {
       y: slot.y + (isAnimating ? Math.cos(input.tick / 9 + index) * 2 : Math.cos(roamPhase * 0.8) * 2.2),
       dir: isAnimating
         ? index % 2 === 0 ? slot.dir : 'right'
-        : idlePhase === 1 ? 'left' : idlePhase === 3 ? 'right' : Math.sin(roamPhase) > 0.35 ? 'right' : Math.sin(roamPhase) < -0.35 ? 'left' : 'down',
+        : ambientPose.dir,
       frame: isAnimating
         ? (index % 3 === 0 ? 5 + (input.tick + index) % 2 : 1 + ((input.tick + index) % 2))
-        : idlePhase === 0 ? 1 : idlePhase === 2 ? 0 : idlePhase === 4 ? 2 : 1,
+        : ambientPose.frame,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
@@ -975,4 +994,77 @@ function resolveSpriteSeed(sceneAgent: Pick<SceneAgent, 'agentId' | 'spriteSeed'
   }
 
   return sceneAgent.agentId.length;
+}
+
+function resolveAmbientPose(input: {
+  agentId: string;
+  tick: number;
+  mode: 'desk' | 'memory' | 'idle';
+  baseDir: SceneAgent['dir'];
+}) {
+  const bucket = Math.floor(input.tick / 24);
+  const variant = hashText(`${input.agentId}:${input.mode}:${bucket}`) % 6;
+
+  if (input.mode === 'desk') {
+    if (variant === 0) {
+      return { dir: input.baseDir, frame: 1 };
+    }
+
+    if (variant === 1) {
+      return { dir: 'left' as const, frame: 1 };
+    }
+
+    if (variant === 2) {
+      return { dir: 'right' as const, frame: 1 };
+    }
+
+    return {
+      dir: input.baseDir,
+      frame: 3 + (bucket % 2),
+    };
+  }
+
+  if (input.mode === 'memory') {
+    if (variant <= 1) {
+      return { dir: input.baseDir, frame: 5 };
+    }
+
+    if (variant === 2) {
+      return { dir: 'down' as const, frame: 1 };
+    }
+
+    if (variant === 3) {
+      return { dir: 'left' as const, frame: 1 };
+    }
+
+    return { dir: input.baseDir, frame: 1 };
+  }
+
+  if (variant === 0) {
+    return { dir: 'down' as const, frame: 1 };
+  }
+
+  if (variant === 1) {
+    return { dir: 'left' as const, frame: 1 };
+  }
+
+  if (variant === 2) {
+    return { dir: 'right' as const, frame: 1 };
+  }
+
+  if (variant === 3) {
+    return { dir: input.baseDir, frame: 0 };
+  }
+
+  return { dir: input.baseDir, frame: 2 };
+}
+
+function hashText(value: string) {
+  let hash = 0;
+
+  for (const char of value) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+
+  return hash;
 }
