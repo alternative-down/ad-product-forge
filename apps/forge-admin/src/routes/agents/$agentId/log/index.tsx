@@ -182,10 +182,12 @@ function AgentRuntimeMemorySection(input: {
           />
           <MetricTile
             label="Thread após cursor"
-            current={input.metrics.rawMessageCount}
+            current={input.lastObservedAt ? input.metrics.rawMessageCount : 0}
             unit="itens"
             detail={
-              input.metrics.latestThreadMessageAt
+              !input.lastObservedAt
+                ? 'sem cursor ativo'
+                : input.metrics.latestThreadMessageAt
                 ? `última mensagem ${formatDateTime(input.metrics.latestThreadMessageAt)}`
                 : 'sem mensagens após cursor'
             }
