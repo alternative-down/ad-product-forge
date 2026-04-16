@@ -9,6 +9,7 @@ export const Route = createFileRoute('/home')({
 function HomeLayoutRoute() {
   const sectionItems = [
     { value: '/home', label: 'Geral' },
+    { value: '/home/pixel', label: 'Pixel' },
     { value: '/home/conversations', label: 'Conversas' },
   ];
 
