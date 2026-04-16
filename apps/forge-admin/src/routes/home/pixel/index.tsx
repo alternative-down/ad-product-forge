@@ -85,7 +85,7 @@ function HomePixelRoute() {
   const [displaySceneAgents, setDisplaySceneAgents] = useState<SceneAgent[]>([]);
   const [camera, setCamera] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const dragOriginRef = useRef<{ x: number; y: number; cameraX: number; cameraY: number } | null>(null);
+  const dragOriginRef = useRef<{ pointerId: number; x: number; y: number; cameraX: number; cameraY: number } | null>(null);
   const previousPreviewByAgentIdRef = useRef<Record<string, string | null>>({});
   const previousStepAtByAgentIdRef = useRef<Record<string, number | null>>({});
   const targetSceneAgentsRef = useRef<SceneAgent[]>([]);
@@ -234,7 +234,10 @@ function HomePixelRoute() {
     }
 
     function handlePointerDown(event: PointerEvent) {
+      event.preventDefault();
+      canvas.setPointerCapture(event.pointerId);
       dragOriginRef.current = {
+        pointerId: event.pointerId,
         x: event.clientX,
         y: event.clientY,
         cameraX: camera.x,
@@ -243,7 +246,7 @@ function HomePixelRoute() {
     }
 
     function handlePointerMove(event: PointerEvent) {
-      if (!dragOriginRef.current) {
+      if (!dragOriginRef.current || dragOriginRef.current.pointerId !== event.pointerId) {
         return;
       }
 
@@ -252,20 +255,25 @@ function HomePixelRoute() {
       setCamera(clampCamera({ x: nextCameraX, y: nextCameraY }));
     }
 
-    function handlePointerUp() {
+    function handlePointerUp(event: PointerEvent) {
+      if (dragOriginRef.current?.pointerId === event.pointerId) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
       dragOriginRef.current = null;
     }
 
     canvas.addEventListener('click', handleClick);
     canvas.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerUp);
 
     return () => {
       canvas.removeEventListener('click', handleClick);
       canvas.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerup', handlePointerUp);
+      canvas.removeEventListener('pointercancel', handlePointerUp);
     };
   }, [camera.x, camera.y, visibleSceneAgents]);
 
@@ -327,6 +335,7 @@ function HomePixelRoute() {
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
               className="block h-full max-h-full w-auto max-w-full bg-[#ddd4c7]"
+              style={{ touchAction: 'none' }}
             />
 
             {visibleSceneAgents.map((sceneAgent) => {
@@ -407,14 +416,14 @@ function buildSceneAgents(input: {
   bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
-    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.9 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.9 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.3 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.3 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.85 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.85 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.25 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.25 * TILE_SIZE, dir: 'down' as const },
   ];
   const memorySlots = [
-    { x: WORLD_OFFSET_X + 14.8 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.8 * TILE_SIZE, dir: 'left' as const },
-    { x: WORLD_OFFSET_X + 17.4 * TILE_SIZE, y: WORLD_OFFSET_Y + 5.8 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 14.6 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.9 * TILE_SIZE, dir: 'left' as const },
+    { x: WORLD_OFFSET_X + 17.2 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.9 * TILE_SIZE, dir: 'left' as const },
   ];
   const focusSlots = [
     { x: WORLD_OFFSET_X + 13.5 * TILE_SIZE, y: WORLD_OFFSET_Y + 11.2 * TILE_SIZE, dir: 'right' as const },
@@ -610,18 +619,10 @@ function drawFurnitureBackground(
     { key: ASSET_URLS.shelf, x: WORLD_OFFSET_X / TILE_SIZE + 18.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.25 },
     { key: ASSET_URLS.plantLarge, x: WORLD_OFFSET_X / TILE_SIZE + 13.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.55 },
     { key: ASSET_URLS.plant, x: WORLD_OFFSET_X / TILE_SIZE + 19.2, y: WORLD_OFFSET_Y / TILE_SIZE + 1.55 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 4.7 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 4.7 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 9.1 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 9.1 },
     { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
     { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
     { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 9.4 },
     { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 9.4 },
-    { key: ASSET_URLS.pcSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.8, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
-    { key: ASSET_URLS.pcSide, x: WORLD_OFFSET_X / TILE_SIZE + 16.5, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
-    { key: ASSET_URLS.deskSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.2, y: WORLD_OFFSET_Y / TILE_SIZE + 5.35 },
-    { key: ASSET_URLS.deskSide, x: WORLD_OFFSET_X / TILE_SIZE + 15.9, y: WORLD_OFFSET_Y / TILE_SIZE + 5.35 },
     { key: ASSET_URLS.sofaBack, x: WORLD_OFFSET_X / TILE_SIZE + 13.15, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
     { key: ASSET_URLS.sofaBack, x: WORLD_OFFSET_X / TILE_SIZE + 15.25, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
     { key: ASSET_URLS.coffeeTable, x: WORLD_OFFSET_X / TILE_SIZE + 14.45, y: WORLD_OFFSET_Y / TILE_SIZE + 11.2 },
@@ -641,12 +642,14 @@ function drawFurnitureForeground(
   },
 ) {
   const items = [
-    { key: ASSET_URLS.pc1, x: WORLD_OFFSET_X / TILE_SIZE + 3.5, y: WORLD_OFFSET_Y / TILE_SIZE + 6.85 },
-    { key: ASSET_URLS.pc2, x: WORLD_OFFSET_X / TILE_SIZE + 7.5, y: WORLD_OFFSET_Y / TILE_SIZE + 6.85 },
-    { key: ASSET_URLS.pc3, x: WORLD_OFFSET_X / TILE_SIZE + 3.5, y: WORLD_OFFSET_Y / TILE_SIZE + 11.25 },
-    { key: ASSET_URLS.pc1, x: WORLD_OFFSET_X / TILE_SIZE + 7.5, y: WORLD_OFFSET_Y / TILE_SIZE + 11.25 },
-    { key: ASSET_URLS.chairSide, x: WORLD_OFFSET_X / TILE_SIZE + 13.55, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
-    { key: ASSET_URLS.chairSide, x: WORLD_OFFSET_X / TILE_SIZE + 16.25, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 6.3 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 6.3 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 10.7 },
+    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 10.7 },
+    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
+    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
+    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 10.45 },
+    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 10.45 },
     { key: ASSET_URLS.sofa, x: WORLD_OFFSET_X / TILE_SIZE + 13.15, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
     { key: ASSET_URLS.sofa, x: WORLD_OFFSET_X / TILE_SIZE + 15.25, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
     { key: ASSET_URLS.plant, x: WORLD_OFFSET_X / TILE_SIZE + 18.35, y: WORLD_OFFSET_Y / TILE_SIZE + 11.0 },
