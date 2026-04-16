@@ -415,7 +415,7 @@ function HomePixelRoute() {
               const visibleHeight = (VIEWPORT_ROWS * TILE_SIZE) / zoom;
               const bubbleXPercent = ((sceneAgent.x - camera.x) / visibleWidth) * 100;
               const bubbleYPercent = ((sceneAgent.y - 44 - camera.y) / visibleHeight) * 100;
-              const bubbleScale = clampZoom(0.88 + zoom * 0.4);
+              const bubbleScale = Number(Math.min(Math.max(zoom * 0.42, 0.34), 0.72).toFixed(2));
               const bubbleAnchorLeft = sceneAgent.x < camera.x + visibleWidth / 2;
               const bubbleOffsetPx = bubbleAnchorLeft ? 44 : -44;
 
@@ -426,7 +426,7 @@ function HomePixelRoute() {
               return (
                 <div
                   key={`${sceneAgent.agentId}:bubble`}
-                  className="pointer-events-none absolute max-w-[15rem] rounded-[1rem] bg-background/96 px-3 py-2 text-xs leading-5 text-foreground shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                  className="pointer-events-none absolute max-w-[9rem] rounded-[1rem] bg-background/96 px-3 py-2 text-xs leading-5 text-foreground shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                   style={{
                     left: `calc(${bubbleXPercent}% + ${bubbleOffsetPx}px)`,
                     top: `${bubbleYPercent}%`,
@@ -453,7 +453,7 @@ function HomePixelRoute() {
               const visibleHeight = (VIEWPORT_ROWS * TILE_SIZE) / zoom;
               const bubbleXPercent = ((sceneAgent.x - camera.x) / visibleWidth) * 100;
               const bubbleYPercent = ((sceneAgent.y - 28 - camera.y) / visibleHeight) * 100;
-              const bubbleScale = clampZoom(0.88 + zoom * 0.4);
+              const bubbleScale = Number(Math.min(Math.max(zoom * 0.42, 0.34), 0.72).toFixed(2));
               const bubbleAnchorLeft = sceneAgent.x < camera.x + visibleWidth / 2;
               const bubbleOffsetPx = bubbleAnchorLeft ? 34 : -34;
 
@@ -495,10 +495,10 @@ function buildSceneAgents(input: {
   bubbleDeadlines: Record<string, number>;
 }) {
   const runningSlots = [
-    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.35 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.35 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.75 * TILE_SIZE, dir: 'down' as const },
-    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 10.75 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.85 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.85 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 11.25 * TILE_SIZE, dir: 'down' as const },
+    { x: WORLD_OFFSET_X + 8 * TILE_SIZE, y: WORLD_OFFSET_Y + 11.25 * TILE_SIZE, dir: 'down' as const },
   ];
   const memorySlots = [
     { x: WORLD_OFFSET_X + 14.6 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.9 * TILE_SIZE, dir: 'left' as const },
