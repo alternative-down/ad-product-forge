@@ -589,6 +589,9 @@ function buildSceneAgents(input: {
       tick: input.tick,
       baseDir: slot.dir,
     });
+    const deskBobOffset = !isAnimating && !ambientDeskPose && !isRoaming
+      ? Math.sin((input.tick + index * 5) / 1.8) * 0.6
+      : 0;
     sceneAgents.push({
       agent,
       agentId: agent.agentId,
@@ -598,7 +601,7 @@ function buildSceneAgents(input: {
           ? Math.sin(input.tick / 4 + index) * 6
           : 0
       ),
-      y: slot.y,
+      y: slot.y + deskBobOffset,
       dir: isAnimating
         ? workPhase === 3 ? 'left' : workPhase === 5 ? 'right' : slot.dir
         : ambientDeskPose?.dir ?? slot.dir,
@@ -1026,22 +1029,36 @@ function resolveDeskAmbientPose(input: {
   tick: number;
   baseDir: SceneAgent['dir'];
 }) {
-  const bucket = Math.floor(input.tick / 30);
-  const variant = hashText(`${input.agentId}:desk:${bucket}`) % 10;
+  const cycleLength = 132;
+  const cycleIndex = Math.floor(input.tick / cycleLength);
+  const tickInCycle = input.tick % cycleLength;
+  const restDuration = 42 + (hashText(`${input.agentId}:desk-rest:${cycleIndex}`) % 30);
+  const eventDuration = 10 + (hashText(`${input.agentId}:desk-event:${cycleIndex}`) % 8);
+
+  if (tickInCycle < restDuration || tickInCycle >= restDuration + eventDuration) {
+    return null;
+  }
+
+  const variant = hashText(`${input.agentId}:desk-variant:${cycleIndex}`) % 4;
+  const eventTick = tickInCycle - restDuration;
+  const halfDuration = Math.max(1, Math.floor(eventDuration / 2));
 
   if (variant === 0) {
-    return { dir: 'left' as const, frame: 1 };
-  }
-
-  if (variant === 1) {
-    return { dir: 'right' as const, frame: 1 };
-  }
-
-  if (variant === 2) {
     return { dir: input.baseDir, frame: 1 };
   }
 
-  return null;
+  if (variant === 1) {
+    return { dir: 'left' as const, frame: 1 };
+  }
+
+  if (variant === 2) {
+    return { dir: 'right' as const, frame: 1 };
+  }
+
+  return {
+    dir: eventTick < halfDuration ? 'left' as const : 'right' as const,
+    frame: 1,
+  };
 }
 
 function hashText(value: string) {
