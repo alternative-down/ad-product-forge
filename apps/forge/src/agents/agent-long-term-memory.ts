@@ -141,6 +141,7 @@ function createMemoryAgentInstructions(input: {
     'If an execution state matters historically, record what happened and when it happened, not the temporary status itself.',
     'Write memory documents in descriptive, discursive, informative prose. Do not over-compress them into shorthand bullet summaries or highly synthetic notes.',
     'These documents are later retrieved through embeddings and similarity search, so they should contain enough explicit wording, context, names, facts, and phrasing to be matchable.',
+    'Keep each document dense but bounded. Prefer multiple small focused documents over one bloated file. Split by topic, person, procedure, event, or inference when the content starts to sprawl.',
     'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
     'Do not read, write, or mention `AGENT_CONTEXT.md`.',
     'Do not read, write, or mention working memory content.',
@@ -162,6 +163,7 @@ function buildMemoryAgentPrompt() {
     'Do not write status documents, progress snapshots, current-state summaries, or ephemeral operational trackers into long-term memory.',
     'Keep memory documents descriptive, durable, and small. Split different themes into separate files instead of accumulating mixed status notes.',
     'Write documents in a descriptive and discursive way, not as overly synthesized fragments. Include enough explicit wording for later embedding-based retrieval to match them well.',
+    'Keep them dense but not swollen. Fragment memory into multiple focused documents instead of letting one file grow across unrelated themes.',
     'Good long-term memory categories include procedural knowledge, insights, events with time, durable facts, people information, preferences, documentation, and explicit inferences.',
     'Do not edit checkpoint packages.',
   ].join('\n');
