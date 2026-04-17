@@ -27,6 +27,7 @@ const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
 const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
+const RUNNER_USER_MESSAGE_PREFIX = 'System Wake Input:\n';
 
 export function createAgentRunner(
   db: Database,
@@ -61,9 +62,9 @@ export function createAgentRunner(
   let activeRunEpoch = 0;
   let activeStepEpoch = 0;
   let activeGenerateToken = 0;
+  let activeRunId: string | null = null;
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages: number | null = DEFAULT_RUN_LAST_MESSAGES;
-  let completedRunStepCount = 0;
   let pendingLongTermMemoryRecallSystemText: string | null = null;
   let flushedRunEventKeys = new Set<string>();
   let currentFlushSettings = {
@@ -296,6 +297,7 @@ export function createAgentRunner(
     startingRun = false;
     activeRunEpoch += 1;
     activeStepEpoch = 0;
+    activeRunId = null;
     invalidateInFlightGenerate();
     executing = false;
     clearTimer();
@@ -388,12 +390,12 @@ export function createAgentRunner(
     const runEpoch = startNewRunEpoch();
 
     try {
+      activeRunId = crypto.randomUUID();
       instant = true;
       backoffMs = ONE_MINUTE_MS;
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
       flushedRunEventKeys = new Set<string>();
-      completedRunStepCount = 0;
       pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
@@ -569,11 +571,9 @@ export function createAgentRunner(
       const stepLongTermMemoryRecallSystemText = pendingLongTermMemoryRecallSystemText;
       pendingLongTermMemoryRecallSystemText = null;
       lastStepStage = 'flushing-pending-run-messages';
-      prompt = completedRunStepCount === 0
-        ? (flushPendingRunMessages({
-            allowOriginIdleOnly: true,
-          }) ?? '')
-        : '';
+      prompt = flushPendingRunMessages({
+        allowOriginIdleOnly: true,
+      }) ?? '';
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       lastStepStage = 'agent-generate';
@@ -606,7 +606,6 @@ export function createAgentRunner(
         RUNNER_AWAIT_TIMEOUT_MS,
         `Agent usage recording timed out for ${runtime.id}`,
       );
-      completedRunStepCount += 1;
       lastStepStage = 'recording-observational-memory-usage';
       void withTimeout(
         usage.recordObservationalMemorySteps(contractId, result.steps),
@@ -941,7 +940,14 @@ export function createAgentRunner(
     runEpoch: number,
     longTermMemoryRecallSystemText: string | null,
   ) {
-    const effectivePromptText = promptText.trim() ? promptText : [];
+    const effectivePromptText = promptText.trim()
+      ? [
+          {
+            role: 'user' as const,
+            content: `${RUNNER_USER_MESSAGE_PREFIX}${promptText.trim()}`,
+          },
+        ]
+      : [];
 
     for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();
@@ -959,6 +965,8 @@ export function createAgentRunner(
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await Promise.race([
           currentRuntime.agent.generate(effectivePromptText, {
+            runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
+            savePerStep: true,
             maxSteps: 1,
             abortSignal: controller.signal,
             ...(systemPrompt ? { system: systemPrompt } : {}),
@@ -975,24 +983,6 @@ export function createAgentRunner(
               anthropic: {
                 thinking: { type: 'enabled', budgetTokens: 2000 },
               },
-            },
-            onIterationComplete: () => {
-              if (isStaleRun(runEpoch) || generateToken !== activeGenerateToken) {
-                return;
-              }
-
-              const feedback = flushPendingRunMessages({
-                allowOriginIdleOnly: false,
-              });
-
-              if (!feedback) {
-                return;
-              }
-
-              return {
-                continue: true,
-                feedback,
-              };
             },
           }),
           timeout.promise,
