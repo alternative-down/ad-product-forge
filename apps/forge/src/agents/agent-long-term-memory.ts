@@ -3,11 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { Agent, type AgentConfig } from '@mastra/core/agent';
-import {
-  CompositeFilesystem,
-  LocalFilesystem,
-  Workspace as WorkspaceRuntime,
-} from '@mastra/core/workspace';
+import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import type {
   CheckpointedOmCheckpointPackageInput,
@@ -23,8 +19,6 @@ const LTM_STATE_FILE = '.ltm-state.json';
 const CHECKPOINTS_DIR = 'checkpoints';
 const MEMORY_DIR = 'memory';
 const SKILLS_DIR = path.join('workspace', 'skills');
-const WORKSPACE_MEMORY_MOUNT = '/workspace-memory';
-const WORKSPACE_SKILLS_MOUNT = '/workspace/skills';
 const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
@@ -165,9 +159,9 @@ function createMemoryAgentInstructions(input: {
     'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
     'Do not create files outside `workspace-memory/memory` and `workspace/skills`.',
     'Use workspace-relative paths. The relevant roots are:',
-    `- \`${path.posix.join(WORKSPACE_MEMORY_MOUNT, CHECKPOINTS_DIR)}\``,
-    `- \`${path.posix.join(WORKSPACE_MEMORY_MOUNT, MEMORY_DIR)}\``,
-    `- \`${WORKSPACE_SKILLS_MOUNT}\``,
+    `- \`${CHECKPOINTS_DIR}\``,
+    `- \`${MEMORY_DIR}\``,
+    `- \`${SKILLS_DIR.replace(/\\/g, '/')}\``,
   ].filter(Boolean).join('\n\n');
 }
 
@@ -179,7 +173,7 @@ function buildMemoryAgentPrompt() {
     'Think of this as an offline consolidation phase: review experience, revisit old notes, compare them with new evidence, strengthen useful abstractions, and preserve better long-term structure.',
     'Prefer durable, descriptive, retrieval-friendly documents and reusable skills when repeated procedures justify them.',
     'Do not write status documents, progress snapshots, current-state summaries, or temporary backlog trackers.',
-    `Do not edit \`${path.posix.join(WORKSPACE_MEMORY_MOUNT, CHECKPOINTS_DIR)}\`. That area may be rewritten later and anything changed there can be lost.`,
+    `Do not edit \`${CHECKPOINTS_DIR}\`. That area may be rewritten later and anything changed there can be lost.`,
     'Write clearly, explain things well, and keep information consistent across files even when some overlap or repetition is helpful for retrieval.',
     'When you finish a maintenance pass, do not spend output tokens on maintenance report tables. Only communicate the minimum necessary outcome.',
   ].join('\n');
@@ -453,20 +447,12 @@ export function createAgentLongTermMemory(input: {
   const memoryPath = path.resolve(input.agentMemoryPath, MEMORY_DIR);
   const statePath = path.resolve(input.agentMemoryPath, LTM_STATE_FILE);
   const ltmMastraId = toMastraSafeIdentifier(`${input.agentId}_long_term_memory`);
-  const ltmFilesystem = new CompositeFilesystem({
-    mounts: {
-      [WORKSPACE_MEMORY_MOUNT]: new LocalFilesystem({
-        basePath: input.agentMemoryPath,
-      }),
-      [WORKSPACE_SKILLS_MOUNT]: new LocalFilesystem({
-        basePath: path.resolve(input.agentWorkspacePath, SKILLS_DIR),
-      }),
-    },
-  });
   const workspace = new WorkspaceRuntime({
     autoSync: true,
-    filesystem: ltmFilesystem,
-    skills: [`${WORKSPACE_SKILLS_MOUNT}/**/SKILL.md`],
+    filesystem: new LocalFilesystem({
+      basePath: input.agentMemoryPath,
+      allowedPaths: [path.resolve(input.agentWorkspacePath, SKILLS_DIR)],
+    }),
   });
   const memory = createAgentMemory({
     storage: input.storage,
