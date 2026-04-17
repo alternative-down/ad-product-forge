@@ -530,9 +530,11 @@ export class AgentLongTermMemoryRecall {
     };
   }
 
-  private extractValueText(value: unknown): string {
+  private formatStructuredValue(value: unknown, indentLevel = 0): string {
+    const indent = '  '.repeat(indentLevel);
+
     if (typeof value === 'string') {
-      return value;
+      return value.trim();
     }
 
     if (typeof value === 'number' || typeof value === 'boolean') {
@@ -540,20 +542,37 @@ export class AgentLongTermMemoryRecall {
     }
 
     if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return '';
+      }
+
       return value
-        .map((item) => this.extractValueText(item))
+        .map((item) => this.formatStructuredValue(item, indentLevel + 1))
         .filter(Boolean)
-        .join(' ');
+        .map((item) => `${indent}- ${item.replace(/\n/g, `\n${indent}  `)}`)
+        .join('\n');
     }
 
     if (!value || typeof value !== 'object') {
       return '';
     }
 
-    return Object.values(value)
-      .map((item) => this.extractValueText(item))
+    return Object.entries(value)
+      .map(([key, item]) => {
+        const formatted = this.formatStructuredValue(item, indentLevel + 1);
+
+        if (!formatted) {
+          return '';
+        }
+
+        if (!formatted.includes('\n')) {
+          return `${indent}${key}: ${formatted}`;
+        }
+
+        return `${indent}${key}:\n${formatted}`;
+      })
       .filter(Boolean)
-      .join(' ');
+      .join('\n');
   }
 
   private buildRecallQueryFromStep(step: unknown) {
@@ -569,31 +588,45 @@ export class AgentLongTermMemoryRecall {
       typeof record.text === 'string' ? record.text : '',
       typeof record.reasoningText === 'string' ? record.reasoningText : '',
       toolCalls
-        .map((toolCall) =>
-          this.extractValueText(
-            typeof toolCall === 'object' && toolCall !== null
-              ? (
-                (toolCall as Record<string, unknown>).args
-                ?? (toolCall as Record<string, unknown>).input
-              )
-              : null,
-          ),
-        )
+        .map((toolCall) => {
+          if (!toolCall || typeof toolCall !== 'object') {
+            return '';
+          }
+
+          const recordToolCall = toolCall as Record<string, unknown>;
+          const toolName = typeof recordToolCall.toolName === 'string' ? recordToolCall.toolName : 'unknown';
+          const formatted = this.formatStructuredValue(
+            recordToolCall.args ?? recordToolCall.input ?? null,
+          );
+
+          if (!formatted) {
+            return '';
+          }
+
+          return [`Tool call: ${toolName}`, formatted].join('\n');
+        })
         .filter(Boolean)
-        .join(' '),
+        .join('\n\n'),
       toolResults
-        .map((toolResult) =>
-          this.extractValueText(
-            typeof toolResult === 'object' && toolResult !== null
-              ? (
-                (toolResult as Record<string, unknown>).result
-                ?? (toolResult as Record<string, unknown>).output
-              )
-              : null,
-          ),
-        )
+        .map((toolResult) => {
+          if (!toolResult || typeof toolResult !== 'object') {
+            return '';
+          }
+
+          const recordToolResult = toolResult as Record<string, unknown>;
+          const toolName = typeof recordToolResult.toolName === 'string' ? recordToolResult.toolName : 'unknown';
+          const formatted = this.formatStructuredValue(
+            recordToolResult.result ?? recordToolResult.output ?? null,
+          );
+
+          if (!formatted) {
+            return '';
+          }
+
+          return [`Tool result: ${toolName}`, formatted].join('\n');
+        })
         .filter(Boolean)
-        .join(' '),
+        .join('\n\n'),
     ]
       .filter(Boolean)
       .join('\n')
