@@ -155,9 +155,14 @@ function createMemoryAgentInstructions(input: {
 
 function buildMemoryAgentPrompt() {
   return [
-    'Use the checkpoint packages under `workspace-memory/checkpoints` as historical execution evidence.',
-    'Use those records to consolidate durable knowledge, maintain memory documents, and create or improve reusable skills when justified.',
-    'Start from the checkpoint package READMEs, then inspect other files only when they help you understand recurring patterns, decisions, failures, or durable procedures.',
+    'Use the checkpoint packages under `workspace-memory/checkpoints` as historical execution evidence for the agent this memory belongs to.',
+    'Each checkpoint package is a period record of execution context, decisions, observations, reflections, and outcomes.',
+    'Do not treat your work as merely reading checkpoints. Your job is to read, understand, identify, extract, compare, connect, reflect, infer, and consolidate durable memory from them.',
+    'Revisit existing documents under `workspace-memory/memory` as part of the same process. Compare memories against checkpoints, memories against memories, and newer evidence against older notes.',
+    'When useful, improve existing memory documents, split them into smaller files, merge overlapping ideas, remove stale framing, sharpen distinctions, and expand weakly captured knowledge.',
+    'Infer durable patterns, lessons, procedures, preferences, people knowledge, documentation, and historical facts when the evidence supports them.',
+    'Think of this as the offline consolidation phase of a brain during sleep, except implemented through files: connections are revisited, experiences are compared, durable knowledge is strengthened, weak organization is improved, and useful abstractions are made persistent.',
+    'Use checkpoint packages as evidence, and use the memory documents as a living durable knowledge base that should be revised when the accumulated evidence supports a better structure.',
     'Update or create durable knowledge documents under `workspace-memory/memory`.',
     'Create or improve files under `workspace/skills` only when the evidence supports a reusable operational skill.',
     'Do not write status documents, progress snapshots, current-state summaries, or ephemeral operational trackers into long-term memory.',
