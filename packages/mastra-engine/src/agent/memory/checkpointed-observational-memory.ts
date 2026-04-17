@@ -74,10 +74,13 @@ type CustomOmMetricsSnapshot = {
   rawMessageCount: number;
   recentRawMessageCount: number;
   recentRawTokenCount: number;
+  recentRawTokenLimit: number;
   overflowMessageCount: number;
   overflowTokenCount: number;
+  observationTriggerTokenLimit: number;
   activeObservationBlockCount: number;
   observationTokenCount: number;
+  reflectionTriggerTokenLimit: number;
   activeReflectionBlockCount: number;
   reflectionTokenCount: number;
   reflectionBudget: number;
@@ -660,18 +663,24 @@ function createMetricsSnapshot(input: {
   rawUnits: RawUnit[];
   recent: RawUnit[];
   recentRawTokens: number;
+  recentRawTokenLimit: number;
   overflow: RawUnit[];
   overflowTokens: number;
+  observationTriggerTokenLimit: number;
+  reflectionTriggerTokenLimit: number;
   reflectionBudget: number;
 }) {
   return {
     rawMessageCount: input.rawUnits.length,
     recentRawMessageCount: input.recent.length,
     recentRawTokenCount: input.recentRawTokens,
+    recentRawTokenLimit: input.recentRawTokenLimit,
     overflowMessageCount: input.overflow.length,
     overflowTokenCount: input.overflowTokens,
+    observationTriggerTokenLimit: input.observationTriggerTokenLimit,
     activeObservationBlockCount: getActiveObservationBlocks(input.state).length,
     observationTokenCount: sumTokens(getActiveObservationBlocks(input.state)),
+    reflectionTriggerTokenLimit: input.reflectionTriggerTokenLimit,
     activeReflectionBlockCount: input.state.activeReflectionBlocks.length,
     reflectionTokenCount: sumTokens(input.state.activeReflectionBlocks),
     reflectionBudget: input.reflectionBudget,
@@ -1147,8 +1156,11 @@ export class CheckpointedObservationalMemoryProcessor
       rawUnits: finalRawMessages,
       recent: finalRawSplit.recent,
       recentRawTokens: finalRawSplit.recent.reduce((total, unit) => total + unit.tokenCount, 0),
+      recentRawTokenLimit: this.recentRawTokens,
       overflow: finalRawSplit.overflow,
       overflowTokens: finalRawSplit.overflow.reduce((total, unit) => total + unit.tokenCount, 0),
+      observationTriggerTokenLimit: this.rawObservationBatchTokens,
+      reflectionTriggerTokenLimit: this.observationReflectionBatchTokens,
       reflectionBudget: buildReflectionBudget({
         totalContextTokens: this.totalContextTokens,
         recentRawTokens: this.recentRawTokens,
