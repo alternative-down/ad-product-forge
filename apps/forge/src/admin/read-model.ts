@@ -355,7 +355,7 @@ function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | und
     searchMode: typeof value.searchMode === 'string' ? value.searchMode : 'hybrid',
     topK: typeof value.topK === 'number' ? value.topK : 4,
     graphTopK: typeof value.graphTopK === 'number' ? value.graphTopK : 3,
-    graphThreshold: typeof value.graphThreshold === 'number' ? value.graphThreshold : 0.7,
+    graphThreshold: typeof value.graphThreshold === 'number' ? value.graphThreshold : 0.4,
     graphRandomWalkSteps:
       typeof value.graphRandomWalkSteps === 'number' ? value.graphRandomWalkSteps : 50,
     indexPaths: Array.isArray(value.indexPaths)

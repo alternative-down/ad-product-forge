@@ -26,7 +26,7 @@ const RECALL_AUTO_INDEX_PATHS = [
 const RECALL_SEARCH_TOP_K = 3;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
 const RECALL_GRAPH_TOP_K = 3;
-const RECALL_GRAPH_THRESHOLD = 0.7;
+const RECALL_GRAPH_THRESHOLD = 0.4;
 const RECALL_GRAPH_RANDOM_WALK_STEPS = 50;
 
 type RecallSnapshot = {
