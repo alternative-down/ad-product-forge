@@ -178,6 +178,16 @@ const agentActionSchema = z.object({
   agentId: z.string().min(1),
 });
 
+const agentLongTermMemoryRecallSearchSchema = z.object({
+  agentId: z.string().min(1),
+  query: z.string(),
+  topK: z.coerce.number().int().min(1).max(20),
+  searchMode: z.enum(['hybrid', 'vector', 'bm25']),
+  graphTopK: z.coerce.number().int().min(1).max(20),
+  graphThreshold: z.coerce.number().min(0).max(1),
+  graphRandomWalkSteps: z.coerce.number().int().min(1).max(200),
+});
+
 const adminInternalChatSendSchema = z.object({
   agentId: z.string().min(1),
   targetKey: z.string().min(1).optional(),
@@ -700,6 +710,24 @@ export function registerAdminRoutes(input: {
       }
 
       return jsonResponse(snapshot);
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/ltm-recall-search',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, agentLongTermMemoryRecallSearchSchema);
+      return jsonResponse(
+        await readModel.debugAgentLongTermMemoryRecallSearch(body.agentId, {
+          query: body.query,
+          topK: body.topK,
+          searchMode: body.searchMode,
+          graphTopK: body.graphTopK,
+          graphThreshold: body.graphThreshold,
+          graphRandomWalkSteps: body.graphRandomWalkSteps,
+        }),
+      );
     },
   });
 

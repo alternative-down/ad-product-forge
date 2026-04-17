@@ -37,6 +37,7 @@ import type { GitHubAppManager } from '../github/manager';
 import { createSystemSettingsStore } from '../system-settings/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { listAgentWorkspaceSkills } from '../agents/workspace-skills';
+import type { AgentLongTermMemoryRecallDebugSearchInput } from '../agents/agent-long-term-memory-recall';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -1101,6 +1102,28 @@ export function createAdminReadModel(input: {
     };
   }
 
+  async function debugAgentLongTermMemoryRecallSearch(
+    agentId: string,
+    input: AgentLongTermMemoryRecallDebugSearchInput,
+  ) {
+    const loadedAgent = getInternalAgentRegistry().get(agentId);
+
+    if (!loadedAgent) {
+      throw new Error(`Agent is not loaded: ${agentId}`);
+    }
+
+    if (!loadedAgent.runtime.longTermMemoryRecall) {
+      throw new Error(`Long-term memory recall is not available for agent: ${agentId}`);
+    }
+
+    const result = await loadedAgent.runtime.longTermMemoryRecall.debugSearch(input);
+
+    return {
+      ...result,
+      lastInitAt: result.lastInitAt ? new Date(result.lastInitAt).getTime() : null,
+    };
+  }
+
   async function listAgentConversationMessages(params: {
     agentId: string;
     provider: string;
@@ -1314,6 +1337,7 @@ export function createAdminReadModel(input: {
     listAgentThreadMessages,
     listAgentLongTermMemoryThreadMessages,
     getAgentRuntimeMemory,
+    debugAgentLongTermMemoryRecallSearch,
     listAgentConversationMessages,
     listRoles,
     listSystemIntegrations,

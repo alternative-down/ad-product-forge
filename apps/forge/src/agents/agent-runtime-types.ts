@@ -8,6 +8,10 @@ import type {
   WorkspaceSkillsConfig,
 } from '../database/schema';
 import type { createAgentContractStore } from './agent-contract-store';
+import type {
+  AgentLongTermMemoryRecallDebugSearchInput,
+  AgentLongTermMemoryRecallDebugSearchResult,
+} from './agent-long-term-memory-recall';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
@@ -71,6 +75,9 @@ export type InternalAgentRuntime<
       threadId: string | null;
       resourceId?: string;
     }): Promise<string | null>;
+    debugSearch(
+      input: AgentLongTermMemoryRecallDebugSearchInput,
+    ): Promise<AgentLongTermMemoryRecallDebugSearchResult>;
   } | null;
   longTermMemory: {
     onAgentIdle(): Promise<void>;
