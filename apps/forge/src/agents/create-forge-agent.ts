@@ -70,6 +70,10 @@ export async function createInternalAgentRuntime<
       ? createAgentLongTermMemory({
         agentId: config.id,
         agentName: config.name,
+        agentDescription: config.description,
+        roleName: config.roleName,
+        roleDescription: config.roleDescription,
+        instructions: typeof config.instructions === 'string' ? config.instructions : '',
         agentWorkspacePath: platform.agentWorkspacePath,
         agentMemoryPath: platform.agentMemoryPath,
         storage: platform.storage,
