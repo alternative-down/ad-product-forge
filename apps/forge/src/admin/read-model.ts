@@ -81,10 +81,13 @@ type CustomCheckpointedContextState = {
     rawMessageCount: number;
     recentRawMessageCount: number;
     recentRawTokenCount: number;
+    recentRawTokenLimit: number;
     overflowMessageCount: number;
     overflowTokenCount: number;
+    observationTriggerTokenLimit: number;
     activeObservationBlockCount: number;
     observationTokenCount: number;
+    reflectionTriggerTokenLimit: number;
     activeReflectionBlockCount: number;
     reflectionTokenCount: number;
     reflectionBudget: number;
@@ -1058,10 +1061,12 @@ export function createAdminReadModel(input: {
         rawMessageCount: metricsSnapshot?.rawMessageCount ?? 0,
         recentRawMessageCount: metricsSnapshot?.recentRawMessageCount ?? 0,
         recentRawTokenCount: metricsSnapshot?.recentRawTokenCount ?? 0,
-        recentRawTokenLimit: settings.checkpointedOmRecentRawTokens,
+        recentRawTokenLimit: metricsSnapshot?.recentRawTokenLimit ?? settings.checkpointedOmRecentRawTokens,
         overflowMessageCount: metricsSnapshot?.overflowMessageCount ?? 0,
         overflowTokenCount: metricsSnapshot?.overflowTokenCount ?? 0,
-        observationTriggerTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
+        observationTriggerTokenLimit:
+          metricsSnapshot?.observationTriggerTokenLimit
+          ?? settings.checkpointedOmRawObservationBatchTokens,
         activeObservationBlockCount: metricsSnapshot?.activeObservationBlockCount
           ?? customState?.observationBlocks.filter((block) => block.reflectedGeneration === null).length
           ?? 0,
@@ -1069,7 +1074,9 @@ export function createAdminReadModel(input: {
           ?? customState?.observationBlocks.filter((block) => block.reflectedGeneration === null)
             .reduce((total, block) => total + block.tokenCount, 0)
           ?? 0,
-        reflectionTriggerTokenLimit: settings.checkpointedOmObservationReflectionBatchTokens,
+        reflectionTriggerTokenLimit:
+          metricsSnapshot?.reflectionTriggerTokenLimit
+          ?? settings.checkpointedOmObservationReflectionBatchTokens,
         activeReflectionBlockCount: metricsSnapshot?.activeReflectionBlockCount
           ?? customState?.activeReflectionBlocks.length
           ?? 0,
