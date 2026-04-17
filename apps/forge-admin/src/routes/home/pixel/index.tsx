@@ -583,13 +583,13 @@ function buildSceneAgents(input: {
     const slot = runningSlots[index % runningSlots.length] ?? roamLane[index % roamLane.length];
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     const isRoaming = index >= runningSlots.length;
-    const workPhase = Math.floor((input.tick + index * 17) / 7) % 8;
     const ambientDeskPose = resolveDeskAmbientPose({
       agentId: agent.agentId,
       tick: input.tick,
       baseDir: slot.dir,
     });
-    const deskBobOffset = !isAnimating && !ambientDeskPose && !isRoaming
+    const forceDeskDefault = isAnimating && Boolean(agent.overview.lastToolBadge);
+    const deskBobOffset = !forceDeskDefault && !ambientDeskPose && !isRoaming
       ? Math.sin((input.tick + index * 5) / 1.8) * 0.6
       : 0;
     sceneAgents.push({
@@ -597,19 +597,13 @@ function buildSceneAgents(input: {
       agentId: agent.agentId,
       name: agent.name,
       x: slot.x + (
-        isAnimating && isRoaming
+        !forceDeskDefault && isRoaming
           ? Math.sin(input.tick / 4 + index) * 6
           : 0
       ),
       y: slot.y + deskBobOffset,
-      dir: isAnimating
-        ? workPhase === 3 ? 'left' : workPhase === 5 ? 'right' : slot.dir
-        : ambientDeskPose?.dir ?? slot.dir,
-      frame: isAnimating
-        ? workPhase === 0 || workPhase === 1 || workPhase === 6
-          ? 3 + (input.tick + index) % 2
-          : 1
-        : ambientDeskPose?.frame ?? 3 + ((input.tick + index) % 2),
+      dir: forceDeskDefault ? slot.dir : ambientDeskPose?.dir ?? slot.dir,
+      frame: forceDeskDefault ? 3 + ((input.tick + index) % 2) : ambientDeskPose?.frame ?? 3 + ((input.tick + index) % 2),
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
