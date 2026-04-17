@@ -4,6 +4,7 @@ import type {
   AgentDetail,
   AgentExecutionStepsResponse,
   AgentListItem,
+  AgentLongTermMemoryRecallDebugSearchResult,
   AgentRecentConversation,
   AgentRuntimeMemorySnapshot,
   AgentMcpServerInput,
@@ -78,6 +79,21 @@ export function getAgentRuntimeMemory(agentId: string) {
   return request<AgentRuntimeMemorySnapshot>(
     `/admin/agent/runtime-memory?agentId=${encodeURIComponent(agentId)}`,
   );
+}
+
+export function runAgentLongTermMemoryRecallSearch(input: {
+  agentId: string;
+  query: string;
+  topK: number;
+  searchMode: 'hybrid' | 'vector' | 'bm25';
+  graphTopK: number;
+  graphThreshold: number;
+  graphRandomWalkSteps: number;
+}) {
+  return request<AgentLongTermMemoryRecallDebugSearchResult>('/admin/agent/ltm-recall-search', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function getAgentConversationMessages(

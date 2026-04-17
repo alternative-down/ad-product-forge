@@ -288,6 +288,28 @@ export type AgentRuntimeMemorySnapshot = {
   };
 };
 
+export type AgentLongTermMemoryRecallDebugSearchResult = {
+  query: string;
+  topK: number;
+  searchMode: 'hybrid' | 'vector' | 'bm25';
+  graphTopK: number;
+  graphThreshold: number;
+  graphRandomWalkSteps: number;
+  lastInitAt: number | null;
+  indexPaths: string[];
+  workspaceFileCount: number;
+  memoryFileCount: number;
+  checkpointFileCount: number;
+  workspaceResults: Array<{
+    id: string;
+    content: string;
+    score: number | null;
+    relativePercent: number | null;
+  }>;
+  graphHit: boolean;
+  graphContext: string;
+};
+
 export type HireAgentInput = {
   hiringRequest: string;
   additionalContext?: string;

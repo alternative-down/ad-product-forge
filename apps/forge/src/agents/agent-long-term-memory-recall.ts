@@ -17,6 +17,37 @@ type SearchResult = {
   score?: number;
 };
 
+export type AgentLongTermMemoryRecallDebugSearchInput = {
+  query: string;
+  topK: number;
+  searchMode: 'hybrid' | 'vector' | 'bm25';
+  graphTopK: number;
+  graphThreshold: number;
+  graphRandomWalkSteps: number;
+};
+
+export type AgentLongTermMemoryRecallDebugSearchResult = {
+  query: string;
+  topK: number;
+  searchMode: 'hybrid' | 'vector' | 'bm25';
+  graphTopK: number;
+  graphThreshold: number;
+  graphRandomWalkSteps: number;
+  lastInitAt: string | null;
+  indexPaths: string[];
+  workspaceFileCount: number;
+  memoryFileCount: number;
+  checkpointFileCount: number;
+  workspaceResults: Array<{
+    id: string;
+    content: string;
+    score: number | null;
+    relativePercent: number | null;
+  }>;
+  graphHit: boolean;
+  graphContext: string;
+};
+
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
 const RECALL_AUTO_INDEX_PATHS = [
   '/workspace-memory',
@@ -280,6 +311,72 @@ export class AgentLongTermMemoryRecall {
     }
   }
 
+  async debugSearch(input: AgentLongTermMemoryRecallDebugSearchInput) {
+    await this.refreshWorkspaceIndex();
+    const indexStats = await this.getIndexStats();
+    const query = input.query.trim();
+
+    if (!query) {
+      return {
+        query: '',
+        topK: input.topK,
+        searchMode: input.searchMode,
+        graphTopK: input.graphTopK,
+        graphThreshold: input.graphThreshold,
+        graphRandomWalkSteps: input.graphRandomWalkSteps,
+        lastInitAt: this.lastInitAt,
+        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+        workspaceFileCount: indexStats.workspaceFileCount,
+        memoryFileCount: indexStats.memoryFileCount,
+        checkpointFileCount: indexStats.checkpointFileCount,
+        workspaceResults: [],
+        graphHit: false,
+        graphContext: '',
+      } satisfies AgentLongTermMemoryRecallDebugSearchResult;
+    }
+
+    const { results } = await this.searchWorkspace(query, {
+      topK: input.topK,
+      mode: input.searchMode,
+    });
+    const graphContext = await this.searchGraph(query, results, {
+      topK: input.graphTopK,
+      threshold: input.graphThreshold,
+      randomWalkSteps: input.graphRandomWalkSteps,
+    });
+    const highestScore = results.reduce((currentMax, result) => {
+      const score = typeof result.score === 'number' ? result.score : 0;
+      return Math.max(currentMax, score);
+    }, 0);
+
+    return {
+      query,
+      topK: input.topK,
+      searchMode: input.searchMode,
+      graphTopK: input.graphTopK,
+      graphThreshold: input.graphThreshold,
+      graphRandomWalkSteps: input.graphRandomWalkSteps,
+      lastInitAt: this.lastInitAt,
+      indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+      workspaceFileCount: indexStats.workspaceFileCount,
+      memoryFileCount: indexStats.memoryFileCount,
+      checkpointFileCount: indexStats.checkpointFileCount,
+      workspaceResults: results.map((result) => ({
+        id: result.id,
+        content: result.content,
+        score: typeof result.score === 'number' ? result.score : null,
+        relativePercent: (
+          typeof result.score === 'number'
+          && highestScore > 0
+        )
+          ? (result.score / highestScore) * 100
+          : null,
+      })),
+      graphHit: Boolean(graphContext),
+      graphContext,
+    } satisfies AgentLongTermMemoryRecallDebugSearchResult;
+  }
+
   private async refreshWorkspaceIndex() {
     await this.ensureVectorIndexReady();
     await withTimeout(
@@ -323,12 +420,21 @@ export class AgentLongTermMemoryRecall {
     });
   }
 
-  private async searchWorkspace(queryText: string): Promise<{ formatted: string; results: SearchResult[] }> {
+  private async searchWorkspace(
+    queryText: string,
+    options: {
+      topK: number;
+      mode: 'hybrid' | 'vector' | 'bm25';
+    } = {
+      topK: RECALL_SEARCH_TOP_K,
+      mode: RECALL_SEARCH_MODE,
+    },
+  ): Promise<{ formatted: string; results: SearchResult[] }> {
     try {
       const results = await withTimeout(
         this.workspace.search(queryText, {
-          topK: RECALL_SEARCH_TOP_K,
-          mode: RECALL_SEARCH_MODE,
+          topK: options.topK,
+          mode: options.mode,
         }),
         this.recallTimeoutMs,
         'ltm recall workspace search timed out',
@@ -359,15 +465,27 @@ export class AgentLongTermMemoryRecall {
     }
   }
 
-  private async searchGraph(queryText: string, workspaceResults: SearchResult[]) {
+  private async searchGraph(
+    queryText: string,
+    workspaceResults: SearchResult[],
+    options: {
+      topK: number;
+      threshold: number;
+      randomWalkSteps: number;
+    } = {
+      topK: RECALL_GRAPH_TOP_K,
+      threshold: RECALL_GRAPH_THRESHOLD,
+      randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+    },
+  ) {
     try {
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
         indexName: this.searchIndexName,
         model: getFastembedSingleton(),
         graphOptions: {
-          threshold: RECALL_GRAPH_THRESHOLD,
-          randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+          threshold: options.threshold,
+          randomWalkSteps: options.randomWalkSteps,
         },
       });
 
@@ -380,7 +498,7 @@ export class AgentLongTermMemoryRecall {
         graphTool.execute(
           {
             queryText: workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText,
-            topK: RECALL_GRAPH_TOP_K,
+            topK: options.topK,
           },
           {} as MastraToolInvocationOptions,
         ),
@@ -412,9 +530,11 @@ export class AgentLongTermMemoryRecall {
     };
   }
 
-  private extractValueText(value: unknown): string {
+  private formatStructuredValue(value: unknown, indentLevel = 0): string {
+    const indent = '  '.repeat(indentLevel);
+
     if (typeof value === 'string') {
-      return value;
+      return value.trim();
     }
 
     if (typeof value === 'number' || typeof value === 'boolean') {
@@ -422,20 +542,37 @@ export class AgentLongTermMemoryRecall {
     }
 
     if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return '';
+      }
+
       return value
-        .map((item) => this.extractValueText(item))
+        .map((item) => this.formatStructuredValue(item, indentLevel + 1))
         .filter(Boolean)
-        .join(' ');
+        .map((item) => `${indent}- ${item.replace(/\n/g, `\n${indent}  `)}`)
+        .join('\n');
     }
 
     if (!value || typeof value !== 'object') {
       return '';
     }
 
-    return Object.values(value)
-      .map((item) => this.extractValueText(item))
+    return Object.entries(value)
+      .map(([key, item]) => {
+        const formatted = this.formatStructuredValue(item, indentLevel + 1);
+
+        if (!formatted) {
+          return '';
+        }
+
+        if (!formatted.includes('\n')) {
+          return `${indent}${key}: ${formatted}`;
+        }
+
+        return `${indent}${key}:\n${formatted}`;
+      })
       .filter(Boolean)
-      .join(' ');
+      .join('\n');
   }
 
   private buildRecallQueryFromStep(step: unknown) {
@@ -451,31 +588,45 @@ export class AgentLongTermMemoryRecall {
       typeof record.text === 'string' ? record.text : '',
       typeof record.reasoningText === 'string' ? record.reasoningText : '',
       toolCalls
-        .map((toolCall) =>
-          this.extractValueText(
-            typeof toolCall === 'object' && toolCall !== null
-              ? (
-                (toolCall as Record<string, unknown>).args
-                ?? (toolCall as Record<string, unknown>).input
-              )
-              : null,
-          ),
-        )
+        .map((toolCall) => {
+          if (!toolCall || typeof toolCall !== 'object') {
+            return '';
+          }
+
+          const recordToolCall = toolCall as Record<string, unknown>;
+          const toolName = typeof recordToolCall.toolName === 'string' ? recordToolCall.toolName : 'unknown';
+          const formatted = this.formatStructuredValue(
+            recordToolCall.args ?? recordToolCall.input ?? null,
+          );
+
+          if (!formatted) {
+            return '';
+          }
+
+          return [`Tool call: ${toolName}`, formatted].join('\n');
+        })
         .filter(Boolean)
-        .join(' '),
+        .join('\n\n'),
       toolResults
-        .map((toolResult) =>
-          this.extractValueText(
-            typeof toolResult === 'object' && toolResult !== null
-              ? (
-                (toolResult as Record<string, unknown>).result
-                ?? (toolResult as Record<string, unknown>).output
-              )
-              : null,
-          ),
-        )
+        .map((toolResult) => {
+          if (!toolResult || typeof toolResult !== 'object') {
+            return '';
+          }
+
+          const recordToolResult = toolResult as Record<string, unknown>;
+          const toolName = typeof recordToolResult.toolName === 'string' ? recordToolResult.toolName : 'unknown';
+          const formatted = this.formatStructuredValue(
+            recordToolResult.result ?? recordToolResult.output ?? null,
+          );
+
+          if (!formatted) {
+            return '';
+          }
+
+          return [`Tool result: ${toolName}`, formatted].join('\n');
+        })
         .filter(Boolean)
-        .join(' '),
+        .join('\n\n'),
     ]
       .filter(Boolean)
       .join('\n')
