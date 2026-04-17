@@ -69,6 +69,16 @@ type SceneAgent = {
   spriteSeed?: number;
 };
 
+type DeskAnimationState = {
+  mode: 'default' | 'event';
+  cycleIndex: number;
+  defaultStartedAtTick: number;
+  restDuration: number;
+  eventDuration: number;
+  eventStartedAtTick: number | null;
+  variant: number;
+};
+
 function HomePixelRoute() {
   const settingsQuery = useQuery({
     queryKey: ['admin', 'system-settings'],
@@ -88,20 +98,38 @@ function HomePixelRoute() {
   const [camera, setCamera] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [canvasLayout, setCanvasLayout] = useState({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, left: 0, top: 0 });
+  const [deskAnimationState, setDeskAnimationState] = useState<Record<string, DeskAnimationState>>({});
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const dragOriginRef = useRef<{ pointerId: number; x: number; y: number; cameraX: number; cameraY: number } | null>(null);
   const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchDistanceRef = useRef<number | null>(null);
+  const agentsRef = useRef<AgentListItem[]>([]);
+  const animationDeadlinesRef = useRef<Record<string, number>>({});
   const previousPreviewByAgentIdRef = useRef<Record<string, string | null>>({});
   const previousStepAtByAgentIdRef = useRef<Record<string, number | null>>({});
   const targetSceneAgentsRef = useRef<SceneAgent[]>([]);
   const agents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data]);
 
   useEffect(() => {
+    agentsRef.current = agents;
+  }, [agents]);
+
+  useEffect(() => {
+    animationDeadlinesRef.current = animationDeadlines;
+  }, [animationDeadlines]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       setTick((value) => {
         const nextValue = value + 1;
+        setDeskAnimationState((currentState) => advanceDeskAnimationState({
+          currentState,
+          agents: agentsRef.current,
+          animationDeadlines: animationDeadlinesRef.current,
+          nowMs: Date.now(),
+          tick: nextValue,
+        }));
         setDisplaySceneAgents((currentAgents) => interpolateSceneAgents(currentAgents, targetSceneAgentsRef.current, nextValue));
         return nextValue;
       });
@@ -186,8 +214,9 @@ function HomePixelRoute() {
       nowMs,
       animationDeadlines,
       bubbleDeadlines,
+      deskAnimationState,
     }),
-    [agents, animationDeadlines, bubbleDeadlines, nowMs, tick],
+    [agents, animationDeadlines, bubbleDeadlines, deskAnimationState, nowMs, tick],
   );
 
   useEffect(() => {
@@ -538,6 +567,7 @@ function buildSceneAgents(input: {
   nowMs: number;
   animationDeadlines: Record<string, number>;
   bubbleDeadlines: Record<string, number>;
+  deskAnimationState: Record<string, DeskAnimationState>;
 }) {
   const runningSlots = [
     { x: WORLD_OFFSET_X + 4 * TILE_SIZE, y: WORLD_OFFSET_Y + 6.85 * TILE_SIZE, dir: 'down' as const },
@@ -583,13 +613,14 @@ function buildSceneAgents(input: {
     const slot = runningSlots[index % runningSlots.length] ?? roamLane[index % roamLane.length];
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
     const isRoaming = index >= runningSlots.length;
-    const workPhase = Math.floor((input.tick + index * 17) / 7) % 8;
     const ambientDeskPose = resolveDeskAmbientPose({
       agentId: agent.agentId,
       tick: input.tick,
       baseDir: slot.dir,
+      state: input.deskAnimationState[agent.agentId],
     });
-    const deskBobOffset = !isAnimating && !ambientDeskPose && !isRoaming
+    const forceDeskDefault = ambientDeskPose === null;
+    const deskBobOffset = forceDeskDefault && !isRoaming
       ? Math.sin((input.tick + index * 5) / 1.8) * 0.6
       : 0;
     sceneAgents.push({
@@ -597,19 +628,13 @@ function buildSceneAgents(input: {
       agentId: agent.agentId,
       name: agent.name,
       x: slot.x + (
-        isAnimating && isRoaming
+        !forceDeskDefault && isRoaming
           ? Math.sin(input.tick / 4 + index) * 6
           : 0
       ),
       y: slot.y + deskBobOffset,
-      dir: isAnimating
-        ? workPhase === 3 ? 'left' : workPhase === 5 ? 'right' : slot.dir
-        : ambientDeskPose?.dir ?? slot.dir,
-      frame: isAnimating
-        ? workPhase === 0 || workPhase === 1 || workPhase === 6
-          ? 3 + (input.tick + index) % 2
-          : 1
-        : ambientDeskPose?.frame ?? 3 + ((input.tick + index) % 2),
+      dir: forceDeskDefault ? slot.dir : ambientDeskPose.dir,
+      frame: forceDeskDefault ? 3 + ((input.tick + index) % 2) : ambientDeskPose.frame,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: input.bubbleDeadlines[agent.agentId] > input.nowMs ? agent.overview.lastStepPreview : null,
     });
@@ -1028,30 +1053,24 @@ function resolveDeskAmbientPose(input: {
   agentId: string;
   tick: number;
   baseDir: SceneAgent['dir'];
+  state: DeskAnimationState | undefined;
 }) {
-  const cycleLength = 132;
-  const cycleIndex = Math.floor(input.tick / cycleLength);
-  const tickInCycle = input.tick % cycleLength;
-  const restDuration = 42 + (hashText(`${input.agentId}:desk-rest:${cycleIndex}`) % 30);
-  const eventDuration = 10 + (hashText(`${input.agentId}:desk-event:${cycleIndex}`) % 8);
-
-  if (tickInCycle < restDuration || tickInCycle >= restDuration + eventDuration) {
+  if (!input.state || input.state.mode === 'default' || input.state.eventStartedAtTick === null) {
     return null;
   }
 
-  const variant = hashText(`${input.agentId}:desk-variant:${cycleIndex}`) % 4;
-  const eventTick = tickInCycle - restDuration;
-  const halfDuration = Math.max(1, Math.floor(eventDuration / 2));
+  const eventTick = input.tick - input.state.eventStartedAtTick;
+  const halfDuration = Math.max(1, Math.floor(input.state.eventDuration / 2));
 
-  if (variant === 0) {
+  if (input.state.variant === 0) {
     return { dir: input.baseDir, frame: 1 };
   }
 
-  if (variant === 1) {
+  if (input.state.variant === 1) {
     return { dir: 'left' as const, frame: 1 };
   }
 
-  if (variant === 2) {
+  if (input.state.variant === 2) {
     return { dir: 'right' as const, frame: 1 };
   }
 
@@ -1059,6 +1078,76 @@ function resolveDeskAmbientPose(input: {
     dir: eventTick < halfDuration ? 'left' as const : 'right' as const,
     frame: 1,
   };
+}
+
+function createDeskAnimationState(input: {
+  agentId: string;
+  cycleIndex: number;
+  tick: number;
+}): DeskAnimationState {
+  return {
+    mode: 'default',
+    cycleIndex: input.cycleIndex,
+    defaultStartedAtTick: input.tick,
+    restDuration: 42 + (hashText(`${input.agentId}:desk-rest:${input.cycleIndex}`) % 30),
+    eventDuration: 10 + (hashText(`${input.agentId}:desk-event:${input.cycleIndex}`) % 8),
+    eventStartedAtTick: null,
+    variant: hashText(`${input.agentId}:desk-variant:${input.cycleIndex}`) % 4,
+  };
+}
+
+function advanceDeskAnimationState(input: {
+  currentState: Record<string, DeskAnimationState>;
+  agents: AgentListItem[];
+  animationDeadlines: Record<string, number>;
+  nowMs: number;
+  tick: number;
+}) {
+  const nextState: Record<string, DeskAnimationState> = {};
+  const runningAgents = input.agents.filter((agent) => agent.executionState === 'running' && !agent.overview.ltm.running);
+
+  for (const agent of runningAgents) {
+    const currentState = input.currentState[agent.agentId]
+      ?? createDeskAnimationState({
+        agentId: agent.agentId,
+        cycleIndex: 0,
+        tick: input.tick,
+      });
+    const forceDefault = input.animationDeadlines[agent.agentId] > input.nowMs && Boolean(agent.overview.lastToolBadge);
+
+    if (forceDefault) {
+      nextState[agent.agentId] = currentState.mode === 'default'
+        ? currentState
+        : createDeskAnimationState({
+            agentId: agent.agentId,
+            cycleIndex: currentState.cycleIndex + 1,
+            tick: input.tick,
+          });
+      continue;
+    }
+
+    if (currentState.mode === 'default') {
+      nextState[agent.agentId] = input.tick - currentState.defaultStartedAtTick >= currentState.restDuration
+        ? {
+            ...currentState,
+            mode: 'event',
+            eventStartedAtTick: input.tick,
+          }
+        : currentState;
+      continue;
+    }
+
+    nextState[agent.agentId] = currentState.eventStartedAtTick !== null &&
+      input.tick - currentState.eventStartedAtTick >= currentState.eventDuration
+      ? createDeskAnimationState({
+          agentId: agent.agentId,
+          cycleIndex: currentState.cycleIndex + 1,
+          tick: input.tick,
+        })
+      : currentState;
+  }
+
+  return nextState;
 }
 
 function hashText(value: string) {
