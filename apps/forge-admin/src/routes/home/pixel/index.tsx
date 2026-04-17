@@ -931,6 +931,8 @@ function clampCamera(input: { x: number; y: number }, zoom: number) {
 }
 
 function interpolateSceneAgents(currentAgents: SceneAgent[], targetAgents: SceneAgent[], tick: number) {
+  const walkSpeed = 1.35;
+
   return targetAgents.map((targetAgent) => {
     const currentAgent = currentAgents.find((agent) => agent.agentId === targetAgent.agentId);
 
@@ -940,9 +942,9 @@ function interpolateSceneAgents(currentAgents: SceneAgent[], targetAgents: Scene
 
     const deltaX = targetAgent.x - currentAgent.x;
     const deltaY = targetAgent.y - currentAgent.y;
-    const distance = Math.abs(deltaX) + Math.abs(deltaY);
+    const distance = Math.hypot(deltaX, deltaY);
 
-    if (distance < 0.6) {
+    if (distance <= walkSpeed) {
       return targetAgent;
     }
 
@@ -953,8 +955,8 @@ function interpolateSceneAgents(currentAgents: SceneAgent[], targetAgents: Scene
 
     return {
       ...targetAgent,
-      x: currentAgent.x + deltaX * 0.32,
-      y: currentAgent.y + deltaY * 0.32,
+      x: currentAgent.x + (deltaX / distance) * walkSpeed,
+      y: currentAgent.y + (deltaY / distance) * walkSpeed,
       dir: movingDir,
       frame: travelFrame,
     };
