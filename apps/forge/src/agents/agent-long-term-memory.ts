@@ -158,10 +158,6 @@ function createMemoryAgentInstructions(input: {
     'If existing files are not aligned with these rules, refactor them. Rename, split, merge, rewrite, or replace them as needed.',
     'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
     'Do not create files outside `workspace-memory/memory` and `workspace/skills`.',
-    'Use workspace-relative paths. The relevant roots are:',
-    `- \`${CHECKPOINTS_DIR}\``,
-    `- \`${MEMORY_DIR}\``,
-    `- \`${SKILLS_DIR.replace(/\\/g, '/')}\``,
   ].filter(Boolean).join('\n\n');
 }
 
