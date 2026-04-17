@@ -508,13 +508,14 @@ export function createAdminReadModel(input: {
         agentRows.map(async (agent) => {
           const messages = await listThreadMessages(input.workspaceBasePath, agent.id, {
             page: 0,
-            perPage: 1,
+            perPage: 8,
           });
+          const latestAssistantMessage = messages.find((message) => message.role === 'assistant') ?? null;
           return [
             agent.id,
             {
-              preview: extractLatestMessagePreview(messages[0]?.content),
-              toolBadge: extractLatestMessageToolBadge(messages[0]?.content),
+              preview: extractLatestMessagePreview(latestAssistantMessage?.content),
+              toolBadge: extractLatestMessageToolBadge(latestAssistantMessage?.content),
             },
           ] as const;
         }),
