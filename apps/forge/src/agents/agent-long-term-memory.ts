@@ -159,8 +159,8 @@ function createMemoryAgentInstructions(input: {
     'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
     'Do not create files outside `workspace-memory/memory` and `workspace/skills`.',
     'Use workspace-relative paths. The relevant roots are:',
-    `- \`${path.posix.join('workspace-memory', CHECKPOINTS_DIR)}\``,
-    `- \`${path.posix.join('workspace-memory', MEMORY_DIR)}\``,
+    `- \`${CHECKPOINTS_DIR}\``,
+    `- \`${MEMORY_DIR}\``,
     `- \`${SKILLS_DIR.replace(/\\/g, '/')}\``,
   ].filter(Boolean).join('\n\n');
 }
@@ -173,7 +173,7 @@ function buildMemoryAgentPrompt() {
     'Think of this as an offline consolidation phase: review experience, revisit old notes, compare them with new evidence, strengthen useful abstractions, and preserve better long-term structure.',
     'Prefer durable, descriptive, retrieval-friendly documents and reusable skills when repeated procedures justify them.',
     'Do not write status documents, progress snapshots, current-state summaries, or temporary backlog trackers.',
-    'Do not edit `workspace-memory/checkpoints`. That area may be rewritten later and anything changed there can be lost.',
+    `Do not edit \`${CHECKPOINTS_DIR}\`. That area may be rewritten later and anything changed there can be lost.`,
     'Write clearly, explain things well, and keep information consistent across files even when some overlap or repetition is helpful for retrieval.',
     'When you finish a maintenance pass, do not spend output tokens on maintenance report tables. Only communicate the minimum necessary outcome.',
   ].join('\n');
@@ -450,9 +450,9 @@ export function createAgentLongTermMemory(input: {
   const workspace = new WorkspaceRuntime({
     autoSync: true,
     filesystem: new LocalFilesystem({
-      basePath: input.agentWorkspacePath,
+      basePath: input.agentMemoryPath,
+      allowedPaths: [path.resolve(input.agentWorkspacePath, SKILLS_DIR)],
     }),
-    skills: ['workspace/skills/**/SKILL.md'],
   });
   const memory = createAgentMemory({
     storage: input.storage,
