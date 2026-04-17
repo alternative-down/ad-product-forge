@@ -27,7 +27,6 @@ const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
 const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
-const RUNNER_USER_MESSAGE_PREFIX = 'System Wake Input:\n';
 
 export function createAgentRunner(
   db: Database,
@@ -944,7 +943,7 @@ export function createAgentRunner(
       ? [
           {
             role: 'user' as const,
-            content: `${RUNNER_USER_MESSAGE_PREFIX}${promptText.trim()}`,
+            content: promptText.trim(),
           },
         ]
       : [];
