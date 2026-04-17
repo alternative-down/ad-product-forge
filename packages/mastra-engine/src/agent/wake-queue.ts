@@ -2,8 +2,6 @@ const DEFAULT_WAKE_DEBOUNCE_MS = 10000;
 const DEFAULT_WAKE_MAX_ACCUMULATION_MS = 30000;
 const GROUP_MESSAGE_WAKE_DEBOUNCE_MS = 120000;
 const GROUP_MESSAGE_WAKE_MAX_ACCUMULATION_MS = 300000;
-const INTERNAL_CHAT_WAKE_DEBOUNCE_MS = 2000;
-const INTERNAL_CHAT_WAKE_MAX_ACCUMULATION_MS = 10000;
 
 export type AgentWakeEvent = {
   type: string;
@@ -42,22 +40,11 @@ export function createAgentWakeQueue(config: {
   const readyEvents = new Map<string, AgentWakeEvent>();
   const idleEvents = new Map<string, AgentWakeEvent>();
 
-  function isInternalChatMessageEvent(event: AgentWakeEvent) {
-    return event.type === 'message:internal-chat' || event.groupMetadata?.Provider === 'internal-chat';
-  }
-
   function isGroupMessageEvent(event: AgentWakeEvent) {
     return event.type.startsWith('message:') && event.groupMetadata?.ConversationType === 'group';
   }
 
   function getWakeWindow(event: AgentWakeEvent) {
-    if (isInternalChatMessageEvent(event)) {
-      return {
-        debounceMs: INTERNAL_CHAT_WAKE_DEBOUNCE_MS,
-        maxAccumulationMs: INTERNAL_CHAT_WAKE_MAX_ACCUMULATION_MS,
-      };
-    }
-
     if (isGroupMessageEvent(event)) {
       return {
         debounceMs: GROUP_MESSAGE_WAKE_DEBOUNCE_MS,
