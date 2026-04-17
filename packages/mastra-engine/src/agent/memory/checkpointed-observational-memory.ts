@@ -626,6 +626,21 @@ function splitMessagesIntoRawUnits(
   return messages.flatMap((message) => splitMessageIntoRawUnits(message, tokenCounter, maxUnitTokens));
 }
 
+function sortRawUnitsChronologically(units: RawUnit[]) {
+  return units
+    .map((unit, index) => ({ unit, index }))
+    .sort((left, right) => {
+      const timeDifference = left.unit.createdAt.getTime() - right.unit.createdAt.getTime();
+
+      if (timeDifference !== 0) {
+        return timeDifference;
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ unit }) => unit);
+}
+
 function getCursorObservedIds(input: {
   previousRecord: ObservationalMemoryRecord;
   selectedUnits: RawUnit[];
@@ -717,7 +732,9 @@ function getMessagesAfterCursor(
   tokenCounter: TokenCounter,
   maxUnitTokens: number,
 ) {
-  const units = splitMessagesIntoRawUnits(messages, tokenCounter, maxUnitTokens);
+  const units = sortRawUnitsChronologically(
+    splitMessagesIntoRawUnits(messages, tokenCounter, maxUnitTokens),
+  );
 
   if (!record.lastObservedAt) {
     return units;
