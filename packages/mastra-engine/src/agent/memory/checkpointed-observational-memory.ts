@@ -947,6 +947,8 @@ export class CheckpointedObservationalMemoryProcessor
       return args.messageList;
     }
 
+    const rawSourceMessages = args.messageList.get.remembered.db();
+
     const thread = await this.store.getThreadById({ threadId: context.threadId });
     const customState = getCustomOmState(thread);
     let currentRecord = await this.ensureCurrentRecord(context.threadId, context.resourceId);
@@ -967,7 +969,7 @@ export class CheckpointedObservationalMemoryProcessor
     while (true) {
       loopIteration += 1;
       const rawMessages = getMessagesAfterCursor(
-        args.messageList.get.all.db(),
+        rawSourceMessages,
         currentRecord,
         this.tokenCounter,
         this.recentRawTokens,
@@ -1045,7 +1047,7 @@ export class CheckpointedObservationalMemoryProcessor
           customState.activeReflectionBlocks,
         );
         const nextRawMessages = getMessagesAfterCursor(
-          args.messageList.get.all.db(),
+          rawSourceMessages,
           currentRecord,
           this.tokenCounter,
           this.recentRawTokens,
@@ -1081,7 +1083,7 @@ export class CheckpointedObservationalMemoryProcessor
         });
         await this.persistCustomState(context.threadId, customState);
         const nextRawMessages = getMessagesAfterCursor(
-          args.messageList.get.all.db(),
+          rawSourceMessages,
           currentRecord,
           this.tokenCounter,
           this.recentRawTokens,
@@ -1142,7 +1144,7 @@ export class CheckpointedObservationalMemoryProcessor
     }
 
     const finalRawMessages = getMessagesAfterCursor(
-      args.messageList.get.all.db(),
+      rawSourceMessages,
       currentRecord,
       this.tokenCounter,
       this.recentRawTokens,
