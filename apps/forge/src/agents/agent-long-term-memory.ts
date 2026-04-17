@@ -124,10 +124,28 @@ function createEmptyLongTermMemoryState(): LongTermMemoryState {
 }
 
 function createMemoryAgentInstructions(input: {
+  agentId: string;
   agentName: string;
+  agentDescription?: string;
+  roleName?: string;
+  roleDescription?: string;
+  instructions: string;
 }) {
   return [
     `You are the long-term memory maintenance agent for ${input.agentName}.`,
+    'You are not the main agent itself. You are the long-term memory layer of that agent: the part that consolidates, learns, restructures, and preserves what should remain useful over time.',
+    'Your job is to maintain the durable memory of a specific agent. That memory must stay aligned with who that agent is, what role that agent has, and what kind of work belongs to that agent.',
+    [
+      '<owner_agent_profile>',
+      `- Agent id: ${input.agentId}`,
+      `- Agent name: ${input.agentName}`,
+      input.agentDescription?.trim() ? `- Agent description: ${input.agentDescription.trim()}` : null,
+      input.roleName?.trim() ? `- Role name: ${input.roleName.trim()}` : null,
+      input.roleDescription?.trim() ? `- Role description: ${input.roleDescription.trim()}` : null,
+      '- Assigned instructions:',
+      input.instructions.trim(),
+      '</owner_agent_profile>',
+    ].filter(Boolean).join('\n'),
     'You work asynchronously over checkpoint packages and durable memory documents.',
     'Never modify anything inside `workspace-memory/checkpoints`.',
     'Read new checkpoint packages, consolidate durable knowledge, and maintain documents under `workspace-memory/memory`.',
@@ -144,6 +162,7 @@ function createMemoryAgentInstructions(input: {
     'These documents are later retrieved through embeddings and similarity search, so they should contain enough explicit wording, context, names, facts, and phrasing to be matchable.',
     'Keep each document dense but bounded. Prefer multiple small focused documents over one bloated file. Split by topic, person, procedure, event, or inference when the content starts to sprawl.',
     'Name memory documents by durable topic, capability, person, architecture area, procedure, event family, or knowledge domain, not by temporary project phase or current status.',
+    'If existing memory files do not match these rules, do not preserve them just because they already exist. Rewrite, split, merge, rename, or replace them as needed so the memory base actually matches the intended structure.',
     'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
     'Do not read, write, or mention `AGENT_CONTEXT.md`.',
     'Do not read, write, or mention working memory content.',
@@ -428,6 +447,10 @@ function buildBootstrapCheckpointPackage(input: {
 export function createAgentLongTermMemory(input: {
   agentId: string;
   agentName: string;
+  agentDescription?: string;
+  roleName?: string;
+  roleDescription?: string;
+  instructions: string;
   agentWorkspacePath: string;
   agentMemoryPath: string;
   storage: LibSQLStore;
@@ -459,7 +482,12 @@ export function createAgentLongTermMemory(input: {
     id: ltmMastraId,
     name: `${input.agentName} Long-Term Memory`,
     instructions: createMemoryAgentInstructions({
+      agentId: input.agentId,
       agentName: input.agentName,
+      agentDescription: input.agentDescription,
+      roleName: input.roleName,
+      roleDescription: input.roleDescription,
+      instructions: input.instructions,
     }),
     model: input.model,
     workspace,
