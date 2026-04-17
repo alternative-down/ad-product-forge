@@ -91,7 +91,10 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
 function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
     const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
-    const lines = [`targetKey: ${targetKey}`];
+    const lines = [
+      ...(event.groupMetadata?.Provider ? [`provider: ${event.groupMetadata.Provider}`] : []),
+      `targetKey: ${targetKey}`,
+    ];
 
     if (event.groupMetadata?.ConversationType === 'group') {
       lines.push('conversationType: group');
