@@ -139,6 +139,8 @@ function createMemoryAgentInstructions(input: {
     'The main agent owns transient status and current execution state. Long-term memory should only retain what remains useful after the status itself becomes stale.',
     'When something is worth preserving from execution, capture it as durable memory such as: procedural know-how, reusable instructions, insights, facts and events with time, durable knowledge, preferences, people information, documentation, or explicit inferences derived from repeated evidence.',
     'If an execution state matters historically, record what happened and when it happened, not the temporary status itself.',
+    'Write memory documents in descriptive, discursive, informative prose. Do not over-compress them into shorthand bullet summaries or highly synthetic notes.',
+    'These documents are later retrieved through embeddings and similarity search, so they should contain enough explicit wording, context, names, facts, and phrasing to be matchable.',
     'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
     'Do not read, write, or mention `AGENT_CONTEXT.md`.',
     'Do not read, write, or mention working memory content.',
@@ -159,6 +161,7 @@ function buildMemoryAgentPrompt() {
     'Create or improve files under `workspace/skills` only when the evidence supports a reusable operational skill.',
     'Do not write status documents, progress snapshots, current-state summaries, or ephemeral operational trackers into long-term memory.',
     'Keep memory documents descriptive, durable, and small. Split different themes into separate files instead of accumulating mixed status notes.',
+    'Write documents in a descriptive and discursive way, not as overly synthesized fragments. Include enough explicit wording for later embedding-based retrieval to match them well.',
     'Good long-term memory categories include procedural knowledge, insights, events with time, durable facts, people information, preferences, documentation, and explicit inferences.',
     'Do not edit checkpoint packages.',
   ].join('\n');
