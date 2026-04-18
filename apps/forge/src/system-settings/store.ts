@@ -22,7 +22,21 @@ const DEFAULT_SYSTEM_SETTINGS = {
   checkpointedOmObservationReflectionBatchTokens: 5000,
   checkpointedOmObservationSupportTokens: 2000,
   checkpointedOmReflectionSupportTokens: 2000,
+  ltmRecallSearchMode: 'hybrid',
+  ltmRecallWorkspaceTopK: 3,
+  ltmRecallGraphTopK: 3,
+  ltmRecallGraphThreshold: 0.7,
+  ltmRecallGraphRandomWalkSteps: 50,
+  ltmRecallGraphIncludeSources: true,
 } as const;
+
+function resolveLtmRecallSearchMode(value: string | null | undefined): 'hybrid' | 'vector' | 'bm25' {
+  if (value === 'vector' || value === 'bm25') {
+    return value;
+  }
+
+  return 'hybrid';
+}
 
 type SystemSettingsInput = {
   companyName: string;
@@ -41,6 +55,12 @@ type SystemSettingsInput = {
   checkpointedOmObservationReflectionBatchTokens: number;
   checkpointedOmObservationSupportTokens: number;
   checkpointedOmReflectionSupportTokens: number;
+  ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+  ltmRecallWorkspaceTopK: number;
+  ltmRecallGraphTopK: number;
+  ltmRecallGraphThreshold: number;
+  ltmRecallGraphRandomWalkSteps: number;
+  ltmRecallGraphIncludeSources: boolean;
 };
 
 export function createSystemSettingsStore(db: Database) {
@@ -86,6 +106,17 @@ export function createSystemSettingsStore(db: Database) {
       checkpointedOmReflectionSupportTokens:
         row?.checkpointedOmReflectionSupportTokens
         ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmReflectionSupportTokens,
+      ltmRecallSearchMode: resolveLtmRecallSearchMode(row?.ltmRecallSearchMode),
+      ltmRecallWorkspaceTopK:
+        row?.ltmRecallWorkspaceTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallWorkspaceTopK,
+      ltmRecallGraphTopK: row?.ltmRecallGraphTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphTopK,
+      ltmRecallGraphThreshold:
+        row?.ltmRecallGraphThreshold ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphThreshold,
+      ltmRecallGraphRandomWalkSteps:
+        row?.ltmRecallGraphRandomWalkSteps ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphRandomWalkSteps,
+      ltmRecallGraphIncludeSources: row
+        ? row.ltmRecallGraphIncludeSources === 1
+        : DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphIncludeSources,
       updatedAt: row?.updatedAt ?? null,
     };
   }
@@ -114,6 +145,12 @@ export function createSystemSettingsStore(db: Database) {
           input.checkpointedOmObservationReflectionBatchTokens,
         checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
         checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+        ltmRecallSearchMode: input.ltmRecallSearchMode,
+        ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
+        ltmRecallGraphTopK: input.ltmRecallGraphTopK,
+        ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
+        ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+        ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources ? 1 : 0,
         updatedAt: now,
       })
       .onConflictDoUpdate({
@@ -136,6 +173,12 @@ export function createSystemSettingsStore(db: Database) {
             input.checkpointedOmObservationReflectionBatchTokens,
           checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
           checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+          ltmRecallSearchMode: input.ltmRecallSearchMode,
+          ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
+          ltmRecallGraphTopK: input.ltmRecallGraphTopK,
+          ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
+          ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+          ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources ? 1 : 0,
           updatedAt: now,
         },
       });
@@ -158,6 +201,12 @@ export function createSystemSettingsStore(db: Database) {
         input.checkpointedOmObservationReflectionBatchTokens,
       checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
       checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+      ltmRecallSearchMode: input.ltmRecallSearchMode,
+      ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
+      ltmRecallGraphTopK: input.ltmRecallGraphTopK,
+      ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
+      ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+      ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources,
       updatedAt: now,
     };
   }

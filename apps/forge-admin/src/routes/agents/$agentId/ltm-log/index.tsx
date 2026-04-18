@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { PageHeader } from '@/components/admin';
@@ -23,11 +23,6 @@ function AgentLongTermMemoryLogIndexRoute() {
   const { agentId } = Route.useParams();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [topK, setTopK] = useState('3');
-  const [searchMode, setSearchMode] = useState<'hybrid' | 'vector' | 'bm25'>('hybrid');
-  const [graphTopK, setGraphTopK] = useState('3');
-  const [graphThreshold, setGraphThreshold] = useState('0.4');
-  const [graphRandomWalkSteps, setGraphRandomWalkSteps] = useState('50');
   const runtimeMemoryQuery = useQuery({
     queryKey: ['admin', 'agent', agentId, 'runtime-memory'],
     queryFn: () => getAgentRuntimeMemory(agentId),
@@ -37,11 +32,6 @@ function AgentLongTermMemoryLogIndexRoute() {
       runAgentLongTermMemoryRecallSearch({
         agentId,
         query: searchQuery,
-        topK: Number(topK),
-        searchMode,
-        graphTopK: Number(graphTopK),
-        graphThreshold: Number(graphThreshold),
-        graphRandomWalkSteps: Number(graphRandomWalkSteps),
       }),
   });
   const messagesQuery = useInfiniteQuery({
@@ -89,16 +79,6 @@ function AgentLongTermMemoryLogIndexRoute() {
         }}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
-        topK={topK}
-        onTopKChange={setTopK}
-        searchMode={searchMode}
-        onSearchModeChange={setSearchMode}
-        graphTopK={graphTopK}
-        onGraphTopKChange={setGraphTopK}
-        graphThreshold={graphThreshold}
-        onGraphThresholdChange={setGraphThreshold}
-        graphRandomWalkSteps={graphRandomWalkSteps}
-        onGraphRandomWalkStepsChange={setGraphRandomWalkSteps}
         loading={runtimeMemoryQuery.isLoading}
         error={runtimeMemoryQuery.error?.message ?? null}
       />
@@ -160,16 +140,6 @@ function LongTermMemorySection(input: {
   onRecallSearchSubmit: (event: FormEvent<HTMLFormElement>) => void;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
-  topK: string;
-  onTopKChange: (value: string) => void;
-  searchMode: 'hybrid' | 'vector' | 'bm25';
-  onSearchModeChange: (value: 'hybrid' | 'vector' | 'bm25') => void;
-  graphTopK: string;
-  onGraphTopKChange: (value: string) => void;
-  graphThreshold: string;
-  onGraphThresholdChange: (value: string) => void;
-  graphRandomWalkSteps: string;
-  onGraphRandomWalkStepsChange: (value: string) => void;
   loading: boolean;
   error: string | null;
 }) {
@@ -261,52 +231,6 @@ function LongTermMemorySection(input: {
             onChange={(event) => input.onSearchQueryChange(event.target.value)}
             placeholder="Texto para testar embeddings e retrieval..."
           />
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <LabeledField label="Search mode">
-              <select
-                className="h-10 rounded-xl border border-border/80 bg-background/70 px-3 text-sm text-foreground outline-none"
-                value={input.searchMode}
-                onChange={(event) =>
-                  input.onSearchModeChange(event.target.value as 'hybrid' | 'vector' | 'bm25')}
-              >
-                <option value="hybrid">hybrid</option>
-                <option value="vector">vector</option>
-                <option value="bm25">bm25</option>
-              </select>
-            </LabeledField>
-            <LabeledField label="Top K workspace">
-              <input
-                className="h-10 rounded-xl border border-border/80 bg-background/70 px-3 text-sm text-foreground outline-none"
-                value={input.topK}
-                onChange={(event) => input.onTopKChange(event.target.value)}
-                inputMode="numeric"
-              />
-            </LabeledField>
-            <LabeledField label="Top K graph">
-              <input
-                className="h-10 rounded-xl border border-border/80 bg-background/70 px-3 text-sm text-foreground outline-none"
-                value={input.graphTopK}
-                onChange={(event) => input.onGraphTopKChange(event.target.value)}
-                inputMode="numeric"
-              />
-            </LabeledField>
-            <LabeledField label="Threshold graph">
-              <input
-                className="h-10 rounded-xl border border-border/80 bg-background/70 px-3 text-sm text-foreground outline-none"
-                value={input.graphThreshold}
-                onChange={(event) => input.onGraphThresholdChange(event.target.value)}
-                inputMode="decimal"
-              />
-            </LabeledField>
-            <LabeledField label="Random walk">
-              <input
-                className="h-10 rounded-xl border border-border/80 bg-background/70 px-3 text-sm text-foreground outline-none"
-                value={input.graphRandomWalkSteps}
-                onChange={(event) => input.onGraphRandomWalkStepsChange(event.target.value)}
-                inputMode="numeric"
-              />
-            </LabeledField>
-          </div>
           <button
             type="submit"
             className="inline-flex h-10 items-center rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-medium text-foreground transition hover:bg-background"
@@ -323,20 +247,6 @@ function LongTermMemorySection(input: {
         ) : null}
       </section>
     </section>
-  );
-}
-
-function LabeledField(input: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <label className="space-y-1">
-      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-        {input.label}
-      </div>
-      {input.children}
-    </label>
   );
 }
 

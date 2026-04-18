@@ -15,6 +15,12 @@ export type SystemSettings = {
   checkpointedOmObservationReflectionBatchTokens: number;
   checkpointedOmObservationSupportTokens: number;
   checkpointedOmReflectionSupportTokens: number;
+  ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+  ltmRecallWorkspaceTopK: number;
+  ltmRecallGraphTopK: number;
+  ltmRecallGraphThreshold: number;
+  ltmRecallGraphRandomWalkSteps: number;
+  ltmRecallGraphIncludeSources: boolean;
 };
 
 export type SystemMcpServer = {

@@ -181,11 +181,6 @@ const agentActionSchema = z.object({
 const agentLongTermMemoryRecallSearchSchema = z.object({
   agentId: z.string().min(1),
   query: z.string(),
-  topK: z.coerce.number().int().min(1).max(20),
-  searchMode: z.enum(['hybrid', 'vector', 'bm25']),
-  graphTopK: z.coerce.number().int().min(1).max(20),
-  graphThreshold: z.coerce.number().min(0).max(1),
-  graphRandomWalkSteps: z.coerce.number().int().min(1).max(200),
 });
 
 const adminInternalChatSendSchema = z.object({
@@ -532,6 +527,12 @@ const upsertSystemSettingsSchema = z.object({
   checkpointedOmObservationReflectionBatchTokens: z.coerce.number().int().positive().default(5000),
   checkpointedOmObservationSupportTokens: z.coerce.number().int().nonnegative().default(2000),
   checkpointedOmReflectionSupportTokens: z.coerce.number().int().nonnegative().default(2000),
+  ltmRecallSearchMode: z.enum(['hybrid', 'vector', 'bm25']).default('hybrid'),
+  ltmRecallWorkspaceTopK: z.coerce.number().int().min(1).max(20).default(3),
+  ltmRecallGraphTopK: z.coerce.number().int().min(1).max(20).default(3),
+  ltmRecallGraphThreshold: z.coerce.number().min(0).max(1).default(0.7),
+  ltmRecallGraphRandomWalkSteps: z.coerce.number().int().min(1).max(500).default(50),
+  ltmRecallGraphIncludeSources: z.boolean().default(true),
 });
 
 const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
@@ -721,11 +722,6 @@ export function registerAdminRoutes(input: {
       return jsonResponse(
         await readModel.debugAgentLongTermMemoryRecallSearch(body.agentId, {
           query: body.query,
-          topK: body.topK,
-          searchMode: body.searchMode,
-          graphTopK: body.graphTopK,
-          graphThreshold: body.graphThreshold,
-          graphRandomWalkSteps: body.graphRandomWalkSteps,
         }),
       );
     },
@@ -832,6 +828,12 @@ export function registerAdminRoutes(input: {
           body.checkpointedOmObservationReflectionBatchTokens,
         checkpointedOmObservationSupportTokens: body.checkpointedOmObservationSupportTokens,
         checkpointedOmReflectionSupportTokens: body.checkpointedOmReflectionSupportTokens,
+        ltmRecallSearchMode: body.ltmRecallSearchMode,
+        ltmRecallWorkspaceTopK: body.ltmRecallWorkspaceTopK,
+        ltmRecallGraphTopK: body.ltmRecallGraphTopK,
+        ltmRecallGraphThreshold: body.ltmRecallGraphThreshold,
+        ltmRecallGraphRandomWalkSteps: body.ltmRecallGraphRandomWalkSteps,
+        ltmRecallGraphIncludeSources: body.ltmRecallGraphIncludeSources,
       });
       const registry = getInternalAgentRegistry();
 

@@ -129,6 +129,12 @@ export const systemSettings = sqliteTable('system_settings', {
   omObservationPreviousObserverTokens: integer('om_observation_previous_observer_tokens').notNull().default(1000),
   omReflectionObservationTokens: integer('om_reflection_observation_tokens').notNull().default(20000),
   omReflectionBufferActivation: real('om_reflection_buffer_activation').notNull().default(0.5),
+  ltmRecallSearchMode: text('ltm_recall_search_mode').notNull().default('hybrid'),
+  ltmRecallWorkspaceTopK: integer('ltm_recall_workspace_top_k').notNull().default(3),
+  ltmRecallGraphTopK: integer('ltm_recall_graph_top_k').notNull().default(3),
+  ltmRecallGraphThreshold: real('ltm_recall_graph_threshold').notNull().default(0.7),
+  ltmRecallGraphRandomWalkSteps: integer('ltm_recall_graph_random_walk_steps').notNull().default(50),
+  ltmRecallGraphIncludeSources: integer('ltm_recall_graph_include_sources').notNull().default(1),
   updatedAt: integer('updated_at').notNull(),
 });
 

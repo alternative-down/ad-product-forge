@@ -84,11 +84,6 @@ export function getAgentRuntimeMemory(agentId: string) {
 export function runAgentLongTermMemoryRecallSearch(input: {
   agentId: string;
   query: string;
-  topK: number;
-  searchMode: 'hybrid' | 'vector' | 'bm25';
-  graphTopK: number;
-  graphThreshold: number;
-  graphRandomWalkSteps: number;
 }) {
   return request<AgentLongTermMemoryRecallDebugSearchResult>('/admin/agent/ltm-recall-search', {
     method: 'POST',

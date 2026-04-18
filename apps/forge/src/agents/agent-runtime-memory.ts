@@ -36,6 +36,12 @@ export async function createAgentRuntimeMemory(input: {
   checkpointedOmObservationReflectionBatchTokens?: number;
   checkpointedOmObservationSupportTokens?: number;
   checkpointedOmReflectionSupportTokens?: number;
+  ltmRecallSearchMode?: 'hybrid' | 'vector' | 'bm25';
+  ltmRecallWorkspaceTopK?: number;
+  ltmRecallGraphTopK?: number;
+  ltmRecallGraphThreshold?: number;
+  ltmRecallGraphRandomWalkSteps?: number;
+  ltmRecallGraphIncludeSources?: boolean;
   workspaceEmbedder?: WorkspaceEmbedderId;
   agentSystemPrompt?: string;
   onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
@@ -61,6 +67,12 @@ export async function createAgentRuntimeMemory(input: {
         workspaceEmbedder: input.workspaceEmbedder,
         mastraId: input.mastraId,
         storage: input.storage,
+        searchMode: input.ltmRecallSearchMode,
+        workspaceTopK: input.ltmRecallWorkspaceTopK,
+        graphTopK: input.ltmRecallGraphTopK,
+        graphThreshold: input.ltmRecallGraphThreshold,
+        graphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+        graphIncludeSources: input.ltmRecallGraphIncludeSources,
       })
     : null;
 
