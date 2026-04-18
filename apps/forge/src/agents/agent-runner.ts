@@ -942,7 +942,7 @@ export function createAgentRunner(
     const effectivePromptText = [
       longTermMemoryRecallSystemText?.trim()
         ? {
-            role: 'system' as const,
+            role: 'assistant' as const,
             content: longTermMemoryRecallSystemText.trim(),
           }
         : null,
@@ -953,7 +953,7 @@ export function createAgentRunner(
           }
         : null,
     ].filter((value): value is {
-      role: 'system' | 'user';
+      role: 'assistant' | 'user';
       content: string;
     } => Boolean(value));
 

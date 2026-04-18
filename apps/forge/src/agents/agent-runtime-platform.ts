@@ -34,6 +34,49 @@ function hasCreateThread(store: unknown): store is MastraMemoryStore {
   );
 }
 
+async function pathExists(targetPath: string) {
+  try {
+    await fs.stat(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function moveLegacyMemoryDirectory(sourcePath: string, targetPath: string): Promise<void> {
+  const sourceExists = await pathExists(sourcePath);
+
+  if (!sourceExists) {
+    return;
+  }
+
+  const targetExists = await pathExists(targetPath);
+
+  if (!targetExists) {
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    await fs.rename(sourcePath, targetPath);
+    return;
+  }
+
+  const sourceEntries = await fs.readdir(sourcePath, { withFileTypes: true });
+
+  for (const entry of sourceEntries) {
+    const sourceEntryPath = path.join(sourcePath, entry.name);
+    const targetEntryPath = path.join(targetPath, entry.name);
+
+    if (entry.isDirectory()) {
+      await moveLegacyMemoryDirectory(sourceEntryPath, targetEntryPath);
+      continue;
+    }
+
+    await fs.mkdir(path.dirname(targetEntryPath), { recursive: true });
+    await fs.rm(targetEntryPath, { recursive: true, force: true });
+    await fs.rename(sourceEntryPath, targetEntryPath);
+  }
+
+  await fs.rm(sourcePath, { recursive: true, force: true });
+}
+
 export async function createAgentRuntimePlatform(input: {
   agentId: string;
   workspaceBasePath: string;
@@ -51,12 +94,15 @@ export async function createAgentRuntimePlatform(input: {
   const agentWorkspaceDir = input.workspaceFilesystem?.basePath
     ? path.resolve(agentWorkspacePath, input.workspaceFilesystem.basePath)
     : path.resolve(agentWorkspacePath, 'workspace');
-  const agentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
+  const agentMemoryPath = path.resolve(agentWorkspaceDir, 'memory');
+  const legacyAgentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
   const sandboxWorkingDirectory = input.workspaceSandbox?.workingDirectory
     ? path.resolve(agentWorkspacePath, input.workspaceSandbox.workingDirectory)
     : agentWorkspaceDir;
 
   await fs.mkdir(agentWorkspacePath, { recursive: true });
+  await fs.mkdir(agentWorkspaceDir, { recursive: true });
+  await moveLegacyMemoryDirectory(legacyAgentMemoryPath, agentMemoryPath);
 
   const dbUrl = `file:${agentDatabasePath}`;
   const client = createClient({ url: dbUrl });
