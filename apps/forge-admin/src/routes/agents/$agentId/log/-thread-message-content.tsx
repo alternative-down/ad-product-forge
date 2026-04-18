@@ -326,7 +326,7 @@ function ThreadMemoryRecallDisclosure(input: {
           ? (
             <ThreadDisclosure
               summary="Instructions"
-              label="Instructions"
+              label={null}
               value={parsed.instructions}
             />
           )
@@ -336,7 +336,7 @@ function ThreadMemoryRecallDisclosure(input: {
           <ThreadDisclosure
             key={`${input.label}:item:${index}`}
             summary={formatMemoryRecallItemSummary(index, item.attributes.score)}
-            label={`Item ${index + 1}`}
+            label={null}
             value={item.content}
           />
         ))}
@@ -357,7 +357,7 @@ function formatMemoryRecallItemSummary(index: number, score: string | undefined)
 
 function ThreadDisclosure(input: {
   summary: string;
-  label: string;
+  label: string | null;
   value: string;
 }) {
   return (
@@ -367,7 +367,7 @@ function ThreadDisclosure(input: {
         <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="min-w-0 space-y-1 overflow-hidden pt-3">
-        <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
+        {input.label ? <div className="text-xs font-medium text-muted-foreground">{input.label}</div> : null}
         <div className="min-w-0 overflow-hidden whitespace-pre-wrap break-all text-sm leading-6 text-foreground [overflow-wrap:anywhere]">
           {input.value}
         </div>
