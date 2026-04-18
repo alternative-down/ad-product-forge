@@ -308,6 +308,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   } | null;
   queryEmbedding: number[];
   queryEmbeddingDimension: number;
+  workspaceFormattedContext: string;
   workspaceResults: Array<{
     id: string;
     content: string;
@@ -321,7 +322,11 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
     document: string | null;
   }>;
   graphHit: boolean;
+  graphQuery: string;
   graphContext: string;
+  graphRawJson: string | null;
+  graphError: string | null;
+  injectedSystemMessage: string | null;
 };
 
 export type HireAgentInput = {

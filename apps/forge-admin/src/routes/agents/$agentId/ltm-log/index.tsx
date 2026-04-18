@@ -379,6 +379,10 @@ function RecallSearchResultSection(input: {
         value={input.result.query || '—'}
       />
       <MemoryDisclosure
+        title="Texto final injetado"
+        value={input.result.injectedSystemMessage}
+      />
+      <MemoryDisclosure
         title="Estado do índice"
         value={[
           `workspace.canBM25: ${input.result.workspaceCanBm25 ? 'yes' : 'no'}`,
@@ -395,6 +399,14 @@ function RecallSearchResultSection(input: {
       <MemoryDisclosure
         title="Embedding da query"
         value={JSON.stringify(input.result.queryEmbedding)}
+      />
+      <MemoryDisclosure
+        title="Workspace formatado"
+        value={input.result.workspaceFormattedContext || null}
+      />
+      <MemoryDisclosure
+        title="Graph query"
+        value={input.result.graphQuery || null}
       />
 
       {input.result.workspaceResults.length > 0 ? (
@@ -448,6 +460,14 @@ function RecallSearchResultSection(input: {
       <MemoryDisclosure
         title="Graph context"
         value={input.result.graphContext || null}
+      />
+      <MemoryDisclosure
+        title="Graph raw JSON"
+        value={input.result.graphRawJson}
+      />
+      <MemoryDisclosure
+        title="Graph error"
+        value={input.result.graphError}
       />
     </div>
   );
