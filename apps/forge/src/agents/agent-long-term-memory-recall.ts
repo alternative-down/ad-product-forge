@@ -456,24 +456,25 @@ export class AgentLongTermMemoryRecall {
 
   private async runRecallSearch(queryText: string, config: RecallConfig) {
     const workspaceSearch = await this.searchWorkspace(queryText);
+    const filteredWorkspaceResults = this.filterWorkspaceFallbackResults(
+      workspaceSearch.results,
+      config.scoreThreshold,
+      config.documentCount,
+    );
     const graphSearch = await this.searchGraph(queryText, workspaceSearch.results, {
       topK: config.documentCount,
       threshold: config.scoreThreshold,
       randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
       includeSources: RECALL_GRAPH_INCLUDE_SOURCES,
+      contextResults: filteredWorkspaceResults,
     });
-    const workspaceFallbackResults = this.filterWorkspaceFallbackResults(
-      workspaceSearch.results,
-      config.scoreThreshold,
-      config.documentCount,
-    );
-    const workspaceFormattedContext = workspaceFallbackResults
+    const workspaceFormattedContext = filteredWorkspaceResults
       .map((result) => `${result.id}\n${result.content}`)
       .join('\n\n');
 
     return {
       formatted: graphSearch.hit ? '' : workspaceFormattedContext,
-      results: workspaceFallbackResults,
+      results: filteredWorkspaceResults,
       rawWorkspaceResults: workspaceSearch.results,
       graph: graphSearch,
     };
@@ -571,11 +572,13 @@ export class AgentLongTermMemoryRecall {
       threshold: number;
       randomWalkSteps: number;
       includeSources: boolean;
+      contextResults: SearchResult[];
     } = {
       topK: RECALL_DOCUMENT_COUNT,
       threshold: RECALL_SCORE_THRESHOLD,
       randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
       includeSources: RECALL_GRAPH_INCLUDE_SOURCES,
+      contextResults: [],
     },
   ): Promise<{
     queryText: string;
@@ -589,7 +592,10 @@ export class AgentLongTermMemoryRecall {
     rawJson: string | null;
     error: string | null;
   }> {
-    const workspaceContext = workspaceResults
+    const workspaceContextBase = options.contextResults.length > 0
+      ? options.contextResults
+      : workspaceResults;
+    const workspaceContext = workspaceContextBase
       .map((result) => result.content)
       .filter(Boolean)
       .join('\n');
