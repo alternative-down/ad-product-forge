@@ -49,6 +49,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   } | null;
   queryEmbedding: number[];
   queryEmbeddingDimension: number;
+  workspaceFormattedContext: string;
   workspaceResults: Array<{
     id: string;
     content: string;
@@ -62,7 +63,11 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
     document: string | null;
   }>;
   graphHit: boolean;
+  graphQuery: string;
   graphContext: string;
+  graphRawJson: string | null;
+  graphError: string | null;
+  injectedSystemMessage: string | null;
 };
 
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
@@ -354,20 +359,25 @@ export class AgentLongTermMemoryRecall {
         activeIndexStats: indexState.activeIndexStats,
         queryEmbedding: [],
         queryEmbeddingDimension: 0,
+        workspaceFormattedContext: '',
         workspaceResults: [],
         vectorResults: [],
         graphHit: false,
+        graphQuery: '',
         graphContext: '',
+        graphRawJson: null,
+        graphError: null,
+        injectedSystemMessage: null,
       } satisfies AgentLongTermMemoryRecallDebugSearchResult;
     }
 
     const queryEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, query);
-    const { results } = await this.searchWorkspace(query, {
+    const { formatted: workspaceFormattedContext, results } = await this.searchWorkspace(query, {
       topK: input.topK,
       mode: input.searchMode,
     });
     const vectorResults = await this.queryVectorIndex(queryEmbedding, input.topK);
-    const graphContext = await this.searchGraph(query, results, {
+    const graphSearch = await this.searchGraph(query, results, {
       topK: input.graphTopK,
       threshold: input.graphThreshold,
       randomWalkSteps: input.graphRandomWalkSteps,
@@ -393,6 +403,7 @@ export class AgentLongTermMemoryRecall {
       activeIndexStats: indexState.activeIndexStats,
       queryEmbedding,
       queryEmbeddingDimension: queryEmbedding.length,
+      workspaceFormattedContext,
       workspaceResults: results.map((result) => ({
         id: result.id,
         content: result.content,
@@ -410,8 +421,12 @@ export class AgentLongTermMemoryRecall {
         metadataJson: result.metadata ? JSON.stringify(result.metadata, null, 2) : null,
         document: typeof result.document === 'string' ? result.document : null,
       })),
-      graphHit: Boolean(graphContext),
-      graphContext,
+      graphHit: Boolean(graphSearch.context),
+      graphQuery: graphSearch.queryText,
+      graphContext: graphSearch.context,
+      graphRawJson: graphSearch.rawJson,
+      graphError: graphSearch.error,
+      injectedSystemMessage: buildRecallSystemMessage(workspaceFormattedContext, graphSearch.context),
     } satisfies AgentLongTermMemoryRecallDebugSearchResult;
   }
 
@@ -515,7 +530,18 @@ export class AgentLongTermMemoryRecall {
       threshold: RECALL_GRAPH_THRESHOLD,
       randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
     },
-  ) {
+  ): Promise<{
+    queryText: string;
+    context: string;
+    rawJson: string | null;
+    error: string | null;
+  }> {
+    const workspaceContext = workspaceResults
+      .map((result) => result.content)
+      .filter(Boolean)
+      .join('\n');
+    const graphQueryText = workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText;
+
     try {
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
@@ -527,15 +553,10 @@ export class AgentLongTermMemoryRecall {
         },
       });
 
-      const workspaceContext = workspaceResults
-        .map((result) => result.content)
-        .filter(Boolean)
-        .join('\n');
-
       const graphResult = await withTimeout(
         graphTool.execute(
           {
-            queryText: workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText,
+            queryText: graphQueryText,
             topK: options.topK,
           },
           {} as MastraToolInvocationOptions,
@@ -552,9 +573,19 @@ export class AgentLongTermMemoryRecall {
           ? graphResult.relevantContext
           : '';
 
-      return relevantContext.trim();
-    } catch {
-      return '';
+      return {
+        queryText: graphQueryText,
+        context: relevantContext.trim(),
+        rawJson: safeSerializeGraphResult(graphResult),
+        error: null,
+      };
+    } catch (error) {
+      return {
+        queryText: graphQueryText,
+        context: '',
+        rawJson: null,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -747,6 +778,30 @@ function safeSerializeRecallSteps(steps: unknown[]) {
   } catch {
     return '[unserializable steps payload]';
   }
+}
+
+function safeSerializeGraphResult(result: unknown) {
+  try {
+    return JSON.stringify(result, null, 2);
+  } catch {
+    return '[unserializable graph result]';
+  }
+}
+
+function buildRecallSystemMessage(workspaceContext: string, graphContext: string) {
+  const sections = [
+    workspaceContext ? `Workspace memory:\n${workspaceContext}` : '',
+    graphContext ? `Graph memory:\n${graphContext}` : '',
+  ].filter(Boolean);
+
+  if (sections.length === 0) {
+    return null;
+  }
+
+  return [
+    'These are search results from your past memory. They may not reflect your current reality and must not be assumed as true by default. Treat them only as potentially relevant context that can be considered or mentioned when useful. If your more recent context conflicts with these results, prefer the more recent context. Treat this memory as extra information that may be outdated, incomplete, or incorrect.',
+    sections.join('\n'),
+  ].join('\n');
 }
 
 export function createAgentLongTermMemoryRecall(input: {
