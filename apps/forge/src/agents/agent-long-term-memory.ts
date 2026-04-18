@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { createAgentContractStore } from './agent-contract-store';
 
 const LTM_STATE_FILE = '.ltm-state.json';
+const LTM_RECALL_INDEX_STAMP_FILE = '.ltm-recall-index-stamp.json';
 const CHECKPOINTS_DIR = 'checkpoints';
 const MEMORY_DIR = 'memory';
 const SKILLS_DIR = path.join('workspace', 'skills');
@@ -584,6 +585,16 @@ export function createAgentLongTermMemory(input: {
     };
   }
 
+  async function markRecallIndexDirty(reason: string) {
+    await ensureInitialized();
+    const stampPath = path.resolve(input.agentMemoryPath, LTM_RECALL_INDEX_STAMP_FILE);
+    const payload = JSON.stringify({
+      updatedAt: new Date().toISOString(),
+      reason,
+    });
+    await fs.writeFile(stampPath, payload);
+  }
+
   async function scheduleRun(delayMs: number) {
     if (stopped || !idle) {
       return;
@@ -675,6 +686,7 @@ export function createAgentLongTermMemory(input: {
     state.lastRunError = null;
     state.lastRunErrorAt = null;
     await writeState(state);
+    await markRecallIndexDirty('checkpoint-write');
 
     forgeDebug('ltm', 'checkpoint package write complete', {
       agentId: input.agentId,
@@ -911,6 +923,10 @@ export function createAgentLongTermMemory(input: {
         packageIds: state.packages.map((entry) => entry.packageId),
         changedFiles: Array.from(changedFiles).sort(),
       });
+
+      if (changedFiles.size > 0) {
+        await markRecallIndexDirty('ltm-run-complete');
+      }
     } catch (error) {
       const nowIso = new Date().toISOString();
 

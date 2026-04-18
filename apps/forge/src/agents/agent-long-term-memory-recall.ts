@@ -73,6 +73,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
 
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
 const RECALL_HISTORY_METADATA_KEY = 'forgeLongTermMemoryRecallHistory';
+const RECALL_INDEX_STAMP_FILE = '.ltm-recall-index-stamp.json';
 const RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
@@ -113,6 +114,10 @@ type RecallSnapshot = {
 type RecallHistoryState = {
   recentFingerprints: string[];
   updatedAt: string;
+};
+
+type SearchIndexRebuildWorkspace = {
+  rebuildSearchIndex(paths: string[]): Promise<void>;
 };
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
@@ -182,6 +187,8 @@ export class AgentLongTermMemoryRecall {
     ltmRecallDocumentCount: number;
   }>;
   private vectorIndexReadyPromise: Promise<void> | null = null;
+  private workspaceInitialized = false;
+  private lastIndexedStamp: string | null = null;
   private lastInitAt: string | null = null;
 
   constructor(input: {
@@ -524,12 +531,43 @@ export class AgentLongTermMemoryRecall {
 
   private async refreshWorkspaceIndex() {
     await this.ensureVectorIndexReady();
+    const currentStamp = await this.readCurrentIndexStamp();
+
+    if (!this.workspaceInitialized) {
+      await withTimeout(
+        this.workspace.init(),
+        this.initTimeoutMs,
+        'ltm recall workspace init timed out',
+      );
+      this.workspaceInitialized = true;
+      this.lastIndexedStamp = currentStamp;
+      this.lastInitAt = new Date().toISOString();
+      return;
+    }
+
+    if (currentStamp === this.lastIndexedStamp) {
+      return;
+    }
+
     await withTimeout(
-      this.workspace.init(),
+      (this.workspace as unknown as SearchIndexRebuildWorkspace)
+        .rebuildSearchIndex([...RECALL_AUTO_INDEX_PATHS]),
       this.initTimeoutMs,
-      'ltm recall workspace init timed out',
+      'ltm recall workspace reindex timed out',
     );
+    this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
+  }
+
+  private async readCurrentIndexStamp() {
+    const stampPath = path.resolve(this.agentMemoryPath, RECALL_INDEX_STAMP_FILE);
+    const raw = await fs.readFile(stampPath, 'utf8').catch(() => null);
+
+    if (!raw) {
+      return null;
+    }
+
+    return raw.trim() || null;
   }
 
   private async ensureVectorIndexReady() {
