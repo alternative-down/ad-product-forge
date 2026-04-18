@@ -240,7 +240,7 @@ function parseMemoryRecallXml(value: string) {
     return null;
   }
 
-  const [, rootAttributesText, body] = rootMatch;
+  const [, , body] = rootMatch;
   const instructionsMatch = body.match(/<instructions>([\s\S]*?)<\/instructions>/u);
   const items = Array.from(body.matchAll(/<item\b([^>]*)>([\s\S]*?)<\/item>/gu)).map((match) => ({
     attributes: parseXmlAttributes(match[1] ?? ''),
@@ -248,7 +248,6 @@ function parseMemoryRecallXml(value: string) {
   }));
 
   return {
-    attributes: parseXmlAttributes(rootAttributesText ?? ''),
     instructions: instructionsMatch ? decodeXmlEntities(instructionsMatch[1].trim()) : null,
     items,
   };
@@ -323,55 +322,37 @@ function ThreadMemoryRecallDisclosure(input: {
         <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="min-w-0 space-y-3 overflow-hidden pt-3">
-        <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
-
-        {parsed.attributes['on-datetime']
-          ? (
-            <ThreadSection label="on-datetime">
-              {parsed.attributes['on-datetime']}
-            </ThreadSection>
-          )
-          : null}
-
         {parsed.instructions
           ? (
             <ThreadDisclosure
               summary="Instructions"
-              label="memory-recall.instructions"
+              label="Instructions"
               value={parsed.instructions}
             />
           )
           : null}
 
         {parsed.items.map((item, index) => (
-          <details
+          <ThreadDisclosure
             key={`${input.label}:item:${index}`}
-            className="group ml-3"
-          >
-            <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span>{`Item ${index + 1}`}</span>
-              <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="min-w-0 space-y-2 overflow-hidden pt-3">
-              {Object.keys(item.attributes).length > 0
-                ? (
-                  <ThreadJsonDisclosure
-                    summary="Metadata"
-                    label={`memory-recall.item[${index}].attributes`}
-                    value={item.attributes}
-                  />
-                )
-                : null}
-
-              <ThreadSection label={`memory-recall.item[${index}]`}>
-                {item.content}
-              </ThreadSection>
-            </div>
-          </details>
+            summary={formatMemoryRecallItemSummary(index, item.attributes.score)}
+            label={`Item ${index + 1}`}
+            value={item.content}
+          />
         ))}
       </div>
     </details>
   );
+}
+
+function formatMemoryRecallItemSummary(index: number, score: string | undefined) {
+  const scoreValue = typeof score === 'string' ? Number(score) : Number.NaN;
+
+  if (!Number.isFinite(scoreValue)) {
+    return `Item ${index + 1}`;
+  }
+
+  return `Item ${index + 1} - score ${scoreValue.toFixed(2)}`;
 }
 
 function ThreadDisclosure(input: {
