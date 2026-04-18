@@ -22,6 +22,7 @@ const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
+const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
 const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
 const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
@@ -63,7 +64,7 @@ export function createAgentRunner(
   let activeGenerateToken = 0;
   let activeRunId: string | null = null;
   let currentGenerateAbortController: AbortController | null = null;
-  let runLastMessages: number | null = DEFAULT_RUN_LAST_MESSAGES;
+  let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
   let pendingLongTermMemoryRecallSystemText: string | null = null;
   let flushedRunEventKeys = new Set<string>();
   let currentFlushSettings = {
@@ -767,7 +768,7 @@ export function createAgentRunner(
     );
 
     if (settings.memoryLastMessagesFullEnabled) {
-      runLastMessages = null;
+      runLastMessages = FULL_MEMORY_LOAD_LAST_MESSAGES;
       return;
     }
 
@@ -802,7 +803,7 @@ export function createAgentRunner(
   }
 
   function incrementRunLastMessages() {
-    if (runLastMessages === null) {
+    if (runLastMessages >= FULL_MEMORY_LOAD_LAST_MESSAGES) {
       return;
     }
     runLastMessages += 1;
@@ -980,11 +981,9 @@ export function createAgentRunner(
             memory: {
               thread: currentRuntime.mastraId,
               resource: currentRuntime.mastraId,
-              options: runLastMessages === null
-                ? undefined
-                : {
-                    lastMessages: runLastMessages,
-                  },
+              options: {
+                lastMessages: runLastMessages,
+              },
             },
             providerOptions: {
               anthropic: {
