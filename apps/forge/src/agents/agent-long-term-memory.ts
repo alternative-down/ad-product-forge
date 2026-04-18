@@ -159,6 +159,8 @@ function createMemoryAgentInstructions(input: {
     'If existing files are not aligned with these rules, refactor them. Rename, split, merge, rewrite, or replace them as needed.',
     'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
     'Do not create files outside `memory` and `workspace/skills`.',
+    'When repeated procedures justify a reusable skill, use the `skill-creator` skill to create or update it.',
+    'A skill is only valid if the skill folder name matches the skill name declared inside its `SKILL.md` file.',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -169,6 +171,8 @@ function buildMemoryAgentPrompt() {
     'Do not follow a lazy maintenance loop. Revisit existing material, try different structures, discover missing connections, compare documents against one another, and improve weak or fragmented knowledge when you see it.',
     'Think of this as an offline consolidation phase: review experience, revisit old notes, compare them with new evidence, strengthen useful abstractions, and preserve better long-term structure.',
     'Prefer durable, descriptive, retrieval-friendly documents and reusable skills when repeated procedures justify them.',
+    'Use the `skill-creator` skill when you decide a reusable skill should be created or updated.',
+    'A skill is only valid when the directory name matches the skill name declared in its `SKILL.md`.',
     'Do not write status documents, progress snapshots, current-state summaries, or temporary backlog trackers.',
     `Do not edit \`${CHECKPOINTS_DIR}\`. That area may be rewritten later and anything changed there can be lost.`,
     'Write clearly, explain things well, and keep information consistent across files even when some overlap or repetition is helpful for retrieval.',
