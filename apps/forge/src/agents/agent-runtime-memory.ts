@@ -15,6 +15,8 @@ import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 
 import { createAgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
 
+const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
+
 export async function createAgentRuntimeMemory(input: {
   storage: LibSQLStore;
   vector: LibSQLVector;
@@ -56,7 +58,9 @@ export async function createAgentRuntimeMemory(input: {
     storage: input.storage,
     vector: input.vector,
     embedder: input.workspaceEmbedder,
-    lastMessages: input.memoryLastMessagesFullEnabled ? undefined : input.memoryLastMessagesCount,
+    lastMessages: input.memoryLastMessagesFullEnabled
+      ? FULL_MEMORY_LOAD_LAST_MESSAGES
+      : input.memoryLastMessagesCount,
   });
   await sanitizeWorkingMemory({
     memory,
