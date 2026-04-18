@@ -974,7 +974,6 @@ export function createAgentRunner(
         const result = await Promise.race([
           currentRuntime.agent.generate(effectivePromptText, {
             runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
-            savePerStep: true,
             maxSteps: 1,
             abortSignal: controller.signal,
             ...(systemPrompt ? { system: systemPrompt } : {}),

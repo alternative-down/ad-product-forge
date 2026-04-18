@@ -276,7 +276,7 @@ export class AgentLongTermMemoryRecall {
       }
 
       const recallSearch = await this.runRecallSearch(queryText, recallConfig);
-      const { results, graph, usedFingerprints } = this.dedupeRecallResults({
+      const { results, graph, candidateFingerprints } = this.dedupeRecallResults({
         graph: recallSearch.graph,
         results: recallSearch.results,
         recentFingerprints: recallThreadState.recentFingerprints,
@@ -341,7 +341,7 @@ export class AgentLongTermMemoryRecall {
         error: null,
       }, this.buildNextRecallHistory({
         recentFingerprints: recallThreadState.recentFingerprints,
-        usedFingerprints,
+        candidateFingerprints,
         windowSize: recallThreadState.windowSize,
       }));
 
@@ -978,6 +978,9 @@ export class AgentLongTermMemoryRecall {
       ? this.buildGraphFingerprint(input.graph.context)
       : null;
     const graphAllowed = graphFingerprint !== null && !seenFingerprints.has(graphFingerprint);
+    const candidateFingerprints = graphFingerprint
+      ? [graphFingerprint]
+      : input.results.map((result) => this.buildWorkspaceFingerprint(result));
 
     return {
       graph: graphAllowed
@@ -988,6 +991,7 @@ export class AgentLongTermMemoryRecall {
           context: '',
         },
       results: graphAllowed ? input.results : workspaceResults,
+      candidateFingerprints,
       usedFingerprints: graphAllowed
         ? (graphFingerprint ? [graphFingerprint] : [])
         : workspaceResults.map((result) => this.buildWorkspaceFingerprint(result)),
@@ -1004,10 +1008,10 @@ export class AgentLongTermMemoryRecall {
 
   private buildNextRecallHistory(input: {
     recentFingerprints: string[];
-    usedFingerprints: string[];
+    candidateFingerprints: string[];
     windowSize: number;
   }) {
-    const merged = [...input.usedFingerprints, ...input.recentFingerprints];
+    const merged = [...input.candidateFingerprints, ...input.recentFingerprints];
     const deduped = Array.from(new Set(merged));
 
     return {
@@ -1058,7 +1062,7 @@ export class AgentLongTermMemoryRecall {
       recentFingerprints,
       windowSize:
         typeof recentRawMessageCount === 'number' && recentRawMessageCount > 0
-          ? recentRawMessageCount
+          ? Math.max(1, Math.floor(recentRawMessageCount * 0.25))
           : 20,
     };
   }
