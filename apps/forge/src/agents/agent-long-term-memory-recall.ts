@@ -22,11 +22,6 @@ type SearchResult = {
 
 export type AgentLongTermMemoryRecallDebugSearchInput = {
   query: string;
-  topK: number;
-  searchMode: 'hybrid' | 'vector' | 'bm25';
-  graphTopK: number;
-  graphThreshold: number;
-  graphRandomWalkSteps: number;
 };
 
 export type AgentLongTermMemoryRecallDebugSearchResult = {
@@ -79,11 +74,21 @@ const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
 const RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
-const RECALL_SEARCH_TOP_K = 3;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
+const RECALL_WORKSPACE_TOP_K = 3;
 const RECALL_GRAPH_TOP_K = 3;
-const RECALL_GRAPH_THRESHOLD = 0.4;
+const RECALL_GRAPH_THRESHOLD = 0.7;
 const RECALL_GRAPH_RANDOM_WALK_STEPS = 50;
+const RECALL_GRAPH_INCLUDE_SOURCES = true;
+
+type RecallConfig = {
+  searchMode: 'hybrid' | 'vector' | 'bm25';
+  workspaceTopK: number;
+  graphTopK: number;
+  graphThreshold: number;
+  graphRandomWalkSteps: number;
+  graphIncludeSources: boolean;
+};
 
 type RecallSnapshot = {
   status: 'hit' | 'miss' | 'error';
@@ -168,6 +173,7 @@ export class AgentLongTermMemoryRecall {
   private readonly agentMemoryPath: string;
   private readonly agentWorkspacePath: string;
   private readonly workspaceEmbedder: WorkspaceEmbedderId;
+  private readonly recallConfig: RecallConfig;
   private vectorIndexReadyPromise: Promise<void> | null = null;
   private lastInitAt: string | null = null;
 
@@ -178,6 +184,12 @@ export class AgentLongTermMemoryRecall {
     mastraId: string;
     storage: LibSQLStore;
     workspaceEmbedder?: WorkspaceEmbedderId;
+    searchMode?: 'hybrid' | 'vector' | 'bm25';
+    workspaceTopK?: number;
+    graphTopK?: number;
+    graphThreshold?: number;
+    graphRandomWalkSteps?: number;
+    graphIncludeSources?: boolean;
     model?: AgentConfig['model'];
   }) {
     const memoryStore = input.storage.stores.memory;
@@ -190,6 +202,14 @@ export class AgentLongTermMemoryRecall {
     this.agentMemoryPath = input.agentMemoryPath;
     this.agentWorkspacePath = input.agentWorkspacePath;
     this.workspaceEmbedder = input.workspaceEmbedder ?? 'fastembed';
+    this.recallConfig = {
+      searchMode: input.searchMode ?? RECALL_SEARCH_MODE,
+      workspaceTopK: input.workspaceTopK ?? RECALL_WORKSPACE_TOP_K,
+      graphTopK: input.graphTopK ?? RECALL_GRAPH_TOP_K,
+      graphThreshold: input.graphThreshold ?? RECALL_GRAPH_THRESHOLD,
+      graphRandomWalkSteps: input.graphRandomWalkSteps ?? RECALL_GRAPH_RANDOM_WALK_STEPS,
+      graphIncludeSources: input.graphIncludeSources ?? RECALL_GRAPH_INCLUDE_SOURCES,
+    };
     this.vectorStore = new LibSQLVector({
       id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
       url: `file:${vectorStorePath}`,
@@ -220,6 +240,7 @@ export class AgentLongTermMemoryRecall {
       await this.refreshWorkspaceIndex();
       const queryText = this.buildRecallQueryFromStep(input.step);
       const indexStats = await this.getIndexStats();
+      const recallConfig = this.recallConfig;
 
       if (!queryText) {
         await this.persistRecallSnapshot({
@@ -235,11 +256,11 @@ export class AgentLongTermMemoryRecall {
           stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
           lastInitAt: this.lastInitAt,
-          searchMode: RECALL_SEARCH_MODE,
-          topK: RECALL_SEARCH_TOP_K,
-          graphTopK: RECALL_GRAPH_TOP_K,
-          graphThreshold: RECALL_GRAPH_THRESHOLD,
-          graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+          searchMode: recallConfig.searchMode,
+          topK: recallConfig.workspaceTopK,
+          graphTopK: recallConfig.graphTopK,
+          graphThreshold: recallConfig.graphThreshold,
+          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
           indexPaths: [...RECALL_AUTO_INDEX_PATHS],
           workspaceFileCount: indexStats.workspaceFileCount,
           memoryFileCount: indexStats.memoryFileCount,
@@ -249,8 +270,9 @@ export class AgentLongTermMemoryRecall {
         return null;
       }
 
-      const { formatted, results } = await this.searchWorkspace(queryText);
-      const graphContext = await this.searchGraph(queryText, results);
+      const recallSearch = await this.runRecallSearch(queryText, recallConfig);
+      const { formatted, results, graph } = recallSearch;
+      const graphContext = graph.context;
       const recallText = [formatted, graphContext].filter(Boolean).join('\n\n');
 
       if (!recallText) {
@@ -267,11 +289,11 @@ export class AgentLongTermMemoryRecall {
           stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
           lastInitAt: this.lastInitAt,
-          searchMode: RECALL_SEARCH_MODE,
-          topK: RECALL_SEARCH_TOP_K,
-          graphTopK: RECALL_GRAPH_TOP_K,
-          graphThreshold: RECALL_GRAPH_THRESHOLD,
-          graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+          searchMode: recallConfig.searchMode,
+          topK: recallConfig.workspaceTopK,
+          graphTopK: recallConfig.graphTopK,
+          graphThreshold: recallConfig.graphThreshold,
+          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
           indexPaths: [...RECALL_AUTO_INDEX_PATHS],
           workspaceFileCount: indexStats.workspaceFileCount,
           memoryFileCount: indexStats.memoryFileCount,
@@ -290,15 +312,15 @@ export class AgentLongTermMemoryRecall {
         resultIds: results.map((result) => result.id),
         resultCount: results.length,
         resultScores: results.map((result) => result.score ?? 0),
-        graphHit: Boolean(graphContext),
+        graphHit: graph.hit,
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         lastInitAt: this.lastInitAt,
-        searchMode: RECALL_SEARCH_MODE,
-        topK: RECALL_SEARCH_TOP_K,
-        graphTopK: RECALL_GRAPH_TOP_K,
-        graphThreshold: RECALL_GRAPH_THRESHOLD,
-        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+        searchMode: recallConfig.searchMode,
+        topK: recallConfig.workspaceTopK,
+        graphTopK: recallConfig.graphTopK,
+        graphThreshold: recallConfig.graphThreshold,
+        graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
         indexPaths: [...RECALL_AUTO_INDEX_PATHS],
         workspaceFileCount: indexStats.workspaceFileCount,
         memoryFileCount: indexStats.memoryFileCount,
@@ -327,11 +349,11 @@ export class AgentLongTermMemoryRecall {
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         lastInitAt: this.lastInitAt,
-        searchMode: RECALL_SEARCH_MODE,
-        topK: RECALL_SEARCH_TOP_K,
-        graphTopK: RECALL_GRAPH_TOP_K,
-        graphThreshold: RECALL_GRAPH_THRESHOLD,
-        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+        searchMode: this.recallConfig.searchMode,
+        topK: this.recallConfig.workspaceTopK,
+        graphTopK: this.recallConfig.graphTopK,
+        graphThreshold: this.recallConfig.graphThreshold,
+        graphRandomWalkSteps: this.recallConfig.graphRandomWalkSteps,
         indexPaths: [...RECALL_AUTO_INDEX_PATHS],
         workspaceFileCount: 0,
         memoryFileCount: 0,
@@ -346,15 +368,16 @@ export class AgentLongTermMemoryRecall {
     await this.refreshWorkspaceIndex();
     const indexState = await this.getWorkspaceIndexState();
     const query = input.query.trim();
+    const recallConfig = this.recallConfig;
 
     if (!query) {
       return {
         query: '',
-        topK: input.topK,
-        searchMode: input.searchMode,
-        graphTopK: input.graphTopK,
-        graphThreshold: input.graphThreshold,
-        graphRandomWalkSteps: input.graphRandomWalkSteps,
+        topK: recallConfig.workspaceTopK,
+        searchMode: recallConfig.searchMode,
+        graphTopK: recallConfig.graphTopK,
+        graphThreshold: recallConfig.graphThreshold,
+        graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
         lastInitAt: this.lastInitAt,
         workspaceCanBm25: indexState.workspaceCanBm25,
         workspaceCanVector: indexState.workspaceCanVector,
@@ -381,17 +404,10 @@ export class AgentLongTermMemoryRecall {
       } satisfies AgentLongTermMemoryRecallDebugSearchResult;
     }
 
+    const recallSearch = await this.runRecallSearch(query, recallConfig);
     const queryEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, query);
-    const { formatted: workspaceFormattedContext, results } = await this.searchWorkspace(query, {
-      topK: input.topK,
-      mode: input.searchMode,
-    });
-    const vectorResults = await this.queryVectorIndex(queryEmbedding, input.topK);
-    const graphSearch = await this.searchGraph(query, results, {
-      topK: input.graphTopK,
-      threshold: input.graphThreshold,
-      randomWalkSteps: input.graphRandomWalkSteps,
-    });
+    const { formatted: workspaceFormattedContext, results, graph: graphSearch } = recallSearch;
+    const vectorResults = await this.queryVectorIndex(queryEmbedding, recallConfig.workspaceTopK);
     const highestScore = results.reduce((currentMax, result) => {
       const score = typeof result.score === 'number' ? result.score : 0;
       return Math.max(currentMax, score);
@@ -399,11 +415,11 @@ export class AgentLongTermMemoryRecall {
 
     return {
       query,
-      topK: input.topK,
-      searchMode: input.searchMode,
-      graphTopK: input.graphTopK,
-      graphThreshold: input.graphThreshold,
-      graphRandomWalkSteps: input.graphRandomWalkSteps,
+      topK: recallConfig.workspaceTopK,
+      searchMode: recallConfig.searchMode,
+      graphTopK: recallConfig.graphTopK,
+      graphThreshold: recallConfig.graphThreshold,
+      graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
       lastInitAt: this.lastInitAt,
       workspaceCanBm25: indexState.workspaceCanBm25,
       workspaceCanVector: indexState.workspaceCanVector,
@@ -431,7 +447,7 @@ export class AgentLongTermMemoryRecall {
         metadataJson: result.metadata ? JSON.stringify(result.metadata, null, 2) : null,
         document: typeof result.document === 'string' ? result.document : null,
       })),
-      graphHit: Boolean(graphSearch.context),
+      graphHit: graphSearch.hit,
       graphQuery: graphSearch.queryText,
       graphDimension: graphSearch.dimension,
       graphIncludeSources: graphSearch.includeSources,
@@ -443,6 +459,24 @@ export class AgentLongTermMemoryRecall {
       graphError: graphSearch.error,
       injectedSystemMessage: buildRecallSystemMessage(workspaceFormattedContext, graphSearch.context),
     } satisfies AgentLongTermMemoryRecallDebugSearchResult;
+  }
+
+  private async runRecallSearch(queryText: string, config: RecallConfig) {
+    const workspaceSearch = await this.searchWorkspace(queryText, {
+      topK: config.workspaceTopK,
+      mode: config.searchMode,
+    });
+    const graphSearch = await this.searchGraph(queryText, workspaceSearch.results, {
+      topK: config.graphTopK,
+      threshold: config.graphThreshold,
+      randomWalkSteps: config.graphRandomWalkSteps,
+      includeSources: config.graphIncludeSources,
+    });
+
+    return {
+      ...workspaceSearch,
+      graph: graphSearch,
+    };
   }
 
   private async refreshWorkspaceIndex() {
@@ -494,7 +528,7 @@ export class AgentLongTermMemoryRecall {
       topK: number;
       mode: 'hybrid' | 'vector' | 'bm25';
     } = {
-      topK: RECALL_SEARCH_TOP_K,
+      topK: RECALL_WORKSPACE_TOP_K,
       mode: RECALL_SEARCH_MODE,
     },
   ): Promise<{ formatted: string; results: SearchResult[] }> {
@@ -540,15 +574,18 @@ export class AgentLongTermMemoryRecall {
       topK: number;
       threshold: number;
       randomWalkSteps: number;
+      includeSources: boolean;
     } = {
       topK: RECALL_GRAPH_TOP_K,
       threshold: RECALL_GRAPH_THRESHOLD,
       randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+      includeSources: RECALL_GRAPH_INCLUDE_SOURCES,
     },
   ): Promise<{
     queryText: string;
     dimension: number;
     includeSources: boolean;
+    hit: boolean;
     context: string;
     relevantContextRaw: string | null;
     sourcesCount: number;
@@ -562,7 +599,7 @@ export class AgentLongTermMemoryRecall {
       .join('\n');
     const graphQueryText = workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText;
     const graphDimension = await this.getGraphDimension();
-    const includeSources = true;
+    const includeSources = options.includeSources;
 
     try {
       const graphTool = createGraphRAGTool({
@@ -601,6 +638,7 @@ export class AgentLongTermMemoryRecall {
         queryText: graphQueryText,
         dimension: graphDimension,
         includeSources,
+        hit: sources.length > 0 || Boolean(context.trim()),
         context: context.trim(),
         relevantContextRaw,
         sourcesCount: sources.length,
@@ -613,6 +651,7 @@ export class AgentLongTermMemoryRecall {
         queryText: graphQueryText,
         dimension: graphDimension,
         includeSources,
+        hit: false,
         context: '',
         relevantContextRaw: null,
         sourcesCount: 0,
@@ -897,6 +936,12 @@ export function createAgentLongTermMemoryRecall(input: {
   mastraId: string;
   storage: LibSQLStore;
   workspaceEmbedder?: WorkspaceEmbedderId;
+  searchMode?: 'hybrid' | 'vector' | 'bm25';
+  workspaceTopK?: number;
+  graphTopK?: number;
+  graphThreshold?: number;
+  graphRandomWalkSteps?: number;
+  graphIncludeSources?: boolean;
   model?: AgentConfig['model'];
 }) {
   return new AgentLongTermMemoryRecall(input);

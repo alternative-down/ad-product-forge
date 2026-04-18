@@ -42,6 +42,12 @@ export function buildAgentRuntimeConfig(
       runtimeData.companySettings.checkpointedOmObservationSupportTokens,
     checkpointedOmReflectionSupportTokens:
       runtimeData.companySettings.checkpointedOmReflectionSupportTokens,
+    ltmRecallSearchMode: runtimeData.companySettings.ltmRecallSearchMode,
+    ltmRecallWorkspaceTopK: runtimeData.companySettings.ltmRecallWorkspaceTopK,
+    ltmRecallGraphTopK: runtimeData.companySettings.ltmRecallGraphTopK,
+    ltmRecallGraphThreshold: runtimeData.companySettings.ltmRecallGraphThreshold,
+    ltmRecallGraphRandomWalkSteps: runtimeData.companySettings.ltmRecallGraphRandomWalkSteps,
+    ltmRecallGraphIncludeSources: runtimeData.companySettings.ltmRecallGraphIncludeSources,
     roleName: runtimeData.role?.name,
     roleDescription: runtimeData.role?.description,
     tools: toolset.tools,

@@ -44,6 +44,12 @@ export type CreateForgeAgentConfig<
   checkpointedOmObservationReflectionBatchTokens?: number;
   checkpointedOmObservationSupportTokens?: number;
   checkpointedOmReflectionSupportTokens?: number;
+  ltmRecallSearchMode?: 'hybrid' | 'vector' | 'bm25';
+  ltmRecallWorkspaceTopK?: number;
+  ltmRecallGraphTopK?: number;
+  ltmRecallGraphThreshold?: number;
+  ltmRecallGraphRandomWalkSteps?: number;
+  ltmRecallGraphIncludeSources?: boolean;
   roleName?: string;
   roleDescription?: string;
   providers?: CommunicationProvider[];
@@ -149,6 +155,12 @@ export interface CreateAgentConfig<
   | 'checkpointedOmObservationReflectionBatchTokens'
   | 'checkpointedOmObservationSupportTokens'
   | 'checkpointedOmReflectionSupportTokens'
+  | 'ltmRecallSearchMode'
+  | 'ltmRecallWorkspaceTopK'
+  | 'ltmRecallGraphTopK'
+  | 'ltmRecallGraphThreshold'
+  | 'ltmRecallGraphRandomWalkSteps'
+  | 'ltmRecallGraphIncludeSources'
   | 'roleName'
   | 'roleDescription'
   | 'providers'
