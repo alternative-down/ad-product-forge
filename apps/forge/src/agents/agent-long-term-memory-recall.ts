@@ -75,19 +75,15 @@ const RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
-const RECALL_WORKSPACE_TOP_K = 3;
-const RECALL_GRAPH_TOP_K = 3;
-const RECALL_GRAPH_THRESHOLD = 0.7;
-const RECALL_GRAPH_RANDOM_WALK_STEPS = 50;
-const RECALL_GRAPH_INCLUDE_SOURCES = true;
+const RECALL_WORKSPACE_SEARCH_TOP_K = 10;
+const RECALL_DOCUMENT_COUNT = 3;
+const RECALL_SCORE_THRESHOLD = 0.7;
+const RECALL_GRAPH_RANDOM_WALK_STEPS = 100;
+const RECALL_GRAPH_INCLUDE_SOURCES = false;
 
 type RecallConfig = {
-  searchMode: 'hybrid' | 'vector' | 'bm25';
-  workspaceTopK: number;
-  graphTopK: number;
-  graphThreshold: number;
-  graphRandomWalkSteps: number;
-  graphIncludeSources: boolean;
+  scoreThreshold: number;
+  documentCount: number;
 };
 
 type RecallSnapshot = {
@@ -184,12 +180,8 @@ export class AgentLongTermMemoryRecall {
     mastraId: string;
     storage: LibSQLStore;
     workspaceEmbedder?: WorkspaceEmbedderId;
-    searchMode?: 'hybrid' | 'vector' | 'bm25';
-    workspaceTopK?: number;
-    graphTopK?: number;
-    graphThreshold?: number;
-    graphRandomWalkSteps?: number;
-    graphIncludeSources?: boolean;
+    scoreThreshold?: number;
+    documentCount?: number;
     model?: AgentConfig['model'];
   }) {
     const memoryStore = input.storage.stores.memory;
@@ -203,12 +195,8 @@ export class AgentLongTermMemoryRecall {
     this.agentWorkspacePath = input.agentWorkspacePath;
     this.workspaceEmbedder = input.workspaceEmbedder ?? 'fastembed';
     this.recallConfig = {
-      searchMode: input.searchMode ?? RECALL_SEARCH_MODE,
-      workspaceTopK: input.workspaceTopK ?? RECALL_WORKSPACE_TOP_K,
-      graphTopK: input.graphTopK ?? RECALL_GRAPH_TOP_K,
-      graphThreshold: input.graphThreshold ?? RECALL_GRAPH_THRESHOLD,
-      graphRandomWalkSteps: input.graphRandomWalkSteps ?? RECALL_GRAPH_RANDOM_WALK_STEPS,
-      graphIncludeSources: input.graphIncludeSources ?? RECALL_GRAPH_INCLUDE_SOURCES,
+      scoreThreshold: input.scoreThreshold ?? RECALL_SCORE_THRESHOLD,
+      documentCount: input.documentCount ?? RECALL_DOCUMENT_COUNT,
     };
     this.vectorStore = new LibSQLVector({
       id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
@@ -256,11 +244,11 @@ export class AgentLongTermMemoryRecall {
           stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
           lastInitAt: this.lastInitAt,
-          searchMode: recallConfig.searchMode,
-          topK: recallConfig.workspaceTopK,
-          graphTopK: recallConfig.graphTopK,
-          graphThreshold: recallConfig.graphThreshold,
-          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
+          searchMode: RECALL_SEARCH_MODE,
+          topK: recallConfig.documentCount,
+          graphTopK: recallConfig.documentCount,
+          graphThreshold: recallConfig.scoreThreshold,
+          graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
           indexPaths: [...RECALL_AUTO_INDEX_PATHS],
           workspaceFileCount: indexStats.workspaceFileCount,
           memoryFileCount: indexStats.memoryFileCount,
@@ -272,8 +260,9 @@ export class AgentLongTermMemoryRecall {
 
       const recallSearch = await this.runRecallSearch(queryText, recallConfig);
       const { formatted, results, graph } = recallSearch;
-      const graphContext = graph.context;
-      const recallText = [formatted, graphContext].filter(Boolean).join('\n\n');
+      const recallText = graph.hit
+        ? graph.context
+        : formatted;
 
       if (!recallText) {
         await this.persistRecallSnapshot({
@@ -289,11 +278,11 @@ export class AgentLongTermMemoryRecall {
           stepsJson: safeSerializeRecallSteps(input.steps),
           updatedAt: new Date().toISOString(),
           lastInitAt: this.lastInitAt,
-          searchMode: recallConfig.searchMode,
-          topK: recallConfig.workspaceTopK,
-          graphTopK: recallConfig.graphTopK,
-          graphThreshold: recallConfig.graphThreshold,
-          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
+          searchMode: RECALL_SEARCH_MODE,
+          topK: recallConfig.documentCount,
+          graphTopK: recallConfig.documentCount,
+          graphThreshold: recallConfig.scoreThreshold,
+          graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
           indexPaths: [...RECALL_AUTO_INDEX_PATHS],
           workspaceFileCount: indexStats.workspaceFileCount,
           memoryFileCount: indexStats.memoryFileCount,
@@ -309,18 +298,18 @@ export class AgentLongTermMemoryRecall {
       }, {
         status: 'hit',
         query: queryText,
-        resultIds: results.map((result) => result.id),
-        resultCount: results.length,
-        resultScores: results.map((result) => result.score ?? 0),
+        resultIds: graph.hit ? [] : results.map((result) => result.id),
+        resultCount: graph.hit ? 0 : results.length,
+        resultScores: graph.hit ? [] : results.map((result) => result.score ?? 0),
         graphHit: graph.hit,
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         lastInitAt: this.lastInitAt,
-        searchMode: recallConfig.searchMode,
-        topK: recallConfig.workspaceTopK,
-        graphTopK: recallConfig.graphTopK,
-        graphThreshold: recallConfig.graphThreshold,
-        graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
+        searchMode: RECALL_SEARCH_MODE,
+        topK: recallConfig.documentCount,
+        graphTopK: recallConfig.documentCount,
+        graphThreshold: recallConfig.scoreThreshold,
+        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
         indexPaths: [...RECALL_AUTO_INDEX_PATHS],
         workspaceFileCount: indexStats.workspaceFileCount,
         memoryFileCount: indexStats.memoryFileCount,
@@ -349,11 +338,11 @@ export class AgentLongTermMemoryRecall {
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         lastInitAt: this.lastInitAt,
-        searchMode: this.recallConfig.searchMode,
-        topK: this.recallConfig.workspaceTopK,
-        graphTopK: this.recallConfig.graphTopK,
-        graphThreshold: this.recallConfig.graphThreshold,
-        graphRandomWalkSteps: this.recallConfig.graphRandomWalkSteps,
+        searchMode: RECALL_SEARCH_MODE,
+        topK: this.recallConfig.documentCount,
+        graphTopK: this.recallConfig.documentCount,
+        graphThreshold: this.recallConfig.scoreThreshold,
+        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
         indexPaths: [...RECALL_AUTO_INDEX_PATHS],
         workspaceFileCount: 0,
         memoryFileCount: 0,
@@ -373,11 +362,11 @@ export class AgentLongTermMemoryRecall {
     if (!query) {
       return {
         query: '',
-        topK: recallConfig.workspaceTopK,
-        searchMode: recallConfig.searchMode,
-        graphTopK: recallConfig.graphTopK,
-        graphThreshold: recallConfig.graphThreshold,
-        graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
+        topK: recallConfig.documentCount,
+        searchMode: RECALL_SEARCH_MODE,
+        graphTopK: recallConfig.documentCount,
+        graphThreshold: recallConfig.scoreThreshold,
+        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
         lastInitAt: this.lastInitAt,
         workspaceCanBm25: indexState.workspaceCanBm25,
         workspaceCanVector: indexState.workspaceCanVector,
@@ -406,20 +395,24 @@ export class AgentLongTermMemoryRecall {
 
     const recallSearch = await this.runRecallSearch(query, recallConfig);
     const queryEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, query);
-    const { formatted: workspaceFormattedContext, results, graph: graphSearch } = recallSearch;
-    const vectorResults = await this.queryVectorIndex(queryEmbedding, recallConfig.workspaceTopK);
-    const highestScore = results.reduce((currentMax, result) => {
+    const {
+      formatted: workspaceFormattedContext,
+      rawWorkspaceResults,
+      graph: graphSearch,
+    } = recallSearch;
+    const vectorResults = await this.queryVectorIndex(queryEmbedding, RECALL_WORKSPACE_SEARCH_TOP_K);
+    const highestScore = rawWorkspaceResults.reduce((currentMax, result) => {
       const score = typeof result.score === 'number' ? result.score : 0;
       return Math.max(currentMax, score);
     }, 0);
 
     return {
       query,
-      topK: recallConfig.workspaceTopK,
-      searchMode: recallConfig.searchMode,
-      graphTopK: recallConfig.graphTopK,
-      graphThreshold: recallConfig.graphThreshold,
-      graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
+      topK: recallConfig.documentCount,
+      searchMode: RECALL_SEARCH_MODE,
+      graphTopK: recallConfig.documentCount,
+      graphThreshold: recallConfig.scoreThreshold,
+      graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
       lastInitAt: this.lastInitAt,
       workspaceCanBm25: indexState.workspaceCanBm25,
       workspaceCanVector: indexState.workspaceCanVector,
@@ -430,7 +423,7 @@ export class AgentLongTermMemoryRecall {
       queryEmbedding,
       queryEmbeddingDimension: queryEmbedding.length,
       workspaceFormattedContext,
-      workspaceResults: results.map((result) => ({
+      workspaceResults: rawWorkspaceResults.map((result) => ({
         id: result.id,
         content: result.content,
         score: typeof result.score === 'number' ? result.score : null,
@@ -462,19 +455,26 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async runRecallSearch(queryText: string, config: RecallConfig) {
-    const workspaceSearch = await this.searchWorkspace(queryText, {
-      topK: config.workspaceTopK,
-      mode: config.searchMode,
-    });
+    const workspaceSearch = await this.searchWorkspace(queryText);
     const graphSearch = await this.searchGraph(queryText, workspaceSearch.results, {
-      topK: config.graphTopK,
-      threshold: config.graphThreshold,
-      randomWalkSteps: config.graphRandomWalkSteps,
-      includeSources: config.graphIncludeSources,
+      topK: config.documentCount,
+      threshold: config.scoreThreshold,
+      randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+      includeSources: RECALL_GRAPH_INCLUDE_SOURCES,
     });
+    const workspaceFallbackResults = this.filterWorkspaceFallbackResults(
+      workspaceSearch.results,
+      config.scoreThreshold,
+      config.documentCount,
+    );
+    const workspaceFormattedContext = workspaceFallbackResults
+      .map((result) => `${result.id}\n${result.content}`)
+      .join('\n\n');
 
     return {
-      ...workspaceSearch,
+      formatted: graphSearch.hit ? '' : workspaceFormattedContext,
+      results: workspaceFallbackResults,
+      rawWorkspaceResults: workspaceSearch.results,
       graph: graphSearch,
     };
   }
@@ -528,7 +528,7 @@ export class AgentLongTermMemoryRecall {
       topK: number;
       mode: 'hybrid' | 'vector' | 'bm25';
     } = {
-      topK: RECALL_WORKSPACE_TOP_K,
+      topK: RECALL_WORKSPACE_SEARCH_TOP_K,
       mode: RECALL_SEARCH_MODE,
     },
   ): Promise<{ formatted: string; results: SearchResult[] }> {
@@ -551,11 +551,7 @@ export class AgentLongTermMemoryRecall {
         content: String(result.content).trim(),
         score: result.score,
       }));
-      const formatted = searchResults
-        .map((result) => `${result.id}\n${result.content}`)
-        .join('\n\n');
-
-      return { formatted, results: searchResults };
+      return { formatted: '', results: searchResults };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
@@ -576,8 +572,8 @@ export class AgentLongTermMemoryRecall {
       randomWalkSteps: number;
       includeSources: boolean;
     } = {
-      topK: RECALL_GRAPH_TOP_K,
-      threshold: RECALL_GRAPH_THRESHOLD,
+      topK: RECALL_DOCUMENT_COUNT,
+      threshold: RECALL_SCORE_THRESHOLD,
       randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
       includeSources: RECALL_GRAPH_INCLUDE_SOURCES,
     },
@@ -728,6 +724,16 @@ export class AgentLongTermMemoryRecall {
 
       throw error;
     }
+  }
+
+  private filterWorkspaceFallbackResults(
+    results: SearchResult[],
+    scoreThreshold: number,
+    documentCount: number,
+  ) {
+    return results
+      .filter((result) => (result.score ?? 0) >= scoreThreshold)
+      .slice(0, documentCount);
   }
 
   private formatStructuredValue(value: unknown, indentLevel = 0): string {
@@ -936,12 +942,8 @@ export function createAgentLongTermMemoryRecall(input: {
   mastraId: string;
   storage: LibSQLStore;
   workspaceEmbedder?: WorkspaceEmbedderId;
-  searchMode?: 'hybrid' | 'vector' | 'bm25';
-  workspaceTopK?: number;
-  graphTopK?: number;
-  graphThreshold?: number;
-  graphRandomWalkSteps?: number;
-  graphIncludeSources?: boolean;
+  scoreThreshold?: number;
+  documentCount?: number;
   model?: AgentConfig['model'];
 }) {
   return new AgentLongTermMemoryRecall(input);

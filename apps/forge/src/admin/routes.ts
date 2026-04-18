@@ -527,12 +527,8 @@ const upsertSystemSettingsSchema = z.object({
   checkpointedOmObservationReflectionBatchTokens: z.coerce.number().int().positive().default(5000),
   checkpointedOmObservationSupportTokens: z.coerce.number().int().nonnegative().default(2000),
   checkpointedOmReflectionSupportTokens: z.coerce.number().int().nonnegative().default(2000),
-  ltmRecallSearchMode: z.enum(['hybrid', 'vector', 'bm25']).default('hybrid'),
-  ltmRecallWorkspaceTopK: z.coerce.number().int().min(1).max(20).default(3),
-  ltmRecallGraphTopK: z.coerce.number().int().min(1).max(20).default(3),
-  ltmRecallGraphThreshold: z.coerce.number().min(0).max(1).default(0.7),
-  ltmRecallGraphRandomWalkSteps: z.coerce.number().int().min(1).max(500).default(50),
-  ltmRecallGraphIncludeSources: z.boolean().default(true),
+  ltmRecallScoreThreshold: z.coerce.number().min(0).max(1).default(0.7),
+  ltmRecallDocumentCount: z.coerce.number().int().min(1).max(20).default(3),
 });
 
 const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
@@ -828,12 +824,8 @@ export function registerAdminRoutes(input: {
           body.checkpointedOmObservationReflectionBatchTokens,
         checkpointedOmObservationSupportTokens: body.checkpointedOmObservationSupportTokens,
         checkpointedOmReflectionSupportTokens: body.checkpointedOmReflectionSupportTokens,
-        ltmRecallSearchMode: body.ltmRecallSearchMode,
-        ltmRecallWorkspaceTopK: body.ltmRecallWorkspaceTopK,
-        ltmRecallGraphTopK: body.ltmRecallGraphTopK,
-        ltmRecallGraphThreshold: body.ltmRecallGraphThreshold,
-        ltmRecallGraphRandomWalkSteps: body.ltmRecallGraphRandomWalkSteps,
-        ltmRecallGraphIncludeSources: body.ltmRecallGraphIncludeSources,
+        ltmRecallScoreThreshold: body.ltmRecallScoreThreshold,
+        ltmRecallDocumentCount: body.ltmRecallDocumentCount,
       });
       const registry = getInternalAgentRegistry();
 

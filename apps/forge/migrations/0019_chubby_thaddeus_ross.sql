@@ -1,0 +1,2 @@
+ALTER TABLE `system_settings` ADD `ltm_recall_score_threshold` real DEFAULT 0.7 NOT NULL;--> statement-breakpoint
+ALTER TABLE `system_settings` ADD `ltm_recall_document_count` integer DEFAULT 3 NOT NULL;
