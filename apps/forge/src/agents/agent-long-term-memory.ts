@@ -317,10 +317,7 @@ function renderCheckpointPackageReadme(input: {
 function renderReflectionFile(reflection: CheckpointedOmCheckpointPackageInput['reflections'][number]) {
   return [
     '---',
-    `recordId: ${reflection.recordId}`,
-    `generationCount: ${reflection.generationCount}`,
     `createdAt: ${reflection.createdAt}`,
-    `tokenCount: ${reflection.tokenCount}`,
     '---',
     '',
     reflection.text.trim(),
@@ -331,11 +328,7 @@ function renderReflectionFile(reflection: CheckpointedOmCheckpointPackageInput['
 function renderObservationFile(observation: CheckpointedOmCheckpointPackageInput['observations'][number]) {
   return [
     '---',
-    `blockId: ${observation.blockId}`,
-    `reflectedGeneration: ${observation.reflectedGeneration}`,
     `createdAt: ${observation.createdAt}`,
-    `lastObservedAt: ${observation.lastObservedAt}`,
-    `tokenCount: ${observation.tokenCount}`,
     '---',
     '',
     observation.text.trim(),
