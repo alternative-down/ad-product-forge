@@ -1,5 +1,10 @@
 import type { Agent, AgentConfig, ToolsInput } from '@mastra/core/agent';
-import type { AgentWakeEvent, CommunicationModule, CommunicationProvider } from '@mastra-engine/core';
+import type {
+  AgentWakeEvent,
+  CommunicationModule,
+  CommunicationProvider,
+  WorkspaceEmbedderId,
+} from '@mastra-engine/core';
 import type { Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 
 import type {
@@ -46,6 +51,7 @@ export type CreateForgeAgentConfig<
   workspaceFilesystem?: WorkspaceFilesystemConfig;
   workspaceSandbox?: WorkspaceSandboxConfig;
   workspaceSkills?: WorkspaceSkillsConfig;
+  workspaceEmbedder?: WorkspaceEmbedderId;
 };
 
 export type CreateAgentOptions = {
@@ -150,6 +156,7 @@ export interface CreateAgentConfig<
   | 'workspaceFilesystem'
   | 'workspaceSandbox'
   | 'workspaceSkills'
+  | 'workspaceEmbedder'
 > {
   workspaceBasePath: string;
 }

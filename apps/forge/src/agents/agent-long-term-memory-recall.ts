@@ -7,9 +7,12 @@ import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/wor
 import { LibSQLVector, type LibSQLStore } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
 
-import { toMastraSafeIdentifier } from '@mastra-engine/core';
-
-import { embedTextWithFastembed, getFastembedSingleton } from '@mastra-engine/core';
+import {
+  embedTextWithWorkspaceEmbedder,
+  getWorkspaceEmbedderProvider,
+  toMastraSafeIdentifier,
+  type WorkspaceEmbedderId,
+} from '@mastra-engine/core';
 
 type SearchResult = {
   id: string;
@@ -152,7 +155,9 @@ export class AgentLongTermMemoryRecall {
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
   private readonly memoryStore: NonNullable<LibSQLStore['stores']['memory']>;
+  private readonly agentMemoryPath: string;
   private readonly agentWorkspacePath: string;
+  private readonly workspaceEmbedder: WorkspaceEmbedderId;
   private vectorIndexReadyPromise: Promise<void> | null = null;
   private lastInitAt: string | null = null;
 
@@ -162,6 +167,7 @@ export class AgentLongTermMemoryRecall {
     agentMemoryPath: string;
     mastraId: string;
     storage: LibSQLStore;
+    workspaceEmbedder?: WorkspaceEmbedderId;
     model?: AgentConfig['model'];
   }) {
     const memoryStore = input.storage.stores.memory;
@@ -171,7 +177,9 @@ export class AgentLongTermMemoryRecall {
     }
 
     const vectorStorePath = path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`);
+    this.agentMemoryPath = input.agentMemoryPath;
     this.agentWorkspacePath = input.agentWorkspacePath;
+    this.workspaceEmbedder = input.workspaceEmbedder ?? 'fastembed';
     this.vectorStore = new LibSQLVector({
       id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
       url: `file:${vectorStorePath}`,
@@ -182,7 +190,7 @@ export class AgentLongTermMemoryRecall {
       autoSync: true,
       bm25: true,
       autoIndexPaths: [...RECALL_AUTO_INDEX_PATHS],
-      embedder: embedTextWithFastembed,
+      embedder: (text) => embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text),
       filesystem: new LocalFilesystem({
         basePath: input.agentMemoryPath,
         allowedPaths: [path.resolve(input.agentWorkspacePath, 'workspace', 'skills')],
@@ -353,7 +361,7 @@ export class AgentLongTermMemoryRecall {
       } satisfies AgentLongTermMemoryRecallDebugSearchResult;
     }
 
-    const queryEmbedding = await embedTextWithFastembed(query);
+    const queryEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, query);
     const { results } = await this.searchWorkspace(query, {
       topK: input.topK,
       mode: input.searchMode,
@@ -440,7 +448,7 @@ export class AgentLongTermMemoryRecall {
       // Index does not exist yet. Create it below.
     }
 
-    const sampleEmbedding = await embedTextWithFastembed('memory-bootstrap');
+    const sampleEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, 'memory-bootstrap');
     const dimension = sampleEmbedding.length;
 
     await this.vectorStore.createIndex({
@@ -512,7 +520,7 @@ export class AgentLongTermMemoryRecall {
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
         indexName: this.searchIndexName,
-        model: getFastembedSingleton(),
+        model: getWorkspaceEmbedderProvider(this.workspaceEmbedder),
         graphOptions: {
           threshold: options.threshold,
           randomWalkSteps: options.randomWalkSteps,
@@ -571,9 +579,9 @@ export class AgentLongTermMemoryRecall {
 
   private async getIndexStats() {
     const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
-      countFiles(this.agentWorkspacePath, '/workspace-memory'),
-      countFiles(this.agentWorkspacePath, '/workspace-memory/memory'),
-      countFiles(this.agentWorkspacePath, '/workspace-memory/checkpoints'),
+      countFiles(this.agentMemoryPath, '.'),
+      countFiles(this.agentMemoryPath, 'memory'),
+      countFiles(this.agentMemoryPath, 'checkpoints'),
     ]);
 
     return {
@@ -747,6 +755,7 @@ export function createAgentLongTermMemoryRecall(input: {
   agentMemoryPath: string;
   mastraId: string;
   storage: LibSQLStore;
+  workspaceEmbedder?: WorkspaceEmbedderId;
   model?: AgentConfig['model'];
 }) {
   return new AgentLongTermMemoryRecall(input);

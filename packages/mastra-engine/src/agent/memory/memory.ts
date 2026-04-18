@@ -2,12 +2,16 @@ import type { AgentConfig } from '@mastra/core/agent';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { Memory } from '@mastra/memory';
 
-import { getFastembedSingleton } from './embedder';
+import {
+  getWorkspaceEmbedderProvider,
+  type WorkspaceEmbedderId,
+} from './embedder';
 import { WORKING_MEMORY_SCHEMA } from './working-memory';
 
 export function createAgentMemory(config: {
   storage: LibSQLStore;
   vector: LibSQLVector;
+  embedder?: WorkspaceEmbedderId;
   lastMessages?: number;
   observationalMemory?: {
     model: AgentConfig['model'];
@@ -33,7 +37,7 @@ export function createAgentMemory(config: {
     : false;
 
   return new Memory({
-    embedder: getFastembedSingleton(),
+    embedder: getWorkspaceEmbedderProvider(config.embedder),
     storage: config.storage,
     vector: config.vector,
     options: {

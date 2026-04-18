@@ -51,5 +51,6 @@ export function buildAgentRuntimeConfig(
     workspaceFilesystem: runtimeData.agent.workspaceFilesystem ?? undefined,
     workspaceSandbox: runtimeData.agent.workspaceSandbox ?? undefined,
     workspaceSkills: runtimeData.agent.workspaceSkills ?? undefined,
+    workspaceEmbedder: runtimeData.agent.workspaceEmbedder,
   };
 }

@@ -13,7 +13,16 @@ export * from './agent/wake-queue';
 export * from './agent/tools/market-research';
 export * from './agent/communication/provider-types';
 export { LongTermMemory } from './agent/memory/long-term-memory';
-export { embedTextWithFastembed, getFastembedSingleton } from './agent/memory/embedder';
+export {
+  WORKSPACE_EMBEDDER_IDS,
+  embedTextWithFastembed,
+  embedTextWithWorkspaceEmbedder,
+  getFastembedSingleton,
+  getWorkspaceEmbedderProvider,
+  isWorkspaceEmbedderId,
+  resolveWorkspaceEmbedderId,
+} from './agent/memory/embedder';
+export type { WorkspaceEmbedderId, WorkspaceEmbedderProvider } from './agent/memory/embedder';
 export { createAgentMemory } from './agent/memory/memory';
 export { createObservationalMemory } from './agent/memory/observational-memory';
 export { createCheckpointedObservationalMemoryProcessor } from './agent/memory/checkpointed-observational-memory';

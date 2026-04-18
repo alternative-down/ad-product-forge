@@ -9,6 +9,7 @@ import type {
   CheckpointedOmCheckpointPackageInput,
   CheckpointedOmArchivedObservation,
   CheckpointedOmArchivedReflection,
+  WorkspaceEmbedderId,
 } from '@mastra-engine/core';
 import { createAgentMemory, forgeDebug, toMastraSafeIdentifier } from '@mastra-engine/core';
 import { z } from 'zod';
@@ -431,6 +432,7 @@ export function createAgentLongTermMemory(input: {
   pricingModelKey: string;
   modelProfileId?: string;
   contractStore: ReturnType<typeof createAgentContractStore>;
+  workspaceEmbedder?: WorkspaceEmbedderId;
 }) {
   const checkpointsPath = path.resolve(input.agentMemoryPath, CHECKPOINTS_DIR);
   const memoryPath = path.resolve(input.agentMemoryPath, MEMORY_DIR);
@@ -446,6 +448,7 @@ export function createAgentLongTermMemory(input: {
   const memory = createAgentMemory({
     storage: input.storage,
     vector: input.vector,
+    embedder: input.workspaceEmbedder,
     lastMessages: 20,
   });
   const memoryAgent = new Agent({
