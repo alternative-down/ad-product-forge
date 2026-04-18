@@ -64,9 +64,9 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
 
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
 const RECALL_AUTO_INDEX_PATHS = [
-  '/workspace-memory',
-  '/workspace-memory/memory',
-  '/workspace-memory/checkpoints',
+  'workspace-memory',
+  'workspace-memory/memory',
+  'workspace-memory/checkpoints',
 ] as const;
 const RECALL_SEARCH_TOP_K = 3;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
