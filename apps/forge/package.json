@@ -15,7 +15,7 @@
     "top-up-contract": "tsx src/scripts/top-up-agent-contract.ts"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.68",
+    "@ai-sdk/anthropic": "^3.0.71",
     "@huggingface/transformers": "3.7.5",
     "@mastra-engine/core": "0.1.0",
     "@mastra/core": "^1.24.1",
