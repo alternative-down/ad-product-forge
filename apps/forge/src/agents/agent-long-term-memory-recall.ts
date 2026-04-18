@@ -170,6 +170,10 @@ export class AgentLongTermMemoryRecall {
   private readonly agentWorkspacePath: string;
   private readonly workspaceEmbedder: WorkspaceEmbedderId;
   private readonly recallConfig: RecallConfig;
+  private readonly readRuntimeMemorySettings?: () => Promise<{
+    ltmRecallScoreThreshold: number;
+    ltmRecallDocumentCount: number;
+  }>;
   private vectorIndexReadyPromise: Promise<void> | null = null;
   private lastInitAt: string | null = null;
 
@@ -182,6 +186,10 @@ export class AgentLongTermMemoryRecall {
     workspaceEmbedder?: WorkspaceEmbedderId;
     scoreThreshold?: number;
     documentCount?: number;
+    readRuntimeMemorySettings?: () => Promise<{
+      ltmRecallScoreThreshold: number;
+      ltmRecallDocumentCount: number;
+    }>;
     model?: AgentConfig['model'];
   }) {
     const memoryStore = input.storage.stores.memory;
@@ -198,6 +206,7 @@ export class AgentLongTermMemoryRecall {
       scoreThreshold: input.scoreThreshold ?? RECALL_SCORE_THRESHOLD,
       documentCount: input.documentCount ?? RECALL_DOCUMENT_COUNT,
     };
+    this.readRuntimeMemorySettings = input.readRuntimeMemorySettings;
     this.vectorStore = new LibSQLVector({
       id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
       url: `file:${vectorStorePath}`,
@@ -228,7 +237,7 @@ export class AgentLongTermMemoryRecall {
       await this.refreshWorkspaceIndex();
       const queryText = this.buildRecallQueryFromStep(input.step);
       const indexStats = await this.getIndexStats();
-      const recallConfig = this.recallConfig;
+      const recallConfig = await this.resolveRecallConfig();
 
       if (!queryText) {
         await this.persistRecallSnapshot({
@@ -360,7 +369,7 @@ export class AgentLongTermMemoryRecall {
     await this.refreshWorkspaceIndex();
     const indexState = await this.getWorkspaceIndexState();
     const query = input.query.trim();
-    const recallConfig = this.recallConfig;
+    const recallConfig = await this.resolveRecallConfig();
 
     if (!query) {
       return {
@@ -487,6 +496,19 @@ export class AgentLongTermMemoryRecall {
       rawWorkspaceResults: workspaceSearch.results,
       graph: graphSearch,
     };
+  }
+
+  private async resolveRecallConfig() {
+    const runtimeSettings = await this.readRuntimeMemorySettings?.();
+
+    if (!runtimeSettings) {
+      return this.recallConfig;
+    }
+
+    return {
+      scoreThreshold: runtimeSettings.ltmRecallScoreThreshold,
+      documentCount: runtimeSettings.ltmRecallDocumentCount,
+    } satisfies RecallConfig;
   }
 
   private async refreshWorkspaceIndex() {
@@ -982,6 +1004,10 @@ export function createAgentLongTermMemoryRecall(input: {
   workspaceEmbedder?: WorkspaceEmbedderId;
   scoreThreshold?: number;
   documentCount?: number;
+  readRuntimeMemorySettings?: () => Promise<{
+    ltmRecallScoreThreshold: number;
+    ltmRecallDocumentCount: number;
+  }>;
   model?: AgentConfig['model'];
 }) {
   return new AgentLongTermMemoryRecall(input);

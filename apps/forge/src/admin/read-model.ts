@@ -534,12 +534,27 @@ export function createAdminReadModel(input: {
             page: 0,
             perPage: 8,
           });
-          const latestAssistantMessage = messages.find((message) => message.role === 'assistant') ?? null;
+          let preview: string | null = null;
+          let toolBadge: ReturnType<typeof extractLatestMessageToolBadge> = null;
+
+          for (const message of messages) {
+            if (message.role !== 'assistant') {
+              continue;
+            }
+
+            preview ??= extractLatestMessagePreview(message.content);
+            toolBadge ??= extractLatestMessageToolBadge(message.content);
+
+            if (preview) {
+              break;
+            }
+          }
+
           return [
             agent.id,
             {
-              preview: extractLatestMessagePreview(latestAssistantMessage?.content),
-              toolBadge: extractLatestMessageToolBadge(latestAssistantMessage?.content),
+              preview,
+              toolBadge,
             },
           ] as const;
         }),

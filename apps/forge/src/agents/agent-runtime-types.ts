@@ -59,6 +59,16 @@ export type CreateForgeAgentConfig<
 export type CreateAgentOptions = {
   longTermMemory?: boolean;
   contractStore?: ReturnType<typeof createAgentContractStore>;
+  readRuntimeMemorySettings?: () => Promise<{
+    checkpointedOmTotalContextTokens: number;
+    checkpointedOmRecentRawTokens: number;
+    checkpointedOmRawObservationBatchTokens: number;
+    checkpointedOmObservationReflectionBatchTokens: number;
+    checkpointedOmObservationSupportTokens: number;
+    checkpointedOmReflectionSupportTokens: number;
+    ltmRecallScoreThreshold: number;
+    ltmRecallDocumentCount: number;
+  }>;
 };
 
 export type InternalAgentRuntime<
