@@ -213,6 +213,47 @@ function splitMemoryRecallSegments(value: string) {
   return segments;
 }
 
+function decodeXmlEntities(value: string) {
+  return value
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', '\'')
+    .replaceAll('&amp;', '&');
+}
+
+function parseXmlAttributes(value: string) {
+  const attributes: Record<string, string> = {};
+
+  for (const match of value.matchAll(/([\w-]+)="([^"]*)"/gu)) {
+    const [, key, rawValue] = match;
+    attributes[key] = decodeXmlEntities(rawValue);
+  }
+
+  return attributes;
+}
+
+function parseMemoryRecallXml(value: string) {
+  const rootMatch = value.match(/<memory-recall\b([^>]*)>([\s\S]*?)<\/memory-recall>/u);
+
+  if (!rootMatch) {
+    return null;
+  }
+
+  const [, rootAttributesText, body] = rootMatch;
+  const instructionsMatch = body.match(/<instructions>([\s\S]*?)<\/instructions>/u);
+  const items = Array.from(body.matchAll(/<item\b([^>]*)>([\s\S]*?)<\/item>/gu)).map((match) => ({
+    attributes: parseXmlAttributes(match[1] ?? ''),
+    content: decodeXmlEntities((match[2] ?? '').trim()),
+  }));
+
+  return {
+    attributes: parseXmlAttributes(rootAttributesText ?? ''),
+    instructions: instructionsMatch ? decodeXmlEntities(instructionsMatch[1].trim()) : null,
+    items,
+  };
+}
+
 function ThreadTextSegments(input: {
   label: string;
   value: string;
@@ -240,11 +281,10 @@ function ThreadTextSegments(input: {
       {segments.map((segment, index) => (
         segment.kind === 'memory-recall'
           ? (
-            <ThreadDisclosure
+            <ThreadMemoryRecallDisclosure
               key={`${input.label}:memory-recall:${index}`}
-              summary="Memory Recall"
+              xml={segment.value}
               label={`Memory Recall · ${input.label}`}
-              value={segment.value}
             />
           )
           : (
@@ -257,6 +297,80 @@ function ThreadTextSegments(input: {
           )
       ))}
     </div>
+  );
+}
+
+function ThreadMemoryRecallDisclosure(input: {
+  label: string;
+  xml: string;
+}) {
+  const parsed = parseMemoryRecallXml(input.xml);
+
+  if (!parsed) {
+    return (
+      <ThreadDisclosure
+        summary="Memory Recall"
+        label={input.label}
+        value={input.xml}
+      />
+    );
+  }
+
+  return (
+    <details className="group">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
+        <span>Memory Recall</span>
+        <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="min-w-0 space-y-3 overflow-hidden pt-3">
+        <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
+
+        {parsed.attributes['on-datetime']
+          ? (
+            <ThreadSection label="on-datetime">
+              {parsed.attributes['on-datetime']}
+            </ThreadSection>
+          )
+          : null}
+
+        {parsed.instructions
+          ? (
+            <ThreadDisclosure
+              summary="Instructions"
+              label="memory-recall.instructions"
+              value={parsed.instructions}
+            />
+          )
+          : null}
+
+        {parsed.items.map((item, index) => (
+          <details
+            key={`${input.label}:item:${index}`}
+            className="group ml-3"
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>{`Item ${index + 1}`}</span>
+              <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="min-w-0 space-y-2 overflow-hidden pt-3">
+              {Object.keys(item.attributes).length > 0
+                ? (
+                  <ThreadJsonDisclosure
+                    summary="Metadata"
+                    label={`memory-recall.item[${index}].attributes`}
+                    value={item.attributes}
+                  />
+                )
+                : null}
+
+              <ThreadSection label={`memory-recall.item[${index}]`}>
+                {item.content}
+              </ThreadSection>
+            </div>
+          </details>
+        ))}
+      </div>
+    </details>
   );
 }
 
