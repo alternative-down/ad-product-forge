@@ -939,14 +939,23 @@ export function createAgentRunner(
     runEpoch: number,
     longTermMemoryRecallSystemText: string | null,
   ) {
-    const effectivePromptText = promptText.trim()
-      ? [
-          {
+    const effectivePromptText = [
+      longTermMemoryRecallSystemText?.trim()
+        ? {
+            role: 'system' as const,
+            content: longTermMemoryRecallSystemText.trim(),
+          }
+        : null,
+      promptText.trim()
+        ? {
             role: 'user' as const,
             content: promptText.trim(),
-          },
-        ]
-      : [];
+          }
+        : null,
+    ].filter((value): value is {
+      role: 'system' | 'user';
+      content: string;
+    } => Boolean(value));
 
     for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();
@@ -958,7 +967,6 @@ export function createAgentRunner(
         const agentContextInstructions = await loadAgentContextInstructions();
         const systemPrompt = buildStepSystemPrompt({
           agentContextInstructions,
-          longTermMemoryRecallSystemText,
         });
         console.log(`[AgentRunner] ${runtime.id} runtime context ready before generate`);
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
@@ -1445,11 +1453,9 @@ function formatAbsentErrorDetailValue(value: unknown): string | null {
 
 function buildStepSystemPrompt(input: {
   agentContextInstructions: string | null | undefined;
-  longTermMemoryRecallSystemText: string | null;
 }) {
   const sections = [
     input.agentContextInstructions?.trim() || null,
-    input.longTermMemoryRecallSystemText?.trim() || null,
   ].filter((value): value is string => Boolean(value));
 
   if (sections.length === 0) {
