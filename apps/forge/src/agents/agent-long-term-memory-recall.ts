@@ -536,9 +536,13 @@ export class AgentLongTermMemoryRecall {
         'ltm graph search timed out',
       );
 
-      const relevantContext = typeof graphResult?.relevantContext === 'string'
+      const relevantContext = Array.isArray(graphResult?.relevantContext)
         ? graphResult.relevantContext
-        : '';
+          .filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0)
+          .join('\n\n')
+        : typeof graphResult?.relevantContext === 'string'
+          ? graphResult.relevantContext
+          : '';
 
       return relevantContext.trim();
     } catch {
