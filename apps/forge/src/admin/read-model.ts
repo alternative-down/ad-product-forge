@@ -133,6 +133,10 @@ type LongTermMemoryRecallSnapshot = {
   error: string | null;
 };
 
+function isMemoryRecallText(value: string) {
+  return /^\s*<memory-recall\b[\s\S]*<\/memory-recall>\s*$/u.test(value);
+}
+
 function extractLatestMessagePreview(content: unknown) {
   if (!content || typeof content !== 'object') {
     return null;
@@ -158,13 +162,13 @@ function extractLatestMessagePreview(content: unknown) {
     ) {
       const text = part.text.trim();
 
-      if (text) {
+      if (text && !isMemoryRecallText(text)) {
         return truncatePreview(text);
       }
     }
   }
 
-  if (typeof record.content === 'string' && record.content.trim()) {
+  if (typeof record.content === 'string' && record.content.trim() && !isMemoryRecallText(record.content.trim())) {
     return truncatePreview(record.content.trim());
   }
 
@@ -183,9 +187,24 @@ function extractLatestMessageToolBadge(content: unknown) {
   const record = content as {
     parts?: unknown;
     toolInvocations?: unknown;
+    content?: unknown;
   };
   const parts = Array.isArray(record.parts) ? record.parts : [];
   const topLevelToolInvocations = Array.isArray(record.toolInvocations) ? record.toolInvocations : [];
+
+  for (const part of [...parts].reverse()) {
+    if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'text' || typeof part.text !== 'string') {
+      continue;
+    }
+
+    if (isMemoryRecallText(part.text.trim())) {
+      return { icon: '🧠', label: 'Recall' };
+    }
+  }
+
+  if (typeof record.content === 'string' && isMemoryRecallText(record.content.trim())) {
+    return { icon: '🧠', label: 'Recall' };
+  }
 
   for (const part of [...parts].reverse()) {
     if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'tool-invocation') {

@@ -259,10 +259,13 @@ export class AgentLongTermMemoryRecall {
       }
 
       const recallSearch = await this.runRecallSearch(queryText, recallConfig);
-      const { formatted, results, graph } = recallSearch;
-      const recallText = graph.hit
-        ? graph.context
-        : formatted;
+      const { results, graph } = recallSearch;
+      const recallText = buildRecallSystemMessage({
+        graphHit: graph.hit,
+        graphContext: graph.context,
+        query: queryText,
+        results,
+      });
 
       if (!recallText) {
         await this.persistRecallSnapshot({
@@ -397,6 +400,7 @@ export class AgentLongTermMemoryRecall {
     const queryEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, query);
     const {
       formatted: workspaceFormattedContext,
+      results,
       rawWorkspaceResults,
       graph: graphSearch,
     } = recallSearch;
@@ -450,7 +454,12 @@ export class AgentLongTermMemoryRecall {
       graphSourcesJson: graphSearch.sourcesJson,
       graphRawJson: graphSearch.rawJson,
       graphError: graphSearch.error,
-      injectedSystemMessage: buildRecallSystemMessage(workspaceFormattedContext, graphSearch.context),
+      injectedSystemMessage: buildRecallSystemMessage({
+        graphHit: graphSearch.hit,
+        graphContext: graphSearch.context,
+        query,
+        results,
+      }),
     } satisfies AgentLongTermMemoryRecallDebugSearchResult;
   }
 
@@ -925,19 +934,42 @@ function safeSerializeGraphResult(result: unknown) {
   }
 }
 
-function buildRecallSystemMessage(workspaceContext: string, graphContext: string) {
-  const sections = [
-    workspaceContext ? `Workspace memory:\n${workspaceContext}` : '',
-    graphContext ? `Graph memory:\n${graphContext}` : '',
-  ].filter(Boolean);
+function escapeXml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&apos;');
+}
 
-  if (sections.length === 0) {
+function buildRecallSystemMessage(input: {
+  query: string;
+  graphHit: boolean;
+  graphContext: string;
+  results: SearchResult[];
+}) {
+  const items = input.graphHit
+    ? (
+        input.graphContext.trim()
+          ? [
+              `  <item source="graph" query="${escapeXml(input.query)}">${escapeXml(input.graphContext.trim())}</item>`,
+            ]
+          : []
+      )
+    : input.results.map((result) => (
+      `  <item source="workspace" id="${escapeXml(result.id)}" score="${typeof result.score === 'number' ? result.score.toFixed(4) : '0.0000'}">${escapeXml(result.content)}</item>`
+    ));
+
+  if (items.length === 0) {
     return null;
   }
 
   return [
-    'These are search results from your past memory. They may not reflect your current reality and must not be assumed as true by default. Treat them only as potentially relevant context that can be considered or mentioned when useful. If your more recent context conflicts with these results, prefer the more recent context. Treat this memory as extra information that may be outdated, incomplete, or incorrect.',
-    sections.join('\n'),
+    `<memory-recall on-datetime="${new Date().toISOString()}">`,
+    `  <instructions>${escapeXml('Now is the datetime in the on-datetime attribute. These recalled items are past information that is no longer in your active context or that your long-term memory consolidated. You may already have seen or resolved them. Use them only as additional relevant context when useful, and prefer more recent context if there is any conflict.')}</instructions>`,
+    ...items,
+    '</memory-recall>',
   ].join('\n');
 }
 
