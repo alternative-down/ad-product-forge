@@ -34,9 +34,17 @@ function ThreadMessageContent(input: {
   return (
     <div className="min-w-0 space-y-3 overflow-hidden">
       {!hasVisibleTextPart && typeof content.content === 'string' && content.content.trim() ? (
-        <ThreadSection label="Response text · content.content">
-          {content.content.trim()}
-        </ThreadSection>
+        isMemoryRecallText(content.content.trim()) ? (
+          <ThreadDisclosure
+            summary="Memory Recall"
+            label="Memory Recall · content.content"
+            value={content.content.trim()}
+          />
+        ) : (
+          <ThreadSection label="Response text · content.content">
+            {content.content.trim()}
+          </ThreadSection>
+        )
       ) : null}
 
       {visibleParts.map((part, index) => (
@@ -79,6 +87,16 @@ function ThreadPart(input: {
 
     if (!text) {
       return null;
+    }
+
+    if (isMemoryRecallText(text)) {
+      return (
+        <ThreadDisclosure
+          summary="Memory Recall"
+          label="Memory Recall · content.parts.text"
+          value={text}
+        />
+      );
     }
 
     return (
@@ -166,6 +184,10 @@ function ThreadSection(input: {
       </div>
     </div>
   );
+}
+
+function isMemoryRecallText(value: string) {
+  return /^\s*<memory-recall\b[\s\S]*<\/memory-recall>\s*$/u.test(value);
 }
 
 function ThreadDisclosure(input: {
