@@ -46,12 +46,8 @@ function SettingsGeneralRoute() {
     checkpointedOmObservationReflectionBatchTokens: string;
     checkpointedOmObservationSupportTokens: string;
     checkpointedOmReflectionSupportTokens: string;
-    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
-    ltmRecallWorkspaceTopK: string;
-    ltmRecallGraphTopK: string;
-    ltmRecallGraphThreshold: string;
-    ltmRecallGraphRandomWalkSteps: string;
-    ltmRecallGraphIncludeSources: boolean;
+    ltmRecallScoreThreshold: string;
+    ltmRecallDocumentCount: string;
   } | null>(null);
   const [defaultsDraft, setDefaultsDraft] = useState<{
     primaryProfileId: string;
@@ -108,12 +104,8 @@ function SettingsGeneralRoute() {
         checkpointedOmObservationReflectionBatchTokens: String(settingsQuery.data.checkpointedOmObservationReflectionBatchTokens),
         checkpointedOmObservationSupportTokens: String(settingsQuery.data.checkpointedOmObservationSupportTokens),
         checkpointedOmReflectionSupportTokens: String(settingsQuery.data.checkpointedOmReflectionSupportTokens),
-        ltmRecallSearchMode: settingsQuery.data.ltmRecallSearchMode,
-        ltmRecallWorkspaceTopK: String(settingsQuery.data.ltmRecallWorkspaceTopK),
-        ltmRecallGraphTopK: String(settingsQuery.data.ltmRecallGraphTopK),
-        ltmRecallGraphThreshold: String(settingsQuery.data.ltmRecallGraphThreshold),
-        ltmRecallGraphRandomWalkSteps: String(settingsQuery.data.ltmRecallGraphRandomWalkSteps),
-        ltmRecallGraphIncludeSources: settingsQuery.data.ltmRecallGraphIncludeSources,
+        ltmRecallScoreThreshold: String(settingsQuery.data.ltmRecallScoreThreshold),
+        ltmRecallDocumentCount: String(settingsQuery.data.ltmRecallDocumentCount),
       }
     : null);
 
@@ -308,12 +300,8 @@ function SettingsGeneralRoute() {
                   Number(runtimeSettings.checkpointedOmObservationSupportTokens),
                 checkpointedOmReflectionSupportTokens:
                   Number(runtimeSettings.checkpointedOmReflectionSupportTokens),
-                ltmRecallSearchMode: runtimeSettings.ltmRecallSearchMode,
-                ltmRecallWorkspaceTopK: Number(runtimeSettings.ltmRecallWorkspaceTopK),
-                ltmRecallGraphTopK: Number(runtimeSettings.ltmRecallGraphTopK),
-                ltmRecallGraphThreshold: Number(runtimeSettings.ltmRecallGraphThreshold),
-                ltmRecallGraphRandomWalkSteps: Number(runtimeSettings.ltmRecallGraphRandomWalkSteps),
-                ltmRecallGraphIncludeSources: runtimeSettings.ltmRecallGraphIncludeSources,
+                ltmRecallScoreThreshold: Number(runtimeSettings.ltmRecallScoreThreshold),
+                ltmRecallDocumentCount: Number(runtimeSettings.ltmRecallDocumentCount),
               });
             }}
           >
@@ -503,109 +491,38 @@ function SettingsGeneralRoute() {
                 />
               </RuntimeSettingField>
               <RuntimeSettingField
-                label="LTM recall search mode"
-                description="Modo usado no search da workspace antes do graph. O teste manual da LTM usa exatamente esse mesmo valor."
-                tooltip="Esse é o mesmo searchMode do retriever automático."
-              >
-                <select
-                  className="h-10 rounded-xl border border-border/80 bg-background/70 px-3 text-sm text-foreground outline-none"
-                  value={runtimeSettings.ltmRecallSearchMode}
-                  onChange={(event) =>
-                    setRuntimeDraft({
-                      ...runtimeSettings,
-                      ltmRecallSearchMode: event.target.value as 'hybrid' | 'vector' | 'bm25',
-                    })
-                  }
-                  disabled={settingsMutation.isPending}
-                >
-                  <option value="hybrid">hybrid</option>
-                  <option value="vector">vector</option>
-                  <option value="bm25">bm25</option>
-                </select>
-              </RuntimeSettingField>
-              <RuntimeSettingField
-                label="LTM recall workspace topK"
-                description="Quantidade de resultados trazidos do workspace search para compor o recall."
-                tooltip="Esse valor é usado tanto no recall automático quanto no teste manual."
-              >
-                <AdminInput
-                  type="number"
-                  value={runtimeSettings.ltmRecallWorkspaceTopK}
-                  onChange={(event) =>
-                    setRuntimeDraft({
-                      ...runtimeSettings,
-                      ltmRecallWorkspaceTopK: event.target.value,
-                    })
-                  }
-                  disabled={settingsMutation.isPending}
-                />
-              </RuntimeSettingField>
-              <RuntimeSettingField
-                label="LTM recall graph topK"
-                description="Quantidade de sources pedidas ao GraphRAG."
-                tooltip="Controla o topK do graph no mesmo fluxo do retriever automático."
-              >
-                <AdminInput
-                  type="number"
-                  value={runtimeSettings.ltmRecallGraphTopK}
-                  onChange={(event) =>
-                    setRuntimeDraft({
-                      ...runtimeSettings,
-                      ltmRecallGraphTopK: event.target.value,
-                    })
-                  }
-                  disabled={settingsMutation.isPending}
-                />
-              </RuntimeSettingField>
-              <RuntimeSettingField
-                label="LTM recall graph threshold"
-                description="Threshold do GraphRAG para conectar/considerar relações no índice."
-                tooltip="Quanto maior, mais estrito; quanto menor, mais amplo."
+                label="LTM recall score threshold"
+                description="Threshold único usado para decidir o hit do graph e para filtrar o fallback do workspace."
+                tooltip="O retriever tenta graph primeiro. Se o graph não trouxer contexto, o fallback usa esse threshold para filtrar os hits do workspace."
               >
                 <AdminInput
                   type="number"
                   step="0.05"
-                  value={runtimeSettings.ltmRecallGraphThreshold}
+                  value={runtimeSettings.ltmRecallScoreThreshold}
                   onChange={(event) =>
                     setRuntimeDraft({
                       ...runtimeSettings,
-                      ltmRecallGraphThreshold: event.target.value,
+                      ltmRecallScoreThreshold: event.target.value,
                     })
                   }
                   disabled={settingsMutation.isPending}
                 />
               </RuntimeSettingField>
               <RuntimeSettingField
-                label="LTM recall random walk steps"
-                description="Número de passos usados pelo GraphRAG no random walk."
-                tooltip="Valor maior tende a explorar mais relações, mas custa mais."
+                label="LTM recall document count"
+                description="Quantidade máxima de documentos usada no fallback do workspace e no topK do graph."
+                tooltip="Search mode fica fixo em hybrid, random walk do graph fica fixo em 100 e includeSources sai da configuração."
               >
                 <AdminInput
                   type="number"
-                  value={runtimeSettings.ltmRecallGraphRandomWalkSteps}
+                  value={runtimeSettings.ltmRecallDocumentCount}
                   onChange={(event) =>
                     setRuntimeDraft({
                       ...runtimeSettings,
-                      ltmRecallGraphRandomWalkSteps: event.target.value,
+                      ltmRecallDocumentCount: event.target.value,
                     })
                   }
                   disabled={settingsMutation.isPending}
-                />
-              </RuntimeSettingField>
-              <RuntimeSettingField
-                label="LTM recall include sources"
-                description="Mantém os sources completos do GraphRAG no retorno e no debug."
-                tooltip="Deixe ligado para inspecionar o retorno cru do graph."
-              >
-                <Switch
-                  checked={runtimeSettings.ltmRecallGraphIncludeSources}
-                  disabled={settingsMutation.isPending}
-                  onCheckedChange={(checked) =>
-                    setRuntimeDraft({
-                      ...runtimeSettings,
-                      ltmRecallGraphIncludeSources: checked,
-                    })
-                  }
                 />
               </RuntimeSettingField>
             </div>

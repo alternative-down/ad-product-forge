@@ -135,6 +135,8 @@ export const systemSettings = sqliteTable('system_settings', {
   ltmRecallGraphThreshold: real('ltm_recall_graph_threshold').notNull().default(0.7),
   ltmRecallGraphRandomWalkSteps: integer('ltm_recall_graph_random_walk_steps').notNull().default(50),
   ltmRecallGraphIncludeSources: integer('ltm_recall_graph_include_sources').notNull().default(1),
+  ltmRecallScoreThreshold: real('ltm_recall_score_threshold').notNull().default(0.7),
+  ltmRecallDocumentCount: integer('ltm_recall_document_count').notNull().default(3),
   updatedAt: integer('updated_at').notNull(),
 });
 
