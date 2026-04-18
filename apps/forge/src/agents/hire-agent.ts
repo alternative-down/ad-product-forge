@@ -21,6 +21,7 @@ import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { loadAgent } from './agent-loader';
 import type { InternalChatService } from '../communication/internal-chat-service';
+import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -77,7 +78,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     executionState: 'idle',
     workspaceAutoSync: 1,
     workspaceBm25: 1,
-    workspaceEmbedder: 'fastembed',
+    workspaceEmbedder: DEFAULT_WORKSPACE_EMBEDDER,
     workspaceFilesystem: input.workspaceFilesystem ?? null,
     workspaceSandbox: input.workspaceSandbox ?? null,
     createdAt: now,

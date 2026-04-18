@@ -84,6 +84,7 @@ export async function createInternalAgentRuntime<
         pricingModelKey: omPricingModelKey,
         modelProfileId: config.omModelProfileId,
         contractStore: options.contractStore,
+        workspaceEmbedder: config.workspaceEmbedder,
       })
     : null;
 
@@ -109,6 +110,7 @@ export async function createInternalAgentRuntime<
       config.checkpointedOmObservationReflectionBatchTokens,
     checkpointedOmObservationSupportTokens: config.checkpointedOmObservationSupportTokens,
     checkpointedOmReflectionSupportTokens: config.checkpointedOmReflectionSupportTokens,
+    workspaceEmbedder: config.workspaceEmbedder,
     agentSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
   });

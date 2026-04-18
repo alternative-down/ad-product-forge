@@ -14,6 +14,7 @@
 import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
+import type { WorkspaceEmbedderId } from '@mastra-engine/core';
 
 const _WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
@@ -52,7 +53,7 @@ export const agents = sqliteTable('agents', {
   // Workspace configuration
   workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1), // boolean as 0/1
   workspaceBm25: integer('workspace_bm25').notNull().default(1), // boolean as 0/1
-  workspaceEmbedder: text('workspace_embedder').notNull().default('fastembed'),
+  workspaceEmbedder: text('workspace_embedder').$type<WorkspaceEmbedderId>().notNull().default('transformers-multilingual-e5-small-cpu'),
   workspaceFilesystem: text('workspace_filesystem', { mode: 'json' }).$type<WorkspaceFilesystemConfig>(),
   workspaceSandbox: text('workspace_sandbox', { mode: 'json' }).$type<WorkspaceSandboxConfig>(),
   workspaceSkills: text('workspace_skills', { mode: 'json' }).$type<WorkspaceSkillsConfig>(),

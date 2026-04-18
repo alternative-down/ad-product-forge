@@ -10,6 +10,7 @@
     "typecheck": "npm run -w @mastra-engine/core build && tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "init-registry": "tsx src/scripts/init-agent-registry.ts",
+    "reset-embedder-indexes": "tsx src/scripts/reset-agent-embedder-indexes.ts",
     "fund-cash": "tsx src/scripts/fund-company-cash.ts",
     "top-up-contract": "tsx src/scripts/top-up-agent-contract.ts"
   },

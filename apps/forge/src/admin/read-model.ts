@@ -7,6 +7,7 @@ import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import type { MastraDBMessage } from '@mastra/core/agent';
 import {
   createAgentMemory,
+  resolveWorkspaceEmbedderId,
   toMastraSafeIdentifier,
   type CommunicationMessageView,
   type CommunicationProviderMessage,
@@ -914,6 +915,7 @@ export function createAdminReadModel(input: {
     const memory = createAgentMemory({
       storage,
       vector,
+      embedder: resolveWorkspaceEmbedderId(agent.workspaceEmbedder),
     });
     const agentWorkspaceRoot = path.resolve(input.workspaceBasePath, agentId);
     const agentWorkspaceDir = agent.workspaceFilesystem?.basePath

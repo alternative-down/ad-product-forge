@@ -3,6 +3,7 @@ import {
   createCheckpointedObservationalMemoryProcessor,
   type CheckpointedOmCheckpointPackageInput,
   sanitizeWorkingMemory,
+  type WorkspaceEmbedderId,
 } from '@mastra-engine/core';
 import { TokenLimiterProcessor } from '@mastra/core/processors';
 import type {
@@ -35,12 +36,14 @@ export async function createAgentRuntimeMemory(input: {
   checkpointedOmObservationReflectionBatchTokens?: number;
   checkpointedOmObservationSupportTokens?: number;
   checkpointedOmReflectionSupportTokens?: number;
+  workspaceEmbedder?: WorkspaceEmbedderId;
   agentSystemPrompt?: string;
   onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
 }) {
   const memory = createAgentMemory({
     storage: input.storage,
     vector: input.vector,
+    embedder: input.workspaceEmbedder,
     lastMessages: input.memoryLastMessagesFullEnabled ? undefined : input.memoryLastMessagesCount,
   });
   await sanitizeWorkingMemory({
@@ -55,6 +58,7 @@ export async function createAgentRuntimeMemory(input: {
         agentId: input.agentId,
         agentWorkspacePath: input.agentWorkspacePath,
         agentMemoryPath: input.agentMemoryPath,
+        workspaceEmbedder: input.workspaceEmbedder,
         mastraId: input.mastraId,
         storage: input.storage,
       })
