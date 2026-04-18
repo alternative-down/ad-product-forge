@@ -64,7 +64,12 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   }>;
   graphHit: boolean;
   graphQuery: string;
+  graphDimension: number;
+  graphIncludeSources: boolean;
   graphContext: string;
+  graphRelevantContextRaw: string | null;
+  graphSourcesCount: number;
+  graphSourcesJson: string | null;
   graphRawJson: string | null;
   graphError: string | null;
   injectedSystemMessage: string | null;
@@ -364,7 +369,12 @@ export class AgentLongTermMemoryRecall {
         vectorResults: [],
         graphHit: false,
         graphQuery: '',
+        graphDimension: 0,
+        graphIncludeSources: true,
         graphContext: '',
+        graphRelevantContextRaw: null,
+        graphSourcesCount: 0,
+        graphSourcesJson: null,
         graphRawJson: null,
         graphError: null,
         injectedSystemMessage: null,
@@ -423,7 +433,12 @@ export class AgentLongTermMemoryRecall {
       })),
       graphHit: Boolean(graphSearch.context),
       graphQuery: graphSearch.queryText,
+      graphDimension: graphSearch.dimension,
+      graphIncludeSources: graphSearch.includeSources,
       graphContext: graphSearch.context,
+      graphRelevantContextRaw: graphSearch.relevantContextRaw,
+      graphSourcesCount: graphSearch.sourcesCount,
+      graphSourcesJson: graphSearch.sourcesJson,
       graphRawJson: graphSearch.rawJson,
       graphError: graphSearch.error,
       injectedSystemMessage: buildRecallSystemMessage(workspaceFormattedContext, graphSearch.context),
@@ -532,7 +547,12 @@ export class AgentLongTermMemoryRecall {
     },
   ): Promise<{
     queryText: string;
+    dimension: number;
+    includeSources: boolean;
     context: string;
+    relevantContextRaw: string | null;
+    sourcesCount: number;
+    sourcesJson: string | null;
     rawJson: string | null;
     error: string | null;
   }> {
@@ -541,13 +561,17 @@ export class AgentLongTermMemoryRecall {
       .filter(Boolean)
       .join('\n');
     const graphQueryText = workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText;
+    const graphDimension = await this.getGraphDimension();
+    const includeSources = true;
 
     try {
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
         indexName: this.searchIndexName,
         model: getWorkspaceEmbedderProvider(this.workspaceEmbedder),
+        includeSources,
         graphOptions: {
+          dimension: graphDimension,
           threshold: options.threshold,
           randomWalkSteps: options.randomWalkSteps,
         },
@@ -565,28 +589,51 @@ export class AgentLongTermMemoryRecall {
         'ltm graph search timed out',
       );
 
-      const relevantContext = Array.isArray(graphResult?.relevantContext)
-        ? graphResult.relevantContext
-          .filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0)
-          .join('\n\n')
-        : typeof graphResult?.relevantContext === 'string'
-          ? graphResult.relevantContext
-          : '';
+      const relevantContextRaw = this.readGraphRelevantContext(graphResult);
+      const sources = this.readGraphSources(graphResult);
+      const context = relevantContextRaw?.trim()
+        || sources
+          .map((source) => this.readGraphSourceDocument(source))
+          .filter(Boolean)
+          .join('\n\n');
 
       return {
         queryText: graphQueryText,
-        context: relevantContext.trim(),
+        dimension: graphDimension,
+        includeSources,
+        context: context.trim(),
+        relevantContextRaw,
+        sourcesCount: sources.length,
+        sourcesJson: safeSerializeGraphResult(sources),
         rawJson: safeSerializeGraphResult(graphResult),
         error: null,
       };
     } catch (error) {
       return {
         queryText: graphQueryText,
+        dimension: graphDimension,
+        includeSources,
         context: '',
+        relevantContextRaw: null,
+        sourcesCount: 0,
+        sourcesJson: null,
         rawJson: null,
         error: error instanceof Error ? error.message : String(error),
       };
     }
+  }
+
+  private async getGraphDimension() {
+    const indexStats = await this.vectorStore.describeIndex({
+      indexName: this.searchIndexName,
+    }).catch(() => null);
+
+    if (indexStats?.dimension) {
+      return indexStats.dimension;
+    }
+
+    const sampleEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, 'memory-bootstrap');
+    return sampleEmbedding.length;
   }
 
   private async getWorkspaceIndexState() {
@@ -687,6 +734,45 @@ export class AgentLongTermMemoryRecall {
       })
       .filter(Boolean)
       .join('\n');
+  }
+
+  private readGraphRelevantContext(result: unknown) {
+    if (!result || typeof result !== 'object') {
+      return null;
+    }
+
+    const relevantContext = (result as Record<string, unknown>).relevantContext;
+
+    if (typeof relevantContext === 'string') {
+      return relevantContext;
+    }
+
+    if (Array.isArray(relevantContext)) {
+      return relevantContext
+        .map((value) => typeof value === 'string' ? value : '')
+        .filter(Boolean)
+        .join('\n\n');
+    }
+
+    return null;
+  }
+
+  private readGraphSources(result: unknown) {
+    if (!result || typeof result !== 'object') {
+      return [];
+    }
+
+    const sources = (result as Record<string, unknown>).sources;
+    return Array.isArray(sources) ? sources : [];
+  }
+
+  private readGraphSourceDocument(source: unknown) {
+    if (!source || typeof source !== 'object') {
+      return '';
+    }
+
+    const document = (source as Record<string, unknown>).document;
+    return typeof document === 'string' ? document.trim() : '';
   }
 
   private buildRecallQueryFromStep(step: unknown) {
