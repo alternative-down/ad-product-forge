@@ -137,6 +137,45 @@ function isMemoryRecallText(value: string) {
   return /^\s*<memory-recall\b[\s\S]*<\/memory-recall>\s*$/u.test(value);
 }
 
+function splitMemoryRecallSegments(value: string) {
+  const segments: Array<{
+    kind: 'text' | 'memory-recall';
+    value: string;
+  }> = [];
+  const pattern = /<memory-recall\b[\s\S]*?<\/memory-recall>/gu;
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(pattern)) {
+    const matchStart = match.index ?? 0;
+    const matchText = match[0];
+    const before = value.slice(lastIndex, matchStart).trim();
+
+    if (before) {
+      segments.push({
+        kind: 'text',
+        value: before,
+      });
+    }
+
+    segments.push({
+      kind: 'memory-recall',
+      value: matchText.trim(),
+    });
+    lastIndex = matchStart + matchText.length;
+  }
+
+  const after = value.slice(lastIndex).trim();
+
+  if (after) {
+    segments.push({
+      kind: 'text',
+      value: after,
+    });
+  }
+
+  return segments;
+}
+
 function extractLatestMessagePreview(content: unknown) {
   if (!content || typeof content !== 'object') {
     return null;
@@ -160,7 +199,11 @@ function extractLatestMessagePreview(content: unknown) {
       'text' in part &&
       typeof part.text === 'string'
     ) {
-      const text = part.text.trim();
+      const text = splitMemoryRecallSegments(part.text)
+        .filter((segment) => segment.kind === 'text')
+        .map((segment) => segment.value)
+        .join('\n')
+        .trim();
 
       if (text && !isMemoryRecallText(text)) {
         return truncatePreview(text);
@@ -168,8 +211,16 @@ function extractLatestMessagePreview(content: unknown) {
     }
   }
 
-  if (typeof record.content === 'string' && record.content.trim() && !isMemoryRecallText(record.content.trim())) {
-    return truncatePreview(record.content.trim());
+  if (typeof record.content === 'string' && record.content.trim()) {
+    const text = splitMemoryRecallSegments(record.content)
+      .filter((segment) => segment.kind === 'text')
+      .map((segment) => segment.value)
+      .join('\n')
+      .trim();
+
+    if (text && !isMemoryRecallText(text)) {
+      return truncatePreview(text);
+    }
   }
 
   if (typeof record.reasoning === 'string' && record.reasoning.trim()) {
@@ -197,12 +248,15 @@ function extractLatestMessageToolBadge(content: unknown) {
       continue;
     }
 
-    if (isMemoryRecallText(part.text.trim())) {
+    if (splitMemoryRecallSegments(part.text).some((segment) => segment.kind === 'memory-recall')) {
       return { icon: '🧠', label: 'Recall' };
     }
   }
 
-  if (typeof record.content === 'string' && isMemoryRecallText(record.content.trim())) {
+  if (
+    typeof record.content === 'string'
+    && splitMemoryRecallSegments(record.content).some((segment) => segment.kind === 'memory-recall')
+  ) {
     return { icon: '🧠', label: 'Recall' };
   }
 

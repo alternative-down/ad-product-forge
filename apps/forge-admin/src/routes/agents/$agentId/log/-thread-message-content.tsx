@@ -34,17 +34,10 @@ function ThreadMessageContent(input: {
   return (
     <div className="min-w-0 space-y-3 overflow-hidden">
       {!hasVisibleTextPart && typeof content.content === 'string' && content.content.trim() ? (
-        isMemoryRecallText(content.content.trim()) ? (
-          <ThreadDisclosure
-            summary="Memory Recall"
-            label="Memory Recall · content.content"
-            value={content.content.trim()}
-          />
-        ) : (
-          <ThreadSection label="Response text · content.content">
-            {content.content.trim()}
-          </ThreadSection>
-        )
+        <ThreadTextSegments
+          label="content.content"
+          value={content.content.trim()}
+        />
       ) : null}
 
       {visibleParts.map((part, index) => (
@@ -89,20 +82,11 @@ function ThreadPart(input: {
       return null;
     }
 
-    if (isMemoryRecallText(text)) {
-      return (
-        <ThreadDisclosure
-          summary="Memory Recall"
-          label="Memory Recall · content.parts.text"
-          value={text}
-        />
-      );
-    }
-
     return (
-      <ThreadSection label="Response text · content.parts.text">
-        {text}
-      </ThreadSection>
+      <ThreadTextSegments
+        label="content.parts.text"
+        value={text}
+      />
     );
   }
 
@@ -188,6 +172,92 @@ function ThreadSection(input: {
 
 function isMemoryRecallText(value: string) {
   return /^\s*<memory-recall\b[\s\S]*<\/memory-recall>\s*$/u.test(value);
+}
+
+function splitMemoryRecallSegments(value: string) {
+  const segments: Array<{
+    kind: 'text' | 'memory-recall';
+    value: string;
+  }> = [];
+  const pattern = /<memory-recall\b[\s\S]*?<\/memory-recall>/gu;
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(pattern)) {
+    const matchStart = match.index ?? 0;
+    const matchText = match[0];
+    const before = value.slice(lastIndex, matchStart).trim();
+
+    if (before) {
+      segments.push({
+        kind: 'text',
+        value: before,
+      });
+    }
+
+    segments.push({
+      kind: 'memory-recall',
+      value: matchText.trim(),
+    });
+    lastIndex = matchStart + matchText.length;
+  }
+
+  const after = value.slice(lastIndex).trim();
+
+  if (after) {
+    segments.push({
+      kind: 'text',
+      value: after,
+    });
+  }
+
+  return segments;
+}
+
+function ThreadTextSegments(input: {
+  label: string;
+  value: string;
+}) {
+  const segments = splitMemoryRecallSegments(input.value);
+
+  if (segments.length === 0) {
+    return isMemoryRecallText(input.value)
+      ? (
+        <ThreadDisclosure
+          summary="Memory Recall"
+          label={`Memory Recall · ${input.label}`}
+          value={input.value}
+        />
+      )
+      : (
+        <ThreadSection label={`Response text · ${input.label}`}>
+          {input.value}
+        </ThreadSection>
+      );
+  }
+
+  return (
+    <div className="min-w-0 space-y-3 overflow-hidden">
+      {segments.map((segment, index) => (
+        segment.kind === 'memory-recall'
+          ? (
+            <ThreadDisclosure
+              key={`${input.label}:memory-recall:${index}`}
+              summary="Memory Recall"
+              label={`Memory Recall · ${input.label}`}
+              value={segment.value}
+            />
+          )
+          : (
+            <ThreadSection
+              key={`${input.label}:text:${index}`}
+              label={`Response text · ${input.label}`}
+            >
+              {segment.value}
+            </ThreadSection>
+          )
+      ))}
+    </div>
+  );
 }
 
 function ThreadDisclosure(input: {
