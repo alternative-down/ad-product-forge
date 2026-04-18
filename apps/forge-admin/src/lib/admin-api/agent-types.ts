@@ -323,7 +323,12 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   }>;
   graphHit: boolean;
   graphQuery: string;
+  graphDimension: number;
+  graphIncludeSources: boolean;
   graphContext: string;
+  graphRelevantContextRaw: string | null;
+  graphSourcesCount: number;
+  graphSourcesJson: string | null;
   graphRawJson: string | null;
   graphError: string | null;
   injectedSystemMessage: string | null;

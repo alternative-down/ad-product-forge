@@ -368,8 +368,8 @@ function RecallSearchResultSection(input: {
         />
         <MetricTile
           label="Graph"
-          current={input.result.graphHit ? 1 : 0}
-          unit={input.result.graphHit ? 'hit' : 'miss'}
+          current={input.result.graphSourcesCount}
+          unit="sources"
           detail={`topK ${formatNumber(input.result.graphTopK)} • threshold ${input.result.graphThreshold}`}
         />
       </div>
@@ -407,6 +407,15 @@ function RecallSearchResultSection(input: {
       <MemoryDisclosure
         title="Graph query"
         value={input.result.graphQuery || null}
+      />
+      <MemoryDisclosure
+        title="Graph config"
+        value={[
+          `dimension: ${formatNumber(input.result.graphDimension)}`,
+          `includeSources: ${input.result.graphIncludeSources ? 'yes' : 'no'}`,
+          `hit: ${input.result.graphHit ? 'yes' : 'no'}`,
+          `sourcesCount: ${formatNumber(input.result.graphSourcesCount)}`,
+        ].join('\n')}
       />
 
       {input.result.workspaceResults.length > 0 ? (
@@ -460,6 +469,14 @@ function RecallSearchResultSection(input: {
       <MemoryDisclosure
         title="Graph context"
         value={input.result.graphContext || null}
+      />
+      <MemoryDisclosure
+        title="Graph relevantContext"
+        value={input.result.graphRelevantContextRaw}
+      />
+      <MemoryDisclosure
+        title="Graph sources JSON"
+        value={input.result.graphSourcesJson}
       />
       <MemoryDisclosure
         title="Graph raw JSON"
