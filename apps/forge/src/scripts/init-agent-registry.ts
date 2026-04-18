@@ -11,6 +11,7 @@ import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import type { WorkspaceEmbedderId } from '@mastra-engine/core';
+import { DEFAULT_WORKSPACE_EMBEDDER } from '../agents/agent-embedder-maintenance';
 
 /**
  * Agent configuration - hardcoded once, then managed via database
@@ -68,7 +69,7 @@ async function initAgentRegistry() {
         instructions: systemPrompt,
         workspaceAutoSync: 1,
         workspaceBm25: 1,
-        workspaceEmbedder: 'fastembed',
+        workspaceEmbedder: DEFAULT_WORKSPACE_EMBEDDER,
         workspaceFilesystem: null,
         workspaceSandbox: null,
       },
@@ -87,7 +88,7 @@ async function initAgentRegistry() {
         ].join('\n\n'),
         workspaceAutoSync: 1,
         workspaceBm25: 1,
-        workspaceEmbedder: 'fastembed',
+        workspaceEmbedder: DEFAULT_WORKSPACE_EMBEDDER,
         workspaceFilesystem: null,
         workspaceSandbox: null,
       },

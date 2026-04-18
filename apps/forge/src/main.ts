@@ -19,6 +19,7 @@ import { registerAdminRoutes } from './admin/routes';
 import { createSystemIntegrationStore } from './system-integrations/store';
 import { createInternalChatService } from './communication/internal-chat-service';
 import { createAgentContractStore } from './agents/agent-contract-store';
+import { prepareAgentEmbeddersForStartup } from './agents/agent-embedder-maintenance';
 
 const envSchema = z.object({
   FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
@@ -35,6 +36,10 @@ export async function main() {
   // Load database and agents from registry
   const db = getDatabase();
   await runMigrations(db);
+  await prepareAgentEmbeddersForStartup({
+    db,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+  });
   const registry = getInternalAgentRegistry();
   const httpServer = createForgeHttpServer({
     port: env.FORGE_HTTP_PORT,
