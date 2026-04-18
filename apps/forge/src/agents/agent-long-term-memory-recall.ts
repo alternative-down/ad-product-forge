@@ -64,9 +64,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
 
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
 const RECALL_AUTO_INDEX_PATHS = [
-  'workspace-memory',
-  'workspace-memory/memory',
-  'workspace-memory/checkpoints',
+  '.',
 ] as const;
 const RECALL_SEARCH_TOP_K = 3;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
@@ -161,6 +159,7 @@ export class AgentLongTermMemoryRecall {
   constructor(input: {
     agentId: string;
     agentWorkspacePath: string;
+    agentMemoryPath: string;
     mastraId: string;
     storage: LibSQLStore;
     model?: AgentConfig['model'];
@@ -185,7 +184,8 @@ export class AgentLongTermMemoryRecall {
       autoIndexPaths: [...RECALL_AUTO_INDEX_PATHS],
       embedder: embedTextWithFastembed,
       filesystem: new LocalFilesystem({
-        basePath: input.agentWorkspacePath,
+        basePath: input.agentMemoryPath,
+        allowedPaths: [path.resolve(input.agentWorkspacePath, 'workspace', 'skills')],
       }),
       vectorStore: this.vectorStore,
       searchIndexName: this.searchIndexName,
@@ -740,6 +740,7 @@ function safeSerializeRecallSteps(steps: unknown[]) {
 export function createAgentLongTermMemoryRecall(input: {
   agentId: string;
   agentWorkspacePath: string;
+  agentMemoryPath: string;
   mastraId: string;
   storage: LibSQLStore;
   model?: AgentConfig['model'];
