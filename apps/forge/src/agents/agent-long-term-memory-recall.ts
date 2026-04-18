@@ -34,15 +34,29 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   graphThreshold: number;
   graphRandomWalkSteps: number;
   lastInitAt: string | null;
-  indexPaths: string[];
-  workspaceFileCount: number;
-  memoryFileCount: number;
-  checkpointFileCount: number;
+  workspaceCanBm25: boolean;
+  workspaceCanVector: boolean;
+  workspaceCanHybrid: boolean;
+  availableIndexes: string[];
+  activeIndexName: string;
+  activeIndexStats: {
+    dimension: number;
+    count: number;
+    metric: string | null;
+  } | null;
+  queryEmbedding: number[];
+  queryEmbeddingDimension: number;
   workspaceResults: Array<{
     id: string;
     content: string;
     score: number | null;
     relativePercent: number | null;
+  }>;
+  vectorResults: Array<{
+    id: string;
+    score: number;
+    metadataJson: string | null;
+    document: string | null;
   }>;
   graphHit: boolean;
   graphContext: string;
@@ -158,7 +172,6 @@ export class AgentLongTermMemoryRecall {
     }
 
     const vectorStorePath = path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`);
-
     this.agentWorkspacePath = input.agentWorkspacePath;
     this.vectorStore = new LibSQLVector({
       id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
@@ -313,7 +326,7 @@ export class AgentLongTermMemoryRecall {
 
   async debugSearch(input: AgentLongTermMemoryRecallDebugSearchInput) {
     await this.refreshWorkspaceIndex();
-    const indexStats = await this.getIndexStats();
+    const indexState = await this.getWorkspaceIndexState();
     const query = input.query.trim();
 
     if (!query) {
@@ -325,20 +338,27 @@ export class AgentLongTermMemoryRecall {
         graphThreshold: input.graphThreshold,
         graphRandomWalkSteps: input.graphRandomWalkSteps,
         lastInitAt: this.lastInitAt,
-        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-        workspaceFileCount: indexStats.workspaceFileCount,
-        memoryFileCount: indexStats.memoryFileCount,
-        checkpointFileCount: indexStats.checkpointFileCount,
+        workspaceCanBm25: indexState.workspaceCanBm25,
+        workspaceCanVector: indexState.workspaceCanVector,
+        workspaceCanHybrid: indexState.workspaceCanHybrid,
+        availableIndexes: indexState.availableIndexes,
+        activeIndexName: this.searchIndexName,
+        activeIndexStats: indexState.activeIndexStats,
+        queryEmbedding: [],
+        queryEmbeddingDimension: 0,
         workspaceResults: [],
+        vectorResults: [],
         graphHit: false,
         graphContext: '',
       } satisfies AgentLongTermMemoryRecallDebugSearchResult;
     }
 
+    const queryEmbedding = await embedTextWithFastembed(query);
     const { results } = await this.searchWorkspace(query, {
       topK: input.topK,
       mode: input.searchMode,
     });
+    const vectorResults = await this.queryVectorIndex(queryEmbedding, input.topK);
     const graphContext = await this.searchGraph(query, results, {
       topK: input.graphTopK,
       threshold: input.graphThreshold,
@@ -357,10 +377,14 @@ export class AgentLongTermMemoryRecall {
       graphThreshold: input.graphThreshold,
       graphRandomWalkSteps: input.graphRandomWalkSteps,
       lastInitAt: this.lastInitAt,
-      indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-      workspaceFileCount: indexStats.workspaceFileCount,
-      memoryFileCount: indexStats.memoryFileCount,
-      checkpointFileCount: indexStats.checkpointFileCount,
+      workspaceCanBm25: indexState.workspaceCanBm25,
+      workspaceCanVector: indexState.workspaceCanVector,
+      workspaceCanHybrid: indexState.workspaceCanHybrid,
+      availableIndexes: indexState.availableIndexes,
+      activeIndexName: this.searchIndexName,
+      activeIndexStats: indexState.activeIndexStats,
+      queryEmbedding,
+      queryEmbeddingDimension: queryEmbedding.length,
       workspaceResults: results.map((result) => ({
         id: result.id,
         content: result.content,
@@ -371,6 +395,12 @@ export class AgentLongTermMemoryRecall {
         )
           ? (result.score / highestScore) * 100
           : null,
+      })),
+      vectorResults: vectorResults.map((result) => ({
+        id: result.id,
+        score: result.score,
+        metadataJson: result.metadata ? JSON.stringify(result.metadata, null, 2) : null,
+        document: typeof result.document === 'string' ? result.document : null,
       })),
       graphHit: Boolean(graphContext),
       graphContext,
@@ -516,6 +546,25 @@ export class AgentLongTermMemoryRecall {
     }
   }
 
+  private async getWorkspaceIndexState() {
+    const availableIndexes = await this.vectorStore.listIndexes().catch(() => []);
+    const activeIndexStats = await this.vectorStore.describeIndex({
+      indexName: this.searchIndexName,
+    }).then((stats) => ({
+      dimension: stats.dimension,
+      count: stats.count,
+      metric: stats.metric ?? null,
+    })).catch(() => null);
+
+    return {
+      workspaceCanBm25: this.workspace.canBM25,
+      workspaceCanVector: this.workspace.canVector,
+      workspaceCanHybrid: this.workspace.canHybrid,
+      availableIndexes,
+      activeIndexStats,
+    };
+  }
+
   private async getIndexStats() {
     const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
       countFiles(this.agentWorkspacePath, '/workspace-memory'),
@@ -528,6 +577,28 @@ export class AgentLongTermMemoryRecall {
       memoryFileCount,
       checkpointFileCount,
     };
+  }
+
+  private async queryVectorIndex(queryVector: number[], topK: number) {
+    try {
+      return await withTimeout(
+        this.vectorStore.query({
+          indexName: this.searchIndexName,
+          queryVector,
+          topK,
+        }),
+        this.recallTimeoutMs,
+        'ltm vector query timed out',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
+        return [];
+      }
+
+      throw error;
+    }
   }
 
   private formatStructuredValue(value: unknown, indentLevel = 0): string {

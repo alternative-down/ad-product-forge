@@ -296,15 +296,29 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   graphThreshold: number;
   graphRandomWalkSteps: number;
   lastInitAt: number | null;
-  indexPaths: string[];
-  workspaceFileCount: number;
-  memoryFileCount: number;
-  checkpointFileCount: number;
+  workspaceCanBm25: boolean;
+  workspaceCanVector: boolean;
+  workspaceCanHybrid: boolean;
+  availableIndexes: string[];
+  activeIndexName: string;
+  activeIndexStats: {
+    dimension: number;
+    count: number;
+    metric: string | null;
+  } | null;
+  queryEmbedding: number[];
+  queryEmbeddingDimension: number;
   workspaceResults: Array<{
     id: string;
     content: string;
     score: number | null;
     relativePercent: number | null;
+  }>;
+  vectorResults: Array<{
+    id: string;
+    score: number;
+    metadataJson: string | null;
+    document: string | null;
   }>;
   graphHit: boolean;
   graphContext: string;

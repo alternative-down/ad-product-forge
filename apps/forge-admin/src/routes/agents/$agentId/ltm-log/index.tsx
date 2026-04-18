@@ -347,10 +347,12 @@ function RecallSearchResultSection(input: {
     <div className="space-y-3 rounded-2xl border border-border/80 bg-background/60 p-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile
-          label="Workspace files"
-          current={input.result.workspaceFileCount}
-          unit="arquivos"
-          detail={`memory ${formatNumber(input.result.memoryFileCount)} • checkpoints ${formatNumber(input.result.checkpointFileCount)}`}
+          label="Index ativo"
+          current={input.result.activeIndexStats?.count ?? 0}
+          unit="vetores"
+          detail={input.result.activeIndexStats
+            ? `dim ${formatNumber(input.result.activeIndexStats.dimension)} • ${input.result.activeIndexStats.metric ?? '—'}`
+            : 'índice não encontrado'}
         />
         <MetricTile
           label="Workspace hits"
@@ -359,16 +361,16 @@ function RecallSearchResultSection(input: {
           detail={`${input.result.searchMode} • topK ${formatNumber(input.result.topK)}`}
         />
         <MetricTile
+          label="Vector hits"
+          current={input.result.vectorResults.length}
+          unit="resultados"
+          detail={`embed dim ${formatNumber(input.result.queryEmbeddingDimension)}`}
+        />
+        <MetricTile
           label="Graph"
           current={input.result.graphHit ? 1 : 0}
           unit={input.result.graphHit ? 'hit' : 'miss'}
           detail={`topK ${formatNumber(input.result.graphTopK)} • threshold ${input.result.graphThreshold}`}
-        />
-        <MetricTile
-          label="Index init"
-          current={input.result.indexPaths.length}
-          unit="paths"
-          detail={input.result.lastInitAt ? formatDateTime(input.result.lastInitAt) : 'ainda não inicializado'}
         />
       </div>
 
@@ -377,8 +379,22 @@ function RecallSearchResultSection(input: {
         value={input.result.query || '—'}
       />
       <MemoryDisclosure
-        title="Index paths"
-        value={input.result.indexPaths.join('\n') || null}
+        title="Estado do índice"
+        value={[
+          `workspace.canBM25: ${input.result.workspaceCanBm25 ? 'yes' : 'no'}`,
+          `workspace.canVector: ${input.result.workspaceCanVector ? 'yes' : 'no'}`,
+          `workspace.canHybrid: ${input.result.workspaceCanHybrid ? 'yes' : 'no'}`,
+          `activeIndexName: ${input.result.activeIndexName}`,
+          `availableIndexes: ${input.result.availableIndexes.join(', ') || '—'}`,
+          `indexCount: ${input.result.activeIndexStats ? formatNumber(input.result.activeIndexStats.count) : '—'}`,
+          `dimension: ${input.result.activeIndexStats ? formatNumber(input.result.activeIndexStats.dimension) : '—'}`,
+          `metric: ${input.result.activeIndexStats?.metric ?? '—'}`,
+          `lastInitAt: ${input.result.lastInitAt ? formatDateTime(input.result.lastInitAt) : '—'}`,
+        ].join('\n')}
+      />
+      <MemoryDisclosure
+        title="Embedding da query"
+        value={JSON.stringify(input.result.queryEmbedding)}
       />
 
       {input.result.workspaceResults.length > 0 ? (
@@ -404,6 +420,29 @@ function RecallSearchResultSection(input: {
         </div>
       ) : (
         <div className="text-sm text-muted-foreground">Nenhum resultado de workspace.</div>
+      )}
+
+      {input.result.vectorResults.length > 0 ? (
+        <div className="space-y-3">
+          <div className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            Vector index results
+          </div>
+          {input.result.vectorResults.map((result) => (
+            <div
+              key={result.id}
+              className="space-y-2 rounded-2xl border border-border/80 bg-background/70 p-4"
+            >
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{result.id}</span>
+                <span>score: {result.score.toFixed(4)}</span>
+              </div>
+              <MemoryDisclosure title="Metadata" value={result.metadataJson} />
+              <MemoryDisclosure title="Document" value={result.document} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm text-muted-foreground">Nenhum resultado direto do vector index.</div>
       )}
 
       <MemoryDisclosure
