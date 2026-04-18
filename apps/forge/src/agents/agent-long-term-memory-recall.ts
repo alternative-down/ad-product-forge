@@ -984,7 +984,7 @@ function buildRecallSystemMessage(input: {
 
   return [
     `<memory-recall on-datetime="${new Date().toISOString()}">`,
-    `  <instructions>${escapeXml('Now is the datetime in the on-datetime attribute. These recalled items are past information that is no longer in your active context or that your long-term memory consolidated. You may already have seen or resolved them. Use them only as additional relevant context when useful, and prefer more recent context if there is any conflict.')}</instructions>`,
+    `  <instructions>${escapeXml('Now is the datetime in the on-datetime attribute. These recalled items are past information that is no longer in your active context or that your long-term memory consolidated. You may already have seen or resolved them. Use them only as additional relevant context when useful, and prefer more recent context if there is any conflict. If you mention or use this information, do not talk about memory, long-term memory, or recalled context. Use active language such as "I remember that...", "we already saw that...", or "on day X in the morning I did X" when that is appropriate.')}</instructions>`,
     ...items,
     '</memory-recall>',
   ].join('\n');
