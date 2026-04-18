@@ -146,8 +146,8 @@ function withTimeout<T>(
 }
 
 export class AgentLongTermMemoryRecall {
-  private readonly initTimeoutMs = 5_000;
-  private readonly recallTimeoutMs = 8_000;
+  private readonly initTimeoutMs = 5 * 60_000;
+  private readonly recallTimeoutMs = 60_000;
   private readonly workspace: WorkspaceRuntime;
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
