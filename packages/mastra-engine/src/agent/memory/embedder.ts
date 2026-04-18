@@ -100,11 +100,18 @@ async function getTransformersPipeline(
 function createTransformersPipeline(
   embedderId: Exclude<WorkspaceEmbedderId, 'fastembed'>,
 ): Promise<FeatureExtractionPipeline> {
+  return createTransformersPipelineInternal(embedderId);
+}
+
+async function createTransformersPipelineInternal(
+  embedderId: Exclude<WorkspaceEmbedderId, 'fastembed'>,
+): Promise<FeatureExtractionPipeline> {
   if (embedderId === 'transformers-multilingual-e5-small') {
-    return pipeline('feature-extraction', 'Xenova/multilingual-e5-small') as Promise<FeatureExtractionPipeline>;
+    const activePipeline = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small');
+    return activePipeline as unknown as FeatureExtractionPipeline;
   }
 
-  return pipeline('feature-extraction', 'Xenova/multilingual-e5-small', {
+  const activePipeline = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small', {
     device: 'cpu',
     session_options: {
       enableCpuMemArena: true,
@@ -115,5 +122,7 @@ function createTransformersPipeline(
       interOpNumThreads: 1,
       intraOpNumThreads: Math.max(1, Math.floor(cpus().length * 0.8)),
     },
-  }) as Promise<FeatureExtractionPipeline>;
+  });
+
+  return activePipeline as unknown as FeatureExtractionPipeline;
 }
