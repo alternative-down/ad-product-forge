@@ -54,6 +54,7 @@ export async function createAgentRuntimeMemory(input: {
     ? createAgentLongTermMemoryRecall({
         agentId: input.agentId,
         agentWorkspacePath: input.agentWorkspacePath,
+        agentMemoryPath: input.agentMemoryPath,
         mastraId: input.mastraId,
         storage: input.storage,
       })
