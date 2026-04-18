@@ -48,9 +48,9 @@ function HomeIndexRoute() {
             key={agent.agentId}
             to="/agents/$agentId"
             params={{ agentId: agent.agentId }}
-            className="block rounded-sm border border-border bg-background px-5 py-4 transition-colors hover:bg-muted/30"
+            className="block min-w-0 overflow-hidden rounded-sm border border-border bg-background px-5 py-4 transition-colors hover:bg-muted/30"
           >
-            <div className="space-y-4">
+            <div className="min-w-0 space-y-4">
               <div className="flex items-start gap-4">
                 <AgentAvatar
                   agentId={agent.agentId}
@@ -59,15 +59,15 @@ function HomeIndexRoute() {
                   fallbackClassName="bg-muted text-sm font-medium text-foreground"
                 />
                 <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="truncate text-base font-semibold tracking-[-0.03em]">{agent.name}</div>
-                    <Badge variant="outline" className="rounded-sm">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="min-w-0 truncate text-base font-semibold tracking-[-0.03em]">{agent.name}</div>
+                    <Badge variant="outline" className="shrink-0 rounded-sm">
                       {humanizeAgentStatus(agent.executionState)}
                     </Badge>
                   </div>
-                  <div className="text-sm text-muted-foreground">{agent.roleName ?? 'Sem papel'}</div>
+                  <div className="truncate text-sm text-muted-foreground">{agent.roleName ?? 'Sem papel'}</div>
                   {agent.overview.lastStepPreview ? (
-                    <div className="truncate text-xs text-muted-foreground">
+                    <div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
                       {agent.overview.lastStepPreview}
                     </div>
                   ) : null}
