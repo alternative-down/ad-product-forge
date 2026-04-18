@@ -329,12 +329,7 @@ export class AgentLongTermMemoryRecall {
         error: null,
       });
 
-      return [
-        'These are retrieved documents from your maintained long-term memory.',
-        'Treat them as useful background context, but still verify against newer thread context and current workspace state when needed.',
-        '',
-        recallText,
-      ].join('\n');
+      return recallText;
     } catch (error) {
       console.error('[AgentLongTermMemoryRecall] recall failed:', error);
       await this.persistRecallSnapshot({
