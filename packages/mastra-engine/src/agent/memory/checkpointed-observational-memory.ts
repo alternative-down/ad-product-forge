@@ -137,6 +137,14 @@ type CheckpointedObservationalMemoryConfig = {
   observationSupportTokens?: number;
   reflectionSupportTokens?: number;
   onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
+  getRuntimeConfig?: () => Promise<{
+    totalContextTokens?: number;
+    recentRawTokens?: number;
+    rawObservationBatchTokens?: number;
+    observationReflectionBatchTokens?: number;
+    observationSupportTokens?: number;
+    reflectionSupportTokens?: number;
+  }>;
 };
 
 const CUSTOM_OM_TAG_REFLECTIONS = 'custom-om-reflections';
@@ -861,14 +869,15 @@ export class CheckpointedObservationalMemoryProcessor
   private readonly store: MemoryStoreWithObservationalMemory;
   private readonly tokenCounter: TokenCounter;
   private readonly model: AgentConfig['model'];
-  private readonly totalContextTokens: number;
-  private readonly recentRawTokens: number;
-  private readonly rawObservationBatchTokens: number;
-  private readonly observationReflectionBatchTokens: number;
-  private readonly observationSupportTokens: number;
-  private readonly reflectionSupportTokens: number;
+  private totalContextTokens: number;
+  private recentRawTokens: number;
+  private rawObservationBatchTokens: number;
+  private observationReflectionBatchTokens: number;
+  private observationSupportTokens: number;
+  private reflectionSupportTokens: number;
   private readonly agentSystemPrompt?: string;
   private readonly onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
+  private readonly getRuntimeConfig?: CheckpointedObservationalMemoryConfig['getRuntimeConfig'];
 
   constructor(config: CheckpointedObservationalMemoryConfig) {
     if (!hasObservationalMemoryStore(config.storage.stores.memory!)) {
@@ -888,6 +897,7 @@ export class CheckpointedObservationalMemoryProcessor
     this.reflectionSupportTokens = config.reflectionSupportTokens ?? DEFAULT_SUPPORT_TOKENS;
     this.agentSystemPrompt = config.agentSystemPrompt?.trim() || undefined;
     this.onCheckpointAdvanced = config.onCheckpointAdvanced;
+    this.getRuntimeConfig = config.getRuntimeConfig;
   }
 
   private async generateOmText(input: {
@@ -959,6 +969,7 @@ export class CheckpointedObservationalMemoryProcessor
   }
 
   async processInputStep(args: ProcessInputStepArgs) {
+    await this.refreshRuntimeConfig();
     const context = getThreadContext(args.requestContext, args.messageList);
     if (!context) {
       return args.messageList;
@@ -1213,6 +1224,25 @@ export class CheckpointedObservationalMemoryProcessor
     });
 
     return args.messageList;
+  }
+
+  private async refreshRuntimeConfig() {
+    const runtimeConfig = await this.getRuntimeConfig?.();
+
+    if (!runtimeConfig) {
+      return;
+    }
+
+    this.totalContextTokens = runtimeConfig.totalContextTokens ?? this.totalContextTokens;
+    this.recentRawTokens = runtimeConfig.recentRawTokens ?? this.recentRawTokens;
+    this.rawObservationBatchTokens =
+      runtimeConfig.rawObservationBatchTokens ?? this.rawObservationBatchTokens;
+    this.observationReflectionBatchTokens =
+      runtimeConfig.observationReflectionBatchTokens ?? this.observationReflectionBatchTokens;
+    this.observationSupportTokens =
+      runtimeConfig.observationSupportTokens ?? this.observationSupportTokens;
+    this.reflectionSupportTokens =
+      runtimeConfig.reflectionSupportTokens ?? this.reflectionSupportTokens;
   }
 
   private async ensureCurrentRecord(threadId: string, resourceId: string) {

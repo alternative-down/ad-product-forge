@@ -41,6 +41,16 @@ export async function createAgentRuntimeMemory(input: {
   workspaceEmbedder?: WorkspaceEmbedderId;
   agentSystemPrompt?: string;
   onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
+  readRuntimeMemorySettings?: () => Promise<{
+    checkpointedOmTotalContextTokens: number;
+    checkpointedOmRecentRawTokens: number;
+    checkpointedOmRawObservationBatchTokens: number;
+    checkpointedOmObservationReflectionBatchTokens: number;
+    checkpointedOmObservationSupportTokens: number;
+    checkpointedOmReflectionSupportTokens: number;
+    ltmRecallScoreThreshold: number;
+    ltmRecallDocumentCount: number;
+  }>;
 }) {
   const memory = createAgentMemory({
     storage: input.storage,
@@ -65,6 +75,7 @@ export async function createAgentRuntimeMemory(input: {
         storage: input.storage,
         scoreThreshold: input.ltmRecallScoreThreshold,
         documentCount: input.ltmRecallDocumentCount,
+        readRuntimeMemorySettings: input.readRuntimeMemorySettings,
       })
     : null;
 
@@ -81,6 +92,25 @@ export async function createAgentRuntimeMemory(input: {
       reflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
       agentSystemPrompt: input.agentSystemPrompt,
       onCheckpointAdvanced: input.onCheckpointAdvanced,
+      getRuntimeConfig: input.readRuntimeMemorySettings
+        ? async () => {
+          const settings = await input.readRuntimeMemorySettings?.();
+
+          if (!settings) {
+            return {};
+          }
+
+          return {
+            totalContextTokens: settings.checkpointedOmTotalContextTokens,
+            recentRawTokens: settings.checkpointedOmRecentRawTokens,
+            rawObservationBatchTokens: settings.checkpointedOmRawObservationBatchTokens,
+            observationReflectionBatchTokens:
+              settings.checkpointedOmObservationReflectionBatchTokens,
+            observationSupportTokens: settings.checkpointedOmObservationSupportTokens,
+            reflectionSupportTokens: settings.checkpointedOmReflectionSupportTokens,
+          };
+        }
+        : undefined,
     });
 
     inputProcessors.push(checkpointedObservationalMemory);

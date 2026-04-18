@@ -115,6 +115,7 @@ export async function createInternalAgentRuntime<
     workspaceEmbedder: config.workspaceEmbedder,
     agentSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
+    readRuntimeMemorySettings: options.readRuntimeMemorySettings,
   });
 
   const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({

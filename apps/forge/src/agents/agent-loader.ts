@@ -6,6 +6,7 @@ import { loadAgentToolset } from './agent-loader-tools';
 import type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';
 import { buildAgentRuntimeConfig } from './agent-loader-runtime-config';
 import { createAgentContractStore } from './agent-contract-store';
+import { createSystemSettingsStore } from '../system-settings/store';
 
 export type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';
 
@@ -18,6 +19,7 @@ export type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-
  * @throws Error if agent not found in database
  */
 export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
+  const systemSettings = createSystemSettingsStore(db);
   const runtimeData = await loadAgentRuntimeData(db, config);
   const allowedToolIds = new Set(runtimeData.capabilitySet.toolIds);
 
@@ -47,6 +49,21 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const runtime = await createInternalAgentRuntime(buildAgentRuntimeConfig(config, runtimeData, toolset), {
     longTermMemory: true,
     contractStore: createAgentContractStore(db),
+    readRuntimeMemorySettings: async () => {
+      const settings = await systemSettings.getSettings();
+
+      return {
+        checkpointedOmTotalContextTokens: settings.checkpointedOmTotalContextTokens,
+        checkpointedOmRecentRawTokens: settings.checkpointedOmRecentRawTokens,
+        checkpointedOmRawObservationBatchTokens: settings.checkpointedOmRawObservationBatchTokens,
+        checkpointedOmObservationReflectionBatchTokens:
+          settings.checkpointedOmObservationReflectionBatchTokens,
+        checkpointedOmObservationSupportTokens: settings.checkpointedOmObservationSupportTokens,
+        checkpointedOmReflectionSupportTokens: settings.checkpointedOmReflectionSupportTokens,
+        ltmRecallScoreThreshold: settings.ltmRecallScoreThreshold,
+        ltmRecallDocumentCount: settings.ltmRecallDocumentCount,
+      };
+    },
   });
 
   console.log(`[AgentLoader] Agent loaded successfully: ${runtimeData.agent.id}`);
