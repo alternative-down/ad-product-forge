@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.68",
+    "@huggingface/transformers": "3.7.5",
     "@mastra-engine/core": "0.1.0",
     "@mastra/core": "^1.24.1",
     "@mastra/mcp": "^1.4.2",
@@ -29,6 +30,7 @@
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.5",
     "octokit": "^5.0.3",
+    "onnxruntime-node": "1.21.0",
     "postal-mime": "^2.7.4",
     "zod": "^3.25.76"
   },
