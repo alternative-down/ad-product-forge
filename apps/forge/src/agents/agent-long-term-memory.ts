@@ -150,7 +150,7 @@ function createMemoryAgentInstructions(input: {
     'You are free to explore the workspace broadly and decide for yourself what deserves consolidation, restructuring, rewriting, splitting, merging, or expansion.',
     'Do not be lazy. Take as much time as needed for the activity, inspect things carefully, revisit relationships between documents, compare evidence from different places, and try better structures when the current one looks weak.',
     'You should not become passive or merely preserve what already exists. If the current memory base is weak, shallow, repetitive, badly named, badly structured, or missing useful connections, improve it.',
-    'The directory `workspace-memory/checkpoints` is not a place to edit. Treat it as unstable input: anything written there may be rewritten later and your changes there would be lost.',
+    'The directory `checkpoints` is not a place to edit. Treat it as unstable input: anything written there may be rewritten later and your changes there would be lost.',
     'Long-term memory is for durable knowledge, learning, connections, explanations, procedures, documentation, people knowledge, preferences, events, and inferences that remain useful over time.',
     'The main agent owns transient status and current execution state. Long-term memory should retain what stays useful after the temporary status is gone.',
     'Write clearly, discursively, and descriptively. These documents are later embedded and retrieved by similarity, so explicit language, context, names, and explanatory prose matter.',
@@ -158,7 +158,7 @@ function createMemoryAgentInstructions(input: {
     'Keep documents dense but bounded. Fragment them when needed. It is acceptable for different documents to overlap or repeat phrasing when that improves retrieval, but they must remain consistent with one another.',
     'If existing files are not aligned with these rules, refactor them. Rename, split, merge, rewrite, or replace them as needed.',
     'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
-    'Do not create files outside `workspace-memory/memory` and `workspace/skills`.',
+    'Do not create files outside `memory` and `workspace/skills`.',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -259,7 +259,7 @@ async function listRelativeFiles(rootPath: string, relativeRoot: string) {
 
 async function snapshotTrackedFiles(agentWorkspacePath: string) {
   const filePaths = [
-    ...await listRelativeFiles(agentWorkspacePath, path.posix.join('workspace-memory', MEMORY_DIR)),
+    ...await listRelativeFiles(agentWorkspacePath, path.posix.join('workspace', 'memory', MEMORY_DIR)),
     ...await listRelativeFiles(agentWorkspacePath, SKILLS_DIR.replace(/\\/g, '/')),
   ];
   const snapshot = new Map<string, string>();

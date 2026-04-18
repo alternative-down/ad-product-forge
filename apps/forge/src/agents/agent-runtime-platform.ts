@@ -51,7 +51,7 @@ export async function createAgentRuntimePlatform(input: {
   const agentWorkspaceDir = input.workspaceFilesystem?.basePath
     ? path.resolve(agentWorkspacePath, input.workspaceFilesystem.basePath)
     : path.resolve(agentWorkspacePath, 'workspace');
-  const agentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
+  const agentMemoryPath = path.resolve(agentWorkspaceDir, 'memory');
   const sandboxWorkingDirectory = input.workspaceSandbox?.workingDirectory
     ? path.resolve(agentWorkspacePath, input.workspaceSandbox.workingDirectory)
     : agentWorkspaceDir;

@@ -371,7 +371,7 @@ function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | und
 }
 
 async function readLongTermMemoryState(workspaceBasePath: string, agentId: string) {
-  const statePath = path.resolve(workspaceBasePath, agentId, 'workspace-memory', '.ltm-state.json');
+  const statePath = path.resolve(workspaceBasePath, agentId, 'workspace', 'memory', '.ltm-state.json');
   const raw = await readFile(statePath, 'utf8').catch(() => null);
 
   if (!raw) {
