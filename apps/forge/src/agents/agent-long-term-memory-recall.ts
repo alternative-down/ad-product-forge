@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
@@ -71,6 +72,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
 };
 
 const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
+const RECALL_HISTORY_METADATA_KEY = 'forgeLongTermMemoryRecallHistory';
 const RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
@@ -106,6 +108,11 @@ type RecallSnapshot = {
   memoryFileCount: number;
   checkpointFileCount: number;
   error: string | null;
+};
+
+type RecallHistoryState = {
+  recentFingerprints: string[];
+  updatedAt: string;
 };
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
@@ -238,6 +245,7 @@ export class AgentLongTermMemoryRecall {
       const queryText = this.buildRecallQueryFromStep(input.step);
       const indexStats = await this.getIndexStats();
       const recallConfig = await this.resolveRecallConfig();
+      const recallThreadState = await this.readRecallThreadState(input.threadId);
 
       if (!queryText) {
         await this.persistRecallSnapshot({
@@ -268,7 +276,11 @@ export class AgentLongTermMemoryRecall {
       }
 
       const recallSearch = await this.runRecallSearch(queryText, recallConfig);
-      const { results, graph } = recallSearch;
+      const { results, graph, usedFingerprints } = this.dedupeRecallResults({
+        graph: recallSearch.graph,
+        results: recallSearch.results,
+        recentFingerprints: recallThreadState.recentFingerprints,
+      });
       const recallText = buildRecallSystemMessage({
         graphHit: graph.hit,
         graphContext: graph.context,
@@ -327,7 +339,11 @@ export class AgentLongTermMemoryRecall {
         memoryFileCount: indexStats.memoryFileCount,
         checkpointFileCount: indexStats.checkpointFileCount,
         error: null,
-      });
+      }, this.buildNextRecallHistory({
+        recentFingerprints: recallThreadState.recentFingerprints,
+        usedFingerprints,
+        windowSize: recallThreadState.windowSize,
+      }));
 
       return recallText;
     } catch (error) {
@@ -913,6 +929,7 @@ export class AgentLongTermMemoryRecall {
   private async persistRecallSnapshot(
     threadContext: { threadId: string | null; resourceId?: string },
     snapshot: RecallSnapshot,
+    history?: RecallHistoryState,
   ) {
     if (!threadContext.threadId) {
       return;
@@ -926,12 +943,124 @@ export class AgentLongTermMemoryRecall {
       : {};
 
     metadata[RECALL_METADATA_KEY] = snapshot;
+    if (history) {
+      metadata[RECALL_HISTORY_METADATA_KEY] = history;
+    }
 
     await this.memoryStore.updateThread({
       id: threadContext.threadId,
       title: thread?.title ?? '',
       metadata,
     });
+  }
+
+  private dedupeRecallResults(input: {
+    graph: {
+      hit: boolean;
+      context: string;
+      queryText: string;
+      dimension: number;
+      includeSources: boolean;
+      relevantContextRaw: string | null;
+      sourcesCount: number;
+      sourcesJson: string | null;
+      rawJson: string | null;
+      error: string | null;
+    };
+    results: SearchResult[];
+    recentFingerprints: string[];
+  }) {
+    const seenFingerprints = new Set(input.recentFingerprints);
+    const workspaceResults = input.results.filter(
+      (result) => !seenFingerprints.has(this.buildWorkspaceFingerprint(result)),
+    );
+    const graphFingerprint = input.graph.hit && input.graph.context.trim()
+      ? this.buildGraphFingerprint(input.graph.context)
+      : null;
+    const graphAllowed = graphFingerprint !== null && !seenFingerprints.has(graphFingerprint);
+
+    return {
+      graph: graphAllowed
+        ? input.graph
+        : {
+          ...input.graph,
+          hit: false,
+          context: '',
+        },
+      results: graphAllowed ? input.results : workspaceResults,
+      usedFingerprints: graphAllowed
+        ? (graphFingerprint ? [graphFingerprint] : [])
+        : workspaceResults.map((result) => this.buildWorkspaceFingerprint(result)),
+    };
+  }
+
+  private buildWorkspaceFingerprint(result: SearchResult) {
+    return `workspace:${result.id}`;
+  }
+
+  private buildGraphFingerprint(context: string) {
+    return `graph:${createHash('sha1').update(context).digest('hex')}`;
+  }
+
+  private buildNextRecallHistory(input: {
+    recentFingerprints: string[];
+    usedFingerprints: string[];
+    windowSize: number;
+  }) {
+    const merged = [...input.usedFingerprints, ...input.recentFingerprints];
+    const deduped = Array.from(new Set(merged));
+
+    return {
+      recentFingerprints: deduped.slice(0, Math.max(input.windowSize, 1)),
+      updatedAt: new Date().toISOString(),
+    } satisfies RecallHistoryState;
+  }
+
+  private async readRecallThreadState(threadId: string | null) {
+    if (!threadId) {
+      return {
+        recentFingerprints: [],
+        windowSize: 20,
+      };
+    }
+
+    const thread = await this.memoryStore.getThreadById({ threadId });
+    const metadata = thread?.metadata && typeof thread.metadata === 'object'
+      ? thread.metadata as Record<string, unknown>
+      : {};
+    const rawHistory = metadata[RECALL_HISTORY_METADATA_KEY];
+    const recentFingerprints =
+      rawHistory
+      && typeof rawHistory === 'object'
+      && Array.isArray((rawHistory as { recentFingerprints?: unknown }).recentFingerprints)
+        ? (rawHistory as { recentFingerprints: unknown[] }).recentFingerprints.filter(
+          (value): value is string => typeof value === 'string' && value.length > 0,
+        )
+        : [];
+    const customCheckpointedContext =
+      metadata.mastra
+      && typeof metadata.mastra === 'object'
+      && 'om' in metadata.mastra
+      && metadata.mastra.om
+      && typeof metadata.mastra.om === 'object'
+      && 'customCheckpointedContext' in metadata.mastra.om
+      && metadata.mastra.om.customCheckpointedContext
+      && typeof metadata.mastra.om.customCheckpointedContext === 'object'
+        ? metadata.mastra.om.customCheckpointedContext as {
+          latestMetrics?: {
+            recentRawMessageCount?: number;
+          };
+        }
+        : null;
+    const recentRawMessageCount = customCheckpointedContext?.latestMetrics?.recentRawMessageCount;
+
+    return {
+      recentFingerprints,
+      windowSize:
+        typeof recentRawMessageCount === 'number' && recentRawMessageCount > 0
+          ? recentRawMessageCount
+          : 20,
+    };
   }
 }
 
