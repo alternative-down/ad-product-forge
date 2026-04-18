@@ -21,6 +21,7 @@ export const WORKING_MEMORY_INSTRUCTIONS = [
   'Remove or rewrite entries when they are resolved, replaced, no longer true, or no longer useful.',
   'Prefer compact bullets or short paragraphs inside each field.',
   'Use direction for what you are currently trying to achieve at a high level, why it matters, and what success means.',
+  'If you mention or use information from working memory, do not say it came from working memory, memory, or context. Use active language such as "I remember that...", "we already saw that...", or "on day X in the morning I did X" when appropriate.',
 ].join('\n');
 
 export const WORKING_MEMORY_SCHEMA = z.object({

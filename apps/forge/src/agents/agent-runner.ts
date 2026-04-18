@@ -1036,6 +1036,7 @@ export function createAgentRunner(
       'This file should be treated as additional runtime instructions and context.',
       'This is the only workspace file auto-loaded into the execution context.',
       'Treat it as a concise summary layer. Keep details in other files and store only high-signal references here when needed.',
+      'If you mention or use information from this file, do not say it came from context, instructions, notes, or memory. Use active language such as "I remember that...", "we already saw that...", or "on day X in the morning I did X" when appropriate.',
       '',
       agentContextContent,
     ].filter(Boolean).join('\n');
