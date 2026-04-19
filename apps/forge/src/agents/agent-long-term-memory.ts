@@ -444,7 +444,7 @@ export function createAgentLongTermMemory(input: {
   const statePath = path.resolve(input.agentMemoryPath, LTM_STATE_FILE);
   const ltmMastraId = toMastraSafeIdentifier(`${input.agentId}_long_term_memory`);
   const workspace = new WorkspaceRuntime({
-    autoSync: true,
+    autoSync: false,
     filesystem: new LocalFilesystem({
       basePath: input.agentMemoryPath,
       allowedPaths: [path.resolve(input.agentWorkspacePath, SKILLS_DIR)],

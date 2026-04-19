@@ -10,6 +10,7 @@ import { createGraphRAGTool } from '@mastra/rag';
 
 import {
   embedTextWithWorkspaceEmbedder,
+  forgeDebug,
   getWorkspaceEmbedderProvider,
   toMastraSafeIdentifier,
   type WorkspaceEmbedderId,
@@ -174,6 +175,7 @@ function withTimeout<T>(
 export class AgentLongTermMemoryRecall {
   private readonly initTimeoutMs = 5 * 60_000;
   private readonly recallTimeoutMs = 60_000;
+  private readonly agentId: string;
   private readonly workspace: WorkspaceRuntime;
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
@@ -212,6 +214,7 @@ export class AgentLongTermMemoryRecall {
       throw new Error(`LTM recall memory store is not available for agent ${input.agentId}`);
     }
 
+    this.agentId = input.agentId;
     const vectorStorePath = path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`);
     this.agentMemoryPath = input.agentMemoryPath;
     this.agentWorkspacePath = input.agentWorkspacePath;
@@ -228,7 +231,7 @@ export class AgentLongTermMemoryRecall {
     this.searchIndexName = `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_search`;
     this.memoryStore = memoryStore;
     this.workspace = new WorkspaceRuntime({
-      autoSync: true,
+      autoSync: false,
       bm25: true,
       autoIndexPaths: [...RECALL_AUTO_INDEX_PATHS],
       embedder: (text) => embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text),
@@ -247,7 +250,14 @@ export class AgentLongTermMemoryRecall {
     threadId: string | null;
     resourceId?: string;
   }) {
+    const recallStartedAt = Date.now();
+
     try {
+      forgeDebug('ltm', 'ltm recall step start', {
+        agentId: this.agentId,
+        threadId: input.threadId,
+        resourceId: input.resourceId ?? null,
+      });
       await this.refreshWorkspaceIndex();
       const queryText = this.buildRecallQueryFromStep(input.step);
       const indexStats = await this.getIndexStats();
@@ -352,9 +362,23 @@ export class AgentLongTermMemoryRecall {
         windowSize: recallThreadState.windowSize,
       }));
 
+      forgeDebug('ltm', 'ltm recall step complete', {
+        agentId: this.agentId,
+        threadId: input.threadId,
+        durationMs: Date.now() - recallStartedAt,
+        graphHit: graph.hit,
+        resultCount: graph.hit ? 0 : results.length,
+      });
+
       return recallText;
     } catch (error) {
       console.error('[AgentLongTermMemoryRecall] recall failed:', error);
+      forgeDebug('ltm', 'ltm recall step failed', {
+        agentId: this.agentId,
+        threadId: input.threadId,
+        durationMs: Date.now() - recallStartedAt,
+        error: error instanceof Error ? error.message : String(error),
+      });
       await this.persistRecallSnapshot({
         threadId: input.threadId,
         resourceId: input.resourceId,
@@ -530,10 +554,15 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async refreshWorkspaceIndex() {
+    const stageStartedAt = Date.now();
     await this.ensureVectorIndexReady();
     const currentStamp = await this.readCurrentIndexStamp();
 
     if (!this.workspaceInitialized) {
+      forgeDebug('ltm', 'ltm recall workspace init start', {
+        agentId: this.agentId,
+        stamp: currentStamp,
+      });
       await withTimeout(
         this.workspace.init(),
         this.initTimeoutMs,
@@ -542,13 +571,28 @@ export class AgentLongTermMemoryRecall {
       this.workspaceInitialized = true;
       this.lastIndexedStamp = currentStamp;
       this.lastInitAt = new Date().toISOString();
+      forgeDebug('ltm', 'ltm recall workspace init complete', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        stamp: currentStamp,
+      });
       return;
     }
 
     if (currentStamp === this.lastIndexedStamp) {
+      forgeDebug('ltm', 'ltm recall workspace index unchanged', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        stamp: currentStamp,
+      });
       return;
     }
 
+    forgeDebug('ltm', 'ltm recall workspace reindex start', {
+      agentId: this.agentId,
+      previousStamp: this.lastIndexedStamp,
+      nextStamp: currentStamp,
+    });
     await withTimeout(
       (this.workspace as unknown as SearchIndexRebuildWorkspace)
         .rebuildSearchIndex([...RECALL_AUTO_INDEX_PATHS]),
@@ -557,6 +601,11 @@ export class AgentLongTermMemoryRecall {
     );
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
+    forgeDebug('ltm', 'ltm recall workspace reindex complete', {
+      agentId: this.agentId,
+      durationMs: Date.now() - stageStartedAt,
+      stamp: currentStamp,
+    });
   }
 
   private async readCurrentIndexStamp() {
@@ -572,11 +621,20 @@ export class AgentLongTermMemoryRecall {
 
   private async ensureVectorIndexReady() {
     if (!this.vectorIndexReadyPromise) {
+      forgeDebug('ltm', 'ltm recall vector index ensure start', {
+        agentId: this.agentId,
+        indexName: this.searchIndexName,
+      });
       this.vectorIndexReadyPromise = withTimeout(
         this.createWorkspaceVectorIndexIfMissing(),
         this.initTimeoutMs,
         'ltm recall vector index initialization timed out',
       ).catch((error) => {
+        forgeDebug('ltm', 'ltm recall vector index ensure failed', {
+          agentId: this.agentId,
+          indexName: this.searchIndexName,
+          error: error instanceof Error ? error.message : String(error),
+        });
         this.vectorIndexReadyPromise = null;
         throw error;
       });
@@ -586,13 +644,24 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async createWorkspaceVectorIndexIfMissing() {
+    const stageStartedAt = Date.now();
+
     try {
       await this.vectorStore.describeIndex({ indexName: this.searchIndexName });
+      forgeDebug('ltm', 'ltm recall vector index exists', {
+        agentId: this.agentId,
+        indexName: this.searchIndexName,
+        durationMs: Date.now() - stageStartedAt,
+      });
       return;
     } catch {
       // Index does not exist yet. Create it below.
     }
 
+    forgeDebug('ltm', 'ltm recall vector index create start', {
+      agentId: this.agentId,
+      indexName: this.searchIndexName,
+    });
     const sampleEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, 'memory-bootstrap');
     const dimension = sampleEmbedding.length;
 
@@ -600,6 +669,12 @@ export class AgentLongTermMemoryRecall {
       indexName: this.searchIndexName,
       dimension,
       metric: 'cosine',
+    });
+    forgeDebug('ltm', 'ltm recall vector index create complete', {
+      agentId: this.agentId,
+      indexName: this.searchIndexName,
+      dimension,
+      durationMs: Date.now() - stageStartedAt,
     });
   }
 
@@ -613,7 +688,15 @@ export class AgentLongTermMemoryRecall {
       mode: RECALL_SEARCH_MODE,
     },
   ): Promise<{ formatted: string; results: SearchResult[] }> {
+    const stageStartedAt = Date.now();
+
     try {
+      forgeDebug('ltm', 'ltm recall workspace search start', {
+        agentId: this.agentId,
+        queryLength: queryText.length,
+        topK: options.topK,
+        mode: options.mode,
+      });
       const results = await withTimeout(
         this.workspace.search(queryText, {
           topK: options.topK,
@@ -632,6 +715,11 @@ export class AgentLongTermMemoryRecall {
         content: String(result.content).trim(),
         score: result.score,
       }));
+      forgeDebug('ltm', 'ltm recall workspace search complete', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        resultCount: searchResults.length,
+      });
       return { formatted: '', results: searchResults };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -640,6 +728,11 @@ export class AgentLongTermMemoryRecall {
         return { formatted: '', results: [] };
       }
 
+      forgeDebug('ltm', 'ltm recall workspace search failed', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        error: message,
+      });
       throw error;
     }
   }
@@ -672,6 +765,7 @@ export class AgentLongTermMemoryRecall {
     rawJson: string | null;
     error: string | null;
   }> {
+    const stageStartedAt = Date.now();
     const workspaceContextBase = options.contextResults.length > 0
       ? options.contextResults
       : workspaceResults;
@@ -684,6 +778,14 @@ export class AgentLongTermMemoryRecall {
     const includeSources = options.includeSources;
 
     try {
+      forgeDebug('ltm', 'ltm recall graph search start', {
+        agentId: this.agentId,
+        queryLength: graphQueryText.length,
+        topK: options.topK,
+        threshold: options.threshold,
+        randomWalkSteps: options.randomWalkSteps,
+        dimension: graphDimension,
+      });
       const graphTool = createGraphRAGTool({
         vectorStore: this.vectorStore,
         indexName: this.searchIndexName,
@@ -729,6 +831,11 @@ export class AgentLongTermMemoryRecall {
         error: null,
       };
     } catch (error) {
+      forgeDebug('ltm', 'ltm recall graph search failed', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return {
         queryText: graphQueryText,
         dimension: graphDimension,
@@ -745,15 +852,26 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async getGraphDimension() {
+    const stageStartedAt = Date.now();
     const indexStats = await this.vectorStore.describeIndex({
       indexName: this.searchIndexName,
     }).catch(() => null);
 
     if (indexStats?.dimension) {
+      forgeDebug('ltm', 'ltm recall graph dimension from index', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        dimension: indexStats.dimension,
+      });
       return indexStats.dimension;
     }
 
     const sampleEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, 'memory-bootstrap');
+    forgeDebug('ltm', 'ltm recall graph dimension from embedding', {
+      agentId: this.agentId,
+      durationMs: Date.now() - stageStartedAt,
+      dimension: sampleEmbedding.length,
+    });
     return sampleEmbedding.length;
   }
 

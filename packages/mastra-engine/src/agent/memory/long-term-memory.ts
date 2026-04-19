@@ -68,7 +68,7 @@ export class LongTermMemory implements Processor<'long-term-memory'> {
     this.searchIndexName = `${mastraAgentId}_memory_search`;
 
     this.workspace = new WorkspaceRuntime({
-      autoSync: true,
+      autoSync: false,
       bm25: true,
       autoIndexPaths: ['/observations', '/memory'],
       embedder: embedTextWithFastembed,
