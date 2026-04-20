@@ -192,6 +192,8 @@ export class AgentLongTermMemoryRecall {
   private workspaceInitialized = false;
   private lastIndexedStamp: string | null = null;
   private lastInitAt: string | null = null;
+  private pendingRecallOperationCount = 0;
+  private lingeringRecallOperationSince: number | null = null;
   private graphToolCache: {
     threshold: number;
     randomWalkSteps: number;
@@ -259,12 +261,23 @@ export class AgentLongTermMemoryRecall {
     const recallStartedAt = Date.now();
 
     try {
+      if (this.pendingRecallOperationCount > 0) {
+        forgeDebug('ltm', 'ltm recall skipped because a prior recall operation is still in flight', {
+          agentId: this.agentId,
+          threadId: input.threadId,
+          pendingRecallOperationCount: this.pendingRecallOperationCount,
+          lingeringRecallOperationSince: this.lingeringRecallOperationSince
+            ? new Date(this.lingeringRecallOperationSince).toISOString()
+            : null,
+        });
+        return null;
+      }
+
       forgeDebug('ltm', 'ltm recall step start', {
         agentId: this.agentId,
         threadId: input.threadId,
         resourceId: input.resourceId ?? null,
       });
-      await this.refreshWorkspaceIndex();
       const queryText = this.buildRecallQueryFromStep(input.step);
       const indexStats = await this.getIndexStats();
       const recallConfig = await this.resolveRecallConfig();
@@ -418,8 +431,71 @@ export class AgentLongTermMemoryRecall {
     await this.workspace.destroy();
   }
 
+  async initialize() {
+    if (this.workspaceInitialized) {
+      return;
+    }
+
+    const stageStartedAt = Date.now();
+    const currentStamp = await this.readCurrentIndexStamp();
+
+    await this.ensureVectorIndexReady();
+    forgeDebug('ltm', 'ltm recall workspace init start', {
+      agentId: this.agentId,
+      stamp: currentStamp,
+    });
+    await this.runTrackedRecallOperation(
+      'workspace.init',
+      this.workspace.init(),
+      this.initTimeoutMs,
+      'ltm recall workspace init timed out',
+    );
+    this.workspaceInitialized = true;
+    this.lastIndexedStamp = currentStamp;
+    this.lastInitAt = new Date().toISOString();
+    forgeDebug('ltm', 'ltm recall workspace init complete', {
+      agentId: this.agentId,
+      durationMs: Date.now() - stageStartedAt,
+      stamp: currentStamp,
+    });
+  }
+
+  async refreshIndex() {
+    await this.initialize();
+    const stageStartedAt = Date.now();
+    const currentStamp = await this.readCurrentIndexStamp();
+
+    if (currentStamp === this.lastIndexedStamp) {
+      forgeDebug('ltm', 'ltm recall workspace index unchanged', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        stamp: currentStamp,
+      });
+      return;
+    }
+
+    forgeDebug('ltm', 'ltm recall workspace reindex start', {
+      agentId: this.agentId,
+      previousStamp: this.lastIndexedStamp,
+      nextStamp: currentStamp,
+    });
+    await this.runTrackedRecallOperation(
+      'workspace.rebuildSearchIndex',
+      (this.workspace as unknown as SearchIndexRebuildWorkspace)
+        .rebuildSearchIndex([...RECALL_AUTO_INDEX_PATHS]),
+      this.initTimeoutMs,
+      'ltm recall workspace reindex timed out',
+    );
+    this.lastIndexedStamp = currentStamp;
+    this.lastInitAt = new Date().toISOString();
+    forgeDebug('ltm', 'ltm recall workspace reindex complete', {
+      agentId: this.agentId,
+      durationMs: Date.now() - stageStartedAt,
+      stamp: currentStamp,
+    });
+  }
+
   async debugSearch(input: AgentLongTermMemoryRecallDebugSearchInput) {
-    await this.refreshWorkspaceIndex();
     const indexState = await this.getWorkspaceIndexState();
     const query = input.query.trim();
     const recallConfig = await this.resolveRecallConfig();
@@ -564,61 +640,6 @@ export class AgentLongTermMemoryRecall {
     } satisfies RecallConfig;
   }
 
-  private async refreshWorkspaceIndex() {
-    const stageStartedAt = Date.now();
-    await this.ensureVectorIndexReady();
-    const currentStamp = await this.readCurrentIndexStamp();
-
-    if (!this.workspaceInitialized) {
-      forgeDebug('ltm', 'ltm recall workspace init start', {
-        agentId: this.agentId,
-        stamp: currentStamp,
-      });
-      await withTimeout(
-        this.workspace.init(),
-        this.initTimeoutMs,
-        'ltm recall workspace init timed out',
-      );
-      this.workspaceInitialized = true;
-      this.lastIndexedStamp = currentStamp;
-      this.lastInitAt = new Date().toISOString();
-      forgeDebug('ltm', 'ltm recall workspace init complete', {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        stamp: currentStamp,
-      });
-      return;
-    }
-
-    if (currentStamp === this.lastIndexedStamp) {
-      forgeDebug('ltm', 'ltm recall workspace index unchanged', {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        stamp: currentStamp,
-      });
-      return;
-    }
-
-    forgeDebug('ltm', 'ltm recall workspace reindex start', {
-      agentId: this.agentId,
-      previousStamp: this.lastIndexedStamp,
-      nextStamp: currentStamp,
-    });
-    await withTimeout(
-      (this.workspace as unknown as SearchIndexRebuildWorkspace)
-        .rebuildSearchIndex([...RECALL_AUTO_INDEX_PATHS]),
-      this.initTimeoutMs,
-      'ltm recall workspace reindex timed out',
-    );
-    this.lastIndexedStamp = currentStamp;
-    this.lastInitAt = new Date().toISOString();
-    forgeDebug('ltm', 'ltm recall workspace reindex complete', {
-      agentId: this.agentId,
-      durationMs: Date.now() - stageStartedAt,
-      stamp: currentStamp,
-    });
-  }
-
   private async readCurrentIndexStamp() {
     const stampPath = path.resolve(this.agentMemoryPath, RECALL_INDEX_STAMP_FILE);
     const raw = await fs.readFile(stampPath, 'utf8').catch(() => null);
@@ -636,7 +657,8 @@ export class AgentLongTermMemoryRecall {
         agentId: this.agentId,
         indexName: this.searchIndexName,
       });
-      this.vectorIndexReadyPromise = withTimeout(
+      this.vectorIndexReadyPromise = this.runTrackedRecallOperation(
+        'vector.createWorkspaceVectorIndexIfMissing',
         this.createWorkspaceVectorIndexIfMissing(),
         this.initTimeoutMs,
         'ltm recall vector index initialization timed out',
@@ -708,7 +730,8 @@ export class AgentLongTermMemoryRecall {
         topK: options.topK,
         mode: options.mode,
       });
-      const results = await withTimeout(
+      const results = await this.runTrackedRecallOperation(
+        'workspace.search',
         this.workspace.search(queryText, {
           topK: options.topK,
           mode: options.mode,
@@ -804,7 +827,8 @@ export class AgentLongTermMemoryRecall {
         includeSources,
       });
 
-      const graphResult = await withTimeout(
+      const graphResult = await this.runTrackedRecallOperation(
+        'graph.execute',
         graphTool.execute(
           {
             queryText: graphQueryText,
@@ -955,7 +979,8 @@ export class AgentLongTermMemoryRecall {
 
   private async queryVectorIndex(queryVector: number[], topK: number) {
     try {
-      return await withTimeout(
+      return await this.runTrackedRecallOperation(
+        'vector.query',
         this.vectorStore.query({
           indexName: this.searchIndexName,
           queryVector,
@@ -971,6 +996,45 @@ export class AgentLongTermMemoryRecall {
         return [];
       }
 
+      throw error;
+    }
+  }
+
+  private async runTrackedRecallOperation<T>(
+    label: string,
+    operation: Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ) {
+    this.pendingRecallOperationCount += 1;
+    let settled = false;
+    const trackedOperation = operation.finally(() => {
+      settled = true;
+      this.pendingRecallOperationCount = Math.max(0, this.pendingRecallOperationCount - 1);
+
+      if (this.pendingRecallOperationCount === 0) {
+        this.lingeringRecallOperationSince = null;
+      }
+    });
+
+    try {
+      return await withTimeout(trackedOperation, timeoutMs, timeoutMessage);
+    } catch (error) {
+      if (!settled && this.lingeringRecallOperationSince === null) {
+        this.lingeringRecallOperationSince = Date.now();
+      }
+
+      forgeDebug('ltm', 'ltm recall operation failed or timed out', {
+        agentId: this.agentId,
+        label,
+        timeoutMs,
+        settled,
+        pendingRecallOperationCount: this.pendingRecallOperationCount,
+        lingeringRecallOperationSince: this.lingeringRecallOperationSince
+          ? new Date(this.lingeringRecallOperationSince).toISOString()
+          : null,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }

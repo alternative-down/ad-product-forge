@@ -118,6 +118,12 @@ export async function createInternalAgentRuntime<
     readRuntimeMemorySettings: options.readRuntimeMemorySettings,
   });
 
+  longTermMemory?.attachRecallIndexRefresh(
+    runtimeMemory.longTermMemoryRecall
+      ? () => runtimeMemory.longTermMemoryRecall!.refreshIndex()
+      : null,
+  );
+
   const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({
     id: config.id,
     name: config.name,

@@ -87,6 +87,8 @@ export type InternalAgentRuntime<
   workspace: WorkspaceRuntime;
   communication: CommunicationModule;
   longTermMemoryRecall: {
+    initialize(): Promise<void>;
+    refreshIndex(): Promise<void>;
     recallFromStep(input: {
       step: unknown;
       steps: unknown[];
@@ -99,6 +101,7 @@ export type InternalAgentRuntime<
     dispose?(): Promise<void>;
   } | null;
   longTermMemory: {
+    attachRecallIndexRefresh(handler: (() => Promise<void>) | null): void;
     onAgentIdle(): Promise<void>;
     onAgentRunning(): void;
     getSnapshot(): {
