@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
+import v8 from 'node:v8';
 import {
   getAnthropicCliAuthFilePath,
   getAnthropicSetupTokenFilePath,
@@ -603,6 +605,12 @@ export function registerAdminRoutes(input: {
     method: 'GET',
     path: '/admin/overview',
     handler: async () => jsonResponse(await readModel.getDashboard()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/healthcheck',
+    handler: async () => jsonResponse(await buildSystemHealthcheck(registry)),
   });
 
   input.httpServer.registerRoute({
@@ -2432,4 +2440,107 @@ function readOauthState() {
       },
     ],
   };
+}
+
+async function buildSystemHealthcheck(
+  registry: ReturnType<typeof getInternalAgentRegistry>,
+) {
+  const processWithDiagnostics = process as NodeJS.Process & {
+    _getActiveHandles?: () => unknown[];
+    _getActiveRequests?: () => unknown[];
+  };
+  const memoryUsage = process.memoryUsage();
+  const activeHandles = processWithDiagnostics._getActiveHandles?.() ?? [];
+  const activeRequests = processWithDiagnostics._getActiveRequests?.() ?? [];
+  const [fdSummary, agentSnapshots] = await Promise.all([
+    readProcessFileDescriptorSummary(),
+    Promise.all(
+      registry.list().map(async (entry) => {
+        const longTermMemory = entry.runtime.longTermMemory
+          ? await entry.runtime.longTermMemory.readSnapshot().catch(() => null)
+          : null;
+
+        return {
+          agentId: entry.runtime.id,
+          mastraId: entry.runtime.mastraId,
+          pricingModelKey: entry.runtime.pricingModelKey,
+          modelProfileId: entry.runtime.modelProfileId ?? null,
+          runner: entry.runner.getSnapshot(),
+          longTermMemory,
+        };
+      }),
+    ),
+  ]);
+
+  return {
+    now: new Date().toISOString(),
+    process: {
+      pid: process.pid,
+      ppid: process.ppid,
+      uptimeSeconds: process.uptime(),
+      cwd: process.cwd(),
+      nodeVersion: process.version,
+      memoryUsage: {
+        rss: memoryUsage.rss,
+        heapTotal: memoryUsage.heapTotal,
+        heapUsed: memoryUsage.heapUsed,
+        external: memoryUsage.external,
+        arrayBuffers: memoryUsage.arrayBuffers,
+      },
+      heapStatistics: v8.getHeapStatistics(),
+      heapSpaceStatistics: v8.getHeapSpaceStatistics(),
+      resourceUsage: process.resourceUsage(),
+    },
+    activity: {
+      activeHandleCount: activeHandles.length,
+      activeHandles: summarizeActiveItems(activeHandles),
+      activeRequestCount: activeRequests.length,
+      activeRequests: summarizeActiveItems(activeRequests),
+    },
+    fileDescriptors: fdSummary,
+    agents: {
+      loadedCount: agentSnapshots.length,
+      items: agentSnapshots,
+    },
+  };
+}
+
+async function readProcessFileDescriptorSummary() {
+  const fdRoot = '/proc/self/fd';
+  const entries = await fsPromises.readdir(fdRoot).catch(() => []);
+  const targetCounts = new Map<string, number>();
+
+  await Promise.all(entries.map(async (entry) => {
+    const target = await fsPromises.readlink(`${fdRoot}/${entry}`).catch(() => null);
+
+    if (!target) {
+      return;
+    }
+
+    targetCounts.set(target, (targetCounts.get(target) ?? 0) + 1);
+  }));
+
+  return {
+    count: entries.length,
+    topTargets: Array.from(targetCounts.entries())
+      .map(([target, count]) => ({ target, count }))
+      .sort((left, right) => right.count - left.count)
+      .slice(0, 50),
+  };
+}
+
+function summarizeActiveItems(items: unknown[]) {
+  const summary = new Map<string, number>();
+
+  for (const item of items) {
+    const name = typeof item === 'object' && item !== null && 'constructor' in item
+      ? (item as { constructor?: { name?: string } }).constructor?.name ?? 'unknown'
+      : typeof item;
+
+    summary.set(name, (summary.get(name) ?? 0) + 1);
+  }
+
+  return Array.from(summary.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((left, right) => right.count - left.count);
 }
