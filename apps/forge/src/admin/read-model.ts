@@ -44,6 +44,7 @@ const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
 const RECENT_CONVERSATION_LIMIT = 10;
+const ADMIN_OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
 interface MastraMemoryStore {
   createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
@@ -132,6 +133,33 @@ type LongTermMemoryRecallSnapshot = {
   checkpointFileCount: number;
   error: string | null;
 };
+
+type ClosableLibsqlClient = ReturnType<typeof createClient> & {
+  close?: () => void | Promise<void>;
+};
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  let timer: NodeJS.Timeout | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
+async function closeLibsqlClient(client: ClosableLibsqlClient) {
+  await client.close?.();
+}
 
 function isMemoryRecallText(value: string) {
   return /^\s*<memory-recall\b[\s\S]*<\/memory-recall>\s*$/u.test(value);
@@ -578,15 +606,32 @@ export function createAdminReadModel(input: {
 
     const runtimeMemoryByAgentId = new Map(
       await Promise.all(
-        agentRows.map(async (agent) => [agent.id, await getAgentRuntimeMemory(agent.id)] as const),
+        agentRows.map(async (agent) => [
+          agent.id,
+          await withTimeout(
+            getAgentRuntimeMemory(agent.id),
+            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            `Admin runtime memory read timed out for ${agent.id}`,
+          ).catch((error) => {
+            console.error(`[AdminReadModel] Failed to load runtime memory for agent ${agent.id}:`, error);
+            return null;
+          }),
+        ] as const),
       ),
     );
     const latestThreadDetailsByAgentId = new Map(
       await Promise.all(
         agentRows.map(async (agent) => {
-          const messages = await listThreadMessages(input.workspaceBasePath, agent.id, {
-            page: 0,
-            perPage: 8,
+          const messages = await withTimeout(
+            listThreadMessages(input.workspaceBasePath, agent.id, {
+              page: 0,
+              perPage: 8,
+            }),
+            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            `Admin latest thread details read timed out for ${agent.id}`,
+          ).catch((error) => {
+            console.error(`[AdminReadModel] Failed to load latest thread details for agent ${agent.id}:`, error);
+            return [];
           });
           let preview: string | null = null;
           let toolBadge: ReturnType<typeof extractLatestMessageToolBadge> = null;
@@ -616,7 +661,17 @@ export function createAdminReadModel(input: {
     );
     const longTermMemoryStateByAgentId = new Map(
       await Promise.all(
-        agentRows.map(async (agent) => [agent.id, await readLongTermMemoryState(input.workspaceBasePath, agent.id)] as const),
+        agentRows.map(async (agent) => [
+          agent.id,
+          await withTimeout(
+            readLongTermMemoryState(input.workspaceBasePath, agent.id),
+            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            `Admin LTM state read timed out for ${agent.id}`,
+          ).catch((error) => {
+            console.error(`[AdminReadModel] Failed to load LTM state for agent ${agent.id}:`, error);
+            return null;
+          }),
+        ] as const),
       ),
     );
     const runtimeLtmSnapshotByAgentId = new Map(
@@ -624,7 +679,14 @@ export function createAdminReadModel(input: {
         agentRows.map(async (agent) => {
           const loadedAgent = registry.get(agent.id);
           const snapshot = loadedAgent?.runtime.longTermMemory
-            ? await loadedAgent.runtime.longTermMemory.readSnapshot()
+            ? await withTimeout(
+              loadedAgent.runtime.longTermMemory.readSnapshot(),
+              ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+              `Admin runtime LTM snapshot timed out for ${agent.id}`,
+            ).catch((error) => {
+              console.error(`[AdminReadModel] Failed to load runtime LTM snapshot for agent ${agent.id}:`, error);
+              return null;
+            })
             : null;
           return [agent.id, snapshot] as const;
         }),
@@ -981,7 +1043,7 @@ export function createAdminReadModel(input: {
 
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(input.workspaceBasePath, agentId, 'database.db');
-    const client = createClient({
+    const client: ClosableLibsqlClient = createClient({
       url: `file:${agentDatabasePath}`,
     });
     const storage = new LibSQLStore({
@@ -993,122 +1055,131 @@ export function createAdminReadModel(input: {
       url: `file:${agentDatabasePath}`,
     });
 
-    if (hasCreateThread(storage.stores.memory)) {
-      await storage.stores.memory.createThread({
-        resourceId: mastraAgentId,
-        threadId: mastraAgentId,
+    try {
+      if (hasCreateThread(storage.stores.memory)) {
+        await storage.stores.memory.createThread({
+          resourceId: mastraAgentId,
+          threadId: mastraAgentId,
+        });
+      }
+
+      const memory = createAgentMemory({
+        storage,
+        vector,
+        embedder: resolveWorkspaceEmbedderId(agent.workspaceEmbedder),
       });
-    }
-
-    const memory = createAgentMemory({
-      storage,
-      vector,
-      embedder: resolveWorkspaceEmbedderId(agent.workspaceEmbedder),
-    });
-    const agentWorkspaceRoot = path.resolve(input.workspaceBasePath, agentId);
-    const agentWorkspaceDir = agent.workspaceFilesystem?.basePath
-      ? path.resolve(agentWorkspaceRoot, agent.workspaceFilesystem.basePath)
-      : path.resolve(agentWorkspaceRoot, 'workspace');
-    const agentContextPath = path.resolve(agentWorkspaceDir, 'AGENT_CONTEXT.md');
-    const agentContext = await readFile(agentContextPath, 'utf8')
-      .then((content) => content.trim() || null)
-      .catch(() => null);
-    const workingMemory = await memory.getWorkingMemory({
-      threadId: mastraAgentId,
-      resourceId: mastraAgentId,
-    });
-    const memoryStore = storage.stores.memory;
-    if (!memoryStore) {
-      return {
-        workingMemory: formatWorkingMemoryValue(workingMemory),
-        agentContext,
-        observations: '',
-        reflection: '',
-        generationCount: 0,
-        updatedAt: null,
-        lastObservedAt: null,
-        checkpointGeneration: null,
-        checkpointSummary: null,
-        checkpointUpdatedAt: null,
-        ltmRecall: null,
-        ltm: null,
-        metrics: {
-          recentRawTokenCount: 0,
-          recentRawTokenLimit: 0,
-          overflowTokenCount: 0,
-          observationTriggerTokenLimit: 0,
-          observationTokenCount: 0,
-          reflectionTriggerTokenLimit: 0,
-          reflectionTokenCount: 0,
-          reflectionBudget: 0,
-          checkpointTokenCount: 0,
-        },
-      };
-    }
-    const threadMetadata = hasObservationalMemoryAccess(memoryStore)
-      ? (await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata
-      : undefined;
-    const customState = hasObservationalMemoryAccess(memoryStore)
-      ? getCustomCheckpointedContextState(threadMetadata)
-      : null;
-    const ltmRecall = getLongTermMemoryRecallSnapshot(threadMetadata);
-    let reflection = '';
-    const observations = customState
-      ? customState.observationBlocks
-        .filter((block) => block.reflectedGeneration === null)
-        .map((block) => block.text.trim())
-        .filter(Boolean)
-        .join('\n')
-      : '';
-    let generationCount = 0;
-    let updatedAt: number | null = null;
-    let lastObservedAt: number | null = null;
-
-    if (hasObservationalMemoryAccess(memoryStore)) {
-      const record = await memoryStore.getObservationalMemory(mastraAgentId, mastraAgentId);
-      if (record) {
-        generationCount = record.generationCount;
-        updatedAt = record.updatedAt?.getTime?.() ?? null;
-        lastObservedAt = record.lastObservedAt?.getTime?.() ?? null;
+      const agentWorkspaceRoot = path.resolve(input.workspaceBasePath, agentId);
+      const agentWorkspaceDir = agent.workspaceFilesystem?.basePath
+        ? path.resolve(agentWorkspaceRoot, agent.workspaceFilesystem.basePath)
+        : path.resolve(agentWorkspaceRoot, 'workspace');
+      const agentContextPath = path.resolve(agentWorkspaceDir, 'AGENT_CONTEXT.md');
+      const agentContext = await readFile(agentContextPath, 'utf8')
+        .then((content) => content.trim() || null)
+        .catch(() => null);
+      const workingMemory = await memory.getWorkingMemory({
+        threadId: mastraAgentId,
+        resourceId: mastraAgentId,
+      });
+      const memoryStore = storage.stores.memory;
+      if (!memoryStore) {
+        return {
+          workingMemory: formatWorkingMemoryValue(workingMemory),
+          agentContext,
+          observations: '',
+          reflection: '',
+          generationCount: 0,
+          updatedAt: null,
+          lastObservedAt: null,
+          checkpointGeneration: null,
+          checkpointSummary: null,
+          checkpointUpdatedAt: null,
+          ltmRecall: null,
+          ltm: null,
+          metrics: {
+            recentRawTokenCount: 0,
+            recentRawTokenLimit: 0,
+            overflowTokenCount: 0,
+            observationTriggerTokenLimit: 0,
+            observationTokenCount: 0,
+            reflectionTriggerTokenLimit: 0,
+            reflectionTokenCount: 0,
+            reflectionBudget: 0,
+            checkpointTokenCount: 0,
+          },
+        };
       }
-
-      if (customState?.activeReflectionBlocks.length) {
-        const history = await memoryStore.getObservationalMemoryHistory(mastraAgentId, mastraAgentId, 200);
-        const byId = new Map(history.map((item) => [item.id, item.activeObservations]));
-        reflection = customState.activeReflectionBlocks
-          .map((block) => byId.get(block.recordId)?.trim() ?? '')
+      const threadMetadata = hasObservationalMemoryAccess(memoryStore)
+        ? (await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata
+        : undefined;
+      const customState = hasObservationalMemoryAccess(memoryStore)
+        ? getCustomCheckpointedContextState(threadMetadata)
+        : null;
+      const ltmRecall = getLongTermMemoryRecallSnapshot(threadMetadata);
+      let reflection = '';
+      const observations = customState
+        ? customState.observationBlocks
+          .filter((block) => block.reflectedGeneration === null)
+          .map((block) => block.text.trim())
           .filter(Boolean)
-          .join('\n\n');
+          .join('\n')
+        : '';
+      let generationCount = 0;
+      let updatedAt: number | null = null;
+      let lastObservedAt: number | null = null;
+
+      if (hasObservationalMemoryAccess(memoryStore)) {
+        const record = await memoryStore.getObservationalMemory(mastraAgentId, mastraAgentId);
+        if (record) {
+          generationCount = record.generationCount;
+          updatedAt = record.updatedAt?.getTime?.() ?? null;
+          lastObservedAt = record.lastObservedAt?.getTime?.() ?? null;
+        }
+
+        if (customState?.activeReflectionBlocks.length) {
+          const history = await memoryStore.getObservationalMemoryHistory(mastraAgentId, mastraAgentId, 200);
+          const byId = new Map(history.map((item) => [item.id, item.activeObservations]));
+          reflection = customState.activeReflectionBlocks
+            .map((block) => byId.get(block.recordId)?.trim() ?? '')
+            .filter(Boolean)
+            .join('\n\n');
+        }
       }
-    }
 
-    const settings = await systemSettings.getSettings();
-    const metricsSnapshot = customState?.latestMetrics;
-    const loadedAgent = getInternalAgentRegistry().get(agentId);
-    const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
-      ? await loadedAgent.runtime.longTermMemory.readSnapshot()
-      : null;
-    const persistedLtmState = await readLongTermMemoryState(input.workspaceBasePath, agentId);
-    const ltm = (runtimeLtmSnapshot
-      ? {
-          ...runtimeLtmSnapshot,
-          running: agent.executionState === 'idle' ? runtimeLtmSnapshot.running : false,
-          queued: agent.executionState === 'idle' ? runtimeLtmSnapshot.queued : false,
-        }
-      : null) ?? (persistedLtmState
-      ? {
-          running: false,
-          queued: false,
-          lastRunAt: persistedLtmState.lastRunAt ? Date.parse(persistedLtmState.lastRunAt) : null,
-          lastRunError: persistedLtmState.lastRunError,
-          lastRunErrorAt: persistedLtmState.lastRunErrorAt ? Date.parse(persistedLtmState.lastRunErrorAt) : null,
-          lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
-          lastWrittenAt: persistedLtmState.lastWrittenAt ? Date.parse(persistedLtmState.lastWrittenAt) : null,
-          packageCount: persistedLtmState.packages.length,
-        }
-      : null);
+      const settings = await systemSettings.getSettings();
+      const metricsSnapshot = customState?.latestMetrics;
+      const loadedAgent = getInternalAgentRegistry().get(agentId);
+      const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
+        ? await withTimeout(
+          loadedAgent.runtime.longTermMemory.readSnapshot(),
+          ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+          `Agent runtime memory LTM snapshot timed out for ${agentId}`,
+        ).catch(() => null)
+        : null;
+      const persistedLtmState = await withTimeout(
+        readLongTermMemoryState(input.workspaceBasePath, agentId),
+        ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+        `Agent runtime memory persisted LTM state timed out for ${agentId}`,
+      ).catch(() => null);
+      const ltm = (runtimeLtmSnapshot
+        ? {
+            ...runtimeLtmSnapshot,
+            running: agent.executionState === 'idle' ? runtimeLtmSnapshot.running : false,
+            queued: agent.executionState === 'idle' ? runtimeLtmSnapshot.queued : false,
+          }
+        : null) ?? (persistedLtmState
+        ? {
+            running: false,
+            queued: false,
+            lastRunAt: persistedLtmState.lastRunAt ? Date.parse(persistedLtmState.lastRunAt) : null,
+            lastRunError: persistedLtmState.lastRunError,
+            lastRunErrorAt: persistedLtmState.lastRunErrorAt ? Date.parse(persistedLtmState.lastRunErrorAt) : null,
+            lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
+            lastWrittenAt: persistedLtmState.lastWrittenAt ? Date.parse(persistedLtmState.lastWrittenAt) : null,
+            packageCount: persistedLtmState.packages.length,
+          }
+        : null);
 
-    return {
+      return {
       workingMemory: formatWorkingMemoryValue(workingMemory),
       agentContext,
       executionState: agent.executionState as 'idle' | 'running' | 'absent',
@@ -1189,7 +1260,10 @@ export function createAdminReadModel(input: {
           ? Date.parse(metricsSnapshot.latestThreadMessageAt)
           : null,
       },
-    };
+      };
+    } finally {
+      await closeLibsqlClient(client);
+    }
   }
 
   async function debugAgentLongTermMemoryRecallSearch(
@@ -1601,7 +1675,7 @@ async function listThreadMessages(
   try {
     const mastraAgentId = input.threadId ?? toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
-    const client = createClient({
+    const client: ClosableLibsqlClient = createClient({
       url: `file:${agentDatabasePath}`,
     });
     const storage = new LibSQLStore({
@@ -1610,36 +1684,40 @@ async function listThreadMessages(
     });
     const memory = storage.stores.memory;
 
-    if (!memory) {
-      return [];
-    }
+    try {
+      if (!memory) {
+        return [];
+      }
 
-    if (hasCreateThread(memory)) {
-      await memory.createThread({
-        resourceId: mastraAgentId,
+      if (hasCreateThread(memory)) {
+        await memory.createThread({
+          resourceId: mastraAgentId,
+          threadId: mastraAgentId,
+        });
+      }
+
+      const result = await memory.listMessages({
         threadId: mastraAgentId,
+        resourceId: mastraAgentId,
+        page: input.page,
+        perPage: input.perPage,
+        orderBy: {
+          field: 'createdAt',
+          direction: 'DESC',
+        },
       });
+      return result.messages.map((message: MastraDBMessage) => ({
+        id: message.id,
+        role: message.role,
+        createdAt: message.createdAt.getTime(),
+        threadId: message.threadId ?? null,
+        resourceId: message.resourceId ?? null,
+        type: message.type ?? null,
+        content: message.content,
+      }));
+    } finally {
+      await closeLibsqlClient(client);
     }
-
-    const result = await memory.listMessages({
-      threadId: mastraAgentId,
-      resourceId: mastraAgentId,
-      page: input.page,
-      perPage: input.perPage,
-      orderBy: {
-        field: 'createdAt',
-        direction: 'DESC',
-      },
-    });
-    return result.messages.map((message: MastraDBMessage) => ({
-      id: message.id,
-      role: message.role,
-      createdAt: message.createdAt.getTime(),
-      threadId: message.threadId ?? null,
-      resourceId: message.resourceId ?? null,
-      type: message.type ?? null,
-      content: message.content,
-    }));
   } catch (error) {
     console.error(`[AdminReadModel] Failed to load recent thread messages for agent ${agentId}:`, error);
     return [];
