@@ -479,6 +479,7 @@ export function createAgentLongTermMemory(input: {
   let timer: NodeJS.Timeout | null = null;
   let currentAbortController: AbortController | null = null;
   let runLastMessages = INITIAL_RUN_LAST_MESSAGES;
+  let refreshRecallIndex: (() => Promise<void>) | null = null;
   let snapshot: LtmSnapshot = {
     running: false,
     queued: false,
@@ -687,6 +688,7 @@ export function createAgentLongTermMemory(input: {
     state.lastRunErrorAt = null;
     await writeState(state);
     await markRecallIndexDirty('checkpoint-write');
+    await refreshRecallIndex?.();
 
     forgeDebug('ltm', 'checkpoint package write complete', {
       agentId: input.agentId,
@@ -926,6 +928,7 @@ export function createAgentLongTermMemory(input: {
 
       if (changedFiles.size > 0) {
         await markRecallIndexDirty('ltm-run-complete');
+        await refreshRecallIndex?.();
       }
     } catch (error) {
       const nowIso = new Date().toISOString();
@@ -946,6 +949,10 @@ export function createAgentLongTermMemory(input: {
   }
 
   return {
+    attachRecallIndexRefresh(handler: (() => Promise<void>) | null) {
+      refreshRecallIndex = handler;
+    },
+
     async start() {
       await ensureInitialized();
       const state = await readState();

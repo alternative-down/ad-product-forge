@@ -83,6 +83,8 @@ export async function createAgentRuntimeMemory(input: {
       })
     : null;
 
+  await longTermMemoryRecall?.initialize();
+
   if (input.checkpointedOmEnabled) {
     const checkpointedObservationalMemory = createCheckpointedObservationalMemoryProcessor({
       storage: input.storage,
