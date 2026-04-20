@@ -153,6 +153,7 @@ export async function createInternalAgentRuntime<
     communication: platform.communication,
     longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
     longTermMemory,
+    checkpointedObservationalMemory: runtimeMemory.checkpointedObservationalMemory,
     onReceiveMessage: platform.communication.onReceiveMessage,
     async dispose() {
       const cleanupResults = await Promise.allSettled([

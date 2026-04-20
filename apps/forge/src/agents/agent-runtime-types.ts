@@ -126,6 +126,35 @@ export type InternalAgentRuntime<
     }>;
     dispose(): Promise<void>;
   } | null;
+  checkpointedObservationalMemory: {
+    getSnapshot(): {
+      generationCount: number;
+      updatedAt: number | null;
+      lastObservedAt: number | null;
+      checkpointGeneration: number | null;
+      checkpointSummary: string | null;
+      checkpointUpdatedAt: number | null;
+      metrics: {
+        rawMessageCount: number;
+        recentRawMessageCount: number;
+        recentRawTokenCount: number;
+        recentRawTokenLimit: number;
+        overflowMessageCount: number;
+        overflowTokenCount: number;
+        observationTriggerTokenLimit: number;
+        activeObservationBlockCount: number;
+        observationTokenCount: number;
+        reflectionTriggerTokenLimit: number;
+        activeReflectionBlockCount: number;
+        reflectionTokenCount: number;
+        reflectionBudget: number;
+        checkpointTokenCount: number;
+        checkpointSummaryUpToGeneration: number | null;
+        latestThreadMessageAt: string | null;
+        updatedAt: string;
+      } | null;
+    } | null;
+  } | null;
   onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
   dispose(): Promise<void>;
 };

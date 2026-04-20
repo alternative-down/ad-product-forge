@@ -17,6 +17,36 @@ import { createAgentLongTermMemoryRecall } from './agent-long-term-memory-recall
 
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 
+type CheckpointedObservationalMemoryRuntime = {
+  getSnapshot(): {
+    generationCount: number;
+    updatedAt: number | null;
+    lastObservedAt: number | null;
+    checkpointGeneration: number | null;
+    checkpointSummary: string | null;
+    checkpointUpdatedAt: number | null;
+    metrics: {
+      rawMessageCount: number;
+      recentRawMessageCount: number;
+      recentRawTokenCount: number;
+      recentRawTokenLimit: number;
+      overflowMessageCount: number;
+      overflowTokenCount: number;
+      observationTriggerTokenLimit: number;
+      activeObservationBlockCount: number;
+      observationTokenCount: number;
+      reflectionTriggerTokenLimit: number;
+      activeReflectionBlockCount: number;
+      reflectionTokenCount: number;
+      reflectionBudget: number;
+      checkpointTokenCount: number;
+      checkpointSummaryUpToGeneration: number | null;
+      latestThreadMessageAt: string | null;
+      updatedAt: string;
+    } | null;
+  } | null;
+};
+
 export async function createAgentRuntimeMemory(input: {
   storage: LibSQLStore;
   vector: LibSQLVector;
@@ -69,6 +99,7 @@ export async function createAgentRuntimeMemory(input: {
   });
   const inputProcessors: InputProcessorOrWorkflow[] = [];
   const outputProcessors: OutputProcessorOrWorkflow[] = [];
+  let checkpointedObservationalMemory: CheckpointedObservationalMemoryRuntime | null = null;
   const longTermMemoryRecall = input.longTermMemory
     ? createAgentLongTermMemoryRecall({
         agentId: input.agentId,
@@ -86,7 +117,8 @@ export async function createAgentRuntimeMemory(input: {
   await longTermMemoryRecall?.initialize();
 
   if (input.checkpointedOmEnabled) {
-    const checkpointedObservationalMemory = createCheckpointedObservationalMemoryProcessor({
+    const checkpointedObservationalMemoryProcessor =
+      createCheckpointedObservationalMemoryProcessor({
       storage: input.storage,
       model: input.omModel ?? input.agentModel,
       totalContextTokens: input.checkpointedOmTotalContextTokens,
@@ -117,9 +149,10 @@ export async function createAgentRuntimeMemory(input: {
           };
         }
         : undefined,
-    });
+      });
+    checkpointedObservationalMemory = checkpointedObservationalMemoryProcessor;
 
-    inputProcessors.push(checkpointedObservationalMemory);
+    inputProcessors.push(checkpointedObservationalMemoryProcessor);
   }
 
   if (input.tokenCountFilterEnabled ?? true) {
@@ -131,5 +164,6 @@ export async function createAgentRuntimeMemory(input: {
     inputProcessors,
     outputProcessors,
     longTermMemoryRecall,
+    checkpointedObservationalMemory,
   };
 }

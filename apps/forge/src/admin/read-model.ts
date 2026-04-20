@@ -1041,6 +1041,9 @@ export function createAdminReadModel(input: {
       return null;
     }
 
+    const loadedAgent = getInternalAgentRegistry().get(agentId);
+    const liveOmSnapshot = loadedAgent?.runtime.checkpointedObservationalMemory?.getSnapshot() ?? null;
+
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(input.workspaceBasePath, agentId, 'database.db');
     const client: ClosableLibsqlClient = createClient({
@@ -1123,11 +1126,11 @@ export function createAdminReadModel(input: {
           .filter(Boolean)
           .join('\n')
         : '';
-      let generationCount = 0;
-      let updatedAt: number | null = null;
-      let lastObservedAt: number | null = null;
+      let generationCount = liveOmSnapshot?.generationCount ?? 0;
+      let updatedAt: number | null = liveOmSnapshot?.updatedAt ?? null;
+      let lastObservedAt: number | null = liveOmSnapshot?.lastObservedAt ?? null;
 
-      if (hasObservationalMemoryAccess(memoryStore)) {
+      if (hasObservationalMemoryAccess(memoryStore) && !liveOmSnapshot) {
         const record = await memoryStore.getObservationalMemory(mastraAgentId, mastraAgentId);
         if (record) {
           generationCount = record.generationCount;
@@ -1146,8 +1149,7 @@ export function createAdminReadModel(input: {
       }
 
       const settings = await systemSettings.getSettings();
-      const metricsSnapshot = customState?.latestMetrics;
-      const loadedAgent = getInternalAgentRegistry().get(agentId);
+      const metricsSnapshot = liveOmSnapshot?.metrics ?? customState?.latestMetrics;
       const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
         ? await withTimeout(
           loadedAgent.runtime.longTermMemory.readSnapshot(),
@@ -1185,16 +1187,21 @@ export function createAdminReadModel(input: {
       executionState: agent.executionState as 'idle' | 'running' | 'absent',
       lastExecutionError: agent.lastExecutionError ?? null,
       lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-      observations,
-      reflection,
-      generationCount,
-      updatedAt,
-      lastObservedAt,
-      checkpointGeneration: customState?.checkpointGeneration ?? null,
-      checkpointSummary: customState?.checkpointSummary?.text ?? null,
-      checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
-        ? Date.parse(customState.checkpointSummary.updatedAt)
-        : null,
+        observations,
+        reflection,
+        generationCount,
+        updatedAt,
+        lastObservedAt,
+        checkpointGeneration: liveOmSnapshot?.checkpointGeneration
+          ?? customState?.checkpointGeneration
+          ?? null,
+        checkpointSummary: liveOmSnapshot?.checkpointSummary
+          ?? customState?.checkpointSummary?.text
+          ?? null,
+        checkpointUpdatedAt: liveOmSnapshot?.checkpointUpdatedAt
+          ?? (customState?.checkpointSummary?.updatedAt
+            ? Date.parse(customState.checkpointSummary.updatedAt)
+            : null),
       ltmRecall: ltmRecall
         ? {
             status: ltmRecall.status,
