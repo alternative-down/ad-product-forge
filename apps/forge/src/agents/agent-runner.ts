@@ -18,6 +18,7 @@ const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const GENERATE_MAX_STEPS_PER_RUN = 1000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
+const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
@@ -51,6 +52,7 @@ export function createAgentRunner(
   let stopped = false;
   let instant = false;
   let startingRun = false;
+  let startingRunStartedAt: number | null = null;
   let executing = false;
   let backoffMs = ONE_MINUTE_MS;
   let nextStepAt: number | null = null;
@@ -221,7 +223,7 @@ export function createAgentRunner(
     }
 
     await beginRun({
-      reloadRuntime: true,
+      reloadRuntime: false,
       wakeStartedAt: Date.now(),
       markRunning: true,
     });
@@ -294,6 +296,7 @@ export function createAgentRunner(
   function stop() {
     stopped = true;
     startingRun = false;
+    startingRunStartedAt = null;
     activeRunEpoch += 1;
     activeStepEpoch = 0;
     activeRunId = null;
@@ -310,6 +313,7 @@ export function createAgentRunner(
   } = {}) {
     const runEpoch = startNewRunEpoch();
     startingRun = false;
+    startingRunStartedAt = null;
     executing = false;
     clearTimer();
     if (!options.preserveQueuedWork) {
@@ -359,7 +363,7 @@ export function createAgentRunner(
 
         if (pendingRunMessages.size > 0) {
           await beginRun({
-            reloadRuntime: true,
+            reloadRuntime: false,
             wakeStartedAt: Date.now(),
             markRunning: true,
           });
@@ -372,6 +376,21 @@ export function createAgentRunner(
         }
 
         return;
+      }
+
+      if (startingRun) {
+        const startingRunAgeMs =
+          startingRunStartedAt === null ? 0 : Date.now() - startingRunStartedAt;
+
+        if (startingRunAgeMs >= STARTING_RUN_TIMEOUT_MS) {
+          console.error(
+            `[AgentRunner] ${runtime.id} startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state`,
+          );
+          startNewRunEpoch();
+          startingRun = false;
+          startingRunStartedAt = null;
+          activeRunId = null;
+        }
       }
 
       if (startingRun || executing || timer) {
@@ -394,6 +413,7 @@ export function createAgentRunner(
     }
 
     startingRun = true;
+    startingRunStartedAt = Date.now();
     const runEpoch = startNewRunEpoch();
 
     try {
@@ -437,6 +457,7 @@ export function createAgentRunner(
       }
     } finally {
       startingRun = false;
+      startingRunStartedAt = null;
     }
   }
 
@@ -806,6 +827,7 @@ export function createAgentRunner(
       stopped,
       instant,
       startingRun,
+      startingRunStartedAt,
       executing,
       activeRunEpoch,
       activeStepEpoch,
