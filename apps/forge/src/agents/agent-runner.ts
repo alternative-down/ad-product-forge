@@ -16,7 +16,7 @@ const STUCK_LOOP_REPEAT_LIMIT = 6;
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
-const GENERATE_MAX_STEPS_PER_RUN = 1000;
+const GENERATE_MAX_STEPS_PER_RUN = 10_000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
@@ -901,6 +901,7 @@ export function createAgentRunner(
           currentRuntime.agent.generate(effectivePromptText, {
             runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
             maxSteps: GENERATE_MAX_STEPS_PER_RUN,
+            savePerStep: true,
             abortSignal: controller.signal,
             ...(systemPrompt ? { system: systemPrompt } : {}),
             memory: {
