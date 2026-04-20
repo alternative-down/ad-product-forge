@@ -36,6 +36,8 @@ export type AgentListItem = {
   overview: {
     lastStepAt: number | null;
     lastStepContextTokens: number | null;
+    lastStepPromptTokens: number | null;
+    lastStepCachedContextTokens: number | null;
     lastStepPreview: string | null;
     lastToolBadge: {
       icon: string;

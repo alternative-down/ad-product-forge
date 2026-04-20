@@ -30,6 +30,28 @@ const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
+function subtractUsageDelta(
+  current: {
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+  },
+  previous: {
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+  } | null,
+) {
+  return {
+    inputTokens: Math.max(current.inputTokens - (previous?.inputTokens ?? 0), 0),
+    cachedInputTokens: Math.max(
+      current.cachedInputTokens - (previous?.cachedInputTokens ?? 0),
+      0,
+    ),
+    outputTokens: Math.max(current.outputTokens - (previous?.outputTokens ?? 0), 0),
+  };
+}
+
 export function createAgentRunner(
   db: Database,
   runtime: InternalAgentRuntime,
@@ -887,6 +909,11 @@ export function createAgentRunner(
       const controller = new AbortController();
       const generateToken = startGenerateAttempt(controller);
       const timeout = createGenerateTimeoutGuard(controller);
+      let previousStepUsage: {
+        inputTokens: number;
+        cachedInputTokens: number;
+        outputTokens: number;
+      } | null = null;
       touchGenerateTimeout(timeout, controller);
 
       try {
@@ -928,8 +955,16 @@ export function createAgentRunner(
             onStepFinish: async (stepResult) => {
               touchGenerateTimeout(timeout, controller);
               lastStepStage = 'recording-agent-usage';
-              const { inputTokens, cachedInputTokens, outputTokens } =
-                usage.getUsageFromResult(stepResult);
+              const currentStepUsage = usage.getUsageFromResult(stepResult);
+              const { inputTokens, cachedInputTokens, outputTokens } = subtractUsageDelta(
+                currentStepUsage,
+                previousStepUsage,
+              );
+              previousStepUsage = currentStepUsage;
+
+              if (inputTokens === 0 && cachedInputTokens === 0 && outputTokens === 0) {
+                return;
+              }
 
               await withTimeout(
                 usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens),
