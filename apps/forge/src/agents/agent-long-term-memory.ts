@@ -24,6 +24,7 @@ const SKILLS_DIR = path.join('workspace', 'skills');
 const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
+const GENERATE_MAX_STEPS_PER_RUN = 1000;
 const INITIAL_RUN_LAST_MESSAGES = 10;
 
 const packageManifestSchema = z.object({
@@ -790,8 +791,9 @@ export function createAgentLongTermMemory(input: {
     return Math.max(0, Math.round(remainingTimeMs / stepsPossible));
   }
 
-  async function generateLtmStep(prompt: string) {
+  async function generateLtmRun(prompt: string) {
     let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
+    const runDelayMs = await estimateNextLtmDelayMs();
 
     for (let attempt = 1; attempt <= GENERATE_MAX_ATTEMPTS; attempt += 1) {
       try {
@@ -799,7 +801,7 @@ export function createAgentLongTermMemory(input: {
         currentAbortController = controller;
         result = await withTimeout(
           memoryAgent.generate(prompt, {
-            maxSteps: 1,
+            maxSteps: GENERATE_MAX_STEPS_PER_RUN,
             abortSignal: controller.signal,
             memory: {
               thread: ltmMastraId,
@@ -807,6 +809,34 @@ export function createAgentLongTermMemory(input: {
               options: {
                 lastMessages: runLastMessages,
               },
+            },
+            prepareStep: async ({ stepNumber }) => {
+              if (stepNumber === 0 || runDelayMs <= 0) {
+                return;
+              }
+
+              await sleep(runDelayMs);
+            },
+            onStepFinish: async (stepResult) => {
+              await recordLtmStep(getUsageFromGenerateResult(stepResult));
+            },
+            onIterationComplete: async (iteration) => {
+              forgeDebug('ltm', 'memory workflow step complete', {
+                agentId: input.agentId,
+                hasToolCalls: iteration.toolCalls.length > 0,
+                outputLength: iteration.text.length,
+                iteration: iteration.iteration,
+              });
+
+              if (iteration.toolCalls.length > 0) {
+                return {
+                  continue: true,
+                };
+              }
+
+              return {
+                continue: false,
+              };
             },
           }),
           GENERATE_TIMEOUT_MS,
@@ -868,50 +898,15 @@ export function createAgentLongTermMemory(input: {
       });
 
       const changedFiles = new Set<string>();
-      let isFirstStep = true;
+      const nextState = await readState();
 
-      while (!stopped && idle) {
-        const nextState = await readState();
-        const nextAvailablePackages = nextState.packages;
-
-        if (nextAvailablePackages.length === 0) {
-          break;
-        }
-
-        const beforeStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
-        const result = await generateLtmStep(isFirstStep ? buildMemoryAgentPrompt() : '');
-        await recordLtmStep(getUsageFromGenerateResult(result));
-        const afterStepSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
-        isFirstStep = false;
-        runLastMessages += 1;
-
-        for (const filePath of diffTrackedFiles(beforeStepSnapshot, afterStepSnapshot)) {
-          changedFiles.add(filePath);
-        }
-
-        const hasToolCalls = result.toolCalls.length > 0;
-
-        forgeDebug('ltm', 'memory workflow step complete', {
-          agentId: input.agentId,
-          packageCount: nextAvailablePackages.length,
-          hasToolCalls,
-          outputLength: result.text.length,
-        });
-
-        if (!hasToolCalls) {
-          const nowIso = new Date().toISOString();
-          nextState.lastRunAt = nowIso;
-          nextState.lastRunError = null;
-          nextState.lastRunErrorAt = null;
-          await writeState(nextState);
-          break;
-        }
-
-        const nextDelayMs = await estimateNextLtmDelayMs();
-
-        if (nextDelayMs > 0) {
-          await sleep(nextDelayMs);
-        }
+      if (nextState.packages.length > 0) {
+        await generateLtmRun(buildMemoryAgentPrompt());
+        const nowIso = new Date().toISOString();
+        nextState.lastRunAt = nowIso;
+        nextState.lastRunError = null;
+        nextState.lastRunErrorAt = null;
+        await writeState(nextState);
       }
 
       const afterSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);

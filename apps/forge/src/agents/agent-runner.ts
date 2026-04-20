@@ -13,11 +13,10 @@ const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS;
 const STUCK_LOOP_REPEAT_LIMIT = 6;
-const STEP_HANG_WARNING_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
-const STEP_HANG_RECOVERY_MS = GENERATE_TIMEOUT_MS + (2 * ONE_MINUTE_MS);
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
+const GENERATE_MAX_STEPS_PER_RUN = 1000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
@@ -503,34 +502,9 @@ export function createAgentRunner(
     activeStepEpoch = runEpoch;
     let continueRunning = false;
     let drainWakeQueueAfterStep = false;
-    let suppressNoToolCallReminder = false;
     let prompt = '';
     lastStepStartedAt = Date.now();
     lastStepStage = 'step-started';
-    const stepWarningTimer = setTimeout(() => {
-      console.error(
-        `[AgentRunner] ${runtime.id} step appears stuck:`,
-        JSON.stringify({
-          agentId: runtime.id,
-          mastraId: currentRuntime.mastraId,
-          pricingModelKey: currentRuntime.pricingModelKey,
-          modelProfileId: currentRuntime.modelProfileId,
-          stepStartedAt: lastStepStartedAt,
-          stepStage: lastStepStage,
-          prompt,
-          snapshot: getSnapshot(),
-          stepHangWarningMs: STEP_HANG_WARNING_MS,
-        }, null, 2),
-      );
-
-    }, STEP_HANG_WARNING_MS);
-    const stepRecoveryTimer = setTimeout(() => {
-      void recoverStuckStep({
-        runEpoch,
-        stage: lastStepStage,
-        prompt,
-      });
-    }, STEP_HANG_RECOVERY_MS);
 
     try {
       lastStepStage = 'checking-execution-state';
@@ -585,92 +559,20 @@ export function createAgentRunner(
       console.log(`[AgentRunner] ${runtime.id} executing step`);
 
       lastStepStage = 'agent-generate';
-      const result = await generateWithTimeoutRetries(prompt, runEpoch, stepLongTermMemoryRecallSystemText);
+      const result = await generateWithTimeoutRetries(
+        prompt,
+        runEpoch,
+        contractId,
+        contract,
+        stepLongTermMemoryRecallSystemText,
+      );
 
       if (isStaleRun(runEpoch)) {
         return;
       }
-      lastStepStage = 'logging-tool-calls';
-      console.log(
-        `[AgentRunner] ${runtime.id} toolCalls:`,
-        JSON.stringify(
-          result.toolCalls.map((chunk) => ({
-            toolName: chunk.payload.toolName,
-            args: chunk.payload.args,
-          })),
-          null,
-          2,
-        ),
-      );
-      lastStepStage = 'recording-agent-usage';
-      const {
-        inputTokens,
-        cachedInputTokens,
-        outputTokens,
-      } = usage.getUsageFromResult(result);
-
-      await withTimeout(
-        usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent usage recording timed out for ${runtime.id}`,
-      );
-      lastStepStage = 'recording-observational-memory-usage';
-      void withTimeout(
-        usage.recordObservationalMemorySteps(contractId, result.steps),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent observational memory usage recording timed out for ${runtime.id}`,
-      ).catch((error) => {
-        console.error(`[AgentRunner] ${runtime.id} failed to record observational memory usage:`, error);
-      });
-
-      lastStepStage = 'processing-runner-control';
+      lastStepStage = 'finalizing-run';
       const controlDirective = extractRunnerControlDirective(result);
-      const ignoredTextRequested = controlDirective === 'ignore';
       const stopRequested = controlDirective === 'stop';
-      const workingMemoryUpdated = didUpdateWorkingMemory(result);
-      const loopSignature = buildLoopSignature(result);
-
-      if (workingMemoryUpdated) {
-        appendPendingRunMessages([
-          {
-            type: 'runner-working-memory-update',
-            groupKey: `runner-working-memory-update:${runtime.id}`,
-            groupMetadata: {
-              Source: 'runner',
-            },
-            idempotencyKey: `runner-working-memory-update:${runtime.id}:${lastStepStartedAt ?? Date.now()}`,
-            itemMetadata: {
-              Kind: 'working-memory-update',
-            },
-            text: `Working memory was updated at ${new Date().toISOString()} during the last step.`,
-            timestamp: Date.now(),
-          },
-        ]);
-      }
-
-      if (registerLoopSignature(loopSignature) >= STUCK_LOOP_REPEAT_LIMIT) {
-        await withTimeout(
-          notifications.createNotification({
-            agentId: runtime.id,
-            content: [
-              'Stuck loop detected.',
-              `Repeated signature count: ${repeatedLoopCount}`,
-              'The agent repeated the same tool/text pattern and was forced to stop.',
-              '',
-              'Signature:',
-              loopSignature,
-            ].join('\n'),
-          }),
-          RUNNER_AWAIT_TIMEOUT_MS,
-          `Agent notification creation timed out for ${runtime.id}`,
-        );
-        nextStepAt = null;
-        resetLoopDetector();
-        await transitionToIdle(runEpoch, {
-          deferWakeQueueDrain: true,
-        });
-        return;
-      }
 
       if (stopRequested && pendingRunMessages.size === 0) {
         nextStepAt = null;
@@ -682,38 +584,8 @@ export function createAgentRunner(
         return;
       }
 
-      if (result.toolCalls.length === 0) {
-        if (ignoredTextRequested) {
-          suppressNoToolCallReminder = true;
-        }
-
-        if (!stopRequested && !suppressNoToolCallReminder) {
-          appendPendingRunMessages([
-            {
-              type: 'runner-reminder',
-              groupKey: `runner-reminder:${runtime.id}`,
-              groupMetadata: {
-                Source: 'runner',
-              },
-              idempotencyKey: `runner-reminder:${runtime.id}:${Date.now()}`,
-              itemMetadata: {
-                Kind: 'run-stop-reminder',
-              },
-              text: RUN_STOP_REMINDER,
-              timestamp: Date.now(),
-            },
-          ]);
-        }
-      }
-
-      pendingLongTermMemoryRecallSystemText = await currentRuntime.longTermMemoryRecall?.recallFromStep({
-        step: result.steps.at(-1) ?? null,
-        steps: result.steps,
-        threadId: currentRuntime.mastraId,
-        resourceId: currentRuntime.mastraId,
-      }) ?? null;
       backoffMs = ONE_MINUTE_MS;
-      continueRunning = true;
+      continueRunning = pendingRunMessages.size > 0;
     } catch (error) {
       if (isStaleRun(runEpoch)) {
         return;
@@ -744,8 +616,6 @@ export function createAgentRunner(
       });
       schedule(nextBackoff());
     } finally {
-      clearTimeout(stepWarningTimer);
-      clearTimeout(stepRecoveryTimer);
       lastStepStartedAt = null;
       lastStepStage = null;
       if (activeStepEpoch === runEpoch) {
@@ -963,6 +833,12 @@ export function createAgentRunner(
   async function generateWithTimeoutRetries(
     promptText: string,
     runEpoch: number,
+    contractId: string,
+    contract: {
+      id: string;
+      budgetUsd: number;
+      endsAt: number;
+    },
     longTermMemoryRecallSystemText: string | null,
   ) {
     const effectivePromptText = [
@@ -982,11 +858,14 @@ export function createAgentRunner(
       role: 'assistant' | 'user';
       content: string;
     } => Boolean(value));
+    const runDelayMs = await planCurrentRunDelayMs(contract);
+    let suppressNoToolCallReminderForRun = false;
 
     for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();
       const generateToken = startGenerateAttempt(controller);
-      const timeout = createGenerateTimeoutPromise(controller);
+      const timeout = createGenerateTimeoutGuard(controller);
+      touchGenerateTimeout(timeout, controller);
 
       try {
         console.log(`[AgentRunner] ${runtime.id} preparing runtime context before generate`);
@@ -999,7 +878,7 @@ export function createAgentRunner(
         const result = await Promise.race([
           currentRuntime.agent.generate(effectivePromptText, {
             runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
-            maxSteps: 1,
+            maxSteps: GENERATE_MAX_STEPS_PER_RUN,
             abortSignal: controller.signal,
             ...(systemPrompt ? { system: systemPrompt } : {}),
             memory: {
@@ -1013,6 +892,131 @@ export function createAgentRunner(
               anthropic: {
                 thinking: { type: 'enabled', budgetTokens: 2000 },
               },
+            },
+            prepareStep: async ({ stepNumber }) => {
+              touchGenerateTimeout(timeout, controller);
+
+              if (stepNumber === 0 || runDelayMs <= 0) {
+                return;
+              }
+
+              await delay(runDelayMs);
+            },
+            onStepFinish: async (stepResult) => {
+              touchGenerateTimeout(timeout, controller);
+              lastStepStage = 'recording-agent-usage';
+              const { inputTokens, cachedInputTokens, outputTokens } =
+                usage.getUsageFromResult(stepResult);
+
+              await withTimeout(
+                usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens),
+                RUNNER_AWAIT_TIMEOUT_MS,
+                `Agent usage recording timed out for ${runtime.id}`,
+              );
+            },
+            onIterationComplete: async (iteration) => {
+              touchGenerateTimeout(timeout, controller);
+              lastStepStage = 'processing-runner-control';
+
+              console.log(
+                `[AgentRunner] ${runtime.id} iteration toolCalls:`,
+                JSON.stringify(iteration.toolCalls, null, 2),
+              );
+
+              const controlDirective = extractRunnerControlDirectiveFromIteration(iteration);
+              const ignoredTextRequested = controlDirective === 'ignore';
+              const stopRequested = controlDirective === 'stop';
+              const workingMemoryUpdated = didIterationUpdateWorkingMemory(iteration);
+              const loopSignature = buildIterationLoopSignature(iteration);
+
+              if (workingMemoryUpdated) {
+                appendPendingRunMessages([
+                  {
+                    type: 'runner-working-memory-update',
+                    groupKey: `runner-working-memory-update:${runtime.id}`,
+                    groupMetadata: {
+                      Source: 'runner',
+                    },
+                    idempotencyKey: `runner-working-memory-update:${runtime.id}:${Date.now()}`,
+                    itemMetadata: {
+                      Kind: 'working-memory-update',
+                    },
+                    text: `Working memory was updated at ${new Date().toISOString()} during the last step.`,
+                    timestamp: Date.now(),
+                  },
+                ]);
+              }
+
+              if (registerLoopSignature(loopSignature) >= STUCK_LOOP_REPEAT_LIMIT) {
+                await withTimeout(
+                  notifications.createNotification({
+                    agentId: runtime.id,
+                    content: [
+                      'Stuck loop detected.',
+                      `Repeated signature count: ${repeatedLoopCount}`,
+                      'The agent repeated the same tool/text pattern and was forced to stop.',
+                      '',
+                      'Signature:',
+                      loopSignature,
+                    ].join('\n'),
+                  }),
+                  RUNNER_AWAIT_TIMEOUT_MS,
+                  `Agent notification creation timed out for ${runtime.id}`,
+                );
+                nextStepAt = null;
+                resetLoopDetector();
+                return {
+                  continue: false,
+                };
+              }
+
+              if (iteration.toolCalls.length === 0 && ignoredTextRequested) {
+                suppressNoToolCallReminderForRun = true;
+              }
+
+              const feedbackParts: string[] = [];
+              const flushedPrompt = flushPendingRunMessages({
+                allowOriginIdleOnly: true,
+              });
+
+              if (flushedPrompt) {
+                feedbackParts.push(flushedPrompt);
+              }
+
+              if (
+                iteration.toolCalls.length === 0 &&
+                !stopRequested &&
+                !suppressNoToolCallReminderForRun
+              ) {
+                feedbackParts.push(RUN_STOP_REMINDER);
+              }
+
+              const recallStep = buildRecallStepFromIteration(iteration);
+              const recallFeedback = await currentRuntime.longTermMemoryRecall?.recallFromStep({
+                step: recallStep,
+                steps: [recallStep],
+                threadId: currentRuntime.mastraId,
+                resourceId: currentRuntime.mastraId,
+              }) ?? null;
+
+              if (recallFeedback?.trim()) {
+                feedbackParts.push(recallFeedback.trim());
+              }
+
+              if (stopRequested && pendingRunMessages.size === 0 && feedbackParts.length === 0) {
+                return {
+                  continue: false,
+                };
+              }
+
+              if (feedbackParts.length > 0) {
+                return {
+                  continue: true,
+                  feedback: feedbackParts.join('\n\n'),
+                };
+              }
+
+              return undefined;
             },
           }),
           timeout.promise,
@@ -1032,7 +1036,7 @@ export function createAgentRunner(
         );
         await delay(backoffMs);
       } finally {
-        timeout.clear();
+        clearGenerateTimeout(timeout);
         finishGenerateAttempt(generateToken, controller);
       }
     }
@@ -1236,83 +1240,83 @@ export function createAgentRunner(
     currentGenerateAbortController = null;
   }
 
-  async function recoverStuckStep(input: {
-    runEpoch: number;
-    stage: string | null;
-    prompt: string;
+  async function planCurrentRunDelayMs(contract: {
+    id: string;
+    budgetUsd: number;
+    endsAt: number;
   }) {
-    if (isStaleRun(input.runEpoch) || !executing) {
-      return;
-    }
-
-    console.error(
-      `[AgentRunner] ${runtime.id} auto-recovering stuck step:`,
-      JSON.stringify({
-        agentId: runtime.id,
-        stepStartedAt: lastStepStartedAt,
-        stepStage: input.stage,
-        prompt: input.prompt,
-        snapshot: getSnapshot(),
-        stepHangRecoveryMs: STEP_HANG_RECOVERY_MS,
-      }, null, 2),
+    backoffMs = ONE_MINUTE_MS;
+    const settings = await withTimeout(
+      systemSettings.getSettings(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `System settings lookup timed out for ${runtime.id}`,
     );
 
-    await withTimeout(
-      notifications.createNotification({
-        agentId: runtime.id,
-        content: [
-          'Step hang auto-recovery triggered.',
-          `Stage: ${input.stage ?? 'unknown'}`,
-          `StartedAt: ${lastStepStartedAt ? new Date(lastStepStartedAt).toISOString() : 'unknown'}`,
-          '',
-          'The runner forced idle and queued an automatic rewakeup because the step exceeded the hang recovery threshold.',
-        ].join('\n'),
-      }),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent stuck-step notification timed out for ${runtime.id}`,
-    ).catch((error) => {
-      console.error(`[AgentRunner] ${runtime.id} failed to create stuck-step notification:`, error);
-    });
+    if (instant || !settings.stepDelayEnabled) {
+      return 0;
+    }
 
-    await forceIdle({
-      preserveQueuedWork: true,
-    });
-    notifyExternalEvent({
-      type: 'runner-auto-rewakeup',
-      groupKey: `runner-auto-rewakeup:${runtime.id}`,
-      groupMetadata: {
-        Source: 'runner',
-      },
-      idempotencyKey: `runner-auto-rewakeup:${runtime.id}:${Date.now()}`,
-      itemMetadata: {
-        Kind: 'auto-rewakeup',
-      },
-      text: 'Runner auto-rewakeup after a stuck step. Rebuild context from the latest persisted state and continue work.',
-      timestamp: Date.now(),
-    });
+    const spentUsd = await withTimeout(
+      store.getContractSpend(contract.id),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent contract spend lookup timed out for ${runtime.id}`,
+    );
+    const remainingBudgetUsd = contract.budgetUsd - spentUsd;
+    const estimatedStepUsd = await withTimeout(
+      usage.estimateStepCostUsd(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent step cost estimate timed out for ${runtime.id}`,
+    );
+
+    return calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd);
   }
 
-  function createGenerateTimeoutPromise(controller: AbortController) {
+  function createGenerateTimeoutGuard(_controller: AbortController) {
     let timeoutId: NodeJS.Timeout | null = null;
+    let rejectTimeout: ((error: Error) => void) | null = null;
     const promise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        const timeoutError = new Error(`Agent generate timed out after ${GENERATE_TIMEOUT_MS}ms`);
-        controller.abort(timeoutError);
-        reject(timeoutError);
-      }, GENERATE_TIMEOUT_MS);
+      rejectTimeout = reject;
     });
 
     return {
       promise,
-      clear() {
-        if (!timeoutId) {
-          return;
-        }
-
-        clearTimeout(timeoutId);
-        timeoutId = null;
+      get timeoutId() {
+        return timeoutId;
       },
+      set timeoutId(value: NodeJS.Timeout | null) {
+        timeoutId = value;
+      },
+      rejectTimeout,
     };
+  }
+
+  function touchGenerateTimeout(
+    timeout: {
+      timeoutId: NodeJS.Timeout | null;
+      rejectTimeout: ((error: Error) => void) | null;
+    },
+    controller: AbortController,
+  ) {
+    if (timeout.timeoutId) {
+      clearTimeout(timeout.timeoutId);
+    }
+
+    timeout.timeoutId = setTimeout(() => {
+      const timeoutError = new Error(
+        `Agent generate timed out after ${GENERATE_TIMEOUT_MS}ms without iteration progress`,
+      );
+      controller.abort(timeoutError);
+      timeout.rejectTimeout?.(timeoutError);
+    }, GENERATE_TIMEOUT_MS);
+  }
+
+  function clearGenerateTimeout(timeout: { timeoutId: NodeJS.Timeout | null }) {
+    if (!timeout.timeoutId) {
+      return;
+    }
+
+    clearTimeout(timeout.timeoutId);
+    timeout.timeoutId = null;
   }
 }
 
@@ -1340,32 +1344,28 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   });
 }
 
-function buildLoopSignature(result: {
+function buildIterationLoopSignature(iteration: {
   text: string;
   toolCalls: Array<{
-    payload: {
-      toolName: string;
-      args?: unknown;
-    };
+    name: string;
+    args: Record<string, unknown>;
   }>;
 }) {
   return JSON.stringify({
-    text: result.text.trim(),
-    toolCalls: result.toolCalls.map((chunk) => ({
-      toolName: chunk.payload.toolName,
-      args: chunk.payload.args,
+    text: iteration.text.trim(),
+    toolCalls: iteration.toolCalls.map((toolCall) => ({
+      toolName: toolCall.name,
+      args: toolCall.args,
     })),
   });
 }
 
-function didUpdateWorkingMemory(result: {
+function didIterationUpdateWorkingMemory(iteration: {
   toolCalls: Array<{
-    payload: {
-      toolName: string;
-    };
+    name: string;
   }>;
 }) {
-  return result.toolCalls.some((chunk) => chunk.payload.toolName === 'updateWorkingMemory');
+  return iteration.toolCalls.some((toolCall) => toolCall.name === 'updateWorkingMemory');
 }
 
 function serializeError(error: unknown): Record<string, unknown> {
@@ -1521,6 +1521,46 @@ function extractRunnerControlDirective(result: {
   }
 
   return null;
+}
+
+function extractRunnerControlDirectiveFromIteration(iteration: {
+  text: string;
+}) {
+  const text = iteration.text.trim();
+
+  if (hasExactControlDirective(text, STOP_AND_IDLE_PREFIX)) {
+    return 'stop' as const;
+  }
+
+  if (hasExactControlDirective(text, NO_ACTION_NEEDED_PREFIX)) {
+    return 'ignore' as const;
+  }
+
+  return null;
+}
+
+function buildRecallStepFromIteration(iteration: {
+  text: string;
+  toolCalls: Array<{
+    name: string;
+    args: Record<string, unknown>;
+  }>;
+  toolResults: Array<{
+    name: string;
+    result: unknown;
+  }>;
+}) {
+  return {
+    text: iteration.text,
+    toolCalls: iteration.toolCalls.map((toolCall) => ({
+      toolName: toolCall.name,
+      args: toolCall.args,
+    })),
+    toolResults: iteration.toolResults.map((toolResult) => ({
+      toolName: toolResult.name,
+      result: toolResult.result,
+    })),
+  };
 }
 
 function collectStepTextParts(steps: Array<{
