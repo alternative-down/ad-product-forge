@@ -901,6 +901,7 @@ export function createAgentRunner(
           currentRuntime.agent.generate(effectivePromptText, {
             runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
             maxSteps: GENERATE_MAX_STEPS_PER_RUN,
+            savePerStep: true,
             abortSignal: controller.signal,
             ...(systemPrompt ? { system: systemPrompt } : {}),
             memory: {

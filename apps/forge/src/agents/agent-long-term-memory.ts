@@ -802,6 +802,7 @@ export function createAgentLongTermMemory(input: {
         result = await withTimeout(
           memoryAgent.generate(prompt, {
             maxSteps: GENERATE_MAX_STEPS_PER_RUN,
+            savePerStep: true,
             abortSignal: controller.signal,
             memory: {
               thread: ltmMastraId,
