@@ -1042,8 +1042,6 @@ export function createAdminReadModel(input: {
     }
 
     const loadedAgent = getInternalAgentRegistry().get(agentId);
-    const liveOmSnapshot = loadedAgent?.runtime.checkpointedObservationalMemory?.getSnapshot() ?? null;
-
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(input.workspaceBasePath, agentId, 'database.db');
     const client: ClosableLibsqlClient = createClient({
@@ -1126,11 +1124,11 @@ export function createAdminReadModel(input: {
           .filter(Boolean)
           .join('\n')
         : '';
-      let generationCount = liveOmSnapshot?.generationCount ?? 0;
-      let updatedAt: number | null = liveOmSnapshot?.updatedAt ?? null;
-      let lastObservedAt: number | null = liveOmSnapshot?.lastObservedAt ?? null;
+      let generationCount = 0;
+      let updatedAt: number | null = null;
+      let lastObservedAt: number | null = null;
 
-      if (hasObservationalMemoryAccess(memoryStore) && !liveOmSnapshot) {
+      if (hasObservationalMemoryAccess(memoryStore)) {
         const record = await memoryStore.getObservationalMemory(mastraAgentId, mastraAgentId);
         if (record) {
           generationCount = record.generationCount;
@@ -1149,7 +1147,7 @@ export function createAdminReadModel(input: {
       }
 
       const settings = await systemSettings.getSettings();
-      const metricsSnapshot = liveOmSnapshot?.metrics ?? customState?.latestMetrics;
+      const metricsSnapshot = customState?.latestMetrics;
       const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
         ? await withTimeout(
           loadedAgent.runtime.longTermMemory.readSnapshot(),
@@ -1182,30 +1180,25 @@ export function createAdminReadModel(input: {
         : null);
 
       return {
-      workingMemory: formatWorkingMemoryValue(workingMemory),
-      agentContext,
-      executionState: agent.executionState as 'idle' | 'running' | 'absent',
-      lastExecutionError: agent.lastExecutionError ?? null,
-      lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
+        workingMemory: formatWorkingMemoryValue(workingMemory),
+        agentContext,
+        executionState: agent.executionState as 'idle' | 'running' | 'absent',
+        lastExecutionError: agent.lastExecutionError ?? null,
+        lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
         observations,
         reflection,
         generationCount,
         updatedAt,
         lastObservedAt,
-        checkpointGeneration: liveOmSnapshot?.checkpointGeneration
-          ?? customState?.checkpointGeneration
-          ?? null,
-        checkpointSummary: liveOmSnapshot?.checkpointSummary
-          ?? customState?.checkpointSummary?.text
-          ?? null,
-        checkpointUpdatedAt: liveOmSnapshot?.checkpointUpdatedAt
-          ?? (customState?.checkpointSummary?.updatedAt
-            ? Date.parse(customState.checkpointSummary.updatedAt)
-            : null),
-      ltmRecall: ltmRecall
-        ? {
-            status: ltmRecall.status,
-            query: ltmRecall.query,
+        checkpointGeneration: customState?.checkpointGeneration ?? null,
+        checkpointSummary: customState?.checkpointSummary?.text ?? null,
+        checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
+          ? Date.parse(customState.checkpointSummary.updatedAt)
+          : null,
+        ltmRecall: ltmRecall
+          ? {
+              status: ltmRecall.status,
+              query: ltmRecall.query,
             resultIds: ltmRecall.resultIds,
             resultCount: ltmRecall.resultCount,
             resultScores: ltmRecall.resultScores,

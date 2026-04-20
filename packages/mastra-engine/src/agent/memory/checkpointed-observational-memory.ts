@@ -126,16 +126,6 @@ type CustomOmState = {
   latestMetrics: CustomOmMetricsSnapshot | null;
 };
 
-type CheckpointedOmRuntimeSnapshot = {
-  generationCount: number;
-  updatedAt: number | null;
-  lastObservedAt: number | null;
-  checkpointGeneration: number | null;
-  checkpointSummary: string | null;
-  checkpointUpdatedAt: number | null;
-  metrics: CustomOmMetricsSnapshot | null;
-};
-
 type CheckpointedObservationalMemoryConfig = {
   storage: LibSQLStore;
   model: AgentConfig['model'];
@@ -888,7 +878,6 @@ export class CheckpointedObservationalMemoryProcessor
   private readonly agentSystemPrompt?: string;
   private readonly onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
   private readonly getRuntimeConfig?: CheckpointedObservationalMemoryConfig['getRuntimeConfig'];
-  private latestSnapshot: CheckpointedOmRuntimeSnapshot | null = null;
 
   constructor(config: CheckpointedObservationalMemoryConfig) {
     if (!hasObservationalMemoryStore(config.storage.stores.memory!)) {
@@ -1210,17 +1199,6 @@ export class CheckpointedObservationalMemoryProcessor
       }),
     });
     await this.persistCustomState(context.threadId, customState);
-    this.latestSnapshot = {
-      generationCount: currentRecord.generationCount,
-      updatedAt: currentRecord.updatedAt?.getTime?.() ?? null,
-      lastObservedAt: currentRecord.lastObservedAt?.getTime?.() ?? null,
-      checkpointGeneration: customState.checkpointGeneration,
-      checkpointSummary: customState.checkpointSummary?.text ?? null,
-      checkpointUpdatedAt: customState.checkpointSummary?.updatedAt
-        ? Date.parse(customState.checkpointSummary.updatedAt)
-        : null,
-      metrics: customState.latestMetrics,
-    };
 
     logOmState('state persisted', {
       threadId: context.threadId,
@@ -1246,10 +1224,6 @@ export class CheckpointedObservationalMemoryProcessor
     });
 
     return args.messageList;
-  }
-
-  getSnapshot() {
-    return this.latestSnapshot;
   }
 
   private async refreshRuntimeConfig() {
