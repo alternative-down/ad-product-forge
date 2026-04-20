@@ -111,20 +111,6 @@ type LtmSnapshot = {
   packageCount: number;
 };
 
-function subtractLtmUsageDelta(
-  current: LtmUsage,
-  previous: LtmUsage | null,
-): LtmUsage {
-  return {
-    inputTokens: Math.max(current.inputTokens - (previous?.inputTokens ?? 0), 0),
-    cachedInputTokens: Math.max(
-      current.cachedInputTokens - (previous?.cachedInputTokens ?? 0),
-      0,
-    ),
-    outputTokens: Math.max(current.outputTokens - (previous?.outputTokens ?? 0), 0),
-  };
-}
-
 function createEmptyLongTermMemoryState(): LongTermMemoryState {
   const now = new Date().toISOString();
 
@@ -812,7 +798,6 @@ export function createAgentLongTermMemory(input: {
     for (let attempt = 1; attempt <= GENERATE_MAX_ATTEMPTS; attempt += 1) {
       try {
         const controller = new AbortController();
-        let previousStepUsage: LtmUsage | null = null;
         currentAbortController = controller;
         result = await withTimeout(
           memoryAgent.generate(prompt, {
@@ -834,19 +819,7 @@ export function createAgentLongTermMemory(input: {
               await sleep(runDelayMs);
             },
             onStepFinish: async (stepResult) => {
-              const currentStepUsage = getUsageFromGenerateResult(stepResult);
-              const deltaUsage = subtractLtmUsageDelta(currentStepUsage, previousStepUsage);
-              previousStepUsage = currentStepUsage;
-
-              if (
-                deltaUsage.inputTokens === 0 &&
-                deltaUsage.cachedInputTokens === 0 &&
-                deltaUsage.outputTokens === 0
-              ) {
-                return;
-              }
-
-              await recordLtmStep(deltaUsage);
+              await recordLtmStep(getUsageFromGenerateResult(stepResult));
             },
             onIterationComplete: async (iteration) => {
               forgeDebug('ltm', 'memory workflow step complete', {

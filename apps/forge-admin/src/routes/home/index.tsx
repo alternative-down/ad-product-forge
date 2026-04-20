@@ -81,13 +81,8 @@ function HomeIndexRoute() {
                     value={agent.overview.lastStepAt ? `${formatDateTime(agent.overview.lastStepAt)} · ${formatRelativeTime(agent.overview.lastStepAt)}` : '—'}
                   />
                   <InfoRow
-                    label="Tokens novos"
+                    label="Contexto da step"
                     value={formatTokenCount(agent.overview.lastStepContextTokens)}
-                    detail={
-                      agent.overview.lastStepPromptTokens !== null
-                        ? `Prompt ${formatTokenCount(agent.overview.lastStepPromptTokens)} · cache ${formatTokenCount(agent.overview.lastStepCachedContextTokens)}`
-                        : null
-                    }
                   />
                   <InfoRow
                     label="Média entre steps"
@@ -138,16 +133,11 @@ function HomeIndexRoute() {
   );
 }
 
-function InfoRow(input: { label: string; value: string; detail?: string | null }) {
+function InfoRow(input: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <span className="text-muted-foreground">{input.label}</span>
-      <span className="text-right">
-        <span className="block font-medium text-foreground">{input.value}</span>
-        {input.detail ? (
-          <span className="block text-xs text-muted-foreground">{input.detail}</span>
-        ) : null}
-      </span>
+      <span className="text-right font-medium text-foreground">{input.value}</span>
     </div>
   );
 }
