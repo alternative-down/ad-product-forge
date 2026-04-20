@@ -1,0 +1,80 @@
+import {
+  ConversationRuntimeBridge,
+  createRuntimeHost,
+  type ConversationStore,
+  type McpRuntimeActionOptions,
+  type RuntimeActionDefinition,
+  type RuntimeHost,
+  type RuntimeInputTarget,
+  type StepModelAdapter,
+} from 'agent-runtime-core/integrations';
+
+import { forgeAgentRuntimeConfigSchema, type ForgeAgentRuntimeConfig, type ForgeMcpServerConfig } from './contracts.js';
+import { createForgeConversationMemory, type ForgeConversationMemoryOptions } from './memory.js';
+import { ForgeMcpToolset } from './mcp.js';
+
+export type CreateForgeAgentRuntimeOptions = {
+  config: ForgeAgentRuntimeConfig;
+  model: StepModelAdapter;
+  conversationStore: ConversationStore;
+  memory: Omit<ForgeConversationMemoryOptions, 'threadId' | 'conversationStore' | 'assistantAuthorId'>;
+  mcpServers?: ForgeMcpServerConfig[];
+  runtimeActions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
+  mcpRuntimeActionOptions?: Omit<McpRuntimeActionOptions, 'session'>;
+};
+
+export type ForgeAgentRuntime = {
+  host: RuntimeHost;
+  bridge: ConversationRuntimeBridge;
+  memory: ReturnType<typeof createForgeConversationMemory>['memory'];
+  mcpToolset: ForgeMcpToolset | null;
+  dispose(): Promise<void>;
+};
+
+export async function createForgeAgentRuntime(
+  options: CreateForgeAgentRuntimeOptions,
+): Promise<ForgeAgentRuntime> {
+  const config = forgeAgentRuntimeConfigSchema.parse(options.config);
+  const conversationMemory = createForgeConversationMemory({
+    ...options.memory,
+    threadId: config.threadId,
+    conversationStore: options.conversationStore,
+    assistantAuthorId: config.assistantAuthorId,
+    recentMessageLimit: config.maxConversationMessages,
+    consolidateOverflow: config.consolidateConversationOverflow,
+  });
+  const mcpToolset = options.mcpServers?.length
+    ? new ForgeMcpToolset({
+      servers: options.mcpServers,
+      runtimeActionOptions: options.mcpRuntimeActionOptions,
+    })
+    : null;
+  const mcpActions = mcpToolset
+    ? await mcpToolset.createRuntimeActions()
+    : [];
+  const host = createRuntimeHost({
+    runtime: {
+      runtimeId: config.runtimeId ?? config.agentId,
+      model: options.model,
+    },
+    actions: [...(options.runtimeActions ?? []), ...mcpActions],
+    plugins: conversationMemory.plugins,
+    observers: conversationMemory.observers,
+    eventStream: true,
+    messageStream: true,
+  });
+  const bridge = new ConversationRuntimeBridge({
+    runtime: host.runtime as RuntimeInputTarget,
+    store: options.conversationStore,
+  });
+
+  return {
+    host,
+    bridge,
+    memory: conversationMemory.memory,
+    mcpToolset,
+    async dispose() {
+      await mcpToolset?.dispose();
+    },
+  };
+}
