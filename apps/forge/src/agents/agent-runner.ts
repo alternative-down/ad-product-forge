@@ -997,12 +997,6 @@ export function createAgentRunner(
                 suppressNoToolCallReminderForRun = true;
               }
 
-              if (stopRequested) {
-                return {
-                  continue: false,
-                };
-              }
-
               const feedbackParts: string[] = [];
               const flushedPrompt = flushPendingRunMessages({
                 allowOriginIdleOnly: true,
@@ -1030,6 +1024,12 @@ export function createAgentRunner(
 
               if (recallFeedback?.trim()) {
                 feedbackParts.push(recallFeedback.trim());
+              }
+
+              if (stopRequested && pendingRunMessages.size === 0 && feedbackParts.length === 0) {
+                return {
+                  continue: false,
+                };
               }
 
               if (feedbackParts.length > 0) {
