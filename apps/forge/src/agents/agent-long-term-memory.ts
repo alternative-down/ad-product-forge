@@ -992,6 +992,7 @@ export function createAgentLongTermMemory(input: {
       stopped = true;
       clearTimer();
       currentAbortController?.abort(new Error('LTM disposed'));
+      await workspace.destroy();
     },
   };
 }

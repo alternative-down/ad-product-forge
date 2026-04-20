@@ -192,6 +192,12 @@ export class AgentLongTermMemoryRecall {
   private workspaceInitialized = false;
   private lastIndexedStamp: string | null = null;
   private lastInitAt: string | null = null;
+  private graphToolCache: {
+    threshold: number;
+    randomWalkSteps: number;
+    includeSources: boolean;
+    tool: ReturnType<typeof createGraphRAGTool>;
+  } | null = null;
 
   constructor(input: {
     agentId: string;
@@ -405,6 +411,11 @@ export class AgentLongTermMemoryRecall {
       });
       return null;
     }
+  }
+
+  async dispose() {
+    this.graphToolCache = null;
+    await this.workspace.destroy();
   }
 
   async debugSearch(input: AgentLongTermMemoryRecallDebugSearchInput) {
@@ -786,16 +797,11 @@ export class AgentLongTermMemoryRecall {
         randomWalkSteps: options.randomWalkSteps,
         dimension: graphDimension,
       });
-      const graphTool = createGraphRAGTool({
-        vectorStore: this.vectorStore,
-        indexName: this.searchIndexName,
-        model: getWorkspaceEmbedderProvider(this.workspaceEmbedder),
+      const graphTool = this.getGraphTool({
+        dimension: graphDimension,
+        threshold: options.threshold,
+        randomWalkSteps: options.randomWalkSteps,
         includeSources,
-        graphOptions: {
-          dimension: graphDimension,
-          threshold: options.threshold,
-          randomWalkSteps: options.randomWalkSteps,
-        },
       });
 
       const graphResult = await withTimeout(
@@ -849,6 +855,45 @@ export class AgentLongTermMemoryRecall {
         error: error instanceof Error ? error.message : String(error),
       };
     }
+  }
+
+  private getGraphTool(input: {
+    dimension: number;
+    threshold: number;
+    randomWalkSteps: number;
+    includeSources: boolean;
+  }) {
+    const currentGraphTool = this.graphToolCache;
+
+    if (
+      currentGraphTool &&
+      currentGraphTool.threshold === input.threshold &&
+      currentGraphTool.randomWalkSteps === input.randomWalkSteps &&
+      currentGraphTool.includeSources === input.includeSources
+    ) {
+      return currentGraphTool.tool;
+    }
+
+    const tool = createGraphRAGTool({
+      vectorStore: this.vectorStore,
+      indexName: this.searchIndexName,
+      model: getWorkspaceEmbedderProvider(this.workspaceEmbedder),
+      includeSources: input.includeSources,
+      graphOptions: {
+        dimension: input.dimension,
+        threshold: input.threshold,
+        randomWalkSteps: input.randomWalkSteps,
+      },
+    });
+
+    this.graphToolCache = {
+      threshold: input.threshold,
+      randomWalkSteps: input.randomWalkSteps,
+      includeSources: input.includeSources,
+      tool,
+    };
+
+    return tool;
   }
 
   private async getGraphDimension() {
