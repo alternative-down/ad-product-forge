@@ -86,7 +86,7 @@ export async function createAgentRuntimeMemory(input: {
   await longTermMemoryRecall?.initialize();
 
   if (input.checkpointedOmEnabled) {
-    const checkpointedObservationalMemory = createCheckpointedObservationalMemoryProcessor({
+    inputProcessors.push(createCheckpointedObservationalMemoryProcessor({
       storage: input.storage,
       model: input.omModel ?? input.agentModel,
       totalContextTokens: input.checkpointedOmTotalContextTokens,
@@ -117,9 +117,7 @@ export async function createAgentRuntimeMemory(input: {
           };
         }
         : undefined,
-    });
-
-    inputProcessors.push(checkpointedObservationalMemory);
+      }));
   }
 
   if (input.tokenCountFilterEnabled ?? true) {

@@ -1041,6 +1041,7 @@ export function createAdminReadModel(input: {
       return null;
     }
 
+    const loadedAgent = getInternalAgentRegistry().get(agentId);
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(input.workspaceBasePath, agentId, 'database.db');
     const client: ClosableLibsqlClient = createClient({
@@ -1147,7 +1148,6 @@ export function createAdminReadModel(input: {
 
       const settings = await systemSettings.getSettings();
       const metricsSnapshot = customState?.latestMetrics;
-      const loadedAgent = getInternalAgentRegistry().get(agentId);
       const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
         ? await withTimeout(
           loadedAgent.runtime.longTermMemory.readSnapshot(),
@@ -1180,25 +1180,25 @@ export function createAdminReadModel(input: {
         : null);
 
       return {
-      workingMemory: formatWorkingMemoryValue(workingMemory),
-      agentContext,
-      executionState: agent.executionState as 'idle' | 'running' | 'absent',
-      lastExecutionError: agent.lastExecutionError ?? null,
-      lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-      observations,
-      reflection,
-      generationCount,
-      updatedAt,
-      lastObservedAt,
-      checkpointGeneration: customState?.checkpointGeneration ?? null,
-      checkpointSummary: customState?.checkpointSummary?.text ?? null,
-      checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
-        ? Date.parse(customState.checkpointSummary.updatedAt)
-        : null,
-      ltmRecall: ltmRecall
-        ? {
-            status: ltmRecall.status,
-            query: ltmRecall.query,
+        workingMemory: formatWorkingMemoryValue(workingMemory),
+        agentContext,
+        executionState: agent.executionState as 'idle' | 'running' | 'absent',
+        lastExecutionError: agent.lastExecutionError ?? null,
+        lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
+        observations,
+        reflection,
+        generationCount,
+        updatedAt,
+        lastObservedAt,
+        checkpointGeneration: customState?.checkpointGeneration ?? null,
+        checkpointSummary: customState?.checkpointSummary?.text ?? null,
+        checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
+          ? Date.parse(customState.checkpointSummary.updatedAt)
+          : null,
+        ltmRecall: ltmRecall
+          ? {
+              status: ltmRecall.status,
+              query: ltmRecall.query,
             resultIds: ltmRecall.resultIds,
             resultCount: ltmRecall.resultCount,
             resultScores: ltmRecall.resultScores,
