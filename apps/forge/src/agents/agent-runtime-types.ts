@@ -96,6 +96,7 @@ export type InternalAgentRuntime<
     debugSearch(
       input: AgentLongTermMemoryRecallDebugSearchInput,
     ): Promise<AgentLongTermMemoryRecallDebugSearchResult>;
+    dispose?(): Promise<void>;
   } | null;
   longTermMemory: {
     onAgentIdle(): Promise<void>;

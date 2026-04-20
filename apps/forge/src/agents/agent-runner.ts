@@ -23,6 +23,7 @@ const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
+const MAX_FLUSHED_RUN_EVENT_KEYS = 2_000;
 const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
 const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
 const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
@@ -67,6 +68,7 @@ export function createAgentRunner(
   let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
   let pendingLongTermMemoryRecallSystemText: string | null = null;
   let flushedRunEventKeys = new Set<string>();
+  let flushedRunEventKeyOrder: string[] = [];
   let currentFlushSettings = {
     communicationDmFlushingEnabled: true,
     communicationGroupFlushingEnabled: true,
@@ -285,10 +287,8 @@ export function createAgentRunner(
     }
 
     for (const event of events) {
-      flushedRunEventKeys.add(event.idempotencyKey);
+      rememberFlushedRunEventKey(event.idempotencyKey);
     }
-
-    incrementRunLastMessages();
     return formatPendingRunEvents(events);
   }
 
@@ -303,7 +303,7 @@ export function createAgentRunner(
     clearTimer();
     clearHealthcheck();
     wakeQueue.stop();
-    flushedRunEventKeys = new Set<string>();
+    resetFlushedRunEventKeys();
   }
 
   async function forceIdle(options: {
@@ -317,11 +317,19 @@ export function createAgentRunner(
       wakeQueue.stop();
       pendingRunMessages.clear();
     }
-    flushedRunEventKeys = new Set<string>();
+    resetFlushedRunEventKeys();
     instant = false;
     resetLoopDetector();
-    await store.setExecutionState(runtime.id, 'idle');
-    await currentRuntime.longTermMemory?.onAgentIdle();
+    await withTimeout(
+      store.setExecutionState(runtime.id, 'idle'),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent execution state update timed out for ${runtime.id}`,
+    );
+    await withTimeout(
+      currentRuntime.longTermMemory?.onAgentIdle() ?? Promise.resolve(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent long-term memory idle transition timed out for ${runtime.id}`,
+    );
 
     if (isStaleRun(runEpoch)) {
       return;
@@ -395,7 +403,7 @@ export function createAgentRunner(
       backoffMs = ONE_MINUTE_MS;
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
-      flushedRunEventKeys = new Set<string>();
+      resetFlushedRunEventKeys();
       pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
@@ -802,11 +810,28 @@ export function createAgentRunner(
     return currentFlushSettings.communicationDmFlushingEnabled;
   }
 
-  function incrementRunLastMessages() {
-    if (runLastMessages >= FULL_MEMORY_LOAD_LAST_MESSAGES) {
+  function resetFlushedRunEventKeys() {
+    flushedRunEventKeys = new Set<string>();
+    flushedRunEventKeyOrder = [];
+  }
+
+  function rememberFlushedRunEventKey(idempotencyKey: string) {
+    if (flushedRunEventKeys.has(idempotencyKey)) {
       return;
     }
-    runLastMessages += 1;
+
+    flushedRunEventKeys.add(idempotencyKey);
+    flushedRunEventKeyOrder.push(idempotencyKey);
+
+    while (flushedRunEventKeyOrder.length > MAX_FLUSHED_RUN_EVENT_KEYS) {
+      const oldestIdempotencyKey = flushedRunEventKeyOrder.shift();
+
+      if (!oldestIdempotencyKey) {
+        return;
+      }
+
+      flushedRunEventKeys.delete(oldestIdempotencyKey);
+    }
   }
 
   function registerLoopSignature(signature: string) {
@@ -1172,7 +1197,11 @@ export function createAgentRunner(
       RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state update timed out for ${runtime.id}`,
     );
-    await currentRuntime.longTermMemory?.onAgentIdle();
+    await withTimeout(
+      currentRuntime.longTermMemory?.onAgentIdle() ?? Promise.resolve(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent long-term memory idle transition timed out for ${runtime.id}`,
+    );
 
     if (isStaleRun(runEpoch)) {
       return;

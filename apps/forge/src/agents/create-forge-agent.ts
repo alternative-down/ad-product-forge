@@ -149,8 +149,17 @@ export async function createInternalAgentRuntime<
     longTermMemory,
     onReceiveMessage: platform.communication.onReceiveMessage,
     async dispose() {
-      await longTermMemory?.dispose();
-      await platform.communication.dispose();
+      const cleanupResults = await Promise.allSettled([
+        runtimeMemory.longTermMemoryRecall?.dispose?.(),
+        longTermMemory?.dispose(),
+        platform.communication.dispose(),
+        platform.dispose(),
+      ]);
+      const rejectedResult = cleanupResults.find((result) => result.status === 'rejected');
+
+      if (rejectedResult?.status === 'rejected') {
+        throw rejectedResult.reason;
+      }
     },
   };
 }
