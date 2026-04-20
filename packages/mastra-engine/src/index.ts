@@ -30,6 +30,9 @@ export type {
   CheckpointedOmCheckpointPackageInput,
   CheckpointedOmArchivedObservation,
   CheckpointedOmArchivedReflection,
+  CheckpointedOmMetricsSnapshot,
+  CheckpointedOmState,
+  CheckpointedOmStateStore,
 } from './agent/memory/checkpointed-observational-memory';
 export { appendWorkingMemoryInstructions, sanitizeWorkingMemory } from './agent/memory/working-memory';
 export { forgeDebug, isForgeDebugEnabled } from './debug';

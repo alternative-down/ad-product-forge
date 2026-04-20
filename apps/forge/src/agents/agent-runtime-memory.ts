@@ -1,6 +1,7 @@
 import {
   createAgentMemory,
   createCheckpointedObservationalMemoryProcessor,
+  type CheckpointedOmStateStore,
   type CheckpointedOmCheckpointPackageInput,
   sanitizeWorkingMemory,
   type WorkspaceEmbedderId,
@@ -43,6 +44,28 @@ export async function createAgentRuntimeMemory(input: {
   workspaceEmbedder?: WorkspaceEmbedderId;
   agentSystemPrompt?: string;
   onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
+  checkpointedOmStateStore?: CheckpointedOmStateStore & {
+    readState(): Promise<{
+      checkpointGeneration: number | null;
+      checkpointSummary: {
+        text: string;
+        tokenCount: number;
+        upToGeneration: number;
+        updatedAt: string;
+      } | null;
+      observationBlocks: Array<{
+        id: string;
+        text: string;
+        tokenCount: number;
+        createdAt: string;
+        lastObservedAt: string;
+        reflectedGeneration: number | null;
+      }>;
+      latestMetrics: {
+        recentRawMessageCount?: number;
+      } | null;
+    }>;
+  };
   readRuntimeMemorySettings?: () => Promise<{
     checkpointedOmTotalContextTokens: number;
     checkpointedOmRecentRawTokens: number;
@@ -54,6 +77,8 @@ export async function createAgentRuntimeMemory(input: {
     ltmRecallDocumentCount: number;
   }>;
 }) {
+  const checkpointedOmStateStore = input.checkpointedOmStateStore;
+
   const memory = createAgentMemory({
     storage: input.storage,
     vector: input.vector,
@@ -79,6 +104,11 @@ export async function createAgentRuntimeMemory(input: {
         storage: input.storage,
         scoreThreshold: input.ltmRecallScoreThreshold,
         documentCount: input.ltmRecallDocumentCount,
+        checkpointedOmStateStore:
+          checkpointedOmStateStore
+          ?? (() => {
+            throw new Error('LTM recall requires a checkpointed OM state store');
+          })(),
         readRuntimeMemorySettings: input.readRuntimeMemorySettings,
       })
     : null;
@@ -86,6 +116,10 @@ export async function createAgentRuntimeMemory(input: {
   await longTermMemoryRecall?.initialize();
 
   if (input.checkpointedOmEnabled) {
+    if (!checkpointedOmStateStore) {
+      throw new Error('Checkpointed OM requires a checkpointed OM state store');
+    }
+
     inputProcessors.push(createCheckpointedObservationalMemoryProcessor({
       storage: input.storage,
       model: input.omModel ?? input.agentModel,
@@ -98,6 +132,7 @@ export async function createAgentRuntimeMemory(input: {
       reflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
       agentSystemPrompt: input.agentSystemPrompt,
       onCheckpointAdvanced: input.onCheckpointAdvanced,
+      stateStore: checkpointedOmStateStore,
       getRuntimeConfig: input.readRuntimeMemorySettings
         ? async () => {
           const settings = await input.readRuntimeMemorySettings?.();

@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 
 import { Agent } from '@mastra/core/agent';
 import type { MastraDBMessage, MessageList } from '@mastra/core/agent';
-import { getThreadOMMetadata, setThreadOMMetadata } from '@mastra/core/memory';
 import type {
   ProcessInputStepArgs,
   Processor,
@@ -70,7 +69,7 @@ type CheckpointSummary = {
   updatedAt: string;
 };
 
-type CustomOmMetricsSnapshot = {
+export type CheckpointedOmMetricsSnapshot = {
   rawMessageCount: number;
   recentRawMessageCount: number;
   recentRawTokenCount: number;
@@ -117,13 +116,22 @@ export type CheckpointedOmCheckpointPackageInput = {
   observations: CheckpointedOmArchivedObservation[];
 };
 
-type CustomOmState = {
+export type CheckpointedOmState = {
   version: 1;
   checkpointGeneration: number | null;
   checkpointSummary: CheckpointSummary | null;
   observationBlocks: ObservationBlock[];
   activeReflectionBlocks: ReflectionBlock[];
-  latestMetrics: CustomOmMetricsSnapshot | null;
+  latestMetrics: CheckpointedOmMetricsSnapshot | null;
+};
+
+export type CheckpointedOmStateStore = {
+  loadState(input: { threadId: string; resourceId: string }): Promise<CheckpointedOmState | null>;
+  saveState(input: {
+    threadId: string;
+    resourceId: string;
+    state: CheckpointedOmState;
+  }): Promise<void>;
 };
 
 type CheckpointedObservationalMemoryConfig = {
@@ -145,6 +153,7 @@ type CheckpointedObservationalMemoryConfig = {
     observationSupportTokens?: number;
     reflectionSupportTokens?: number;
   }>;
+  stateStore: CheckpointedOmStateStore;
 };
 
 const CUSTOM_OM_TAG_REFLECTIONS = 'custom-om-reflections';
@@ -259,74 +268,14 @@ function getThreadContext(requestContext: RequestContext | undefined, messageLis
   return null;
 }
 
-function getCustomOmState(thread: StorageThread | null): CustomOmState {
-  const raw = thread?.metadata?.mastra;
-  const rawOm = raw && typeof raw === 'object' ? (raw as { om?: Record<string, unknown> }).om : undefined;
-  const custom = rawOm?.customCheckpointedContext;
-
-  if (
-    typeof custom !== 'object' ||
-    custom === null ||
-    !('version' in custom) ||
-    custom.version !== 1
-  ) {
-    return {
-      version: 1,
-      checkpointGeneration: null,
-      checkpointSummary: null,
-      observationBlocks: [],
-      activeReflectionBlocks: [],
-      latestMetrics: null,
-    };
-  }
-
-  const value = custom as Partial<CustomOmState>;
-  const checkpointSummary =
-    value.checkpointSummary && typeof value.checkpointSummary === 'object'
-      ? value.checkpointSummary as CheckpointSummary
-      : null;
-  const checkpointGeneration =
-    checkpointSummary && typeof value.checkpointGeneration === 'number'
-      ? value.checkpointGeneration
-      : null;
-
+function createEmptyCheckpointedOmState(): CheckpointedOmState {
   return {
     version: 1,
-    checkpointGeneration,
-    checkpointSummary,
-    observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
-    activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks)
-      ? value.activeReflectionBlocks
-      : [],
-    latestMetrics:
-      value.latestMetrics && typeof value.latestMetrics === 'object'
-        ? value.latestMetrics as CustomOmMetricsSnapshot
-        : null,
-  };
-}
-
-function setCustomOmState(
-  thread: StorageThread,
-  state: CustomOmState,
-  omMetadata: ReturnType<typeof getThreadOMMetadata>,
-) {
-  const baseMetadata = setThreadOMMetadata(thread.metadata, omMetadata ?? {});
-  const mastra = baseMetadata.mastra && typeof baseMetadata.mastra === 'object'
-    ? (baseMetadata.mastra as Record<string, unknown>)
-    : {};
-  const om = mastra.om && typeof mastra.om === 'object'
-    ? (mastra.om as Record<string, unknown>)
-    : {};
-
-  return {
-    ...baseMetadata,
-    mastra: {
-      ...mastra,
-      om: {
-        ...om,
-        customCheckpointedContext: state,
-      },
-    },
+    checkpointGeneration: null,
+    checkpointSummary: null,
+    observationBlocks: [],
+    activeReflectionBlocks: [],
+    latestMetrics: null,
   };
 }
 
@@ -334,7 +283,7 @@ function sumTokens(blocks: Array<{ tokenCount: number }>) {
   return blocks.reduce((total, block) => total + block.tokenCount, 0);
 }
 
-function getActiveObservationBlocks(state: CustomOmState) {
+function getActiveObservationBlocks(state: CheckpointedOmState) {
   return state.observationBlocks.filter((block) => block.reflectedGeneration === null);
 }
 
@@ -392,7 +341,7 @@ function logOmState(
   input: {
     threadId: string;
     resourceId: string;
-    state: CustomOmState;
+    state: CheckpointedOmState;
     recentRawCount?: number;
     recentRawTokens?: number;
     overflowCount?: number;
@@ -682,7 +631,7 @@ function sanitizeObservedUnitIds(value: string[] | undefined) {
 }
 
 function createMetricsSnapshot(input: {
-  state: CustomOmState;
+  state: CheckpointedOmState;
   rawUnits: RawUnit[];
   recent: RawUnit[];
   recentRawTokens: number;
@@ -711,7 +660,7 @@ function createMetricsSnapshot(input: {
     checkpointSummaryUpToGeneration: input.state.checkpointSummary?.upToGeneration ?? null,
     latestThreadMessageAt: input.rawUnits.at(-1)?.createdAt?.toISOString?.() ?? null,
     updatedAt: new Date().toISOString(),
-  } satisfies CustomOmMetricsSnapshot;
+  } satisfies CheckpointedOmMetricsSnapshot;
 }
 
 function isObservedRawUnit(record: ObservationalMemoryRecord, unit: RawUnit) {
@@ -869,6 +818,7 @@ export class CheckpointedObservationalMemoryProcessor
   private readonly store: MemoryStoreWithObservationalMemory;
   private readonly tokenCounter: TokenCounter;
   private readonly model: AgentConfig['model'];
+  private readonly stateStore: CheckpointedOmStateStore;
   private totalContextTokens: number;
   private recentRawTokens: number;
   private rawObservationBatchTokens: number;
@@ -886,6 +836,7 @@ export class CheckpointedObservationalMemoryProcessor
 
     this.store = config.storage.stores.memory;
     this.model = config.model;
+    this.stateStore = config.stateStore;
     this.tokenCounter = new TokenCounter();
     this.totalContextTokens = config.totalContextTokens ?? DEFAULT_TOTAL_CONTEXT_TOKENS;
     this.recentRawTokens = config.recentRawTokens ?? DEFAULT_RECENT_RAW_TOKENS;
@@ -977,8 +928,10 @@ export class CheckpointedObservationalMemoryProcessor
 
     const rawSourceMessages = args.messageList.get.remembered.db();
 
-    const thread = await this.store.getThreadById({ threadId: context.threadId });
-    const customState = getCustomOmState(thread);
+    const customState = await this.stateStore.loadState({
+      threadId: context.threadId,
+      resourceId: context.resourceId,
+    }) ?? createEmptyCheckpointedOmState();
     let currentRecord = await this.ensureCurrentRecord(context.threadId, context.resourceId);
     currentRecord = await this.repairCurrentRecordIfNeeded({
       threadId: context.threadId,
@@ -1068,7 +1021,7 @@ export class CheckpointedObservationalMemoryProcessor
           state: customState,
           requestContext: args.requestContext,
         });
-        await this.persistCustomState(context.threadId, customState);
+        await this.persistCustomState(context.threadId, context.resourceId, customState);
         activeReflections = await this.loadActiveReflections(
           context.threadId,
           context.resourceId,
@@ -1109,7 +1062,7 @@ export class CheckpointedObservationalMemoryProcessor
           overflow,
           requestContext: args.requestContext,
         });
-        await this.persistCustomState(context.threadId, customState);
+        await this.persistCustomState(context.threadId, context.resourceId, customState);
         const nextRawMessages = getMessagesAfterCursor(
           rawSourceMessages,
           currentRecord,
@@ -1152,7 +1105,7 @@ export class CheckpointedObservationalMemoryProcessor
           requestContext: args.requestContext,
         });
         this.pruneArchivedObservationBlocks(customState);
-        await this.persistCustomState(context.threadId, customState);
+        await this.persistCustomState(context.threadId, context.resourceId, customState);
         activeReflections = await this.loadActiveReflections(
           context.threadId,
           context.resourceId,
@@ -1198,7 +1151,7 @@ export class CheckpointedObservationalMemoryProcessor
         observationReflectionBatchTokens: this.observationReflectionBatchTokens,
       }),
     });
-    await this.persistCustomState(context.threadId, customState);
+    await this.persistCustomState(context.threadId, context.resourceId, customState);
 
     logOmState('state persisted', {
       threadId: context.threadId,
@@ -1265,7 +1218,7 @@ export class CheckpointedObservationalMemoryProcessor
     threadId: string;
     resourceId: string;
     currentRecord: ObservationalMemoryRecord;
-    state: CustomOmState;
+    state: CheckpointedOmState;
   }) {
     const expectedObservationText = formatObservationBlocks(getActiveObservationBlocks(input.state));
 
@@ -1313,7 +1266,7 @@ export class CheckpointedObservationalMemoryProcessor
     currentRecord: ObservationalMemoryRecord;
     threadId: string;
     resourceId: string;
-    state: CustomOmState;
+    state: CheckpointedOmState;
     overflow: RawUnit[];
     requestContext: RequestContext | undefined;
   }) {
@@ -1439,7 +1392,7 @@ export class CheckpointedObservationalMemoryProcessor
     currentRecord: ObservationalMemoryRecord;
     threadId: string;
     resourceId: string;
-    state: CustomOmState;
+    state: CheckpointedOmState;
     requestContext?: RequestContext;
   }) {
     const unreflectedBlocks = getActiveObservationBlocks(input.state);
@@ -1549,18 +1502,15 @@ export class CheckpointedObservationalMemoryProcessor
     return currentRecord;
   }
 
-  private async persistCustomState(threadId: string, state: CustomOmState) {
-    const thread = await this.store.getThreadById({ threadId });
-
-    if (!thread) {
-      return;
-    }
-
-    const omMetadata = getThreadOMMetadata(thread.metadata);
-    await this.store.updateThread({
-      id: thread.id,
-      title: thread.title,
-      metadata: setCustomOmState(thread, state, omMetadata),
+  private async persistCustomState(
+    threadId: string,
+    resourceId: string,
+    state: CheckpointedOmState,
+  ) {
+    await this.stateStore.saveState({
+      threadId,
+      resourceId,
+      state,
     });
   }
 
@@ -1585,7 +1535,7 @@ export class CheckpointedObservationalMemoryProcessor
   private async advanceCheckpoint(input: {
     threadId: string;
     resourceId: string;
-    state: CustomOmState;
+    state: CheckpointedOmState;
     activeReflections: ObservationalMemoryRecord[];
     reflectionBudget: number;
     requestContext?: RequestContext;
@@ -1731,7 +1681,7 @@ export class CheckpointedObservationalMemoryProcessor
     });
   }
 
-  private pruneArchivedObservationBlocks(state: CustomOmState) {
+  private pruneArchivedObservationBlocks(state: CheckpointedOmState) {
     if (state.checkpointGeneration === null) {
       return;
     }

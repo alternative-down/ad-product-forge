@@ -14,7 +14,7 @@
 import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
-import type { WorkspaceEmbedderId } from '@mastra-engine/core';
+import type { CheckpointedOmState, WorkspaceEmbedderId } from '@mastra-engine/core';
 
 const _WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
@@ -193,6 +193,22 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
 
 export type AgentExecutionStep = typeof agentExecutionSteps.$inferSelect;
 export type NewAgentExecutionStep = typeof agentExecutionSteps.$inferInsert;
+
+export const agentCheckpointedOmStates = sqliteTable('agent_checkpointed_om_states', {
+  agentId: text('agent_id')
+    .primaryKey()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  threadId: text('thread_id').notNull(),
+  resourceId: text('resource_id').notNull(),
+  state: text('state', { mode: 'json' }).$type<CheckpointedOmState>().notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  agentCheckpointedOmStatesThreadIdIdx: uniqueIndex('agent_checkpointed_om_states_thread_id_idx').on(table.threadId),
+}));
+
+export type AgentCheckpointedOmState = typeof agentCheckpointedOmStates.$inferSelect;
+export type NewAgentCheckpointedOmState = typeof agentCheckpointedOmStates.$inferInsert;
 
 export const agentNotifications = sqliteTable('agent_notifications', {
   id: text('id').primaryKey(),

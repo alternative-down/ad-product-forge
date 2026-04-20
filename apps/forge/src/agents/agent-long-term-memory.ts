@@ -9,6 +9,7 @@ import type {
   CheckpointedOmCheckpointPackageInput,
   CheckpointedOmArchivedObservation,
   CheckpointedOmArchivedReflection,
+  CheckpointedOmStateStore,
   WorkspaceEmbedderId,
 } from '@mastra-engine/core';
 import { createAgentMemory, forgeDebug, toMastraSafeIdentifier } from '@mastra-engine/core';
@@ -77,12 +78,6 @@ type CustomObservationBlock = {
   createdAt: string;
   lastObservedAt: string;
   reflectedGeneration: number | null;
-};
-
-type CustomCheckpointedContextState = {
-  checkpointGeneration: number | null;
-  checkpointSummary: CustomCheckpointSummary | null;
-  observationBlocks: CustomObservationBlock[];
 };
 
 type MemoryStoreWithObservationalMemory = NonNullable<LibSQLStore['stores']['memory']> & {
@@ -356,29 +351,6 @@ function hasObservationalMemoryAccess(
   );
 }
 
-function getCustomCheckpointedContextState(metadata: Record<string, unknown> | undefined) {
-  const rawMastra = metadata?.mastra;
-  const rawOm = rawMastra && typeof rawMastra === 'object'
-    ? (rawMastra as { om?: Record<string, unknown> }).om
-    : undefined;
-  const custom = rawOm?.customCheckpointedContext;
-
-  if (!custom || typeof custom !== 'object') {
-    return null;
-  }
-
-  const value = custom as Partial<CustomCheckpointedContextState>;
-  return {
-    checkpointGeneration:
-      typeof value.checkpointGeneration === 'number' ? value.checkpointGeneration : null,
-    checkpointSummary:
-      value.checkpointSummary && typeof value.checkpointSummary === 'object'
-        ? value.checkpointSummary as CustomCheckpointSummary
-        : null,
-    observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
-  };
-}
-
 function buildBootstrapCheckpointPackage(input: {
   threadId: string;
   resourceId: string;
@@ -439,6 +411,13 @@ export function createAgentLongTermMemory(input: {
   modelProfileId?: string;
   contractStore: ReturnType<typeof createAgentContractStore>;
   workspaceEmbedder?: WorkspaceEmbedderId;
+  checkpointedOmStateStore: CheckpointedOmStateStore & {
+    readState(): Promise<{
+      checkpointGeneration: number | null;
+      checkpointSummary: CustomCheckpointSummary | null;
+      observationBlocks: CustomObservationBlock[];
+    }>;
+  };
 }) {
   const checkpointsPath = path.resolve(input.agentMemoryPath, CHECKPOINTS_DIR);
   const memoryPath = path.resolve(input.agentMemoryPath, MEMORY_DIR);
@@ -499,8 +478,7 @@ export function createAgentLongTermMemory(input: {
     }
 
     const state = await readState();
-    const thread = await store.getThreadById({ threadId: input.threadId });
-    const customState = getCustomCheckpointedContextState(thread?.metadata);
+    const customState = await input.checkpointedOmStateStore.readState();
     const checkpointGeneration = customState?.checkpointGeneration ?? null;
     const checkpointSummary = customState?.checkpointSummary ?? null;
 

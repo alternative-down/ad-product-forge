@@ -7,6 +7,8 @@ import type { Tool } from '@mastra/core/tools';
 import {
   createExternalAccountTools,
 } from '@mastra-engine/core';
+import { getDatabase } from '../database';
+import { createAgentCheckpointedOmStateStore } from './checkpointed-om-state-store';
 import { createAgentRuntimePlatform } from './agent-runtime-platform';
 import { createAgentLongTermMemory } from './agent-long-term-memory';
 import { createAgentRuntimeMemory } from './agent-runtime-memory';
@@ -55,6 +57,9 @@ export async function createInternalAgentRuntime<
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
+  const checkpointedOmStateStore = createAgentCheckpointedOmStateStore(getDatabase(), {
+    agentId: config.id,
+  });
   const agentSystemPrompt = buildAgentSystemPrompt({
     agentId: config.id,
     agentSlug: platform.mastraId,
@@ -85,6 +90,7 @@ export async function createInternalAgentRuntime<
         modelProfileId: config.omModelProfileId,
         contractStore: options.contractStore,
         workspaceEmbedder: config.workspaceEmbedder,
+        checkpointedOmStateStore,
       })
     : null;
 
@@ -115,6 +121,7 @@ export async function createInternalAgentRuntime<
     workspaceEmbedder: config.workspaceEmbedder,
     agentSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
+    checkpointedOmStateStore,
     readRuntimeMemorySettings: options.readRuntimeMemorySettings,
   });
 

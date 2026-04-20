@@ -141,6 +141,13 @@
       "when": 1776487040587,
       "tag": "0019_chubby_thaddeus_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1776722082972,
+      "tag": "0020_friendly_celestials",
+      "breakpoints": true
     }
   ]
 }
