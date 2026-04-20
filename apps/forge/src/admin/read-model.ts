@@ -737,8 +737,10 @@ export function createAdminReadModel(input: {
         overview: {
           lastStepAt: lastStep?.createdAt ?? null,
           lastStepContextTokens: lastStep
-            ? lastStep.inputTokens
+            ? Math.max(lastStep.inputTokens - lastStep.cachedInputTokens, 0)
             : null,
+          lastStepPromptTokens: lastStep?.inputTokens ?? null,
+          lastStepCachedContextTokens: lastStep?.cachedInputTokens ?? null,
           lastStepPreview: latestThreadDetails?.preview ?? null,
           lastToolBadge: latestThreadDetails?.toolBadge ?? null,
           lastStepTokens: lastStep
