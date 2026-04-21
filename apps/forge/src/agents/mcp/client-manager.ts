@@ -1,10 +1,8 @@
-import { MCPClient } from '@mastra/mcp';
-import type { MastraMCPServerDefinition } from '@mastra/mcp';
-import type { Tool } from '@forge-runtime/core';
+import { ForgeMcpToolset, type ForgeMcpServerConfig, type Tool } from '@forge-runtime/core';
 import { getAgentMcpServers } from './store';
 
 // Cache for MCP clients per agent
-const agentMCPClients = new Map<string, InstanceType<typeof MCPClient>>();
+const agentMCPClients = new Map<string, ForgeMcpToolset>();
 
 /**
  * Get MCP tools for an agent by connecting to all configured MCP servers
@@ -28,23 +26,23 @@ export async function getMCPToolsForAgent(
 
     if (cachedClient) {
       try {
-        const tools = await cachedClient.listTools();
+        const tools = await cachedClient.createTools();
         console.log(`[MCP] Loaded ${Object.keys(tools).length} tool(s) for agent ${agentId}`);
-        return tools as unknown as Record<string, Tool<unknown, unknown>>;
+        return tools as Record<string, Tool<unknown, unknown>>;
       } catch (error) {
         console.warn(`[MCP] Cached client failed for agent ${agentId}, rebuilding client:`, error);
-        clearAgentMCPClient(agentId);
+        await clearAgentMCPClient(agentId);
       }
     }
 
     const mcpClient = createAgentMCPClient(agentId, mcpServers);
-    const tools = await mcpClient.listTools();
+    const tools = await mcpClient.createTools();
 
     agentMCPClients.set(agentId, mcpClient);
     console.log(`[MCP] Loaded ${Object.keys(tools).length} tool(s) for agent ${agentId}`);
-    return tools as unknown as Record<string, Tool<unknown, unknown>>;
+    return tools as Record<string, Tool<unknown, unknown>>;
   } catch (error) {
-    clearAgentMCPClient(agentId);
+    await clearAgentMCPClient(agentId);
     console.warn(`[MCP] Failed to get tools for agent ${agentId}:`, error);
     return {};
   }
@@ -54,48 +52,41 @@ function createAgentMCPClient(
   agentId: string,
   mcpServers: Awaited<ReturnType<typeof getAgentMcpServers>>,
 ) {
-  const serverDefs: Record<string, MastraMCPServerDefinition> = {};
-  const serverIds: string[] = [];
-
-  for (const { server } of mcpServers) {
-    serverIds.push(server.id);
-
-    if (server.transport === 'stdio') {
-      serverDefs[server.name] = {
-        command: server.command || '',
-        args: server.args ? JSON.parse(server.args) : [],
-        env: server.envVars ? JSON.parse(server.envVars) : {},
-      };
-      continue;
-    }
-
-    if (server.transport === 'http_streamable') {
-      serverDefs[server.name] = {
-        url: new URL(server.url || 'http://localhost:3000/mcp'),
-        requestInit: server.headers
-          ? {
-              headers: JSON.parse(server.headers),
-            }
-          : undefined,
-      };
-    }
-  }
-
-  serverIds.sort();
-
-  return new MCPClient({
-    id: `forge-agent:${agentId}:${serverIds.join(',')}`,
-    servers: serverDefs,
+  return new ForgeMcpToolset({
+    servers: mcpServers.map(({ server }) => mapServerConfig(server)),
   });
 }
 
 /**
  * Clear MCP client cache for an agent
  */
-export function clearAgentMCPClient(agentId: string): void {
+export async function clearAgentMCPClient(agentId: string): Promise<void> {
   const client = agentMCPClients.get(agentId);
   if (client) {
-    client.disconnect();
+    await client.dispose();
     agentMCPClients.delete(agentId);
   }
+}
+
+function mapServerConfig(
+  server: Awaited<ReturnType<typeof getAgentMcpServers>>[number]['server'],
+): ForgeMcpServerConfig {
+  if (server.transport === 'stdio') {
+    return {
+      id: server.id,
+      name: server.name,
+      transport: 'stdio',
+      command: server.command || '',
+      args: server.args ? JSON.parse(server.args) : [],
+      env: server.envVars ? JSON.parse(server.envVars) : {},
+    };
+  }
+
+  return {
+    id: server.id,
+    name: server.name,
+    transport: 'http-stream',
+    url: server.url || 'http://localhost:3000/mcp',
+    headers: server.headers ? JSON.parse(server.headers) : undefined,
+  };
 }

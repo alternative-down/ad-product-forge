@@ -15,7 +15,7 @@ import {
   getWorkspaceEmbedderProvider,
   toMastraSafeIdentifier,
   type WorkspaceEmbedderId,
-} from '@mastra-engine/core';
+} from '@forge-runtime/core';
 
 type SearchResult = {
   id: string;

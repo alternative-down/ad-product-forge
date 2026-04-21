@@ -5,14 +5,16 @@ import path from 'node:path';
 import { Agent, type AgentConfig } from '@mastra/core/agent';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
-import type {
-  CheckpointedOmCheckpointPackageInput,
-  CheckpointedOmArchivedObservation,
-  CheckpointedOmArchivedReflection,
+import {
+  type CheckpointedOmCheckpointPackageInput,
+  type CheckpointedOmArchivedObservation,
+  type CheckpointedOmArchivedReflection,
   CheckpointedOmStateStore,
   WorkspaceEmbedderId,
-} from '@mastra-engine/core';
-import { createAgentMemory, forgeDebug, toMastraSafeIdentifier } from '@mastra-engine/core';
+  createAgentMemory,
+  forgeDebug,
+  toMastraSafeIdentifier,
+} from '@forge-runtime/core';
 import { z } from 'zod';
 
 import { createAgentContractStore } from './agent-contract-store';

@@ -11,7 +11,7 @@ import {
   toMastraSafeIdentifier,
   type CommunicationMessageView,
   type CommunicationProviderMessage,
-} from '@mastra-engine/core';
+} from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import {

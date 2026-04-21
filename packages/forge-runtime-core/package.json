@@ -19,6 +19,7 @@
     "@ai-sdk/openai": "^3.0.52",
     "@huggingface/transformers": "3.7.5",
     "@mastra/fastembed": "^1.0.1",
+    "@mastra/memory": "^1.4.2",
     "agent-runtime-core": "file:../../../agent-runtime-core",
     "zod": "^4.3.6"
   },

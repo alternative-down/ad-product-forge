@@ -12,6 +12,16 @@ export type CommunicationAttachmentView = {
   sizeBytes?: number;
 };
 
+export type CommunicationContactView = {
+  targetKey: string;
+  slug: string;
+  displayName: string;
+  description: string | undefined;
+  metadata: {
+    slug: string;
+  };
+};
+
 export type CommunicationInboundMessage = {
   targetKey: string;
   messageId: string;
@@ -62,8 +72,8 @@ export type CommunicationConversationView = {
   provider: string;
   latestMessageAt: string;
   unreadCount: number;
-  name?: string;
-  participants?: string[];
+  name: string | undefined;
+  participants: string[] | undefined;
   messages: CommunicationMessageView[];
 };
 
@@ -110,8 +120,8 @@ export type CommunicationProvider = {
 
 export type CommunicationModule = {
   listContacts(filter?: 'self' | 'others' | 'all'): Promise<{
-    self: CommunicationProviderContact[];
-    others: CommunicationProviderContact[];
+    self: CommunicationContactView[];
+    others: CommunicationContactView[];
   }>;
   upsertContact(input: {
     slug: string;
@@ -120,7 +130,7 @@ export type CommunicationModule = {
   }): Promise<{
     slug: string;
     displayName: string;
-    description?: string;
+    description: string | undefined;
   }>;
   listConversations(input: {
     provider?: string;
@@ -147,7 +157,14 @@ export type CommunicationModule = {
     targetKey: string;
     messageId?: string;
     conversationName?: string;
-    unreadConversation?: CommunicationConversationView;
+    unreadConversation?: {
+      targetKey: string;
+      provider: string;
+      unreadCount: number;
+      name: string | undefined;
+      participants: string[] | undefined;
+      messages: CommunicationMessageView[];
+    };
   }>;
   onReceiveMessage(handler: (event: import('./wake-queue.js').AgentWakeEvent) => void): void;
   dispose(): Promise<void>;

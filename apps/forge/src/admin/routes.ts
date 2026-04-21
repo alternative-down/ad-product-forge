@@ -10,7 +10,7 @@ import {
   oauthStore,
   syncAnthropicCredential,
   syncOpenAICodexCredential,
-} from '@mastra-engine/core';
+} from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
@@ -2340,7 +2340,7 @@ export function registerAdminRoutes(input: {
 }
 
 async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
-  clearAgentMCPClient(agentId);
+  await clearAgentMCPClient(agentId);
   await reloadAgentIfLoaded(db, loaderConfig, agentId);
 }
 

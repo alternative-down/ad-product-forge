@@ -99,12 +99,19 @@ export {
 export type {
   CheckpointedOmArchivedObservation,
   CheckpointedOmArchivedReflection,
+  CheckpointedOmCheckpointPackageInput,
+  CheckpointedOmCheckpointSummary,
   CheckpointedOmMetricsSnapshot,
+  CheckpointedOmObservationBlock,
   CheckpointedOmState,
   CheckpointedOmStateStore,
 } from './checkpointed-om.js';
+export {
+  createCheckpointedObservationalMemoryProcessor,
+} from './checkpointed-observational-memory.js';
 export type {
   CommunicationAttachmentView,
+  CommunicationContactView,
   CommunicationConversationView,
   CommunicationFile,
   CommunicationInboundMessage,
@@ -116,6 +123,12 @@ export type {
   CommunicationProviderMessage,
 } from './communication.js';
 export {
+  createCommunicationModule,
+} from './communication-module.js';
+export {
+  createExternalAccountTools,
+} from './communication-tools.js';
+export {
   forgeAgentRuntimeConfigSchema,
   forgeMcpHttpServerSchema,
   forgeMcpServerSchema,
@@ -123,3 +136,13 @@ export {
   type ForgeAgentRuntimeConfig,
   type ForgeMcpServerConfig,
 } from './contracts.js';
+export {
+  appendWorkingMemoryInstructions,
+  sanitizeWorkingMemory,
+  WORKING_MEMORY_INSTRUCTIONS,
+  WORKING_MEMORY_SCHEMA,
+  type WorkingMemoryAccess,
+} from './working-memory.js';
+export {
+  createAgentMemory,
+} from './mastra-memory.js';

@@ -5,8 +5,9 @@ import {
 } from '@mastra/core/processors';
 import type { Tool } from '@mastra/core/tools';
 import {
+  type CommunicationModule,
   createExternalAccountTools,
-} from '@mastra-engine/core';
+} from '@forge-runtime/core';
 import { getDatabase } from '../database';
 import { createAgentCheckpointedOmStateStore } from './checkpointed-om-state-store';
 import { createAgentRuntimePlatform } from './agent-runtime-platform';
@@ -45,7 +46,7 @@ export async function createInternalAgentRuntime<
     agentId: config.id,
     workspaceBasePath: config.workspaceBasePath,
     providers: config.providers,
-    communication: config.communication,
+    communication: config.communication as CommunicationModule | undefined,
     workspaceFilesystem: config.workspaceFilesystem,
     workspaceSandbox: config.workspaceSandbox,
     workspaceSkills: config.workspaceSkills,
@@ -53,7 +54,7 @@ export async function createInternalAgentRuntime<
     communicationGroupFlushingEnabled: config.communicationGroupFlushingEnabled,
   });
   const allAgentTools = {
-    ...createExternalAccountTools(platform.communication),
+    ...createExternalAccountTools(platform.communication as CommunicationModule),
     ...(config.tools ?? {}),
   } as Record<string, Tool<unknown, unknown>>;
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
@@ -156,7 +157,7 @@ export async function createInternalAgentRuntime<
     omModelProfileId: config.omModelProfileId,
     agent,
     workspace: platform.workspace,
-    communication: platform.communication,
+    communication: platform.communication as CommunicationModule,
     longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
     longTermMemory,
     onReceiveMessage: platform.communication.onReceiveMessage,

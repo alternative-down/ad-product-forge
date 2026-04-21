@@ -1,9 +1,16 @@
+export type CheckpointedOmCheckpointSummary = {
+  text: string;
+  tokenCount: number;
+  upToGeneration: number;
+  updatedAt: string;
+};
+
 export type CheckpointedOmArchivedObservation = {
-  id: string;
+  blockId: string;
   tokenCount: number;
   createdAt: string;
   lastObservedAt: string;
-  reflectedGeneration: number | null;
+  reflectedGeneration: number;
   text: string;
 };
 
@@ -12,6 +19,25 @@ export type CheckpointedOmArchivedReflection = {
   generationCount: number;
   tokenCount: number;
   createdAt: string;
+  text: string;
+};
+
+export type CheckpointedOmCheckpointPackageInput = {
+  threadId: string;
+  resourceId: string;
+  fromGeneration: number | null;
+  toGeneration: number;
+  checkpointSummary: CheckpointedOmCheckpointSummary;
+  reflections: CheckpointedOmArchivedReflection[];
+  observations: CheckpointedOmArchivedObservation[];
+};
+
+export type CheckpointedOmObservationBlock = {
+  id: string;
+  tokenCount: number;
+  createdAt: string;
+  lastObservedAt: string;
+  reflectedGeneration: number | null;
   text: string;
 };
 
@@ -38,13 +64,8 @@ export type CheckpointedOmMetricsSnapshot = {
 export type CheckpointedOmState = {
   version: 1;
   checkpointGeneration: number | null;
-  checkpointSummary: {
-    text: string;
-    tokenCount: number;
-    upToGeneration: number;
-    updatedAt: string;
-  } | null;
-  observationBlocks: CheckpointedOmArchivedObservation[];
+  checkpointSummary: CheckpointedOmCheckpointSummary | null;
+  observationBlocks: CheckpointedOmObservationBlock[];
   activeReflectionBlocks: Array<{
     recordId: string;
     generationCount: number;

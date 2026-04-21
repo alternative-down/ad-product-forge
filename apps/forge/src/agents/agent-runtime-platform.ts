@@ -9,11 +9,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import {
-  createCommunicationModule,
-  type CommunicationModule,
   type CommunicationProvider,
+  createCommunicationModule,
   toMastraSafeIdentifier,
-} from '@mastra-engine/core';
+  type CommunicationModule,
+} from '@forge-runtime/core';
 
 import type {
   WorkspaceFilesystemConfig,
@@ -131,8 +131,7 @@ export async function createAgentRuntimePlatform(input: {
     });
   }
 
-  const communication = input.communication ?? await createCommunicationModule({
-    client,
+  const communication: CommunicationModule = input.communication ?? await createCommunicationModule({
     providers: input.providers ?? [],
     workspace,
     workspaceRoot: agentWorkspaceDir,

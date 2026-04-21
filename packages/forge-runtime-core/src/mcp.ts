@@ -6,6 +6,7 @@ import {
 } from 'agent-runtime-core/integrations';
 
 import { forgeMcpServerSchema, type ForgeMcpServerConfig } from './contracts.js';
+import { createTool, type Tool } from './tools.js';
 
 export type ForgeMcpToolsetOptions = {
   servers: ForgeMcpServerConfig[];
@@ -35,6 +36,34 @@ export class ForgeMcpToolset {
     }));
 
     return definitions.flat();
+  }
+
+  async createTools(): Promise<Record<string, Tool<Record<string, unknown>, unknown>>> {
+    const toolEntries = await Promise.all(this.servers.map(async (server) => {
+      const session = await this.sessions.getSession(
+        this.buildSessionKey(server),
+        mapServerToTransport(server),
+      );
+      const tools = await session.listTools();
+
+      return tools.map((tool) => [
+        tool.name,
+        createTool({
+          id: tool.name,
+          description: tool.description?.trim() || `Call MCP tool ${tool.name}.`,
+          inputSchema: {
+            parse(input: unknown) {
+              return input as Record<string, unknown>;
+            },
+          },
+          execute(input) {
+            return session.callTool(tool.name, input);
+          },
+        }),
+      ] as const);
+    }));
+
+    return Object.fromEntries(toolEntries.flat());
   }
 
   async dispose() {

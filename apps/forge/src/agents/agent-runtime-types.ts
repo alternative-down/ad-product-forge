@@ -1,8 +1,8 @@
 import type { Agent, ToolsInput as MastraToolsInput } from '@mastra/core/agent';
-import type { CommunicationModule } from '@mastra-engine/core';
 import type {
   AgentConfig,
   AgentWakeEvent,
+  CommunicationModule,
   CommunicationProvider,
   WorkspaceEmbedderId,
 } from '@forge-runtime/core';
