@@ -4,9 +4,11 @@ import type { LanguageModel } from 'ai';
 import {
   AiSdkStepModelAdapter,
   RuntimeRunController,
+  createTextStepContextEntry,
   type ConversationStore,
   type RuntimeActionDefinition,
   type RuntimeObserver,
+  type RuntimePlugin,
 } from 'agent-runtime-core/integrations';
 
 import {
@@ -19,6 +21,8 @@ import {
   type RuntimeWorkingMemoryStore,
 } from './runtime-working-memory.js';
 import { toolToRuntimeAction, type Tool } from './tools.js';
+
+const SYSTEM_INSTRUCTION_INPUT_TYPE = 'forge-system-instruction';
 
 export type RuntimeAgentSessionGenerateMessage =
   | string
@@ -120,6 +124,30 @@ export async function createRuntimeAgentSession(
     resourceId: input.resourceId,
     store: input.workingMemoryStore,
   });
+  const runtimePlugins: RuntimePlugin[] = [
+    createWorkingMemoryPlugin({
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      store: input.workingMemoryStore,
+    }),
+    {
+      name: 'forge-system-instruction',
+      provideContext(context) {
+        return context.pendingInputs
+          .filter((pendingInput) => pendingInput.type === SYSTEM_INSTRUCTION_INPUT_TYPE)
+          .map((pendingInput, index) =>
+            createTextStepContextEntry({
+              id: `${pendingInput.id}:${index}`,
+              kind: 'system-instruction',
+              title: 'System Instruction',
+              text:
+                typeof pendingInput.payload === 'string'
+                  ? pendingInput.payload
+                  : '',
+            }));
+      },
+    },
+  ];
   const runtime = await createForgeAgentRuntime({
     config: {
       agentId: input.agentId,
@@ -136,13 +164,7 @@ export async function createRuntimeAgentSession(
     memory: {
       stateStore: input.checkpointedStateStore,
     },
-    runtimePlugins: [
-      createWorkingMemoryPlugin({
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-        store: input.workingMemoryStore,
-      }),
-    ],
+    runtimePlugins,
     runtimeActions: [
       toolToRuntimeAction(workingMemoryTool),
       ...(input.runtimeActions ?? []),
@@ -155,6 +177,14 @@ export async function createRuntimeAgentSession(
 
   return {
     async generate(prompt, options = {}) {
+      if (options.system?.trim()) {
+        await runtime.host.runtime.dispatch({
+          id: randomUUID(),
+          type: SYSTEM_INSTRUCTION_INPUT_TYPE,
+          payload: options.system.trim(),
+        });
+      }
+
       const promptMessages = typeof prompt === 'string'
         ? [{
           role: 'user' as const,
