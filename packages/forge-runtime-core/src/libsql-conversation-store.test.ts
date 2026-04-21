@@ -86,6 +86,12 @@ describe('LibsqlConversationStore', () => {
         },
         updatedAt: '2026-04-21T00:00:03.000Z',
       });
+      await store.write({
+        threadId: 'thread-1',
+        resourceId: 'thread-1',
+        workingMemory: '{"identity":{"roleCore":"test"}}',
+        updatedAt: '2026-04-21T00:00:04.000Z',
+      });
 
       await expect(store.getThread('thread-1')).resolves.toEqual({
         id: 'thread-1',
@@ -144,6 +150,15 @@ describe('LibsqlConversationStore', () => {
           totalActiveMessageCount: 1,
         },
         updatedAt: '2026-04-21T00:00:03.000Z',
+      });
+      await expect(store.read({
+        threadId: 'thread-1',
+        resourceId: 'thread-1',
+      })).resolves.toEqual({
+        threadId: 'thread-1',
+        resourceId: 'thread-1',
+        workingMemory: '{"identity":{"roleCore":"test"}}',
+        updatedAt: '2026-04-21T00:00:04.000Z',
       });
     } finally {
       await client.close();

@@ -148,5 +148,12 @@ export {
   type WorkingMemoryAccess,
 } from './working-memory.js';
 export {
+  createUpdateWorkingMemoryTool,
+  createWorkingMemoryContextEntry,
+  createWorkingMemoryPlugin,
+  type RuntimeWorkingMemoryStore,
+  type WorkingMemoryRecord,
+} from './runtime-working-memory.js';
+export {
   createAgentMemory,
 } from './mastra-memory.js';
