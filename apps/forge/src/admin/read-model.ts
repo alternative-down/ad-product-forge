@@ -369,8 +369,17 @@ function hasObservationalMemoryAccess(store: unknown): store is MemoryStoreWithO
   );
 }
 
-function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | undefined) {
-  const raw = metadata?.forgeLongTermMemoryRecall;
+async function readLongTermMemoryRecallSnapshot(workspaceBasePath: string, agentId: string) {
+  const rawFile = await readFile(
+    path.resolve(workspaceBasePath, agentId, 'workspace', 'memory', '.ltm-recall-snapshot.json'),
+    'utf8',
+  ).catch(() => null);
+
+  if (!rawFile) {
+    return null;
+  }
+
+  const raw = JSON.parse(rawFile) as unknown;
 
   if (!raw || typeof raw !== 'object') {
     return null;
@@ -1050,13 +1059,10 @@ export function createAdminReadModel(input: {
           },
         };
       }
-      const threadMetadata = hasObservationalMemoryAccess(memoryStore)
-        ? (await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata
-        : undefined;
       const customState = await createAgentCheckpointedOmStateStore(db, {
         agentId,
       }).readState();
-      const ltmRecall = getLongTermMemoryRecallSnapshot(threadMetadata);
+      const ltmRecall = await readLongTermMemoryRecallSnapshot(input.workspaceBasePath, agentId);
       let reflection = '';
       const observations = customState
         ? customState.observationBlocks

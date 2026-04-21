@@ -2,9 +2,8 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import type { MastraToolInvocationOptions } from '@mastra/core/tools';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
-import { LibSQLVector, type LibSQLStore } from '@mastra/libsql';
+import { LibSQLVector } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
 
 import {
@@ -72,9 +71,9 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   injectedSystemMessage: string | null;
 };
 
-const RECALL_METADATA_KEY = 'forgeLongTermMemoryRecall';
-const RECALL_HISTORY_METADATA_KEY = 'forgeLongTermMemoryRecallHistory';
 const RECALL_INDEX_STAMP_FILE = '.ltm-recall-index-stamp.json';
+const RECALL_SNAPSHOT_FILE = '.ltm-recall-snapshot.json';
+const RECALL_HISTORY_FILE = '.ltm-recall-history.json';
 const RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
@@ -179,7 +178,6 @@ export class AgentLongTermMemoryRecall {
   private readonly workspace: WorkspaceRuntime;
   private readonly vectorStore: LibSQLVector;
   private readonly searchIndexName: string;
-  private readonly memoryStore: NonNullable<LibSQLStore['stores']['memory']>;
   private readonly agentMemoryPath: string;
   private readonly agentWorkspacePath: string;
   private readonly workspaceEmbedder: WorkspaceEmbedderId;
@@ -213,7 +211,6 @@ export class AgentLongTermMemoryRecall {
     agentWorkspacePath: string;
     agentMemoryPath: string;
     mastraId: string;
-    storage: LibSQLStore;
     workspaceEmbedder?: WorkspaceEmbedderId;
     scoreThreshold?: number;
     documentCount?: number;
@@ -230,12 +227,6 @@ export class AgentLongTermMemoryRecall {
     };
     model?: unknown;
   }) {
-    const memoryStore = input.storage.stores.memory;
-
-    if (!memoryStore) {
-      throw new Error(`LTM recall memory store is not available for agent ${input.agentId}`);
-    }
-
     this.agentId = input.agentId;
     const vectorStorePath = path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`);
     this.agentMemoryPath = input.agentMemoryPath;
@@ -252,7 +243,6 @@ export class AgentLongTermMemoryRecall {
       url: `file:${vectorStorePath}`,
     });
     this.searchIndexName = `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_search`;
-    this.memoryStore = memoryStore;
     this.workspace = new WorkspaceRuntime({
       autoSync: false,
       bm25: true,
@@ -849,7 +839,7 @@ export class AgentLongTermMemoryRecall {
             queryText: graphQueryText,
             topK: options.topK,
           },
-          {} as MastraToolInvocationOptions,
+          {} as never,
         ),
         this.recallTimeoutMs,
         'ltm graph search timed out',
@@ -1211,27 +1201,23 @@ export class AgentLongTermMemoryRecall {
     snapshot: RecallSnapshot,
     history?: RecallHistoryState,
   ) {
-    if (!threadContext.threadId) {
+    await fs.writeFile(
+      path.resolve(this.agentMemoryPath, RECALL_SNAPSHOT_FILE),
+      JSON.stringify({
+        ...snapshot,
+        threadId: threadContext.threadId,
+        resourceId: threadContext.resourceId ?? null,
+      }, null, 2),
+    );
+
+    if (!history) {
       return;
     }
 
-    const thread = await this.memoryStore.getThreadById({
-      threadId: threadContext.threadId,
-    });
-    const metadata = thread?.metadata && typeof thread.metadata === 'object'
-      ? { ...thread.metadata }
-      : {};
-
-    metadata[RECALL_METADATA_KEY] = snapshot;
-    if (history) {
-      metadata[RECALL_HISTORY_METADATA_KEY] = history;
-    }
-
-    await this.memoryStore.updateThread({
-      id: threadContext.threadId,
-      title: thread?.title ?? '',
-      metadata,
-    });
+    await fs.writeFile(
+      path.resolve(this.agentMemoryPath, RECALL_HISTORY_FILE),
+      JSON.stringify(history, null, 2),
+    );
   }
 
   private dedupeRecallResults(input: {
@@ -1301,26 +1287,18 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async readRecallThreadState(threadId: string | null) {
-    if (!threadId) {
-      return {
-        recentFingerprints: [],
-        windowSize: 20,
-      };
-    }
-
-    const thread = await this.memoryStore.getThreadById({ threadId });
-    const metadata = thread?.metadata && typeof thread.metadata === 'object'
-      ? thread.metadata as Record<string, unknown>
-      : {};
-    const rawHistory = metadata[RECALL_HISTORY_METADATA_KEY];
-    const recentFingerprints =
-      rawHistory
-      && typeof rawHistory === 'object'
-      && Array.isArray((rawHistory as { recentFingerprints?: unknown }).recentFingerprints)
-        ? (rawHistory as { recentFingerprints: unknown[] }).recentFingerprints.filter(
-          (value): value is string => typeof value === 'string' && value.length > 0,
-        )
-        : [];
+    const rawHistory = await fs.readFile(
+      path.resolve(this.agentMemoryPath, RECALL_HISTORY_FILE),
+      'utf8',
+    ).catch(() => null);
+    const parsedHistory = rawHistory
+      ? JSON.parse(rawHistory) as { recentFingerprints?: unknown[] }
+      : null;
+    const recentFingerprints = Array.isArray(parsedHistory?.recentFingerprints)
+      ? parsedHistory.recentFingerprints.filter(
+        (value): value is string => typeof value === 'string' && value.length > 0,
+      )
+      : [];
     const checkpointedOmState = await this.checkpointedOmStateStore.readState();
     const recentRawMessageCount = checkpointedOmState.latestMetrics?.recentRawMessageCount;
 
@@ -1394,7 +1372,6 @@ export function createAgentLongTermMemoryRecall(input: {
   agentWorkspacePath: string;
   agentMemoryPath: string;
   mastraId: string;
-  storage: LibSQLStore;
   workspaceEmbedder?: WorkspaceEmbedderId;
   scoreThreshold?: number;
   documentCount?: number;

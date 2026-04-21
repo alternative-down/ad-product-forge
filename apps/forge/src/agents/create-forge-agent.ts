@@ -97,7 +97,6 @@ export async function createInternalAgentRuntime<
     : null;
 
   const runtimeMemory = await createAgentRuntimeMemory({
-    storage: platform.storage,
     vector: platform.vector,
     agentId: config.id,
     mastraId: platform.mastraId,
