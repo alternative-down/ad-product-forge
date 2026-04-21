@@ -44,7 +44,7 @@ describe('createInternalAgentTools', () => {
         agentId: 'agent-1',
       })).not.toThrow();
     expect(() =>
-      hireAction?.parseInput?.({
+      hireAction?.inputSchema.parse({
         weeklyBudgetUsd: 250,
       })).toThrow();
   });
