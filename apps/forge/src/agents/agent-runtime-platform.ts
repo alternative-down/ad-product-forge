@@ -11,6 +11,7 @@ import path from 'node:path';
 import {
   type CommunicationProvider,
   createCommunicationModule,
+  LibsqlConversationStore,
   toMastraSafeIdentifier,
   type CommunicationModule,
 } from '@forge-runtime/core';
@@ -108,6 +109,10 @@ export async function createAgentRuntimePlatform(input: {
   const client = createClient({ url: dbUrl });
   const storage = new LibSQLStore({ id: `${mastraId}_storage`, client });
   const vector = new LibSQLVector({ id: `${mastraId}_vector`, url: dbUrl });
+  const conversationStore = new LibsqlConversationStore({
+    client,
+    tablePrefix: mastraId,
+  });
   const workspace = new WorkspaceRuntime({
     autoSync: true,
     bm25: true,
@@ -142,6 +147,7 @@ export async function createAgentRuntimePlatform(input: {
     workspace,
     storage,
     vector,
+    conversationStore,
     communication,
     agentWorkspacePath,
     agentWorkspaceDir,

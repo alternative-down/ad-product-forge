@@ -1,12 +1,9 @@
-import { Agent, type ToolsInput } from '@mastra/core/agent';
-import {
-  type InputProcessorOrWorkflow,
-  type OutputProcessorOrWorkflow,
-} from '@mastra/core/processors';
-import type { Tool } from '@mastra/core/tools';
 import {
   type CommunicationModule,
+  createRuntimeAgentSession,
   createExternalAccountTools,
+  type ToolsInput,
+  toolsToRuntimeActions,
 } from '@forge-runtime/core';
 import { getDatabase } from '../database';
 import { createAgentCheckpointedOmStateStore } from './checkpointed-om-state-store';
@@ -54,10 +51,11 @@ export async function createInternalAgentRuntime<
     communicationDmFlushingEnabled: config.communicationDmFlushingEnabled,
     communicationGroupFlushingEnabled: config.communicationGroupFlushingEnabled,
   });
-  const allAgentTools = {
+  const configuredTools = (config.tools ?? {}) as ToolsInput;
+  const allAgentTools: ToolsInput = {
     ...createExternalAccountTools(platform.communication as CommunicationModule),
-    ...(config.tools ?? {}),
-  } as Record<string, Tool<unknown, unknown>>;
+    ...configuredTools,
+  };
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
   const checkpointedOmStateStore = createAgentCheckpointedOmStateStore(getDatabase(), {
     agentId: config.id,
@@ -133,30 +131,25 @@ export async function createInternalAgentRuntime<
       : null,
   );
 
-  const agent = new Agent<TAgentId, ToolsInput, TOutput, TRequestContext>({
-    id: config.id,
-    name: config.name,
-    description: config.description,
-    instructions: agentSystemPrompt as never,
+  const agent = await createRuntimeAgentSession({
+    agentId: config.id,
+    agentName: config.name,
+    threadId: platform.mastraId,
+    resourceId: platform.mastraId,
+    assistantAuthorId: config.id,
     model: config.model as never,
-    tools: allAgentTools as ToolsInput,
-    workspace: platform.workspace,
-    agents: config.agents as never,
-    memory: runtimeMemory.memory,
-    inputProcessors: runtimeMemory.inputProcessors as InputProcessorOrWorkflow[],
-    outputProcessors: runtimeMemory.outputProcessors as OutputProcessorOrWorkflow[],
+    system: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
+    conversationStore: platform.conversationStore,
+    checkpointedStateStore: platform.conversationStore,
+    workingMemoryStore: platform.conversationStore,
+    checkpointedOmStateStore,
+    onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
+    runtimeActions: toolsToRuntimeActions(allAgentTools),
+    maxConversationMessages: config.memoryLastMessagesFullEnabled
+      ? Number.MAX_SAFE_INTEGER
+      : config.memoryLastMessagesCount,
+    consolidateConversationOverflow: config.checkpointedOmEnabled,
   });
-  const runtimeAgent: RuntimeAgent = {
-    generate(prompt, options) {
-      return agent.generate(prompt as never, options as never);
-    },
-    hasOwnMemory() {
-      return agent.hasOwnMemory();
-    },
-    async getMemory() {
-      return (await agent.getMemory()) ?? null;
-    },
-  };
 
   await longTermMemory?.start();
 
@@ -167,7 +160,7 @@ export async function createInternalAgentRuntime<
     modelProfileId: config.modelProfileId,
     omPricingModelKey,
     omModelProfileId: config.omModelProfileId,
-    agent: runtimeAgent,
+    agent,
     workspace: platform.workspace,
     communication: platform.communication as CommunicationModule,
     longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,

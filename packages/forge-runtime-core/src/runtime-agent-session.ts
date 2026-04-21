@@ -12,6 +12,10 @@ import {
 } from 'agent-runtime-core/integrations';
 
 import {
+  createCheckpointedOmCompatibilityObserver,
+} from './checkpointed-om-compatibility.js';
+import type { CheckpointedOmStateStore } from './checkpointed-om.js';
+import {
   createForgeAgentRuntime,
   type CreateForgeAgentRuntimeOptions,
 } from './runtime.js';
@@ -109,6 +113,34 @@ export type CreateRuntimeAgentSessionOptions = {
   conversationStore: ConversationStore;
   checkpointedStateStore: CreateForgeAgentRuntimeOptions['memory']['stateStore'];
   workingMemoryStore: RuntimeWorkingMemoryStore;
+  checkpointedOmStateStore?: CheckpointedOmStateStore;
+  onCheckpointAdvanced?: (input: {
+    threadId: string;
+    resourceId: string;
+    fromGeneration: number | null;
+    toGeneration: number;
+    checkpointSummary: {
+      text: string;
+      tokenCount: number;
+      upToGeneration: number;
+      updatedAt: string;
+    };
+    reflections: Array<{
+      recordId: string;
+      generationCount: number;
+      tokenCount: number;
+      createdAt: string;
+      text: string;
+    }>;
+    observations: Array<{
+      blockId: string;
+      tokenCount: number;
+      createdAt: string;
+      lastObservedAt: string;
+      reflectedGeneration: number;
+      text: string;
+    }>;
+  }) => Promise<void>;
   runtimeActions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   runtimeObservers?: RuntimeObserver[];
   workingMemoryTool?: Tool<{ workingMemory: string }, { updated: true }>;
@@ -174,6 +206,17 @@ export async function createRuntimeAgentSession(
   const runController = new RuntimeRunController({
     runtime: runtime.host.runtime,
   });
+
+  if (input.checkpointedOmStateStore) {
+    runtime.host.runtime.observe(createCheckpointedOmCompatibilityObserver({
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      conversationStore: input.conversationStore,
+      conversationMemory: runtime.memory,
+      stateStore: input.checkpointedOmStateStore,
+      onCheckpointAdvanced: input.onCheckpointAdvanced,
+    }));
+  }
 
   return {
     async generate(prompt, options = {}) {
