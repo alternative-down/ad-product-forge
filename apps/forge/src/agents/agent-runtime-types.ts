@@ -1,10 +1,9 @@
-import type { Agent } from '@mastra/core/agent';
+import type { Agent, ToolsInput as MastraToolsInput } from '@mastra/core/agent';
+import type { CommunicationModule } from '@mastra-engine/core';
 import type {
   AgentConfig,
   AgentWakeEvent,
-  CommunicationModule,
   CommunicationProvider,
-  ToolsInput,
   WorkspaceEmbedderId,
 } from '@forge-runtime/core';
 import type { Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
@@ -22,7 +21,7 @@ import type {
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
+  TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
@@ -75,7 +74,7 @@ export type CreateAgentOptions = {
 
 export type InternalAgentRuntime<
   TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
+  TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = {
@@ -85,7 +84,7 @@ export type InternalAgentRuntime<
   modelProfileId?: string;
   omPricingModelKey: string;
   omModelProfileId?: string;
-  agent: Agent<TAgentId, TTools, TOutput, TRequestContext>;
+  agent: Agent<TAgentId, MastraToolsInput, TOutput, TRequestContext>;
   workspace: WorkspaceRuntime;
   communication: CommunicationModule;
   longTermMemoryRecall: {
@@ -134,7 +133,7 @@ export type InternalAgentRuntime<
 
 export interface CreateAgentConfig<
   TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
+  TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > extends Pick<
@@ -146,7 +145,6 @@ export interface CreateAgentConfig<
   | 'model'
   | 'pricingModelKey'
   | 'tools'
-  | 'workflows'
   | 'agents'
   | 'omModel'
   | 'omPricingModelKey'

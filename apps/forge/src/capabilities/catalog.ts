@@ -27,16 +27,12 @@ export const forgeCustomToolIds = [
   'list_minimax_voices',
   'minimax_tts',
   'minimax_image',
-] as const;
-
-export const forgeWorkflowIds = [
   'hire-internal-agent',
   'terminate-internal-agent',
 ] as const;
 
 export type ForgeCustomToolId = typeof forgeCustomToolIds[number];
-export type ForgeWorkflowId = typeof forgeWorkflowIds[number];
-export const forgeCapabilityIds = [...forgeCustomToolIds, ...forgeWorkflowIds] as const;
+export const forgeCapabilityIds = [...forgeCustomToolIds] as const;
 export type ForgeCapabilityId = typeof forgeCapabilityIds[number];
 
 export function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolId: ForgeCustomToolId) {
@@ -49,10 +45,6 @@ export function hasToolPermission(allowedToolIds: Set<string> | null | undefined
   }
 
   return false;
-}
-
-export function isWorkflowCapabilityId(capabilityId: string): capabilityId is ForgeWorkflowId {
-  return forgeWorkflowIds.some((workflowId) => workflowId === capabilityId);
 }
 
 export function isToolCapabilityId(capabilityId: string): capabilityId is ForgeCustomToolId {

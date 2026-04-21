@@ -23,7 +23,7 @@ export async function resolveProfileRuntimeModel(
 
     return gateway.resolveLanguageModel({
       modelId,
-      providerId,
+      providerId: providerId as 'openai-codex' | 'claude-code',
       apiKey,
     });
   }

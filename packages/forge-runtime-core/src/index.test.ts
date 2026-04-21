@@ -4,15 +4,12 @@ import { z } from 'zod';
 import {
   ForgeMcpToolset,
   InMemoryForgeUsageSink,
-  createStep,
   createTool,
-  createWorkflow,
   forgeDebug,
   isForgeDebugEnabled,
   resolveWorkspaceEmbedderId,
   toForgeSafeIdentifier,
   toolsToRuntimeActions,
-  workflowsToTools,
 } from './index.js';
 
 describe('@forge-runtime/core', () => {
@@ -29,53 +26,26 @@ describe('@forge-runtime/core', () => {
     expect(typeof ForgeMcpToolset).toBe('function');
   });
 
-  it('maps tools and workflows into runtime actions', async () => {
+  it('maps tools into runtime actions', async () => {
     const pingTool = createTool({
       id: 'ping',
       description: 'Ping tool.',
       inputSchema: z.object({
         text: z.string(),
       }),
-      execute(input) {
+      execute(input: { text: string }) {
         return {
           echoed: input.text,
         };
       },
     });
-    const workflow = createWorkflow({
-      id: 'demo-workflow',
-      inputSchema: z.object({
-        text: z.string(),
-      }),
-      outputSchema: z.object({
-        echoed: z.string(),
-      }),
-    })
-      .then(createStep({
-        id: 'demo-step',
-        inputSchema: z.object({
-          text: z.string(),
-        }),
-        outputSchema: z.object({
-          echoed: z.string(),
-        }),
-        execute({ inputData }) {
-          return {
-            echoed: inputData.text,
-          };
-        },
-      }))
-      .commit();
 
     const actions = toolsToRuntimeActions({
       ping: pingTool,
-      ...workflowsToTools({
-        demo: workflow,
-      }),
     });
 
-    expect(actions).toHaveLength(2);
-    expect(actions.map((action) => action.name)).toEqual(['ping', 'demo-workflow']);
+    expect(actions).toHaveLength(1);
+    expect(actions.map((action) => action.name)).toEqual(['ping']);
     await expect(Promise.resolve(actions[0]!.execute({
       text: 'hello',
     }, {

@@ -1452,7 +1452,6 @@ export function registerAdminRoutes(input: {
         additionalContext: body.additionalContext,
         weeklyBudgetUsd: body.weeklyBudgetUsd,
         workspaceBasePath: input.workspaceBasePath,
-        workflows: input.loaderConfig.workflows,
         githubApps: input.githubApps,
         emailMailboxes: input.emailMailboxes,
         coolify: input.coolify,

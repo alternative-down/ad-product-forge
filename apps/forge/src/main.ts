@@ -1,13 +1,9 @@
 import 'dotenv/config';
 
-import { Mastra } from '@mastra/core';
-import { ConsoleLogger } from '@mastra/core/logger';
-import { createOAuthGateway } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import { getDatabase, runMigrations } from './database/index';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry';
-import { createInternalAgentWorkflows } from './workflows/internal-agents';
 import { createForgeHttpServer } from './http/server';
 import { createGitHubAppManager } from './github/manager';
 import { createAgentEmailManager } from './email/migadu-manager';
@@ -104,19 +100,10 @@ export async function main() {
   const minimax = createMiniMaxManager({
     integrations,
   });
-  const workflows = createInternalAgentWorkflows({
-    db,
+  const loaderConfig = {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     githubApps,
     emailMailboxes,
-    coolify,
-    schedules,
-    internalChat,
-  });
-  const loaderConfig = {
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-    workflows,
-    githubApps,
     coolify,
     minimax,
     schedules,
@@ -140,18 +127,6 @@ export async function main() {
 
   await httpServer.start();
   console.log(`[Forge] HTTP server listening on ${publicBaseUrl}`);
-
-  new Mastra({
-    agents: Object.fromEntries(agents.map(({ runtime }) => [runtime.id, runtime.agent])),
-    workflows,
-    gateways: {
-      oauth: createOAuthGateway(),
-    },
-    logger: new ConsoleLogger({
-      name: 'forge-app',
-      level: env.FORGE_LOG_LEVEL ?? 'warn',
-    }),
-  });
 
   // Graceful shutdown handlers
   const handleShutdown = (signal: string) => {

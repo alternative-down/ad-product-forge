@@ -8,11 +8,10 @@ import {
   roleToolPermissions,
   roleWorkflowPermissions,
 } from '../database/schema';
-import { forgeCapabilityIds, isWorkflowCapabilityId, normalizeToolPermissionIds } from './catalog';
+import { forgeCapabilityIds, normalizeToolPermissionIds } from './catalog';
 
 type CapabilitySet = {
   toolIds: string[];
-  workflowIds: string[];
 };
 
 const roleInspectionToolIds = [
@@ -285,12 +284,6 @@ export function createCapabilityStore(db: Database) {
     roleId: string;
     capabilityId: string;
   }) {
-    if (isWorkflowCapabilityId(input.capabilityId)) {
-      return input.action === 'add'
-        ? addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
-        : removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId });
-    }
-
     return input.action === 'add'
       ? addRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId })
       : removeRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
@@ -310,8 +303,10 @@ export function createCapabilityStore(db: Database) {
     }
 
     return {
-      toolIds: resolveLoadedToolIds(await listRoleToolPermissions(agent.roleId)),
-      workflowIds: await listRoleWorkflowPermissions(agent.roleId),
+      toolIds: resolveLoadedToolIds([
+        ...(await listRoleToolPermissions(agent.roleId)),
+        ...(await listRoleWorkflowPermissions(agent.roleId)),
+      ]),
     };
   }
 

@@ -2,7 +2,6 @@ import type { CreateAgentConfig } from './agent-runtime-types';
 import type { AgentLoaderConfig } from './agent-loader-types';
 import type { loadAgentRuntimeData } from './agent-loader-data';
 import type { loadAgentToolset } from './agent-loader-tools';
-import { filterWorkflows } from './agent-loader-workflows';
 
 type AgentRuntimeData = Awaited<ReturnType<typeof loadAgentRuntimeData>>;
 type AgentToolset = Awaited<ReturnType<typeof loadAgentToolset>>;
@@ -48,7 +47,6 @@ export function buildAgentRuntimeConfig(
     roleDescription: runtimeData.role?.description,
     tools: toolset.tools,
     providers: runtimeData.providers,
-    workflows: filterWorkflows(loaderConfig.workflows, runtimeData.capabilitySet.workflowIds),
     workspaceBasePath: loaderConfig.workspaceBasePath,
     workspaceFilesystem: runtimeData.agent.workspaceFilesystem ?? undefined,
     workspaceSandbox: runtimeData.agent.workspaceSandbox ?? undefined,

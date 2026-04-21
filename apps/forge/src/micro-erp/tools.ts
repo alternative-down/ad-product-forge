@@ -159,7 +159,15 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            const result = await companyCash.recordCashIn(input.recordIn);
+            const recordIn = input.recordIn;
+            const result = await companyCash.recordCashIn({
+              type: recordIn.type!,
+              description: recordIn.description,
+              amountUsd: recordIn.amountUsd!,
+              referenceType: recordIn.referenceType,
+              referenceId: recordIn.referenceId,
+              effectiveAt: recordIn.effectiveAt,
+            });
             return { valid: true, action: input.action, ...result };
           }
 
@@ -188,7 +196,15 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            const result = await companyCash.recordCashOut(input.recordOut);
+            const recordOut = input.recordOut;
+            const result = await companyCash.recordCashOut({
+              type: recordOut.type!,
+              description: recordOut.description,
+              amountUsd: recordOut.amountUsd!,
+              referenceType: recordOut.referenceType,
+              referenceId: recordOut.referenceId,
+              effectiveAt: recordOut.effectiveAt,
+            });
             return { valid: true, action: input.action, ...result };
           }
 
@@ -225,7 +241,15 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            const result = await companyCash.scheduleCashIn(input.scheduleIn);
+            const scheduleIn = input.scheduleIn;
+            const result = await companyCash.scheduleCashIn({
+              type: scheduleIn.type!,
+              description: scheduleIn.description,
+              amountUsd: scheduleIn.amountUsd!,
+              referenceType: scheduleIn.referenceType,
+              referenceId: scheduleIn.referenceId,
+              dueAt: scheduleIn.dueAt!,
+            });
             return { valid: true, action: input.action, ...result };
           }
 
@@ -262,7 +286,15 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            const result = await companyCash.scheduleCashOut(input.scheduleOut);
+            const scheduleOut = input.scheduleOut;
+            const result = await companyCash.scheduleCashOut({
+              type: scheduleOut.type!,
+              description: scheduleOut.description,
+              amountUsd: scheduleOut.amountUsd!,
+              referenceType: scheduleOut.referenceType,
+              referenceId: scheduleOut.referenceId,
+              dueAt: scheduleOut.dueAt!,
+            });
             return { valid: true, action: input.action, ...result };
           }
 

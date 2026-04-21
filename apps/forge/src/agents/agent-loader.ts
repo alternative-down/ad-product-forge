@@ -94,8 +94,8 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
     try {
       const runtime = await loadAgent(db, {
         workspaceBasePath: config.workspaceBasePath,
-        workflows: config.workflows,
         githubApps: config.githubApps,
+        emailMailboxes: config.emailMailboxes,
         coolify: config.coolify,
         minimax: config.minimax,
         schedules: config.schedules,

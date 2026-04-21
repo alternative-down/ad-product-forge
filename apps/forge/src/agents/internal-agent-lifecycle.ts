@@ -16,7 +16,6 @@ type RunInternalHiringInput = {
   additionalContext?: string;
   weeklyBudgetUsd: number;
   workspaceBasePath: string;
-  workflows?: HireInternalAgentInput['workflows'];
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
@@ -30,8 +29,8 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     additionalContext: input.additionalContext,
     loaderConfig: {
       workspaceBasePath: input.workspaceBasePath,
-      workflows: input.workflows,
       githubApps: input.githubApps,
+      emailMailboxes: input.emailMailboxes,
       coolify: input.coolify,
       schedules: input.schedules,
       internalChat: input.internalChat,
@@ -55,7 +54,6 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     instructions: hiringRh.instructions,
     weeklyBudgetUsd: input.weeklyBudgetUsd,
     workspaceBasePath: input.workspaceBasePath,
-    workflows: input.workflows,
     githubApps: input.githubApps,
     emailMailboxes: input.emailMailboxes,
     coolify: input.coolify,

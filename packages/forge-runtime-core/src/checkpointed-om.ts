@@ -1,9 +1,9 @@
 export type CheckpointedOmArchivedObservation = {
-  blockId: string;
+  id: string;
   tokenCount: number;
   createdAt: string;
   lastObservedAt: string;
-  reflectedGeneration: number;
+  reflectedGeneration: number | null;
   text: string;
 };
 
@@ -45,7 +45,12 @@ export type CheckpointedOmState = {
     updatedAt: string;
   } | null;
   observationBlocks: CheckpointedOmArchivedObservation[];
-  activeReflectionBlocks: CheckpointedOmArchivedReflection[];
+  activeReflectionBlocks: Array<{
+    recordId: string;
+    generationCount: number;
+    tokenCount: number;
+    createdAt: string;
+  }>;
   latestMetrics: CheckpointedOmMetricsSnapshot | null;
 };
 

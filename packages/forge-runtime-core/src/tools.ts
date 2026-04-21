@@ -1,5 +1,3 @@
-import type { z } from 'zod';
-
 import type {
   RuntimeActionContext,
   RuntimeActionDefinition,
@@ -7,6 +5,10 @@ import type {
 
 export type ToolExecutionContext = RuntimeActionContext & {
   toolCallId: string;
+};
+
+type SchemaLike<TInput> = {
+  parse(input: unknown): TInput;
 };
 
 export type Tool<
@@ -24,37 +26,28 @@ export type Tool<
 };
 
 export type ToolsInput = Record<string, Tool>;
-
-export function createTool(tool: {
-  id: string;
-  description: string;
-  inputSchema: unknown;
-  outputSchema?: unknown;
-  execute(input: any, context: ToolExecutionContext): any;
-  [key: string]: unknown;
-}): Tool<any, any>;
 export function createTool<
-  TInputSchema extends z.ZodTypeAny,
+  TInput,
   TExecute extends (
-    input: z.infer<TInputSchema>,
+    input: TInput,
     context: ToolExecutionContext,
   ) => unknown,
 >(tool: {
   id: string;
   description: string;
-  inputSchema: TInputSchema;
-  outputSchema?: z.ZodTypeAny;
+  inputSchema: SchemaLike<TInput>;
+  outputSchema?: unknown;
   execute: TExecute;
-}): Tool<z.infer<TInputSchema>, Awaited<ReturnType<TExecute>>>;
+}): Tool<TInput, Awaited<ReturnType<TExecute>>>;
 export function createTool(tool: {
   id: string;
   description: string;
-  inputSchema: unknown;
+  inputSchema: SchemaLike<unknown>;
   outputSchema?: unknown;
-  execute(input: any, context: ToolExecutionContext): any;
+  execute(input: unknown, context: ToolExecutionContext): unknown;
   [key: string]: unknown;
-}): Tool<any, any> {
-  return tool as Tool<any, any>;
+}): Tool<unknown, unknown> {
+  return tool as Tool<unknown, unknown>;
 }
 
 export function toolToRuntimeAction(
@@ -63,7 +56,7 @@ export function toolToRuntimeAction(
   return {
     name: tool.id,
     description: tool.description,
-    inputSchema: tool.inputSchema as z.ZodType<Record<string, unknown>>,
+    inputSchema: tool.inputSchema as RuntimeActionDefinition<Record<string, unknown>, unknown>['inputSchema'],
     execute(input, context) {
       return tool.execute(input, {
         ...context,

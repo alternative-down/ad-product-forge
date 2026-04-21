@@ -4,7 +4,6 @@ export {
 } from './memory.js';
 export type {
   AgentConfig,
-  ForgeWorkflowInput,
 } from './agent-config.js';
 export {
   createTool,
@@ -14,14 +13,12 @@ export {
   type ToolsInput,
 } from './tools.js';
 export {
-  createStep,
-  createWorkflow,
-  workflowToTool,
-  workflowsToTools,
-  type AnyWorkflow,
-  type WorkflowDefinition,
-  type WorkflowStepDefinition,
-} from './workflows.js';
+  AiSdkStepModelAdapter,
+  RuntimeRunController,
+  createDefaultContextFormatter,
+  createRuntimeHost,
+  createTextStepContextEntry,
+} from 'agent-runtime-core/integrations';
 export {
   ForgeMcpToolset,
   type ForgeMcpToolsetOptions,
@@ -112,6 +109,7 @@ export type {
   CommunicationFile,
   CommunicationInboundMessage,
   CommunicationMessageView,
+  CommunicationModule,
   CommunicationProvider,
   CommunicationProviderContact,
   CommunicationProviderConversation,

@@ -12,6 +12,7 @@ import { createInternalChatTools } from '../communication/internal-chat-tools';
 import { createMiniMaxTools } from '../minimax/tools';
 import { getMCPToolsForAgent } from './mcp/client-manager';
 import { createAgentSkillTools } from './skills-tools';
+import { createInternalAgentTools } from './internal-agent-tools';
 
 export async function loadAgentToolset(input: {
   db: Database;
@@ -52,6 +53,15 @@ export async function loadAgentToolset(input: {
     agentId: input.agentId,
     allowedToolIds: input.allowedToolIds,
   });
+  const internalAgentTools = createInternalAgentTools({
+    db: input.db,
+    workspaceBasePath: input.loaderConfig.workspaceBasePath,
+    githubApps: input.loaderConfig.githubApps,
+    emailMailboxes: input.loaderConfig.emailMailboxes,
+    coolify: input.loaderConfig.coolify,
+    schedules: input.loaderConfig.schedules,
+    internalChat: input.loaderConfig.internalChat,
+  });
   const mcpTools = await loadMCPToolsForAgent(input.agentId);
 
   const tools: ToolsInput = {
@@ -64,6 +74,7 @@ export async function loadAgentToolset(input: {
     ...internalChatTools,
     ...minimaxTools,
     ...skillTools,
+    ...internalAgentTools,
     ...mcpTools,
   };
 
@@ -79,6 +90,7 @@ export async function loadAgentToolset(input: {
       internalChat: Object.keys(internalChatTools).length,
       minimax: Object.keys(minimaxTools).length,
       skills: Object.keys(skillTools).length,
+      internalAgents: Object.keys(internalAgentTools).length,
       mcp: Object.keys(mcpTools).length,
       total: Object.keys(tools).length,
     },

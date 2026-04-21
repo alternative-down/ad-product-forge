@@ -28,7 +28,7 @@ export function createAgentSkillTools(input: {
           .min(1)
           .describe('Skill directory name inside your local `skills/` folder to publish to the shared catalog.'),
       }),
-      execute: async ({ context }) => {
+      execute: async (inputData) => {
         const agent = await input.db.query.agents.findFirst({
           where: (fields, operators) => operators.eq(fields.id, input.agentId),
           columns: {
@@ -44,12 +44,12 @@ export function createAgentSkillTools(input: {
         await publishAgentWorkspaceSkillToGlobalCatalog({
           workspaceBasePath: input.workspaceBasePath,
           agent,
-          skillName: context.skillName,
+          skillName: inputData.skillName,
         });
 
         return {
           success: true,
-          skillName: context.skillName,
+          skillName: inputData.skillName,
         };
       },
     });

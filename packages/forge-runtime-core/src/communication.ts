@@ -42,7 +42,9 @@ export type CommunicationProviderContact = {
   slug: string;
   displayName: string;
   description?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: {
+    slug: string;
+  };
 };
 
 export type CommunicationProviderConversation = {
@@ -104,4 +106,49 @@ export type CommunicationProvider = {
     messageId?: string;
     conversationName?: string;
   }>;
+};
+
+export type CommunicationModule = {
+  listContacts(filter?: 'self' | 'others' | 'all'): Promise<{
+    self: CommunicationProviderContact[];
+    others: CommunicationProviderContact[];
+  }>;
+  upsertContact(input: {
+    slug: string;
+    displayName: string;
+    description?: string;
+  }): Promise<{
+    slug: string;
+    displayName: string;
+    description?: string;
+  }>;
+  listConversations(input: {
+    provider?: string;
+    limit?: number;
+    unread?: boolean;
+  }): Promise<CommunicationConversationView[]>;
+  getMessages(input: {
+    provider: string;
+    targetKey: string;
+    limit?: number;
+    offset?: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<CommunicationMessageView[]>;
+  sendMessage(input: {
+    provider: string;
+    targetKey: string;
+    content: string;
+    attachments?: string[];
+  }): Promise<{
+    valid: boolean;
+    provider: string;
+    targetKey: string;
+    messageId?: string;
+    conversationName?: string;
+    unreadConversation?: CommunicationConversationView;
+  }>;
+  onReceiveMessage(handler: (event: import('./wake-queue.js').AgentWakeEvent) => void): void;
+  dispose(): Promise<void>;
 };

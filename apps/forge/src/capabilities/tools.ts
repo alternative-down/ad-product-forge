@@ -269,7 +269,7 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'manage_role_capabilities')) {
     tools.manage_role_capabilities = createTool({
       id: 'manage_role_capabilities',
-      description: 'Add or remove one capability from a role. A capability can be either a tool or a workflow.',
+      description: 'Add or remove one capability from a role.',
       inputSchema: z.object({
         action: z.enum(['add', 'remove']).describe('Choose add to grant the capability or remove to revoke it.'),
         roleId: z.string().min(1).describe('The roleId you want to change.'),

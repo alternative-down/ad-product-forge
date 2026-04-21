@@ -1,55 +1,26 @@
-import { Agent } from '@mastra/core/agent';
-import { Mastra } from '@mastra/core';
 import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
 import { llmModelPrices } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import { createOAuthGateway } from '@forge-runtime/core';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
+import {
+  AiSdkStepModelAdapter,
+  RuntimeRunController,
+  createDefaultContextFormatter,
+  createRuntimeHost,
+  createTextStepContextEntry,
+  createTool,
+  toolsToRuntimeActions,
+} from '@forge-runtime/core';
 import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
 import { forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
-import { createTool } from '@mastra/core/tools';
-import type { Processor, ProcessInputStepArgs, ProcessInputStepResult } from '@mastra/core/processors';
 import { AGENT_BASE_TOOL_IDS } from './base-tool-ids';
-
-/**
- * Processor that disables tools after hireAgent tool is called.
- * This forces the agent to return text output instead of continuing tool calls.
- */
-class HireAgentDisablerProcessor implements Processor {
-  id = 'hire-agent-disabler';
-
-  async processInputStep({
-    stepNumber,
-    steps,
-  }: ProcessInputStepArgs): Promise<ProcessInputStepResult> {
-    // On first step, allow tools
-    if (stepNumber === 0) {
-      console.log(`[HireAgentDisabler] Step ${stepNumber}: allowing tools`);
-      return {};
-    }
-
-    const hasSuccessfulHireAgentResult = steps.some((step) =>
-      step.toolResults?.some((toolResult) => hasSuccessfulHireAgentToolResult(toolResult)),
-    );
-
-    if (hasSuccessfulHireAgentResult) {
-      console.log(
-        `[HireAgentDisabler] Step ${stepNumber}: valid hireAgent result detected, disabling tools`,
-      );
-      return { tools: {}, toolChoice: 'none' };
-    }
-
-    console.log(`[HireAgentDisabler] Step ${stepNumber}: allowing tools`);
-    return {};
-  }
-}
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
@@ -82,6 +53,22 @@ const hireAgentFailureSchema = z.object({
   hint: z.string().min(1).optional(),
 });
 const hireAgentToolResultSchema = z.union([hireAgentSuccessSchema, hireAgentFailureSchema]);
+type HiringActionResult = {
+  name: string;
+  output: unknown;
+};
+type HiringStepRecord = {
+  stepNumber: number;
+  continuation: string;
+  modelUsage: {
+    inputTokens?: number;
+    outputTokens?: number;
+  } | null;
+  modelResponse: {
+    segments: unknown[];
+  };
+  actionResults: HiringActionResult[];
+};
 
 type HiringRhResult =
   | { valid: false; error: string; hint?: string }
@@ -102,31 +89,8 @@ function isSuccessfulHireAgentResult(result: unknown) {
   return parsed.success && parsed.data.valid;
 }
 
-function hasSuccessfulHireAgentToolResult(toolResult: unknown) {
-  if (typeof toolResult !== 'object' || toolResult === null) {
-    return false;
-  }
-
-  if (
-    'toolName' in toolResult &&
-    toolResult.toolName === 'hireAgent' &&
-    'result' in toolResult
-  ) {
-    return isSuccessfulHireAgentResult(toolResult.result);
-  }
-
-  if (
-    'payload' in toolResult &&
-    typeof toolResult.payload === 'object' &&
-    toolResult.payload !== null &&
-    'toolName' in toolResult.payload &&
-    toolResult.payload.toolName === 'hireAgent' &&
-    'result' in toolResult.payload
-  ) {
-    return isSuccessfulHireAgentResult(toolResult.payload.result);
-  }
-
-  return false;
+function hasSuccessfulHireAgentActionResult(actionResult: { name: string; output: unknown }) {
+  return actionResult.name === 'hireAgent' && isSuccessfulHireAgentResult(actionResult.output);
 }
 
 function normalizeAgentName(value: string) {
@@ -275,10 +239,7 @@ export async function generateHiredAgentInstructions(
 
   // NOTE: inputSchema kept for reference but we now use toolResults instead of args
 
-  const agent = new Agent({
-    id: HIRING_RH_AGENT_ID,
-    name: 'Internal Hiring RH',
-    instructions: [
+  const systemPrompt = [
       '# Hiring RH Agent - Agent Design & Hiring System',
       '',
       'You are an expert at designing and hiring permanent internal collaborators for the company.',
@@ -366,159 +327,174 @@ export async function generateHiredAgentInstructions(
       '',
       'System Prompt:',
       '[Full system prompt with Primary Goal, Secondary Goals, and Backstory sections]',
-    ].join('\n'),
-    model: hiringRhRuntimeModel,
-    tools: {
-      reportHiringState: createTool({
-        id: 'reportHiringState',
-        description: 'Use this tool to report what you see, what tools are available, and any difficulties you encounter during the hiring process. This helps with debugging.',
-        inputSchema: z.object({
-          status: z.string().describe('Describe what you currently see, what tools you have access to, what you are trying to do, and any issues or difficulties.'),
-        }),
-        execute: async ({ status }) => {
-          try {
-            console.log(`[HiringRH] Agent status report:`, status);
-            return { valid: true, logged: status };
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
+    ].join('\n');
+  const hiringTools = {
+    reportHiringState: createTool({
+      id: 'reportHiringState',
+      description: 'Use this tool to report what you see, what tools are available, and any difficulties you encounter during the hiring process. This helps with debugging.',
+      inputSchema: z.object({
+        status: z.string().describe('Describe what you currently see, what tools you have access to, what you are trying to do, and any issues or difficulties.'),
+      }),
+      execute: async ({ status }) => {
+        try {
+          console.log(`[HiringRH] Agent status report:`, status);
+          return { valid: true, logged: status };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Try again in a moment. If the problem persists, report the same status in plain text.',
+          };
+        }
+      },
+    }),
+    hireAgent: createTool({
+      id: 'hireAgent',
+      description: 'Realiza contratação do agente e finaliza o processo',
+      inputSchema,
+      execute: async ({ agent }) => {
+        try {
+          console.log(`[HiringRH] hireAgent called with:`, JSON.stringify(agent, null, 2));
+          const currentAgents = await db.query.agents.findMany({
+            columns: {
+              name: true,
+            },
+          });
+          const normalizedAgentName = normalizeAgentName(agent.agentName);
+
+          if (currentAgents.some((currentAgent) => normalizeAgentName(currentAgent.name) === normalizedAgentName)) {
             return {
               valid: false,
-              error: message,
-              hint: 'Try again in a moment. If the problem persists, report the same status in plain text.',
+              error: `An internal collaborator named "${agent.agentName}" already exists.`,
+              hint: 'Choose a different fictional single-word name that does not duplicate an existing collaborator.',
             };
           }
-        },
-      }),
-      hireAgent: createTool({
-        id: 'hireAgent',
-        description: 'Realiza contratação do agente e finaliza o processo',
-        inputSchema,
-        execute: async ({ agent }) => {
-          try {
-            console.log(`[HiringRH] hireAgent called with:`, JSON.stringify(agent, null, 2));
-            const currentAgents = await db.query.agents.findMany({
-              columns: {
-                name: true,
-              },
-            });
-            const normalizedAgentName = normalizeAgentName(agent.agentName);
 
-            if (currentAgents.some((currentAgent) => normalizeAgentName(currentAgent.name) === normalizedAgentName)) {
-              return {
-                valid: false,
-                error: `An internal collaborator named "${agent.agentName}" already exists.`,
-                hint: 'Choose a different fictional single-word name that does not duplicate an existing collaborator.',
-              };
-            }
+          const profileValidation = validateGeneratedAgentProfile(agent);
 
-            const profileValidation = validateGeneratedAgentProfile(agent);
-
-            if (!profileValidation.valid) {
-              return {
-                valid: false,
-                error: profileValidation.error,
-                hint: profileValidation.hint,
-              };
-            }
-
-            const validation = await validateHireAgentInput(capabilities, agent.roleId);
-
-            if (!validation.valid) {
-              console.log(`[HiringRH] hireAgent ERROR:`, validation.error);
-              return validation;
-            }
-
-            const result = {
-              ...agent,
-              instructions: buildGeneratedAgentInstructions(agent),
-              roleId: validation.roleId,
-              roleName: validation.roleName,
-              roleDescription: validation.roleDescription,
-              valid: true,
-            };
-            console.log(`[HiringRH] hireAgent SUCCESS, returning:`, JSON.stringify(result, null, 2));
-            return result;
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            console.log(`[HiringRH] hireAgent FAILURE:`, message);
+          if (!profileValidation.valid) {
             return {
               valid: false,
-              error: message,
-              hint: 'Verify the selected role and its permissions, then try again.',
+              error: profileValidation.error,
+              hint: profileValidation.hint,
             };
           }
-        },
-      }),
-      ...tools,
-    },
-    inputProcessors: [new HireAgentDisablerProcessor()],
-  });
 
-  const mastra = new Mastra({
-    agents: {
-      [HIRING_RH_AGENT_ID]: agent,
+          const validation = await validateHireAgentInput(capabilities, agent.roleId);
+
+          if (!validation.valid) {
+            console.log(`[HiringRH] hireAgent ERROR:`, validation.error);
+            return validation;
+          }
+
+          const result = {
+            ...agent,
+            instructions: buildGeneratedAgentInstructions(agent),
+            roleId: validation.roleId,
+            roleName: validation.roleName,
+            roleDescription: validation.roleDescription,
+            valid: true,
+          };
+          console.log(`[HiringRH] hireAgent SUCCESS, returning:`, JSON.stringify(result, null, 2));
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.log(`[HiringRH] hireAgent FAILURE:`, message);
+          return {
+            valid: false,
+            error: message,
+            hint: 'Verify the selected role and its permissions, then try again.',
+          };
+        }
+      },
+    }),
+    ...tools,
+  };
+  const defaultFormatter = createDefaultContextFormatter();
+  const host = createRuntimeHost({
+    runtime: {
+      runtimeId: HIRING_RH_AGENT_ID,
+      model: new AiSdkStepModelAdapter({
+        model: hiringRhRuntimeModel,
+        system: systemPrompt,
+      }),
+      contextFormatter: {
+        formatInput(runtimeInput: {
+          id: string;
+          type: string;
+          payload: unknown;
+        }) {
+          return createTextStepContextEntry({
+            id: runtimeInput.id,
+            kind: `input:${runtimeInput.type}`,
+            title: 'Hiring Request',
+            text: typeof runtimeInput.payload === 'string'
+              ? runtimeInput.payload
+              : JSON.stringify(runtimeInput.payload, null, 2),
+          });
+        },
+        formatActionResults: defaultFormatter.formatActionResults,
+      },
     },
-    gateways: {
-      oauth: createOAuthGateway(),
-    },
+    actions: toolsToRuntimeActions(hiringTools),
   });
-  const result = await mastra.getAgent(HIRING_RH_AGENT_ID)!.generate(hiringPrompt, {
+  await host.runtime.dispatch({
+    id: `hiring-request:${Date.now()}`,
+    type: 'hiring-request',
+    payload: hiringPrompt,
+  });
+  const runController = new RuntimeRunController({
+    runtime: host.runtime,
+  });
+  const runResult = await runController.run({
     maxSteps: 100,
-    toolChoice: 'auto',
+    continueAfterStep({ latestStep }: { latestStep: HiringStepRecord }) {
+      return !latestStep.actionResults.some((actionResult: HiringActionResult) => hasSuccessfulHireAgentActionResult(actionResult));
+    },
   });
-
-  const inputTokens = result.usage.inputTokens ?? 0;
-  const outputTokens = result.usage.outputTokens ?? 0;
+  const usage = runResult.steps.reduce((totals: { inputTokens: number; outputTokens: number }, step: HiringStepRecord) => {
+    return {
+      inputTokens: totals.inputTokens + (step.modelUsage?.inputTokens ?? 0),
+      outputTokens: totals.outputTokens + (step.modelUsage?.outputTokens ?? 0),
+    };
+  }, {
+    inputTokens: 0,
+    outputTokens: 0,
+  });
+  const inputTokens = usage.inputTokens;
+  const outputTokens = usage.outputTokens;
   const costUsd =
     (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
-  console.log(`[HiringRH] generate() completed`);
-  console.log(`[HiringRH] result.text:`, result.text);
+  console.log(`[HiringRH] run completed`);
   console.log(
-    `[HiringRH] result.toolCalls:`,
+    `[HiringRH] action results:`,
     JSON.stringify(
-      result.toolCalls.map((chunk) => ({ toolName: chunk.payload.toolName })),
+      runResult.steps.flatMap((step: HiringStepRecord) => step.actionResults.map((actionResult: HiringActionResult) => ({
+        actionName: actionResult.name,
+        output: actionResult.output,
+      }))),
       null,
       2,
     ),
   );
-  console.log(
-    `[HiringRH] result.toolResults:`,
-    JSON.stringify(
-      result.toolResults.map((chunk) => ({
-        toolName: chunk.payload.toolName,
-        hasResult: true,
-      })),
-      null,
-      2,
-    ),
-  );
+  const hireAgentActionResult = runResult.steps
+    .flatMap((step: HiringStepRecord) => step.actionResults)
+    .find((actionResult: HiringActionResult) => actionResult.name === 'hireAgent');
 
-  // After hireAgent is called, the next step disables tools and returns text
-  // Parse the text to extract the structured result
-  const toolCall = result.toolCalls.find((chunk) => chunk.payload.toolName === 'hireAgent');
-  const toolResult = result.toolResults.find((chunk) => chunk.payload.toolName === 'hireAgent');
-
-  console.log(`[HiringRH] toolCall found:`, !!toolCall);
-  console.log(`[HiringRH] toolResult found:`, !!toolResult);
-
-  // If we have toolResult from hireAgent, use it
-  if (toolResult) {
+  if (hireAgentActionResult) {
     console.log(
-      `[HiringRH] toolResult.result:`,
-      JSON.stringify(toolResult.payload.result, null, 2),
+      `[HiringRH] hireAgent action result:`,
+      JSON.stringify(hireAgentActionResult.output, null, 2),
     );
-    const parsedToolResult = hireAgentToolResultSchema.safeParse(toolResult.payload.result);
+    const parsedToolResult = hireAgentToolResultSchema.safeParse(hireAgentActionResult.output);
 
     if (!parsedToolResult.success) {
       console.log(
         '[HiringRH] ERROR: hireAgent tool result failed schema validation',
         JSON.stringify(parsedToolResult.error.flatten(), null, 2),
-      );
-      console.log(
-        '[HiringRH] ERROR: raw hireAgent tool result payload',
-        JSON.stringify(toolResult.payload.result, null, 2),
       );
     }
 
@@ -554,14 +530,11 @@ export async function generateHiredAgentInstructions(
     '[HiringRH] ERROR DETAILS:',
     JSON.stringify(
       {
-        text: result.text,
-        toolCalls: result.toolCalls.map((chunk) => ({
-          toolName: chunk.payload.toolName,
-          args: chunk.payload.args,
-        })),
-        toolResults: result.toolResults.map((chunk) => ({
-          toolName: chunk.payload.toolName,
-          result: chunk.payload.result,
+        steps: runResult.steps.map((step: HiringStepRecord) => ({
+          stepNumber: step.stepNumber,
+          continuation: step.continuation,
+          segments: step.modelResponse.segments,
+          actionResults: step.actionResults,
         })),
       },
       null,

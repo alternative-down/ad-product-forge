@@ -40,7 +40,6 @@ export type HireInternalAgentInput = {
   workspaceSandbox?: WorkspaceSandboxConfig;
   weeklyBudgetUsd: number;
   providerCredentials?: ProviderCredentialsMap;
-  workflows?: CreateAgentConfig['workflows'];
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
@@ -128,8 +127,8 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     const runtime = await loadAgent(db, {
       agentId,
       workspaceBasePath: input.workspaceBasePath,
-      workflows: input.workflows,
       githubApps: input.githubApps,
+      emailMailboxes: input.emailMailboxes,
       coolify: input.coolify,
       schedules: input.schedules,
       internalChat: input.internalChat,

@@ -21,20 +21,20 @@ import type {
 
 export async function createAgent<
   TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
+  TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
-): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
+): Promise<Agent<TAgentId, ToolsInput, TOutput, TRequestContext>> {
   const runtime = await createInternalAgentRuntime(config, options);
   return runtime.agent;
 }
 
 export async function createInternalAgentRuntime<
   TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
+  TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
@@ -85,7 +85,7 @@ export async function createInternalAgentRuntime<
         vector: platform.vector,
         threadId: platform.mastraId,
         resourceId: platform.mastraId,
-        model: (config.omModel ?? config.model) as CreateAgentConfig['model'],
+        model: (config.omModel ?? config.model) as never,
         pricingModelKey: omPricingModelKey,
         modelProfileId: config.omModelProfileId,
         contractStore: options.contractStore,
@@ -100,8 +100,8 @@ export async function createInternalAgentRuntime<
     agentId: config.id,
     mastraId: platform.mastraId,
     agentWorkspacePath: platform.agentWorkspacePath,
-    agentModel: config.model as CreateAgentConfig['model'],
-    omModel: config.omModel as CreateAgentConfig['omModel'],
+    agentModel: config.model as never,
+    omModel: config.omModel as never,
     agentMemoryPath: platform.agentMemoryPath,
     longTermMemory: options.longTermMemory,
     memoryLastMessagesFullEnabled: config.memoryLastMessagesFullEnabled,
@@ -131,16 +131,15 @@ export async function createInternalAgentRuntime<
       : null,
   );
 
-  const agent = new Agent<TAgentId, TTools, TOutput, TRequestContext>({
+  const agent = new Agent<TAgentId, ToolsInput, TOutput, TRequestContext>({
     id: config.id,
     name: config.name,
     description: config.description,
-    instructions: agentSystemPrompt,
-    model: config.model,
-    tools: allAgentTools as TTools,
-    workflows: config.workflows,
+    instructions: agentSystemPrompt as never,
+    model: config.model as never,
+    tools: allAgentTools as ToolsInput,
     workspace: platform.workspace,
-    agents: config.agents,
+    agents: config.agents as never,
     memory: runtimeMemory.memory,
     inputProcessors: runtimeMemory.inputProcessors as InputProcessorOrWorkflow[],
     outputProcessors: runtimeMemory.outputProcessors as OutputProcessorOrWorkflow[],
@@ -179,11 +178,11 @@ export async function createInternalAgentRuntime<
 
 export async function createForgeAgent<
   TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
+  TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-): Promise<Agent<TAgentId, TTools, TOutput, TRequestContext>> {
+): Promise<Agent<TAgentId, ToolsInput, TOutput, TRequestContext>> {
   return createAgent(config, { longTermMemory: false });
 }

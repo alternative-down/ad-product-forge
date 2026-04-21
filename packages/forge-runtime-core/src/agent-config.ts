@@ -1,13 +1,6 @@
-import type { AnyWorkflow } from './workflows.js';
-import type { ToolsInput } from './tools.js';
-
-export type ForgeWorkflowInput =
-  | Record<string, AnyWorkflow>
-  | ((context: unknown) => Promise<Record<string, AnyWorkflow>> | Record<string, AnyWorkflow>);
-
 export type AgentConfig<
   TAgentId extends string = string,
-  TTools extends ToolsInput = ToolsInput,
+  TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = {
@@ -17,7 +10,6 @@ export type AgentConfig<
   instructions?: string;
   model: unknown;
   tools?: TTools;
-  workflows?: ForgeWorkflowInput;
   agents?: Record<string, unknown>;
   output?: TOutput;
   requestContext?: TRequestContext;
