@@ -1,4 +1,7 @@
 export {
+  createCommunicationConversationKey,
+} from './conversation-key.js';
+export {
   createForgeConversationMessage,
   createForgeConversationThread,
 } from './conversation.js';
@@ -34,6 +37,9 @@ export type {
   CommunicationProviderConversation,
   CommunicationProviderMessage,
 } from './communication.js';
+export {
+  createExternalCommunicationActions,
+} from './communication-actions.js';
 export {
   createForgeInternalAgentAction,
   createForgeWorkspaceActions,
@@ -94,6 +100,9 @@ export {
 } from './openai-codex.js';
 export {
   toForgeSafeIdentifier,
+} from './safe-identifier.js';
+export {
+  toForgeSafeIdentifier as toMastraSafeIdentifier,
 } from './safe-identifier.js';
 export {
   createAgentWakeQueue,

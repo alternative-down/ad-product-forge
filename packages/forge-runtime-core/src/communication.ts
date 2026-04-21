@@ -108,6 +108,43 @@ export type CommunicationProvider = {
 
 export type CommunicationModule = {
   providers: Map<string, CommunicationProvider>;
+  listContacts(filter?: 'self' | 'others' | 'all'): Promise<{
+    self: CommunicationProviderContact[];
+    others: CommunicationProviderContact[];
+  }>;
+  upsertContact(input: {
+    slug: string;
+    displayName: string;
+    description?: string;
+  }): Promise<{
+    slug: string;
+    displayName: string;
+    description?: string;
+  }>;
+  listConversations(input: {
+    provider?: string;
+    unread?: boolean;
+    limit: number;
+  }): Promise<CommunicationConversationView[]>;
+  getMessages(input: {
+    provider: string;
+    targetKey: string;
+    limit: number;
+    offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<CommunicationMessageView[]>;
+  sendMessage(input: {
+    provider: string;
+    targetKey: string;
+    content: string;
+    attachmentPaths?: string[];
+  }): Promise<{
+    targetKey: string;
+    messageId?: string;
+    conversationName?: string;
+  }>;
   onReceiveMessage(handler: (event: import('./wake-queue.js').AgentWakeEvent) => void): void;
   dispose(): Promise<void>;
 };
