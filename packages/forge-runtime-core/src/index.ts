@@ -122,6 +122,10 @@ export type {
 export {
   createCheckpointedObservationalMemoryProcessor,
 } from './checkpointed-observational-memory.js';
+export {
+  createCheckpointedOmCompatibilityObserver,
+  type CheckpointedOmCompatibilityObserverOptions,
+} from './checkpointed-om-compatibility.js';
 export type {
   CommunicationAttachmentView,
   CommunicationContactView,
