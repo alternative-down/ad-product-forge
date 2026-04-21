@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { z } from 'zod';
 
 import type { AgentWakeEvent } from './wake-queue.js';
@@ -31,9 +30,16 @@ const contactStateSchema = z.object({
 
 type ContactRecord = z.infer<typeof contactRecordSchema>;
 
+type RuntimeWorkspaceFilesystem = {
+  readFile(path: string): Promise<string | Uint8Array | Buffer>;
+  writeFile(path: string, data: Uint8Array | Buffer | string): Promise<void>;
+};
+
 export async function createCommunicationModule(config: {
   providers: CommunicationProvider[];
-  workspace: WorkspaceRuntime;
+  workspace: {
+    filesystem: RuntimeWorkspaceFilesystem | null;
+  };
   workspaceRoot: string;
 }): Promise<CommunicationModule> {
   const providers = new Map(config.providers.map((provider) => [provider.id, provider]));
@@ -268,7 +274,7 @@ async function listSelfContacts(providers: Map<string, CommunicationProvider>) {
 
 async function getUnreadConversationContext(input: {
   providers: Map<string, CommunicationProvider>;
-  workspaceFilesystem: NonNullable<WorkspaceRuntime['filesystem']>;
+  workspaceFilesystem: RuntimeWorkspaceFilesystem;
   provider: string;
   targetKey: string;
 }) {
@@ -356,7 +362,7 @@ function buildItemMetadata(
 }
 
 async function toAgentConversationView(
-  workspaceFilesystem: NonNullable<WorkspaceRuntime['filesystem']>,
+  workspaceFilesystem: RuntimeWorkspaceFilesystem,
   conversation: CommunicationProviderConversation,
 ): Promise<CommunicationConversationView> {
   return {
@@ -373,7 +379,7 @@ async function toAgentConversationView(
 }
 
 async function toAgentMessageView(
-  workspaceFilesystem: NonNullable<WorkspaceRuntime['filesystem']>,
+  workspaceFilesystem: RuntimeWorkspaceFilesystem,
   message: CommunicationProviderMessage,
 ): Promise<CommunicationMessageView> {
   return {
@@ -390,7 +396,7 @@ async function toAgentMessageView(
 }
 
 async function materializeInboundAttachments(
-  workspaceFilesystem: NonNullable<WorkspaceRuntime['filesystem']>,
+  workspaceFilesystem: RuntimeWorkspaceFilesystem,
   messageId: string,
   attachments: CommunicationProviderMessage['attachments'],
 ): Promise<CommunicationAttachmentView[]> {
@@ -412,7 +418,7 @@ async function materializeInboundAttachments(
 }
 
 async function readOutboundAttachments(input: {
-  workspaceFilesystem: NonNullable<WorkspaceRuntime['filesystem']>;
+  workspaceFilesystem: RuntimeWorkspaceFilesystem;
   workspaceRoot: string;
   attachmentPaths: string[];
 }) {
