@@ -7,7 +7,9 @@ import {
 } from 'agent-runtime-core/integrations';
 
 import { createForgeConversationMessage, createForgeConversationThread } from './conversation.js';
+import { createForgeMcpToolsetFromStore } from './mcp-store.js';
 import { createForgeAgentRuntime } from './runtime.js';
+import { InMemoryForgeUsageSink } from './usage.js';
 
 describe('forge runtime core conversation helpers', () => {
   it('creates thread and message records', () => {
@@ -30,6 +32,7 @@ describe('forge runtime core conversation helpers', () => {
 describe('createForgeAgentRuntime', () => {
   it('creates a runtime with conversation memory and bridge', async () => {
     const conversationStore = new InMemoryConversationStore();
+    const usageSink = new InMemoryForgeUsageSink();
     const runtime = await createForgeAgentRuntime({
       config: {
         agentId: 'agent-1',
@@ -49,6 +52,7 @@ describe('createForgeAgentRuntime', () => {
       memory: {
         stateStore: new InMemoryCheckpointedConversationStateStore(),
       },
+      usageSink,
     });
 
     await runtime.bridge.dispatchMessage({
@@ -70,6 +74,20 @@ describe('createForgeAgentRuntime', () => {
 
     expect(result?.record.modelResponse.segments[0]?.text).toBe('Hello back');
     expect(messages).toHaveLength(2);
+    expect(usageSink.list()).toHaveLength(1);
     await runtime.dispose();
+  });
+
+  it('returns no mcp toolset when the store has no servers', async () => {
+    const toolset = await createForgeMcpToolsetFromStore({
+      agentId: 'agent-1',
+      store: {
+        async listServersForAgent() {
+          return [];
+        },
+      },
+    });
+
+    expect(toolset).toBeNull();
   });
 });

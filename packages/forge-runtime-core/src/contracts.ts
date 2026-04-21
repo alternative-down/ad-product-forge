@@ -6,7 +6,7 @@ export const forgeMcpStdioServerSchema = z.object({
   transport: z.literal('stdio'),
   command: z.string().min(1),
   args: z.array(z.string()).default([]),
-  env: z.record(z.string()).default({}),
+  env: z.record(z.string(), z.string()).default({}),
 });
 
 export const forgeMcpHttpServerSchema = z.object({
@@ -14,7 +14,7 @@ export const forgeMcpHttpServerSchema = z.object({
   name: z.string().min(1),
   transport: z.literal('http-stream'),
   url: z.string().url(),
-  headers: z.record(z.string()).default({}),
+  headers: z.record(z.string(), z.string()).default({}),
 });
 
 export const forgeMcpServerSchema = z.union([

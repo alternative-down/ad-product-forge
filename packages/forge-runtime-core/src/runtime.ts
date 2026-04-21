@@ -3,15 +3,20 @@ import {
   createRuntimeHost,
   type ConversationStore,
   type McpRuntimeActionOptions,
+  type RuntimeObserver,
   type RuntimeActionDefinition,
   type RuntimeHost,
   type RuntimeInputTarget,
   type StepModelAdapter,
+  type WorkspaceGateway,
 } from 'agent-runtime-core/integrations';
 
+import { createForgeInternalAgentAction, createForgeWorkspaceActions, type ForgeInternalAgentInvoker } from './actions.js';
 import { forgeAgentRuntimeConfigSchema, type ForgeAgentRuntimeConfig, type ForgeMcpServerConfig } from './contracts.js';
 import { createForgeConversationMemory, type ForgeConversationMemoryOptions } from './memory.js';
 import { ForgeMcpToolset } from './mcp.js';
+import { createForgeMcpToolsetFromStore, type ForgeMcpServerStore } from './mcp-store.js';
+import { createForgeUsageObserver, type ForgeUsageSink } from './usage.js';
 
 export type CreateForgeAgentRuntimeOptions = {
   config: ForgeAgentRuntimeConfig;
@@ -19,8 +24,13 @@ export type CreateForgeAgentRuntimeOptions = {
   conversationStore: ConversationStore;
   memory: Omit<ForgeConversationMemoryOptions, 'threadId' | 'conversationStore' | 'assistantAuthorId'>;
   mcpServers?: ForgeMcpServerConfig[];
+  mcpServerStore?: ForgeMcpServerStore;
   runtimeActions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   mcpRuntimeActionOptions?: Omit<McpRuntimeActionOptions, 'session'>;
+  workspaceGateway?: WorkspaceGateway;
+  internalAgentInvoker?: ForgeInternalAgentInvoker;
+  usageSink?: ForgeUsageSink;
+  runtimeObservers?: RuntimeObserver[];
 };
 
 export type ForgeAgentRuntime = {
@@ -48,18 +58,47 @@ export async function createForgeAgentRuntime(
       servers: options.mcpServers,
       runtimeActionOptions: options.mcpRuntimeActionOptions,
     })
-    : null;
+    : await (
+      options.mcpServerStore
+        ? createForgeMcpToolsetFromStore({
+          agentId: config.agentId,
+          store: options.mcpServerStore,
+          runtimeActionOptions: options.mcpRuntimeActionOptions,
+        })
+        : Promise.resolve(null)
+    );
   const mcpActions = mcpToolset
     ? await mcpToolset.createRuntimeActions()
     : [];
+  const workspaceActions = options.workspaceGateway
+    ? createForgeWorkspaceActions(options.workspaceGateway)
+    : [];
+  const internalAgentActions = options.internalAgentInvoker
+    ? [createForgeInternalAgentAction(options.internalAgentInvoker)]
+    : [];
+  const observers = [...conversationMemory.observers];
+
+  if (options.usageSink) {
+    observers.push(createForgeUsageObserver(options.usageSink));
+  }
+
+  if (options.runtimeObservers?.length) {
+    observers.push(...options.runtimeObservers);
+  }
+
   const host = createRuntimeHost({
     runtime: {
       runtimeId: config.runtimeId ?? config.agentId,
       model: options.model,
     },
-    actions: [...(options.runtimeActions ?? []), ...mcpActions],
+    actions: [
+      ...(options.runtimeActions ?? []),
+      ...workspaceActions,
+      ...internalAgentActions,
+      ...mcpActions,
+    ],
     plugins: conversationMemory.plugins,
-    observers: conversationMemory.observers,
+    observers,
     eventStream: true,
     messageStream: true,
   });
