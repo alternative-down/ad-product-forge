@@ -73,6 +73,17 @@ export type RuntimeAgentSessionGenerateOptions = {
   runId?: string;
   maxSteps?: number;
   system?: string;
+  abortSignal?: AbortSignal;
+  prepareStep?: (input: { stepNumber: number }) => Promise<void> | void;
+  savePerStep?: boolean;
+  memory?: {
+    thread: string;
+    resource: string;
+    options: {
+      lastMessages: number;
+    };
+  };
+  providerOptions?: Record<string, unknown>;
   onStepFinish?: (result: RuntimeAgentSessionStepResult) => Promise<void> | void;
   onIterationComplete?: (
     iteration: RuntimeAgentSessionIteration,
@@ -262,6 +273,12 @@ export async function createRuntimeAgentSession(
 
       await runController.run({
         maxSteps: options.maxSteps,
+        signal: options.abortSignal,
+        beforeStep: async ({ nextStepNumber }) => {
+          await options.prepareStep?.({
+            stepNumber: nextStepNumber - 1,
+          });
+        },
         afterStep: async ({ latestStep }) => {
           finalText = latestStep.modelResponse.segments
             .filter((segment) => segment.kind === 'message')

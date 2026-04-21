@@ -3,10 +3,9 @@ import { readFile } from 'node:fs/promises';
 
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
-import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
+import { LibSQLStore } from '@mastra/libsql';
 import {
-  createAgentMemory,
-  resolveWorkspaceEmbedderId,
+  LibsqlConversationStore,
   toMastraSafeIdentifier,
   type CommunicationMessageView,
   type CommunicationProviderMessage,
@@ -68,6 +67,12 @@ type RuntimeStoredMessage = {
   threadId?: string | null;
   resourceId?: string | null;
   createdAt?: string | Date;
+};
+
+type RuntimeStoredMessagePart = {
+  type: string;
+  text?: string;
+  [key: string]: unknown;
 };
 
 type LongTermMemoryStateSnapshot = {
@@ -992,9 +997,9 @@ export function createAdminReadModel(input: {
       id: `${mastraAgentId}_storage`,
       client,
     });
-    const vector = new LibSQLVector({
-      id: `${mastraAgentId}_vector`,
-      url: `file:${agentDatabasePath}`,
+    const conversationStore = new LibsqlConversationStore({
+      client,
+      tablePrefix: mastraAgentId,
     });
 
     try {
@@ -1005,11 +1010,6 @@ export function createAdminReadModel(input: {
         });
       }
 
-      const memory = createAgentMemory({
-        storage,
-        vector,
-        embedder: resolveWorkspaceEmbedderId(agent.workspaceEmbedder),
-      });
       const agentWorkspaceRoot = path.resolve(input.workspaceBasePath, agentId);
       const agentWorkspaceDir = agent.workspaceFilesystem?.basePath
         ? path.resolve(agentWorkspaceRoot, agent.workspaceFilesystem.basePath)
@@ -1018,10 +1018,10 @@ export function createAdminReadModel(input: {
       const agentContext = await readFile(agentContextPath, 'utf8')
         .then((content) => content.trim() || null)
         .catch(() => null);
-      const workingMemory = await memory.getWorkingMemory({
+      const workingMemory = (await conversationStore.read({
         threadId: mastraAgentId,
         resourceId: mastraAgentId,
-      });
+      }))?.workingMemory ?? null;
       const memoryStore = storage.stores.memory;
       if (!memoryStore) {
         return {
@@ -1619,46 +1619,37 @@ async function listThreadMessages(
     const client: ClosableLibsqlClient = createClient({
       url: `file:${agentDatabasePath}`,
     });
-    const storage = new LibSQLStore({
-      id: `${mastraAgentId}_storage`,
+    const conversationStore = new LibsqlConversationStore({
       client,
+      tablePrefix: mastraAgentId,
     });
-    const memory = storage.stores.memory;
 
     try {
-      if (!memory) {
-        return [];
-      }
-
-      if (hasCreateThread(memory)) {
-        await memory.createThread({
-          resourceId: mastraAgentId,
-          threadId: mastraAgentId,
-        });
-      }
-
-      const result = await memory.listMessages({
+      const messages = await conversationStore.listMessages({
         threadId: mastraAgentId,
-        resourceId: mastraAgentId,
-        page: input.page,
-        perPage: input.perPage,
-        orderBy: {
-          field: 'createdAt',
-          direction: 'DESC',
-        },
+        limit: input.perPage * (input.page + 1),
       });
-      return result.messages.map((message: RuntimeStoredMessage) => ({
-        id: message.id,
-        role: message.role,
-        createdAt:
-          message.createdAt instanceof Date
-            ? message.createdAt.getTime()
-            : new Date(message.createdAt ?? Date.now()).getTime(),
-        threadId: message.threadId ?? null,
-        resourceId: message.resourceId ?? null,
-        type: message.type ?? null,
-        content: message.content,
-      }));
+
+      return [...messages]
+        .reverse()
+        .slice(input.page * input.perPage, (input.page + 1) * input.perPage)
+        .map((message) => ({
+          id: message.id,
+          role: message.role,
+          createdAt: new Date(message.createdAt).getTime(),
+          threadId: message.threadId,
+          resourceId: mastraAgentId,
+          type: message.role,
+          content: {
+            parts: message.parts.map((part: RuntimeStoredMessagePart) =>
+              part.type === 'text'
+                ? {
+                    type: 'text',
+                    text: part.text,
+                  }
+                : part),
+          },
+        }));
     } finally {
       await closeLibsqlClient(client);
     }

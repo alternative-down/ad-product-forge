@@ -18,10 +18,17 @@ export {
 } from './tools.js';
 export {
   AiSdkStepModelAdapter,
+  ConfiguredWorkspaceGateway,
+  createWorkspaceActionDefinitions,
   RuntimeRunController,
   createDefaultContextFormatter,
+  LocalBashWorkspaceGateway,
   createRuntimeHost,
   createTextStepContextEntry,
+} from 'agent-runtime-core/integrations';
+export type {
+  ConversationStore,
+  RuntimeActionDefinition,
 } from 'agent-runtime-core/integrations';
 export {
   ForgeMcpToolset,

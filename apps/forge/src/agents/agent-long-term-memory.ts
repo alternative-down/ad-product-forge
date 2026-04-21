@@ -2,8 +2,6 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { Agent } from '@mastra/core/agent';
-import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import {
   type CheckpointedOmCheckpointPackageInput,
@@ -11,8 +9,10 @@ import {
   type CheckpointedOmArchivedReflection,
   CheckpointedOmStateStore,
   WorkspaceEmbedderId,
-  createAgentMemory,
+  createRuntimeAgentSession,
   forgeDebug,
+  type ConversationStore,
+  type RuntimeActionDefinition,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 import { z } from 'zod';
@@ -28,7 +28,6 @@ const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
-const INITIAL_RUN_LAST_MESSAGES = 10;
 
 const packageManifestSchema = z.object({
   packageId: z.string().min(1),
@@ -412,6 +411,8 @@ export function createAgentLongTermMemory(input: {
   pricingModelKey: string;
   modelProfileId?: string;
   contractStore: ReturnType<typeof createAgentContractStore>;
+  conversationStore: ConversationStore;
+  workspaceActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   workspaceEmbedder?: WorkspaceEmbedderId;
   checkpointedOmStateStore: CheckpointedOmStateStore & {
     readState(): Promise<{
@@ -425,34 +426,7 @@ export function createAgentLongTermMemory(input: {
   const memoryPath = path.resolve(input.agentMemoryPath, MEMORY_DIR);
   const statePath = path.resolve(input.agentMemoryPath, LTM_STATE_FILE);
   const ltmMastraId = toMastraSafeIdentifier(`${input.agentId}_long_term_memory`);
-  const workspace = new WorkspaceRuntime({
-    autoSync: false,
-    filesystem: new LocalFilesystem({
-      basePath: input.agentMemoryPath,
-      allowedPaths: [path.resolve(input.agentWorkspacePath, SKILLS_DIR)],
-    }),
-  });
-  const memory = createAgentMemory({
-    storage: input.storage,
-    vector: input.vector,
-    embedder: input.workspaceEmbedder,
-    lastMessages: 20,
-  });
-  const memoryAgent = new Agent({
-    id: ltmMastraId,
-    name: `${input.agentName} Long-Term Memory`,
-    instructions: createMemoryAgentInstructions({
-      agentId: input.agentId,
-      agentName: input.agentName,
-      agentDescription: input.agentDescription,
-      roleName: input.roleName,
-      roleDescription: input.roleDescription,
-      instructions: input.instructions,
-    }),
-    model: input.model as never,
-    workspace,
-    memory,
-  });
+  let memoryAgent: Awaited<ReturnType<typeof createRuntimeAgentSession>> | null = null;
 
   let initialized = false;
   let idle = false;
@@ -460,7 +434,6 @@ export function createAgentLongTermMemory(input: {
   let stopped = false;
   let timer: NodeJS.Timeout | null = null;
   let currentAbortController: AbortController | null = null;
-  let runLastMessages = INITIAL_RUN_LAST_MESSAGES;
   let refreshRecallIndex: (() => Promise<void>) | null = null;
   let snapshot: LtmSnapshot = {
     running: false,
@@ -525,7 +498,28 @@ export function createAgentLongTermMemory(input: {
 
     await fs.mkdir(checkpointsPath, { recursive: true });
     await fs.mkdir(memoryPath, { recursive: true });
-    await workspace.init();
+    memoryAgent = await createRuntimeAgentSession({
+      agentId: ltmMastraId,
+      agentName: `${input.agentName} Long-Term Memory`,
+      threadId: ltmMastraId,
+      resourceId: ltmMastraId,
+      assistantAuthorId: ltmMastraId,
+      model: input.model as never,
+      system: createMemoryAgentInstructions({
+        agentId: input.agentId,
+        agentName: input.agentName,
+        agentDescription: input.agentDescription,
+        roleName: input.roleName,
+        roleDescription: input.roleDescription,
+        instructions: input.instructions,
+      }),
+      conversationStore: input.conversationStore,
+      checkpointedStateStore: input.conversationStore,
+      workingMemoryStore: input.conversationStore,
+      runtimeActions: input.workspaceActions,
+      maxConversationMessages: 20,
+      consolidateConversationOverflow: false,
+    });
     initialized = true;
   }
 
@@ -772,6 +766,12 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function generateLtmRun(prompt: string) {
+    await ensureInitialized();
+
+    if (!memoryAgent) {
+      throw new Error(`LTM runtime session is not available for ${input.agentId}`);
+    }
+
     let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
     const runDelayMs = await estimateNextLtmDelayMs();
 
@@ -784,13 +784,6 @@ export function createAgentLongTermMemory(input: {
             maxSteps: GENERATE_MAX_STEPS_PER_RUN,
             savePerStep: true,
             abortSignal: controller.signal,
-            memory: {
-              thread: ltmMastraId,
-              resource: ltmMastraId,
-              options: {
-                lastMessages: runLastMessages,
-              },
-            },
             prepareStep: async ({ stepNumber }) => {
               if (stepNumber === 0 || runDelayMs <= 0) {
                 return;
@@ -867,7 +860,6 @@ export function createAgentLongTermMemory(input: {
     running = true;
     snapshot.running = true;
     snapshot.queued = false;
-    runLastMessages = INITIAL_RUN_LAST_MESSAGES;
     currentAbortController = new AbortController();
     const beforeSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
@@ -975,7 +967,7 @@ export function createAgentLongTermMemory(input: {
       stopped = true;
       clearTimer();
       currentAbortController?.abort(new Error('LTM disposed'));
-      await workspace.destroy();
+      await memoryAgent?.dispose();
     },
   };
 }

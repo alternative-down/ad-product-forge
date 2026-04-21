@@ -10,8 +10,11 @@ import path from 'node:path';
 
 import {
   type CommunicationProvider,
+  ConfiguredWorkspaceGateway,
   createCommunicationModule,
+  createWorkspaceActionDefinitions,
   LibsqlConversationStore,
+  LocalBashWorkspaceGateway,
   toMastraSafeIdentifier,
   type CommunicationModule,
 } from '@forge-runtime/core';
@@ -128,6 +131,10 @@ export async function createAgentRuntimePlatform(input: {
   });
 
   await workspace.init();
+  const workspaceGateway = new ConfiguredWorkspaceGateway({
+    base: new LocalBashWorkspaceGateway(),
+    cwd: agentWorkspaceDir,
+  });
 
   if (hasCreateThread(storage.stores.memory)) {
     await storage.stores.memory.createThread({
@@ -148,6 +155,8 @@ export async function createAgentRuntimePlatform(input: {
     storage,
     vector,
     conversationStore,
+    workspaceGateway,
+    workspaceActions: createWorkspaceActionDefinitions(workspaceGateway),
     communication,
     agentWorkspacePath,
     agentWorkspaceDir,

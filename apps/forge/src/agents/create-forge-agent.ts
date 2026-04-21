@@ -89,6 +89,8 @@ export async function createInternalAgentRuntime<
         pricingModelKey: omPricingModelKey,
         modelProfileId: config.omModelProfileId,
         contractStore: options.contractStore,
+        conversationStore: platform.conversationStore,
+        workspaceActions: platform.workspaceActions,
         workspaceEmbedder: config.workspaceEmbedder,
         checkpointedOmStateStore,
       })
@@ -106,21 +108,9 @@ export async function createInternalAgentRuntime<
     longTermMemory: options.longTermMemory,
     memoryLastMessagesFullEnabled: config.memoryLastMessagesFullEnabled,
     memoryLastMessagesCount: config.memoryLastMessagesCount,
-    tokenCountFilterEnabled: config.tokenCountFilterEnabled,
-    tokenCountFilterLimit: config.tokenCountFilterLimit,
-    checkpointedOmEnabled: config.checkpointedOmEnabled,
-    checkpointedOmTotalContextTokens: config.checkpointedOmTotalContextTokens,
-    checkpointedOmRecentRawTokens: config.checkpointedOmRecentRawTokens,
-    checkpointedOmRawObservationBatchTokens: config.checkpointedOmRawObservationBatchTokens,
-    checkpointedOmObservationReflectionBatchTokens:
-      config.checkpointedOmObservationReflectionBatchTokens,
-    checkpointedOmObservationSupportTokens: config.checkpointedOmObservationSupportTokens,
-    checkpointedOmReflectionSupportTokens: config.checkpointedOmReflectionSupportTokens,
     ltmRecallScoreThreshold: config.ltmRecallScoreThreshold,
     ltmRecallDocumentCount: config.ltmRecallDocumentCount,
     workspaceEmbedder: config.workspaceEmbedder,
-    agentSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
-    onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
     checkpointedOmStateStore,
     readRuntimeMemorySettings: options.readRuntimeMemorySettings,
   });
@@ -144,7 +134,10 @@ export async function createInternalAgentRuntime<
     workingMemoryStore: platform.conversationStore,
     checkpointedOmStateStore,
     onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
-    runtimeActions: toolsToRuntimeActions(allAgentTools),
+    runtimeActions: [
+      ...platform.workspaceActions,
+      ...toolsToRuntimeActions(allAgentTools),
+    ],
     maxConversationMessages: config.memoryLastMessagesFullEnabled
       ? Number.MAX_SAFE_INTEGER
       : config.memoryLastMessagesCount,
