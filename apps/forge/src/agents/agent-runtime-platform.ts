@@ -1,10 +1,5 @@
 import { createClient } from '@libsql/client';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
-import {
-  LocalFilesystem,
-  LocalSandbox,
-  Workspace as WorkspaceRuntime,
-} from '@mastra/core/workspace';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -24,6 +19,12 @@ import type {
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
 } from '../database/schema';
+import type { RuntimeWorkspace } from './agent-runtime-types';
+
+type CommunicationWorkspaceFilesystem = {
+  readFile(path: string): Promise<string | Uint8Array | Buffer>;
+  writeFile(path: string, data: Uint8Array | Buffer | string): Promise<void>;
+};
 
 interface MastraMemoryStore {
   createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
@@ -116,24 +117,35 @@ export async function createAgentRuntimePlatform(input: {
     client,
     tablePrefix: mastraId,
   });
-  const workspace = new WorkspaceRuntime({
-    autoSync: true,
-    bm25: true,
-    filesystem: new LocalFilesystem({
-      basePath: agentWorkspaceDir,
-    }),
-    lsp: false,
-    sandbox: new LocalSandbox({
-      isolation: 'none',
-      workingDirectory: sandboxWorkingDirectory,
-    }),
-    skills: input.workspaceSkills ?? ['**/skills'],
-  });
-
-  await workspace.init();
+  const workspaceFilesystem: RuntimeWorkspace['filesystem'] = {
+    async exists(targetPath: string) {
+      try {
+        await fs.access(path.resolve(agentWorkspaceDir, targetPath));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async readFile(targetPath: string) {
+      return fs.readFile(path.resolve(agentWorkspaceDir, targetPath));
+    },
+  };
+  const communicationWorkspaceFilesystem: CommunicationWorkspaceFilesystem = {
+    async readFile(targetPath: string) {
+      return fs.readFile(path.resolve(agentWorkspaceDir, targetPath));
+    },
+    async writeFile(targetPath: string, data: Uint8Array | Buffer | string) {
+      const absolutePath = path.resolve(agentWorkspaceDir, targetPath);
+      await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+      await fs.writeFile(absolutePath, data);
+    },
+  };
+  const workspace: RuntimeWorkspace = {
+    filesystem: workspaceFilesystem,
+  };
   const workspaceGateway = new ConfiguredWorkspaceGateway({
     base: new LocalBashWorkspaceGateway(),
-    cwd: agentWorkspaceDir,
+    cwd: sandboxWorkingDirectory,
   });
 
   if (hasCreateThread(storage.stores.memory)) {
@@ -145,7 +157,9 @@ export async function createAgentRuntimePlatform(input: {
 
   const communication: CommunicationModule = input.communication ?? await createCommunicationModule({
     providers: input.providers ?? [],
-    workspace,
+    workspace: {
+      filesystem: communicationWorkspaceFilesystem,
+    },
     workspaceRoot: agentWorkspaceDir,
   });
 
@@ -162,7 +176,6 @@ export async function createAgentRuntimePlatform(input: {
     agentWorkspaceDir,
     agentMemoryPath,
     async dispose() {
-      await workspace.destroy();
       client.close();
     },
   };
