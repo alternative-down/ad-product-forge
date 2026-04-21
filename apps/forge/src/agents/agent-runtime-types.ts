@@ -1,4 +1,3 @@
-import type { Agent, ToolsInput as MastraToolsInput } from '@mastra/core/agent';
 import type {
   AgentConfig,
   AgentWakeEvent,
@@ -6,7 +5,6 @@ import type {
   CommunicationProvider,
   WorkspaceEmbedderId,
 } from '@forge-runtime/core';
-import type { Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 
 import type {
   WorkspaceFilesystemConfig,
@@ -25,7 +23,7 @@ export type CreateForgeAgentConfig<
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
-  omModel?: AgentConfig['model'];
+  omModel?: unknown;
   pricingModelKey: string;
   omPricingModelKey?: string;
   modelProfileId?: string;
@@ -72,6 +70,111 @@ export type CreateAgentOptions = {
   }>;
 };
 
+export type RuntimeWorkingMemory = {
+  getWorkingMemory(input: {
+    threadId: string;
+    resourceId: string;
+  }): Promise<string | null>;
+};
+
+export type RuntimeStepUsage = {
+  inputTokens?: number;
+  outputTokens?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  cachedInputTokens?: number;
+  inputTokenDetails?: {
+    noCacheTokens?: number;
+    cacheReadTokens?: number;
+  };
+};
+
+export type RuntimeGenerateStepResult = {
+  usage?: RuntimeStepUsage;
+};
+
+export type RuntimeIteration = {
+  iteration: number;
+  text: string;
+  toolCalls: Array<{
+    id: string;
+    name: string;
+    args: Record<string, unknown>;
+  }>;
+  toolResults: Array<{
+    id: string;
+    name: string;
+    result: unknown;
+    error?: Error;
+  }>;
+  isFinal: boolean;
+  finishReason: string;
+  runId: string;
+  threadId?: string;
+  resourceId?: string;
+  agentId: string;
+  agentName: string;
+  messages: unknown[];
+};
+
+export type RuntimeGenerateResult = {
+  text: string;
+  usage?: RuntimeStepUsage;
+  steps?: Array<{
+    response?: {
+      uiMessages?: Array<{
+        parts?: unknown[];
+      }>;
+    };
+  }>;
+};
+
+export type RuntimeAgentGenerateMessage =
+  | string
+  | Array<{
+      role: 'assistant' | 'user';
+      content: string;
+    }>;
+
+export type RuntimeAgentGenerateOptions = {
+  runId?: string;
+  maxSteps?: number;
+  savePerStep?: boolean;
+  abortSignal?: AbortSignal;
+  system?: string;
+  memory?: {
+    thread: string;
+    resource: string;
+    options: {
+      lastMessages: number;
+    };
+  };
+  providerOptions?: Record<string, unknown>;
+  prepareStep?: (input: { stepNumber: number }) => Promise<void> | void;
+  onStepFinish?: (stepResult: RuntimeGenerateStepResult) => Promise<void> | void;
+  onIterationComplete?: (
+    iteration: RuntimeIteration,
+  ) => Promise<{ continue?: boolean; feedback?: string } | void> | { continue?: boolean; feedback?: string } | void;
+};
+
+export type RuntimeAgent = {
+  generate(
+    prompt: RuntimeAgentGenerateMessage,
+    options?: RuntimeAgentGenerateOptions,
+  ): Promise<RuntimeGenerateResult>;
+  hasOwnMemory(): boolean;
+  getMemory(): Promise<RuntimeWorkingMemory | null>;
+};
+
+export type RuntimeWorkspaceFilesystem = {
+  exists(path: string): Promise<boolean>;
+  readFile(path: string): Promise<string | Uint8Array | Buffer>;
+};
+
+export type RuntimeWorkspace = {
+  filesystem: RuntimeWorkspaceFilesystem | null;
+};
+
 export type InternalAgentRuntime<
   TAgentId extends string = string,
   TTools extends Record<string, unknown> = Record<string, unknown>,
@@ -84,8 +187,8 @@ export type InternalAgentRuntime<
   modelProfileId?: string;
   omPricingModelKey: string;
   omModelProfileId?: string;
-  agent: Agent<TAgentId, MastraToolsInput, TOutput, TRequestContext>;
-  workspace: WorkspaceRuntime;
+  agent: RuntimeAgent;
+  workspace: RuntimeWorkspace;
   communication: CommunicationModule;
   longTermMemoryRecall: {
     initialize(): Promise<void>;

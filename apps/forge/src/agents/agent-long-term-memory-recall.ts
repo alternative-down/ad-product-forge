@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import type { AgentConfig } from '@mastra/core/agent';
 import type { MastraToolInvocationOptions } from '@mastra/core/tools';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import { LibSQLVector, type LibSQLStore } from '@mastra/libsql';
@@ -229,7 +228,7 @@ export class AgentLongTermMemoryRecall {
         } | null;
       }>;
     };
-    model?: AgentConfig['model'];
+    model?: unknown;
   }) {
     const memoryStore = input.storage.stores.memory;
 
@@ -1410,7 +1409,7 @@ export function createAgentLongTermMemoryRecall(input: {
       } | null;
     }>;
   };
-  model?: AgentConfig['model'];
+  model?: unknown;
 }) {
   return new AgentLongTermMemoryRecall(input);
 }

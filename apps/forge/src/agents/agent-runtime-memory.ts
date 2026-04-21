@@ -11,7 +11,6 @@ import type {
   InputProcessorOrWorkflow,
   OutputProcessorOrWorkflow,
 } from '@mastra/core/processors';
-import type { AgentConfig } from '@mastra/core/agent';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 
 import { createAgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
@@ -24,8 +23,8 @@ export async function createAgentRuntimeMemory(input: {
   agentId: string;
   mastraId: string;
   agentWorkspacePath: string;
-  agentModel: AgentConfig['model'];
-  omModel?: AgentConfig['model'];
+  agentModel: unknown;
+  omModel?: unknown;
   agentMemoryPath: string;
   longTermMemory?: boolean;
   memoryLastMessagesFullEnabled?: boolean;
@@ -122,7 +121,7 @@ export async function createAgentRuntimeMemory(input: {
 
     inputProcessors.push(createCheckpointedObservationalMemoryProcessor({
       storage: input.storage,
-      model: input.omModel ?? input.agentModel,
+      model: (input.omModel ?? input.agentModel) as never,
       totalContextTokens: input.checkpointedOmTotalContextTokens,
       recentRawTokens: input.checkpointedOmRecentRawTokens,
       rawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,

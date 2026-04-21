@@ -4,7 +4,6 @@ import { readFile } from 'node:fs/promises';
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
-import type { MastraDBMessage } from '@mastra/core/agent';
 import {
   createAgentMemory,
   resolveWorkspaceEmbedderId,
@@ -58,8 +57,18 @@ interface MastraMemoryStore {
       field: 'createdAt';
       direction: 'ASC' | 'DESC';
     };
-  }): Promise<{ messages: MastraDBMessage[] }>;
+  }): Promise<{ messages: RuntimeStoredMessage[] }>;
 }
+
+type RuntimeStoredMessage = {
+  id: string;
+  role?: string;
+  type?: string;
+  content?: unknown;
+  threadId?: string | null;
+  resourceId?: string | null;
+  createdAt?: string | Date;
+};
 
 type LongTermMemoryStateSnapshot = {
   packages: Array<{
@@ -1638,10 +1647,13 @@ async function listThreadMessages(
           direction: 'DESC',
         },
       });
-      return result.messages.map((message: MastraDBMessage) => ({
+      return result.messages.map((message: RuntimeStoredMessage) => ({
         id: message.id,
         role: message.role,
-        createdAt: message.createdAt.getTime(),
+        createdAt:
+          message.createdAt instanceof Date
+            ? message.createdAt.getTime()
+            : new Date(message.createdAt ?? Date.now()).getTime(),
         threadId: message.threadId ?? null,
         resourceId: message.resourceId ?? null,
         type: message.type ?? null,

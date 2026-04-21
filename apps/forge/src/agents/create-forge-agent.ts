@@ -18,6 +18,7 @@ import type {
   CreateAgentConfig,
   CreateAgentOptions,
   InternalAgentRuntime,
+  RuntimeAgent,
 } from './agent-runtime-types';
 
 export async function createAgent<
@@ -28,7 +29,7 @@ export async function createAgent<
 >(
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
-): Promise<Agent<TAgentId, ToolsInput, TOutput, TRequestContext>> {
+): Promise<RuntimeAgent> {
   const runtime = await createInternalAgentRuntime(config, options);
   return runtime.agent;
 }
@@ -145,6 +146,17 @@ export async function createInternalAgentRuntime<
     inputProcessors: runtimeMemory.inputProcessors as InputProcessorOrWorkflow[],
     outputProcessors: runtimeMemory.outputProcessors as OutputProcessorOrWorkflow[],
   });
+  const runtimeAgent: RuntimeAgent = {
+    generate(prompt, options) {
+      return agent.generate(prompt as never, options as never);
+    },
+    hasOwnMemory() {
+      return agent.hasOwnMemory();
+    },
+    async getMemory() {
+      return (await agent.getMemory()) ?? null;
+    },
+  };
 
   await longTermMemory?.start();
 
@@ -155,7 +167,7 @@ export async function createInternalAgentRuntime<
     modelProfileId: config.modelProfileId,
     omPricingModelKey,
     omModelProfileId: config.omModelProfileId,
-    agent,
+    agent: runtimeAgent,
     workspace: platform.workspace,
     communication: platform.communication as CommunicationModule,
     longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
@@ -184,6 +196,6 @@ export async function createForgeAgent<
   TRequestContext extends Record<string, unknown> | unknown = unknown,
 >(
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-): Promise<Agent<TAgentId, ToolsInput, TOutput, TRequestContext>> {
+): Promise<RuntimeAgent> {
   return createAgent(config, { longTermMemory: false });
 }

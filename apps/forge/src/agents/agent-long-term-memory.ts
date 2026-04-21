@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { Agent, type AgentConfig } from '@mastra/core/agent';
+import { Agent } from '@mastra/core/agent';
 import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
 import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import {
@@ -408,7 +408,7 @@ export function createAgentLongTermMemory(input: {
   vector: LibSQLVector;
   threadId: string;
   resourceId: string;
-  model: AgentConfig['model'];
+  model: unknown;
   pricingModelKey: string;
   modelProfileId?: string;
   contractStore: ReturnType<typeof createAgentContractStore>;
@@ -449,7 +449,7 @@ export function createAgentLongTermMemory(input: {
       roleDescription: input.roleDescription,
       instructions: input.instructions,
     }),
-    model: input.model,
+    model: input.model as never,
     workspace,
     memory,
   });
