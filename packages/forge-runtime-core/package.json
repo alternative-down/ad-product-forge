@@ -15,6 +15,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.68",
+    "@ai-sdk/openai": "^3.0.52",
+    "@huggingface/transformers": "3.7.5",
+    "@mastra/fastembed": "^1.0.1",
     "agent-runtime-core": "file:../../../agent-runtime-core",
     "zod": "^4.3.6"
   },
