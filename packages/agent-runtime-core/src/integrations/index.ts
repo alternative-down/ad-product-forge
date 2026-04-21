@@ -130,7 +130,6 @@ export {
 } from '../core/snapshot-schema.js';
 export {
   AiSdkStepModelAdapter,
-  renderAiSdkPrompt,
   type AiSdkModelAdapterOptions,
 } from './adapters/ai-sdk.js';
 export {

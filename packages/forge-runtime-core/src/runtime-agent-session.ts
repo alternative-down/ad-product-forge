@@ -341,7 +341,7 @@ export async function createRuntimeAgentSession(
             return result.continue;
           }
 
-          return latestStep.continuation === 'continue';
+          return false;
         },
       });
 

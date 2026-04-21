@@ -68,11 +68,13 @@ describe('AiSdkStepModelAdapter', () => {
     expect(messages).toHaveLength(1);
     expect(messages[0]?.role).toBe('user');
     expect(messages[0]?.content[0]?.type).toBe('text');
-    expect(messages[0]?.content[0]?.text).toContain('<context>');
+    expect(messages[0]?.content[0]?.text).toContain('<entry id="entry-1"');
+    expect(messages[0]?.content[0]?.text).not.toContain('bounded agent step');
     expect(messages[0]?.content[1]).toEqual({
       type: 'image',
       image: 'data:image/png;base64,AQID',
     });
+    expect(Object.keys(request?.tools ?? {})).toEqual([]);
   });
 
   it('maps streamText output into runtime stream events and final response', async () => {
@@ -146,6 +148,7 @@ describe('AiSdkStepModelAdapter', () => {
     expect(response.actionRequests).toEqual([
       { name: 'lookup', input: { query: 'forge' } },
     ]);
+    expect(response.continuation).toBe('stop');
     expect(response.usage).toEqual({
       inputTokens: 10,
       outputTokens: 12,
@@ -153,5 +156,6 @@ describe('AiSdkStepModelAdapter', () => {
       cachedInputTokens: undefined,
       reasoningTokens: undefined,
     });
+    expect(Object.keys(streamTextMock.mock.calls[0]?.[0]?.tools ?? {})).toEqual(['lookup']);
   });
 });

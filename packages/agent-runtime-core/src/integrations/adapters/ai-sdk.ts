@@ -1,5 +1,4 @@
-import { generateText, streamText, tool, type LanguageModel } from 'ai';
-import { z } from 'zod';
+import { generateText, streamText, tool, type LanguageModel, type ToolSet } from 'ai';
 
 import { AsyncEventChannel } from '../../core/async-event-channel.js';
 import type { StepModelAdapter, StreamingStepModelAdapter } from '../../core/model.js';
@@ -14,8 +13,6 @@ import type {
   StepModelStream,
   StepModelStreamEvent,
 } from '../../core/types.js';
-
-const emptyObjectSchema = z.object({});
 
 export type AiSdkModelAdapterOptions = {
   model: LanguageModel;
@@ -45,7 +42,7 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
       model: this.model,
       temperature: this.temperature,
       system: this.system,
-      messages: buildAiSdkMessages(request.context, request.actions),
+      messages: buildAiSdkMessages(request.context),
       tools: buildToolSet(request.actions),
     });
 
@@ -63,7 +60,7 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
       model: this.model,
       temperature: this.temperature,
       system: this.system,
-      messages: buildAiSdkMessages(request.context, request.actions),
+      messages: buildAiSdkMessages(request.context),
       tools: buildToolSet(request.actions),
     });
     const events = new AsyncEventChannel<StepModelStreamEvent>();
@@ -94,39 +91,15 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
   }
 }
 
-export function renderAiSdkPrompt(
-  context: StepContextEntry[],
-  actions: StepActionDescriptor[],
-) {
-  return [
-    'You are executing one bounded agent step.',
-    'Use the provided context entries as the full visible context for this step.',
-    'Some context entries may also include image parts that are attached separately to the same request.',
-    'Respond with normal text and call tools when needed.',
-    'If another step should follow immediately without external action, call runtime_continue.',
-    'If the runtime should wait for new input, call runtime_wait.',
-    'If no tool is needed and no continuation tool is needed, answer and stop.',
-    '',
-    '<available-actions>',
-    renderActionSection(actions),
-    '</available-actions>',
-    '',
-    '<context>',
-    renderContextSection(context),
-    '</context>',
-  ].join('\n');
-}
-
 function buildAiSdkMessages(
   context: StepContextEntry[],
-  actions: StepActionDescriptor[],
 ) {
   const content: Array<
     | { type: 'text'; text: string }
     | { type: 'image'; image: string }
   > = [{
     type: 'text',
-    text: renderAiSdkPrompt(context, actions),
+    text: renderContextSection(context),
   }];
 
   for (const entry of context) {
@@ -148,19 +121,6 @@ function buildAiSdkMessages(
   }];
 }
 
-function renderActionSection(actions: StepActionDescriptor[]) {
-  if (actions.length === 0) {
-    return 'No actions are available.';
-  }
-
-  return actions.map((action) => [
-    `<action name="${action.name}">`,
-    action.description,
-    action.inputSchemaText,
-    '</action>',
-  ].join('\n')).join('\n\n');
-}
-
 function renderContextSection(context: StepContextEntry[]) {
   if (context.length === 0) {
     return 'No context entries were provided.';
@@ -175,19 +135,10 @@ function renderContextSection(context: StepContextEntry[]) {
 }
 
 function buildToolSet(actions: StepActionDescriptor[]) {
-  const toolSet = {
-    runtime_continue: tool({
-      description: 'Request one more immediate runtime step without waiting for new external input.',
-      inputSchema: emptyObjectSchema,
-    }),
-    runtime_wait: tool({
-      description: 'Tell the runtime to wait for new external input.',
-      inputSchema: emptyObjectSchema,
-    }),
-  };
+  const toolSet: ToolSet = {};
 
   for (const action of actions) {
-    (toolSet as Record<string, unknown>)[action.name] = tool({
+    toolSet[action.name] = tool({
       description: action.description,
       inputSchema: action.inputSchema,
     });
@@ -214,10 +165,7 @@ function buildStepModelResponse(input: {
   return {
     segments: mapContentToSegments(input.content),
     actionRequests,
-    continuation: resolveContinuation({
-      toolCalls: input.toolCalls,
-      actionRequests,
-    }),
+    continuation: 'stop',
     usage: {
       inputTokens: input.usage.inputTokens,
       outputTokens: input.usage.outputTokens,
@@ -265,7 +213,7 @@ async function forwardAiSdkStreamEvents(input: {
         continue;
       }
 
-      if (part.type === 'tool-call' && part.toolName && !isRuntimeControlTool(part.toolName)) {
+      if (part.type === 'tool-call' && part.toolName) {
         input.events.publish({
           type: 'action-request',
           actionRequest: {
@@ -306,34 +254,10 @@ function mapContentToSegments(content: Array<{ type: string; text?: string }>) {
 function mapToolCallsToActionRequests(
   toolCalls: Array<{ toolName: string; input: unknown }>,
 ) {
-  return toolCalls
-    .filter((toolCall) => !isRuntimeControlTool(toolCall.toolName))
-    .map((toolCall): ActionRequest => ({
-      name: toolCall.toolName,
-      input: isRecord(toolCall.input) ? toolCall.input : {},
-    }));
-}
-
-function resolveContinuation(input: {
-  toolCalls: Array<{ toolName: string }>;
-  actionRequests: ActionRequest[];
-}): StepModelResponse['continuation'] {
-  if (input.toolCalls.some((toolCall) => toolCall.toolName === 'runtime_wait')) {
-    return 'wait';
-  }
-
-  if (
-    input.toolCalls.some((toolCall) => toolCall.toolName === 'runtime_continue')
-    || input.actionRequests.length > 0
-  ) {
-    return 'continue';
-  }
-
-  return 'stop';
-}
-
-function isRuntimeControlTool(name: string) {
-  return name === 'runtime_continue' || name === 'runtime_wait';
+  return toolCalls.map((toolCall): ActionRequest => ({
+    name: toolCall.toolName,
+    input: isRecord(toolCall.input) ? toolCall.input : {},
+  }));
 }
 
 function countImageParts(entry: StepContextEntry) {

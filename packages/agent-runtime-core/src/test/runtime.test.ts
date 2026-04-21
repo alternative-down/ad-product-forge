@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { AgentRuntime } from '../core/runtime.js';
+import { RuntimeRunController } from '../integrations/runtime/run-controller.js';
 import { FakeStepModelAdapter } from '../integrations/testing/fake-model.js';
 
 describe('AgentRuntime', () => {
@@ -77,7 +78,12 @@ describe('AgentRuntime', () => {
       payload: { text: 'run' },
     });
 
-    const result = await runtime.run();
+    const controller = new RuntimeRunController({ runtime });
+    const result = await controller.run({
+      continueAfterStep(context) {
+        return context.latestStep.stepNumber === 1;
+      },
+    });
 
     expect(result.steps).toHaveLength(2);
     expect(result.steps[0]?.actionResults[0]?.output).toBe(5);
@@ -276,9 +282,9 @@ describe('AgentRuntime', () => {
       payload: { message: 'run actions' },
     });
 
-    const result = await runtime.run();
+    const result = await runtime.step();
 
-    expect(result.steps[0]?.actionResults).toHaveLength(2);
+    expect(result?.record.actionResults).toHaveLength(2);
     expect(executionMoments).toEqual(['second', 'first']);
   });
 

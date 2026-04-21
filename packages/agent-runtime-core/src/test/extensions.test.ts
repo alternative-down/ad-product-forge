@@ -6,6 +6,7 @@ import { createInMemoryRecallPlugin } from '../integrations/extensions/in-memory
 import { createRecentInputsPlugin } from '../integrations/extensions/recent-inputs.js';
 import { createRecentStepsPlugin } from '../integrations/extensions/recent-steps.js';
 import { createStaticContextPlugin } from '../integrations/extensions/static-context.js';
+import { RuntimeRunController } from '../integrations/runtime/run-controller.js';
 import { FakeStepModelAdapter } from '../integrations/testing/fake-model.js';
 
 describe('extensions', () => {
@@ -36,7 +37,13 @@ describe('extensions', () => {
       payload: { message: 'hello' },
     });
 
-    await runtime.run();
+    const controller = new RuntimeRunController({ runtime });
+
+    await controller.run({
+      continueAfterStep(context) {
+        return context.latestStep.stepNumber === 1;
+      },
+    });
 
     expect(seenRecentEntries).toEqual(['step-1']);
   });
@@ -111,7 +118,13 @@ describe('extensions', () => {
       payload: { message: 'hello' },
     });
 
-    await runtime.run();
+    const controller = new RuntimeRunController({ runtime });
+
+    await controller.run({
+      continueAfterStep(context) {
+        return context.latestStep.stepNumber === 1;
+      },
+    });
 
     expect(recallTitles).toEqual([
       'Recall 1 - score 0.95',

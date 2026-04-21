@@ -8,14 +8,10 @@ export type ContinuationResolver = (context: {
 
 export function createDefaultContinuationResolver(): ContinuationResolver {
   return ({ modelResponse, pendingInputsRemaining }) => {
-    if (modelResponse.continuation === 'continue') {
-      return 'continue';
-    }
-
     if (pendingInputsRemaining > 0) {
       return 'continue';
     }
 
-    return modelResponse.continuation;
+    return modelResponse.continuation === 'wait' ? 'wait' : 'stop';
   };
 }

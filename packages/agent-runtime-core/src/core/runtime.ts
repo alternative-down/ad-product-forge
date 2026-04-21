@@ -306,6 +306,10 @@ export class AgentRuntime {
     this.status = 'idle';
   }
 
+  requestContinuation() {
+    this.continuationRequested = true;
+  }
+
   restoreSnapshot(snapshot: RuntimeSnapshot) {
     const normalizedSnapshot = runtimeSnapshotSchema.parse(snapshot);
     const lastStep = normalizedSnapshot.steps.at(-1) ?? null;

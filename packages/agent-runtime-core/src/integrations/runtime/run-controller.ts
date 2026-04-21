@@ -3,7 +3,6 @@ import type { RuntimeSnapshot, StepExecutionResult, StepRecord } from '../../cor
 
 export type RuntimeRunLoopStopReason =
   | 'idle'
-  | 'continuation'
   | 'max-steps'
   | 'aborted';
 
@@ -93,13 +92,15 @@ export class RuntimeRunController {
         snapshot: result.snapshot,
       });
 
-      if (shouldContinue === false || result.record.continuation !== 'continue') {
+      if (shouldContinue !== true) {
         return {
           steps,
           snapshot: this.runtime.getSnapshot(),
-          stopReason: result.record.continuation === 'continue' ? 'continuation' : 'idle',
+          stopReason: 'idle',
         };
       }
+
+      this.runtime.requestContinuation();
 
       const delayMs = options.resolveDelayMs?.({
         completedSteps: [...steps],

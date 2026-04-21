@@ -5,7 +5,7 @@ import { RuntimeRunController } from '../integrations/runtime/run-controller.js'
 import { FakeStepModelAdapter } from '../integrations/testing/fake-model.js';
 
 describe('RuntimeRunController', () => {
-  it('runs multiple steps with delay hooks until continuation stops', async () => {
+  it('runs multiple steps while continueAfterStep keeps the loop alive', async () => {
     const seenSteps: number[] = [];
     const seenDelays: number[] = [];
     const runtime = new AgentRuntime({
@@ -36,6 +36,9 @@ describe('RuntimeRunController', () => {
       },
       beforeDelay(context) {
         seenDelays.push(context.delayMs);
+      },
+      continueAfterStep(context) {
+        return context.latestStep.stepNumber < 2;
       },
     });
 
