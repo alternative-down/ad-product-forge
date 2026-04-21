@@ -56,4 +56,27 @@ describe('@forge-runtime/core', () => {
       echoed: 'hello',
     });
   });
+
+  it('normalizes non-zod tool schemas into runtime actions', () => {
+    const passthroughTool = createTool({
+      id: 'passthrough',
+      description: 'Passthrough tool.',
+      inputSchema: {
+        parse(input: unknown) {
+          return input;
+        },
+      },
+      execute(input: unknown) {
+        return input;
+      },
+    });
+
+    const actions = toolsToRuntimeActions({
+      passthrough: passthroughTool,
+    });
+
+    expect(actions).toHaveLength(1);
+    expect(() => actions[0]!.inputSchema.parse({ ok: true })).not.toThrow();
+    expect(() => z.toJSONSchema(actions[0]!.inputSchema)).not.toThrow();
+  });
 });

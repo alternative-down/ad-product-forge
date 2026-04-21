@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import type {
   RuntimeActionContext,
   RuntimeActionDefinition,
@@ -56,7 +58,7 @@ export function toolToRuntimeAction(
   return {
     name: tool.id,
     description: tool.description,
-    inputSchema: tool.inputSchema as RuntimeActionDefinition<Record<string, unknown>, unknown>['inputSchema'],
+    inputSchema: toRuntimeInputSchema(tool.inputSchema),
     execute(input, context) {
       return tool.execute(input, {
         ...context,
@@ -74,4 +76,12 @@ export function toolsToRuntimeActions(
   }
 
   return Object.values(tools).map((tool) => toolToRuntimeAction(tool));
+}
+
+function toRuntimeInputSchema(inputSchema: unknown): z.ZodType<Record<string, unknown>> {
+  if (inputSchema instanceof z.ZodType) {
+    return inputSchema as z.ZodType<Record<string, unknown>>;
+  }
+
+  return z.object({}).passthrough();
 }
