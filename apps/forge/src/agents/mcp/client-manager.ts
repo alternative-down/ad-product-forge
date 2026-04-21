@@ -1,6 +1,6 @@
 import { MCPClient } from '@mastra/mcp';
 import type { MastraMCPServerDefinition } from '@mastra/mcp';
-import type { Tool } from '@mastra/core/tools';
+import type { Tool } from '@forge-runtime/core';
 import { getAgentMcpServers } from './store';
 
 // Cache for MCP clients per agent
@@ -30,7 +30,7 @@ export async function getMCPToolsForAgent(
       try {
         const tools = await cachedClient.listTools();
         console.log(`[MCP] Loaded ${Object.keys(tools).length} tool(s) for agent ${agentId}`);
-        return tools;
+        return tools as unknown as Record<string, Tool<unknown, unknown>>;
       } catch (error) {
         console.warn(`[MCP] Cached client failed for agent ${agentId}, rebuilding client:`, error);
         clearAgentMCPClient(agentId);
@@ -42,7 +42,7 @@ export async function getMCPToolsForAgent(
 
     agentMCPClients.set(agentId, mcpClient);
     console.log(`[MCP] Loaded ${Object.keys(tools).length} tool(s) for agent ${agentId}`);
-    return tools;
+    return tools as unknown as Record<string, Tool<unknown, unknown>>;
   } catch (error) {
     clearAgentMCPClient(agentId);
     console.warn(`[MCP] Failed to get tools for agent ${agentId}:`, error);

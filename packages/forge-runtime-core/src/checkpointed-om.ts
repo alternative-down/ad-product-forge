@@ -1,32 +1,42 @@
 export type CheckpointedOmArchivedObservation = {
-  id: string;
-  text: string;
+  blockId: string;
   tokenCount: number;
   createdAt: string;
   lastObservedAt: string;
-  reflectedGeneration: number | null;
+  reflectedGeneration: number;
+  text: string;
 };
 
 export type CheckpointedOmArchivedReflection = {
-  id: string;
-  text: string;
+  recordId: string;
+  generationCount: number;
   tokenCount: number;
   createdAt: string;
-  sourceObservationIds: string[];
+  text: string;
 };
 
 export type CheckpointedOmMetricsSnapshot = {
-  recentRawMessageCount?: number;
-  recentRawTokenCount?: number;
-  observationCount?: number;
-  observationTokenCount?: number;
-  reflectionCount?: number;
-  reflectionTokenCount?: number;
-  checkpointTokenCount?: number;
+  rawMessageCount: number;
+  recentRawMessageCount: number;
+  recentRawTokenCount: number;
+  recentRawTokenLimit: number;
+  overflowMessageCount: number;
+  overflowTokenCount: number;
+  observationTriggerTokenLimit: number;
+  activeObservationBlockCount: number;
+  observationTokenCount: number;
+  reflectionTriggerTokenLimit: number;
+  activeReflectionBlockCount: number;
+  reflectionTokenCount: number;
+  reflectionBudget: number;
+  checkpointTokenCount: number;
+  checkpointSummaryUpToGeneration: number | null;
+  latestThreadMessageAt: string | null;
+  updatedAt: string;
 };
 
 export type CheckpointedOmState = {
-  version: number;
+  version: 1;
   checkpointGeneration: number | null;
   checkpointSummary: {
     text: string;
@@ -43,7 +53,7 @@ export type CheckpointedOmStateStore = {
   loadState(input: {
     threadId: string;
     resourceId: string;
-  }): Promise<CheckpointedOmState>;
+  }): Promise<CheckpointedOmState | null>;
   saveState(input: {
     threadId: string;
     resourceId: string;

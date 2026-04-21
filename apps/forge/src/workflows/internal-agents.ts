@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createStep, createWorkflow, type AnyWorkflow } from '@mastra/core/workflows';
+import { createStep, createWorkflow, type AnyWorkflow } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';

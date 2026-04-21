@@ -1,5 +1,4 @@
-import type { ToolsInput } from '@mastra/core/agent';
-import type { Tool } from '@mastra/core/tools';
+import type { ToolsInput, Tool } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import type { AgentLoaderConfig } from './agent-loader-types';

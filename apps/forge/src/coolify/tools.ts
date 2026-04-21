@@ -1,5 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
-import { createTool, type Tool } from '@mastra/core/tools';
+import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import { hasToolPermission } from '../capabilities/catalog';

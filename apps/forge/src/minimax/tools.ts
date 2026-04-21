@@ -1,4 +1,4 @@
-import { createTool } from '@mastra/core/tools';
+import { createTool } from '@forge-runtime/core';
 import path from 'node:path';
 import { z } from 'zod';
 

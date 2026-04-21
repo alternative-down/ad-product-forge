@@ -2,6 +2,26 @@ export {
   createForgeConversationMemory,
   type ForgeConversationMemoryOptions,
 } from './memory.js';
+export type {
+  AgentConfig,
+  ForgeWorkflowInput,
+} from './agent-config.js';
+export {
+  createTool,
+  toolToRuntimeAction,
+  toolsToRuntimeActions,
+  type Tool,
+  type ToolsInput,
+} from './tools.js';
+export {
+  createStep,
+  createWorkflow,
+  workflowToTool,
+  workflowsToTools,
+  type AnyWorkflow,
+  type WorkflowDefinition,
+  type WorkflowStepDefinition,
+} from './workflows.js';
 export {
   ForgeMcpToolset,
   type ForgeMcpToolsetOptions,

@@ -1,4 +1,4 @@
-import { createTool, type Tool } from '@mastra/core/tools';
+import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -245,12 +245,6 @@ export function createAgentScheduleTools(
       id: 'manage_self_crons',
       description: 'Use this to create, update, or delete automatic tasks for yourself. Do not rely on your own memory to remember future work. Use crons proactively to trigger your future and recurring work dynamically, and prefer simple, directed tasks.',
       inputSchema: manageSelfCronsInputSchema,
-      onInputAvailable: async ({ input, toolCallId }) => {
-        console.log('[CronTool] manage_self_crons input available:', JSON.stringify({
-          toolCallId,
-          input,
-        }, null, 2));
-      },
       execute: async (input) => {
         forgeDebug('tools:schedules', 'manage_self_crons called', { agentId, action: input.action, input });
 
@@ -422,12 +416,6 @@ export function createAgentScheduleTools(
       id: 'manage_crons',
       description: 'Use this to create, update, or delete automatic tasks for other agents. Use delegated crons proactively when another agent should receive future or recurring work without relying on someone to remember manually. Prefer simple, directed tasks.',
       inputSchema: manageCronsInputSchema,
-      onInputAvailable: async ({ input, toolCallId }) => {
-        console.log('[CronTool] manage_crons input available:', JSON.stringify({
-          toolCallId,
-          input,
-        }, null, 2));
-      },
       execute: async (input) => {
         forgeDebug('tools:schedules', 'manage_crons called', { agentId, action: input.action, input });
 

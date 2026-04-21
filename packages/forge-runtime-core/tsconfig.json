@@ -17,6 +17,6 @@
     "rootDir": "./src",
     "declaration": true
   },
-  "files": ["src/index.ts", "src/index.test.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", ".turbo", "dist"]
 }

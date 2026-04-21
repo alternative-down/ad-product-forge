@@ -1,4 +1,4 @@
-import { createTool } from '@mastra/core/tools';
+import { createTool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { InternalChatService } from './internal-chat-service';
