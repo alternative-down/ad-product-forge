@@ -127,9 +127,6 @@ export type {
   CheckpointedOmStateStore,
 } from './checkpointed-om.js';
 export {
-  createCheckpointedObservationalMemoryProcessor,
-} from './checkpointed-observational-memory.js';
-export {
   createCheckpointedOmCompatibilityObserver,
   type CheckpointedOmCompatibilityObserverOptions,
 } from './checkpointed-om-compatibility.js';
@@ -174,6 +171,3 @@ export {
   type RuntimeWorkingMemoryStore,
   type WorkingMemoryRecord,
 } from './runtime-working-memory.js';
-export {
-  createAgentMemory,
-} from './mastra-memory.js';
