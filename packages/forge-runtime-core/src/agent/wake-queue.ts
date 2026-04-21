@@ -64,7 +64,6 @@ export function createAgentWakeQueue(config: {
 
     for (const event of readyEvents.values()) {
       const candidate = getWakeWindow(event);
-
       debounceMs = Math.max(debounceMs, candidate.debounceMs);
       maxAccumulationMs = Math.max(maxAccumulationMs, candidate.maxAccumulationMs);
     }
@@ -112,14 +111,14 @@ export function createAgentWakeQueue(config: {
 
       pending = readyEvents.size > 0;
       firstPendingAt ??= Date.now();
-      console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to execute`, error);
+
+      console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to execute:`, error);
 
       if (!pending) {
         return;
       }
 
       const wakeWindow = getCurrentWakeWindow();
-
       scheduleTrigger(wakeWindow.debounceMs);
     }
   }
@@ -145,7 +144,6 @@ export function createAgentWakeQueue(config: {
 
       const wakeWindow = getCurrentWakeWindow();
       const accumulatedMs = now - firstPendingAt;
-
       if (accumulatedMs >= wakeWindow.maxAccumulationMs) {
         clearTimer();
         void trigger();
@@ -153,7 +151,6 @@ export function createAgentWakeQueue(config: {
       }
 
       const remainingAccumulationMs = wakeWindow.maxAccumulationMs - accumulatedMs;
-
       scheduleTrigger(Math.min(wakeWindow.debounceMs, remainingAccumulationMs));
     },
     async onRunnerIdle() {
@@ -183,7 +180,6 @@ export function createAgentWakeQueue(config: {
       }
 
       const remainingAccumulationMs = wakeWindow.maxAccumulationMs - accumulatedMs;
-
       scheduleTrigger(Math.min(wakeWindow.debounceMs, remainingAccumulationMs));
     },
     stop() {

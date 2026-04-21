@@ -1,5 +1,5 @@
-import { OPENAI_CODEX_MODELS, type OpenAICodexModelId } from './model-ids.js';
-import { OAUTH_GATEWAY_ID } from './oauth-gateway.js';
+import { OPENAI_CODEX_MODELS, type OpenAICodexModelId } from './model-ids';
+import { OAUTH_GATEWAY_ID } from './oauth-gateway';
 
 export { OPENAI_CODEX_MODELS };
 export type { OpenAICodexModelId };

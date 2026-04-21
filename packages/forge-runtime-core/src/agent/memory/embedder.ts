@@ -50,7 +50,6 @@ export function getWorkspaceEmbedderProvider(
   }
 
   const existingProvider = transformersProviderByEmbedder.get(embedderId);
-
   if (existingProvider) {
     return existingProvider;
   }
@@ -78,7 +77,6 @@ export async function embedTextWithWorkspaceEmbedder(
   text: string,
 ): Promise<number[]> {
   const result = await getWorkspaceEmbedderProvider(embedderId).doEmbed({ values: [text] });
-
   return result.embeddings[0] ?? [];
 }
 
@@ -90,13 +88,11 @@ async function getTransformersPipeline(
   embedderId: Exclude<WorkspaceEmbedderId, 'fastembed'>,
 ): Promise<FeatureExtractionPipeline> {
   const existingPipeline = transformersPipelineByEmbedder.get(embedderId);
-
   if (existingPipeline) {
     return existingPipeline;
   }
 
   const pipelinePromise = createTransformersPipeline(embedderId);
-
   transformersPipelineByEmbedder.set(embedderId, pipelinePromise);
   return pipelinePromise;
 }
@@ -112,7 +108,6 @@ async function createTransformersPipelineInternal(
 ): Promise<FeatureExtractionPipeline> {
   if (embedderId === 'transformers-multilingual-e5-small') {
     const activePipeline = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small');
-
     return activePipeline as unknown as FeatureExtractionPipeline;
   }
 

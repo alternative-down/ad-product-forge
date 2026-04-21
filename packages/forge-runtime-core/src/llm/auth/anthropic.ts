@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { z } from 'zod';
 
-import { oauthStore, type OAuthCredential } from './oauth-store.js';
+import { oauthStore, type OAuthCredential } from './store';
 
 const ANTHROPIC_CLIENT_ID = Buffer.from('OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl', 'base64').toString('utf8');
 const ANTHROPIC_TOKEN_URL = 'https://console.anthropic.com/v1/oauth/token';
@@ -42,15 +42,16 @@ async function refresh(credential: OAuthCredential) {
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');
-
     throw new Error(`Anthropic token refresh failed: ${response.status} ${text}`.trim());
   }
 
-  const payload = z.object({
-    access_token: z.string().optional(),
-    refresh_token: z.string().optional(),
-    expires_in: z.number().optional(),
-  }).parse(await response.json());
+  const payload = z
+    .object({
+      access_token: z.string().optional(),
+      refresh_token: z.string().optional(),
+      expires_in: z.number().optional(),
+    })
+    .parse(await response.json());
 
   if (!payload.access_token || payload.expires_in === undefined) {
     throw new Error('Anthropic refresh response missing access token or expiry.');
@@ -79,7 +80,6 @@ export async function syncAnthropicCredential(options?: {
     }
 
     const credential = { access } satisfies OAuthCredential;
-
     oauthStore.write('anthropic', credential, storePath);
     return credential;
   } catch {
@@ -114,7 +114,6 @@ export async function resolveAnthropicCredential(options?: {
 
   if (stored?.refresh && oauthStore.isExpired(stored)) {
     const credential = await refresh(stored);
-
     oauthStore.write('anthropic', credential, storePath);
     return credential;
   }

@@ -3,12 +3,9 @@ export function isForgeDebugEnabled() {
 }
 
 export function forgeDebug(scope: string, message: string, data?: Record<string, unknown>) {
-  if (!isForgeDebugEnabled()) {
-    return;
-  }
+  if (!isForgeDebugEnabled()) return;
 
   const prefix = `[forge:${scope}]`;
-
   if (data && hasKeys(data)) {
     console.log(prefix, message, data);
     return;
@@ -17,10 +14,8 @@ export function forgeDebug(scope: string, message: string, data?: Record<string,
   console.log(prefix, message);
 }
 
-function hasKeys(value: Record<string, unknown>) {
-  for (const _ in value) {
-    return true;
-  }
-
+// Check if object has any keys with O(1) early exit
+function hasKeys(obj: Record<string, unknown>): boolean {
+  for (const _ in obj) return true;
   return false;
 }

@@ -1,145 +1,39 @@
+export * from './llm/model-ids';
+export * from './llm/oauth-gateway';
+export * from './llm/openai-codex';
+export * from './llm/claude-max';
+export * from './llm/auth/store';
+export * from './llm/auth/openai-codex';
+export * from './llm/auth/anthropic';
+export * from './agent/communication/module';
+export * from './agent/communication/index';
+export * from './agent/communication/tools';
+export * from './agent/communication/conversation-key';
+export * from './agent/wake-queue';
+export * from './agent/tools/market-research';
+export * from './agent/communication/provider-types';
+export { LongTermMemory } from './agent/memory/long-term-memory';
 export {
-  createAgentMemory,
-  type AgentMemory,
-} from './agent-memory.js';
-export {
-  createCommunicationConversationKey,
-} from './conversation-key.js';
-export {
-  createForgeConversationMessage,
-  createForgeConversationThread,
-} from './conversation.js';
-export {
-  createCheckpointedObservationalMemoryProcessor,
-  type CheckpointedOmArchivedObservation,
-  type CheckpointedOmArchivedReflection,
-  type CheckpointedOmCheckpointPackageInput,
-  type CheckpointedOmMetricsSnapshot,
-  type CheckpointedOmState,
-  type CheckpointedOmStateStore,
-} from './checkpointed-observational-memory.js';
-export {
-  CLAUDE_MAX_MODELS,
-  claudeCodeProvider,
-  type ClaudeMaxModelId,
-} from './claude-max.js';
-export {
+  WORKSPACE_EMBEDDER_IDS,
   embedTextWithFastembed,
   embedTextWithWorkspaceEmbedder,
   getFastembedSingleton,
   getWorkspaceEmbedderProvider,
   isWorkspaceEmbedderId,
   resolveWorkspaceEmbedderId,
-  WORKSPACE_EMBEDDER_IDS,
-  type WorkspaceEmbedderId,
-  type WorkspaceEmbedderProvider,
-} from './embedder.js';
-export {
-  forgeDebug,
-  isForgeDebugEnabled,
-} from './debug.js';
+} from './agent/memory/embedder';
+export type { WorkspaceEmbedderId, WorkspaceEmbedderProvider } from './agent/memory/embedder';
+export { createAgentMemory } from './agent/memory/memory';
+export { createObservationalMemory } from './agent/memory/observational-memory';
+export { createCheckpointedObservationalMemoryProcessor } from './agent/memory/checkpointed-observational-memory';
 export type {
-  CommunicationAttachmentView,
-  CommunicationConversationView,
-  CommunicationFile,
-  CommunicationInboundMessage,
-  CommunicationMessageView,
-  CommunicationModule,
-  CommunicationProvider,
-  CommunicationProviderContact,
-  CommunicationProviderConversation,
-  CommunicationProviderMessage,
-} from './communication.js';
-export {
-  createCommunicationModule,
-} from './communication-module.js';
-export {
-  createExternalCommunicationActions,
-} from './communication-actions.js';
-export {
-  createExternalAccountTools,
-} from './external-account-tools.js';
-export {
-  createForgeInternalAgentAction,
-  createForgeWorkspaceActions,
-  type ForgeInternalAgentInvocation,
-  type ForgeInternalAgentInvocationResult,
-  type ForgeInternalAgentInvoker,
-} from './actions.js';
-export {
-  createForgeConversationMemory,
-  type ForgeConversationMemoryOptions,
-} from './memory.js';
-export {
-  ForgeMcpToolset,
-  type ForgeMcpToolsetOptions,
-} from './mcp.js';
-export {
-  createForgeMcpToolsetFromStore,
-  type ForgeMcpServerStore,
-} from './mcp-store.js';
-export {
-  createForgeAgentRuntime,
-  type CreateForgeAgentRuntimeOptions,
-  type ForgeAgentRuntime,
-} from './runtime.js';
-export {
-  createForgeUsageObserver,
-  InMemoryForgeUsageSink,
-  type ForgeStepUsageRecord,
-  type ForgeUsageSink,
-} from './usage.js';
-export {
-  createOAuthGateway,
-  OAUTH_GATEWAY_ID,
-  type OAuthGateway,
-  type OAuthGatewayOptions,
-} from './oauth-gateway.js';
-export {
-  getAnthropicCliAuthFilePath,
-  getAnthropicSetupTokenFilePath,
-  resolveAnthropicCredential,
-  syncAnthropicCredential,
-} from './oauth-anthropic.js';
-export {
-  getOpenAICodexCliAuthFilePath,
-  resolveOpenAICodexCredential,
-  syncOpenAICodexCredential,
-} from './oauth-openai-codex.js';
-export {
-  createOAuthStore,
-  oauthStore,
-  type OAuthCredential,
-  type ProviderId,
-} from './oauth-store.js';
-export {
-  OPENAI_CODEX_MODELS,
-  openaiCodexProvider,
-  type OpenAICodexModelId,
-} from './openai-codex.js';
-export {
-  LongTermMemory,
-} from './long-term-memory.js';
-export {
-  toForgeSafeIdentifier,
-} from './safe-identifier.js';
-export {
-  toForgeSafeIdentifier as toMastraSafeIdentifier,
-} from './safe-identifier.js';
-export {
-  createAgentWakeQueue,
-  type AgentWakeEvent,
-  type AgentWakeQueue,
-} from './wake-queue.js';
-export {
-  appendWorkingMemoryInstructions,
-  sanitizeWorkingMemory,
-} from './working-memory.js';
-export {
-  forgeAgentRuntimeConfigSchema,
-  forgeMcpHttpServerSchema,
-  forgeMcpServerSchema,
-  forgeMcpStdioServerSchema,
-  type ForgeAgentRuntimeConfig,
-  type ForgeMcpServerConfig,
-} from './contracts.js';
+  CheckpointedOmCheckpointPackageInput,
+  CheckpointedOmArchivedObservation,
+  CheckpointedOmArchivedReflection,
+  CheckpointedOmMetricsSnapshot,
+  CheckpointedOmState,
+  CheckpointedOmStateStore,
+} from './agent/memory/checkpointed-observational-memory';
+export { appendWorkingMemoryInstructions, sanitizeWorkingMemory } from './agent/memory/working-memory';
+export { forgeDebug, isForgeDebugEnabled } from './debug';
+export { toMastraSafeIdentifier } from './mastra-id';

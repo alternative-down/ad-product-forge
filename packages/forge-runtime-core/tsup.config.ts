@@ -3,7 +3,7 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
-  dts: true,
+  dts: false,
   clean: true,
   splitting: false,
   sourcemap: false,
@@ -11,8 +11,6 @@ export default defineConfig({
   platform: 'node',
   outDir: 'dist',
   external: [
-    'agent-runtime-core',
-    'agent-runtime-core/integrations',
     'zod',
   ],
 });

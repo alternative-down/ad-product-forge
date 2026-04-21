@@ -26,7 +26,6 @@ export function createOAuthStore() {
   function getDefaultPath() {
     const dataPath = process.env.FORGE_DATA_PATH ?? './data';
     const resolvedDataPath = path.resolve(process.cwd(), dataPath);
-
     return path.join(resolvedDataPath, 'auth', 'oauth.json');
   }
 
@@ -34,14 +33,17 @@ export function createOAuthStore() {
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf8'));
     } catch (error) {
+      // File doesn't exist (expected case)
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
         return null;
       }
 
+      // JSON parsing error (should be reported)
       if (error instanceof SyntaxError) {
         throw new Error(`Failed to parse JSON in ${filePath}: ${error.message}`);
       }
 
+      // Other errors (rethrow)
       throw error;
     }
   }
@@ -58,7 +60,6 @@ export function createOAuthStore() {
 
   function write(provider: ProviderId, credential: OAuthCredential, storePath = getDefaultPath()) {
     const store = read(storePath);
-
     fs.mkdirSync(path.dirname(storePath), { recursive: true, mode: 0o700 });
     store[provider] = credential;
     fs.writeFileSync(storePath, JSON.stringify(store, null, 2), 'utf8');

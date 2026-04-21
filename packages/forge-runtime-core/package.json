@@ -1,7 +1,7 @@
 {
   "name": "@forge-runtime/core",
   "version": "0.1.0",
-  "description": "Forge runtime layer on top of agent-runtime-core.",
+  "description": "Forge runtime core package.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,7 +9,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.json --emitDeclarationOnly",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "test": "vitest run"
@@ -18,12 +18,20 @@
     "@ai-sdk/anthropic": "^3.0.68",
     "@ai-sdk/openai": "^3.0.52",
     "@huggingface/transformers": "3.7.5",
+    "@libsql/client": "^0.17.2",
+    "@mastra/core": "^1.24.1",
     "@mastra/fastembed": "^1.0.1",
-    "agent-runtime-core": "file:../../../agent-runtime-core",
-    "zod": "^4.3.6"
+    "@mastra/libsql": "^1.8.0",
+    "@mastra/memory": "^1.15.0",
+    "@mendable/firecrawl-js": "^4.18.1",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.1",
+    "onnxruntime-node": "1.21.0",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
+    "ts-node": "^10.9.2",
     "tsup": "^8.5.1",
     "typescript": "^6.0.2",
     "vitest": "^4.1.4"

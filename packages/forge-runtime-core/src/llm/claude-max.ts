@@ -1,5 +1,5 @@
-import { CLAUDE_MAX_MODELS, type ClaudeMaxModelId } from './model-ids.js';
-import { OAUTH_GATEWAY_ID } from './oauth-gateway.js';
+import { CLAUDE_MAX_MODELS, type ClaudeMaxModelId } from './model-ids';
+import { OAUTH_GATEWAY_ID } from './oauth-gateway';
 
 export { CLAUDE_MAX_MODELS };
 export type { ClaudeMaxModelId };
