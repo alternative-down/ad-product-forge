@@ -55,10 +55,13 @@ export function createTool(tool: {
 export function toolToRuntimeAction(
   tool: Tool,
 ): RuntimeActionDefinition<Record<string, unknown>, unknown> {
+  const { inputSchema, parseInput } = toRuntimeInputSchema(tool.inputSchema);
+
   return {
     name: tool.id,
     description: tool.description,
-    inputSchema: toRuntimeInputSchema(tool.inputSchema),
+    inputSchema,
+    parseInput,
     execute(input, context) {
       return tool.execute(input, {
         ...context,
@@ -78,10 +81,37 @@ export function toolsToRuntimeActions(
   return Object.values(tools).map((tool) => toolToRuntimeAction(tool));
 }
 
-function toRuntimeInputSchema(inputSchema: unknown): z.ZodType<Record<string, unknown>> {
+function toRuntimeInputSchema(inputSchema: unknown): {
+  inputSchema: z.ZodType<Record<string, unknown>>;
+  parseInput?: (input: Record<string, unknown>) => Record<string, unknown>;
+} {
   if (inputSchema instanceof z.ZodType) {
-    return inputSchema as z.ZodType<Record<string, unknown>>;
+    return {
+      inputSchema: inputSchema as z.ZodType<Record<string, unknown>>,
+    };
   }
 
-  return z.object({}).passthrough();
+  if (hasParseFunction(inputSchema)) {
+    return {
+      inputSchema: z.object({}).passthrough(),
+      parseInput(input) {
+        return inputSchema.parse(input) as Record<string, unknown>;
+      },
+    };
+  }
+
+  return {
+    inputSchema: z.object({}).passthrough(),
+  };
+}
+
+function hasParseFunction(inputSchema: unknown): inputSchema is {
+  parse(input: unknown): unknown;
+} {
+  return (
+    typeof inputSchema === 'object'
+    && inputSchema !== null
+    && 'parse' in inputSchema
+    && typeof inputSchema.parse === 'function'
+  );
 }

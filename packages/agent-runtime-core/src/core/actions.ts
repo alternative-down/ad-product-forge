@@ -12,6 +12,7 @@ export type RuntimeActionDefinition<TInput extends Record<string, unknown>, TOut
   name: string;
   description: string;
   inputSchema: z.ZodType<TInput>;
+  parseInput?(input: Record<string, unknown>): TInput;
   execute(input: TInput, context: RuntimeActionContext): Promise<TOutput> | TOutput;
 };
 
@@ -46,7 +47,9 @@ export class RuntimeActionRegistry {
       throw new Error(`Unknown action: ${name}`);
     }
 
-    const parsedInput = action.inputSchema.parse(input);
+    const parsedInput = action.parseInput
+      ? action.parseInput(input)
+      : action.inputSchema.parse(input);
     const output = await action.execute(parsedInput, context);
 
     return {

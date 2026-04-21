@@ -63,6 +63,10 @@ describe('@forge-runtime/core', () => {
       description: 'Passthrough tool.',
       inputSchema: {
         parse(input: unknown) {
+          if (typeof input !== 'object' || input === null || !('ok' in input)) {
+            throw new Error('missing ok');
+          }
+
           return input;
         },
       },
@@ -74,9 +78,11 @@ describe('@forge-runtime/core', () => {
     const actions = toolsToRuntimeActions({
       passthrough: passthroughTool,
     });
+    const action = actions[0]!;
 
     expect(actions).toHaveLength(1);
-    expect(() => actions[0]!.inputSchema.parse({ ok: true })).not.toThrow();
-    expect(() => z.toJSONSchema(actions[0]!.inputSchema)).not.toThrow();
+    expect(() => action.inputSchema.parse({ ok: true })).not.toThrow();
+    expect(() => action.parseInput?.({})).toThrow('missing ok');
+    expect(() => z.toJSONSchema(action.inputSchema)).not.toThrow();
   });
 });
