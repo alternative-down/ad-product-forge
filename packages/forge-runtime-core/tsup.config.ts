@@ -11,6 +11,8 @@ export default defineConfig({
   platform: 'node',
   outDir: 'dist',
   external: [
+    'agent-runtime-core',
+    'agent-runtime-core/integrations',
     'zod',
   ],
 });
