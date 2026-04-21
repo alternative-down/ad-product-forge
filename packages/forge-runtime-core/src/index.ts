@@ -3,6 +3,22 @@ export {
   createForgeConversationThread,
 } from './conversation.js';
 export {
+  forgeDebug,
+  isForgeDebugEnabled,
+} from './debug.js';
+export type {
+  CommunicationAttachmentView,
+  CommunicationConversationView,
+  CommunicationFile,
+  CommunicationInboundMessage,
+  CommunicationMessageView,
+  CommunicationModule,
+  CommunicationProvider,
+  CommunicationProviderContact,
+  CommunicationProviderConversation,
+  CommunicationProviderMessage,
+} from './communication.js';
+export {
   createForgeInternalAgentAction,
   createForgeWorkspaceActions,
   type ForgeInternalAgentInvocation,
@@ -32,6 +48,14 @@ export {
   type ForgeStepUsageRecord,
   type ForgeUsageSink,
 } from './usage.js';
+export {
+  toForgeSafeIdentifier,
+} from './safe-identifier.js';
+export {
+  createAgentWakeQueue,
+  type AgentWakeEvent,
+  type AgentWakeQueue,
+} from './wake-queue.js';
 export {
   forgeAgentRuntimeConfigSchema,
   forgeMcpHttpServerSchema,
