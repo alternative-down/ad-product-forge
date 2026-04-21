@@ -1,4 +1,4 @@
-import type { CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
 
 import type { InternalChatService } from './internal-chat-service';
 

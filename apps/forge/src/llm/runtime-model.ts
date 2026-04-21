@@ -1,6 +1,6 @@
 import type { AgentConfig } from '@mastra/core/agent';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { createOAuthGateway, OAUTH_GATEWAY_ID } from '@mastra-engine/core';
+import { createOAuthGateway, OAUTH_GATEWAY_ID } from '@forge-runtime/core';
 
 type RuntimeProfile = {
   modelKey: string;

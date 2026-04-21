@@ -1,4 +1,4 @@
-import type { AgentWakeEvent } from '@mastra-engine/core';
+import type { AgentWakeEvent } from '@forge-runtime/core';
 
 export const RUN_STOP_REMINDER = [
   'System Message:',

@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { CheckpointedOmState, CheckpointedOmStateStore } from '@mastra-engine/core';
+import type { CheckpointedOmState, CheckpointedOmStateStore } from '@forge-runtime/core';
 
 import type { Database } from '../database';
 import { agentCheckpointedOmStates } from '../database/schema';

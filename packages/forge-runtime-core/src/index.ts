@@ -77,7 +77,15 @@ export {
 export {
   toForgeSafeIdentifier,
   toForgeSafeIdentifier as toRuntimeSafeIdentifier,
+  toForgeSafeIdentifier as toMastraSafeIdentifier,
 } from './safe-identifier.js';
+export type {
+  CheckpointedOmArchivedObservation,
+  CheckpointedOmArchivedReflection,
+  CheckpointedOmMetricsSnapshot,
+  CheckpointedOmState,
+  CheckpointedOmStateStore,
+} from './checkpointed-om.js';
 export type {
   CommunicationAttachmentView,
   CommunicationConversationView,

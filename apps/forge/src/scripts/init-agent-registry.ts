@@ -10,7 +10,7 @@ import { getDatabase, runMigrations } from '../database/index';
 import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import type { WorkspaceEmbedderId } from '@mastra-engine/core';
+import type { WorkspaceEmbedderId } from '@forge-runtime/core';
 import { DEFAULT_WORKSPACE_EMBEDDER } from '../agents/agent-embedder-maintenance';
 
 /**

@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { eq } from 'drizzle-orm';
 import { LibSQLVector } from '@mastra/libsql';
-import { toMastraSafeIdentifier, type WorkspaceEmbedderId } from '@mastra-engine/core';
+import { toForgeSafeIdentifier, type WorkspaceEmbedderId } from '@forge-runtime/core';
 
 import type { Database } from '../database';
 import { agents } from '../database/schema';
@@ -35,7 +35,7 @@ export async function prepareAgentEmbeddersForStartup(input: {
 
 export async function resetAgentEmbedderIndexes(workspaceBasePath: string, agentId: string) {
   const agentWorkspacePath = path.resolve(workspaceBasePath, agentId);
-  const mastraId = toMastraSafeIdentifier(agentId);
+  const mastraId = toForgeSafeIdentifier(agentId);
 
   await resetVectorDatabase({
     databasePath: path.resolve(agentWorkspacePath, 'database.db'),

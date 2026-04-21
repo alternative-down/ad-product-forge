@@ -6,7 +6,7 @@ import type { Database } from '../database/index';
 import { llmModelPrices } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import { createOAuthGateway } from '@mastra-engine/core';
+import { createOAuthGateway } from '@forge-runtime/core';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';

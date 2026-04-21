@@ -1,5 +1,5 @@
-import { createAgentWakeQueue } from '@mastra-engine/core';
-import type { AgentWakeEvent } from '@mastra-engine/core';
+import { createAgentWakeQueue } from '@forge-runtime/core';
+import type { AgentWakeEvent } from '@forge-runtime/core';
 
 import type { InternalAgentRuntime } from './agent-runtime-types';
 import { createAgentContractStore } from './agent-contract-store';

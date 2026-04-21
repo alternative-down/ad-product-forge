@@ -1,6 +1,6 @@
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { forgeDebug } from '@mastra-engine/core';
+import { forgeDebug } from '@forge-runtime/core';
 
 import { hasToolPermission } from '../capabilities/catalog';
 import type { createAgentScheduleManager } from './manager';

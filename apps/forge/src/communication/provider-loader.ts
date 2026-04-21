@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationProvider } from '@forge-runtime/core';
 import { createDiscordProvider } from '../discord-account';
 import { createEmailProvider } from '../email-account';
 import { createInternalChatProvider } from './internal-chat-provider';

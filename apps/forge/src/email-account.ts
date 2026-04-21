@@ -2,7 +2,7 @@ import { ImapFlow } from 'imapflow';
 import nodemailer from 'nodemailer';
 import PostalMime, { type Email } from 'postal-mime';
 
-import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
 
 type EmailProviderConfig = {
   id?: string;

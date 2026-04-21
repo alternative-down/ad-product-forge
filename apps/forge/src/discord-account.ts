@@ -1,6 +1,6 @@
 import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord.js';
 
-import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@mastra-engine/core';
+import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
 
 type DiscordSendableChannel = {
   id: string;

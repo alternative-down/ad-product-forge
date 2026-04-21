@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 import { Mastra } from '@mastra/core';
 import { ConsoleLogger } from '@mastra/core/logger';
-import { createOAuthGateway } from '@mastra-engine/core';
+import { createOAuthGateway } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import { getDatabase, runMigrations } from './database/index';

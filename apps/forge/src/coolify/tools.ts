@@ -1,4 +1,4 @@
-import { forgeDebug } from '@mastra-engine/core';
+import { forgeDebug } from '@forge-runtime/core';
 import { createTool, type Tool } from '@mastra/core/tools';
 import { z } from 'zod';
 

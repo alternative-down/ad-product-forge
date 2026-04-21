@@ -14,7 +14,7 @@
 import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
-import type { CheckpointedOmState, WorkspaceEmbedderId } from '@mastra-engine/core';
+import type { CheckpointedOmState, WorkspaceEmbedderId } from '@forge-runtime/core';
 
 const _WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
