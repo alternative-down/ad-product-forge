@@ -2,6 +2,10 @@ export {
   createForgeConversationMemory,
   type ForgeConversationMemoryOptions,
 } from './memory.js';
+export {
+  LibsqlConversationStore,
+  type LibsqlConversationStoreOptions,
+} from './libsql-conversation-store.js';
 export type {
   AgentConfig,
 } from './agent-config.js';

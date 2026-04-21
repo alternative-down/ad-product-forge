@@ -1,0 +1,330 @@
+import type { Client } from '@libsql/client';
+import type {
+  ConversationMessage,
+  ConversationStore,
+  ConversationThread,
+} from 'agent-runtime-core/integrations';
+import type {
+  CheckpointedConversationState,
+  CheckpointedConversationStateStore,
+} from 'agent-runtime-core/integrations';
+
+type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+
+function escapeIdentifier(value: string) {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function serializeJson(value: unknown) {
+  return JSON.stringify(value ?? null);
+}
+
+function parseJson<T>(value: unknown): T | null {
+  if (typeof value !== 'string' || value.trim() === '') {
+    return null;
+  }
+
+  return JSON.parse(value) as T;
+}
+
+export type LibsqlConversationStoreOptions = {
+  client: Client;
+  tablePrefix?: string;
+};
+
+export class LibsqlConversationStore
+implements ConversationStore, CheckpointedConversationStateStore {
+  private readonly client: Client;
+  private readonly threadTableName: string;
+  private readonly messageTableName: string;
+  private readonly stateTableName: string;
+  private schemaReady = false;
+
+  constructor(options: LibsqlConversationStoreOptions) {
+    const prefix = options.tablePrefix ?? 'forge_runtime';
+
+    this.client = options.client;
+    this.threadTableName = `${prefix}_conversation_threads`;
+    this.messageTableName = `${prefix}_conversation_messages`;
+    this.stateTableName = `${prefix}_checkpointed_conversation_states`;
+  }
+
+  async upsertThread(thread: ConversationThread): Promise<void> {
+    await this.ensureSchema();
+    await this.client.execute({
+      sql: `
+        insert into ${escapeIdentifier(this.threadTableName)} (
+          id,
+          title,
+          participant_ids_json,
+          metadata_json,
+          created_at,
+          updated_at
+        ) values (?, ?, ?, ?, ?, ?)
+        on conflict(id) do update set
+          title = excluded.title,
+          participant_ids_json = excluded.participant_ids_json,
+          metadata_json = excluded.metadata_json,
+          updated_at = excluded.updated_at
+      `,
+      args: [
+        thread.id,
+        thread.title ?? null,
+        serializeJson(thread.participantIds ?? []),
+        serializeJson(thread.metadata ?? null),
+        thread.createdAt,
+        thread.updatedAt,
+      ],
+    });
+  }
+
+  async getThread(threadId: string): Promise<ConversationThread | null> {
+    await this.ensureSchema();
+    const result = await this.client.execute({
+      sql: `
+        select
+          id,
+          title,
+          participant_ids_json,
+          metadata_json,
+          created_at,
+          updated_at
+        from ${escapeIdentifier(this.threadTableName)}
+        where id = ?
+        limit 1
+      `,
+      args: [threadId],
+    });
+    const row = result.rows[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: String(row.id),
+      title: row.title ? String(row.title) : undefined,
+      participantIds: parseJson<string[]>(row.participant_ids_json) ?? [],
+      metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at),
+    };
+  }
+
+  async listThreads(): Promise<ConversationThread[]> {
+    await this.ensureSchema();
+    const result = await this.client.execute(`
+      select
+        id,
+        title,
+        participant_ids_json,
+        metadata_json,
+        created_at,
+        updated_at
+      from ${escapeIdentifier(this.threadTableName)}
+      order by updated_at desc
+    `);
+
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      title: row.title ? String(row.title) : undefined,
+      participantIds: parseJson<string[]>(row.participant_ids_json) ?? [],
+      metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at),
+    }));
+  }
+
+  async appendMessage(message: ConversationMessage): Promise<void> {
+    await this.ensureSchema();
+    await this.client.batch([
+      {
+        sql: `
+          insert or ignore into ${escapeIdentifier(this.threadTableName)} (
+            id,
+            title,
+            participant_ids_json,
+            metadata_json,
+            created_at,
+            updated_at
+          ) values (?, null, '[]', null, ?, ?)
+        `,
+        args: [message.threadId, message.createdAt, message.createdAt],
+      },
+      {
+        sql: `
+          insert into ${escapeIdentifier(this.messageTableName)} (
+            id,
+            thread_id,
+            role,
+            author_id,
+            parts_json,
+            metadata_json,
+            created_at
+          ) values (?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          message.id,
+          message.threadId,
+          message.role,
+          message.authorId ?? null,
+          serializeJson(message.parts),
+          serializeJson(message.metadata ?? null),
+          message.createdAt,
+        ],
+      },
+      {
+        sql: `
+          update ${escapeIdentifier(this.threadTableName)}
+          set updated_at = ?
+          where id = ?
+        `,
+        args: [message.createdAt, message.threadId],
+      },
+    ], 'write');
+  }
+
+  async listMessages(query: {
+    threadId: string;
+    limit?: number;
+    beforeMessageId?: string;
+    afterMessageId?: string;
+  }): Promise<ConversationMessage[]> {
+    await this.ensureSchema();
+    const conditions = ['thread_id = ?'];
+    const args: Array<string | number> = [query.threadId];
+
+    if (query.beforeMessageId) {
+      conditions.push(
+        `created_at < (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)`,
+      );
+      args.push(query.beforeMessageId);
+    }
+
+    if (query.afterMessageId) {
+      conditions.push(
+        `created_at > (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)`,
+      );
+      args.push(query.afterMessageId);
+    }
+
+    if (query.limit) {
+      args.push(query.limit);
+    }
+
+    const result = await this.client.execute({
+      sql: `
+        select
+          id,
+          thread_id,
+          role,
+          author_id,
+          parts_json,
+          metadata_json,
+          created_at
+        from ${escapeIdentifier(this.messageTableName)}
+        where ${conditions.join(' and ')}
+        order by created_at asc
+        ${query.limit ? 'limit ?' : ''}
+      `,
+      args,
+    });
+
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      threadId: String(row.thread_id),
+      role: row.role as ConversationMessage['role'],
+      authorId: row.author_id ? String(row.author_id) : undefined,
+      parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
+      metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
+      createdAt: String(row.created_at),
+    }));
+  }
+
+  async load(threadId: string): Promise<CheckpointedConversationState | null> {
+    await this.ensureSchema();
+    const result = await this.client.execute({
+      sql: `
+        select state_json
+        from ${escapeIdentifier(this.stateTableName)}
+        where thread_id = ?
+        limit 1
+      `,
+      args: [threadId],
+    });
+    const row = result.rows[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return parseJson<CheckpointedConversationState>(row.state_json);
+  }
+
+  async save(state: CheckpointedConversationState): Promise<void> {
+    await this.ensureSchema();
+    await this.client.execute({
+      sql: `
+        insert into ${escapeIdentifier(this.stateTableName)} (
+          thread_id,
+          state_json,
+          updated_at
+        ) values (?, ?, ?)
+        on conflict(thread_id) do update set
+          state_json = excluded.state_json,
+          updated_at = excluded.updated_at
+      `,
+      args: [state.threadId, serializeJson(state), state.updatedAt],
+    });
+  }
+
+  private async ensureSchema() {
+    if (this.schemaReady) {
+      return;
+    }
+
+    await this.client.batch([
+      {
+        sql: `
+          create table if not exists ${escapeIdentifier(this.threadTableName)} (
+            id text primary key,
+            title text,
+            participant_ids_json text not null,
+            metadata_json text,
+            created_at text not null,
+            updated_at text not null
+          )
+        `,
+      },
+      {
+        sql: `
+          create table if not exists ${escapeIdentifier(this.messageTableName)} (
+            id text primary key,
+            thread_id text not null,
+            role text not null,
+            author_id text,
+            parts_json text not null,
+            metadata_json text,
+            created_at text not null
+          )
+        `,
+      },
+      {
+        sql: `
+          create index if not exists ${escapeIdentifier(`${this.messageTableName}_thread_created_idx`)}
+          on ${escapeIdentifier(this.messageTableName)} (thread_id, created_at)
+        `,
+      },
+      {
+        sql: `
+          create table if not exists ${escapeIdentifier(this.stateTableName)} (
+            thread_id text primary key,
+            state_json text not null,
+            updated_at text not null
+          )
+        `,
+      },
+    ], 'write');
+    this.schemaReady = true;
+  }
+}
