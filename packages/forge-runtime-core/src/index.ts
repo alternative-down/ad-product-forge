@@ -1,10 +1,23 @@
 export {
+  createAgentMemory,
+  type AgentMemory,
+} from './agent-memory.js';
+export {
   createCommunicationConversationKey,
 } from './conversation-key.js';
 export {
   createForgeConversationMessage,
   createForgeConversationThread,
 } from './conversation.js';
+export {
+  createCheckpointedObservationalMemoryProcessor,
+  type CheckpointedOmArchivedObservation,
+  type CheckpointedOmArchivedReflection,
+  type CheckpointedOmCheckpointPackageInput,
+  type CheckpointedOmMetricsSnapshot,
+  type CheckpointedOmState,
+  type CheckpointedOmStateStore,
+} from './checkpointed-observational-memory.js';
 export {
   CLAUDE_MAX_MODELS,
   claudeCodeProvider,
@@ -38,8 +51,14 @@ export type {
   CommunicationProviderMessage,
 } from './communication.js';
 export {
+  createCommunicationModule,
+} from './communication-module.js';
+export {
   createExternalCommunicationActions,
 } from './communication-actions.js';
+export {
+  createExternalAccountTools,
+} from './external-account-tools.js';
 export {
   createForgeInternalAgentAction,
   createForgeWorkspaceActions,
@@ -99,6 +118,9 @@ export {
   type OpenAICodexModelId,
 } from './openai-codex.js';
 export {
+  LongTermMemory,
+} from './long-term-memory.js';
+export {
   toForgeSafeIdentifier,
 } from './safe-identifier.js';
 export {
@@ -109,6 +131,10 @@ export {
   type AgentWakeEvent,
   type AgentWakeQueue,
 } from './wake-queue.js';
+export {
+  appendWorkingMemoryInstructions,
+  sanitizeWorkingMemory,
+} from './working-memory.js';
 export {
   forgeAgentRuntimeConfigSchema,
   forgeMcpHttpServerSchema,
