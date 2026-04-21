@@ -9,6 +9,7 @@ import { LibSQLVector, type LibSQLStore } from '@mastra/libsql';
 import { createGraphRAGTool } from '@mastra/rag';
 
 import {
+  type CheckpointedOmStateStore,
   embedTextWithWorkspaceEmbedder,
   forgeDebug,
   getWorkspaceEmbedderProvider,
@@ -188,6 +189,13 @@ export class AgentLongTermMemoryRecall {
     ltmRecallScoreThreshold: number;
     ltmRecallDocumentCount: number;
   }>;
+  private readonly checkpointedOmStateStore: CheckpointedOmStateStore & {
+    readState(): Promise<{
+      latestMetrics?: {
+        recentRawMessageCount?: number;
+      } | null;
+    }>;
+  };
   private vectorIndexReadyPromise: Promise<void> | null = null;
   private workspaceInitialized = false;
   private lastIndexedStamp: string | null = null;
@@ -214,6 +222,13 @@ export class AgentLongTermMemoryRecall {
       ltmRecallScoreThreshold: number;
       ltmRecallDocumentCount: number;
     }>;
+    checkpointedOmStateStore: CheckpointedOmStateStore & {
+      readState(): Promise<{
+        latestMetrics?: {
+          recentRawMessageCount?: number;
+        } | null;
+      }>;
+    };
     model?: AgentConfig['model'];
   }) {
     const memoryStore = input.storage.stores.memory;
@@ -232,6 +247,7 @@ export class AgentLongTermMemoryRecall {
       documentCount: input.documentCount ?? RECALL_DOCUMENT_COUNT,
     };
     this.readRuntimeMemorySettings = input.readRuntimeMemorySettings;
+    this.checkpointedOmStateStore = input.checkpointedOmStateStore;
     this.vectorStore = new LibSQLVector({
       id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
       url: `file:${vectorStorePath}`,
@@ -1306,22 +1322,8 @@ export class AgentLongTermMemoryRecall {
           (value): value is string => typeof value === 'string' && value.length > 0,
         )
         : [];
-    const customCheckpointedContext =
-      metadata.mastra
-      && typeof metadata.mastra === 'object'
-      && 'om' in metadata.mastra
-      && metadata.mastra.om
-      && typeof metadata.mastra.om === 'object'
-      && 'customCheckpointedContext' in metadata.mastra.om
-      && metadata.mastra.om.customCheckpointedContext
-      && typeof metadata.mastra.om.customCheckpointedContext === 'object'
-        ? metadata.mastra.om.customCheckpointedContext as {
-          latestMetrics?: {
-            recentRawMessageCount?: number;
-          };
-        }
-        : null;
-    const recentRawMessageCount = customCheckpointedContext?.latestMetrics?.recentRawMessageCount;
+    const checkpointedOmState = await this.checkpointedOmStateStore.readState();
+    const recentRawMessageCount = checkpointedOmState.latestMetrics?.recentRawMessageCount;
 
     return {
       recentFingerprints,
@@ -1401,6 +1403,13 @@ export function createAgentLongTermMemoryRecall(input: {
     ltmRecallScoreThreshold: number;
     ltmRecallDocumentCount: number;
   }>;
+  checkpointedOmStateStore: CheckpointedOmStateStore & {
+    readState(): Promise<{
+      latestMetrics?: {
+        recentRawMessageCount?: number;
+      } | null;
+    }>;
+  };
   model?: AgentConfig['model'];
 }) {
   return new AgentLongTermMemoryRecall(input);

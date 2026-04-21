@@ -38,6 +38,7 @@ import type { GitHubAppManager } from '../github/manager';
 import { createSystemSettingsStore } from '../system-settings/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { listAgentWorkspaceSkills } from '../agents/workspace-skills';
+import { createAgentCheckpointedOmStateStore } from '../agents/checkpointed-om-state-store';
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../agents/agent-long-term-memory-recall';
 
 const RECENT_STEP_LIMIT = 10;
@@ -59,47 +60,6 @@ interface MastraMemoryStore {
     };
   }): Promise<{ messages: MastraDBMessage[] }>;
 }
-
-type CustomCheckpointSummary = {
-  text: string;
-  tokenCount: number;
-  upToGeneration: number;
-  updatedAt: string;
-};
-
-type CustomCheckpointedContextState = {
-  checkpointGeneration: number | null;
-  checkpointSummary: CustomCheckpointSummary | null;
-  observationBlocks: Array<{
-    text: string;
-    tokenCount: number;
-    reflectedGeneration: number | null;
-  }>;
-  activeReflectionBlocks: Array<{
-    recordId: string;
-    generationCount: number;
-    tokenCount: number;
-  }>;
-  latestMetrics: {
-    rawMessageCount: number;
-    recentRawMessageCount: number;
-    recentRawTokenCount: number;
-    recentRawTokenLimit: number;
-    overflowMessageCount: number;
-    overflowTokenCount: number;
-    observationTriggerTokenLimit: number;
-    activeObservationBlockCount: number;
-    observationTokenCount: number;
-    reflectionTriggerTokenLimit: number;
-    activeReflectionBlockCount: number;
-    reflectionTokenCount: number;
-    reflectionBudget: number;
-    checkpointTokenCount: number;
-    checkpointSummaryUpToGeneration: number | null;
-    latestThreadMessageAt: string | null;
-    updatedAt: string;
-  } | null;
-};
 
 type LongTermMemoryStateSnapshot = {
   packages: Array<{
@@ -393,34 +353,6 @@ function hasObservationalMemoryAccess(store: unknown): store is MemoryStoreWithO
     'getObservationalMemoryHistory' in store &&
     typeof (store as MemoryStoreWithObservationalMemory).getObservationalMemoryHistory === 'function'
   );
-}
-
-function getCustomCheckpointedContextState(metadata: Record<string, unknown> | undefined) {
-  const rawMastra = metadata?.mastra;
-  const rawOm = rawMastra && typeof rawMastra === 'object'
-    ? (rawMastra as { om?: Record<string, unknown> }).om
-    : undefined;
-  const custom = rawOm?.customCheckpointedContext;
-
-  if (!custom || typeof custom !== 'object') {
-    return null;
-  }
-
-  const value = custom as Partial<CustomCheckpointedContextState>;
-  return {
-    checkpointGeneration:
-      typeof value.checkpointGeneration === 'number' ? value.checkpointGeneration : null,
-    checkpointSummary:
-      value.checkpointSummary && typeof value.checkpointSummary === 'object'
-        ? value.checkpointSummary as CustomCheckpointSummary
-        : null,
-    observationBlocks: Array.isArray(value.observationBlocks) ? value.observationBlocks : [],
-    activeReflectionBlocks: Array.isArray(value.activeReflectionBlocks) ? value.activeReflectionBlocks : [],
-    latestMetrics:
-      value.latestMetrics && typeof value.latestMetrics === 'object'
-        ? value.latestMetrics as CustomCheckpointedContextState['latestMetrics']
-        : null,
-  };
 }
 
 function getLongTermMemoryRecallSnapshot(metadata: Record<string, unknown> | undefined) {
@@ -1112,9 +1044,9 @@ export function createAdminReadModel(input: {
       const threadMetadata = hasObservationalMemoryAccess(memoryStore)
         ? (await memoryStore.getThreadById({ threadId: mastraAgentId }))?.metadata
         : undefined;
-      const customState = hasObservationalMemoryAccess(memoryStore)
-        ? getCustomCheckpointedContextState(threadMetadata)
-        : null;
+      const customState = await createAgentCheckpointedOmStateStore(db, {
+        agentId,
+      }).readState();
       const ltmRecall = getLongTermMemoryRecallSnapshot(threadMetadata);
       let reflection = '';
       const observations = customState
