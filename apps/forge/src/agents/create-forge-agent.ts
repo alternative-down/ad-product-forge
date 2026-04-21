@@ -82,7 +82,6 @@ export async function createInternalAgentRuntime<
         agentWorkspacePath: platform.agentWorkspacePath,
         agentMemoryPath: platform.agentMemoryPath,
         storage: platform.storage,
-        vector: platform.vector,
         threadId: platform.mastraId,
         resourceId: platform.mastraId,
         model: (config.omModel ?? config.model) as never,
@@ -97,7 +96,6 @@ export async function createInternalAgentRuntime<
     : null;
 
   const runtimeMemory = await createAgentRuntimeMemory({
-    vector: platform.vector,
     agentId: config.id,
     mastraId: platform.mastraId,
     agentWorkspacePath: platform.agentWorkspacePath,

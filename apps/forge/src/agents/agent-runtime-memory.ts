@@ -2,12 +2,10 @@ import {
   type CheckpointedOmStateStore,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
-import type { LibSQLVector } from '@mastra/libsql';
 
 import { createAgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
 
 export async function createAgentRuntimeMemory(input: {
-  vector: LibSQLVector;
   agentId: string;
   mastraId: string;
   agentWorkspacePath: string;

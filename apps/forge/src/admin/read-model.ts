@@ -3,7 +3,6 @@ import { readFile } from 'node:fs/promises';
 
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
-import { LibSQLStore } from '@mastra/libsql';
 import {
   LibsqlConversationStore,
   toMastraSafeIdentifier,
@@ -44,20 +43,6 @@ const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
 const RECENT_CONVERSATION_LIMIT = 10;
 const ADMIN_OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
-
-interface MastraMemoryStore {
-  createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
-  listMessages(params: {
-    threadId: string;
-    resourceId?: string;
-    page: number;
-    perPage: number;
-    orderBy?: {
-      field: 'createdAt';
-      direction: 'ASC' | 'DESC';
-    };
-  }): Promise<{ messages: RuntimeStoredMessage[] }>;
-}
 
 type RuntimeStoredMessage = {
   id: string;
@@ -325,48 +310,6 @@ function toToolBadge(toolName: string) {
 
 function truncatePreview(value: string) {
   return value.length > 220 ? `${value.slice(0, 217).trimEnd()}...` : value;
-}
-
-type MemoryStoreWithObservationalMemory = MastraMemoryStore & {
-  getThreadById(input: { threadId: string }): Promise<{
-    metadata?: Record<string, unknown>;
-  } | null>;
-  getObservationalMemory(threadId: string | null, resourceId: string): Promise<{
-    activeObservations: string;
-    generationCount: number;
-    updatedAt: Date;
-    lastObservedAt: Date | null;
-  } | null>;
-  getObservationalMemoryHistory(
-    threadId: string | null,
-    resourceId: string,
-    limit?: number,
-  ): Promise<Array<{
-    id: string;
-    activeObservations: string;
-  }>>;
-};
-
-function hasCreateThread(store: unknown): store is MastraMemoryStore {
-  return (
-    typeof store === 'object' &&
-    store !== null &&
-    'createThread' in store &&
-    typeof (store as MastraMemoryStore).createThread === 'function'
-  );
-}
-
-function hasObservationalMemoryAccess(store: unknown): store is MemoryStoreWithObservationalMemory {
-  return (
-    typeof store === 'object' &&
-    store !== null &&
-    'getThreadById' in store &&
-    typeof (store as MemoryStoreWithObservationalMemory).getThreadById === 'function' &&
-    'getObservationalMemory' in store &&
-    typeof (store as MemoryStoreWithObservationalMemory).getObservationalMemory === 'function' &&
-    'getObservationalMemoryHistory' in store &&
-    typeof (store as MemoryStoreWithObservationalMemory).getObservationalMemoryHistory === 'function'
-  );
 }
 
 async function readLongTermMemoryRecallSnapshot(workspaceBasePath: string, agentId: string) {
@@ -1002,23 +945,12 @@ export function createAdminReadModel(input: {
     const client: ClosableLibsqlClient = createClient({
       url: `file:${agentDatabasePath}`,
     });
-    const storage = new LibSQLStore({
-      id: `${mastraAgentId}_storage`,
-      client,
-    });
     const conversationStore = new LibsqlConversationStore({
       client,
       tablePrefix: mastraAgentId,
     });
 
     try {
-      if (hasCreateThread(storage.stores.memory)) {
-        await storage.stores.memory.createThread({
-          resourceId: mastraAgentId,
-          threadId: mastraAgentId,
-        });
-      }
-
       const agentWorkspaceRoot = path.resolve(input.workspaceBasePath, agentId);
       const agentWorkspaceDir = agent.workspaceFilesystem?.basePath
         ? path.resolve(agentWorkspaceRoot, agent.workspaceFilesystem.basePath)
@@ -1031,34 +963,6 @@ export function createAdminReadModel(input: {
         threadId: mastraAgentId,
         resourceId: mastraAgentId,
       }))?.workingMemory ?? null;
-      const memoryStore = storage.stores.memory;
-      if (!memoryStore) {
-        return {
-          workingMemory: formatWorkingMemoryValue(workingMemory),
-          agentContext,
-          observations: '',
-          reflection: '',
-          generationCount: 0,
-          updatedAt: null,
-          lastObservedAt: null,
-          checkpointGeneration: null,
-          checkpointSummary: null,
-          checkpointUpdatedAt: null,
-          ltmRecall: null,
-          ltm: null,
-          metrics: {
-            recentRawTokenCount: 0,
-            recentRawTokenLimit: 0,
-            overflowTokenCount: 0,
-            observationTriggerTokenLimit: 0,
-            observationTokenCount: 0,
-            reflectionTriggerTokenLimit: 0,
-            reflectionTokenCount: 0,
-            reflectionBudget: 0,
-            checkpointTokenCount: 0,
-          },
-        };
-      }
       const customState = await createAgentCheckpointedOmStateStore(db, {
         agentId,
       }).readState();
@@ -1071,30 +975,15 @@ export function createAdminReadModel(input: {
           .filter(Boolean)
           .join('\n')
         : '';
-      let generationCount = 0;
-      let updatedAt: number | null = null;
-      let lastObservedAt: number | null = null;
-
-      if (hasObservationalMemoryAccess(memoryStore)) {
-        const record = await memoryStore.getObservationalMemory(mastraAgentId, mastraAgentId);
-        if (record) {
-          generationCount = record.generationCount;
-          updatedAt = record.updatedAt?.getTime?.() ?? null;
-          lastObservedAt = record.lastObservedAt?.getTime?.() ?? null;
-        }
-
-        if (customState?.activeReflectionBlocks.length) {
-          const history = await memoryStore.getObservationalMemoryHistory(mastraAgentId, mastraAgentId, 200);
-          const byId = new Map(history.map((item) => [item.id, item.activeObservations]));
-          reflection = customState.activeReflectionBlocks
-            .map((block) => byId.get(block.recordId)?.trim() ?? '')
-            .filter(Boolean)
-            .join('\n\n');
-        }
-      }
-
       const settings = await systemSettings.getSettings();
       const metricsSnapshot = customState?.latestMetrics;
+      const generationCount = customState?.checkpointGeneration ?? 0;
+      const updatedAt = metricsSnapshot?.updatedAt
+        ? Date.parse(metricsSnapshot.updatedAt)
+        : null;
+      const lastObservedAt = metricsSnapshot?.latestThreadMessageAt
+        ? Date.parse(metricsSnapshot.latestThreadMessageAt)
+        : null;
       const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
         ? await withTimeout(
           loadedAgent.runtime.longTermMemory.readSnapshot(),

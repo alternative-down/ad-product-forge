@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { LibSQLStore, LibSQLVector } from '@mastra/libsql';
+import type { LibSQLStore } from '@mastra/libsql';
 import {
   type CheckpointedOmCheckpointPackageInput,
   type CheckpointedOmArchivedObservation,
@@ -404,7 +404,6 @@ export function createAgentLongTermMemory(input: {
   agentWorkspacePath: string;
   agentMemoryPath: string;
   storage: LibSQLStore;
-  vector: LibSQLVector;
   threadId: string;
   resourceId: string;
   model: unknown;
