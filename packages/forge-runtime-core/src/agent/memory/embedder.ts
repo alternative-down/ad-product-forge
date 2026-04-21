@@ -2,7 +2,7 @@ import { cpus } from 'node:os';
 
 import type { FeatureExtractionPipeline } from '@huggingface/transformers';
 import { pipeline } from '@huggingface/transformers';
-import { fastembed } from '@mastra/fastembed';
+import { EmbeddingModel, FlagEmbedding } from 'fastembed';
 
 export const WORKSPACE_EMBEDDER_IDS = [
   'fastembed',
@@ -20,7 +20,7 @@ export type WorkspaceEmbedderProvider = {
   doEmbed(input: { values: string[] }): Promise<EmbedderResult>;
 };
 
-const fastembedProvider = fastembed;
+let fastembedProviderPromise: Promise<WorkspaceEmbedderProvider> | null = null;
 const transformersPipelineByEmbedder = new Map<
   Exclude<WorkspaceEmbedderId, 'fastembed'>,
   Promise<FeatureExtractionPipeline>
@@ -31,7 +31,11 @@ const transformersProviderByEmbedder = new Map<
 >();
 
 export function getFastembedSingleton() {
-  return fastembedProvider;
+  if (!fastembedProviderPromise) {
+    fastembedProviderPromise = createFastembedProvider();
+  }
+
+  return fastembedProviderPromise;
 }
 
 export function isWorkspaceEmbedderId(value: string): value is WorkspaceEmbedderId {
@@ -44,9 +48,9 @@ export function resolveWorkspaceEmbedderId(value: string | null | undefined): Wo
 
 export function getWorkspaceEmbedderProvider(
   embedderId: WorkspaceEmbedderId = 'fastembed',
-): WorkspaceEmbedderProvider {
+): WorkspaceEmbedderProvider | Promise<WorkspaceEmbedderProvider> {
   if (embedderId === 'fastembed') {
-    return fastembedProvider;
+    return getFastembedSingleton();
   }
 
   const existingProvider = transformersProviderByEmbedder.get(embedderId);
@@ -76,7 +80,8 @@ export async function embedTextWithWorkspaceEmbedder(
   embedderId: WorkspaceEmbedderId,
   text: string,
 ): Promise<number[]> {
-  const result = await getWorkspaceEmbedderProvider(embedderId).doEmbed({ values: [text] });
+  const provider = await getWorkspaceEmbedderProvider(embedderId);
+  const result = await provider.doEmbed({ values: [text] });
   return result.embeddings[0] ?? [];
 }
 
@@ -95,6 +100,24 @@ async function getTransformersPipeline(
   const pipelinePromise = createTransformersPipeline(embedderId);
   transformersPipelineByEmbedder.set(embedderId, pipelinePromise);
   return pipelinePromise;
+}
+
+async function createFastembedProvider(): Promise<WorkspaceEmbedderProvider> {
+  const embeddingModel = await FlagEmbedding.init({
+    model: EmbeddingModel.MLE5Large,
+  });
+
+  return {
+    async doEmbed(input) {
+      const embeddings: number[][] = [];
+
+      for await (const batch of embeddingModel.embed(input.values)) {
+        embeddings.push(...batch);
+      }
+
+      return { embeddings };
+    },
+  };
 }
 
 function createTransformersPipeline(

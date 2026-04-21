@@ -81,7 +81,6 @@ export async function createInternalAgentRuntime<
         instructions: typeof config.instructions === 'string' ? config.instructions : '',
         agentWorkspacePath: platform.agentWorkspacePath,
         agentMemoryPath: platform.agentMemoryPath,
-        storage: platform.storage,
         threadId: platform.mastraId,
         resourceId: platform.mastraId,
         model: (config.omModel ?? config.model) as never,

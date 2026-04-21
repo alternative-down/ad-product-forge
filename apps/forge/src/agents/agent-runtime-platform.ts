@@ -1,5 +1,4 @@
 import { createClient } from '@libsql/client';
-import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -25,19 +24,6 @@ type CommunicationWorkspaceFilesystem = {
   readFile(path: string): Promise<string | Uint8Array | Buffer>;
   writeFile(path: string, data: Uint8Array | Buffer | string): Promise<void>;
 };
-
-interface MastraMemoryStore {
-  createThread(params: { resourceId?: string; threadId: string }): Promise<unknown>;
-}
-
-function hasCreateThread(store: unknown): store is MastraMemoryStore {
-  return (
-    typeof store === 'object' &&
-    store !== null &&
-    'createThread' in store &&
-    typeof (store as MastraMemoryStore).createThread === 'function'
-  );
-}
 
 async function pathExists(targetPath: string) {
   try {
@@ -109,10 +95,7 @@ export async function createAgentRuntimePlatform(input: {
   await fs.mkdir(agentWorkspaceDir, { recursive: true });
   await moveLegacyMemoryDirectory(legacyAgentMemoryPath, agentMemoryPath);
 
-  const dbUrl = `file:${agentDatabasePath}`;
-  const client = createClient({ url: dbUrl });
-  const storage = new LibSQLStore({ id: `${mastraId}_storage`, client });
-  const vector = new LibSQLVector({ id: `${mastraId}_vector`, url: dbUrl });
+  const client = createClient({ url: `file:${agentDatabasePath}` });
   const conversationStore = new LibsqlConversationStore({
     client,
     tablePrefix: mastraId,
@@ -148,13 +131,6 @@ export async function createAgentRuntimePlatform(input: {
     cwd: sandboxWorkingDirectory,
   });
 
-  if (hasCreateThread(storage.stores.memory)) {
-    await storage.stores.memory.createThread({
-      resourceId: mastraId,
-      threadId: mastraId,
-    });
-  }
-
   const communication: CommunicationModule = input.communication ?? await createCommunicationModule({
     providers: input.providers ?? [],
     workspace: {
@@ -166,8 +142,6 @@ export async function createAgentRuntimePlatform(input: {
   return {
     mastraId,
     workspace,
-    storage,
-    vector,
     conversationStore,
     workspaceGateway,
     workspaceActions: createWorkspaceActionDefinitions(workspaceGateway),

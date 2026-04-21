@@ -2,8 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { eq } from 'drizzle-orm';
-import { LibSQLVector } from '@mastra/libsql';
-import { toForgeSafeIdentifier, type WorkspaceEmbedderId } from '@forge-runtime/core';
+import { type WorkspaceEmbedderId } from '@forge-runtime/core';
 
 import type { Database } from '../database';
 import { agents } from '../database/schema';
@@ -35,25 +34,20 @@ export async function prepareAgentEmbeddersForStartup(input: {
 
 export async function resetAgentEmbedderIndexes(workspaceBasePath: string, agentId: string) {
   const agentWorkspacePath = path.resolve(workspaceBasePath, agentId);
-  const mastraId = toForgeSafeIdentifier(agentId);
 
   await resetVectorDatabase({
     databasePath: path.resolve(agentWorkspacePath, 'database.db'),
-    vectorId: `${mastraId}_vector`,
   });
   await resetVectorDatabase({
     databasePath: path.resolve(agentWorkspacePath, `${agentId}-memory-recall.db`),
-    vectorId: `${mastraId}_memory_recall_vector`,
   });
   await resetVectorDatabase({
     databasePath: path.resolve(agentWorkspacePath, `${agentId}-memory.db`),
-    vectorId: `${mastraId}_memory_vector`,
   });
 }
 
 async function resetVectorDatabase(input: {
   databasePath: string;
-  vectorId: string;
 }) {
   const exists = await fs
     .access(input.databasePath)
@@ -64,13 +58,9 @@ async function resetVectorDatabase(input: {
     return;
   }
 
-  const vector = new LibSQLVector({
-    id: input.vectorId,
-    url: `file:${input.databasePath}`,
-  });
-  const indexes = await vector.listIndexes();
-
-  for (const indexName of indexes) {
-    await vector.deleteIndex({ indexName });
+  if (path.basename(input.databasePath) === 'database.db') {
+    return;
   }
+
+  await fs.rm(input.databasePath, { force: true });
 }

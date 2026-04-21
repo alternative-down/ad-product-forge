@@ -2,11 +2,9 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { LibSQLStore } from '@mastra/libsql';
 import {
   type CheckpointedOmCheckpointPackageInput,
   type CheckpointedOmArchivedObservation,
-  type CheckpointedOmArchivedReflection,
   CheckpointedOmStateStore,
   WorkspaceEmbedderId,
   createRuntimeAgentSession,
@@ -54,17 +52,6 @@ const ltmStateSchema = z.object({
 type LongTermMemoryState = z.infer<typeof ltmStateSchema>;
 type CheckpointPackageManifest = z.infer<typeof packageManifestSchema>;
 
-type StorageThread = {
-  metadata?: Record<string, unknown>;
-};
-
-type ObservationalMemoryRecord = {
-  id: string;
-  generationCount: number;
-  activeObservations: string;
-  createdAt: Date;
-};
-
 type CustomCheckpointSummary = {
   text: string;
   tokenCount: number;
@@ -79,15 +66,6 @@ type CustomObservationBlock = {
   createdAt: string;
   lastObservedAt: string;
   reflectedGeneration: number | null;
-};
-
-type MemoryStoreWithObservationalMemory = NonNullable<LibSQLStore['stores']['memory']> & {
-  getThreadById(input: { threadId: string }): Promise<StorageThread | null>;
-  getObservationalMemoryHistory(
-    threadId: string | null,
-    resourceId: string,
-    limit?: number,
-  ): Promise<ObservationalMemoryRecord[]>;
 };
 
 type LtmUsage = {
@@ -339,36 +317,13 @@ function renderObservationFile(observation: CheckpointedOmCheckpointPackageInput
   ].join('\n');
 }
 
-function hasObservationalMemoryAccess(
-  store: NonNullable<LibSQLStore['stores']['memory']>,
-): store is MemoryStoreWithObservationalMemory {
-  return (
-    typeof store === 'object' &&
-    store !== null &&
-    'getThreadById' in store &&
-    typeof store.getThreadById === 'function' &&
-    'getObservationalMemoryHistory' in store &&
-    typeof store.getObservationalMemoryHistory === 'function'
-  );
-}
-
 function buildBootstrapCheckpointPackage(input: {
   threadId: string;
   resourceId: string;
   checkpointGeneration: number;
   checkpointSummary: CustomCheckpointSummary;
-  reflectionRecords: ObservationalMemoryRecord[];
   observationBlocks: CustomObservationBlock[];
 }): CheckpointedOmCheckpointPackageInput {
-  const reflections: CheckpointedOmArchivedReflection[] = input.reflectionRecords
-    .filter((record) => record.generationCount <= input.checkpointGeneration)
-    .map((record) => ({
-      recordId: record.id,
-      generationCount: record.generationCount,
-      tokenCount: 0,
-      createdAt: record.createdAt.toISOString(),
-      text: record.activeObservations,
-    }));
   const observations: CheckpointedOmArchivedObservation[] = input.observationBlocks
     .filter((block) =>
       typeof block.reflectedGeneration === 'number' &&
@@ -389,7 +344,7 @@ function buildBootstrapCheckpointPackage(input: {
     fromGeneration: null,
     toGeneration: input.checkpointGeneration,
     checkpointSummary: input.checkpointSummary,
-    reflections,
+    reflections: [],
     observations,
   };
 }
@@ -403,7 +358,6 @@ export function createAgentLongTermMemory(input: {
   instructions: string;
   agentWorkspacePath: string;
   agentMemoryPath: string;
-  storage: LibSQLStore;
   threadId: string;
   resourceId: string;
   model: unknown;
@@ -446,11 +400,6 @@ export function createAgentLongTermMemory(input: {
   };
 
   async function backfillCheckpointPackages() {
-    const store = input.storage.stores.memory;
-    if (!store || !hasObservationalMemoryAccess(store)) {
-      return;
-    }
-
     const state = await readState();
     const customState = await input.checkpointedOmStateStore.readState();
     const checkpointGeneration = customState?.checkpointGeneration ?? null;
@@ -464,17 +413,11 @@ export function createAgentLongTermMemory(input: {
       return;
     }
 
-    const reflectionRecords = await store.getObservationalMemoryHistory(
-      input.threadId,
-      input.resourceId,
-      500,
-    );
     const payload = buildBootstrapCheckpointPackage({
       threadId: input.threadId,
       resourceId: input.resourceId,
       checkpointGeneration,
       checkpointSummary,
-      reflectionRecords,
       observationBlocks: customState?.observationBlocks ?? [],
     });
 
