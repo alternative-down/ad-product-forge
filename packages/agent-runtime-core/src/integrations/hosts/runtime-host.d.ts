@@ -1,0 +1,37 @@
+import { type StepModelMiddleware } from '../adapters/model-middleware.js';
+import type { RuntimeActionDefinition } from '../../core/actions.js';
+import { RuntimeEventStream } from '../../core/runtime-events.js';
+import { AgentRuntime, type AgentRuntimeOptions } from '../../core/runtime.js';
+import type { RuntimeObserver } from '../../core/observers.js';
+import type { RuntimePlugin } from '../../core/plugins.js';
+import { RuntimeMessageStream } from '../runtime/runtime-message-stream.js';
+import type { RuntimeJournal } from '../journal/contracts.js';
+import type { RuntimeSnapshotStore } from '../persistence/runtime-snapshot-store.js';
+import { InMemoryRuntimeScheduler } from '../scheduler/in-memory-runtime-scheduler.js';
+import type { ContextNoteStore } from '../state/context-note-store.js';
+export type RuntimeHostOptions = {
+    runtime: AgentRuntimeOptions;
+    scheduler?: boolean;
+    journal?: RuntimeJournal;
+    notes?: ContextNoteStore;
+    schedulerInstance?: InMemoryRuntimeScheduler;
+    snapshotStore?: RuntimeSnapshotStore;
+    plugins?: RuntimePlugin[];
+    observers?: RuntimeObserver[];
+    actions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
+    eventStream?: RuntimeEventStream | true;
+    messageStream?: RuntimeMessageStream | true;
+    modelMiddlewares?: StepModelMiddleware[];
+};
+export type RuntimeHost = {
+    runtime: AgentRuntime;
+    journal: RuntimeJournal;
+    notes: ContextNoteStore;
+    scheduler: InMemoryRuntimeScheduler | null;
+    snapshotStore: RuntimeSnapshotStore | null;
+    eventStream: RuntimeEventStream | null;
+    messageStream: RuntimeMessageStream | null;
+    saveSnapshot(): Promise<void>;
+    restoreSnapshot(): Promise<boolean>;
+};
+export declare function createRuntimeHost(options: RuntimeHostOptions): RuntimeHost;

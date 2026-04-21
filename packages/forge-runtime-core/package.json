@@ -9,17 +9,17 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.json --emitDeclarationOnly",
-    "typecheck": "tsc --noEmit",
+    "build": "npm run -w agent-runtime-core build && tsup && tsc -p tsconfig.json --emitDeclarationOnly",
+    "typecheck": "npm run -w agent-runtime-core build && tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
-    "test": "vitest run"
+    "test": "npm run -w agent-runtime-core build && vitest run"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.68",
     "@ai-sdk/openai": "^3.0.52",
     "@huggingface/transformers": "3.7.5",
     "@libsql/client": "^0.15.15",
-    "agent-runtime-core": "file:../../../agent-runtime-core",
+    "agent-runtime-core": "file:../agent-runtime-core",
     "ai": "^5.0.155",
     "fastembed": "^2.1.0",
     "zod": "^4.3.6"

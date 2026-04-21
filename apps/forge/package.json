@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "build": "npm run -w @forge-runtime/core build && tsup && mkdir -p dist/skills && cp -R src/agents/skills/. dist/skills/",
-    "typecheck": "npm run -w @forge-runtime/core build && tsc --noEmit",
+    "build": "npm run -w agent-runtime-core build && npm run -w @forge-runtime/core build && tsup && mkdir -p dist/skills && cp -R src/agents/skills/. dist/skills/",
+    "typecheck": "npm run -w agent-runtime-core build && npm run -w @forge-runtime/core build && tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "init-registry": "tsx src/scripts/init-agent-registry.ts",
     "reset-embedder-indexes": "tsx src/scripts/reset-agent-embedder-indexes.ts",
@@ -18,7 +18,6 @@
     "@ai-sdk/anthropic": "^3.0.68",
     "@forge-runtime/core": "0.1.0",
     "@huggingface/transformers": "3.7.5",
-    "@mastra/core": "^1.24.1",
     "@octokit/auth-app": "^8.1.1",
     "@types/node-schedule": "^2.1.8",
     "discord.js": "^14.26.2",

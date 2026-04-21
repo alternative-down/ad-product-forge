@@ -1,0 +1,49 @@
+{
+  "name": "agent-runtime-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generic runtime core for persistent, step-based agents.",
+  "main": "./dist/core-entry.js",
+  "types": "./dist/core-entry.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core-entry.d.ts",
+      "import": "./dist/core-entry.js"
+    },
+    "./integrations": {
+      "types": "./dist/integrations-entry.d.ts",
+      "import": "./dist/integrations-entry.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "validate:examples": "node dist/scripts/validate-examples.js",
+    "validate:browser": "node dist/scripts/validate-browser.js",
+    "validate:minimax": "node dist/scripts/validate-minimax.js",
+    "prepublishOnly": "npm run test && npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.0",
+    "@ai-sdk/anthropic": "^3.0.71",
+    "ai": "^6.0.168",
+    "playwright": "^1.59.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.8.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

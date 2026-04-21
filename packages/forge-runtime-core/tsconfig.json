@@ -6,10 +6,10 @@
     "baseUrl": ".",
     "paths": {
       "agent-runtime-core": [
-        "../../../agent-runtime-core/dist/core-entry.d.ts"
+        "../agent-runtime-core/dist/core-entry.d.ts"
       ],
       "agent-runtime-core/integrations": [
-        "../../../agent-runtime-core/dist/integrations-entry.d.ts"
+        "../agent-runtime-core/dist/integrations-entry.d.ts"
       ]
     },
     "noEmit": false,
