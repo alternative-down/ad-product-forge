@@ -22,6 +22,7 @@
     "@mastra/fastembed": "^1.0.1",
     "@mastra/memory": "^1.4.2",
     "agent-runtime-core": "file:../../../agent-runtime-core",
+    "ai": "^5.0.155",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -33,6 +33,15 @@ export {
   type ForgeAgentRuntime,
 } from './runtime.js';
 export {
+  createRuntimeAgentSession,
+  type CreateRuntimeAgentSessionOptions,
+  type RuntimeAgentSession,
+  type RuntimeAgentSessionGenerateMessage,
+  type RuntimeAgentSessionGenerateOptions,
+  type RuntimeAgentSessionIteration,
+  type RuntimeAgentSessionStepResult,
+} from './runtime-agent-session.js';
+export {
   createForgeUsageObserver,
   InMemoryForgeUsageSink,
   type ForgeStepUsageRecord,

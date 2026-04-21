@@ -7,6 +7,7 @@ import {
   type RuntimeActionDefinition,
   type RuntimeHost,
   type RuntimeInputTarget,
+  type RuntimePlugin,
   type StepModelAdapter,
 } from 'agent-runtime-core/integrations';
 
@@ -25,6 +26,7 @@ export type CreateForgeAgentRuntimeOptions = {
   mcpRuntimeActionOptions?: Omit<McpRuntimeActionOptions, 'session'>;
   usageSink?: ForgeUsageSink;
   runtimeObservers?: RuntimeObserver[];
+  runtimePlugins?: RuntimePlugin[];
 };
 
 export type ForgeAgentRuntime = {
@@ -75,7 +77,10 @@ export async function createForgeAgentRuntime(
       ...(options.runtimeActions ?? []),
       ...mcpActions,
     ],
-    plugins: conversationMemory.plugins,
+    plugins: [
+      ...conversationMemory.plugins,
+      ...(options.runtimePlugins ?? []),
+    ],
     observers,
     eventStream: true,
     messageStream: true,
