@@ -20,9 +20,13 @@ export {
   AiSdkStepModelAdapter,
   ConfiguredWorkspaceGateway,
   createWorkspaceActionDefinitions,
+  FilesystemDocumentSource,
+  InMemoryBm25Index,
+  InMemoryVectorIndex,
   RuntimeRunController,
   createDefaultContextFormatter,
   LocalBashWorkspaceGateway,
+  RefreshableRetrievalWorkspace,
   createRuntimeHost,
   createTextStepContextEntry,
 } from 'agent-runtime-core/integrations';

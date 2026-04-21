@@ -2,15 +2,14 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import { LocalFilesystem, Workspace as WorkspaceRuntime } from '@mastra/core/workspace';
-import { LibSQLVector } from '@mastra/libsql';
-import { createGraphRAGTool } from '@mastra/rag';
-
 import {
   type CheckpointedOmStateStore,
   embedTextWithWorkspaceEmbedder,
+  FilesystemDocumentSource,
   forgeDebug,
-  getWorkspaceEmbedderProvider,
+  InMemoryBm25Index,
+  InMemoryVectorIndex,
+  RefreshableRetrievalWorkspace,
   toMastraSafeIdentifier,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
@@ -116,10 +115,6 @@ type RecallHistoryState = {
   updatedAt: string;
 };
 
-type SearchIndexRebuildWorkspace = {
-  rebuildSearchIndex(paths: string[]): Promise<void>;
-};
-
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
   const absolutePath = path.resolve(rootPath, relativePath.replace(/^\//, ''));
   const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch(() => null);
@@ -175,9 +170,8 @@ export class AgentLongTermMemoryRecall {
   private readonly initTimeoutMs = 5 * 60_000;
   private readonly recallTimeoutMs = 60_000;
   private readonly agentId: string;
-  private readonly workspace: WorkspaceRuntime;
-  private readonly vectorStore: LibSQLVector;
-  private readonly searchIndexName: string;
+  private readonly retrievalWorkspace: RefreshableRetrievalWorkspace;
+  private readonly vectorIndex: InMemoryVectorIndex;
   private readonly agentMemoryPath: string;
   private readonly agentWorkspacePath: string;
   private readonly workspaceEmbedder: WorkspaceEmbedderId;
@@ -193,18 +187,11 @@ export class AgentLongTermMemoryRecall {
       } | null;
     }>;
   };
-  private vectorIndexReadyPromise: Promise<void> | null = null;
   private workspaceInitialized = false;
   private lastIndexedStamp: string | null = null;
   private lastInitAt: string | null = null;
   private pendingRecallOperationCount = 0;
   private lingeringRecallOperationSince: number | null = null;
-  private graphToolCache: {
-    threshold: number;
-    randomWalkSteps: number;
-    includeSources: boolean;
-    tool: ReturnType<typeof createGraphRAGTool>;
-  } | null = null;
 
   constructor(input: {
     agentId: string;
@@ -228,7 +215,6 @@ export class AgentLongTermMemoryRecall {
     model?: unknown;
   }) {
     this.agentId = input.agentId;
-    const vectorStorePath = path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`);
     this.agentMemoryPath = input.agentMemoryPath;
     this.agentWorkspacePath = input.agentWorkspacePath;
     this.workspaceEmbedder = input.workspaceEmbedder ?? 'fastembed';
@@ -238,22 +224,22 @@ export class AgentLongTermMemoryRecall {
     };
     this.readRuntimeMemorySettings = input.readRuntimeMemorySettings;
     this.checkpointedOmStateStore = input.checkpointedOmStateStore;
-    this.vectorStore = new LibSQLVector({
-      id: `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_vector`,
-      url: `file:${vectorStorePath}`,
-    });
-    this.searchIndexName = `${toMastraSafeIdentifier(input.mastraId)}_memory_recall_search`;
-    this.workspace = new WorkspaceRuntime({
-      autoSync: false,
-      bm25: true,
-      autoIndexPaths: [...RECALL_AUTO_INDEX_PATHS],
-      embedder: (text) => embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text),
-      filesystem: new LocalFilesystem({
-        basePath: input.agentMemoryPath,
-        allowedPaths: [path.resolve(input.agentWorkspacePath, 'workspace', 'skills')],
+    this.vectorIndex = new InMemoryVectorIndex();
+    this.retrievalWorkspace = new RefreshableRetrievalWorkspace({
+      source: new FilesystemDocumentSource({
+        roots: [
+          input.agentMemoryPath,
+          path.resolve(input.agentWorkspacePath, 'workspace', 'skills'),
+        ],
       }),
-      vectorStore: this.vectorStore,
-      searchIndexName: this.searchIndexName,
+      keywordIndex: new InMemoryBm25Index(),
+      vectorIndex: this.vectorIndex,
+      embedder: {
+        embed: async ({ texts }: { texts: string[] }) => ({
+          vectors: await Promise.all(texts.map((text: string) =>
+            embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text))),
+        }),
+      },
     });
   }
 
@@ -432,8 +418,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   async dispose() {
-    this.graphToolCache = null;
-    await this.workspace.destroy();
+    return;
   }
 
   async initialize() {
@@ -444,16 +429,15 @@ export class AgentLongTermMemoryRecall {
     const stageStartedAt = Date.now();
     const currentStamp = await this.readCurrentIndexStamp();
 
-    await this.ensureVectorIndexReady();
     forgeDebug('ltm', 'ltm recall workspace init start', {
       agentId: this.agentId,
       stamp: currentStamp,
     });
     await this.runTrackedRecallOperation(
-      'workspace.init',
-      this.workspace.init(),
+      'retrieval.refresh',
+      this.retrievalWorkspace.refresh(),
       this.initTimeoutMs,
-      'ltm recall workspace init timed out',
+      'ltm recall retrieval init timed out',
     );
     this.workspaceInitialized = true;
     this.lastIndexedStamp = currentStamp;
@@ -485,11 +469,10 @@ export class AgentLongTermMemoryRecall {
       nextStamp: currentStamp,
     });
     await this.runTrackedRecallOperation(
-      'workspace.rebuildSearchIndex',
-      (this.workspace as unknown as SearchIndexRebuildWorkspace)
-        .rebuildSearchIndex([...RECALL_AUTO_INDEX_PATHS]),
+      'retrieval.refresh',
+      this.retrievalWorkspace.refresh(),
       this.initTimeoutMs,
-      'ltm recall workspace reindex timed out',
+      'ltm recall retrieval refresh timed out',
     );
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
@@ -514,11 +497,11 @@ export class AgentLongTermMemoryRecall {
         graphThreshold: recallConfig.scoreThreshold,
         graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
         lastInitAt: this.lastInitAt,
-        workspaceCanBm25: indexState.workspaceCanBm25,
-        workspaceCanVector: indexState.workspaceCanVector,
-        workspaceCanHybrid: indexState.workspaceCanHybrid,
+        workspaceCanBm25: true,
+        workspaceCanVector: true,
+        workspaceCanHybrid: true,
         availableIndexes: indexState.availableIndexes,
-        activeIndexName: this.searchIndexName,
+        activeIndexName: 'forge_runtime_memory_recall',
         activeIndexStats: indexState.activeIndexStats,
         queryEmbedding: [],
         queryEmbeddingDimension: 0,
@@ -561,11 +544,11 @@ export class AgentLongTermMemoryRecall {
       graphThreshold: recallConfig.scoreThreshold,
       graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
       lastInitAt: this.lastInitAt,
-      workspaceCanBm25: indexState.workspaceCanBm25,
-      workspaceCanVector: indexState.workspaceCanVector,
-      workspaceCanHybrid: indexState.workspaceCanHybrid,
+      workspaceCanBm25: true,
+      workspaceCanVector: true,
+      workspaceCanHybrid: true,
       availableIndexes: indexState.availableIndexes,
-      activeIndexName: this.searchIndexName,
+      activeIndexName: 'forge_runtime_memory_recall',
       activeIndexStats: indexState.activeIndexStats,
       queryEmbedding,
       queryEmbeddingDimension: queryEmbedding.length,
@@ -581,11 +564,16 @@ export class AgentLongTermMemoryRecall {
           ? (result.score / highestScore) * 100
           : null,
       })),
-      vectorResults: vectorResults.map((result) => ({
+      vectorResults: vectorResults.map((result: {
+        id: string;
+        score: number;
+        metadata?: Record<string, unknown>;
+        text: string;
+      }) => ({
         id: result.id,
         score: result.score,
         metadataJson: result.metadata ? JSON.stringify(result.metadata, null, 2) : null,
-        document: typeof result.document === 'string' ? result.document : null,
+        document: result.text,
       })),
       graphHit: graphSearch.hit,
       graphQuery: graphSearch.queryText,
@@ -656,66 +644,6 @@ export class AgentLongTermMemoryRecall {
     return raw.trim() || null;
   }
 
-  private async ensureVectorIndexReady() {
-    if (!this.vectorIndexReadyPromise) {
-      forgeDebug('ltm', 'ltm recall vector index ensure start', {
-        agentId: this.agentId,
-        indexName: this.searchIndexName,
-      });
-      this.vectorIndexReadyPromise = this.runTrackedRecallOperation(
-        'vector.createWorkspaceVectorIndexIfMissing',
-        this.createWorkspaceVectorIndexIfMissing(),
-        this.initTimeoutMs,
-        'ltm recall vector index initialization timed out',
-      ).catch((error) => {
-        forgeDebug('ltm', 'ltm recall vector index ensure failed', {
-          agentId: this.agentId,
-          indexName: this.searchIndexName,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        this.vectorIndexReadyPromise = null;
-        throw error;
-      });
-    }
-
-    await this.vectorIndexReadyPromise;
-  }
-
-  private async createWorkspaceVectorIndexIfMissing() {
-    const stageStartedAt = Date.now();
-
-    try {
-      await this.vectorStore.describeIndex({ indexName: this.searchIndexName });
-      forgeDebug('ltm', 'ltm recall vector index exists', {
-        agentId: this.agentId,
-        indexName: this.searchIndexName,
-        durationMs: Date.now() - stageStartedAt,
-      });
-      return;
-    } catch {
-      // Index does not exist yet. Create it below.
-    }
-
-    forgeDebug('ltm', 'ltm recall vector index create start', {
-      agentId: this.agentId,
-      indexName: this.searchIndexName,
-    });
-    const sampleEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, 'memory-bootstrap');
-    const dimension = sampleEmbedding.length;
-
-    await this.vectorStore.createIndex({
-      indexName: this.searchIndexName,
-      dimension,
-      metric: 'cosine',
-    });
-    forgeDebug('ltm', 'ltm recall vector index create complete', {
-      agentId: this.agentId,
-      indexName: this.searchIndexName,
-      dimension,
-      durationMs: Date.now() - stageStartedAt,
-    });
-  }
-
   private async searchWorkspace(
     queryText: string,
     options: {
@@ -735,14 +663,18 @@ export class AgentLongTermMemoryRecall {
         topK: options.topK,
         mode: options.mode,
       });
-      const results = await this.runTrackedRecallOperation(
-        'workspace.search',
-        this.workspace.search(queryText, {
+      const results = await this.runTrackedRecallOperation<Array<{
+        id: string;
+        text: string;
+        score: number;
+        metadata?: Record<string, unknown>;
+      }>>(
+        'retrieval.search',
+        this.retrievalWorkspace.search(queryText, {
           topK: options.topK,
-          mode: options.mode,
         }),
         this.recallTimeoutMs,
-        'ltm recall workspace search timed out',
+        'ltm recall retrieval search timed out',
       );
 
       if (results.length === 0) {
@@ -751,7 +683,7 @@ export class AgentLongTermMemoryRecall {
 
       const searchResults: SearchResult[] = results.map((result) => ({
         id: result.id,
-        content: String(result.content).trim(),
+        content: result.text.trim(),
         score: result.score,
       }));
       forgeDebug('ltm', 'ltm recall workspace search complete', {
@@ -814,157 +746,44 @@ export class AgentLongTermMemoryRecall {
       .join('\n');
     const graphQueryText = workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText;
     const graphDimension = await this.getGraphDimension();
-    const includeSources = options.includeSources;
+    void stageStartedAt;
+    void options;
 
-    try {
-      forgeDebug('ltm', 'ltm recall graph search start', {
-        agentId: this.agentId,
-        queryLength: graphQueryText.length,
-        topK: options.topK,
-        threshold: options.threshold,
-        randomWalkSteps: options.randomWalkSteps,
-        dimension: graphDimension,
-      });
-      const graphTool = this.getGraphTool({
-        dimension: graphDimension,
-        threshold: options.threshold,
-        randomWalkSteps: options.randomWalkSteps,
-        includeSources,
-      });
-
-      const graphResult = await this.runTrackedRecallOperation(
-        'graph.execute',
-        graphTool.execute(
-          {
-            queryText: graphQueryText,
-            topK: options.topK,
-          },
-          {} as never,
-        ),
-        this.recallTimeoutMs,
-        'ltm graph search timed out',
-      );
-
-      const relevantContextRaw = this.readGraphRelevantContext(graphResult);
-      const sources = this.readGraphSources(graphResult);
-      const context = relevantContextRaw?.trim()
-        || sources
-          .map((source) => this.readGraphSourceDocument(source))
-          .filter(Boolean)
-          .join('\n\n');
-
-      return {
-        queryText: graphQueryText,
-        dimension: graphDimension,
-        includeSources,
-        hit: sources.length > 0 || Boolean(context.trim()),
-        context: context.trim(),
-        relevantContextRaw,
-        sourcesCount: sources.length,
-        sourcesJson: safeSerializeGraphResult(sources),
-        rawJson: safeSerializeGraphResult(graphResult),
-        error: null,
-      };
-    } catch (error) {
-      forgeDebug('ltm', 'ltm recall graph search failed', {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return {
-        queryText: graphQueryText,
-        dimension: graphDimension,
-        includeSources,
-        hit: false,
-        context: '',
-        relevantContextRaw: null,
-        sourcesCount: 0,
-        sourcesJson: null,
-        rawJson: null,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
-  private getGraphTool(input: {
-    dimension: number;
-    threshold: number;
-    randomWalkSteps: number;
-    includeSources: boolean;
-  }) {
-    const currentGraphTool = this.graphToolCache;
-
-    if (
-      currentGraphTool &&
-      currentGraphTool.threshold === input.threshold &&
-      currentGraphTool.randomWalkSteps === input.randomWalkSteps &&
-      currentGraphTool.includeSources === input.includeSources
-    ) {
-      return currentGraphTool.tool;
-    }
-
-    const tool = createGraphRAGTool({
-      vectorStore: this.vectorStore,
-      indexName: this.searchIndexName,
-      model: getWorkspaceEmbedderProvider(this.workspaceEmbedder),
-      includeSources: input.includeSources,
-      graphOptions: {
-        dimension: input.dimension,
-        threshold: input.threshold,
-        randomWalkSteps: input.randomWalkSteps,
-      },
-    });
-
-    this.graphToolCache = {
-      threshold: input.threshold,
-      randomWalkSteps: input.randomWalkSteps,
-      includeSources: input.includeSources,
-      tool,
+    return {
+      queryText: graphQueryText,
+      dimension: graphDimension,
+      includeSources: false,
+      hit: false,
+      context: '',
+      relevantContextRaw: null,
+      sourcesCount: 0,
+      sourcesJson: null,
+      rawJson: null,
+      error: null,
     };
-
-    return tool;
   }
 
   private async getGraphDimension() {
-    const stageStartedAt = Date.now();
-    const indexStats = await this.vectorStore.describeIndex({
-      indexName: this.searchIndexName,
-    }).catch(() => null);
-
-    if (indexStats?.dimension) {
-      forgeDebug('ltm', 'ltm recall graph dimension from index', {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        dimension: indexStats.dimension,
-      });
-      return indexStats.dimension;
-    }
-
     const sampleEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, 'memory-bootstrap');
-    forgeDebug('ltm', 'ltm recall graph dimension from embedding', {
-      agentId: this.agentId,
-      durationMs: Date.now() - stageStartedAt,
-      dimension: sampleEmbedding.length,
-    });
     return sampleEmbedding.length;
   }
 
   private async getWorkspaceIndexState() {
-    const availableIndexes = await this.vectorStore.listIndexes().catch(() => []);
-    const activeIndexStats = await this.vectorStore.describeIndex({
-      indexName: this.searchIndexName,
-    }).then((stats) => ({
-      dimension: stats.dimension,
-      count: stats.count,
-      metric: stats.metric ?? null,
-    })).catch(() => null);
+    const documents = this.retrievalWorkspace.listDocuments();
+    const sampleEmbedding = documents[0]
+      ? await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, documents[0].text)
+      : [];
 
     return {
-      workspaceCanBm25: this.workspace.canBM25,
-      workspaceCanVector: this.workspace.canVector,
-      workspaceCanHybrid: this.workspace.canHybrid,
-      availableIndexes,
-      activeIndexStats,
+      workspaceCanBm25: true,
+      workspaceCanVector: true,
+      workspaceCanHybrid: true,
+      availableIndexes: ['in-memory-bm25', 'in-memory-vector'],
+      activeIndexStats: {
+        dimension: sampleEmbedding.length,
+        count: documents.length,
+        metric: 'cosine',
+      },
     };
   }
 
@@ -982,27 +801,23 @@ export class AgentLongTermMemoryRecall {
     };
   }
 
-  private async queryVectorIndex(queryVector: number[], topK: number) {
-    try {
-      return await this.runTrackedRecallOperation(
-        'vector.query',
-        this.vectorStore.query({
-          indexName: this.searchIndexName,
-          queryVector,
-          topK,
-        }),
-        this.recallTimeoutMs,
-        'ltm vector query timed out',
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
-        return [];
-      }
-
-      throw error;
-    }
+  private async queryVectorIndex(queryVector: number[], topK: number): Promise<Array<{
+    id: string;
+    text: string;
+    score: number;
+    metadata?: Record<string, unknown>;
+  }>> {
+    return this.runTrackedRecallOperation<Array<{
+      id: string;
+      text: string;
+      score: number;
+      metadata?: Record<string, unknown>;
+    }>>(
+      'vector.query',
+      this.vectorIndex.search(queryVector, { topK }),
+      this.recallTimeoutMs,
+      'ltm vector query timed out',
+    );
   }
 
   private async runTrackedRecallOperation<T>(
