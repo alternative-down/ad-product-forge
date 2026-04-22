@@ -1,39 +1,24 @@
 import type { LanguageModel } from 'ai';
-import {
-  AiSdkStepModelAdapter,
-  RuntimeRunController,
-  type ConversationStore,
-  type RuntimeActionDefinition,
-  type RuntimeObserver,
-  type RuntimePlugin,
+import type {
+  ConversationStore,
+  RuntimeActionDefinition,
+  RuntimeObserver,
 } from 'agent-runtime-core/integrations';
 
-import {
-  createCheckpointedOmCompatibilityObserver,
-} from './checkpointed-om-compatibility.js';
 import type { CheckpointedOmStateStore } from './checkpointed-om.js';
-import {
-  createForgeAgentRuntime,
-  type CreateForgeAgentRuntimeOptions,
-} from './runtime.js';
-import {
-  createUpdateWorkingMemoryTool,
-  createWorkingMemoryPlugin,
-  type RuntimeWorkingMemoryStore,
-} from './runtime-working-memory.js';
+import type { CreateForgeAgentRuntimeOptions } from './runtime.js';
+import { type RuntimeWorkingMemoryStore } from './runtime-working-memory.js';
 import {
   dispatchRuntimeSessionFeedback,
   dispatchRuntimeSessionMessages,
 } from './runtime-agent-session-messages.js';
-import {
-  createRuntimeSystemInstructionPlugin,
-  dispatchRuntimeSystemInstruction,
-} from './runtime-agent-session-system-plugin.js';
+import { dispatchRuntimeSystemInstruction } from './runtime-agent-session-system-plugin.js';
 import {
   createRuntimeAgentSessionIteration,
   resolveRuntimeAgentSessionContinuation,
 } from './runtime-agent-session-iteration.js';
-import { toolToRuntimeAction, type Tool } from './tools.js';
+import { createRuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
+import { type Tool } from './tools.js';
 
 export type RuntimeAgentSessionGenerateMessage =
   | string
@@ -175,62 +160,7 @@ export type CreateRuntimeAgentSessionOptions = {
 export async function createRuntimeAgentSession(
   input: CreateRuntimeAgentSessionOptions,
 ): Promise<RuntimeAgentSession> {
-  const workingMemoryTool = input.workingMemoryTool ?? createUpdateWorkingMemoryTool({
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-    store: input.workingMemoryStore,
-  });
-  const runtimePlugins: RuntimePlugin[] = [
-    createWorkingMemoryPlugin({
-      threadId: input.threadId,
-      resourceId: input.resourceId,
-      store: input.workingMemoryStore,
-    }),
-    createRuntimeSystemInstructionPlugin(),
-  ];
-  const runtime = await createForgeAgentRuntime({
-    config: {
-      agentId: input.agentId,
-      assistantAuthorId: input.assistantAuthorId,
-      threadId: input.threadId,
-      maxConversationMessages: input.maxConversationMessages ?? 20,
-      consolidateConversationOverflow: input.consolidateConversationOverflow ?? true,
-    },
-    model: new AiSdkStepModelAdapter({
-      model: input.model,
-      system: input.system,
-    }),
-    conversationStore: input.conversationStore,
-    memory: {
-      stateStore: input.checkpointedStateStore,
-    },
-    runtimePlugins,
-    runtimeActions: [
-      toolToRuntimeAction(workingMemoryTool),
-      ...(input.runtimeActions ?? []),
-    ],
-    runtimeObservers: input.runtimeObservers,
-  });
-  const runController = new RuntimeRunController({
-    runtime: runtime.host.runtime,
-  });
-
-  if (input.checkpointedOmStateStore) {
-    runtime.host.runtime.observe(createCheckpointedOmCompatibilityObserver({
-      threadId: input.threadId,
-      resourceId: input.resourceId,
-      conversationStore: input.conversationStore,
-      conversationMemory: runtime.memory,
-      stateStore: input.checkpointedOmStateStore,
-      limits: input.checkpointedOmLimits ?? {
-        totalContextTokens: 50_000,
-        recentRawTokens: 10_000,
-        rawObservationBatchTokens: 5_000,
-        observationReflectionBatchTokens: 5_000,
-      },
-      onCheckpointAdvanced: input.onCheckpointAdvanced,
-    }));
-  }
+  const { runtime, runController } = await createRuntimeAgentSessionRuntime(input);
 
   return {
     async generate(prompt, options = {}) {
