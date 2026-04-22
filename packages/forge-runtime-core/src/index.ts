@@ -83,6 +83,7 @@ export {
 export {
   createOAuthGateway,
   OAUTH_GATEWAY_ID,
+  wrapAnthropicPromptCacheModel,
   type OAuthGateway,
   type OAuthGatewayOptions,
 } from './oauth-gateway.js';

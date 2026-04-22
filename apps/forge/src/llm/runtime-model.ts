@@ -1,5 +1,10 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { createOAuthGateway, OAUTH_GATEWAY_ID, type AgentConfig } from '@forge-runtime/core';
+import {
+  createOAuthGateway,
+  OAUTH_GATEWAY_ID,
+  type AgentConfig,
+  wrapAnthropicPromptCacheModel,
+} from '@forge-runtime/core';
 
 type RuntimeProfile = {
   modelKey: string;
@@ -41,10 +46,12 @@ export async function resolveProfileRuntimeModel(
         ? 'https://api.minimax.io/anthropic/v1'
         : profile.baseUrl || 'https://api.minimax.io/anthropic/v1';
 
-    return createAnthropic({
-      authToken: profile.apiKey,
-      baseURL: baseUrl,
-    })(modelId);
+    return wrapAnthropicPromptCacheModel(
+      createAnthropic({
+        authToken: profile.apiKey,
+        baseURL: baseUrl,
+      })(modelId),
+    );
   }
 
   return {
