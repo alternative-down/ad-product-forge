@@ -20,7 +20,6 @@ import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
 import { forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
-import { AGENT_BASE_TOOL_IDS } from './base-tool-ids';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
@@ -30,7 +29,6 @@ const HIRING_RH_TOOL_IDS = new Set([
   'list_role_capabilities',
   'manage_role_capabilities',
 ] as const);
-const REQUIRED_HIRING_TOOL_IDS = AGENT_BASE_TOOL_IDS;
 const generatedAgentProfileSchema = z.object({
   agentName: z.string().min(1),
   agentDescription: z.string().min(1),
@@ -152,17 +150,6 @@ async function validateHireAgentInput(
     };
   }
 
-  const grantedToolIds = new Set(await capabilities.listRoleToolPermissions(agentRole.roleId));
-  const missingToolIds = REQUIRED_HIRING_TOOL_IDS.filter((toolId) => !grantedToolIds.has(toolId));
-
-  if (missingToolIds.length > 0) {
-    return {
-      valid: false as const,
-      error: `Role "${agentRole.name}" is missing the minimum base tools required for a hired agent.`,
-      hint: `Add these capabilities to the role with manage_role_capabilities: ${missingToolIds.join(', ')}.`,
-    };
-  }
-
   return {
     valid: true as const,
     roleDescription: agentRole.description,
@@ -265,18 +252,11 @@ export async function generateHiredAgentInstructions(
       '',
       '3. **Role Selection**: Reuse an existing role when it matches the hiring request. Create or update a new role only when no existing role fits.',
       '',
-      '4. **Minimum Permissions**: Before finalizing, confirm the chosen role grants these minimum tools:',
-      '   - list_conversations',
-      '   - get_messages',
-      '   - send_message',
-      '   - list_self_crons',
-      '   - manage_self_crons',
-      '',
-      'Use manage_role_capabilities when those requirements are missing.',
+      '4. **Role Creation Rule**: When you create a new role with manage_agent_role, the platform already provisions the minimum base tools automatically.',
       '',
       '5. **Report Progress**: After each major step, call reportHiringState to describe what you found and what you plan to do next.',
       '',
-      '6. **Finalize Hiring**: Call hireAgent only after the role and minimum tool permissions are already valid.',
+      '6. **Finalize Hiring**: Call hireAgent only after the role selection is correct and the generated profile is valid.',
       '',
       '7. **Report Final Result**: Call reportHiringState to confirm the hiring was successful or describe any errors.',
       '',
@@ -312,7 +292,7 @@ export async function generateHiredAgentInstructions(
       '- The name should feel like a proper identity, not a joke, not a mascot label, and not a generic placeholder.',
       '- Everything except the name must stay grounded in the real professional role and real operating context of the work.',
       '- The generated text should read more like a real-world professional role profile than an operational instruction manual.',
-      '- The selected role must already grant the minimum base tools before hireAgent is called.',
+      '- Newly created roles already receive the minimum base tools automatically.',
       '- Generated agent prompts should feel professionally written, not templated.',
       '- Do NOT include tool ids, workflow ids, tool descriptions, environment-control instructions, or platform mechanics in the generated agent text.',
       '- Do NOT name internal functions such as list_conversations, send_message, manage_crons, or any other capability id in the agent text.',

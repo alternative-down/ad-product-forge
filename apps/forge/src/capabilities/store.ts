@@ -9,6 +9,7 @@ import {
   roleWorkflowPermissions,
 } from '../database/schema';
 import { forgeCapabilityIds, normalizeToolPermissionIds } from './catalog';
+import { AGENT_BASE_TOOL_IDS } from '../agents/base-tool-ids';
 
 type CapabilitySet = {
   toolIds: string[];
@@ -94,6 +95,12 @@ export function createCapabilityStore(db: Database) {
     };
 
     await db.insert(agentRoles).values(record);
+    await Promise.all(
+      AGENT_BASE_TOOL_IDS.map((toolId) => addRoleToolPermission({
+        roleId: record.id,
+        toolId,
+      })),
+    );
 
     return {
       roleId: record.id,
