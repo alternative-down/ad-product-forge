@@ -32,6 +32,12 @@ export type CheckpointedOmCompatibilityObserverOptions = {
   conversationStore: ConversationStore;
   conversationMemory: CheckpointedConversationMemory;
   stateStore: CheckpointedOmStateStore;
+  limits: {
+    totalContextTokens: number;
+    recentRawTokens: number;
+    rawObservationBatchTokens: number;
+    observationReflectionBatchTokens: number;
+  };
   onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
 };
 
@@ -47,7 +53,7 @@ export function createCheckpointedOmCompatibilityObserver(
       const messages = await input.conversationStore.listMessages({
         threadId: input.threadId,
       });
-      const compatibleState = buildCompatibleState(state, messages);
+      const compatibleState = buildCompatibleState(state, messages, input.limits);
       const previousCheckpointMessageId = lastCheckpointMessageId;
 
       await input.stateStore.saveState({
@@ -101,6 +107,7 @@ function buildCompatibleState(
     parts: Array<{ type: string; text?: string }>;
     createdAt: string;
   }>,
+  limits: CheckpointedOmCompatibilityObserverOptions['limits'],
 ): CheckpointedOmState {
   const rawMessages = state.recentMessageIds
     .map((messageId) => messages.find((message) => message.id === messageId))
@@ -142,16 +149,22 @@ function buildCompatibleState(
       rawMessageCount: rawMessages.length,
       recentRawMessageCount: rawMessages.length,
       recentRawTokenCount: estimateTokenCount(rawMessageText),
-      recentRawTokenLimit: estimateTokenCount(rawMessageText),
+      recentRawTokenLimit: limits.recentRawTokens,
       overflowMessageCount: state.metrics.overflowMessageCount,
       overflowTokenCount: 0,
-      observationTriggerTokenLimit: 0,
+      observationTriggerTokenLimit: limits.rawObservationBatchTokens,
       activeObservationBlockCount: state.observations.length,
       observationTokenCount: state.observations.reduce((total, observation) => total + observation.units, 0),
-      reflectionTriggerTokenLimit: 0,
+      reflectionTriggerTokenLimit: limits.observationReflectionBatchTokens,
       activeReflectionBlockCount: 0,
       reflectionTokenCount: 0,
-      reflectionBudget: 0,
+      reflectionBudget: Math.max(
+        0,
+        limits.totalContextTokens
+          - limits.recentRawTokens
+          - limits.rawObservationBatchTokens
+          - limits.observationReflectionBatchTokens,
+      ),
       checkpointTokenCount: checkpointSummary?.tokenCount ?? 0,
       checkpointSummaryUpToGeneration: checkpointSummary?.upToGeneration ?? null,
       latestThreadMessageAt: messages[messages.length - 1]?.createdAt ?? null,

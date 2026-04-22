@@ -961,12 +961,10 @@ export function createAdminReadModel(input: {
         rawMessageCount: metricsSnapshot?.rawMessageCount ?? 0,
         recentRawMessageCount: metricsSnapshot?.recentRawMessageCount ?? 0,
         recentRawTokenCount: metricsSnapshot?.recentRawTokenCount ?? 0,
-        recentRawTokenLimit: metricsSnapshot?.recentRawTokenLimit ?? settings.checkpointedOmRecentRawTokens,
+        recentRawTokenLimit: settings.checkpointedOmRecentRawTokens,
         overflowMessageCount: metricsSnapshot?.overflowMessageCount ?? 0,
         overflowTokenCount: metricsSnapshot?.overflowTokenCount ?? 0,
-        observationTriggerTokenLimit:
-          metricsSnapshot?.observationTriggerTokenLimit
-          ?? settings.checkpointedOmRawObservationBatchTokens,
+        observationTriggerTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
         activeObservationBlockCount: metricsSnapshot?.activeObservationBlockCount
           ?? customState?.observationBlocks.filter((block) => block.reflectedGeneration === null).length
           ?? 0,
@@ -974,16 +972,14 @@ export function createAdminReadModel(input: {
           ?? customState?.observationBlocks.filter((block) => block.reflectedGeneration === null)
             .reduce((total, block) => total + block.tokenCount, 0)
           ?? 0,
-        reflectionTriggerTokenLimit:
-          metricsSnapshot?.reflectionTriggerTokenLimit
-          ?? settings.checkpointedOmObservationReflectionBatchTokens,
+        reflectionTriggerTokenLimit: settings.checkpointedOmObservationReflectionBatchTokens,
         activeReflectionBlockCount: metricsSnapshot?.activeReflectionBlockCount
           ?? customState?.activeReflectionBlocks.length
           ?? 0,
         reflectionTokenCount: metricsSnapshot?.reflectionTokenCount
           ?? customState?.activeReflectionBlocks.reduce((total, block) => total + block.tokenCount, 0)
           ?? 0,
-        reflectionBudget: metricsSnapshot?.reflectionBudget ?? Math.max(
+        reflectionBudget: Math.max(
           0,
           settings.checkpointedOmTotalContextTokens
             - settings.checkpointedOmRecentRawTokens
@@ -1436,7 +1432,7 @@ async function listThreadMessages(
           createdAt: new Date(message.createdAt).getTime(),
           threadId: message.threadId,
           resourceId: mastraAgentId,
-          type: message.role,
+          type: null,
           content: {
             parts: message.parts.map((part: RuntimeStoredMessagePart) =>
               part.type === 'text'

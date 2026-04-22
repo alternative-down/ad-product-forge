@@ -135,6 +135,13 @@ export async function createInternalAgentRuntime<
     checkpointedStateStore: platform.conversationStore,
     workingMemoryStore: platform.conversationStore,
     checkpointedOmStateStore,
+    checkpointedOmLimits: {
+      totalContextTokens: config.checkpointedOmTotalContextTokens ?? 50_000,
+      recentRawTokens: config.checkpointedOmRecentRawTokens ?? 10_000,
+      rawObservationBatchTokens: config.checkpointedOmRawObservationBatchTokens ?? 5_000,
+      observationReflectionBatchTokens:
+        config.checkpointedOmObservationReflectionBatchTokens ?? 5_000,
+    },
     onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
     runtimeActions: [
       ...platform.workspaceActions,

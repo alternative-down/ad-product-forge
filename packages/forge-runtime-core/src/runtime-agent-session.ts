@@ -125,6 +125,12 @@ export type CreateRuntimeAgentSessionOptions = {
   checkpointedStateStore: CreateForgeAgentRuntimeOptions['memory']['stateStore'];
   workingMemoryStore: RuntimeWorkingMemoryStore;
   checkpointedOmStateStore?: CheckpointedOmStateStore;
+  checkpointedOmLimits?: {
+    totalContextTokens: number;
+    recentRawTokens: number;
+    rawObservationBatchTokens: number;
+    observationReflectionBatchTokens: number;
+  };
   onCheckpointAdvanced?: (input: {
     threadId: string;
     resourceId: string;
@@ -225,6 +231,12 @@ export async function createRuntimeAgentSession(
       conversationStore: input.conversationStore,
       conversationMemory: runtime.memory,
       stateStore: input.checkpointedOmStateStore,
+      limits: input.checkpointedOmLimits ?? {
+        totalContextTokens: 50_000,
+        recentRawTokens: 10_000,
+        rawObservationBatchTokens: 5_000,
+        observationReflectionBatchTokens: 5_000,
+      },
       onCheckpointAdvanced: input.onCheckpointAdvanced,
     }));
   }

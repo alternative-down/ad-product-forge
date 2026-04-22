@@ -108,6 +108,12 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
       conversationStore: createConversationStore(messages),
       conversationMemory: state,
       stateStore: store.store,
+      limits: {
+        totalContextTokens: 50_000,
+        recentRawTokens: 10_000,
+        rawObservationBatchTokens: 5_000,
+        observationReflectionBatchTokens: 5_000,
+      },
       async onCheckpointAdvanced(input) {
         checkpointPayload = {
           toGeneration: input.toGeneration,
@@ -152,6 +158,10 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
     expect(savedState?.checkpointSummary?.text).toBe('The agent confirmed the deployment issue.');
     expect(savedState?.observationBlocks).toHaveLength(1);
     expect(savedState?.latestMetrics?.rawMessageCount).toBe(2);
+    expect(savedState?.latestMetrics?.recentRawTokenLimit).toBe(10_000);
+    expect(savedState?.latestMetrics?.observationTriggerTokenLimit).toBe(5_000);
+    expect(savedState?.latestMetrics?.reflectionTriggerTokenLimit).toBe(5_000);
+    expect(savedState?.latestMetrics?.reflectionBudget).toBe(30_000);
     expect(checkpointPayload).toEqual({
       toGeneration: 1,
       checkpointSummary: {
