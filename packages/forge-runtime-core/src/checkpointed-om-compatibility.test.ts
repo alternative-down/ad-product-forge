@@ -252,4 +252,111 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
     expect(savedState?.latestMetrics?.overflowMessageCount).toBe(1);
     expect(savedState?.latestMetrics?.overflowTokenCount).toBe(5);
   });
+
+  it('projects older observations into reflections when the active observation budget is exceeded', async () => {
+    const updatedAt = new Date().toISOString();
+    const state = createConversationMemory({
+      threadId: 'thread-1',
+      checkpointMessageId: 'message-2',
+      recentMessageIds: ['message-3'],
+      overflowMessageIds: [],
+      observations: [
+        {
+          id: 'observation-1',
+          text: 'First observation block',
+          sourceMessageIds: ['message-1'],
+          createdAt: updatedAt,
+          units: 6,
+        },
+        {
+          id: 'observation-2',
+          text: 'Second observation block',
+          sourceMessageIds: ['message-2'],
+          createdAt: updatedAt,
+          units: 6,
+        },
+      ],
+      metrics: {
+        recentMessageCount: 1,
+        overflowMessageCount: 0,
+        observationCount: 2,
+        totalActiveMessageCount: 1,
+      },
+      updatedAt,
+    });
+    const store = createStateStore();
+    let checkpointPayload: {
+      reflections: Array<{ recordId: string }>;
+      observations: Array<{ blockId: string }>;
+    } | null = null;
+
+    const observer = createCheckpointedOmCompatibilityObserver({
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      conversationStore: createConversationStore([{
+        id: 'message-3',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'latest' }],
+        createdAt: updatedAt,
+      }]),
+      conversationMemory: state,
+      stateStore: store.store,
+      limits: {
+        totalContextTokens: 22,
+        recentRawTokens: 10,
+        rawObservationBatchTokens: 5,
+        observationReflectionBatchTokens: 6,
+      },
+      async onCheckpointAdvanced(input) {
+        checkpointPayload = {
+          reflections: input.reflections.map((reflection) => ({
+            recordId: reflection.recordId,
+          })),
+          observations: input.observations.map((observation) => ({
+            blockId: observation.blockId,
+          })),
+        };
+      },
+    });
+
+    await observer.onAfterStep?.({
+      runtimeId: 'runtime-1',
+      record: {
+        id: 'step-1',
+        stepNumber: 1,
+        inputs: [],
+        context: [],
+        modelResponse: {
+          segments: [],
+          actionRequests: [],
+          continuation: 'stop',
+        },
+        modelUsage: null,
+        modelMetadata: null,
+        actionResults: [],
+        continuation: 'stop',
+        startedAt: updatedAt,
+        finishedAt: updatedAt,
+      },
+      snapshot: {
+        runtimeId: 'runtime-1',
+        status: 'idle',
+        pendingInputs: [],
+        lastActionResults: [],
+        steps: [],
+      },
+    });
+
+    const savedState = store.getSavedState();
+
+    expect(savedState?.latestMetrics?.activeObservationBlockCount).toBe(1);
+    expect(savedState?.latestMetrics?.activeReflectionBlockCount).toBe(1);
+    expect(savedState?.observationBlocks.filter((block) => block.reflectedGeneration === null)).toHaveLength(1);
+    expect(savedState?.observationBlocks.filter((block) => block.reflectedGeneration !== null)).toHaveLength(1);
+    expect(checkpointPayload).toEqual({
+      reflections: [{ recordId: 'observation-1' }],
+      observations: [{ blockId: 'observation-2' }],
+    });
+  });
 });

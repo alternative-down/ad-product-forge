@@ -131,8 +131,18 @@ export function createCheckpointedOmCompatibilityObserver(
             : compatibleState.checkpointGeneration - 1,
         toGeneration: compatibleState.checkpointGeneration,
         checkpointSummary: compatibleState.checkpointSummary,
-        reflections: [],
-        observations: compatibleState.observationBlocks.map((observationBlock) => ({
+        reflections: compatibleState.observationBlocks
+          .filter((observationBlock) => observationBlock.reflectedGeneration !== null)
+          .map((observationBlock) => ({
+            recordId: observationBlock.id,
+            generationCount: observationBlock.reflectedGeneration ?? compatibleState.checkpointGeneration ?? 0,
+            tokenCount: observationBlock.tokenCount,
+            createdAt: observationBlock.createdAt,
+            text: observationBlock.text,
+          })),
+        observations: compatibleState.observationBlocks
+          .filter((observationBlock) => observationBlock.reflectedGeneration === null)
+          .map((observationBlock) => ({
           blockId: observationBlock.id,
           tokenCount: observationBlock.tokenCount,
           createdAt: observationBlock.createdAt,
@@ -186,18 +196,48 @@ function buildCompatibleState(
     observations: state.observations,
     observationTokenLimit: limits.observationReflectionBatchTokens,
   });
+  const reflectedObservations = state.observations.filter((observation) =>
+    !visibleObservations.some((visibleObservation) => visibleObservation.id === observation.id),
+  );
+  const activeReflections = selectVisibleObservations({
+    observations: reflectedObservations,
+    observationTokenLimit: Math.max(
+      0,
+      limits.totalContextTokens
+        - limits.recentRawTokens
+        - limits.rawObservationBatchTokens
+        - limits.observationReflectionBatchTokens,
+    ),
+  });
+  const checkpointGeneration = state.checkpointMessageId ? state.observations.length : null;
 
   return {
     ...createEmptyCheckpointedOmState(),
-    checkpointGeneration: state.checkpointMessageId ? state.observations.length : null,
+    checkpointGeneration,
     checkpointSummary,
-    observationBlocks: visibleObservations.map((observation) => ({
-      id: observation.id,
+    observationBlocks: [
+      ...activeReflections.map((observation) => ({
+        id: observation.id,
+        tokenCount: observation.units,
+        createdAt: observation.createdAt,
+        lastObservedAt: observation.createdAt,
+        reflectedGeneration: checkpointGeneration,
+        text: observation.text,
+      })),
+      ...visibleObservations.map((observation) => ({
+        id: observation.id,
+        tokenCount: observation.units,
+        createdAt: observation.createdAt,
+        lastObservedAt: observation.createdAt,
+        reflectedGeneration: null,
+        text: observation.text,
+      })),
+    ],
+    activeReflectionBlocks: activeReflections.map((observation) => ({
+      recordId: observation.id,
+      generationCount: checkpointGeneration ?? 0,
       tokenCount: observation.units,
       createdAt: observation.createdAt,
-      lastObservedAt: observation.createdAt,
-      reflectedGeneration: null,
-      text: observation.text,
     })),
     latestMetrics: {
       rawMessageCount: activeMessages.length,
@@ -210,8 +250,8 @@ function buildCompatibleState(
       activeObservationBlockCount: visibleObservations.length,
       observationTokenCount: visibleObservations.reduce((total, observation) => total + observation.units, 0),
       reflectionTriggerTokenLimit: limits.observationReflectionBatchTokens,
-      activeReflectionBlockCount: 0,
-      reflectionTokenCount: 0,
+      activeReflectionBlockCount: activeReflections.length,
+      reflectionTokenCount: activeReflections.reduce((total, observation) => total + observation.units, 0),
       reflectionBudget: Math.max(
         0,
         limits.totalContextTokens
