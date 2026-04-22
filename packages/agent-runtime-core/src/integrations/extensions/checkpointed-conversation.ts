@@ -39,7 +39,7 @@ export function createCheckpointedConversationPlugin(
     },
     async onAfterStep() {
       if (options.consolidateAfterStep) {
-        await options.memory.consolidateOverflow();
+        await options.memory.stabilize();
         return;
       }
 

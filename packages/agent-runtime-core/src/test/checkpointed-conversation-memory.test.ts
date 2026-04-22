@@ -123,15 +123,7 @@ describe('CheckpointedConversationMemory', () => {
     expect(state.recentMessageIds).toEqual(['message-3']);
     expect(state.overflowMessageIds).toEqual(['message-1', 'message-2']);
 
-    await memory.consolidateOverflow();
-    state = await memory.getState();
-
-    expect(state.checkpointMessageId).toBe('message-1');
-    expect(state.recentMessageIds).toEqual(['message-3']);
-    expect(state.overflowMessageIds).toEqual(['message-2']);
-    expect(state.observations).toHaveLength(1);
-
-    await memory.consolidateOverflow();
+    await memory.stabilize();
     state = await memory.getState();
 
     expect(state.checkpointMessageId).toBe('message-2');

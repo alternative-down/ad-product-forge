@@ -112,6 +112,35 @@ export class CheckpointedConversationMemory {
   }
 
   async consolidateOverflow(): Promise<CheckpointedConversationObservation | null> {
+    return this.consolidateOneOverflowBatch();
+  }
+
+  async stabilize(): Promise<CheckpointedConversationState> {
+    let state = await this.sync();
+
+    if (!this.observer) {
+      return state;
+    }
+
+    while (state.overflowMessageIds.length > 0) {
+      const previousCheckpointMessageId = state.checkpointMessageId;
+      const observation = await this.consolidateOneOverflowBatch();
+
+      if (!observation) {
+        break;
+      }
+
+      state = await this.sync();
+
+      if (state.checkpointMessageId === previousCheckpointMessageId) {
+        break;
+      }
+    }
+
+    return state;
+  }
+
+  private async consolidateOneOverflowBatch(): Promise<CheckpointedConversationObservation | null> {
     if (!this.observer) {
       await this.sync();
       return null;
