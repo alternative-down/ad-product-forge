@@ -22,6 +22,7 @@ export function createDefaultContextFormatter(): ContextFormatter {
         kind: 'action-results',
         title: 'Previous action results',
         text: JSON.stringify(actionResults, null, 2),
+        data: actionResults,
       });
     },
   };

@@ -8,11 +8,13 @@ export function createTextStepContextEntry(input: {
   kind: string;
   title: string;
   text: string;
+  data?: unknown;
 }): StepContextEntry {
   return {
     id: input.id,
     kind: input.kind,
     title: input.title,
+    data: input.data,
     content: [{
       type: 'text',
       text: input.text,

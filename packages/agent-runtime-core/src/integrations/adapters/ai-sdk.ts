@@ -270,6 +270,19 @@ function renderContextSection(context: StepContextEntry[]) {
 }
 
 function parseActionResults(entry: StepContextEntry) {
+  if (Array.isArray(entry.data)) {
+    return entry.data
+      .filter((value): value is { name: string; input: Record<string, unknown>; output: unknown } => (
+        typeof value === 'object'
+        && value !== null
+        && 'name' in value
+        && typeof value.name === 'string'
+        && 'input' in value
+        && isRecord(value.input)
+        && 'output' in value
+      ));
+  }
+
   const text = getStepContextText(entry);
 
   if (!text) {

@@ -24,6 +24,7 @@ export type StepContextEntry = {
   title: string;
   content?: StepContextPart[];
   text?: string;
+  data?: unknown;
 };
 
 export type StepContentSegment = {

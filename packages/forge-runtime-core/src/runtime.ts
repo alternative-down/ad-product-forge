@@ -115,6 +115,7 @@ export async function createForgeAgentRuntime(
             kind: 'action-results',
             title: 'Previous action results',
             text: JSON.stringify(actionResults, null, 2),
+            data: actionResults,
           });
         },
       },
