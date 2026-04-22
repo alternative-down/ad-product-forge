@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MockLanguageModelV3 } from 'ai/test';
 
 import { createCheckpointedOmCompatibilityObserver } from './checkpointed-om-compatibility.js';
 import type { CheckpointedOmState, CheckpointedOmStateStore } from './checkpointed-om.js';
@@ -303,11 +304,34 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
       conversationMemory: state,
       stateStore: store.store,
       limits: {
-        totalContextTokens: 22,
+        totalContextTokens: 25,
         recentRawTokens: 10,
         rawObservationBatchTokens: 5,
         observationReflectionBatchTokens: 6,
       },
+      reflectionModel: new MockLanguageModelV3({
+        doGenerate: async () => ({
+          content: [{
+            type: 'text',
+            text: '<reflection>Reflection for the first observation.</reflection>',
+          }],
+          finishReason: { raw: 'stop', unified: 'stop' },
+          usage: {
+            inputTokens: {
+              total: 1,
+              noCache: 1,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: {
+              total: 1,
+              text: 1,
+              reasoning: 0,
+            },
+          },
+          warnings: [],
+        }),
+      }),
       async onCheckpointAdvanced(input) {
         checkpointPayload = {
           reflections: input.reflections.map((reflection) => ({
@@ -349,14 +373,25 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
     });
 
     const savedState = store.getSavedState();
+    const archivedPayload = checkpointPayload as {
+      reflections: Array<{ recordId: string }>;
+      observations: Array<{ blockId: string }>;
+    } | null;
 
-    expect(savedState?.latestMetrics?.activeObservationBlockCount).toBe(1);
-    expect(savedState?.latestMetrics?.activeReflectionBlockCount).toBe(1);
-    expect(savedState?.observationBlocks.filter((block) => block.reflectedGeneration === null)).toHaveLength(1);
-    expect(savedState?.observationBlocks.filter((block) => block.reflectedGeneration !== null)).toHaveLength(1);
-    expect(checkpointPayload).toEqual({
-      reflections: [{ recordId: 'observation-1' }],
-      observations: [{ blockId: 'observation-2' }],
-    });
+    expect(savedState?.latestMetrics?.activeObservationBlockCount).toBe(0);
+    expect(savedState?.latestMetrics?.activeReflectionBlockCount).toBe(0);
+    expect(savedState?.observationBlocks.filter((block) => block.reflectedGeneration === null)).toHaveLength(0);
+    expect(savedState?.observationBlocks.filter((block) => block.reflectedGeneration !== null)).toHaveLength(0);
+
+    if (!archivedPayload) {
+      throw new Error('expected checkpoint payload');
+    }
+
+    expect(archivedPayload.reflections).toHaveLength(2);
+    expect(archivedPayload.observations).toHaveLength(2);
+    expect(archivedPayload.observations.map((observation) => observation.blockId)).toEqual([
+      'observation-1',
+      'observation-2',
+    ]);
   });
 });

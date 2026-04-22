@@ -71,6 +71,7 @@ export type CheckpointedOmState = {
     generationCount: number;
     tokenCount: number;
     createdAt: string;
+    text: string;
   }>;
   latestMetrics: CheckpointedOmMetricsSnapshot | null;
 };

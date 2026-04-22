@@ -870,7 +870,11 @@ export function createAdminReadModel(input: {
       }).readState();
       const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
       const reflection = customState
-        ? customState.observationBlocks
+        ? customState.activeReflectionBlocks
+          .map((block) => typeof block.text === 'string' ? block.text.trim() : '')
+          .filter(Boolean)
+          .join('\n')
+        || customState.observationBlocks
           .filter((block) => block.reflectedGeneration !== null)
           .map((block) => block.text.trim())
           .filter(Boolean)

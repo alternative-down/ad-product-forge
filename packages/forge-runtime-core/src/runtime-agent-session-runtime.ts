@@ -85,6 +85,8 @@ export async function createRuntimeAgentSessionRuntime(
       conversationMemory: runtime.memory,
       stateStore: input.checkpointedOmStateStore,
       limits: input.checkpointedOmLimits ?? DEFAULT_CHECKPOINTED_OM_LIMITS,
+      reflectionModel: input.checkpointedOmModel ?? input.model,
+      agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
       onCheckpointAdvanced: input.onCheckpointAdvanced,
     }));
   }
