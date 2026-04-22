@@ -1,5 +1,12 @@
+import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import { generateText, stepCountIs, tool as createAiSdkTool, type LanguageModel } from 'ai';
+import {
+  generateText,
+  stepCountIs,
+  tool as createAiSdkTool,
+  type LanguageModel,
+  type ModelMessage,
+} from 'ai';
 
 import type { Database } from '../database/index';
 import { llmModelPrices } from '../database/schema';
@@ -92,20 +99,165 @@ function validateGeneratedAgentProfile(profile: z.infer<typeof generatedAgentPro
 
 function toAiSdkTools(tools: Record<string, Tool>) {
   return Object.fromEntries(
-    Object.values(tools).map((tool) => [
-      tool.id,
-      createAiSdkTool({
-        description: tool.description,
-        inputSchema: tool.inputSchema as never,
-        execute: async (toolInput: unknown, options) =>
-          tool.execute(toolInput, {
-            runtimeId: HIRING_RH_AGENT_ID,
-            stepId: options.toolCallId,
-            stepNumber: 0,
-            toolCallId: options.toolCallId,
+    Object.values(tools).map((tool) => {
+      if (tool.id === 'hireAgent') {
+        return [
+          tool.id,
+          createAiSdkTool({
+            description: tool.description,
+            inputSchema: tool.inputSchema as never,
           }),
-      }),
-    ]),
+        ];
+      }
+
+      return [
+        tool.id,
+        createAiSdkTool({
+          description: tool.description,
+          inputSchema: tool.inputSchema as never,
+          execute: async (toolInput: unknown, options: { toolCallId: string }) =>
+            tool.execute(toolInput, {
+              runtimeId: HIRING_RH_AGENT_ID,
+              stepId: options.toolCallId,
+              stepNumber: 0,
+              toolCallId: options.toolCallId,
+            }),
+        }),
+      ];
+    }),
+  );
+}
+
+async function executeHireAgentTool(input: {
+  tool: Tool;
+  toolInput: unknown;
+}) {
+  return input.tool.execute(input.toolInput, {
+    runtimeId: HIRING_RH_AGENT_ID,
+    stepId: randomUUID(),
+    stepNumber: 0,
+    toolCallId: randomUUID(),
+  });
+}
+
+function findHireAgentToolCall(messages: ModelMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+
+    if (!message || message.role !== 'assistant' || !Array.isArray(message.content)) {
+      continue;
+    }
+
+    const toolCall = message.content.find((part) => part.type === 'tool-call' && part.toolName === 'hireAgent');
+
+    if (!toolCall) {
+      continue;
+    }
+
+    return toolCall;
+  }
+
+  return null;
+}
+
+function getLastAssistantText(messages: ModelMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+
+    if (!message || message.role !== 'assistant') {
+      continue;
+    }
+
+    if (typeof message.content === 'string') {
+      return message.content;
+    }
+
+    if (!Array.isArray(message.content)) {
+      continue;
+    }
+
+    return message.content
+      .filter((part) => part.type === 'text')
+      .map((part) => part.text)
+      .join('');
+  }
+
+  return '';
+}
+
+function appendResponseMessages(
+  messages: ModelMessage[],
+  responseMessages: Array<ModelMessage>,
+) {
+  messages.push(...responseMessages);
+}
+
+function buildStepDiagnostics(messages: ModelMessage[]) {
+  return messages
+    .map((message) => {
+      if (message.role === 'assistant' && Array.isArray(message.content)) {
+        return {
+          role: message.role,
+          content: message.content.map((part) => {
+            if (part.type === 'tool-call') {
+              return {
+                type: part.type,
+                toolName: part.toolName,
+                input: part.input,
+              };
+            }
+
+            if (part.type === 'text') {
+              return {
+                type: part.type,
+                text: part.text,
+              };
+            }
+
+            return {
+              type: part.type,
+            };
+          }),
+        };
+      }
+
+      if (message.role === 'tool' && Array.isArray(message.content)) {
+        return {
+          role: message.role,
+          content: message.content.map((part) => ({
+            type: part.type,
+            toolName: 'toolName' in part ? part.toolName : undefined,
+            output: 'output' in part ? part.output : undefined,
+          })),
+        };
+      }
+
+      return {
+        role: message.role,
+      };
+    });
+}
+
+function isHireAgentToolCall(value: unknown): value is {
+  toolName: 'hireAgent';
+  input: unknown;
+} {
+  return (
+    typeof value === 'object'
+    && value !== null
+    && 'toolName' in value
+    && value.toolName === 'hireAgent'
+    && 'input' in value
+  );
+}
+
+function isToolResultWithOutput(value: unknown): value is {
+  output: unknown;
+} {
+  return (
+    typeof value === 'object'
+    && value !== null
+    && 'output' in value
   );
 }
 
@@ -382,41 +534,71 @@ export async function generateHiredAgentInstructions(
     }),
     ...tools,
   };
-  const runResult = await generateText({
-    model: hiringRhRuntimeModel as LanguageModel,
-    system: systemPrompt,
-    prompt: hiringPrompt,
-    tools: toAiSdkTools(hiringTools),
-    stopWhen: stepCountIs(100),
-  });
-  const inputTokens = runResult.totalUsage.inputTokens ?? 0;
-  const outputTokens = runResult.totalUsage.outputTokens ?? 0;
+  const aiSdkTools = toAiSdkTools(hiringTools);
+  const messages: ModelMessage[] = [{
+    role: 'user',
+    content: hiringPrompt,
+  }];
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let hireAgentActionResult: unknown = null;
+  let lastRunText = '';
+  let lastRunFinishReason: string | undefined;
+
+  for (let loop = 0; loop < 100; loop += 1) {
+    const runResult = await generateText({
+      model: hiringRhRuntimeModel as LanguageModel,
+      system: systemPrompt,
+      messages,
+      tools: aiSdkTools,
+      stopWhen: stepCountIs(20),
+    });
+    lastRunText = runResult.text;
+    lastRunFinishReason = runResult.finishReason;
+    inputTokens += runResult.totalUsage.inputTokens ?? 0;
+    outputTokens += runResult.totalUsage.outputTokens ?? 0;
+    appendResponseMessages(messages, runResult.response.messages as ModelMessage[]);
+
+    const hireAgentToolCall = findHireAgentToolCall(runResult.response.messages as ModelMessage[]);
+
+    if (hireAgentToolCall && isHireAgentToolCall(hireAgentToolCall)) {
+      hireAgentActionResult = await executeHireAgentTool({
+        tool: hiringTools.hireAgent,
+        toolInput: hireAgentToolCall.input,
+      });
+      break;
+    }
+
+    const hasAnyToolCall = runResult.toolCalls.length > 0;
+
+    if (hasAnyToolCall) {
+      continue;
+    }
+  }
+
   const costUsd =
     (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
   console.log(`[HiringRH] generateText completed`);
   console.log(
-    `[HiringRH] action results:`,
+    `[HiringRH] response messages:`,
     JSON.stringify(
-      runResult.steps.flatMap((step) => step.toolResults.map((toolResult) => ({
-        actionName: toolResult.toolName,
-        output: toolResult.output,
-      }))),
+      buildStepDiagnostics(messages),
       null,
       2,
     ),
   );
-  const hireAgentActionResult = runResult.steps
-    .flatMap((step) => step.toolResults)
-    .find((toolResult) => toolResult.toolName === 'hireAgent');
 
   if (hireAgentActionResult) {
+    const toolOutput = isToolResultWithOutput(hireAgentActionResult)
+      ? hireAgentActionResult.output
+      : hireAgentActionResult;
     console.log(
       `[HiringRH] hireAgent action result:`,
-      JSON.stringify(hireAgentActionResult.output, null, 2),
+      JSON.stringify(toolOutput, null, 2),
     );
-    const parsedToolResult = hireAgentToolResultSchema.safeParse(hireAgentActionResult.output);
+    const parsedToolResult = hireAgentToolResultSchema.safeParse(toolOutput);
 
     if (!parsedToolResult.success) {
       console.log(
@@ -457,21 +639,9 @@ export async function generateHiredAgentInstructions(
     '[HiringRH] ERROR DETAILS:',
     JSON.stringify(
       {
-        text: runResult.text,
-        finishReason: runResult.finishReason,
-        steps: runResult.steps.map((step) => ({
-          stepNumber: step.stepNumber,
-          text: step.text,
-          finishReason: step.finishReason,
-          toolCalls: step.toolCalls.map((toolCall) => ({
-            toolName: toolCall.toolName,
-            input: toolCall.input,
-          })),
-          toolResults: step.toolResults.map((toolResult) => ({
-            toolName: toolResult.toolName,
-            output: toolResult.output,
-          })),
-        })),
+        text: lastRunText || getLastAssistantText(messages),
+        finishReason: lastRunFinishReason,
+        messages: buildStepDiagnostics(messages),
       },
       null,
       2,
