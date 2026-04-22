@@ -169,4 +169,87 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
       },
     });
   });
+
+  it('moves excess raw tokens into overflow metrics when the raw budget is exceeded', async () => {
+    const updatedAt = new Date().toISOString();
+    const state = createConversationMemory({
+      threadId: 'thread-1',
+      checkpointMessageId: null,
+      recentMessageIds: ['message-1', 'message-2'],
+      overflowMessageIds: [],
+      observations: [],
+      metrics: {
+        recentMessageCount: 2,
+        overflowMessageCount: 0,
+        observationCount: 0,
+        totalActiveMessageCount: 2,
+      },
+      updatedAt,
+    });
+    const messages: ConversationMessage[] = [
+      {
+        id: 'message-1',
+        threadId: 'thread-1',
+        role: 'user',
+        parts: [{ type: 'text', text: '12345678901234567890' }],
+        createdAt: updatedAt,
+      },
+      {
+        id: 'message-2',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'abcdefghijabcdefghij' }],
+        createdAt: updatedAt,
+      },
+    ];
+    const store = createStateStore();
+    const observer = createCheckpointedOmCompatibilityObserver({
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      conversationStore: createConversationStore(messages),
+      conversationMemory: state,
+      stateStore: store.store,
+      limits: {
+        totalContextTokens: 50_000,
+        recentRawTokens: 5,
+        rawObservationBatchTokens: 5_000,
+        observationReflectionBatchTokens: 5_000,
+      },
+    });
+
+    await observer.onAfterStep?.({
+      runtimeId: 'runtime-1',
+      record: {
+        id: 'step-1',
+        stepNumber: 1,
+        inputs: [],
+        context: [],
+        modelResponse: {
+          segments: [],
+          actionRequests: [],
+          continuation: 'stop',
+        },
+        modelUsage: null,
+        modelMetadata: null,
+        actionResults: [],
+        continuation: 'stop',
+        startedAt: updatedAt,
+        finishedAt: updatedAt,
+      },
+      snapshot: {
+        runtimeId: 'runtime-1',
+        status: 'idle',
+        pendingInputs: [],
+        lastActionResults: [],
+        steps: [],
+      },
+    });
+
+    const savedState = store.getSavedState();
+
+    expect(savedState?.latestMetrics?.recentRawMessageCount).toBe(1);
+    expect(savedState?.latestMetrics?.recentRawTokenCount).toBe(5);
+    expect(savedState?.latestMetrics?.overflowMessageCount).toBe(1);
+    expect(savedState?.latestMetrics?.overflowTokenCount).toBe(5);
+  });
 });

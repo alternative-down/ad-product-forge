@@ -15,6 +15,54 @@ function estimateTokenCount(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
+function extractMessageText(message: {
+  parts: Array<{ type: string; text?: string }>;
+}) {
+  return message.parts
+    .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
+    .map((part) => part.text.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+function partitionActiveMessages(input: {
+  messages: Array<{
+    id: string;
+    parts: Array<{ type: string; text?: string }>;
+  }>;
+  recentRawTokenLimit: number;
+}) {
+  const recentRawMessages: typeof input.messages = [];
+  const overflowMessages: typeof input.messages = [];
+  let recentRawTokenCount = 0;
+
+  for (const message of [...input.messages].reverse()) {
+    const messageText = extractMessageText(message);
+    const messageTokenCount = estimateTokenCount(messageText);
+
+    if (
+      recentRawMessages.length === 0
+      || recentRawTokenCount + messageTokenCount <= input.recentRawTokenLimit
+    ) {
+      recentRawMessages.unshift(message);
+      recentRawTokenCount += messageTokenCount;
+      continue;
+    }
+
+    overflowMessages.unshift(message);
+  }
+
+  return {
+    recentRawMessages,
+    overflowMessages,
+    recentRawTokenCount,
+    overflowTokenCount: overflowMessages.reduce(
+      (total, message) => total + estimateTokenCount(extractMessageText(message)),
+      0,
+    ),
+  };
+}
+
 function createEmptyCheckpointedOmState(): CheckpointedOmState {
   return {
     version: 1,
@@ -109,13 +157,15 @@ function buildCompatibleState(
   }>,
   limits: CheckpointedOmCompatibilityObserverOptions['limits'],
 ): CheckpointedOmState {
-  const rawMessages = state.recentMessageIds
+  const activeMessages = [...state.overflowMessageIds, ...state.recentMessageIds]
     .map((messageId) => messages.find((message) => message.id === messageId))
     .filter((message): message is NonNullable<typeof message> => Boolean(message));
-  const rawMessageText = rawMessages
-    .flatMap((message) => message.parts)
-    .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
-    .map((part) => part.text.trim())
+  const activeMessageBands = partitionActiveMessages({
+    messages: activeMessages,
+    recentRawTokenLimit: limits.recentRawTokens,
+  });
+  const rawMessageText = activeMessageBands.recentRawMessages
+    .map((message) => extractMessageText(message))
     .filter(Boolean)
     .join('\n');
   const checkpointSummary = state.checkpointMessageId
@@ -137,21 +187,21 @@ function buildCompatibleState(
     ...createEmptyCheckpointedOmState(),
     checkpointGeneration: state.checkpointMessageId ? state.observations.length : null,
     checkpointSummary,
-    observationBlocks: state.observations.map((observation, index) => ({
+    observationBlocks: state.observations.map((observation) => ({
       id: observation.id,
       tokenCount: observation.units,
       createdAt: observation.createdAt,
       lastObservedAt: observation.createdAt,
-      reflectedGeneration: index + 1 <= state.observations.length ? index + 1 : null,
+      reflectedGeneration: null,
       text: observation.text,
     })),
     latestMetrics: {
-      rawMessageCount: rawMessages.length,
-      recentRawMessageCount: rawMessages.length,
-      recentRawTokenCount: estimateTokenCount(rawMessageText),
+      rawMessageCount: activeMessages.length,
+      recentRawMessageCount: activeMessageBands.recentRawMessages.length,
+      recentRawTokenCount: activeMessageBands.recentRawTokenCount,
       recentRawTokenLimit: limits.recentRawTokens,
-      overflowMessageCount: state.metrics.overflowMessageCount,
-      overflowTokenCount: 0,
+      overflowMessageCount: activeMessageBands.overflowMessages.length,
+      overflowTokenCount: activeMessageBands.overflowTokenCount,
       observationTriggerTokenLimit: limits.rawObservationBatchTokens,
       activeObservationBlockCount: state.observations.length,
       observationTokenCount: state.observations.reduce((total, observation) => total + observation.units, 0),
