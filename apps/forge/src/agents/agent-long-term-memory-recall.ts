@@ -83,12 +83,17 @@ const RECALL_SEARCH_MODE = 'hybrid' as const;
 const RECALL_WORKSPACE_SEARCH_TOP_K = 10;
 const RECALL_DOCUMENT_COUNT = 3;
 const RECALL_SCORE_THRESHOLD = 0.7;
+const RECALL_GRAPH_TOP_K = 3;
 const RECALL_GRAPH_RANDOM_WALK_STEPS = 100;
 const RECALL_GRAPH_INCLUDE_SOURCES = false;
 
 type RecallConfig = {
   scoreThreshold: number;
   documentCount: number;
+  graphTopK: number;
+  graphThreshold: number;
+  graphRandomWalkSteps: number;
+  graphIncludeSources: boolean;
 };
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
@@ -153,6 +158,10 @@ export class AgentLongTermMemoryRecall {
   private readonly workspaceEmbedder: WorkspaceEmbedderId;
   private readonly recallConfig: RecallConfig;
   private readonly readRuntimeMemorySettings?: () => Promise<{
+    ltmRecallGraphTopK: number;
+    ltmRecallGraphThreshold: number;
+    ltmRecallGraphRandomWalkSteps: number;
+    ltmRecallGraphIncludeSources: boolean;
     ltmRecallScoreThreshold: number;
     ltmRecallDocumentCount: number;
   }>;
@@ -179,6 +188,10 @@ export class AgentLongTermMemoryRecall {
     scoreThreshold?: number;
     documentCount?: number;
     readRuntimeMemorySettings?: () => Promise<{
+      ltmRecallGraphTopK: number;
+      ltmRecallGraphThreshold: number;
+      ltmRecallGraphRandomWalkSteps: number;
+      ltmRecallGraphIncludeSources: boolean;
       ltmRecallScoreThreshold: number;
       ltmRecallDocumentCount: number;
     }>;
@@ -199,6 +212,10 @@ export class AgentLongTermMemoryRecall {
     this.recallConfig = {
       scoreThreshold: input.scoreThreshold ?? RECALL_SCORE_THRESHOLD,
       documentCount: input.documentCount ?? RECALL_DOCUMENT_COUNT,
+      graphTopK: RECALL_GRAPH_TOP_K,
+      graphThreshold: input.scoreThreshold ?? RECALL_SCORE_THRESHOLD,
+      graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+      graphIncludeSources: RECALL_GRAPH_INCLUDE_SOURCES,
     };
     this.readRuntimeMemorySettings = input.readRuntimeMemorySettings;
     this.checkpointedOmStateStore = input.checkpointedOmStateStore;
@@ -291,9 +308,9 @@ export class AgentLongTermMemoryRecall {
         lastInitAt: this.lastInitAt,
         searchMode: RECALL_SEARCH_MODE,
         topK: recallConfig.documentCount,
-        graphTopK: recallConfig.documentCount,
-        graphThreshold: recallConfig.scoreThreshold,
-        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+        graphTopK: recallConfig.graphTopK,
+        graphThreshold: recallConfig.graphThreshold,
+        graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
         indexPaths: [...RECALL_AUTO_INDEX_PATHS],
         workspaceFileCount: indexStats.workspaceFileCount,
         memoryFileCount: indexStats.memoryFileCount,
@@ -403,9 +420,9 @@ export class AgentLongTermMemoryRecall {
         query: '',
         topK: recallConfig.documentCount,
         searchMode: RECALL_SEARCH_MODE,
-        graphTopK: recallConfig.documentCount,
-        graphThreshold: recallConfig.scoreThreshold,
-        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+        graphTopK: recallConfig.graphTopK,
+        graphThreshold: recallConfig.graphThreshold,
+        graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
         lastInitAt: this.lastInitAt,
         workspaceCanBm25: true,
         workspaceCanVector: true,
@@ -421,7 +438,7 @@ export class AgentLongTermMemoryRecall {
         graphHit: false,
         graphQuery: '',
         graphDimension: 0,
-        graphIncludeSources: true,
+        graphIncludeSources: recallConfig.graphIncludeSources,
         graphContext: '',
         graphRelevantContextRaw: null,
         graphSourcesCount: 0,
@@ -450,9 +467,9 @@ export class AgentLongTermMemoryRecall {
       query,
       topK: recallConfig.documentCount,
       searchMode: RECALL_SEARCH_MODE,
-      graphTopK: recallConfig.documentCount,
-      graphThreshold: recallConfig.scoreThreshold,
-      graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+      graphTopK: recallConfig.graphTopK,
+      graphThreshold: recallConfig.graphThreshold,
+      graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
       lastInitAt: this.lastInitAt,
       workspaceCanBm25: true,
       workspaceCanVector: true,
@@ -505,17 +522,20 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async runRecallSearch(queryText: string, config: RecallConfig) {
-    const workspaceSearch = await this.searchWorkspace(queryText);
+    const workspaceSearch = await this.searchWorkspace(queryText, {
+      topK: Math.max(RECALL_WORKSPACE_SEARCH_TOP_K, config.documentCount, config.graphTopK),
+      mode: RECALL_SEARCH_MODE,
+    });
     const filteredWorkspaceResults = this.filterWorkspaceFallbackResults(
       workspaceSearch.results,
       config.scoreThreshold,
       config.documentCount,
     );
     const graphSearch = await this.searchGraph(queryText, workspaceSearch.results, {
-      topK: config.documentCount,
-      threshold: config.scoreThreshold,
-      randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
-      includeSources: RECALL_GRAPH_INCLUDE_SOURCES,
+      topK: config.graphTopK,
+      threshold: config.graphThreshold,
+      randomWalkSteps: config.graphRandomWalkSteps,
+      includeSources: config.graphIncludeSources,
       contextResults: filteredWorkspaceResults,
     });
     const workspaceFormattedContext = filteredWorkspaceResults
@@ -540,6 +560,10 @@ export class AgentLongTermMemoryRecall {
     return {
       scoreThreshold: runtimeSettings.ltmRecallScoreThreshold,
       documentCount: runtimeSettings.ltmRecallDocumentCount,
+      graphTopK: runtimeSettings.ltmRecallGraphTopK,
+      graphThreshold: runtimeSettings.ltmRecallGraphThreshold,
+      graphRandomWalkSteps: runtimeSettings.ltmRecallGraphRandomWalkSteps,
+      graphIncludeSources: runtimeSettings.ltmRecallGraphIncludeSources,
     } satisfies RecallConfig;
   }
 
@@ -621,7 +645,7 @@ export class AgentLongTermMemoryRecall {
       includeSources: boolean;
       contextResults: SearchResult[];
     } = {
-      topK: RECALL_DOCUMENT_COUNT,
+      topK: RECALL_GRAPH_TOP_K,
       threshold: RECALL_SCORE_THRESHOLD,
       randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
       includeSources: RECALL_GRAPH_INCLUDE_SOURCES,
@@ -655,7 +679,7 @@ export class AgentLongTermMemoryRecall {
     return {
       queryText: graphQueryText,
       dimension: graphDimension,
-      includeSources: false,
+      includeSources: options.includeSources,
       hit: false,
       context: '',
       relevantContextRaw: null,
@@ -1081,6 +1105,10 @@ export function createAgentLongTermMemoryRecall(input: {
   scoreThreshold?: number;
   documentCount?: number;
   readRuntimeMemorySettings?: () => Promise<{
+    ltmRecallGraphTopK: number;
+    ltmRecallGraphThreshold: number;
+    ltmRecallGraphRandomWalkSteps: number;
+    ltmRecallGraphIncludeSources: boolean;
     ltmRecallScoreThreshold: number;
     ltmRecallDocumentCount: number;
   }>;

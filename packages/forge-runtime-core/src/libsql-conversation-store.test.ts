@@ -164,4 +164,67 @@ describe('LibsqlConversationStore', () => {
       await client.close();
     }
   });
+
+  it('keeps message ordering stable when multiple messages share the same timestamp', async () => {
+    const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
+    const databasePath = path.join(directoryPath, 'conversation.db');
+    tempDirectories.push(directoryPath);
+    const client = createClient({
+      url: `file:${databasePath}`,
+    });
+    const store = new LibsqlConversationStore({
+      client,
+      tablePrefix: 'test_runtime_same_timestamp',
+    });
+
+    try {
+      const createdAt = '2026-04-21T00:00:01.000Z';
+
+      await store.appendMessage({
+        id: 'message-1',
+        threadId: 'thread-1',
+        role: 'user',
+        parts: [{ type: 'text', text: 'first' }],
+        createdAt,
+      });
+      await store.appendMessage({
+        id: 'message-2',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'second' }],
+        createdAt,
+      });
+      await store.appendMessage({
+        id: 'message-3',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'third' }],
+        createdAt,
+      });
+
+      await expect(store.listMessages({
+        threadId: 'thread-1',
+      })).resolves.toMatchObject([
+        { id: 'message-1' },
+        { id: 'message-2' },
+        { id: 'message-3' },
+      ]);
+      await expect(store.listMessages({
+        threadId: 'thread-1',
+        afterMessageId: 'message-1',
+      })).resolves.toMatchObject([
+        { id: 'message-2' },
+        { id: 'message-3' },
+      ]);
+      await expect(store.listMessages({
+        threadId: 'thread-1',
+        beforeMessageId: 'message-3',
+      })).resolves.toMatchObject([
+        { id: 'message-1' },
+        { id: 'message-2' },
+      ]);
+    } finally {
+      await client.close();
+    }
+  });
 });

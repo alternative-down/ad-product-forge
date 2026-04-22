@@ -22,6 +22,10 @@ const DEFAULT_SYSTEM_SETTINGS = {
   checkpointedOmObservationReflectionBatchTokens: 5000,
   checkpointedOmObservationSupportTokens: 2000,
   checkpointedOmReflectionSupportTokens: 2000,
+  ltmRecallGraphTopK: 3,
+  ltmRecallGraphThreshold: 0.7,
+  ltmRecallGraphRandomWalkSteps: 50,
+  ltmRecallGraphIncludeSources: true,
   ltmRecallScoreThreshold: 0.7,
   ltmRecallDocumentCount: 3,
 } as const;
@@ -43,6 +47,10 @@ type SystemSettingsInput = {
   checkpointedOmObservationReflectionBatchTokens: number;
   checkpointedOmObservationSupportTokens: number;
   checkpointedOmReflectionSupportTokens: number;
+  ltmRecallGraphTopK: number;
+  ltmRecallGraphThreshold: number;
+  ltmRecallGraphRandomWalkSteps: number;
+  ltmRecallGraphIncludeSources: boolean;
   ltmRecallScoreThreshold: number;
   ltmRecallDocumentCount: number;
 };
@@ -90,6 +98,15 @@ export function createSystemSettingsStore(db: Database) {
       checkpointedOmReflectionSupportTokens:
         row?.checkpointedOmReflectionSupportTokens
         ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmReflectionSupportTokens,
+      ltmRecallGraphTopK:
+        row?.ltmRecallGraphTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphTopK,
+      ltmRecallGraphThreshold:
+        row?.ltmRecallGraphThreshold ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphThreshold,
+      ltmRecallGraphRandomWalkSteps:
+        row?.ltmRecallGraphRandomWalkSteps ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphRandomWalkSteps,
+      ltmRecallGraphIncludeSources: row
+        ? row.ltmRecallGraphIncludeSources === 1
+        : DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphIncludeSources,
       ltmRecallScoreThreshold:
         row?.ltmRecallScoreThreshold ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallScoreThreshold,
       ltmRecallDocumentCount:
@@ -122,6 +139,10 @@ export function createSystemSettingsStore(db: Database) {
           input.checkpointedOmObservationReflectionBatchTokens,
         checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
         checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+        ltmRecallGraphTopK: input.ltmRecallGraphTopK,
+        ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
+        ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+        ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources ? 1 : 0,
         ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
         ltmRecallDocumentCount: input.ltmRecallDocumentCount,
         updatedAt: now,
@@ -146,6 +167,10 @@ export function createSystemSettingsStore(db: Database) {
             input.checkpointedOmObservationReflectionBatchTokens,
           checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
           checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+          ltmRecallGraphTopK: input.ltmRecallGraphTopK,
+          ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
+          ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+          ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources ? 1 : 0,
           ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
           ltmRecallDocumentCount: input.ltmRecallDocumentCount,
           updatedAt: now,
@@ -170,6 +195,10 @@ export function createSystemSettingsStore(db: Database) {
         input.checkpointedOmObservationReflectionBatchTokens,
       checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
       checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+      ltmRecallGraphTopK: input.ltmRecallGraphTopK,
+      ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
+      ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+      ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources,
       ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
       ltmRecallDocumentCount: input.ltmRecallDocumentCount,
       updatedAt: now,

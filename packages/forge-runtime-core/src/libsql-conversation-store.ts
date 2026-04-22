@@ -202,16 +202,28 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
 
     if (query.beforeMessageId) {
       conditions.push(
-        `created_at < (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)`,
+        `(
+          created_at < (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)
+          or (
+            created_at = (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)
+            and rowid < (select rowid from ${escapeIdentifier(this.messageTableName)} where id = ?)
+          )
+        )`,
       );
-      args.push(query.beforeMessageId);
+      args.push(query.beforeMessageId, query.beforeMessageId, query.beforeMessageId);
     }
 
     if (query.afterMessageId) {
       conditions.push(
-        `created_at > (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)`,
+        `(
+          created_at > (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)
+          or (
+            created_at = (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)
+            and rowid > (select rowid from ${escapeIdentifier(this.messageTableName)} where id = ?)
+          )
+        )`,
       );
-      args.push(query.afterMessageId);
+      args.push(query.afterMessageId, query.afterMessageId, query.afterMessageId);
     }
 
     if (query.limit) {
@@ -230,7 +242,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
           created_at
         from ${escapeIdentifier(this.messageTableName)}
         where ${conditions.join(' and ')}
-        order by created_at asc
+        order by created_at asc, rowid asc
         ${query.limit ? 'limit ?' : ''}
       `,
       args,
