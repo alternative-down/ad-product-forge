@@ -91,7 +91,11 @@ export class FilesystemConversationStore implements ConversationStore {
     const selectedMessages = threadMessages.slice(Math.max(0, startIndex), endIndex);
 
     if (!query.limit || query.limit <= 0) {
-      return selectedMessages;
+      return query.order === 'desc' ? [...selectedMessages].reverse() : selectedMessages;
+    }
+
+    if (query.order === 'desc') {
+      return [...selectedMessages].reverse().slice(0, query.limit);
     }
 
     return selectedMessages.slice(-query.limit);
@@ -103,9 +107,9 @@ export class FilesystemConversationStore implements ConversationStore {
     if (!rawContent) {
       return {
         threads: [],
-      messages: [],
-    };
-  }
+        messages: [],
+      };
+    }
 
     return JSON.parse(rawContent) as ConversationStoreFile;
   }

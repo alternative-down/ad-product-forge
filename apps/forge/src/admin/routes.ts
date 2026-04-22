@@ -2,14 +2,18 @@ import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
+import path from 'node:path';
 import v8 from 'node:v8';
+import { createClient } from '@libsql/client';
 import {
   getAnthropicCliAuthFilePath,
   getAnthropicSetupTokenFilePath,
   getOpenAICodexCliAuthFilePath,
+  LibsqlConversationStore,
   oauthStore,
   syncAnthropicCredential,
   syncOpenAICodexCredential,
+  toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
@@ -31,6 +35,8 @@ import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { GitHubAppManager } from '../github/manager';
 import {
+  agentCheckpointedOmStates,
+  agentLongTermMemoryRecallStates,
   agentMcpConfigs,
   agents,
   agentProviders,
@@ -178,6 +184,11 @@ const deleteScheduleSchema = z.object({
 
 const agentActionSchema = z.object({
   agentId: z.string().min(1),
+});
+
+const clearAgentHistorySchema = z.object({
+  agentId: z.string().min(1),
+  includeLongTermMemoryThread: z.boolean().default(true),
 });
 
 const agentLongTermMemoryRecallSearchSchema = z.object({
@@ -703,6 +714,28 @@ export function registerAdminRoutes(input: {
           perPage: query.perPage,
         }),
       );
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/clear-history',
+    handler: async (request) => {
+      const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
+
+      await clearAgentHistory({
+        db: input.db,
+        workspaceBasePath: input.workspaceBasePath,
+        agentId: body.agentId,
+        includeLongTermMemoryThread: body.includeLongTermMemoryThread,
+      });
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        includeLongTermMemoryThread: body.includeLongTermMemoryThread,
+      });
     },
   });
 
@@ -2398,6 +2431,42 @@ function normalizeJsonText(
   }
 
   return JSON.stringify(parsed);
+}
+
+async function clearAgentHistory(input: {
+  db: Database;
+  workspaceBasePath: string;
+  agentId: string;
+  includeLongTermMemoryThread: boolean;
+}) {
+  const agentDatabasePath = path.resolve(input.workspaceBasePath, input.agentId, 'database.db');
+  const threadIds = [
+    toMastraSafeIdentifier(input.agentId),
+    ...(input.includeLongTermMemoryThread
+      ? [toMastraSafeIdentifier(`${input.agentId}_long_term_memory`)]
+      : []),
+  ];
+
+  for (const threadId of threadIds) {
+    const client = createClient({
+      url: `file:${agentDatabasePath}`,
+    });
+    const conversationStore = new LibsqlConversationStore({
+      client,
+      tablePrefix: threadId,
+    });
+
+    try {
+      await conversationStore.clearThread(threadId);
+    } finally {
+      client.close();
+    }
+  }
+
+  await input.db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, input.agentId));
+  await input.db
+    .delete(agentLongTermMemoryRecallStates)
+    .where(eq(agentLongTermMemoryRecallStates.agentId, input.agentId));
 }
 
 function parseJsonBody<TSchema extends z.ZodTypeAny>(

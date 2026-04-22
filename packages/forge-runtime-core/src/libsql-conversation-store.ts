@@ -195,6 +195,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     limit?: number;
     beforeMessageId?: string;
     afterMessageId?: string;
+    order?: 'asc' | 'desc';
   }): Promise<ConversationMessage[]> {
     await this.ensureSchema();
     const conditions = ['thread_id = ?'];
@@ -242,7 +243,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
           created_at
         from ${escapeIdentifier(this.messageTableName)}
         where ${conditions.join(' and ')}
-        order by created_at asc, rowid asc
+        order by created_at ${query.order === 'desc' ? 'desc' : 'asc'}, rowid ${query.order === 'desc' ? 'desc' : 'asc'}
         ${query.limit ? 'limit ?' : ''}
       `,
       args,
@@ -257,6 +258,40 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
       createdAt: String(row.created_at),
     }));
+  }
+
+  async clearThread(threadId: string): Promise<void> {
+    await this.ensureSchema();
+    await this.client.batch([
+      {
+        sql: `
+          delete from ${escapeIdentifier(this.messageTableName)}
+          where thread_id = ?
+        `,
+        args: [threadId],
+      },
+      {
+        sql: `
+          delete from ${escapeIdentifier(this.stateTableName)}
+          where thread_id = ?
+        `,
+        args: [threadId],
+      },
+      {
+        sql: `
+          delete from ${escapeIdentifier(this.workingMemoryTableName)}
+          where thread_id = ?
+        `,
+        args: [threadId],
+      },
+      {
+        sql: `
+          delete from ${escapeIdentifier(this.threadTableName)}
+          where id = ?
+        `,
+        args: [threadId],
+      },
+    ], 'write');
   }
 
   async load(threadId: string): Promise<CheckpointedConversationState | null> {

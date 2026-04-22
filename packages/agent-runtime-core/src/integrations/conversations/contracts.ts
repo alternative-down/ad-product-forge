@@ -39,6 +39,7 @@ export type ConversationMessageListQuery = {
   limit?: number;
   beforeMessageId?: string;
   afterMessageId?: string;
+  order?: 'asc' | 'desc';
 };
 
 export interface ConversationStore {

@@ -227,4 +227,77 @@ describe('LibsqlConversationStore', () => {
       await client.close();
     }
   });
+
+  it('supports descending reads and clearing a thread with its persisted state', async () => {
+    const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
+    const databasePath = path.join(directoryPath, 'conversation.db');
+    tempDirectories.push(directoryPath);
+    const client = createClient({
+      url: `file:${databasePath}`,
+    });
+    const store = new LibsqlConversationStore({
+      client,
+      tablePrefix: 'test_runtime_clear',
+    });
+
+    try {
+      await store.appendMessage({
+        id: 'message-1',
+        threadId: 'thread-1',
+        role: 'user',
+        parts: [{ type: 'text', text: 'first' }],
+        createdAt: '2026-04-21T00:00:01.000Z',
+      });
+      await store.appendMessage({
+        id: 'message-2',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'second' }],
+        createdAt: '2026-04-21T00:00:02.000Z',
+      });
+      await store.save({
+        threadId: 'thread-1',
+        checkpointMessageId: 'message-2',
+        recentMessageIds: ['message-2'],
+        overflowMessageIds: [],
+        observations: [],
+        metrics: {
+          recentMessageCount: 1,
+          overflowMessageCount: 0,
+          observationCount: 0,
+          totalActiveMessageCount: 1,
+        },
+        updatedAt: '2026-04-21T00:00:03.000Z',
+      });
+      await store.write({
+        threadId: 'thread-1',
+        resourceId: 'thread-1',
+        workingMemory: '{"identity":{"roleCore":"test"}}',
+        updatedAt: '2026-04-21T00:00:04.000Z',
+      });
+
+      await expect(store.listMessages({
+        threadId: 'thread-1',
+        order: 'desc',
+        limit: 2,
+      })).resolves.toMatchObject([
+        { id: 'message-2' },
+        { id: 'message-1' },
+      ]);
+
+      await store.clearThread('thread-1');
+
+      await expect(store.listMessages({
+        threadId: 'thread-1',
+      })).resolves.toEqual([]);
+      await expect(store.load('thread-1')).resolves.toBeNull();
+      await expect(store.read({
+        threadId: 'thread-1',
+        resourceId: 'thread-1',
+      })).resolves.toBeNull();
+      await expect(store.getThread('thread-1')).resolves.toBeNull();
+    } finally {
+      await client.close();
+    }
+  });
 });

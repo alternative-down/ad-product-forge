@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-import { PageHeader } from '@/components/admin';
-import { getAgentRuntimeMemory, getAgentThreadMessages } from '@/lib/admin-api';
+import { AdminButton, PageHeader } from '@/components/admin';
+import { clearAgentHistory, getAgentRuntimeMemory, getAgentThreadMessages } from '@/lib/admin-api';
 
 import { ThreadMessageArticle } from './-thread-message-content';
 
@@ -18,6 +18,7 @@ const LIVE_REFETCH_INTERVAL_MS = 5_000;
 function AgentLogIndexRoute() {
   const { agentId } = Route.useParams();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const queryClient = useQueryClient();
   const runtimeMemoryQuery = useQuery({
     queryKey: ['admin', 'agent', agentId, 'runtime-memory'],
     queryFn: () => getAgentRuntimeMemory(agentId),
@@ -30,6 +31,29 @@ function AgentLogIndexRoute() {
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasMore ? lastPageParam + 1 : undefined,
     refetchInterval: LIVE_REFETCH_INTERVAL_MS,
+  });
+  const clearHistoryMutation = useMutation({
+    mutationFn: async () => {
+      if (!window.confirm('Limpar o histórico do agente e da LTM? Isso também limpa o estado observado atual.')) {
+        return null;
+      }
+
+      return clearAgentHistory({
+        agentId,
+        includeLongTermMemoryThread: true,
+      });
+    },
+    onSuccess: async (result) => {
+      if (!result) {
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'thread-messages'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'ltm-thread-messages'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'runtime-memory'] }),
+      ]);
+    },
   });
   const messages = messagesQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
@@ -52,7 +76,18 @@ function AgentLogIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader title="Log" />
+      <PageHeader
+        title="Log"
+        actions={(
+          <AdminButton
+            variant="outline"
+            onClick={() => void clearHistoryMutation.mutateAsync()}
+            disabled={clearHistoryMutation.isPending}
+          >
+            {clearHistoryMutation.isPending ? 'Limpando...' : 'Limpar histórico'}
+          </AdminButton>
+        )}
+      />
 
       <AgentRuntimeMemorySection
         workingMemory={runtimeMemoryQuery.data?.workingMemory ?? null}
@@ -82,6 +117,9 @@ function AgentLogIndexRoute() {
       <div ref={sentinelRef} className="h-4" />
       {messagesQuery.isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
       {messagesQuery.error ? <div className="text-sm text-destructive">{messagesQuery.error.message}</div> : null}
+      {clearHistoryMutation.error ? (
+        <div className="text-sm text-destructive">{clearHistoryMutation.error.message}</div>
+      ) : null}
     </div>
   );
 }

@@ -42,7 +42,11 @@ export class InMemoryConversationStore implements ConversationStore {
     const selectedMessages = currentMessages.slice(Math.max(0, startIndex), endIndex);
 
     if (!query.limit || query.limit <= 0) {
-      return [...selectedMessages];
+      return query.order === 'desc' ? [...selectedMessages].reverse() : [...selectedMessages];
+    }
+
+    if (query.order === 'desc') {
+      return [...selectedMessages].reverse().slice(0, query.limit);
     }
 
     return selectedMessages.slice(-query.limit);

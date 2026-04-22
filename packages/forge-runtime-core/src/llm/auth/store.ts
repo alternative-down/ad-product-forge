@@ -27,7 +27,7 @@ export function createOAuthStore() {
   function getDefaultPath() {
     const dataPath = process.env.FORGE_DATA_PATH ?? './data';
     const resolvedDataPath = path.resolve(process.cwd(), dataPath);
-    return path.join(resolvedDataPath, 'auth', 'oauth.db');
+    return path.join(resolvedDataPath, 'agents.db');
   }
 
   async function readJsonFile(filePath: string) {
@@ -47,6 +47,7 @@ export function createOAuthStore() {
   }
 
   async function read(storePath = getDefaultPath()) {
+    await fs.mkdir(path.dirname(storePath), { recursive: true });
     const client = createClient({ url: `file:${storePath}` });
 
     try {
@@ -75,6 +76,7 @@ export function createOAuthStore() {
   }
 
   async function write(provider: ProviderId, credential: OAuthCredential, storePath = getDefaultPath()) {
+    await fs.mkdir(path.dirname(storePath), { recursive: true });
     const client = createClient({ url: `file:${storePath}` });
 
     try {

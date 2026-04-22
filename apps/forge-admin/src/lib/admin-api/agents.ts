@@ -81,6 +81,19 @@ export function getAgentRuntimeMemory(agentId: string) {
   );
 }
 
+export function clearAgentHistory(input: {
+  agentId: string;
+  includeLongTermMemoryThread?: boolean;
+}) {
+  return request<{ success: true; agentId: string; includeLongTermMemoryThread: boolean }>('/admin/agent/clear-history', {
+    method: 'POST',
+    body: JSON.stringify({
+      agentId: input.agentId,
+      includeLongTermMemoryThread: input.includeLongTermMemoryThread ?? true,
+    }),
+  });
+}
+
 export function runAgentLongTermMemoryRecallSearch(input: {
   agentId: string;
   query: string;

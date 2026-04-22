@@ -117,6 +117,35 @@ describe('SqliteWorkspaceRetrieval', () => {
     expect(result.sourcesCount).toBeGreaterThan(0);
     expect(result.sourcesJson).toContain('alpha.md');
   });
+
+  it('sanitizes keyword queries before sending them to fts', async () => {
+    const rootPath = await mkdtemp(path.join(tmpdir(), 'forge-sqlite-retrieval-'));
+    temporaryDirectories.push(rootPath);
+    const docsPath = path.join(rootPath, 'docs');
+    const databasePath = path.join(rootPath, 'retrieval.db');
+
+    await mkdir(docsPath, { recursive: true });
+    await writeFile(path.join(docsPath, 'checkpointed.md'), 'checkpointed memory call flow');
+
+    const retrieval = new SqliteWorkspaceRetrieval({
+      databasePath,
+      source: new FilesystemDocumentSource({
+        roots: [docsPath],
+      }),
+      embedder: createTestEmbedder(),
+    });
+
+    await retrieval.refresh();
+
+    await expect(retrieval.search('- checkpointed call:', {
+      topK: 5,
+      mode: 'bm25',
+    })).resolves.toEqual([
+      expect.objectContaining({
+        id: expect.stringContaining('checkpointed.md'),
+      }),
+    ]);
+  });
 });
 
 function createTestEmbedder() {

@@ -422,7 +422,7 @@ export function createAdminReadModel(input: {
     const latestThreadDetailsByAgentId = new Map(
       await Promise.all(
         agentRows.map(async (agent) => {
-          const messages = await withTimeout(
+          const threadMessages = await withTimeout(
             listThreadMessages(input.workspaceBasePath, agent.id, {
               page: 0,
               perPage: 8,
@@ -431,8 +431,12 @@ export function createAdminReadModel(input: {
             `Admin latest thread details read timed out for ${agent.id}`,
           ).catch((error) => {
             console.error(`[AdminReadModel] Failed to load latest thread details for agent ${agent.id}:`, error);
-            return [];
+            return {
+              items: [],
+              hasMore: false,
+            };
           });
+          const messages = threadMessages.items;
           let preview: string | null = null;
           let toolBadge: ReturnType<typeof extractLatestMessageToolBadge> = null;
 
@@ -804,15 +808,10 @@ export function createAdminReadModel(input: {
     page: number;
     perPage: number;
   }) {
-    const items = await listThreadMessages(input.workspaceBasePath, params.agentId, {
+    return listThreadMessages(input.workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
     });
-
-    return {
-      items,
-      hasMore: items.length === params.perPage,
-    };
   }
 
   async function listAgentLongTermMemoryThreadMessages(params: {
@@ -820,16 +819,11 @@ export function createAdminReadModel(input: {
     page: number;
     perPage: number;
   }) {
-    const items = await listThreadMessages(input.workspaceBasePath, params.agentId, {
+    return listThreadMessages(input.workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
       threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
     });
-
-    return {
-      items,
-      hasMore: items.length === params.perPage,
-    };
   }
 
   async function getAgentRuntimeMemory(agentId: string) {
@@ -1430,12 +1424,16 @@ async function listThreadMessages(
     try {
       const messages = await conversationStore.listMessages({
         threadId: mastraAgentId,
-        limit: input.perPage * (input.page + 1),
+        limit: (input.perPage * (input.page + 1)) + 1,
+        order: 'desc',
       });
+      const pageStart = input.page * input.perPage;
+      const pageEnd = pageStart + input.perPage;
+      const pagedMessages = messages.slice(pageStart, pageEnd);
 
-      return [...messages]
+      return {
+        items: [...pagedMessages]
         .reverse()
-        .slice(input.page * input.perPage, (input.page + 1) * input.perPage)
         .map((message) => ({
           id: message.id,
           role: message.role,
@@ -1457,13 +1455,18 @@ async function listThreadMessages(
                 }
               : {}),
           },
-        }));
+        })),
+        hasMore: messages.length > pageEnd,
+      };
     } finally {
       await closeLibsqlClient(client);
     }
   } catch (error) {
     console.error(`[AdminReadModel] Failed to load recent thread messages for agent ${agentId}:`, error);
-    return [];
+    return {
+      items: [],
+      hasMore: false,
+    };
   }
 }
 

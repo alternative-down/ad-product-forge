@@ -702,6 +702,12 @@ export class SqliteWorkspaceRetrieval {
   }
 
   private searchKeywordRows(db: SqliteDatabase, queryText: string, topK: number) {
+    const keywordQuery = buildKeywordMatchQuery(queryText);
+
+    if (!keywordQuery) {
+      return [];
+    }
+
     return db.prepare(`
       select
         retrieval_documents.rowid as rowid,
@@ -714,7 +720,7 @@ export class SqliteWorkspaceRetrieval {
       where retrieval_documents_fts match ?
       order by rank asc
       limit ?
-    `).all(queryText, topK) as SearchResultRow[];
+    `).all(keywordQuery, topK) as SearchResultRow[];
   }
 
   private async embedQuery(queryText: string) {
@@ -757,6 +763,20 @@ function parseMetadata(value: string | null) {
 
 function distanceToScore(distance: number) {
   return Math.max(0, 1 - distance);
+}
+
+function buildKeywordMatchQuery(queryText: string) {
+  const tokens = queryText
+    .toLowerCase()
+    .match(/[\p{L}\p{N}_]+/gu)
+    ?.filter((token) => token.length >= 2) ?? [];
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  const uniqueTokens = [...new Set(tokens)].slice(0, 12);
+  return uniqueTokens.map((token) => `${token}*`).join(' OR ');
 }
 
 function keywordRankToScore(rank: number) {
