@@ -74,7 +74,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
 };
 
 const RECALL_AUTO_INDEX_PATHS = [
-  '.',
+  'memory',
 ] as const;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
 const RECALL_DOCUMENT_COUNT = 3;
@@ -223,8 +223,7 @@ export class AgentLongTermMemoryRecall {
       databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
       source: new FilesystemDocumentSource({
         roots: [
-          input.agentMemoryPath,
-          path.resolve(input.agentWorkspacePath, 'workspace', 'skills'),
+          path.resolve(input.agentMemoryPath, 'memory'),
         ],
       }),
       embedder: {
@@ -747,7 +746,7 @@ export class AgentLongTermMemoryRecall {
 
   private async getIndexStats() {
     const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
-      countFiles(this.agentMemoryPath, '.'),
+      countFiles(this.agentMemoryPath, 'memory'),
       countFiles(this.agentMemoryPath, 'memory'),
       countFiles(this.agentMemoryPath, 'checkpoints'),
     ]);

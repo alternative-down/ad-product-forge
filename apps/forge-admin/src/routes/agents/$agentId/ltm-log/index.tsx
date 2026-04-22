@@ -44,7 +44,13 @@ function AgentLongTermMemoryLogIndexRoute() {
       lastPage.hasMore ? lastPageParam + 1 : undefined,
     refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
-  const messages = messagesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const messages = (messagesQuery.data?.pages.flatMap((page) => page.items) ?? [])
+    .slice()
+    .sort((left, right) =>
+      left.createdAt === right.createdAt
+        ? left.id.localeCompare(right.id)
+        : left.createdAt - right.createdAt,
+    );
 
   useEffect(() => {
     const target = sentinelRef.current;
