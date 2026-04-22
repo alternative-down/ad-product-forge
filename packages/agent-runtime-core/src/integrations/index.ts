@@ -154,6 +154,10 @@ export {
   type TimeoutStepModelAdapterOptions,
 } from './adapters/timeout-model.js';
 export {
+  ReadWriteFs,
+  type IFileSystem,
+} from 'just-bash';
+export {
   createContextNotesPlugin,
   type ContextNotesPluginOptions,
 } from './extensions/context-notes.js';

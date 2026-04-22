@@ -1,6 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { LocalBashWorkspaceGateway } from '../integrations/gateways/local-bash-workspace.js';
+
+const temporaryDirectories: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(
+    temporaryDirectories.splice(0).map((directory) =>
+      rm(directory, { recursive: true, force: true })),
+  );
+});
 
 describe('LocalBashWorkspaceGateway', () => {
   it('executes a bash command and captures stdout', async () => {
@@ -11,5 +24,22 @@ describe('LocalBashWorkspaceGateway', () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe('hello');
+  });
+
+  it('executes commands inside a rooted just-bash filesystem', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'local-bash-workspace-'));
+    temporaryDirectories.push(root);
+    await writeFile(path.join(root, 'hello.txt'), 'hello just bash');
+
+    const gateway = new LocalBashWorkspaceGateway({
+      root,
+    });
+    const result = await gateway.execute({
+      command: 'cat hello.txt',
+      cwd: root,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('hello just bash');
   });
 });

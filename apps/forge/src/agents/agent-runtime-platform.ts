@@ -12,6 +12,7 @@ import {
   toMastraSafeIdentifier,
   type CommunicationModule,
 } from '@forge-runtime/core';
+import { ReadWriteFs } from 'just-bash';
 
 import type {
   WorkspaceFilesystemConfig,
@@ -24,6 +25,17 @@ type CommunicationWorkspaceFilesystem = {
   readFile(path: string): Promise<string | Uint8Array | Buffer>;
   writeFile(path: string, data: Uint8Array | Buffer | string): Promise<void>;
 };
+
+function toVirtualWorkspacePath(targetPath: string) {
+  const normalizedPath = targetPath.split(path.sep).join(path.posix.sep);
+  const virtualPath = path.posix.normalize(path.posix.join('/', normalizedPath));
+
+  if (virtualPath.startsWith('/..')) {
+    throw new Error(`Workspace path must stay within root: ${targetPath}`);
+  }
+
+  return virtualPath;
+}
 
 async function pathExists(targetPath: string) {
   try {
@@ -100,34 +112,35 @@ export async function createAgentRuntimePlatform(input: {
     client,
     tablePrefix: mastraId,
   });
+  const workspaceFs = new ReadWriteFs({
+    root: agentWorkspaceDir,
+  });
   const workspaceFilesystem: RuntimeWorkspace['filesystem'] = {
     async exists(targetPath: string) {
-      try {
-        await fs.access(path.resolve(agentWorkspaceDir, targetPath));
-        return true;
-      } catch {
-        return false;
-      }
+      return workspaceFs.exists(toVirtualWorkspacePath(targetPath));
     },
     async readFile(targetPath: string) {
-      return fs.readFile(path.resolve(agentWorkspaceDir, targetPath));
+      return workspaceFs.readFileBuffer(toVirtualWorkspacePath(targetPath));
     },
   };
   const communicationWorkspaceFilesystem: CommunicationWorkspaceFilesystem = {
     async readFile(targetPath: string) {
-      return fs.readFile(path.resolve(agentWorkspaceDir, targetPath));
+      return workspaceFs.readFileBuffer(toVirtualWorkspacePath(targetPath));
     },
     async writeFile(targetPath: string, data: Uint8Array | Buffer | string) {
-      const absolutePath = path.resolve(agentWorkspaceDir, targetPath);
-      await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-      await fs.writeFile(absolutePath, data);
+      const virtualPath = toVirtualWorkspacePath(targetPath);
+      await workspaceFs.mkdir(path.posix.dirname(virtualPath), { recursive: true });
+      await workspaceFs.writeFile(virtualPath, data);
     },
   };
   const workspace: RuntimeWorkspace = {
     filesystem: workspaceFilesystem,
   };
   const workspaceGateway = new ConfiguredWorkspaceGateway({
-    base: new LocalBashWorkspaceGateway(),
+    base: new LocalBashWorkspaceGateway({
+      fs: workspaceFs,
+      root: agentWorkspaceDir,
+    }),
     cwd: sandboxWorkingDirectory,
   });
 

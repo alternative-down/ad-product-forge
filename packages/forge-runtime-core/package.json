@@ -22,6 +22,7 @@
     "agent-runtime-core": "file:../agent-runtime-core",
     "ai": "^6.0.168",
     "fastembed": "^2.1.0",
+    "just-bash": "^2.14.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {

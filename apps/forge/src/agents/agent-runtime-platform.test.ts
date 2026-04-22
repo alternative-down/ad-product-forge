@@ -32,6 +32,16 @@ describe('createAgentRuntimePlatform', () => {
       expect(platform.agentWorkspaceDir).toContain(path.join('agent-1', 'workspace'));
       expect(platform.agentMemoryPath).toContain(path.join('agent-1', 'workspace', 'memory'));
 
+      const writeResult = await platform.workspaceGateway.execute({
+        command: 'mkdir -p notes && printf test-workspace > notes/hello.txt',
+      });
+
+      expect(writeResult.exitCode).toBe(0);
+      expect(platform.workspace.filesystem).not.toBeNull();
+      expect(
+        Buffer.from(await platform.workspace.filesystem!.readFile('notes/hello.txt')).toString('utf8'),
+      ).toBe('test-workspace');
+
       const now = new Date().toISOString();
 
       await platform.conversationStore.upsertThread({
