@@ -29,6 +29,10 @@ import {
   createRuntimeSystemInstructionPlugin,
   dispatchRuntimeSystemInstruction,
 } from './runtime-agent-session-system-plugin.js';
+import {
+  createRuntimeAgentSessionIteration,
+  resolveRuntimeAgentSessionContinuation,
+} from './runtime-agent-session-iteration.js';
 import { toolToRuntimeAction, type Tool } from './tools.js';
 
 export type RuntimeAgentSessionGenerateMessage =
@@ -263,56 +267,45 @@ export async function createRuntimeAgentSession(
           });
         },
         afterStep: async ({ latestStep }) => {
-          finalText = latestStep.modelResponse.segments
-            .filter((segment) => segment.kind === 'message')
-            .map((segment) => segment.text)
-            .join('');
+          const iteration = createRuntimeAgentSessionIteration({
+            record: latestStep,
+            runId: options.runId ?? input.threadId,
+            threadId: input.threadId,
+            resourceId: input.resourceId,
+            agentId: input.agentId,
+            agentName: input.agentName,
+          });
+
+          finalText = iteration.text;
           finalUsage = latestStep.modelUsage ?? undefined;
           await options.onStepFinish?.({
             usage: latestStep.modelUsage ?? undefined,
           });
         },
         continueAfterStep: async ({ latestStep }) => {
-          const result = await options.onIterationComplete?.({
-            iteration: latestStep.stepNumber,
-            text: latestStep.modelResponse.segments
-              .filter((segment) => segment.kind === 'message')
-              .map((segment) => segment.text)
-              .join(''),
-            toolCalls: latestStep.modelResponse.actionRequests.map((actionRequest, index) => ({
-              id: `${latestStep.id}:${index}`,
-              name: actionRequest.name,
-              args: actionRequest.input,
-            })),
-            toolResults: latestStep.actionResults.map((actionResult, index) => ({
-              id: `${latestStep.id}:${index}`,
-              name: actionResult.name,
-              result: actionResult.output,
-            })),
-            isFinal: latestStep.continuation !== 'continue',
-            finishReason: latestStep.continuation,
+          const iteration = createRuntimeAgentSessionIteration({
+            record: latestStep,
             runId: options.runId ?? input.threadId,
             threadId: input.threadId,
             resourceId: input.resourceId,
             agentId: input.agentId,
             agentName: input.agentName,
-            messages: [],
+          });
+          const result = await resolveRuntimeAgentSessionContinuation({
+            options,
+            iteration,
           });
 
-          if (result?.feedback?.trim()) {
+          if (result.feedback?.trim()) {
             await dispatchRuntimeSessionFeedback({
               bridge: runtime.bridge,
               threadId: input.threadId,
               agentId: input.agentId,
               text: result.feedback.trim(),
             });
-          } 
-
-          if (result?.continue !== undefined) {
-            return result.continue;
           }
 
-          return latestStep.modelResponse.actionRequests.length > 0 || latestStep.actionResults.length > 0;
+          return result.continue;
         },
       });
 
