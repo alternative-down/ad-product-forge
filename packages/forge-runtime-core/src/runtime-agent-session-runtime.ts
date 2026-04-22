@@ -4,6 +4,7 @@ import {
   type RuntimePlugin,
 } from 'agent-runtime-core/integrations';
 
+import { createCheckpointedConversationObserver } from './checkpointed-conversation-observer.js';
 import { createCheckpointedOmCompatibilityObserver } from './checkpointed-om-compatibility.js';
 import { createForgeAgentRuntime } from './runtime.js';
 import {
@@ -39,13 +40,15 @@ export async function createRuntimeAgentSessionRuntime(
     createRuntimeProviderOptionsPlugin(),
     createRuntimeSystemInstructionPlugin(),
   ];
+  const checkpointedOmLimits = input.checkpointedOmLimits ?? DEFAULT_CHECKPOINTED_OM_LIMITS;
+  const checkpointedOmEnabled = input.consolidateConversationOverflow ?? true;
   const runtime = await createForgeAgentRuntime({
     config: {
       agentId: input.agentId,
       assistantAuthorId: input.assistantAuthorId,
       threadId: input.threadId,
       maxConversationMessages: input.maxConversationMessages ?? 20,
-      consolidateConversationOverflow: input.consolidateConversationOverflow ?? true,
+      consolidateConversationOverflow: checkpointedOmEnabled,
     },
     model: new AiSdkStepModelAdapter({
       model: input.model,
@@ -54,6 +57,17 @@ export async function createRuntimeAgentSessionRuntime(
     conversationStore: input.conversationStore,
     memory: {
       stateStore: input.checkpointedStateStore,
+      observer: checkpointedOmEnabled
+        ? createCheckpointedConversationObserver({
+          model: input.checkpointedOmModel ?? input.model,
+          agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
+        })
+        : undefined,
+      recentTokenLimit: checkpointedOmEnabled ? checkpointedOmLimits.recentRawTokens : undefined,
+      observationTokenLimit:
+        checkpointedOmEnabled ? checkpointedOmLimits.observationReflectionBatchTokens : undefined,
+      overflowObservationTokenLimit:
+        checkpointedOmEnabled ? checkpointedOmLimits.rawObservationBatchTokens : undefined,
     },
     runtimePlugins,
     runtimeActions: [

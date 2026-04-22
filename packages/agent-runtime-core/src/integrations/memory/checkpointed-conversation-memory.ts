@@ -31,6 +31,9 @@ export type CheckpointedConversationMemoryOptions = {
   store: ConversationStore;
   stateStore: CheckpointedConversationStateStore;
   recentMessageLimit?: number;
+  recentTokenLimit?: number;
+  observationTokenLimit?: number;
+  overflowObservationTokenLimit?: number;
   maxObservationCount?: number;
   observer?: CheckpointedConversationObserver;
 };
@@ -40,6 +43,9 @@ export class CheckpointedConversationMemory {
   private readonly store: ConversationStore;
   private readonly stateStore: CheckpointedConversationStateStore;
   private readonly recentMessageLimit: number;
+  private readonly recentTokenLimit: number | null;
+  private readonly observationTokenLimit: number | null;
+  private readonly overflowObservationTokenLimit: number | null;
   private readonly maxObservationCount: number;
   private readonly observer: CheckpointedConversationObserver | null;
 
@@ -48,6 +54,9 @@ export class CheckpointedConversationMemory {
     this.store = options.store;
     this.stateStore = options.stateStore;
     this.recentMessageLimit = options.recentMessageLimit ?? 20;
+    this.recentTokenLimit = options.recentTokenLimit ?? null;
+    this.observationTokenLimit = options.observationTokenLimit ?? null;
+    this.overflowObservationTokenLimit = options.overflowObservationTokenLimit ?? null;
     this.maxObservationCount = options.maxObservationCount ?? 20;
     this.observer = options.observer ?? null;
   }
@@ -58,8 +67,13 @@ export class CheckpointedConversationMemory {
       threadId: this.threadId,
       afterMessageId: previousState.checkpointMessageId ?? undefined,
     });
-    const recentMessages = activeMessages.slice(-this.recentMessageLimit);
-    const overflowMessages = activeMessages.slice(0, Math.max(0, activeMessages.length - recentMessages.length));
+    const messageBands = partitionMessages({
+      messages: activeMessages,
+      recentMessageLimit: this.recentMessageLimit,
+      recentTokenLimit: this.recentTokenLimit,
+    });
+    const recentMessages = messageBands.recentMessages;
+    const overflowMessages = messageBands.overflowMessages;
     const nextState: CheckpointedConversationState = {
       ...previousState,
       recentMessageIds: recentMessages.map((message) => message.id),
@@ -114,25 +128,29 @@ export class CheckpointedConversationMemory {
       afterMessageId: state.checkpointMessageId ?? undefined,
       beforeMessageId: state.recentMessageIds[0],
     });
+    const observationBatch = selectObservationBatch({
+      messages: overflowMessages,
+      overflowObservationTokenLimit: this.overflowObservationTokenLimit,
+    });
 
-    if (overflowMessages.length === 0) {
+    if (observationBatch.length === 0) {
       return null;
     }
 
     const response = await this.observer.observe({
       threadId: this.threadId,
-      messages: overflowMessages,
+      messages: observationBatch,
     });
     const observation: CheckpointedConversationObservation = {
       id: `observation:${randomUUID()}`,
       text: response.text,
-      sourceMessageIds: overflowMessages.map((message) => message.id),
+      sourceMessageIds: observationBatch.map((message) => message.id),
       createdAt: new Date().toISOString(),
       units: estimateTextUnits(response.text),
     };
     const nextState: CheckpointedConversationState = {
       ...state,
-      checkpointMessageId: overflowMessages[overflowMessages.length - 1]?.id ?? state.checkpointMessageId,
+      checkpointMessageId: observationBatch[observationBatch.length - 1]?.id ?? state.checkpointMessageId,
       observations: [...state.observations, observation].slice(-this.maxObservationCount),
       updatedAt: new Date().toISOString(),
     };
@@ -152,8 +170,12 @@ export class CheckpointedConversationMemory {
       });
     const recentMessageMap = new Map(recentMessages.map((message) => [message.id, message]));
     const context: StepContextEntry[] = [];
+    const visibleObservations = selectVisibleObservations({
+      observations: state.observations,
+      observationTokenLimit: this.observationTokenLimit,
+    });
 
-    for (const observation of state.observations) {
+    for (const observation of visibleObservations) {
       context.push(createTextStepContextEntry({
         id: observation.id,
         kind: 'checkpointed-conversation-observation',
@@ -197,4 +219,109 @@ export class CheckpointedConversationMemory {
 
 function estimateTextUnits(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function estimateMessageUnits(message: ConversationMessage) {
+  return estimateTextUnits(getMessageText(message));
+}
+
+function getMessageText(message: ConversationMessage) {
+  return message.parts
+    .filter((part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text')
+    .map((part) => part.text.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+function partitionMessages(input: {
+  messages: ConversationMessage[];
+  recentMessageLimit: number;
+  recentTokenLimit: number | null;
+}) {
+  if (input.recentTokenLimit === null) {
+    const recentMessages = input.messages.slice(-input.recentMessageLimit);
+
+    return {
+      recentMessages,
+      overflowMessages: input.messages.slice(0, Math.max(0, input.messages.length - recentMessages.length)),
+    };
+  }
+
+  const recentMessages: ConversationMessage[] = [];
+  const overflowMessages: ConversationMessage[] = [];
+  let recentTokenCount = 0;
+
+  for (const message of [...input.messages].reverse()) {
+    const messageUnits = estimateMessageUnits(message);
+
+    if (
+      recentMessages.length === 0
+      || recentTokenCount + messageUnits <= input.recentTokenLimit
+    ) {
+      recentMessages.unshift(message);
+      recentTokenCount += messageUnits;
+      continue;
+    }
+
+    overflowMessages.unshift(message);
+  }
+
+  return {
+    recentMessages,
+    overflowMessages,
+  };
+}
+
+function selectObservationBatch(input: {
+  messages: ConversationMessage[];
+  overflowObservationTokenLimit: number | null;
+}) {
+  if (input.overflowObservationTokenLimit === null) {
+    return input.messages;
+  }
+
+  const selected: ConversationMessage[] = [];
+  let tokenCount = 0;
+
+  for (const message of input.messages) {
+    const messageUnits = estimateMessageUnits(message);
+
+    if (
+      selected.length > 0
+      && tokenCount + messageUnits > input.overflowObservationTokenLimit
+    ) {
+      break;
+    }
+
+    selected.push(message);
+    tokenCount += messageUnits;
+  }
+
+  return selected;
+}
+
+function selectVisibleObservations(input: {
+  observations: CheckpointedConversationObservation[];
+  observationTokenLimit: number | null;
+}) {
+  if (input.observationTokenLimit === null) {
+    return input.observations;
+  }
+
+  const visibleObservations: CheckpointedConversationObservation[] = [];
+  let tokenCount = 0;
+
+  for (const observation of [...input.observations].reverse()) {
+    if (
+      visibleObservations.length > 0
+      && tokenCount + observation.units > input.observationTokenLimit
+    ) {
+      break;
+    }
+
+    visibleObservations.unshift(observation);
+    tokenCount += observation.units;
+  }
+
+  return visibleObservations;
 }

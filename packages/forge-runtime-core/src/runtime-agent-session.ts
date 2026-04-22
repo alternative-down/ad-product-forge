@@ -127,6 +127,8 @@ export type CreateRuntimeAgentSessionOptions = {
     rawObservationBatchTokens: number;
     observationReflectionBatchTokens: number;
   };
+  checkpointedOmModel?: LanguageModel;
+  checkpointedOmSystemPrompt?: string;
   onCheckpointAdvanced?: (input: {
     threadId: string;
     resourceId: string;

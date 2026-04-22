@@ -91,6 +91,60 @@ describe('CheckpointedConversationMemory', () => {
       recentMessageIds: ['message-3'],
     });
   });
+
+  it('uses token budgets for recent raw, observation batches, and visible observations', async () => {
+    const store = new InMemoryConversationStore();
+
+    for (const message of [
+      createMessage('message-1', '11111111111111111111'),
+      createMessage('message-2', '22222222222222222222'),
+      createMessage('message-3', '33333333333333333333'),
+    ]) {
+      await store.appendMessage(message);
+    }
+
+    const memory = new CheckpointedConversationMemory({
+      threadId: 'thread-1',
+      store,
+      stateStore: new InMemoryCheckpointedConversationStateStore(),
+      recentTokenLimit: 5,
+      overflowObservationTokenLimit: 5,
+      observationTokenLimit: 5,
+      observer: {
+        async observe(request) {
+          return {
+            text: request.messages.map((message) => getText(message)).join(' | '),
+          };
+        },
+      },
+    });
+
+    let state = await memory.getState();
+    expect(state.recentMessageIds).toEqual(['message-3']);
+    expect(state.overflowMessageIds).toEqual(['message-1', 'message-2']);
+
+    await memory.consolidateOverflow();
+    state = await memory.getState();
+
+    expect(state.checkpointMessageId).toBe('message-1');
+    expect(state.recentMessageIds).toEqual(['message-3']);
+    expect(state.overflowMessageIds).toEqual(['message-2']);
+    expect(state.observations).toHaveLength(1);
+
+    await memory.consolidateOverflow();
+    state = await memory.getState();
+
+    expect(state.checkpointMessageId).toBe('message-2');
+    expect(state.recentMessageIds).toEqual(['message-3']);
+    expect(state.overflowMessageIds).toEqual([]);
+    expect(state.observations).toHaveLength(2);
+
+    const context = await memory.renderContext();
+
+    expect(context).toHaveLength(2);
+    expect(getStepContextText(context[0]!)).toContain('22222222222222222222');
+    expect(context[1]?.id).toContain('message-3');
+  });
 });
 
 function createMessage(id: string, text: string) {

@@ -182,12 +182,16 @@ function buildCompatibleState(
       updatedAt: state.updatedAt,
     }
     : null;
+  const visibleObservations = selectVisibleObservations({
+    observations: state.observations,
+    observationTokenLimit: limits.observationReflectionBatchTokens,
+  });
 
   return {
     ...createEmptyCheckpointedOmState(),
     checkpointGeneration: state.checkpointMessageId ? state.observations.length : null,
     checkpointSummary,
-    observationBlocks: state.observations.map((observation) => ({
+    observationBlocks: visibleObservations.map((observation) => ({
       id: observation.id,
       tokenCount: observation.units,
       createdAt: observation.createdAt,
@@ -203,8 +207,8 @@ function buildCompatibleState(
       overflowMessageCount: activeMessageBands.overflowMessages.length,
       overflowTokenCount: activeMessageBands.overflowTokenCount,
       observationTriggerTokenLimit: limits.rawObservationBatchTokens,
-      activeObservationBlockCount: state.observations.length,
-      observationTokenCount: state.observations.reduce((total, observation) => total + observation.units, 0),
+      activeObservationBlockCount: visibleObservations.length,
+      observationTokenCount: visibleObservations.reduce((total, observation) => total + observation.units, 0),
       reflectionTriggerTokenLimit: limits.observationReflectionBatchTokens,
       activeReflectionBlockCount: 0,
       reflectionTokenCount: 0,
@@ -221,4 +225,26 @@ function buildCompatibleState(
       updatedAt: state.updatedAt,
     },
   };
+}
+
+function selectVisibleObservations(input: {
+  observations: CheckpointedConversationState['observations'];
+  observationTokenLimit: number;
+}) {
+  const visibleObservations: CheckpointedConversationState['observations'] = [];
+  let tokenCount = 0;
+
+  for (const observation of [...input.observations].reverse()) {
+    if (
+      visibleObservations.length > 0
+      && tokenCount + observation.units > input.observationTokenLimit
+    ) {
+      break;
+    }
+
+    visibleObservations.unshift(observation);
+    tokenCount += observation.units;
+  }
+
+  return visibleObservations;
 }

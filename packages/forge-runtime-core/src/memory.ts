@@ -17,6 +17,9 @@ export type ForgeConversationMemoryOptions = {
   assistantAuthorId?: string;
   observer?: CheckpointedConversationObserver;
   recentMessageLimit?: number;
+  recentTokenLimit?: number;
+  observationTokenLimit?: number;
+  overflowObservationTokenLimit?: number;
   consolidateOverflow?: boolean;
 };
 
@@ -31,6 +34,9 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
     stateStore: input.stateStore,
     observer: input.observer,
     recentMessageLimit: input.recentMessageLimit,
+    recentTokenLimit: input.recentTokenLimit,
+    observationTokenLimit: input.observationTokenLimit,
+    overflowObservationTokenLimit: input.overflowObservationTokenLimit,
   });
 
   return {

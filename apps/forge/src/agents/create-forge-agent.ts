@@ -142,6 +142,8 @@ export async function createInternalAgentRuntime<
       observationReflectionBatchTokens:
         config.checkpointedOmObservationReflectionBatchTokens ?? 5_000,
     },
+    checkpointedOmModel: (config.omModel ?? config.model) as never,
+    checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
     runtimeActions: [
       ...platform.workspaceActions,
