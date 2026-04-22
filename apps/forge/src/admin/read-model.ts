@@ -1445,6 +1445,11 @@ async function listThreadMessages(
                     text: part.text,
                   }
                 : part),
+            ...(Array.isArray(message.metadata?.toolInvocations)
+              ? {
+                  toolInvocations: message.metadata.toolInvocations,
+                }
+              : {}),
           },
         }));
     } finally {

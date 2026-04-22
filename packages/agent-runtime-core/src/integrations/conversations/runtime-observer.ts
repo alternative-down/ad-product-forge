@@ -26,8 +26,16 @@ export function createConversationRuntimeObserver(
       }
 
       const messageText = getStepMessageText(context.record);
+      const toolInvocations = context.record.modelResponse.actionRequests.map((actionRequest) => ({
+        toolName: actionRequest.name,
+        args: actionRequest.input,
+      }));
+      const toolResults = context.record.actionResults.map((actionResult) => ({
+        toolName: actionResult.name,
+        result: actionResult.output,
+      }));
 
-      if (!messageText) {
+      if (!messageText && toolInvocations.length === 0 && toolResults.length === 0) {
         return;
       }
 
@@ -36,14 +44,18 @@ export function createConversationRuntimeObserver(
         threadId: payload.threadId,
         role: 'assistant',
         authorId: options.authorId,
-        parts: [{
-          type: 'text',
-          text: messageText,
-        }],
+        parts: messageText
+          ? [{
+            type: 'text' as const,
+            text: messageText,
+          }]
+          : [],
         metadata: {
           runtimeId: context.snapshot.runtimeId,
           stepId: context.record.id,
           stepNumber: context.record.stepNumber,
+          toolInvocations,
+          toolResults,
         },
         createdAt: context.record.finishedAt,
       });
