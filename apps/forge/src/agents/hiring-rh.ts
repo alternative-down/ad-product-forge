@@ -87,8 +87,8 @@ function isSuccessfulHireAgentResult(result: unknown) {
   return parsed.success && parsed.data.valid;
 }
 
-function hasSuccessfulHireAgentActionResult(actionResult: { name: string; output: unknown }) {
-  return actionResult.name === 'hireAgent' && isSuccessfulHireAgentResult(actionResult.output);
+function hasHireAgentActionResult(actionResult: { name: string }) {
+  return actionResult.name === 'hireAgent';
 }
 
 function normalizeAgentName(value: string) {
@@ -430,7 +430,11 @@ export async function generateHiredAgentInstructions(
   const runResult = await runController.run({
     maxSteps: 100,
     continueAfterStep({ latestStep }: { latestStep: HiringStepRecord }) {
-      return !latestStep.actionResults.some((actionResult: HiringActionResult) => hasSuccessfulHireAgentActionResult(actionResult));
+      if (latestStep.actionResults.some((actionResult: HiringActionResult) => hasHireAgentActionResult(actionResult))) {
+        return false;
+      }
+
+      return latestStep.actionResults.length > 0;
     },
   });
   const usage = runResult.steps.reduce((totals: { inputTokens: number; outputTokens: number }, step: HiringStepRecord) => {
