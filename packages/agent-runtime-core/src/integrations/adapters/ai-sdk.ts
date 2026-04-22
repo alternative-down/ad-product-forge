@@ -45,11 +45,15 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
   }
 
   async generateStep(request: StepModelRequest): Promise<StepModelResponse> {
+    const prompt = buildAiSdkPrompt({
+      baseSystem: this.system,
+      context: request.context,
+    });
     const result = await generateText({
       model: this.model,
       temperature: this.temperature,
-      system: this.system,
-      messages: buildAiSdkMessages(request.context),
+      system: prompt.system,
+      messages: prompt.messages,
       tools: buildToolSet(request.actions),
     });
 
@@ -63,11 +67,15 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
   }
 
   async streamStep(request: StepModelRequest): Promise<StepModelStream> {
+    const prompt = buildAiSdkPrompt({
+      baseSystem: this.system,
+      context: request.context,
+    });
     const result = streamText({
       model: this.model,
       temperature: this.temperature,
-      system: this.system,
-      messages: buildAiSdkMessages(request.context),
+      system: prompt.system,
+      messages: prompt.messages,
       tools: buildToolSet(request.actions),
     });
     const events = new AsyncEventChannel<StepModelStreamEvent>();
@@ -98,31 +106,55 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
   }
 }
 
-function buildAiSdkMessages(
-  context: StepContextEntry[],
-) {
-  const systemMessages: ModelMessage[] = [];
+function buildAiSdkPrompt(input: {
+  baseSystem?: string;
+  context: StepContextEntry[];
+}) {
+  const systemTexts: string[] = [];
   const historyMessages: ModelMessage[] = [];
   const toolResultMessages: ModelMessage[] = [];
   const currentInputMessages: ModelMessage[] = [];
   const remainingContext: StepContextEntry[] = [];
 
-  for (const entry of context) {
+  for (const entry of input.context) {
     if (entry.kind === 'system-instruction') {
-      systemMessages.push({
-        role: 'system',
-        content: getStepContextText(entry) || '',
-      });
+      const text = getStepContextText(entry)?.trim();
+
+      if (text) {
+        systemTexts.push(text);
+      }
       continue;
     }
 
     if (entry.kind.startsWith('conversation-message:')) {
-      historyMessages.push(buildConversationMessage(entry, entry.kind.slice('conversation-message:'.length)));
+      const role = entry.kind.slice('conversation-message:'.length);
+
+      if (role === 'system') {
+        const text = getStepContextText(entry)?.trim();
+
+        if (text) {
+          systemTexts.push(text);
+        }
+        continue;
+      }
+
+      historyMessages.push(buildConversationMessage(entry, role));
       continue;
     }
 
     if (entry.kind.startsWith('input:conversation-message:')) {
-      currentInputMessages.push(buildConversationMessage(entry, entry.kind.slice('input:conversation-message:'.length)));
+      const role = entry.kind.slice('input:conversation-message:'.length);
+
+      if (role === 'system') {
+        const text = getStepContextText(entry)?.trim();
+
+        if (text) {
+          systemTexts.push(text);
+        }
+        continue;
+      }
+
+      currentInputMessages.push(buildConversationMessage(entry, role));
       continue;
     }
 
@@ -135,7 +167,6 @@ function buildAiSdkMessages(
   }
 
   const messages = [
-    ...systemMessages,
     ...historyMessages,
     ...toolResultMessages,
     ...currentInputMessages,
@@ -145,7 +176,18 @@ function buildAiSdkMessages(
     messages.push(buildContextMessage(remainingContext));
   }
 
-  return messages;
+  const system = [
+    input.baseSystem?.trim(),
+    ...systemTexts,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join('\n\n')
+    .trim();
+
+  return {
+    system: system || undefined,
+    messages,
+  };
 }
 
 function buildConversationMessage(entry: StepContextEntry, role: string): ModelMessage {

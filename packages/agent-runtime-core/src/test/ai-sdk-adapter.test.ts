@@ -249,7 +249,7 @@ describe('AiSdkStepModelAdapter', () => {
     ]);
   });
 
-  it('sends runtime system instructions as native system messages', async () => {
+  it('consolidates runtime system instructions into the ai sdk system prompt', async () => {
     generateTextMock.mockResolvedValue({
       content: [{ type: 'text', text: 'done' }],
       toolCalls: [],
@@ -284,15 +284,48 @@ describe('AiSdkStepModelAdapter', () => {
     const request = generateTextMock.mock.calls[0]?.[0];
     const messages = request?.messages as Array<{ role: string; content: unknown }>;
 
-    expect(messages).toEqual([
-      {
-        role: 'system',
-        content: 'Stay concise.',
-      },
-      {
-        role: 'user',
-        content: [{ type: 'text', text: 'Reply now.' }],
-      },
-    ]);
+    expect(request?.system).toBe('Stay concise.');
+    expect(messages).toEqual([{
+      role: 'user',
+      content: [{ type: 'text', text: 'Reply now.' }],
+    }]);
+  });
+
+  it('merges adapter system text with context system text into one ai sdk system prompt', async () => {
+    generateTextMock.mockResolvedValue({
+      content: [{ type: 'text', text: 'done' }],
+      toolCalls: [],
+      usage: {},
+    });
+
+    const adapter = new AiSdkStepModelAdapter({
+      model: {} as never,
+      system: 'Base system.',
+    });
+
+    await adapter.generateStep({
+      runtimeId: 'runtime-1',
+      stepId: 'step-4',
+      stepNumber: 4,
+      context: [
+        createTextStepContextEntry({
+          id: 'system-1',
+          kind: 'system-instruction',
+          title: 'System Instruction',
+          text: 'Stay concise.',
+        }),
+        createTextStepContextEntry({
+          id: 'conversation-message:user-4',
+          kind: 'input:conversation-message:user',
+          title: 'User message',
+          text: 'Reply now.',
+        }),
+      ],
+      actions: [],
+    });
+
+    const request = generateTextMock.mock.calls[0]?.[0];
+
+    expect(request?.system).toBe('Base system.\n\nStay concise.');
   });
 });

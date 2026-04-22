@@ -53,6 +53,12 @@ export {
   type RuntimeAgentSessionStepResult,
 } from './runtime-agent-session.js';
 export {
+  runNativeToolLoop,
+  type NativeToolLoopDeferredCall,
+  type NativeToolLoopMessage,
+  type NativeToolLoopResult,
+} from './native-tool-loop.js';
+export {
   createForgeUsageObserver,
   InMemoryForgeUsageSink,
   type ForgeStepUsageRecord,

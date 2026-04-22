@@ -1,12 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import {
-  generateText,
-  stepCountIs,
-  tool as createAiSdkTool,
-  type LanguageModel,
-  type ModelMessage,
-} from 'ai';
 
 import type { Database } from '../database/index';
 import { llmModelPrices } from '../database/schema';
@@ -15,6 +8,8 @@ import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import {
   createTool,
+  runNativeToolLoop,
+  type NativeToolLoopMessage,
   type Tool,
 } from '@forge-runtime/core';
 import { z } from 'zod';
@@ -68,11 +63,6 @@ type HiringRhResult =
       modelKey: string;
     };
 
-function isSuccessfulHireAgentResult(result: unknown) {
-  const parsed = hireAgentSuccessSchema.safeParse(result);
-  return parsed.success && parsed.data.valid;
-}
-
 function normalizeAgentName(value: string) {
   return value.trim().toLowerCase();
 }
@@ -97,37 +87,6 @@ function validateGeneratedAgentProfile(profile: z.infer<typeof generatedAgentPro
   };
 }
 
-function toAiSdkTools(tools: Record<string, Tool>) {
-  return Object.fromEntries(
-    Object.values(tools).map((tool) => {
-      if (tool.id === 'hireAgent') {
-        return [
-          tool.id,
-          createAiSdkTool({
-            description: tool.description,
-            inputSchema: tool.inputSchema as never,
-          }),
-        ];
-      }
-
-      return [
-        tool.id,
-        createAiSdkTool({
-          description: tool.description,
-          inputSchema: tool.inputSchema as never,
-          execute: async (toolInput: unknown, options: { toolCallId: string }) =>
-            tool.execute(toolInput, {
-              runtimeId: HIRING_RH_AGENT_ID,
-              stepId: options.toolCallId,
-              stepNumber: 0,
-              toolCallId: options.toolCallId,
-            }),
-        }),
-      ];
-    }),
-  );
-}
-
 async function executeHireAgentTool(input: {
   tool: Tool;
   toolInput: unknown;
@@ -140,27 +99,7 @@ async function executeHireAgentTool(input: {
   });
 }
 
-function findHireAgentToolCall(messages: ModelMessage[]) {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-
-    if (!message || message.role !== 'assistant' || !Array.isArray(message.content)) {
-      continue;
-    }
-
-    const toolCall = message.content.find((part) => part.type === 'tool-call' && part.toolName === 'hireAgent');
-
-    if (!toolCall) {
-      continue;
-    }
-
-    return toolCall;
-  }
-
-  return null;
-}
-
-function getLastAssistantText(messages: ModelMessage[]) {
+function getLastAssistantText(messages: NativeToolLoopMessage[]) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
 
@@ -185,14 +124,7 @@ function getLastAssistantText(messages: ModelMessage[]) {
   return '';
 }
 
-function appendResponseMessages(
-  messages: ModelMessage[],
-  responseMessages: Array<ModelMessage>,
-) {
-  messages.push(...responseMessages);
-}
-
-function buildStepDiagnostics(messages: ModelMessage[]) {
+function buildStepDiagnostics(messages: NativeToolLoopMessage[]) {
   return messages
     .map((message) => {
       if (message.role === 'assistant' && Array.isArray(message.content)) {
@@ -213,10 +145,6 @@ function buildStepDiagnostics(messages: ModelMessage[]) {
                 text: part.text,
               };
             }
-
-            return {
-              type: part.type,
-            };
           }),
         };
       }
@@ -236,19 +164,6 @@ function buildStepDiagnostics(messages: ModelMessage[]) {
         role: message.role,
       };
     });
-}
-
-function isHireAgentToolCall(value: unknown): value is {
-  toolName: 'hireAgent';
-  input: unknown;
-} {
-  return (
-    typeof value === 'object'
-    && value !== null
-    && 'toolName' in value
-    && value.toolName === 'hireAgent'
-    && 'input' in value
-  );
 }
 
 function isToolResultWithOutput(value: unknown): value is {
@@ -534,47 +449,30 @@ export async function generateHiredAgentInstructions(
     }),
     ...tools,
   };
-  const aiSdkTools = toAiSdkTools(hiringTools);
-  const messages: ModelMessage[] = [{
-    role: 'user',
-    content: hiringPrompt,
-  }];
-  let inputTokens = 0;
-  let outputTokens = 0;
-  let hireAgentActionResult: unknown = null;
-  let lastRunText = '';
-  let lastRunFinishReason: string | undefined;
-
-  for (let loop = 0; loop < 100; loop += 1) {
-    const runResult = await generateText({
-      model: hiringRhRuntimeModel as LanguageModel,
-      system: systemPrompt,
-      messages,
-      tools: aiSdkTools,
-      stopWhen: stepCountIs(20),
-    });
-    lastRunText = runResult.text;
-    lastRunFinishReason = runResult.finishReason;
-    inputTokens += runResult.totalUsage.inputTokens ?? 0;
-    outputTokens += runResult.totalUsage.outputTokens ?? 0;
-    appendResponseMessages(messages, runResult.response.messages as ModelMessage[]);
-
-    const hireAgentToolCall = findHireAgentToolCall(runResult.response.messages as ModelMessage[]);
-
-    if (hireAgentToolCall && isHireAgentToolCall(hireAgentToolCall)) {
-      hireAgentActionResult = await executeHireAgentTool({
-        tool: hiringTools.hireAgent,
-        toolInput: hireAgentToolCall.input,
-      });
-      break;
-    }
-
-    const hasAnyToolCall = runResult.toolCalls.length > 0;
-
-    if (hasAnyToolCall) {
-      continue;
-    }
-  }
+  const runResult = await runNativeToolLoop({
+    model: hiringRhRuntimeModel,
+    system: systemPrompt,
+    prompt: hiringPrompt,
+    tools: hiringTools,
+    deferredToolNames: ['hireAgent'],
+    maxRounds: 100,
+    maxStepsPerRound: 20,
+    runtimeId: HIRING_RH_AGENT_ID,
+  });
+  const messages = runResult.messages;
+  const inputTokens = runResult.usage.inputTokens;
+  const outputTokens = runResult.usage.outputTokens;
+  const lastRunText = runResult.text;
+  const lastRunFinishReason = runResult.finishReason;
+  const hireAgentActionResult = (
+    runResult.deferredToolCall
+    && runResult.deferredToolCall.toolName === 'hireAgent'
+  )
+    ? await executeHireAgentTool({
+      tool: hiringTools.hireAgent,
+      toolInput: runResult.deferredToolCall.input,
+    })
+    : null;
 
   const costUsd =
     (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
