@@ -4,9 +4,11 @@ import type { LanguageModel } from 'ai';
 import {
   AiSdkStepModelAdapter,
   RuntimeRunController,
+  createTextStepContextEntry,
   type ConversationStore,
   type RuntimeActionDefinition,
   type RuntimeObserver,
+  type RuntimePlugin,
 } from 'agent-runtime-core/integrations';
 
 import {
@@ -23,6 +25,8 @@ import {
   type RuntimeWorkingMemoryStore,
 } from './runtime-working-memory.js';
 import { toolToRuntimeAction, type Tool } from './tools.js';
+
+const SYSTEM_INSTRUCTION_INPUT_TYPE = 'forge-system-instruction';
 
 export type RuntimeAgentSessionGenerateMessage =
   | string
@@ -169,12 +173,29 @@ export async function createRuntimeAgentSession(
     resourceId: input.resourceId,
     store: input.workingMemoryStore,
   });
-  const runtimePlugins = [
+  const runtimePlugins: RuntimePlugin[] = [
     createWorkingMemoryPlugin({
       threadId: input.threadId,
       resourceId: input.resourceId,
       store: input.workingMemoryStore,
     }),
+    {
+      name: 'forge-system-instruction',
+      provideContext(context) {
+        return context.pendingInputs
+          .filter((pendingInput) => pendingInput.type === SYSTEM_INSTRUCTION_INPUT_TYPE)
+          .map((pendingInput, index) =>
+            createTextStepContextEntry({
+              id: `${pendingInput.id}:${index}`,
+              kind: 'system-instruction',
+              title: 'System Instruction',
+              text:
+                typeof pendingInput.payload === 'string'
+                  ? pendingInput.payload
+                  : '',
+            }));
+      },
+    },
   ];
   const runtime = await createForgeAgentRuntime({
     config: {
@@ -223,23 +244,10 @@ export async function createRuntimeAgentSession(
   return {
     async generate(prompt, options = {}) {
       if (options.system?.trim()) {
-        await runtime.bridge.dispatchMessage({
-          thread: {
-            id: input.threadId,
-            participantIds: [input.agentId],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          message: {
-            id: randomUUID(),
-            threadId: input.threadId,
-            role: 'user',
-            parts: [{
-              type: 'text',
-              text: options.system.trim(),
-            }],
-            createdAt: new Date().toISOString(),
-          },
+        await runtime.host.runtime.dispatch({
+          id: randomUUID(),
+          type: SYSTEM_INSTRUCTION_INPUT_TYPE,
+          payload: options.system.trim(),
         });
       }
 
