@@ -101,12 +101,21 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
 function buildAiSdkMessages(
   context: StepContextEntry[],
 ) {
+  const systemMessages: ModelMessage[] = [];
   const historyMessages: ModelMessage[] = [];
   const toolResultMessages: ModelMessage[] = [];
   const currentInputMessages: ModelMessage[] = [];
   const remainingContext: StepContextEntry[] = [];
 
   for (const entry of context) {
+    if (entry.kind === 'system-instruction') {
+      systemMessages.push({
+        role: 'system',
+        content: getStepContextText(entry) || '',
+      });
+      continue;
+    }
+
     if (entry.kind.startsWith('conversation-message:')) {
       historyMessages.push(buildConversationMessage(entry, entry.kind.slice('conversation-message:'.length)));
       continue;
@@ -126,6 +135,7 @@ function buildAiSdkMessages(
   }
 
   const messages = [
+    ...systemMessages,
     ...historyMessages,
     ...toolResultMessages,
     ...currentInputMessages,

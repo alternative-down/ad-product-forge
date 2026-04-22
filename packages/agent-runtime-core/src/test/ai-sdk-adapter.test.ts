@@ -248,4 +248,51 @@ describe('AiSdkStepModelAdapter', () => {
       },
     ]);
   });
+
+  it('sends runtime system instructions as native system messages', async () => {
+    generateTextMock.mockResolvedValue({
+      content: [{ type: 'text', text: 'done' }],
+      toolCalls: [],
+      usage: {},
+    });
+
+    const adapter = new AiSdkStepModelAdapter({
+      model: {} as never,
+    });
+
+    await adapter.generateStep({
+      runtimeId: 'runtime-1',
+      stepId: 'step-3',
+      stepNumber: 3,
+      context: [
+        createTextStepContextEntry({
+          id: 'system-1',
+          kind: 'system-instruction',
+          title: 'System Instruction',
+          text: 'Stay concise.',
+        }),
+        createTextStepContextEntry({
+          id: 'conversation-message:user-3',
+          kind: 'input:conversation-message:user',
+          title: 'User message',
+          text: 'Reply now.',
+        }),
+      ],
+      actions: [],
+    });
+
+    const request = generateTextMock.mock.calls[0]?.[0];
+    const messages = request?.messages as Array<{ role: string; content: unknown }>;
+
+    expect(messages).toEqual([
+      {
+        role: 'system',
+        content: 'Stay concise.',
+      },
+      {
+        role: 'user',
+        content: [{ type: 'text', text: 'Reply now.' }],
+      },
+    ]);
+  });
 });
