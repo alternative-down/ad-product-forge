@@ -23,13 +23,7 @@ export function createCheckpointedOmContextPlugin(input: {
       }
 
       const entries = [];
-      const checkpointText = renderCheckpointText(state.checkpointSummary?.text ?? null);
-      const reflectionsText = renderReflectionsText(state.activeReflectionBlocks.map((block) => block.text));
-      const observationsText = renderObservationsText(
-        state.observationBlocks
-          .filter((block) => block.reflectedGeneration === null)
-          .map((block) => block.text),
-      );
+      const [checkpointText, reflectionsText, observationsText] = buildCheckpointedOmSystemTexts(state);
 
       if (checkpointText) {
         entries.push(createTextStepContextEntry({
@@ -61,6 +55,39 @@ export function createCheckpointedOmContextPlugin(input: {
       return entries;
     },
   };
+}
+
+export async function loadCheckpointedOmSystemTexts(input: {
+  threadId: string;
+  resourceId: string;
+  stateStore: CheckpointedOmStateStore;
+}) {
+  const state = await input.stateStore.loadState({
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+  });
+
+  if (!state) {
+    return [];
+  }
+
+  return buildCheckpointedOmSystemTexts(state).filter(Boolean);
+}
+
+function buildCheckpointedOmSystemTexts(state: {
+  checkpointSummary: { text: string } | null;
+  activeReflectionBlocks: Array<{ text: string }>;
+  observationBlocks: Array<{ reflectedGeneration: number | null; text: string }>;
+}) {
+  const checkpointText = renderCheckpointText(state.checkpointSummary?.text ?? null);
+  const reflectionsText = renderReflectionsText(state.activeReflectionBlocks.map((block) => block.text));
+  const observationsText = renderObservationsText(
+    state.observationBlocks
+      .filter((block) => block.reflectedGeneration === null)
+      .map((block) => block.text),
+  );
+
+  return [checkpointText, reflectionsText, observationsText] as const;
 }
 
 function renderCheckpointText(text: string | null) {

@@ -1,19 +1,13 @@
-import {
-  AiSdkStepModelAdapter,
-  RuntimeRunController,
-  type RuntimePlugin,
+import type {
+  RuntimeActionDefinition,
 } from 'agent-runtime-core/integrations';
 
 import { createCheckpointedConversationObserver } from './checkpointed-conversation-observer.js';
-import { createCheckpointedOmContextPlugin } from './checkpointed-om-context-plugin.js';
-import { createCheckpointedOmCompatibilityObserver } from './checkpointed-om-compatibility.js';
-import { createForgeAgentRuntime } from './runtime.js';
+import { syncCheckpointedOmCompatibility } from './checkpointed-om-compatibility.js';
+import { createForgeConversationMemory } from './memory.js';
 import {
   createUpdateWorkingMemoryTool,
-  createWorkingMemoryPlugin,
 } from './runtime-working-memory.js';
-import { createRuntimeProviderOptionsPlugin } from './runtime-agent-session-provider-options-plugin.js';
-import { createRuntimeSystemInstructionPlugin } from './runtime-agent-session-system-plugin.js';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
 import { toolToRuntimeAction } from './tools.js';
 
@@ -24,87 +18,81 @@ const DEFAULT_CHECKPOINTED_OM_LIMITS = {
   observationReflectionBatchTokens: 5_000,
 };
 
+export type RuntimeAgentSessionRuntime = {
+  model: CreateRuntimeAgentSessionOptions['model'];
+  assistantAuthorId?: string;
+  conversationStore: CreateRuntimeAgentSessionOptions['conversationStore'];
+  conversationMemory: ReturnType<typeof createForgeConversationMemory>['memory'];
+  runtimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
+  checkpointedOmStateStore?: CreateRuntimeAgentSessionOptions['checkpointedOmStateStore'];
+  workingMemoryStore: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
+  syncState(): Promise<void>;
+};
+
 export async function createRuntimeAgentSessionRuntime(
   input: CreateRuntimeAgentSessionOptions,
-) {
+): Promise<RuntimeAgentSessionRuntime> {
   const workingMemoryTool = input.workingMemoryTool ?? createUpdateWorkingMemoryTool({
     threadId: input.threadId,
     resourceId: input.resourceId,
     store: input.workingMemoryStore,
   });
-  const runtimePlugins: RuntimePlugin[] = [
-    createWorkingMemoryPlugin({
-      threadId: input.threadId,
-      resourceId: input.resourceId,
-      store: input.workingMemoryStore,
-    }),
-    createRuntimeProviderOptionsPlugin(),
-    createRuntimeSystemInstructionPlugin(),
-  ];
   const checkpointedOmLimits = input.checkpointedOmLimits ?? DEFAULT_CHECKPOINTED_OM_LIMITS;
   const checkpointedOmEnabled = input.consolidateConversationOverflow ?? true;
-
-  if (input.checkpointedOmStateStore) {
-    runtimePlugins.push(createCheckpointedOmContextPlugin({
-      threadId: input.threadId,
-      resourceId: input.resourceId,
-      stateStore: input.checkpointedOmStateStore,
-    }));
-  }
-
-  const runtime = await createForgeAgentRuntime({
-    config: {
-      agentId: input.agentId,
-      assistantAuthorId: input.assistantAuthorId,
-      threadId: input.threadId,
-      maxConversationMessages: input.maxConversationMessages ?? 20,
-      consolidateConversationOverflow: checkpointedOmEnabled,
-    },
-    model: new AiSdkStepModelAdapter({
-      model: input.model,
-      system: input.system,
-    }),
+  const conversationMemory = createForgeConversationMemory({
+    threadId: input.threadId,
     conversationStore: input.conversationStore,
-    memory: {
-      stateStore: input.checkpointedStateStore,
-      observer: checkpointedOmEnabled
-        ? createCheckpointedConversationObserver({
-          model: input.checkpointedOmModel ?? input.model,
-          agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
-        })
-        : undefined,
-      recentTokenLimit: checkpointedOmEnabled ? checkpointedOmLimits.recentRawTokens : undefined,
-      observationTokenLimit:
-        checkpointedOmEnabled ? checkpointedOmLimits.observationReflectionBatchTokens : undefined,
-      overflowObservationTokenLimit:
-        checkpointedOmEnabled ? checkpointedOmLimits.rawObservationBatchTokens : undefined,
-    },
-    runtimePlugins,
-    runtimeActions: [
-      toolToRuntimeAction(workingMemoryTool),
-      ...(input.runtimeActions ?? []),
-    ],
-    runtimeObservers: input.runtimeObservers,
+    stateStore: input.checkpointedStateStore,
+    assistantAuthorId: input.assistantAuthorId,
+    observer: checkpointedOmEnabled
+      ? createCheckpointedConversationObserver({
+        model: input.checkpointedOmModel ?? input.model,
+        agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
+      })
+      : undefined,
+    recentMessageLimit: input.maxConversationMessages ?? 20,
+    recentTokenLimit: checkpointedOmEnabled ? checkpointedOmLimits.recentRawTokens : undefined,
+    observationTokenLimit:
+      checkpointedOmEnabled ? checkpointedOmLimits.observationReflectionBatchTokens : undefined,
+    overflowObservationTokenLimit:
+      checkpointedOmEnabled ? checkpointedOmLimits.rawObservationBatchTokens : undefined,
+    consolidateOverflow: checkpointedOmEnabled,
   });
-
-  if (input.checkpointedOmStateStore) {
-    runtime.host.runtime.observe(createCheckpointedOmCompatibilityObserver({
-      threadId: input.threadId,
-      resourceId: input.resourceId,
-      conversationStore: input.conversationStore,
-      conversationMemory: runtime.memory,
-      stateStore: input.checkpointedOmStateStore,
-      limits: input.checkpointedOmLimits ?? DEFAULT_CHECKPOINTED_OM_LIMITS,
-      reflectionModel: input.checkpointedOmModel ?? input.model,
-      agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
-      onCheckpointAdvanced: input.onCheckpointAdvanced,
-    }));
-  }
+  const runtimeActions = [
+    toolToRuntimeAction(workingMemoryTool),
+    ...(input.runtimeActions ?? []),
+  ];
 
   return {
-    runtime,
-    runController: new RuntimeRunController({
-      runtime: runtime.host.runtime,
-    }),
+    model: input.model,
+    assistantAuthorId: input.assistantAuthorId,
+    conversationStore: input.conversationStore,
+    conversationMemory: conversationMemory.memory,
+    runtimeActions,
+    checkpointedOmStateStore: input.checkpointedOmStateStore,
+    workingMemoryStore: input.workingMemoryStore,
+    async syncState() {
+      if (checkpointedOmEnabled) {
+        await conversationMemory.memory.stabilize();
+      } else {
+        await conversationMemory.memory.sync();
+      }
+
+      if (!input.checkpointedOmStateStore) {
+        return;
+      }
+
+      await syncCheckpointedOmCompatibility({
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+        conversationStore: input.conversationStore,
+        conversationMemory: conversationMemory.memory,
+        stateStore: input.checkpointedOmStateStore,
+        limits: checkpointedOmLimits,
+        reflectionModel: input.checkpointedOmModel ?? input.model,
+        agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
+        onCheckpointAdvanced: input.onCheckpointAdvanced,
+      });
+    },
   };
 }

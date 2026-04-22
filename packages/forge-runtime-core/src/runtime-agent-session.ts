@@ -154,13 +154,12 @@ export type CreateRuntimeAgentSessionOptions = {
 export async function createRuntimeAgentSession(
   input: CreateRuntimeAgentSessionOptions,
 ): Promise<RuntimeAgentSession> {
-  const { runtime, runController } = await createRuntimeAgentSessionRuntime(input);
+  const runtime = await createRuntimeAgentSessionRuntime(input);
 
   return {
     async generate(prompt, options = {}) {
       return runRuntimeAgentSessionGenerate({
         runtime,
-        runController,
         session: input,
         prompt,
         options,
@@ -185,7 +184,7 @@ export async function createRuntimeAgentSession(
       };
     },
     async dispose() {
-      await runtime.dispose();
+      await Promise.resolve();
     },
   };
 }

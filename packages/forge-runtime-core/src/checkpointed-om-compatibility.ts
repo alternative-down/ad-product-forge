@@ -97,40 +97,46 @@ export function createCheckpointedOmCompatibilityObserver(
   return {
     name: 'forge-checkpointed-om-compatibility',
     async onAfterStep() {
-      const conversationState = await input.conversationMemory.getState();
-      const previousState = await input.stateStore.loadState({
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-      }) ?? createEmptyCheckpointedOmState();
-      const messages = await input.conversationStore.listMessages({
-        threadId: input.threadId,
-      });
-      const result = await buildCompatibleState({
-        previousState,
-        conversationState,
-        messages,
-        limits: input.limits,
-        reflectionModel: input.reflectionModel,
-        agentSystemPrompt: input.agentSystemPrompt,
-      });
-
-      await input.stateStore.saveState({
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-        state: result.state,
-      });
-
-      if (!input.onCheckpointAdvanced || !result.checkpointPayload) {
-        return;
-      }
-
-      await input.onCheckpointAdvanced({
-        ...result.checkpointPayload,
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-      });
+      await syncCheckpointedOmCompatibility(input);
     },
   };
+}
+
+export async function syncCheckpointedOmCompatibility(
+  input: CheckpointedOmCompatibilityObserverOptions,
+) {
+  const conversationState = await input.conversationMemory.getState();
+  const previousState = await input.stateStore.loadState({
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+  }) ?? createEmptyCheckpointedOmState();
+  const messages = await input.conversationStore.listMessages({
+    threadId: input.threadId,
+  });
+  const result = await buildCompatibleState({
+    previousState,
+    conversationState,
+    messages,
+    limits: input.limits,
+    reflectionModel: input.reflectionModel,
+    agentSystemPrompt: input.agentSystemPrompt,
+  });
+
+  await input.stateStore.saveState({
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+    state: result.state,
+  });
+
+  if (!input.onCheckpointAdvanced || !result.checkpointPayload) {
+    return;
+  }
+
+  await input.onCheckpointAdvanced({
+    ...result.checkpointPayload,
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+  });
 }
 
 async function buildCompatibleState(input: {

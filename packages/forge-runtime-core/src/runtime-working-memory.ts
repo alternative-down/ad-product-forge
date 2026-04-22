@@ -109,6 +109,23 @@ export function createWorkingMemoryContextEntry(workingMemory: string): StepCont
   });
 }
 
+export async function loadWorkingMemoryContextText(input: {
+  threadId: string;
+  resourceId: string;
+  store: RuntimeWorkingMemoryStore;
+}) {
+  const record = await input.store.read({
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+  });
+
+  if (!record?.workingMemory.trim()) {
+    return null;
+  }
+
+  return record.workingMemory;
+}
+
 function parseWorkingMemoryRecord(workingMemory: string | null | undefined) {
   if (!workingMemory?.trim()) {
     return {};
