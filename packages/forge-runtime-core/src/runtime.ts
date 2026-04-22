@@ -1,8 +1,6 @@
 import {
   ConversationRuntimeBridge,
   createRuntimeHost,
-  createTextStepContextEntry,
-  isConversationRuntimeInputPayload,
   type ConversationStore,
   type McpRuntimeActionOptions,
   type RuntimeObserver,
@@ -10,10 +8,10 @@ import {
   type RuntimeHost,
   type RuntimeInputTarget,
   type RuntimePlugin,
-  type StepContextEntry,
   type StepModelAdapter,
 } from 'agent-runtime-core/integrations';
 
+import { createConversationRuntimeContextFormatter } from './conversation-runtime-context-formatter.js';
 import { forgeAgentRuntimeConfigSchema, type ForgeAgentRuntimeConfig, type ForgeMcpServerConfig } from './contracts.js';
 import { createForgeConversationMemory, type ForgeConversationMemoryOptions } from './memory.js';
 import { ForgeMcpToolset } from './mcp.js';
@@ -75,51 +73,7 @@ export async function createForgeAgentRuntime(
     runtime: {
       runtimeId: config.runtimeId ?? config.agentId,
       model: options.model,
-      contextFormatter: {
-        formatInput(runtimeInput) {
-          if (isConversationRuntimeInputPayload(runtimeInput.payload)) {
-            const text = runtimeInput.payload.parts
-              .filter((part) => part.type === 'text')
-              .map((part) => part.text.trim())
-              .filter(Boolean)
-              .join('\n')
-              .trim();
-            const content = runtimeInput.payload.parts
-              .filter((part) => part.type === 'image')
-              .map((part) => ({
-                type: 'image' as const,
-                mimeType: part.mimeType,
-                bytes: part.bytes,
-              }));
-
-            return {
-              id: `conversation-message:${runtimeInput.payload.messageId}`,
-              kind: `input:conversation-message:${runtimeInput.payload.role}`,
-              title: runtimeInput.payload.authorId
-                ? `${runtimeInput.payload.role} message from ${runtimeInput.payload.authorId}`
-                : `${runtimeInput.payload.role} message`,
-              text: text || undefined,
-              content: content.length > 0 ? content : undefined,
-            };
-          }
-
-          return createTextStepContextEntry({
-            id: runtimeInput.id,
-            kind: `input:${runtimeInput.type}`,
-            title: `Input ${runtimeInput.type}`,
-            text: JSON.stringify(runtimeInput.payload, null, 2),
-          });
-        },
-        formatActionResults(previousStepNumber, actionResults) {
-          return {
-            id: `action-results:${previousStepNumber}`,
-            kind: 'action-results',
-            title: 'Previous action results',
-            data: actionResults,
-            content: [],
-          } satisfies StepContextEntry;
-        },
-      },
+      contextFormatter: createConversationRuntimeContextFormatter(),
     },
     actions: [
       ...(options.runtimeActions ?? []),

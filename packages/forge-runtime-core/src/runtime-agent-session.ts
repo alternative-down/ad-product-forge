@@ -1,10 +1,7 @@
-import { randomUUID } from 'node:crypto';
-
 import type { LanguageModel } from 'ai';
 import {
   AiSdkStepModelAdapter,
   RuntimeRunController,
-  createTextStepContextEntry,
   type ConversationStore,
   type RuntimeActionDefinition,
   type RuntimeObserver,
@@ -24,9 +21,15 @@ import {
   createWorkingMemoryPlugin,
   type RuntimeWorkingMemoryStore,
 } from './runtime-working-memory.js';
+import {
+  dispatchRuntimeSessionFeedback,
+  dispatchRuntimeSessionMessages,
+} from './runtime-agent-session-messages.js';
+import {
+  createRuntimeSystemInstructionPlugin,
+  dispatchRuntimeSystemInstruction,
+} from './runtime-agent-session-system-plugin.js';
 import { toolToRuntimeAction, type Tool } from './tools.js';
-
-const SYSTEM_INSTRUCTION_INPUT_TYPE = 'forge-system-instruction';
 
 export type RuntimeAgentSessionGenerateMessage =
   | string
@@ -179,23 +182,7 @@ export async function createRuntimeAgentSession(
       resourceId: input.resourceId,
       store: input.workingMemoryStore,
     }),
-    {
-      name: 'forge-system-instruction',
-      provideContext(context) {
-        return context.pendingInputs
-          .filter((pendingInput) => pendingInput.type === SYSTEM_INSTRUCTION_INPUT_TYPE)
-          .map((pendingInput, index) =>
-            createTextStepContextEntry({
-              id: `${pendingInput.id}:${index}`,
-              kind: 'system-instruction',
-              title: 'System Instruction',
-              text:
-                typeof pendingInput.payload === 'string'
-                  ? pendingInput.payload
-                  : '',
-            }));
-      },
-    },
+    createRuntimeSystemInstructionPlugin(),
   ];
   const runtime = await createForgeAgentRuntime({
     config: {
@@ -244,10 +231,9 @@ export async function createRuntimeAgentSession(
   return {
     async generate(prompt, options = {}) {
       if (options.system?.trim()) {
-        await runtime.host.runtime.dispatch({
-          id: randomUUID(),
-          type: SYSTEM_INSTRUCTION_INPUT_TYPE,
-          payload: options.system.trim(),
+        await dispatchRuntimeSystemInstruction({
+          runtime: runtime.host.runtime,
+          text: options.system.trim(),
         });
       }
 
@@ -258,27 +244,12 @@ export async function createRuntimeAgentSession(
         }]
         : prompt;
 
-      for (const message of promptMessages) {
-        await runtime.bridge.dispatchMessage({
-          thread: {
-            id: input.threadId,
-            participantIds: [input.agentId],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          message: {
-            id: randomUUID(),
-            threadId: input.threadId,
-            role: message.role,
-            authorId: message.role === 'assistant' ? input.agentId : undefined,
-            parts: [{
-              type: 'text',
-              text: message.content,
-            }],
-            createdAt: new Date().toISOString(),
-          },
-        });
-      }
+      await dispatchRuntimeSessionMessages({
+        bridge: runtime.bridge,
+        threadId: input.threadId,
+        agentId: input.agentId,
+        messages: promptMessages,
+      });
 
       let finalText = '';
       let finalUsage: RuntimeAgentSessionStepResult['usage'];
@@ -329,25 +300,13 @@ export async function createRuntimeAgentSession(
           });
 
           if (result?.feedback?.trim()) {
-            await runtime.bridge.dispatchMessage({
-              thread: {
-                id: input.threadId,
-                participantIds: [input.agentId],
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-              message: {
-                id: randomUUID(),
-                threadId: input.threadId,
-                role: 'user',
-                parts: [{
-                  type: 'text',
-                  text: result.feedback.trim(),
-                }],
-                createdAt: new Date().toISOString(),
-              },
+            await dispatchRuntimeSessionFeedback({
+              bridge: runtime.bridge,
+              threadId: input.threadId,
+              agentId: input.agentId,
+              text: result.feedback.trim(),
             });
-          }
+          } 
 
           if (result?.continue !== undefined) {
             return result.continue;
