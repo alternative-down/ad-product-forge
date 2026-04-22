@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { generateText, stepCountIs, tool as createAiSdkTool, type LanguageModel } from 'ai';
 
 import type { Database } from '../database/index';
 import { llmModelPrices } from '../database/schema';
@@ -6,13 +7,8 @@ import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import {
-  AiSdkStepModelAdapter,
-  RuntimeRunController,
-  createDefaultContextFormatter,
-  createRuntimeHost,
-  createTextStepContextEntry,
   createTool,
-  toolsToRuntimeActions,
+  type Tool,
 } from '@forge-runtime/core';
 import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
@@ -51,23 +47,6 @@ const hireAgentFailureSchema = z.object({
   hint: z.string().min(1).optional(),
 });
 const hireAgentToolResultSchema = z.union([hireAgentSuccessSchema, hireAgentFailureSchema]);
-type HiringActionResult = {
-  name: string;
-  output: unknown;
-};
-type HiringStepRecord = {
-  stepNumber: number;
-  continuation: string;
-  modelUsage: {
-    inputTokens?: number;
-    outputTokens?: number;
-  } | null;
-  modelResponse: {
-    segments: unknown[];
-  };
-  actionResults: HiringActionResult[];
-};
-
 type HiringRhResult =
   | { valid: false; error: string; hint?: string }
   | {
@@ -85,10 +64,6 @@ type HiringRhResult =
 function isSuccessfulHireAgentResult(result: unknown) {
   const parsed = hireAgentSuccessSchema.safeParse(result);
   return parsed.success && parsed.data.valid;
-}
-
-function hasHireAgentActionResult(actionResult: { name: string }) {
-  return actionResult.name === 'hireAgent';
 }
 
 function normalizeAgentName(value: string) {
@@ -113,6 +88,25 @@ function validateGeneratedAgentProfile(profile: z.infer<typeof generatedAgentPro
   return {
     valid: true as const,
   };
+}
+
+function toAiSdkTools(tools: Record<string, Tool>) {
+  return Object.fromEntries(
+    Object.values(tools).map((tool) => [
+      tool.id,
+      createAiSdkTool({
+        description: tool.description,
+        inputSchema: tool.inputSchema as never,
+        execute: async (toolInput: unknown, options) =>
+          tool.execute(toolInput, {
+            runtimeId: HIRING_RH_AGENT_ID,
+            stepId: options.toolCallId,
+            stepNumber: 0,
+            toolCallId: options.toolCallId,
+          }),
+      }),
+    ]),
+  );
 }
 
 function buildGeneratedAgentInstructions(profile: z.infer<typeof generatedAgentProfileSchema>) {
@@ -388,82 +382,34 @@ export async function generateHiredAgentInstructions(
     }),
     ...tools,
   };
-  const defaultFormatter = createDefaultContextFormatter();
-  const host = createRuntimeHost({
-    runtime: {
-      runtimeId: HIRING_RH_AGENT_ID,
-      model: new AiSdkStepModelAdapter({
-        model: hiringRhRuntimeModel,
-        system: systemPrompt,
-      }),
-      contextFormatter: {
-        formatInput(runtimeInput: {
-          id: string;
-          type: string;
-          payload: unknown;
-        }) {
-          return createTextStepContextEntry({
-            id: runtimeInput.id,
-            kind: `input:${runtimeInput.type}`,
-            title: 'Hiring Request',
-            text: typeof runtimeInput.payload === 'string'
-              ? runtimeInput.payload
-              : JSON.stringify(runtimeInput.payload, null, 2),
-          });
-        },
-        formatActionResults: defaultFormatter.formatActionResults,
-      },
-    },
-    actions: toolsToRuntimeActions(hiringTools),
+  const runResult = await generateText({
+    model: hiringRhRuntimeModel as LanguageModel,
+    system: systemPrompt,
+    prompt: hiringPrompt,
+    tools: toAiSdkTools(hiringTools),
+    stopWhen: stepCountIs(100),
   });
-  await host.runtime.dispatch({
-    id: `hiring-request:${Date.now()}`,
-    type: 'hiring-request',
-    payload: hiringPrompt,
-  });
-  const runController = new RuntimeRunController({
-    runtime: host.runtime,
-  });
-  const runResult = await runController.run({
-    maxSteps: 100,
-    continueAfterStep({ latestStep }: { latestStep: HiringStepRecord }) {
-      if (latestStep.actionResults.some((actionResult: HiringActionResult) => hasHireAgentActionResult(actionResult))) {
-        return false;
-      }
-
-      return latestStep.actionResults.length > 0;
-    },
-  });
-  const usage = runResult.steps.reduce((totals: { inputTokens: number; outputTokens: number }, step: HiringStepRecord) => {
-    return {
-      inputTokens: totals.inputTokens + (step.modelUsage?.inputTokens ?? 0),
-      outputTokens: totals.outputTokens + (step.modelUsage?.outputTokens ?? 0),
-    };
-  }, {
-    inputTokens: 0,
-    outputTokens: 0,
-  });
-  const inputTokens = usage.inputTokens;
-  const outputTokens = usage.outputTokens;
+  const inputTokens = runResult.totalUsage.inputTokens ?? 0;
+  const outputTokens = runResult.totalUsage.outputTokens ?? 0;
   const costUsd =
     (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
-  console.log(`[HiringRH] run completed`);
+  console.log(`[HiringRH] generateText completed`);
   console.log(
     `[HiringRH] action results:`,
     JSON.stringify(
-      runResult.steps.flatMap((step: HiringStepRecord) => step.actionResults.map((actionResult: HiringActionResult) => ({
-        actionName: actionResult.name,
-        output: actionResult.output,
+      runResult.steps.flatMap((step) => step.toolResults.map((toolResult) => ({
+        actionName: toolResult.toolName,
+        output: toolResult.output,
       }))),
       null,
       2,
     ),
   );
   const hireAgentActionResult = runResult.steps
-    .flatMap((step: HiringStepRecord) => step.actionResults)
-    .find((actionResult: HiringActionResult) => actionResult.name === 'hireAgent');
+    .flatMap((step) => step.toolResults)
+    .find((toolResult) => toolResult.toolName === 'hireAgent');
 
   if (hireAgentActionResult) {
     console.log(
@@ -511,11 +457,20 @@ export async function generateHiredAgentInstructions(
     '[HiringRH] ERROR DETAILS:',
     JSON.stringify(
       {
-        steps: runResult.steps.map((step: HiringStepRecord) => ({
+        text: runResult.text,
+        finishReason: runResult.finishReason,
+        steps: runResult.steps.map((step) => ({
           stepNumber: step.stepNumber,
-          continuation: step.continuation,
-          segments: step.modelResponse.segments,
-          actionResults: step.actionResults,
+          text: step.text,
+          finishReason: step.finishReason,
+          toolCalls: step.toolCalls.map((toolCall) => ({
+            toolName: toolCall.toolName,
+            input: toolCall.input,
+          })),
+          toolResults: step.toolResults.map((toolResult) => ({
+            toolName: toolResult.toolName,
+            output: toolResult.output,
+          })),
         })),
       },
       null,
