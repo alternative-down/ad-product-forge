@@ -1,4 +1,11 @@
-import { generateText, streamText, tool, type LanguageModel, type ToolSet } from 'ai';
+import {
+  generateText,
+  streamText,
+  tool,
+  type LanguageModel,
+  type ModelMessage,
+  type ToolSet,
+} from 'ai';
 
 import { AsyncEventChannel } from '../../core/async-event-channel.js';
 import type { StepModelAdapter, StreamingStepModelAdapter } from '../../core/model.js';
@@ -94,6 +101,96 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
 function buildAiSdkMessages(
   context: StepContextEntry[],
 ) {
+  const historyMessages: ModelMessage[] = [];
+  const toolResultMessages: ModelMessage[] = [];
+  const currentInputMessages: ModelMessage[] = [];
+  const remainingContext: StepContextEntry[] = [];
+
+  for (const entry of context) {
+    if (entry.kind.startsWith('conversation-message:')) {
+      historyMessages.push(buildConversationMessage(entry, entry.kind.slice('conversation-message:'.length)));
+      continue;
+    }
+
+    if (entry.kind.startsWith('input:conversation-message:')) {
+      currentInputMessages.push(buildConversationMessage(entry, entry.kind.slice('input:conversation-message:'.length)));
+      continue;
+    }
+
+    if (entry.kind === 'action-results') {
+      toolResultMessages.push(...buildActionResultMessages(entry));
+      continue;
+    }
+
+    remainingContext.push(entry);
+  }
+
+  const messages = [
+    ...historyMessages,
+    ...toolResultMessages,
+    ...currentInputMessages,
+  ];
+
+  if (remainingContext.length > 0 || messages.length === 0) {
+    messages.push(buildContextMessage(remainingContext));
+  }
+
+  return messages;
+}
+
+function buildConversationMessage(entry: StepContextEntry, role: string): ModelMessage {
+  const content = buildMessageContent(entry);
+
+  if (role === 'system') {
+    return {
+      role: 'system',
+      content: getStepContextText(entry) || '',
+    };
+  }
+
+  if (role === 'assistant') {
+    return {
+      role: 'assistant',
+      content,
+    } as ModelMessage;
+  }
+
+  return {
+    role: role === 'tool' ? 'tool' : 'user',
+    content,
+  } as ModelMessage;
+}
+
+function buildActionResultMessages(entry: StepContextEntry): ModelMessage[] {
+  const actionResults = parseActionResults(entry);
+
+  return actionResults.flatMap((actionResult, index) => {
+    const toolCallId = `${entry.id}:${index}`;
+
+    return [
+      {
+        role: 'assistant',
+        content: [{
+          type: 'tool-call',
+          toolCallId,
+          toolName: actionResult.name,
+          input: actionResult.input,
+        }],
+      } as ModelMessage,
+      {
+        role: 'tool',
+        content: [{
+          type: 'tool-result',
+          toolCallId,
+          toolName: actionResult.name,
+          output: actionResult.output,
+        }],
+      } as ModelMessage,
+    ];
+  });
+}
+
+function buildContextMessage(context: StepContextEntry[]): ModelMessage {
   const content: Array<
     | { type: 'text'; text: string }
     | { type: 'image'; image: string }
@@ -115,10 +212,45 @@ function buildAiSdkMessages(
     }
   }
 
-  return [{
-    role: 'user' as const,
+  return {
+    role: 'user',
     content,
-  }];
+  };
+}
+
+function buildMessageContent(entry: StepContextEntry) {
+  const content: Array<
+    | { type: 'text'; text: string }
+    | { type: 'image'; image: string }
+  > = [];
+  const text = getStepContextText(entry);
+
+  if (text) {
+    content.push({
+      type: 'text',
+      text,
+    });
+  }
+
+  for (const part of getStepContextParts(entry)) {
+    if (part.type !== 'image') {
+      continue;
+    }
+
+    content.push({
+      type: 'image',
+      image: toDataUrl(part.mimeType, part.bytes),
+    });
+  }
+
+  if (content.length === 0) {
+    content.push({
+      type: 'text',
+      text: '[No text content]',
+    });
+  }
+
+  return content;
 }
 
 function renderContextSection(context: StepContextEntry[]) {
@@ -132,6 +264,35 @@ function renderContextSection(context: StepContextEntry[]) {
     getStepContextText(entry) || '[No text content]',
     '</entry>',
   ].join('\n')).join('\n\n');
+}
+
+function parseActionResults(entry: StepContextEntry) {
+  const text = getStepContextText(entry);
+
+  if (!text) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter((value): value is { name: string; input: Record<string, unknown>; output: unknown } => (
+        typeof value === 'object'
+        && value !== null
+        && 'name' in value
+        && typeof value.name === 'string'
+        && 'input' in value
+        && isRecord(value.input)
+        && 'output' in value
+      ));
+  } catch {
+    return [];
+  }
 }
 
 function buildToolSet(actions: StepActionDescriptor[]) {

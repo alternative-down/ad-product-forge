@@ -22,7 +22,20 @@ export function createCheckpointedConversationPlugin(
         return [];
       }
 
-      return options.memory.renderContext();
+      const currentMessageIds = new Set(
+        context.pendingInputs
+          .map((input) => isConversationRuntimeInputPayload(input.payload) ? input.payload.messageId : null)
+          .filter((messageId): messageId is string => Boolean(messageId)),
+      );
+      const renderedContext = await options.memory.renderContext();
+
+      return renderedContext.filter((entry) => {
+        if (!entry.id.startsWith('conversation-message:')) {
+          return true;
+        }
+
+        return !currentMessageIds.has(entry.id.replace('conversation-message:', ''));
+      });
     },
     async onAfterStep() {
       if (options.consolidateAfterStep) {

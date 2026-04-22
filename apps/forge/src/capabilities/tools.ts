@@ -216,7 +216,7 @@ export function createCapabilityTools(
       description: 'List the current execution status of agents, such as idle or running. You can filter by one agentId or by one executionState.',
       inputSchema: z.object({
         agentId: z.string().optional().describe('Optional agentId if you want to inspect one specific agent.'),
-        executionState: z.enum(['idle', 'running', 'absent']).optional().describe('Optional execution state filter. Use idle, running, or absent.'),
+        executionState: z.enum(['idle', 'running']).optional().describe('Optional execution state filter. Use idle or running.'),
       }),
       execute: async (input) => {
         forgeDebug('tools:capabilities', 'list_agent_statuses called', { input });
@@ -269,7 +269,7 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'manage_role_capabilities')) {
     tools.manage_role_capabilities = createTool({
       id: 'manage_role_capabilities',
-      description: 'Add or remove one capability from a role.',
+      description: 'Add or remove one capability from a role. A capability can be either a tool or a workflow.',
       inputSchema: z.object({
         action: z.enum(['add', 'remove']).describe('Choose add to grant the capability or remove to revoke it.'),
         roleId: z.string().min(1).describe('The roleId you want to change.'),

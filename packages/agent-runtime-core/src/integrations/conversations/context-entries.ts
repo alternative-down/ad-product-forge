@@ -28,7 +28,7 @@ export function createConversationMessageContextEntry(message: ConversationMessa
 
   return {
     id: `conversation-message:${message.id}`,
-    kind: 'conversation-message',
+    kind: `conversation-message:${message.role}`,
     title: buildConversationMessageTitle(message),
     text: [...textSegments, ...fileSegments].join('\n').trim() || undefined,
     content: content.length > 0 ? content : undefined,

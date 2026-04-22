@@ -158,4 +158,91 @@ describe('AiSdkStepModelAdapter', () => {
     });
     expect(Object.keys(streamTextMock.mock.calls[0]?.[0]?.tools ?? {})).toEqual(['lookup']);
   });
+
+  it('preserves conversation history and previous tool results as native ai sdk messages', async () => {
+    generateTextMock.mockResolvedValue({
+      content: [{ type: 'text', text: 'done' }],
+      toolCalls: [],
+      usage: {},
+    });
+
+    const adapter = new AiSdkStepModelAdapter({
+      model: {} as never,
+    });
+
+    await adapter.generateStep({
+      runtimeId: 'runtime-1',
+      stepId: 'step-2',
+      stepNumber: 2,
+      context: [
+        createTextStepContextEntry({
+          id: 'conversation-message:user-1',
+          kind: 'conversation-message:user',
+          title: 'User message',
+          text: 'Need a landing page.',
+        }),
+        createTextStepContextEntry({
+          id: 'conversation-message:assistant-1',
+          kind: 'conversation-message:assistant',
+          title: 'Assistant message',
+          text: 'I will create a plan.',
+        }),
+        createTextStepContextEntry({
+          id: 'action-results:0',
+          kind: 'action-results',
+          title: 'Previous action results',
+          text: JSON.stringify([
+            {
+              name: 'lookup',
+              input: { query: 'landing page' },
+              output: { ok: true },
+            },
+          ]),
+        }),
+        createTextStepContextEntry({
+          id: 'conversation-message:user-2',
+          kind: 'input:conversation-message:user',
+          title: 'User message',
+          text: 'Use the warm design system.',
+        }),
+      ],
+      actions: [],
+    });
+
+    const request = generateTextMock.mock.calls[0]?.[0];
+    const messages = request?.messages as Array<{ role: string; content: unknown }>;
+
+    expect(messages).toEqual([
+      {
+        role: 'user',
+        content: [{ type: 'text', text: 'Need a landing page.' }],
+      },
+      {
+        role: 'assistant',
+        content: [{ type: 'text', text: 'I will create a plan.' }],
+      },
+      {
+        role: 'assistant',
+        content: [{
+          type: 'tool-call',
+          toolCallId: 'action-results:0:0',
+          toolName: 'lookup',
+          input: { query: 'landing page' },
+        }],
+      },
+      {
+        role: 'tool',
+        content: [{
+          type: 'tool-result',
+          toolCallId: 'action-results:0:0',
+          toolName: 'lookup',
+          output: { ok: true },
+        }],
+      },
+      {
+        role: 'user',
+        content: [{ type: 'text', text: 'Use the warm design system.' }],
+      },
+    ]);
+  });
 });
