@@ -67,6 +67,25 @@ export const WORKING_MEMORY_SCHEMA = z.object({
   'Structured working memory for intrinsic identity, domain boundaries, and current direction.',
 );
 
+export const WORKING_MEMORY_UPDATE_SCHEMA = z.object({
+  identity: z.object({
+    roleCore: z.string().optional(),
+    nonNegotiables: z.string().optional(),
+    operatingPrinciples: z.string().optional(),
+  }).partial().optional(),
+  domain: z.object({
+    scope: z.string().optional(),
+    activities: z.string().optional(),
+    boundaries: z.string().optional(),
+  }).partial().optional(),
+  direction: z.object({
+    currentMission: z.string().optional(),
+    successDefinition: z.string().optional(),
+  }).partial().optional(),
+}).describe(
+  'Partial working memory update. Only include properties that changed; omitted properties remain unchanged.',
+);
+
 export type WorkingMemoryAccess = {
   getWorkingMemory(input: {
     threadId: string;

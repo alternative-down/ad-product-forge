@@ -140,7 +140,7 @@ function buildAiSdkPrompt(input: {
         continue;
       }
 
-      historyMessages.push(buildConversationMessage(entry, role));
+      historyMessages.push(...buildConversationMessages(entry, role));
       continue;
     }
 
@@ -156,7 +156,7 @@ function buildAiSdkPrompt(input: {
         continue;
       }
 
-      currentInputMessages.push(buildConversationMessage(entry, role));
+      currentInputMessages.push(...buildConversationMessages(entry, role));
       continue;
     }
 
@@ -192,27 +192,57 @@ function buildAiSdkPrompt(input: {
   };
 }
 
-function buildConversationMessage(entry: StepContextEntry, role: string): ModelMessage {
+function buildConversationMessages(entry: StepContextEntry, role: string): ModelMessage[] {
   const content = buildMessageContent(entry);
+  const toolHistory = parseConversationToolHistory(entry);
 
   if (role === 'system') {
-    return {
+    return [{
       role: 'system',
       content: getStepContextText(entry) || '',
-    };
+    }];
   }
 
   if (role === 'assistant') {
-    return {
+    const assistantTextContent = toolHistory.toolInvocations.length > 0 && isEmptyPlaceholderContent(content)
+      ? []
+      : content;
+    const assistantContent = [
+      ...assistantTextContent,
+      ...toolHistory.toolInvocations.map((toolInvocation, index) => ({
+        type: 'tool-call' as const,
+        toolCallId: `${entry.id}:tool:${index}`,
+        toolName: toolInvocation.toolName,
+        input: toolInvocation.args,
+      })),
+    ];
+    const messages: ModelMessage[] = [{
       role: 'assistant',
-      content,
-    } as ModelMessage;
+      content: assistantContent,
+    } as ModelMessage];
+
+    for (const [index, toolResult] of toolHistory.toolResults.entries()) {
+      messages.push({
+        role: 'tool',
+        content: [{
+          type: 'tool-result',
+          toolCallId: `${entry.id}:tool:${index}`,
+          toolName: toolResult.toolName,
+          output: {
+            type: 'json',
+            value: toolResult.result,
+          },
+        }],
+      } as ModelMessage);
+    }
+
+    return messages;
   }
 
-  return {
+  return [{
     role: role === 'tool' ? 'tool' : 'user',
     content,
-  } as ModelMessage;
+  } as ModelMessage];
 }
 
 function buildActionResultMessages(entry: StepContextEntry): ModelMessage[] {
@@ -363,6 +393,51 @@ function parseActionResults(entry: StepContextEntry) {
   } catch {
     return [];
   }
+}
+
+function parseConversationToolHistory(entry: StepContextEntry) {
+  if (!entry.data || typeof entry.data !== 'object') {
+    return {
+      toolInvocations: [] as Array<{ toolName: string; args: Record<string, unknown> }>,
+      toolResults: [] as Array<{ toolName: string; result: unknown }>,
+    };
+  }
+
+  const data = entry.data as {
+    toolInvocations?: unknown;
+    toolResults?: unknown;
+  };
+
+  return {
+    toolInvocations: Array.isArray(data.toolInvocations)
+      ? data.toolInvocations
+          .filter((value): value is { toolName: string; args?: unknown } =>
+            typeof value === 'object'
+            && value !== null
+            && 'toolName' in value
+            && typeof value.toolName === 'string')
+          .map((toolInvocation) => ({
+            toolName: toolInvocation.toolName,
+            args: isRecord(toolInvocation.args) ? toolInvocation.args : {},
+          }))
+      : [],
+    toolResults: Array.isArray(data.toolResults)
+      ? data.toolResults
+          .filter((value): value is { toolName: string; result?: unknown } =>
+            typeof value === 'object'
+            && value !== null
+            && 'toolName' in value
+            && typeof value.toolName === 'string')
+          .map((toolResult) => ({
+            toolName: toolResult.toolName,
+            result: toolResult.result,
+          }))
+      : [],
+  };
+}
+
+function isEmptyPlaceholderContent(content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }>) {
+  return content.length === 1 && content[0]?.type === 'text' && content[0]?.text === '[No text content]';
 }
 
 function buildToolSet(actions: StepActionDescriptor[]) {

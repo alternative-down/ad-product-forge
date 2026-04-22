@@ -8,6 +8,10 @@ import {
 import { z } from 'zod';
 
 import { createTool, type Tool } from './tools.js';
+import {
+  WORKING_MEMORY_SCHEMA,
+  WORKING_MEMORY_UPDATE_SCHEMA,
+} from './working-memory.js';
 
 export type WorkingMemoryRecord = {
   threadId: string;
@@ -30,7 +34,7 @@ export interface RuntimeWorkingMemoryStore {
 }
 
 const updateWorkingMemoryInputSchema = z.object({
-  workingMemory: z.string().min(1),
+  workingMemory: WORKING_MEMORY_UPDATE_SCHEMA,
 });
 
 const updateWorkingMemoryOutputSchema = z.object({
@@ -51,10 +55,18 @@ export function createUpdateWorkingMemoryTool(input: {
     inputSchema: updateWorkingMemoryInputSchema,
     outputSchema: updateWorkingMemoryOutputSchema,
     async execute(value) {
+      const currentRecord = await input.store.read({
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+      });
+      const currentWorkingMemory = parseWorkingMemoryRecord(currentRecord?.workingMemory);
+      const mergedWorkingMemory = mergeWorkingMemory(currentWorkingMemory, value.workingMemory);
+      const normalizedWorkingMemory = JSON.stringify(WORKING_MEMORY_SCHEMA.parse(mergedWorkingMemory));
+
       await input.store.write({
         threadId: input.threadId,
         resourceId: input.resourceId,
-        workingMemory: value.workingMemory,
+        workingMemory: normalizedWorkingMemory,
       });
 
       return {
@@ -95,4 +107,48 @@ export function createWorkingMemoryContextEntry(workingMemory: string): StepCont
     title: 'Working Memory',
     text: workingMemory,
   });
+}
+
+function parseWorkingMemoryRecord(workingMemory: string | null | undefined) {
+  if (!workingMemory?.trim()) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(workingMemory) as unknown;
+    return WORKING_MEMORY_SCHEMA.safeParse(parsed).success
+      ? WORKING_MEMORY_SCHEMA.parse(parsed)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function mergeWorkingMemory(
+  current: Record<string, unknown>,
+  patch: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = { ...current };
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (isPlainObject(value) && isPlainObject(next[key])) {
+      next[key] = mergeWorkingMemory(
+        next[key] as Record<string, unknown>,
+        value as Record<string, unknown>,
+      );
+      continue;
+    }
+
+    next[key] = value;
+  }
+
+  return next;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

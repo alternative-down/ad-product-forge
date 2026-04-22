@@ -140,6 +140,7 @@ export {
   createCheckpointedOmCompatibilityObserver,
   type CheckpointedOmCompatibilityObserverOptions,
 } from './checkpointed-om-compatibility.js';
+export { createCheckpointedOmContextPlugin } from './checkpointed-om-context-plugin.js';
 export type {
   CommunicationAttachmentView,
   CommunicationContactView,

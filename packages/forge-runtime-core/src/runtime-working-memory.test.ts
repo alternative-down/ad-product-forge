@@ -45,7 +45,13 @@ describe('runtime working memory', () => {
     });
 
     const result = await tool.execute(
-      { workingMemory: 'Keep the release notes concise.' },
+      {
+        workingMemory: {
+          direction: {
+            currentMission: 'Keep the release notes concise.',
+          },
+        },
+      },
       {
         runtimeId: 'runtime-1',
         stepId: 'step-1',
@@ -55,7 +61,58 @@ describe('runtime working memory', () => {
     );
 
     expect(result).toEqual({ updated: true });
-    expect(memory.getRecord()?.workingMemory).toBe('Keep the release notes concise.');
+    expect(memory.getRecord()?.workingMemory).toBe(JSON.stringify({
+      direction: {
+        currentMission: 'Keep the release notes concise.',
+      },
+    }));
+  });
+
+  it('merges only the provided working memory fields', async () => {
+    const memory = createWorkingMemoryStore();
+    const tool = createUpdateWorkingMemoryTool({
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      store: memory.store,
+    });
+
+    await memory.store.write({
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      workingMemory: JSON.stringify({
+        identity: {
+          roleCore: 'Own frontend delivery',
+        },
+        direction: {
+          currentMission: 'Ship the redesign',
+        },
+      }),
+    });
+    await tool.execute(
+      {
+        workingMemory: {
+          direction: {
+            successDefinition: 'Users can navigate the new IA without friction.',
+          },
+        },
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-2',
+        stepNumber: 2,
+        toolCallId: 'tool-2',
+      },
+    );
+
+    expect(memory.getRecord()?.workingMemory).toBe(JSON.stringify({
+      identity: {
+        roleCore: 'Own frontend delivery',
+      },
+      direction: {
+        currentMission: 'Ship the redesign',
+        successDefinition: 'Users can navigate the new IA without friction.',
+      },
+    }));
   });
 
   it('provides working memory as runtime context', async () => {

@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { createTextStepContextEntry } from '../../core/step-context.js';
 import type { StepContextEntry } from '../../core/types.js';
 import { createConversationMessageContextEntry } from '../conversations/context-entries.js';
 import type { ConversationMessage, ConversationStore } from '../conversations/contracts.js';
@@ -196,22 +195,9 @@ export class CheckpointedConversationMemory {
       : await this.store.listMessages({
         threadId: this.threadId,
         afterMessageId: state.checkpointMessageId ?? undefined,
-      });
+    });
     const recentMessageMap = new Map(recentMessages.map((message) => [message.id, message]));
     const context: StepContextEntry[] = [];
-    const visibleObservations = selectVisibleObservations({
-      observations: state.observations,
-      observationTokenLimit: this.observationTokenLimit,
-    });
-
-    for (const observation of visibleObservations) {
-      context.push(createTextStepContextEntry({
-        id: observation.id,
-        kind: 'checkpointed-conversation-observation',
-        title: 'Conversation Observation',
-        text: observation.text,
-      }));
-    }
 
     for (const messageId of state.recentMessageIds) {
       const message = recentMessageMap.get(messageId);
@@ -327,30 +313,4 @@ function selectObservationBatch(input: {
   }
 
   return selected;
-}
-
-function selectVisibleObservations(input: {
-  observations: CheckpointedConversationObservation[];
-  observationTokenLimit: number | null;
-}) {
-  if (input.observationTokenLimit === null) {
-    return input.observations;
-  }
-
-  const visibleObservations: CheckpointedConversationObservation[] = [];
-  let tokenCount = 0;
-
-  for (const observation of [...input.observations].reverse()) {
-    if (
-      visibleObservations.length > 0
-      && tokenCount + observation.units > input.observationTokenLimit
-    ) {
-      break;
-    }
-
-    visibleObservations.unshift(observation);
-    tokenCount += observation.units;
-  }
-
-  return visibleObservations;
 }

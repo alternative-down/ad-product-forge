@@ -5,6 +5,7 @@ import {
 } from 'agent-runtime-core/integrations';
 
 import { createCheckpointedConversationObserver } from './checkpointed-conversation-observer.js';
+import { createCheckpointedOmContextPlugin } from './checkpointed-om-context-plugin.js';
 import { createCheckpointedOmCompatibilityObserver } from './checkpointed-om-compatibility.js';
 import { createForgeAgentRuntime } from './runtime.js';
 import {
@@ -42,6 +43,15 @@ export async function createRuntimeAgentSessionRuntime(
   ];
   const checkpointedOmLimits = input.checkpointedOmLimits ?? DEFAULT_CHECKPOINTED_OM_LIMITS;
   const checkpointedOmEnabled = input.consolidateConversationOverflow ?? true;
+
+  if (input.checkpointedOmStateStore) {
+    runtimePlugins.push(createCheckpointedOmContextPlugin({
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      stateStore: input.checkpointedOmStateStore,
+    }));
+  }
+
   const runtime = await createForgeAgentRuntime({
     config: {
       agentId: input.agentId,

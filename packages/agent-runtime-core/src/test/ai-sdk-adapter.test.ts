@@ -249,6 +249,77 @@ describe('AiSdkStepModelAdapter', () => {
     ]);
   });
 
+  it('rebuilds persisted assistant tool history as native ai sdk tool messages', async () => {
+    generateTextMock.mockResolvedValue({
+      content: [{ type: 'text', text: 'done' }],
+      toolCalls: [],
+      usage: {},
+    });
+
+    const adapter = new AiSdkStepModelAdapter({
+      model: {} as never,
+    });
+
+    await adapter.generateStep({
+      runtimeId: 'runtime-1',
+      stepId: 'step-3',
+      stepNumber: 3,
+      context: [
+        {
+          id: 'conversation-message:assistant-tool-step',
+          kind: 'conversation-message:assistant',
+          title: 'Assistant tool step',
+          data: {
+            toolInvocations: [{
+              toolName: 'searchWorkspace',
+              args: {
+                query: 'checkpointed memory',
+              },
+            }],
+            toolResults: [{
+              toolName: 'searchWorkspace',
+              result: {
+                hit: true,
+              },
+            }],
+          },
+        },
+      ],
+      actions: [],
+    });
+
+    const request = generateTextMock.mock.calls[0]?.[0];
+    const messages = request?.messages as Array<{ role: string; content: unknown }>;
+
+    expect(messages).toEqual([
+      {
+        role: 'assistant',
+        content: [{
+          type: 'tool-call',
+          toolCallId: 'conversation-message:assistant-tool-step:tool:0',
+          toolName: 'searchWorkspace',
+          input: {
+            query: 'checkpointed memory',
+          },
+        }],
+      },
+      {
+        role: 'tool',
+        content: [{
+          type: 'tool-result',
+          toolCallId: 'conversation-message:assistant-tool-step:tool:0',
+          toolName: 'searchWorkspace',
+          output: {
+            type: 'json',
+            value: {
+              hit: true,
+            },
+          },
+        }],
+      },
+    ]);
+  });
+
   it('consolidates runtime system instructions into the ai sdk system prompt', async () => {
     generateTextMock.mockResolvedValue({
       content: [{ type: 'text', text: 'done' }],

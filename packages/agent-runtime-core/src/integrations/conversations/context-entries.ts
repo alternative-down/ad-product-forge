@@ -32,6 +32,7 @@ export function createConversationMessageContextEntry(message: ConversationMessa
     title: buildConversationMessageTitle(message),
     text: [...textSegments, ...fileSegments].join('\n').trim() || undefined,
     content: content.length > 0 ? content : undefined,
+    data: normalizeConversationMessageData(message.metadata),
   };
 }
 
@@ -41,4 +42,48 @@ function buildConversationMessageTitle(message: ConversationMessage) {
   }
 
   return `${message.role} message`;
+}
+
+function normalizeConversationMessageData(metadata: ConversationMessage['metadata']) {
+  if (!metadata || typeof metadata !== 'object') {
+    return undefined;
+  }
+
+  const toolInvocations = Array.isArray(metadata.toolInvocations)
+    ? metadata.toolInvocations
+        .filter((value): value is { toolName: string; args?: unknown } =>
+          typeof value === 'object'
+          && value !== null
+          && 'toolName' in value
+          && typeof value.toolName === 'string')
+        .map((toolInvocation) => ({
+          toolName: toolInvocation.toolName,
+          args: isPlainObject(toolInvocation.args) ? toolInvocation.args : {},
+        }))
+    : [];
+  const toolResults = Array.isArray(metadata.toolResults)
+    ? metadata.toolResults
+        .filter((value): value is { toolName: string; result?: unknown } =>
+          typeof value === 'object'
+          && value !== null
+          && 'toolName' in value
+          && typeof value.toolName === 'string')
+        .map((toolResult) => ({
+          toolName: toolResult.toolName,
+          result: toolResult.result,
+        }))
+    : [];
+
+  if (toolInvocations.length === 0 && toolResults.length === 0) {
+    return undefined;
+  }
+
+  return {
+    toolInvocations,
+    toolResults,
+  };
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
