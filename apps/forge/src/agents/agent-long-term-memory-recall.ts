@@ -7,10 +7,7 @@ import {
   embedTextWithWorkspaceEmbedder,
   FilesystemDocumentSource,
   forgeDebug,
-  InMemoryBm25Index,
-  InMemoryVectorIndex,
-  RefreshableRetrievalWorkspace,
-  toMastraSafeIdentifier,
+  SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
 
@@ -80,7 +77,6 @@ const RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
-const RECALL_WORKSPACE_SEARCH_TOP_K = 10;
 const RECALL_DOCUMENT_COUNT = 3;
 const RECALL_SCORE_THRESHOLD = 0.7;
 const RECALL_GRAPH_TOP_K = 3;
@@ -88,6 +84,7 @@ const RECALL_GRAPH_RANDOM_WALK_STEPS = 100;
 const RECALL_GRAPH_INCLUDE_SOURCES = false;
 
 type RecallConfig = {
+  searchMode: 'hybrid' | 'vector' | 'bm25';
   scoreThreshold: number;
   documentCount: number;
   graphTopK: number;
@@ -151,13 +148,13 @@ export class AgentLongTermMemoryRecall {
   private readonly initTimeoutMs = 5 * 60_000;
   private readonly recallTimeoutMs = 60_000;
   private readonly agentId: string;
-  private readonly retrievalWorkspace: RefreshableRetrievalWorkspace;
-  private readonly vectorIndex: InMemoryVectorIndex;
+  private readonly retrievalWorkspace: SqliteWorkspaceRetrieval;
   private readonly agentMemoryPath: string;
   private readonly agentWorkspacePath: string;
   private readonly workspaceEmbedder: WorkspaceEmbedderId;
   private readonly recallConfig: RecallConfig;
   private readonly readRuntimeMemorySettings?: () => Promise<{
+    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;
     ltmRecallGraphRandomWalkSteps: number;
@@ -188,6 +185,7 @@ export class AgentLongTermMemoryRecall {
     scoreThreshold?: number;
     documentCount?: number;
     readRuntimeMemorySettings?: () => Promise<{
+      ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
       ltmRecallGraphTopK: number;
       ltmRecallGraphThreshold: number;
       ltmRecallGraphRandomWalkSteps: number;
@@ -210,6 +208,7 @@ export class AgentLongTermMemoryRecall {
     this.agentWorkspacePath = input.agentWorkspacePath;
     this.workspaceEmbedder = input.workspaceEmbedder ?? 'fastembed';
     this.recallConfig = {
+      searchMode: RECALL_SEARCH_MODE,
       scoreThreshold: input.scoreThreshold ?? RECALL_SCORE_THRESHOLD,
       documentCount: input.documentCount ?? RECALL_DOCUMENT_COUNT,
       graphTopK: RECALL_GRAPH_TOP_K,
@@ -220,16 +219,14 @@ export class AgentLongTermMemoryRecall {
     this.readRuntimeMemorySettings = input.readRuntimeMemorySettings;
     this.checkpointedOmStateStore = input.checkpointedOmStateStore;
     this.persistenceStore = input.persistenceStore;
-    this.vectorIndex = new InMemoryVectorIndex();
-    this.retrievalWorkspace = new RefreshableRetrievalWorkspace({
+    this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
+      databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
       source: new FilesystemDocumentSource({
         roots: [
           input.agentMemoryPath,
           path.resolve(input.agentWorkspacePath, 'workspace', 'skills'),
         ],
       }),
-      keywordIndex: new InMemoryBm25Index(),
-      vectorIndex: this.vectorIndex,
       embedder: {
         embed: async ({ texts }: { texts: string[] }) => ({
           vectors: await Promise.all(texts.map((text: string) =>
@@ -306,7 +303,7 @@ export class AgentLongTermMemoryRecall {
         stepsJson: safeSerializeRecallSteps(input.steps),
         updatedAt: new Date().toISOString(),
         lastInitAt: this.lastInitAt,
-        searchMode: RECALL_SEARCH_MODE,
+        searchMode: recallConfig.searchMode,
         topK: recallConfig.documentCount,
         graphTopK: recallConfig.graphTopK,
         graphThreshold: recallConfig.graphThreshold,
@@ -345,7 +342,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   async dispose() {
-    return;
+    this.retrievalWorkspace.dispose();
   }
 
   async initialize() {
@@ -419,7 +416,7 @@ export class AgentLongTermMemoryRecall {
       return {
         query: '',
         topK: recallConfig.documentCount,
-        searchMode: RECALL_SEARCH_MODE,
+        searchMode: recallConfig.searchMode,
         graphTopK: recallConfig.graphTopK,
         graphThreshold: recallConfig.graphThreshold,
         graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
@@ -457,7 +454,10 @@ export class AgentLongTermMemoryRecall {
       rawWorkspaceResults,
       graph: graphSearch,
     } = recallSearch;
-    const vectorResults = await this.queryVectorIndex(queryEmbedding, RECALL_WORKSPACE_SEARCH_TOP_K);
+    const vectorResults = await this.queryVectorIndex(
+      queryEmbedding,
+      Math.max(recallConfig.documentCount, recallConfig.graphTopK),
+    );
     const highestScore = rawWorkspaceResults.reduce((currentMax, result) => {
       const score = typeof result.score === 'number' ? result.score : 0;
       return Math.max(currentMax, score);
@@ -466,7 +466,7 @@ export class AgentLongTermMemoryRecall {
     return {
       query,
       topK: recallConfig.documentCount,
-      searchMode: RECALL_SEARCH_MODE,
+      searchMode: recallConfig.searchMode,
       graphTopK: recallConfig.graphTopK,
       graphThreshold: recallConfig.graphThreshold,
       graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
@@ -523,8 +523,8 @@ export class AgentLongTermMemoryRecall {
 
   private async runRecallSearch(queryText: string, config: RecallConfig) {
     const workspaceSearch = await this.searchWorkspace(queryText, {
-      topK: Math.max(RECALL_WORKSPACE_SEARCH_TOP_K, config.documentCount, config.graphTopK),
-      mode: RECALL_SEARCH_MODE,
+      topK: Math.max(config.documentCount, config.graphTopK),
+      mode: config.searchMode,
     });
     const filteredWorkspaceResults = this.filterWorkspaceFallbackResults(
       workspaceSearch.results,
@@ -558,6 +558,7 @@ export class AgentLongTermMemoryRecall {
     }
 
     return {
+      searchMode: runtimeSettings.ltmRecallSearchMode,
       scoreThreshold: runtimeSettings.ltmRecallScoreThreshold,
       documentCount: runtimeSettings.ltmRecallDocumentCount,
       graphTopK: runtimeSettings.ltmRecallGraphTopK,
@@ -577,7 +578,7 @@ export class AgentLongTermMemoryRecall {
       topK: number;
       mode: 'hybrid' | 'vector' | 'bm25';
     } = {
-      topK: RECALL_WORKSPACE_SEARCH_TOP_K,
+      topK: RECALL_DOCUMENT_COUNT,
       mode: RECALL_SEARCH_MODE,
     },
   ): Promise<{ formatted: string; results: SearchResult[] }> {
@@ -599,6 +600,7 @@ export class AgentLongTermMemoryRecall {
         'retrieval.search',
         this.retrievalWorkspace.search(queryText, {
           topK: options.topK,
+          mode: options.mode,
         }),
         this.recallTimeoutMs,
         'ltm recall retrieval search timed out',
@@ -673,44 +675,73 @@ export class AgentLongTermMemoryRecall {
       .join('\n');
     const graphQueryText = workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText;
     const graphDimension = await this.getGraphDimension();
-    void stageStartedAt;
-    void options;
 
-    return {
-      queryText: graphQueryText,
-      dimension: graphDimension,
-      includeSources: options.includeSources,
-      hit: false,
-      context: '',
-      relevantContextRaw: null,
-      sourcesCount: 0,
-      sourcesJson: null,
-      rawJson: null,
-      error: null,
-    };
+    try {
+      const result = await this.runTrackedRecallOperation(
+        'retrieval.graph',
+        this.retrievalWorkspace.searchGraph({
+          query: graphQueryText,
+          topK: options.topK,
+          threshold: options.threshold,
+          randomWalkSteps: options.randomWalkSteps,
+          includeSources: options.includeSources,
+        }),
+        this.recallTimeoutMs,
+        'ltm recall graph search timed out',
+      );
+
+      forgeDebug('ltm', 'ltm recall graph search complete', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        hit: result.hit,
+        sourcesCount: result.sourcesCount,
+      });
+
+      return {
+        queryText: graphQueryText,
+        dimension: graphDimension,
+        includeSources: options.includeSources,
+        hit: result.hit,
+        context: result.context,
+        relevantContextRaw: result.relevantContextRaw,
+        sourcesCount: result.sourcesCount,
+        sourcesJson: result.sourcesJson,
+        rawJson: result.rawJson,
+        error: null,
+      };
+    } catch (error) {
+      forgeDebug('ltm', 'ltm recall graph search failed', {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      return {
+        queryText: graphQueryText,
+        dimension: graphDimension,
+        includeSources: options.includeSources,
+        hit: false,
+        context: '',
+        relevantContextRaw: null,
+        sourcesCount: 0,
+        sourcesJson: null,
+        rawJson: null,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   private async getGraphDimension() {
-    const sampleEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, 'memory-bootstrap');
-    return sampleEmbedding.length;
+    const indexState = await this.retrievalWorkspace.getStats();
+    return indexState.activeIndexStats?.dimension ?? 0;
   }
 
   private async getWorkspaceIndexState() {
-    const documents = this.retrievalWorkspace.listDocuments();
-    const sampleEmbedding = documents[0]
-      ? await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, documents[0].text)
-      : [];
-
     return {
       workspaceCanBm25: true,
       workspaceCanVector: true,
       workspaceCanHybrid: true,
-      availableIndexes: ['in-memory-bm25', 'in-memory-vector'],
-      activeIndexStats: {
-        dimension: sampleEmbedding.length,
-        count: documents.length,
-        metric: 'cosine',
-      },
+      ...(await this.retrievalWorkspace.getStats()),
     };
   }
 
@@ -741,7 +772,7 @@ export class AgentLongTermMemoryRecall {
       metadata?: Record<string, unknown>;
     }>>(
       'vector.query',
-      this.vectorIndex.search(queryVector, { topK }),
+      this.retrievalWorkspace.queryVector(queryVector, topK),
       this.recallTimeoutMs,
       'ltm vector query timed out',
     );
@@ -1105,6 +1136,7 @@ export function createAgentLongTermMemoryRecall(input: {
   scoreThreshold?: number;
   documentCount?: number;
   readRuntimeMemorySettings?: () => Promise<{
+    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;
     ltmRecallGraphRandomWalkSteps: number;

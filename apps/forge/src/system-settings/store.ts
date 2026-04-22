@@ -5,6 +5,14 @@ import { systemSettings } from '../database/schema';
 
 const SYSTEM_SETTINGS_ID = 'global';
 
+function resolveRecallSearchMode(value: string | null | undefined) {
+  if (value === 'vector' || value === 'bm25') {
+    return value;
+  }
+
+  return 'hybrid' as const;
+}
+
 const DEFAULT_SYSTEM_SETTINGS = {
   companyName: '',
   companyContext: '',
@@ -22,6 +30,7 @@ const DEFAULT_SYSTEM_SETTINGS = {
   checkpointedOmObservationReflectionBatchTokens: 5000,
   checkpointedOmObservationSupportTokens: 2000,
   checkpointedOmReflectionSupportTokens: 2000,
+  ltmRecallSearchMode: 'hybrid',
   ltmRecallGraphTopK: 3,
   ltmRecallGraphThreshold: 0.7,
   ltmRecallGraphRandomWalkSteps: 50,
@@ -47,6 +56,7 @@ type SystemSettingsInput = {
   checkpointedOmObservationReflectionBatchTokens: number;
   checkpointedOmObservationSupportTokens: number;
   checkpointedOmReflectionSupportTokens: number;
+  ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
   ltmRecallGraphTopK: number;
   ltmRecallGraphThreshold: number;
   ltmRecallGraphRandomWalkSteps: number;
@@ -55,8 +65,12 @@ type SystemSettingsInput = {
   ltmRecallDocumentCount: number;
 };
 
+export type SystemSettingsValue = SystemSettingsInput & {
+  updatedAt: number | null;
+};
+
 export function createSystemSettingsStore(db: Database) {
-  async function getSettings() {
+  async function getSettings(): Promise<SystemSettingsValue> {
     const row = await db.query.systemSettings.findFirst({
       where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
     });
@@ -98,6 +112,8 @@ export function createSystemSettingsStore(db: Database) {
       checkpointedOmReflectionSupportTokens:
         row?.checkpointedOmReflectionSupportTokens
         ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmReflectionSupportTokens,
+      ltmRecallSearchMode:
+        resolveRecallSearchMode(row?.ltmRecallSearchMode),
       ltmRecallGraphTopK:
         row?.ltmRecallGraphTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphTopK,
       ltmRecallGraphThreshold:
@@ -112,10 +128,10 @@ export function createSystemSettingsStore(db: Database) {
       ltmRecallDocumentCount:
         row?.ltmRecallDocumentCount ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallDocumentCount,
       updatedAt: row?.updatedAt ?? null,
-    };
+    } satisfies SystemSettingsValue;
   }
 
-  async function upsertSettings(input: SystemSettingsInput) {
+  async function upsertSettings(input: SystemSettingsInput): Promise<SystemSettingsValue> {
     const now = Date.now();
 
     await db
@@ -139,6 +155,7 @@ export function createSystemSettingsStore(db: Database) {
           input.checkpointedOmObservationReflectionBatchTokens,
         checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
         checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+        ltmRecallSearchMode: input.ltmRecallSearchMode,
         ltmRecallGraphTopK: input.ltmRecallGraphTopK,
         ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
         ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
@@ -167,6 +184,7 @@ export function createSystemSettingsStore(db: Database) {
             input.checkpointedOmObservationReflectionBatchTokens,
           checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
           checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+          ltmRecallSearchMode: input.ltmRecallSearchMode,
           ltmRecallGraphTopK: input.ltmRecallGraphTopK,
           ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
           ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
@@ -195,6 +213,7 @@ export function createSystemSettingsStore(db: Database) {
         input.checkpointedOmObservationReflectionBatchTokens,
       checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
       checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+      ltmRecallSearchMode: input.ltmRecallSearchMode,
       ltmRecallGraphTopK: input.ltmRecallGraphTopK,
       ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
       ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
@@ -202,7 +221,7 @@ export function createSystemSettingsStore(db: Database) {
       ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
       ltmRecallDocumentCount: input.ltmRecallDocumentCount,
       updatedAt: now,
-    };
+    } satisfies SystemSettingsValue;
   }
 
   return {

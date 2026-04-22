@@ -21,13 +21,10 @@ export {
   ConfiguredWorkspaceGateway,
   createWorkspaceActionDefinitions,
   FilesystemDocumentSource,
-  InMemoryBm25Index,
-  InMemoryVectorIndex,
   RuntimeRunController,
   createDefaultContextFormatter,
   LocalBashWorkspaceGateway,
   ReadWriteFs,
-  RefreshableRetrievalWorkspace,
   createRuntimeHost,
   createTextStepContextEntry,
 } from 'agent-runtime-core/integrations';
@@ -166,6 +163,10 @@ export {
   LibsqlCommunicationContactsStore,
   type LibsqlCommunicationContactsStoreOptions,
 } from './libsql-communication-contacts-store.js';
+export {
+  SqliteWorkspaceRetrieval,
+  type SqliteWorkspaceRetrievalOptions,
+} from './sqlite-workspace-retrieval.js';
 export {
   createExternalAccountTools,
 } from './communication-tools.js';

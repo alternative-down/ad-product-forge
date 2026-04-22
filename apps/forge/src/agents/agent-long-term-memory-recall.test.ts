@@ -26,6 +26,11 @@ describe('AgentLongTermMemoryRecall', () => {
     await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
     await mkdir(agentMemoryPath, { recursive: true });
     const readRuntimeMemorySettings = vi.fn(async () => ({
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
       ltmRecallScoreThreshold: 0.7,
       ltmRecallDocumentCount: 3,
     }));

@@ -40,9 +40,7 @@ export function createRuntimeProviderOptionsPlugin(): RuntimePlugin {
 
 export async function dispatchRuntimeProviderOptions(input: {
   runtime: RuntimeInputTarget;
-  providerOptions: Record<string, {
-    [key: string]: RuntimeProviderOptionValue | undefined;
-  }>;
+  providerOptions: Record<string, unknown>;
 }) {
   await input.runtime.dispatch({
     id: randomUUID(),
