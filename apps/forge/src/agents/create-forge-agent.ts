@@ -141,6 +141,8 @@ export async function createInternalAgentRuntime<
       rawObservationBatchTokens: config.checkpointedOmRawObservationBatchTokens ?? 5_000,
       observationReflectionBatchTokens:
         config.checkpointedOmObservationReflectionBatchTokens ?? 5_000,
+      observationSupportTokens: config.checkpointedOmObservationSupportTokens ?? 2_000,
+      reflectionSupportTokens: config.checkpointedOmReflectionSupportTokens ?? 2_000,
     },
     checkpointedOmModel: (config.omModel ?? config.model) as never,
     checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,

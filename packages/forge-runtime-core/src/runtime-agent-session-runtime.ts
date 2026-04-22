@@ -16,6 +16,8 @@ const DEFAULT_CHECKPOINTED_OM_LIMITS = {
   recentRawTokens: 10_000,
   rawObservationBatchTokens: 5_000,
   observationReflectionBatchTokens: 5_000,
+  observationSupportTokens: 2_000,
+  reflectionSupportTokens: 2_000,
 };
 
 export type RuntimeAgentSessionRuntime = {
@@ -48,6 +50,25 @@ export async function createRuntimeAgentSessionRuntime(
       ? createCheckpointedConversationObserver({
         model: input.checkpointedOmModel ?? input.model,
         agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
+        loadSupportText: input.checkpointedOmStateStore
+          ? async () => {
+            const state = await input.checkpointedOmStateStore!.loadState({
+              threadId: input.threadId,
+              resourceId: input.resourceId,
+            });
+
+            if (!state) {
+              return null;
+            }
+
+            return takeSupportText(
+              state.observationBlocks
+                .filter((block) => block.reflectedGeneration === null)
+                .map((block) => block.text),
+              checkpointedOmLimits.observationSupportTokens ?? DEFAULT_CHECKPOINTED_OM_LIMITS.observationSupportTokens,
+            );
+          }
+          : undefined,
       })
       : undefined,
     recentMessageLimit: input.maxConversationMessages ?? 20,
@@ -95,4 +116,36 @@ export async function createRuntimeAgentSessionRuntime(
       });
     },
   };
+}
+
+function takeSupportText(observations: string[], tokenLimit: number) {
+  if (tokenLimit <= 0) {
+    return '';
+  }
+
+  const selected: string[] = [];
+  let usedTokens = 0;
+
+  for (let index = observations.length - 1; index >= 0; index -= 1) {
+    const text = observations[index]?.trim();
+
+    if (!text) {
+      continue;
+    }
+
+    const tokenCount = estimateTokenCount(text);
+
+    if (usedTokens + tokenCount > tokenLimit) {
+      break;
+    }
+
+    selected.unshift(text);
+    usedTokens += tokenCount;
+  }
+
+  return selected.join('\n');
+}
+
+function estimateTokenCount(text: string) {
+  return Math.max(1, Math.ceil(text.length / 4));
 }

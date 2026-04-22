@@ -85,6 +85,8 @@ export type CheckpointedOmCompatibilityObserverOptions = {
     recentRawTokens: number;
     rawObservationBatchTokens: number;
     observationReflectionBatchTokens: number;
+    observationSupportTokens?: number;
+    reflectionSupportTokens?: number;
   };
   reflectionModel?: LanguageModel;
   agentSystemPrompt?: string;
@@ -191,6 +193,9 @@ async function buildCompatibleState(input: {
 
   if (input.reflectionModel) {
     while (sumActiveObservationTokens(observationBlocks) >= input.limits.observationReflectionBatchTokens) {
+      const activeObservationTexts = observationBlocks
+        .filter((block) => block.reflectedGeneration === null)
+        .map((block) => block.text);
       const batch = takeActiveObservationBatch({
         observationBlocks,
         tokenLimit: input.limits.observationReflectionBatchTokens,
@@ -203,7 +208,10 @@ async function buildCompatibleState(input: {
       const reflectionText = await generateReflectionText({
         model: input.reflectionModel,
         agentSystemPrompt: input.agentSystemPrompt,
-        reflections: activeReflectionBlocks.map((block) => block.text),
+        supportText: takeSupportText(
+          activeObservationTexts.slice(0, Math.max(0, activeObservationTexts.length - batch.length)),
+          input.limits.reflectionSupportTokens ?? 2_000,
+        ),
         observations: batch.map((block) => block.text),
       });
       const generationCount = (activeReflectionBlocks.at(-1)?.generationCount ?? checkpointGeneration ?? 0) + 1;
@@ -380,31 +388,21 @@ function sumReflectionTokens(reflectionBlocks: CheckpointedOmState['activeReflec
 async function generateReflectionText(input: {
   model: LanguageModel;
   agentSystemPrompt?: string;
-  reflections: string[];
+  supportText: string;
   observations: string[];
 }) {
   const result = await generateText({
     model: input.model,
-    system: buildOmSystemPrompt({
-      mode: 'reflection',
-      agentSystemPrompt: input.agentSystemPrompt,
-    }),
-    prompt: [
-      '<existing_reflections>',
-      input.reflections.join('\n\n'),
-      '</existing_reflections>',
-      '',
-      '<observation_batch>',
-      input.observations.join('\n\n'),
-      '</observation_batch>',
-      '',
-      'Return only <reflection>...</reflection>.',
-    ].join('\n'),
+    system: buildAlignedOmInstructions(
+      buildReflectorSystemPrompt(),
+      input.agentSystemPrompt,
+    ),
+    prompt: buildReflectorPrompt([input.supportText, input.observations.join('\n')].filter(Boolean).join('\n')),
   });
-  const text = extractTaggedText(result.text, 'reflection');
+  const text = parseReflectorOutput(result.text).observations.trim();
 
   if (!text) {
-    throw new Error('Checkpointed OM reflection returned no text');
+    throw new Error('Checkpointed OM reflector returned no observations');
   }
 
   return text;
@@ -418,60 +416,90 @@ async function generateCheckpointSummaryText(input: {
 }) {
   const result = await generateText({
     model: input.model,
-    system: buildOmSystemPrompt({
-      mode: 'checkpoint',
-      agentSystemPrompt: input.agentSystemPrompt,
-    }),
-    prompt: [
-      '<previous_checkpoint_summary>',
-      input.previousSummary ?? '',
-      '</previous_checkpoint_summary>',
-      '',
-      '<archived_reflections>',
-      input.archivedReflections.join('\n\n'),
-      '</archived_reflections>',
-      '',
-      'Return only <summary>...</summary>.',
-    ].join('\n'),
+    system: buildAlignedOmInstructions(
+      buildReflectorSystemPrompt(),
+      input.agentSystemPrompt,
+    ),
+    prompt: buildReflectorPrompt(
+      [input.previousSummary, input.archivedReflections.join('\n\n')].filter(Boolean).join('\n\n'),
+    ),
   });
-  const text = extractTaggedText(result.text, 'summary');
+  const text = parseReflectorOutput(result.text).observations.trim();
 
   if (!text) {
-    throw new Error('Checkpointed OM checkpoint summarizer returned no text');
+    throw new Error('Checkpointed OM checkpoint summarizer returned no observations');
   }
 
   return text;
 }
 
-function buildOmSystemPrompt(input: {
-  mode: 'reflection' | 'checkpoint';
-  agentSystemPrompt?: string;
-}) {
-  const basePrompt = input.mode === 'reflection'
-    ? [
-        'You compress observation blocks into a durable reflection.',
-        'Preserve concrete facts, active work, blockers, decisions, open questions, and useful continuity context.',
-        'Remove redundancy.',
-      ]
-    : [
-        'You compress archived reflections into a checkpoint summary.',
-        'Preserve the durable state that should survive after older reflections are dropped from the active context.',
-        'Remove redundancy and keep continuity-critical facts.',
-      ];
+function buildReflectorSystemPrompt() {
+  return [
+    'You compress batches of observations into a smaller durable reflection.',
+    'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
+    'Do not drop operational detail that would still matter for continuity.',
+    'Return XML with a single <observations>...</observations> block.',
+  ].join('\n');
+}
 
-  if (!input.agentSystemPrompt?.trim()) {
-    return basePrompt.join('\n');
+function buildAlignedOmInstructions(baseInstructions: string, agentSystemPrompt?: string) {
+  const prompt = agentSystemPrompt?.trim();
+
+  if (!prompt) {
+    return baseInstructions;
   }
 
   return [
-    basePrompt.join('\n'),
-    '<agent_system_prompt>',
-    input.agentSystemPrompt.trim(),
-    '</agent_system_prompt>',
+    baseInstructions,
+    '<main_agent_system_prompt>',
+    'Use the following main agent system prompt as alignment context. Keep observations, reflections, and checkpoint summaries aligned with the same role, scope, operating style, and priorities.',
+    prompt,
+    '</main_agent_system_prompt>',
   ].join('\n\n');
 }
 
-function extractTaggedText(text: string, tagName: 'reflection' | 'summary') {
-  const match = text.match(new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
-  return (match?.[1] ?? text).trim();
+function buildReflectorPrompt(observations: string) {
+  return [
+    'Compress the observations below into a tighter reflection.',
+    'Preserve the important details while removing redundancy.',
+    '',
+    '<observations>',
+    observations,
+    '</observations>',
+  ].join('\n');
+}
+
+function parseReflectorOutput(output: string) {
+  const match = output.match(/<observations>([\s\S]*?)<\/observations>/i);
+  return {
+    observations: (match?.[1] ?? output).trim(),
+  };
+}
+
+function takeSupportText(observations: string[], tokenLimit: number) {
+  if (tokenLimit <= 0) {
+    return '';
+  }
+
+  const selected: string[] = [];
+  let usedTokens = 0;
+
+  for (let index = observations.length - 1; index >= 0; index -= 1) {
+    const text = observations[index]?.trim();
+
+    if (!text) {
+      continue;
+    }
+
+    const tokenCount = estimateTokenCount(text);
+
+    if (usedTokens + tokenCount > tokenLimit) {
+      break;
+    }
+
+    selected.unshift(text);
+    usedTokens += tokenCount;
+  }
+
+  return selected.join('\n');
 }
