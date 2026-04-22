@@ -7,6 +7,7 @@ import { isConversationRuntimeInputPayload } from './runtime-input.js';
 export type ConversationRuntimeObserverOptions = {
   store: ConversationStore;
   authorId?: string;
+  threadId?: string;
   name?: string;
 };
 
@@ -21,7 +22,11 @@ export function createConversationRuntimeObserver(
         .find((input) => isConversationRuntimeInputPayload(input.payload));
       const payload = latestConversationInput?.payload;
 
-      if (!payload || !isConversationRuntimeInputPayload(payload)) {
+      const threadId = payload && isConversationRuntimeInputPayload(payload)
+        ? payload.threadId
+        : options.threadId;
+
+      if (!threadId) {
         return;
       }
 
@@ -41,7 +46,7 @@ export function createConversationRuntimeObserver(
 
       await options.store.appendMessage({
         id: `${context.record.id}:assistant`,
-        threadId: payload.threadId,
+        threadId,
         role: 'assistant',
         authorId: options.authorId,
         parts: messageText

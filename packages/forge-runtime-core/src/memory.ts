@@ -38,12 +38,16 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
       createCheckpointedConversationPlugin({
         memory,
         consolidateAfterStep: input.consolidateOverflow,
+        selectThreadId() {
+          return input.threadId;
+        },
       }),
     ],
     observers: [
       createConversationRuntimeObserver({
         store: input.conversationStore,
         authorId: input.assistantAuthorId,
+        threadId: input.threadId,
       }),
     ],
   };
