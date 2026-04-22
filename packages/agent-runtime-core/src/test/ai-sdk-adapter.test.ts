@@ -236,7 +236,10 @@ describe('AiSdkStepModelAdapter', () => {
           type: 'tool-result',
           toolCallId: 'action-results:0:0',
           toolName: 'lookup',
-          output: { ok: true },
+          output: {
+            type: 'json',
+            value: { ok: true },
+          },
         }],
       },
       {

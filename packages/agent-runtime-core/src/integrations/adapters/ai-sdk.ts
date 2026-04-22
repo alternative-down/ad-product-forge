@@ -183,7 +183,10 @@ function buildActionResultMessages(entry: StepContextEntry): ModelMessage[] {
           type: 'tool-result',
           toolCallId,
           toolName: actionResult.name,
-          output: actionResult.output,
+          output: {
+            type: 'json',
+            value: actionResult.output,
+          },
         }],
       } as ModelMessage,
     ];
