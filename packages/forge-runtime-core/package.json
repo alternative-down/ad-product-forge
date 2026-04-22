@@ -20,7 +20,7 @@
     "@huggingface/transformers": "3.7.5",
     "@libsql/client": "^0.15.15",
     "agent-runtime-core": "file:../agent-runtime-core",
-    "ai": "^5.0.155",
+    "ai": "^6.0.168",
     "fastembed": "^2.1.0",
     "zod": "^4.3.6"
   },
