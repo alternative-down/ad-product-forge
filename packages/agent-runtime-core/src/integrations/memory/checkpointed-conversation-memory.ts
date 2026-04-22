@@ -99,6 +99,7 @@ export class CheckpointedConversationMemory {
 
   async consolidateOverflow(): Promise<CheckpointedConversationObservation | null> {
     if (!this.observer) {
+      await this.sync();
       return null;
     }
 

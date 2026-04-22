@@ -13,6 +13,7 @@ import { createForgeAgentRuntime } from './runtime.js';
 describe('createForgeAgentRuntime', () => {
   it('persists conversation messages through the runtime bridge and observer flow', async () => {
     const conversationStore = new InMemoryConversationStore();
+    const stateStore = new InMemoryCheckpointedConversationStateStore();
     const runtime = await createForgeAgentRuntime({
       config: {
         agentId: 'agent-1',
@@ -32,7 +33,7 @@ describe('createForgeAgentRuntime', () => {
       })),
       conversationStore,
       memory: {
-        stateStore: new InMemoryCheckpointedConversationStateStore(),
+        stateStore,
       },
     });
 
@@ -75,6 +76,14 @@ describe('createForgeAgentRuntime', () => {
           text: 'Reply from runtime.',
         },
       ]);
+
+      const checkpointedState = await stateStore.load('thread-1');
+
+      expect(checkpointedState?.recentMessageIds).toEqual([
+        messages[0]?.id,
+        messages[1]?.id,
+      ]);
+      expect(checkpointedState?.metrics.recentMessageCount).toBe(2);
     } finally {
       await runtime.dispose();
     }
