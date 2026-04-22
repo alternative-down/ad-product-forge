@@ -13,6 +13,7 @@ export const Route = createFileRoute('/agents/$agentId/log/')({
 });
 
 const PAGE_SIZE = 20;
+const LIVE_REFETCH_INTERVAL_MS = 5_000;
 
 function AgentLogIndexRoute() {
   const { agentId } = Route.useParams();
@@ -20,6 +21,7 @@ function AgentLogIndexRoute() {
   const runtimeMemoryQuery = useQuery({
     queryKey: ['admin', 'agent', agentId, 'runtime-memory'],
     queryFn: () => getAgentRuntimeMemory(agentId),
+    refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
   const messagesQuery = useInfiniteQuery({
     queryKey: ['admin', 'agent', agentId, 'thread-messages'],
@@ -27,6 +29,7 @@ function AgentLogIndexRoute() {
     initialPageParam: 0,
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasMore ? lastPageParam + 1 : undefined,
+    refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
   const messages = messagesQuery.data?.pages.flatMap((page) => page.items) ?? [];
 

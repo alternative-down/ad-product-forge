@@ -18,6 +18,7 @@ export const Route = createFileRoute('/agents/$agentId/ltm-log/')({
 });
 
 const PAGE_SIZE = 20;
+const LIVE_REFETCH_INTERVAL_MS = 5_000;
 
 function AgentLongTermMemoryLogIndexRoute() {
   const { agentId } = Route.useParams();
@@ -26,6 +27,7 @@ function AgentLongTermMemoryLogIndexRoute() {
   const runtimeMemoryQuery = useQuery({
     queryKey: ['admin', 'agent', agentId, 'runtime-memory'],
     queryFn: () => getAgentRuntimeMemory(agentId),
+    refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
   const recallSearchMutation = useMutation({
     mutationFn: () =>
@@ -40,6 +42,7 @@ function AgentLongTermMemoryLogIndexRoute() {
     initialPageParam: 0,
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasMore ? lastPageParam + 1 : undefined,
+    refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
   const messages = messagesQuery.data?.pages.flatMap((page) => page.items) ?? [];
 

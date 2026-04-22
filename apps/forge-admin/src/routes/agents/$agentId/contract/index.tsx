@@ -26,6 +26,7 @@ export const Route = createFileRoute('/agents/$agentId/contract/')({
 });
 
 const PAGE_SIZE = 20;
+const LIVE_REFETCH_INTERVAL_MS = 5_000;
 
 function AgentContractIndexRoute() {
   const { agentId } = Route.useParams();
@@ -37,6 +38,7 @@ function AgentContractIndexRoute() {
   const agentQuery = useQuery({
     queryKey: ['admin', 'agent', agentId],
     queryFn: () => getAgent(agentId),
+    refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
   const [contractForm, setContractForm] = useState<ContractForm | null>(null);
   const stepsQuery = useInfiniteQuery({
@@ -45,6 +47,7 @@ function AgentContractIndexRoute() {
     initialPageParam: 0,
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasMore ? lastPageParam + PAGE_SIZE : undefined,
+    refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
   const mutation = useMutation({
     mutationFn: async (input: ContractForm) => {
