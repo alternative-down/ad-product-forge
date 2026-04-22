@@ -29,6 +29,16 @@ export type RuntimeAgentSessionStepResult = {
   };
 };
 
+type RuntimeAgentSessionJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | RuntimeAgentSessionJsonValue[]
+  | {
+      [key: string]: RuntimeAgentSessionJsonValue | undefined;
+    };
+
 export type RuntimeAgentSessionIteration = {
   iteration: number;
   text: string;
@@ -67,7 +77,9 @@ export type RuntimeAgentSessionGenerateOptions = {
       lastMessages: number;
     };
   };
-  providerOptions?: Record<string, unknown>;
+  providerOptions?: Record<string, {
+    [key: string]: RuntimeAgentSessionJsonValue | undefined;
+  }>;
   onStepFinish?: (result: RuntimeAgentSessionStepResult) => Promise<void> | void;
   onIterationComplete?: (
     iteration: RuntimeAgentSessionIteration,

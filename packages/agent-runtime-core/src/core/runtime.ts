@@ -31,8 +31,10 @@ import type {
   RuntimeStepStream,
   RuntimeStepStreamEvent,
   RuntimeStatus,
+  StepActionDescriptor,
   StepContextEntry,
   StepExecutionResult,
+  StepModelRequest,
   StepRecord,
 } from './types.js';
 
@@ -122,13 +124,15 @@ export class AgentRuntime {
       const currentInputs = inputBatch.selected;
       this.pendingInputs.splice(0, this.pendingInputs.length, ...inputBatch.remaining);
       const context = await this.buildStepContext(stepId, stepNumber, currentInputs);
-      const modelResponse = await this.model.generateStep({
+      const request = await this.resolveModelRequest({
+        pendingInputs: currentInputs,
         runtimeId: this.runtimeId,
         stepId,
         stepNumber,
         context,
         actions: this.actions.describe(),
       });
+      const modelResponse = await this.model.generateStep(request);
 
       for (const plugin of this.plugins.list()) {
         await plugin.onAfterModel?.({
@@ -258,13 +262,21 @@ export class AgentRuntime {
     const currentInputs = inputBatch.selected;
     this.pendingInputs.splice(0, this.pendingInputs.length, ...inputBatch.remaining);
     const context = await this.buildStepContext(stepId, stepNumber, currentInputs);
+    const request = await this.resolveModelRequest({
+      pendingInputs: currentInputs,
+      runtimeId: this.runtimeId,
+      stepId,
+      stepNumber,
+      context,
+      actions: this.actions.describe(),
+    });
     const events = new AsyncEventChannel<RuntimeStepStreamEvent>();
     const completion = this.executeStreamStep({
       stepId,
       stepNumber,
       startedAt,
       currentInputs,
-      context,
+      request,
       events,
     });
 
@@ -336,9 +348,9 @@ export class AgentRuntime {
     stepNumber: number,
     currentInputs: RuntimeInput[],
   ): Promise<StepContextEntry[]> {
-    const context: StepContextEntry[] = currentInputs.map((input) => (
-      this.contextFormatter.formatInput(input)
-    ));
+    const context: StepContextEntry[] = currentInputs
+      .map((input) => this.contextFormatter.formatInput(input))
+      .filter((entry): entry is StepContextEntry => entry !== null);
 
     if (this.lastActionResults.length > 0) {
       context.push(
@@ -364,6 +376,54 @@ export class AgentRuntime {
     }
 
     return context;
+  }
+
+  private async resolveModelRequest(
+    input: {
+      pendingInputs: RuntimeInput[];
+      runtimeId: string;
+      stepId: string;
+      stepNumber: number;
+      context: StepContextEntry[];
+      actions: StepActionDescriptor[];
+    },
+  ): Promise<StepModelRequest> {
+    let resolvedRequest: StepModelRequest = {
+      runtimeId: input.runtimeId,
+      stepId: input.stepId,
+      stepNumber: input.stepNumber,
+      context: input.context,
+      actions: input.actions,
+    };
+
+    for (const plugin of this.plugins.list()) {
+      const partialRequest = await plugin.resolveModelRequest?.({
+        runtimeId: this.runtimeId,
+        stepId: input.stepId,
+        stepNumber: input.stepNumber,
+        pendingInputs: [...input.pendingInputs],
+        lastActionResults: this.lastActionResults,
+        steps: [...this.steps],
+        request: resolvedRequest,
+      });
+
+      if (!partialRequest) {
+        continue;
+      }
+
+      resolvedRequest = {
+        ...resolvedRequest,
+        ...partialRequest,
+        providerOptions: partialRequest.providerOptions
+          ? {
+            ...(resolvedRequest.providerOptions ?? {}),
+            ...partialRequest.providerOptions,
+          }
+          : resolvedRequest.providerOptions,
+      };
+    }
+
+    return resolvedRequest;
   }
 
   private async executeActions(
@@ -400,19 +460,13 @@ export class AgentRuntime {
     stepNumber: number;
     startedAt: string;
     currentInputs: RuntimeInput[];
-    context: StepContextEntry[];
+    request: StepModelRequest;
     events: AsyncEventChannel<RuntimeStepStreamEvent>;
   }): Promise<StepExecutionResult> {
     const streamingModel = this.model as StreamingStepModelAdapter;
 
     try {
-      const modelStream = await streamingModel.streamStep({
-        runtimeId: this.runtimeId,
-        stepId: input.stepId,
-        stepNumber: input.stepNumber,
-        context: input.context,
-        actions: this.actions.describe(),
-      });
+      const modelStream = await streamingModel.streamStep(input.request);
 
       for await (const event of modelStream.events) {
         if (event.type === 'segment-delta') {
@@ -501,7 +555,7 @@ export class AgentRuntime {
         id: input.stepId,
         stepNumber: input.stepNumber,
         inputs: input.currentInputs,
-        context: input.context,
+        context: input.request.context,
         modelResponse,
         modelUsage: modelResponse.usage ?? null,
         modelMetadata: modelResponse.metadata ?? null,

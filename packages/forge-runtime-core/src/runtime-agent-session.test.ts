@@ -23,6 +23,14 @@ describe('createRuntimeAgentSession', () => {
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const model = new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
+        expect(options.providerOptions).toEqual({
+          anthropic: {
+            cacheControl: {
+              type: 'ephemeral',
+            },
+          },
+        });
+
         const systemMessages = options.prompt.filter((message) => message.role === 'system');
         const assistantMessages = options.prompt.filter((message) => message.role === 'assistant');
 
@@ -101,6 +109,13 @@ describe('createRuntimeAgentSession', () => {
     try {
       const result = await session.generate('Initial prompt.', {
         system: 'Step system.',
+        providerOptions: {
+          anthropic: {
+            cacheControl: {
+              type: 'ephemeral',
+            },
+          },
+        },
         onIterationComplete(iteration) {
           iterations.push(iteration);
 

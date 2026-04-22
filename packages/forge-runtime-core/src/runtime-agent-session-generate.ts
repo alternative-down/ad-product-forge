@@ -8,6 +8,7 @@ import {
   createRuntimeAgentSessionIteration,
   resolveRuntimeAgentSessionContinuation,
 } from './runtime-agent-session-iteration.js';
+import { dispatchRuntimeProviderOptions } from './runtime-agent-session-provider-options-plugin.js';
 import { dispatchRuntimeSystemInstruction } from './runtime-agent-session-system-plugin.js';
 import type {
   CreateRuntimeAgentSessionOptions,
@@ -55,6 +56,13 @@ export async function runRuntimeAgentSessionGenerate(input: {
     maxSteps: input.options.maxSteps,
     signal: input.options.abortSignal,
     beforeStep: async ({ nextStepNumber }) => {
+      if (input.options.providerOptions && Object.keys(input.options.providerOptions).length > 0) {
+        await dispatchRuntimeProviderOptions({
+          runtime: input.runtime.host.runtime,
+          providerOptions: input.options.providerOptions,
+        });
+      }
+
       await input.options.prepareStep?.({
         stepNumber: nextStepNumber - 1,
       });

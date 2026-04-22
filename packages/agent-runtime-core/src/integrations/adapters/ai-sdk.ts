@@ -55,6 +55,7 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
       system: prompt.system,
       messages: prompt.messages,
       tools: buildToolSet(request.actions),
+      providerOptions: request.providerOptions,
     });
 
     return buildStepModelResponse({
@@ -77,6 +78,7 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
       system: prompt.system,
       messages: prompt.messages,
       tools: buildToolSet(request.actions),
+      providerOptions: request.providerOptions,
     });
     const events = new AsyncEventChannel<StepModelStreamEvent>();
 

@@ -1,5 +1,15 @@
 import type { z } from 'zod';
 
+export type StepModelJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | StepModelJsonValue[]
+  | {
+      [key: string]: StepModelJsonValue | undefined;
+    };
+
 export type RuntimeInput<TPayload = unknown> = {
   id: string;
   type: string;
@@ -64,6 +74,9 @@ export type StepModelRequest = {
   stepNumber: number;
   context: StepContextEntry[];
   actions: StepActionDescriptor[];
+  providerOptions?: Record<string, {
+    [key: string]: StepModelJsonValue | undefined;
+  }>;
 };
 
 export type StepModelStreamEvent =

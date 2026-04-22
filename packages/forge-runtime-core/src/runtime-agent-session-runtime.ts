@@ -10,6 +10,7 @@ import {
   createUpdateWorkingMemoryTool,
   createWorkingMemoryPlugin,
 } from './runtime-working-memory.js';
+import { createRuntimeProviderOptionsPlugin } from './runtime-agent-session-provider-options-plugin.js';
 import { createRuntimeSystemInstructionPlugin } from './runtime-agent-session-system-plugin.js';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
 import { toolToRuntimeAction } from './tools.js';
@@ -35,6 +36,7 @@ export async function createRuntimeAgentSessionRuntime(
       resourceId: input.resourceId,
       store: input.workingMemoryStore,
     }),
+    createRuntimeProviderOptionsPlugin(),
     createRuntimeSystemInstructionPlugin(),
   ];
   const runtime = await createForgeAgentRuntime({

@@ -2,6 +2,7 @@ import type {
   ActionResult,
   RuntimeInput,
   StepContextEntry,
+  StepModelRequest,
   StepModelResponse,
   StepRecord,
   RuntimeSnapshot,
@@ -21,6 +22,15 @@ export type RuntimePlugin = {
     lastActionResults: ActionResult[];
     steps: StepRecord[];
   }): Promise<StepContextEntry[]> | StepContextEntry[];
+  resolveModelRequest?(context: {
+    runtimeId: string;
+    stepId: string;
+    stepNumber: number;
+    pendingInputs: RuntimeInput[];
+    lastActionResults: ActionResult[];
+    steps: StepRecord[];
+    request: StepModelRequest;
+  }): Promise<Partial<StepModelRequest>> | Partial<StepModelRequest>;
   onAfterModel?(context: {
     runtimeId: string;
     stepId: string;

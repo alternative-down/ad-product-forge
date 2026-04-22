@@ -2,7 +2,7 @@ import { createTextStepContextEntry } from './step-context.js';
 import type { ActionResult, RuntimeInput, StepContextEntry } from './types.js';
 
 export type ContextFormatter = {
-  formatInput(input: RuntimeInput): StepContextEntry;
+  formatInput(input: RuntimeInput): StepContextEntry | null;
   formatActionResults(previousStepNumber: number, actionResults: ActionResult[]): StepContextEntry;
 };
 

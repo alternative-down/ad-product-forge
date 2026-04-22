@@ -328,4 +328,48 @@ describe('AiSdkStepModelAdapter', () => {
 
     expect(request?.system).toBe('Base system.\n\nStay concise.');
   });
+
+  it('passes provider options through to ai sdk generateText', async () => {
+    generateTextMock.mockResolvedValue({
+      content: [{ type: 'text', text: 'done' }],
+      toolCalls: [],
+      usage: {},
+    });
+
+    const adapter = new AiSdkStepModelAdapter({
+      model: {} as never,
+    });
+
+    await adapter.generateStep({
+      runtimeId: 'runtime-1',
+      stepId: 'step-5',
+      stepNumber: 5,
+      context: [
+        createTextStepContextEntry({
+          id: 'conversation-message:user-5',
+          kind: 'input:conversation-message:user',
+          title: 'User message',
+          text: 'Reply now.',
+        }),
+      ],
+      actions: [],
+      providerOptions: {
+        anthropic: {
+          cacheControl: {
+            type: 'ephemeral',
+          },
+        },
+      },
+    });
+
+    const request = generateTextMock.mock.calls[0]?.[0];
+
+    expect(request?.providerOptions).toEqual({
+      anthropic: {
+        cacheControl: {
+          type: 'ephemeral',
+        },
+      },
+    });
+  });
 });

@@ -4,6 +4,11 @@ import {
   type StepContextEntry,
 } from 'agent-runtime-core/integrations';
 
+const INTERNAL_RUNTIME_INPUT_TYPES = new Set([
+  'forge-provider-options',
+  'forge-system-instruction',
+]);
+
 export function createConversationRuntimeContextFormatter() {
   return {
     formatInput(runtimeInput: {
@@ -11,6 +16,10 @@ export function createConversationRuntimeContextFormatter() {
       type: string;
       payload: unknown;
     }) {
+      if (INTERNAL_RUNTIME_INPUT_TYPES.has(runtimeInput.type)) {
+        return null;
+      }
+
       if (isConversationRuntimeInputPayload(runtimeInput.payload)) {
         const text = runtimeInput.payload.parts
           .filter((part) => part.type === 'text')
