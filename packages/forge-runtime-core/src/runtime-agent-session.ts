@@ -353,7 +353,7 @@ export async function createRuntimeAgentSession(
             return result.continue;
           }
 
-          return false;
+          return latestStep.modelResponse.actionRequests.length > 0 || latestStep.actionResults.length > 0;
         },
       });
 
