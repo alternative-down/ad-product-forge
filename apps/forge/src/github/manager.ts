@@ -193,6 +193,10 @@ export function createGitHubAppManager(config: {
       return buildProvisioning(agentId, credentials);
     }
 
+    if (!(await isConfigured())) {
+      return null;
+    }
+
     const agent = await config.db.query.agents.findFirst({
       where: eq(agents.id, agentId),
     });
