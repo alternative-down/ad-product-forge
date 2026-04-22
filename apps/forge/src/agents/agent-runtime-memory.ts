@@ -3,6 +3,7 @@ import {
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
 
+import type { createAgentLongTermMemoryStore } from './agent-long-term-memory-store';
 import { createAgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
 
 export async function createAgentRuntimeMemory(input: {
@@ -49,6 +50,7 @@ export async function createAgentRuntimeMemory(input: {
       } | null;
     }>;
   };
+  persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   readRuntimeMemorySettings?: () => Promise<{
     ltmRecallScoreThreshold: number;
     ltmRecallDocumentCount: number;
@@ -69,6 +71,7 @@ export async function createAgentRuntimeMemory(input: {
           ?? (() => {
             throw new Error('LTM recall requires a checkpointed OM state store');
           })(),
+        persistenceStore: input.persistenceStore,
         readRuntimeMemorySettings: input.readRuntimeMemorySettings,
       })
     : null;

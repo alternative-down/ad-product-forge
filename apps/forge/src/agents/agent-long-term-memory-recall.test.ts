@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -25,15 +25,6 @@ describe('AgentLongTermMemoryRecall', () => {
 
     await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
     await mkdir(agentMemoryPath, { recursive: true });
-    await writeFile(
-      path.join(agentMemoryPath, '.ltm-recall-snapshot.json'),
-      JSON.stringify({ status: 'miss' }),
-    );
-    await writeFile(
-      path.join(agentMemoryPath, '.ltm-recall-history.json'),
-      JSON.stringify({ recentFingerprints: ['workspace:test'] }),
-    );
-
     const readRuntimeMemorySettings = vi.fn(async () => ({
       ltmRecallScoreThreshold: 0.7,
       ltmRecallDocumentCount: 3,
@@ -47,6 +38,52 @@ describe('AgentLongTermMemoryRecall', () => {
       loadState: vi.fn(async () => null),
       saveState: vi.fn(),
     };
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const,
+        packages: [],
+        lastWrittenPackageId: null,
+        lastWrittenAt: null,
+        lastRunAt: null,
+        lastRunError: null,
+        lastRunErrorAt: null,
+        updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => null),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => ({
+        threadId: 'thread-1',
+        resourceId: 'resource-1',
+        snapshot: {
+          status: 'hit' as const,
+          query: 'old query',
+          resultIds: [],
+          resultCount: 0,
+          resultScores: [],
+          graphHit: false,
+          stepsJson: '[]',
+          updatedAt: new Date().toISOString(),
+          lastInitAt: null,
+          searchMode: 'hybrid',
+          topK: 3,
+          graphTopK: 3,
+          graphThreshold: 0.7,
+          graphRandomWalkSteps: 100,
+          indexPaths: [],
+          workspaceFileCount: 0,
+          memoryFileCount: 0,
+          checkpointFileCount: 0,
+          error: null,
+        },
+        history: {
+          recentFingerprints: ['workspace:test'],
+          updatedAt: new Date().toISOString(),
+        },
+      })),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
 
     const recall = new AgentLongTermMemoryRecall({
       agentId: 'agent-1',
@@ -55,6 +92,7 @@ describe('AgentLongTermMemoryRecall', () => {
       mastraId: 'agent_1',
       readRuntimeMemorySettings,
       checkpointedOmStateStore,
+      persistenceStore,
     });
 
     const result = await recall.recallFromStep({
@@ -67,11 +105,7 @@ describe('AgentLongTermMemoryRecall', () => {
     expect(result).toBeNull();
     expect(readRuntimeMemorySettings).not.toHaveBeenCalled();
     expect(checkpointedOmStateStore.readState).not.toHaveBeenCalled();
-    await expect(
-      readFile(path.join(agentMemoryPath, '.ltm-recall-snapshot.json'), 'utf8'),
-    ).rejects.toThrow();
-    await expect(
-      readFile(path.join(agentMemoryPath, '.ltm-recall-history.json'), 'utf8'),
-    ).rejects.toThrow();
+    expect(persistenceStore.clearRecallState).toHaveBeenCalledTimes(1);
+    expect(persistenceStore.readRecallState).not.toHaveBeenCalled();
   });
 });

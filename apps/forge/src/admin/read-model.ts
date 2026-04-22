@@ -37,6 +37,11 @@ import type { InternalChatService } from '../communication/internal-chat-service
 import { listAgentWorkspaceSkills } from '../agents/workspace-skills';
 import { createAgentCheckpointedOmStateStore } from '../agents/checkpointed-om-state-store';
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../agents/agent-long-term-memory-recall';
+import {
+  createAgentLongTermMemoryStore,
+  type LongTermMemoryRecallSnapshot,
+  type LongTermMemoryState,
+} from '../agents/agent-long-term-memory-store';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -58,39 +63,6 @@ type RuntimeStoredMessagePart = {
   type: string;
   text?: string;
   [key: string]: unknown;
-};
-
-type LongTermMemoryStateSnapshot = {
-  packages: Array<{
-    packageId: string;
-  }>;
-  lastWrittenPackageId: string | null;
-  lastWrittenAt: string | null;
-  lastRunAt: string | null;
-  lastRunError: string | null;
-  lastRunErrorAt: string | null;
-};
-
-type LongTermMemoryRecallSnapshot = {
-  status: 'hit' | 'miss' | 'error';
-  query: string;
-  resultIds: string[];
-  resultCount: number;
-  resultScores: number[];
-  graphHit: boolean;
-  stepsJson: string;
-  updatedAt: string;
-  lastInitAt: string | null;
-  searchMode: string;
-  topK: number;
-  graphTopK: number;
-  graphThreshold: number;
-  graphRandomWalkSteps: number;
-  indexPaths: string[];
-  workspaceFileCount: number;
-  memoryFileCount: number;
-  checkpointFileCount: number;
-  error: string | null;
 };
 
 type ClosableLibsqlClient = ReturnType<typeof createClient> & {
@@ -312,90 +284,20 @@ function truncatePreview(value: string) {
   return value.length > 220 ? `${value.slice(0, 217).trimEnd()}...` : value;
 }
 
-async function readLongTermMemoryRecallSnapshot(workspaceBasePath: string, agentId: string) {
-  const rawFile = await readFile(
-    path.resolve(workspaceBasePath, agentId, 'workspace', 'memory', '.ltm-recall-snapshot.json'),
-    'utf8',
-  ).catch(() => null);
+async function readLongTermMemoryRecallSnapshot(db: Database, agentId: string) {
+  const state = await createAgentLongTermMemoryStore(db, {
+    agentId,
+  }).readRecallState();
 
-  if (!rawFile) {
-    return null;
-  }
-
-  const raw = JSON.parse(rawFile) as unknown;
-
-  if (!raw || typeof raw !== 'object') {
-    return null;
-  }
-
-  const value = raw as Partial<LongTermMemoryRecallSnapshot>;
-
-  if (
-    (value.status !== 'hit' && value.status !== 'miss' && value.status !== 'error')
-    || typeof value.query !== 'string'
-    || !Array.isArray(value.resultIds)
-    || typeof value.resultCount !== 'number'
-    || typeof value.stepsJson !== 'string'
-    || typeof value.updatedAt !== 'string'
-  ) {
-    return null;
-  }
-
-  return {
-    status: value.status,
-    query: value.query,
-    resultIds: value.resultIds.filter((item): item is string => typeof item === 'string'),
-    resultCount: value.resultCount,
-    resultScores: Array.isArray(value.resultScores)
-      ? value.resultScores.filter((item): item is number => typeof item === 'number')
-      : [],
-    graphHit: value.graphHit === true,
-    stepsJson: value.stepsJson,
-    updatedAt: value.updatedAt,
-    lastInitAt: typeof value.lastInitAt === 'string' ? value.lastInitAt : null,
-    searchMode: typeof value.searchMode === 'string' ? value.searchMode : 'hybrid',
-    topK: typeof value.topK === 'number' ? value.topK : 4,
-    graphTopK: typeof value.graphTopK === 'number' ? value.graphTopK : 3,
-    graphThreshold: typeof value.graphThreshold === 'number' ? value.graphThreshold : 0.4,
-    graphRandomWalkSteps:
-      typeof value.graphRandomWalkSteps === 'number' ? value.graphRandomWalkSteps : 50,
-    indexPaths: Array.isArray(value.indexPaths)
-      ? value.indexPaths.filter((item): item is string => typeof item === 'string')
-      : [],
-    workspaceFileCount: typeof value.workspaceFileCount === 'number' ? value.workspaceFileCount : 0,
-    memoryFileCount: typeof value.memoryFileCount === 'number' ? value.memoryFileCount : 0,
-    checkpointFileCount: typeof value.checkpointFileCount === 'number' ? value.checkpointFileCount : 0,
-    error: typeof value.error === 'string' ? value.error : null,
-  };
+  return state.snapshot;
 }
 
-async function readLongTermMemoryState(workspaceBasePath: string, agentId: string) {
-  const statePath = path.resolve(workspaceBasePath, agentId, 'workspace', 'memory', '.ltm-state.json');
-  const raw = await readFile(statePath, 'utf8').catch(() => null);
+async function readLongTermMemoryState(db: Database, agentId: string) {
+  const state = await createAgentLongTermMemoryStore(db, {
+    agentId,
+  }).readState();
 
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<LongTermMemoryStateSnapshot> & {
-      packages?: Array<{ packageId?: string }>;
-    };
-
-    return {
-      packages: Array.isArray(parsed.packages)
-        ? parsed.packages.filter((entry): entry is { packageId: string } => typeof entry?.packageId === 'string')
-        : [],
-      lastWrittenPackageId:
-        typeof parsed.lastWrittenPackageId === 'string' ? parsed.lastWrittenPackageId : null,
-      lastWrittenAt: typeof parsed.lastWrittenAt === 'string' ? parsed.lastWrittenAt : null,
-      lastRunAt: typeof parsed.lastRunAt === 'string' ? parsed.lastRunAt : null,
-      lastRunError: typeof parsed.lastRunError === 'string' ? parsed.lastRunError : null,
-      lastRunErrorAt: typeof parsed.lastRunErrorAt === 'string' ? parsed.lastRunErrorAt : null,
-    };
-  } catch {
-    return null;
-  }
+  return state satisfies LongTermMemoryState;
 }
 
 export function createAdminReadModel(input: {
@@ -562,7 +464,7 @@ export function createAdminReadModel(input: {
         agentRows.map(async (agent) => [
           agent.id,
           await withTimeout(
-            readLongTermMemoryState(input.workspaceBasePath, agent.id),
+            readLongTermMemoryState(db, agent.id),
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Admin LTM state read timed out for ${agent.id}`,
           ).catch((error) => {
@@ -966,7 +868,7 @@ export function createAdminReadModel(input: {
       const customState = await createAgentCheckpointedOmStateStore(db, {
         agentId,
       }).readState();
-      const ltmRecall = await readLongTermMemoryRecallSnapshot(input.workspaceBasePath, agentId);
+      const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
       let reflection = '';
       const observations = customState
         ? customState.observationBlocks
@@ -992,7 +894,7 @@ export function createAdminReadModel(input: {
         ).catch(() => null)
         : null;
       const persistedLtmState = await withTimeout(
-        readLongTermMemoryState(input.workspaceBasePath, agentId),
+        readLongTermMemoryState(db, agentId),
         ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
         `Agent runtime memory persisted LTM state timed out for ${agentId}`,
       ).catch(() => null);

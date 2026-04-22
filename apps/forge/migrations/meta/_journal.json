@@ -148,6 +148,13 @@
       "when": 1776722082972,
       "tag": "0020_friendly_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1776857593069,
+      "tag": "0021_spicy_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }

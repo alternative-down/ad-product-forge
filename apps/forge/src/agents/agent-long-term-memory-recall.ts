@@ -14,6 +14,12 @@ import {
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
 
+import type {
+  LongTermMemoryRecallHistory,
+  LongTermMemoryRecallSnapshot,
+  createAgentLongTermMemoryStore,
+} from './agent-long-term-memory-store';
+
 type SearchResult = {
   id: string;
   content: string;
@@ -70,9 +76,6 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   injectedSystemMessage: string | null;
 };
 
-const RECALL_INDEX_STAMP_FILE = '.ltm-recall-index-stamp.json';
-const RECALL_SNAPSHOT_FILE = '.ltm-recall-snapshot.json';
-const RECALL_HISTORY_FILE = '.ltm-recall-history.json';
 const RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
@@ -86,33 +89,6 @@ const RECALL_GRAPH_INCLUDE_SOURCES = false;
 type RecallConfig = {
   scoreThreshold: number;
   documentCount: number;
-};
-
-type RecallSnapshot = {
-  status: 'hit' | 'miss' | 'error';
-  query: string;
-  resultIds: string[];
-  resultCount: number;
-  resultScores: number[];
-  graphHit: boolean;
-  stepsJson: string;
-  updatedAt: string;
-  lastInitAt: string | null;
-  searchMode: string;
-  topK: number;
-  graphTopK: number;
-  graphThreshold: number;
-  graphRandomWalkSteps: number;
-  indexPaths: string[];
-  workspaceFileCount: number;
-  memoryFileCount: number;
-  checkpointFileCount: number;
-  error: string | null;
-};
-
-type RecallHistoryState = {
-  recentFingerprints: string[];
-  updatedAt: string;
 };
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
@@ -187,6 +163,7 @@ export class AgentLongTermMemoryRecall {
       } | null;
     }>;
   };
+  private readonly persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   private workspaceInitialized = false;
   private lastIndexedStamp: string | null = null;
   private lastInitAt: string | null = null;
@@ -212,6 +189,7 @@ export class AgentLongTermMemoryRecall {
         } | null;
       }>;
     };
+    persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
     model?: unknown;
   }) {
     this.agentId = input.agentId;
@@ -224,6 +202,7 @@ export class AgentLongTermMemoryRecall {
     };
     this.readRuntimeMemorySettings = input.readRuntimeMemorySettings;
     this.checkpointedOmStateStore = input.checkpointedOmStateStore;
+    this.persistenceStore = input.persistenceStore;
     this.vectorIndex = new InMemoryVectorIndex();
     this.retrievalWorkspace = new RefreshableRetrievalWorkspace({
       source: new FilesystemDocumentSource({
@@ -565,14 +544,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async readCurrentIndexStamp() {
-    const stampPath = path.resolve(this.agentMemoryPath, RECALL_INDEX_STAMP_FILE);
-    const raw = await fs.readFile(stampPath, 'utf8').catch(() => null);
-
-    if (!raw) {
-      return null;
-    }
-
-    return raw.trim() || null;
+    return this.persistenceStore.readRecallIndexStamp();
   }
 
   private async searchWorkspace(
@@ -944,33 +916,19 @@ export class AgentLongTermMemoryRecall {
 
   private async persistRecallSnapshot(
     threadContext: { threadId: string | null; resourceId?: string },
-    snapshot: RecallSnapshot,
-    history?: RecallHistoryState,
+    snapshot: LongTermMemoryRecallSnapshot,
+    history?: LongTermMemoryRecallHistory,
   ) {
-    await fs.writeFile(
-      path.resolve(this.agentMemoryPath, RECALL_SNAPSHOT_FILE),
-      JSON.stringify({
-        ...snapshot,
-        threadId: threadContext.threadId,
-        resourceId: threadContext.resourceId ?? null,
-      }, null, 2),
-    );
-
-    if (!history) {
-      return;
-    }
-
-    await fs.writeFile(
-      path.resolve(this.agentMemoryPath, RECALL_HISTORY_FILE),
-      JSON.stringify(history, null, 2),
-    );
+    await this.persistenceStore.writeRecallState({
+      threadId: threadContext.threadId,
+      resourceId: threadContext.resourceId,
+      snapshot,
+      history,
+    });
   }
 
   private async clearPersistedRecallState() {
-    await Promise.all([
-      fs.rm(path.resolve(this.agentMemoryPath, RECALL_SNAPSHOT_FILE), { force: true }),
-      fs.rm(path.resolve(this.agentMemoryPath, RECALL_HISTORY_FILE), { force: true }),
-    ]);
+    await this.persistenceStore.clearRecallState();
   }
 
   private dedupeRecallResults(input: {
@@ -1036,19 +994,13 @@ export class AgentLongTermMemoryRecall {
     return {
       recentFingerprints: deduped.slice(0, Math.max(input.windowSize, 1)),
       updatedAt: new Date().toISOString(),
-    } satisfies RecallHistoryState;
+    } satisfies LongTermMemoryRecallHistory;
   }
 
   private async readRecallThreadState(threadId: string | null) {
-    const rawHistory = await fs.readFile(
-      path.resolve(this.agentMemoryPath, RECALL_HISTORY_FILE),
-      'utf8',
-    ).catch(() => null);
-    const parsedHistory = rawHistory
-      ? JSON.parse(rawHistory) as { recentFingerprints?: unknown[] }
-      : null;
-    const recentFingerprints = Array.isArray(parsedHistory?.recentFingerprints)
-      ? parsedHistory.recentFingerprints.filter(
+    const persistedState = await this.persistenceStore.readRecallState();
+    const recentFingerprints = Array.isArray(persistedState.history?.recentFingerprints)
+      ? persistedState.history.recentFingerprints.filter(
         (value): value is string => typeof value === 'string' && value.length > 0,
       )
       : [];
@@ -1139,6 +1091,7 @@ export function createAgentLongTermMemoryRecall(input: {
       } | null;
     }>;
   };
+  persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   model?: unknown;
 }) {
   return new AgentLongTermMemoryRecall(input);

@@ -15,10 +15,13 @@ import {
 } from '@forge-runtime/core';
 import { z } from 'zod';
 
+import {
+  createAgentLongTermMemoryStore,
+  type CheckpointPackageManifest,
+  type LongTermMemoryState,
+} from './agent-long-term-memory-store';
 import { createAgentContractStore } from './agent-contract-store';
 
-const LTM_STATE_FILE = '.ltm-state.json';
-const LTM_RECALL_INDEX_STAMP_FILE = '.ltm-recall-index-stamp.json';
 const CHECKPOINTS_DIR = 'checkpoints';
 const MEMORY_DIR = 'memory';
 const SKILLS_DIR = path.join('workspace', 'skills');
@@ -26,31 +29,6 @@ const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
-
-const packageManifestSchema = z.object({
-  packageId: z.string().min(1),
-  checkpointGeneration: z.number().int().nonnegative(),
-  fromGeneration: z.number().int().nonnegative().nullable(),
-  toGeneration: z.number().int().nonnegative(),
-  createdAt: z.string().min(1),
-  checkpointSummaryUpdatedAt: z.string().min(1),
-  reflectionCount: z.number().int().nonnegative(),
-  observationCount: z.number().int().nonnegative(),
-});
-
-const ltmStateSchema = z.object({
-  version: z.literal(1),
-  packages: z.array(packageManifestSchema),
-  lastWrittenPackageId: z.string().min(1).nullable(),
-  lastWrittenAt: z.string().min(1).nullable(),
-  lastRunAt: z.string().min(1).nullable(),
-  lastRunError: z.string().min(1).nullable(),
-  lastRunErrorAt: z.string().min(1).nullable(),
-  updatedAt: z.string().min(1),
-});
-
-type LongTermMemoryState = z.infer<typeof ltmStateSchema>;
-type CheckpointPackageManifest = z.infer<typeof packageManifestSchema>;
 
 type CustomCheckpointSummary = {
   text: string;
@@ -84,21 +62,6 @@ type LtmSnapshot = {
   lastWrittenAt: number | null;
   packageCount: number;
 };
-
-function createEmptyLongTermMemoryState(): LongTermMemoryState {
-  const now = new Date().toISOString();
-
-  return {
-    version: 1,
-    packages: [],
-    lastWrittenPackageId: null,
-    lastWrittenAt: null,
-    lastRunAt: null,
-    lastRunError: null,
-    lastRunErrorAt: null,
-    updatedAt: now,
-  };
-}
 
 function createMemoryAgentInstructions(input: {
   agentId: string;
@@ -374,10 +337,10 @@ export function createAgentLongTermMemory(input: {
       observationBlocks: CustomObservationBlock[];
     }>;
   };
+  persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
 }) {
   const checkpointsPath = path.resolve(input.agentMemoryPath, CHECKPOINTS_DIR);
   const memoryPath = path.resolve(input.agentMemoryPath, MEMORY_DIR);
-  const statePath = path.resolve(input.agentMemoryPath, LTM_STATE_FILE);
   const ltmMastraId = toMastraSafeIdentifier(`${input.agentId}_long_term_memory`);
   let memoryAgent: Awaited<ReturnType<typeof createRuntimeAgentSession>> | null = null;
 
@@ -467,50 +430,26 @@ export function createAgentLongTermMemory(input: {
 
   async function readState() {
     await ensureInitialized();
-    const raw = await fs.readFile(statePath, 'utf8').catch(() => null);
-
-    if (!raw) {
-      const state = createEmptyLongTermMemoryState();
-      await writeState(state);
-      return state;
-    }
-
-    const parsed = ltmStateSchema.safeParse(JSON.parse(raw));
-
-    if (!parsed.success) {
-      const state = createEmptyLongTermMemoryState();
-      await writeState(state);
-      return state;
-    }
-
-    return parsed.data;
+    return input.persistenceStore.readState();
   }
 
   async function writeState(state: LongTermMemoryState) {
     await ensureInitialized();
-    state.updatedAt = new Date().toISOString();
-    const tempPath = `${statePath}.${randomUUID()}.tmp`;
-    await fs.writeFile(tempPath, JSON.stringify(state, null, 2));
-    await fs.rename(tempPath, statePath);
+    const persistedState = await input.persistenceStore.writeState(state);
     snapshot = {
       ...snapshot,
-      lastRunAt: state.lastRunAt ? Date.parse(state.lastRunAt) : snapshot.lastRunAt,
-      lastRunError: state.lastRunError,
-      lastRunErrorAt: state.lastRunErrorAt ? Date.parse(state.lastRunErrorAt) : null,
-      lastWrittenPackageId: state.lastWrittenPackageId,
-      lastWrittenAt: state.lastWrittenAt ? Date.parse(state.lastWrittenAt) : null,
-      packageCount: state.packages.length,
+      lastRunAt: persistedState.lastRunAt ? Date.parse(persistedState.lastRunAt) : snapshot.lastRunAt,
+      lastRunError: persistedState.lastRunError,
+      lastRunErrorAt: persistedState.lastRunErrorAt ? Date.parse(persistedState.lastRunErrorAt) : null,
+      lastWrittenPackageId: persistedState.lastWrittenPackageId,
+      lastWrittenAt: persistedState.lastWrittenAt ? Date.parse(persistedState.lastWrittenAt) : null,
+      packageCount: persistedState.packages.length,
     };
   }
 
   async function markRecallIndexDirty(reason: string) {
     await ensureInitialized();
-    const stampPath = path.resolve(input.agentMemoryPath, LTM_RECALL_INDEX_STAMP_FILE);
-    const payload = JSON.stringify({
-      updatedAt: new Date().toISOString(),
-      reason,
-    });
-    await fs.writeFile(stampPath, payload);
+    await input.persistenceStore.writeRecallIndexStamp(reason);
   }
 
   async function scheduleRun(delayMs: number) {

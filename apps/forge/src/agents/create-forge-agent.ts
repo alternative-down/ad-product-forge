@@ -7,6 +7,7 @@ import {
 } from '@forge-runtime/core';
 import { getDatabase } from '../database';
 import { createAgentCheckpointedOmStateStore } from './checkpointed-om-state-store';
+import { createAgentLongTermMemoryStore } from './agent-long-term-memory-store';
 import { createAgentRuntimePlatform } from './agent-runtime-platform';
 import { createAgentLongTermMemory } from './agent-long-term-memory';
 import { createAgentRuntimeMemory } from './agent-runtime-memory';
@@ -60,6 +61,9 @@ export async function createInternalAgentRuntime<
   const checkpointedOmStateStore = createAgentCheckpointedOmStateStore(getDatabase(), {
     agentId: config.id,
   });
+  const longTermMemoryStore = createAgentLongTermMemoryStore(getDatabase(), {
+    agentId: config.id,
+  });
   const agentSystemPrompt = buildAgentSystemPrompt({
     agentId: config.id,
     agentSlug: platform.mastraId,
@@ -91,6 +95,7 @@ export async function createInternalAgentRuntime<
         workspaceActions: platform.workspaceActions,
         workspaceEmbedder: config.workspaceEmbedder,
         checkpointedOmStateStore,
+        persistenceStore: longTermMemoryStore,
       })
     : null;
 
@@ -108,6 +113,7 @@ export async function createInternalAgentRuntime<
     ltmRecallDocumentCount: config.ltmRecallDocumentCount,
     workspaceEmbedder: config.workspaceEmbedder,
     checkpointedOmStateStore,
+    persistenceStore: longTermMemoryStore,
     readRuntimeMemorySettings: options.readRuntimeMemorySettings,
   });
 

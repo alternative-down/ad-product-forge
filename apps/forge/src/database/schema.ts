@@ -210,6 +210,34 @@ export const agentCheckpointedOmStates = sqliteTable('agent_checkpointed_om_stat
 export type AgentCheckpointedOmState = typeof agentCheckpointedOmStates.$inferSelect;
 export type NewAgentCheckpointedOmState = typeof agentCheckpointedOmStates.$inferInsert;
 
+export const agentLongTermMemoryStates = sqliteTable('agent_long_term_memory_states', {
+  agentId: text('agent_id')
+    .primaryKey()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  state: text('state', { mode: 'json' }).$type<unknown>().notNull(),
+  recallIndexStamp: text('recall_index_stamp'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type AgentLongTermMemoryState = typeof agentLongTermMemoryStates.$inferSelect;
+export type NewAgentLongTermMemoryState = typeof agentLongTermMemoryStates.$inferInsert;
+
+export const agentLongTermMemoryRecallStates = sqliteTable('agent_long_term_memory_recall_states', {
+  agentId: text('agent_id')
+    .primaryKey()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  threadId: text('thread_id'),
+  resourceId: text('resource_id'),
+  snapshot: text('snapshot', { mode: 'json' }).$type<unknown>(),
+  history: text('history', { mode: 'json' }).$type<unknown>(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type AgentLongTermMemoryRecallState = typeof agentLongTermMemoryRecallStates.$inferSelect;
+export type NewAgentLongTermMemoryRecallState = typeof agentLongTermMemoryRecallStates.$inferInsert;
+
 export const agentNotifications = sqliteTable('agent_notifications', {
   id: text('id').primaryKey(),
   agentId: text('agent_id')
