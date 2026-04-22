@@ -304,16 +304,6 @@ export async function generateHiredAgentInstructions(
       '- Do NOT include tool ids, workflow ids, tool descriptions, environment-control instructions, or platform mechanics in the generated agent text.',
       '- Do NOT name internal functions such as list_conversations, send_message, manage_crons, or any other capability id in the agent text.',
       '',
-      '## Output Structure',
-      '',
-      'Return the agent profile in this format:',
-      '',
-      'Agent Name: [name]',
-      'Agent Description: [1-2 sentence description]',
-      'Role ID: [internal role id]',
-      '',
-      'System Prompt:',
-      '[Full system prompt with Primary Goal, Secondary Goals, and Backstory sections]',
     ].join('\n');
   const hiringTools = {
     reportHiringState: createTool({
