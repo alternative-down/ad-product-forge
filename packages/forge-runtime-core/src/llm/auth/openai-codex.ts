@@ -82,7 +82,7 @@ export async function syncOpenAICodexCredential(options?: {
 }): Promise<OAuthCredential> {
   const storePath = options?.storePath ?? oauthStore.getDefaultPath();
   const filePath = options?.cliAuthFilePath ?? getOpenAICodexCliAuthFilePath();
-  const auth = codexCliAuthSchema.parse(oauthStore.readJsonFile(filePath) ?? {});
+  const auth = codexCliAuthSchema.parse(await oauthStore.readJsonFile(filePath) ?? {});
   const access = auth.tokens?.access_token;
 
   if (!access) {
@@ -100,7 +100,7 @@ export async function syncOpenAICodexCredential(options?: {
     credential = await refresh(credential);
   }
 
-  oauthStore.write('openai-codex', credential, storePath);
+  await oauthStore.write('openai-codex', credential, storePath);
   return credential;
 }
 
@@ -109,7 +109,7 @@ export async function resolveOpenAICodexCredential(options?: {
   storePath?: string;
 }): Promise<OAuthCredential> {
   const storePath = options?.storePath ?? oauthStore.getDefaultPath();
-  const stored = oauthStore.read(storePath)['openai-codex'];
+  const stored = (await oauthStore.read(storePath))['openai-codex'];
 
   if (stored && !oauthStore.isExpired(stored)) {
     return stored;
@@ -117,7 +117,7 @@ export async function resolveOpenAICodexCredential(options?: {
 
   if (stored?.refresh && oauthStore.isExpired(stored)) {
     const credential = await refresh(stored);
-    oauthStore.write('openai-codex', credential, storePath);
+    await oauthStore.write('openai-codex', credential, storePath);
     return credential;
   }
 

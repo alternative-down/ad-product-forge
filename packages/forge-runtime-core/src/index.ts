@@ -158,6 +158,13 @@ export type {
 export {
   createCommunicationModule,
 } from './communication-module.js';
+export type {
+  CommunicationContactsStore,
+} from './communication-module.js';
+export {
+  LibsqlCommunicationContactsStore,
+  type LibsqlCommunicationContactsStoreOptions,
+} from './libsql-communication-contacts-store.js';
 export {
   createExternalAccountTools,
 } from './communication-tools.js';

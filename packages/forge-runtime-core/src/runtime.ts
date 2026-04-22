@@ -10,6 +10,7 @@ import {
   type RuntimeHost,
   type RuntimeInputTarget,
   type RuntimePlugin,
+  type StepContextEntry,
   type StepModelAdapter,
 } from 'agent-runtime-core/integrations';
 
@@ -110,13 +111,13 @@ export async function createForgeAgentRuntime(
           });
         },
         formatActionResults(previousStepNumber, actionResults) {
-          return createTextStepContextEntry({
+          return {
             id: `action-results:${previousStepNumber}`,
             kind: 'action-results',
             title: 'Previous action results',
-            text: JSON.stringify(actionResults, null, 2),
             data: actionResults,
-          });
+            content: [],
+          } satisfies StepContextEntry;
         },
       },
     },

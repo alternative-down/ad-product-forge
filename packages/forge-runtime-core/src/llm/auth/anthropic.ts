@@ -80,11 +80,11 @@ export async function syncAnthropicCredential(options?: {
     }
 
     const credential = { access } satisfies OAuthCredential;
-    oauthStore.write('anthropic', credential, storePath);
+    await oauthStore.write('anthropic', credential, storePath);
     return credential;
   } catch {
     const authFilePath = options?.authFilePath ?? getAnthropicCliAuthFilePath();
-    const payload = claudeCliAuthSchema.parse(oauthStore.readJsonFile(authFilePath));
+    const payload = claudeCliAuthSchema.parse(await oauthStore.readJsonFile(authFilePath));
     let credential = {
       access: payload.claudeAiOauth.accessToken,
       refresh: payload.claudeAiOauth.refreshToken,
@@ -95,7 +95,7 @@ export async function syncAnthropicCredential(options?: {
       credential = await refresh(credential);
     }
 
-    oauthStore.write('anthropic', credential, storePath);
+    await oauthStore.write('anthropic', credential, storePath);
     return credential;
   }
 }
@@ -106,7 +106,7 @@ export async function resolveAnthropicCredential(options?: {
   storePath?: string;
 }): Promise<OAuthCredential> {
   const storePath = options?.storePath ?? oauthStore.getDefaultPath();
-  const stored = oauthStore.read(storePath).anthropic;
+  const stored = (await oauthStore.read(storePath)).anthropic;
 
   if (stored && !oauthStore.isExpired(stored)) {
     return stored;
@@ -114,19 +114,19 @@ export async function resolveAnthropicCredential(options?: {
 
   if (stored?.refresh && oauthStore.isExpired(stored)) {
     const credential = await refresh(stored);
-    oauthStore.write('anthropic', credential, storePath);
+    await oauthStore.write('anthropic', credential, storePath);
     return credential;
   }
 
   if (options?.authFilePath) {
-    let credential = oauthStore.readCredentialFile(options.authFilePath);
+    let credential = await oauthStore.readCredentialFile(options.authFilePath);
 
     if (credential.refresh && oauthStore.isExpired(credential)) {
       credential = await refresh(credential);
     }
 
     if (credential.refresh) {
-      oauthStore.write('anthropic', credential, storePath);
+      await oauthStore.write('anthropic', credential, storePath);
     }
 
     return credential;

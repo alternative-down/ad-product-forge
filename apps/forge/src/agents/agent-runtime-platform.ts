@@ -7,6 +7,7 @@ import {
   ConfiguredWorkspaceGateway,
   createCommunicationModule,
   createWorkspaceActionDefinitions,
+  LibsqlCommunicationContactsStore,
   LibsqlConversationStore,
   LocalBashWorkspaceGateway,
   toMastraSafeIdentifier,
@@ -112,6 +113,10 @@ export async function createAgentRuntimePlatform(input: {
     client,
     tablePrefix: mastraId,
   });
+  const communicationContactsStore = new LibsqlCommunicationContactsStore({
+    client,
+    tablePrefix: mastraId,
+  });
   const workspaceFs = new ReadWriteFs({
     root: agentWorkspaceDir,
   });
@@ -150,6 +155,7 @@ export async function createAgentRuntimePlatform(input: {
       filesystem: communicationWorkspaceFilesystem,
     },
     workspaceRoot: agentWorkspaceDir,
+    contactsStore: communicationContactsStore,
   });
 
   return {

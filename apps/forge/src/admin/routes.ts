@@ -974,7 +974,7 @@ export function registerAdminRoutes(input: {
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/oauth',
-    handler: async () => jsonResponse(readOauthState()),
+    handler: async () => jsonResponse(await readOauthState()),
   });
 
   input.httpServer.registerRoute({
@@ -2229,7 +2229,7 @@ export function registerAdminRoutes(input: {
       }
 
       return jsonResponse({
-        state: readOauthState(),
+        state: await readOauthState(),
         results,
       });
     },
@@ -2409,9 +2409,9 @@ function jsonResponse(body: unknown, status = 200) {
   };
 }
 
-function readOauthState() {
+async function readOauthState() {
   const storePath = oauthStore.getDefaultPath();
-  const store = oauthStore.read(storePath);
+  const store = await oauthStore.read(storePath);
   const openAICodexPath = getOpenAICodexCliAuthFilePath();
   const anthropicSetupTokenPath = getAnthropicSetupTokenFilePath();
   const anthropicCliPath = getAnthropicCliAuthFilePath();

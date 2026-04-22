@@ -1,6 +1,7 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { createClient } from '@libsql/client';
 import { z } from 'zod';
 
 export type ProviderId = 'openai-codex' | 'anthropic';
@@ -26,48 +27,75 @@ export function createOAuthStore() {
   function getDefaultPath() {
     const dataPath = process.env.FORGE_DATA_PATH ?? './data';
     const resolvedDataPath = path.resolve(process.cwd(), dataPath);
-    return path.join(resolvedDataPath, 'auth', 'oauth.json');
+    return path.join(resolvedDataPath, 'auth', 'oauth.db');
   }
 
-  function readJsonFile(filePath: string) {
+  async function readJsonFile(filePath: string) {
     try {
-      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      return JSON.parse(await fs.readFile(filePath, 'utf8'));
     } catch (error) {
-      // File doesn't exist (expected case)
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
         return null;
       }
 
-      // JSON parsing error (should be reported)
       if (error instanceof SyntaxError) {
         throw new Error(`Failed to parse JSON in ${filePath}: ${error.message}`);
       }
 
-      // Other errors (rethrow)
       throw error;
     }
   }
 
-  function read(storePath = getDefaultPath()) {
-    const store = readJsonFile(storePath);
+  async function read(storePath = getDefaultPath()) {
+    const client = createClient({ url: `file:${storePath}` });
 
-    if (!store || typeof store !== 'object') {
-      return {};
+    try {
+      await ensureSchema(client);
+
+      const result = await client.execute(`
+        select provider_id, credential_json
+        from oauth_credentials
+      `);
+      const storeEntries: Array<[string, unknown]> = [];
+
+      for (const row of result.rows) {
+        if (typeof row.provider_id !== 'string' || typeof row.credential_json !== 'string') {
+          continue;
+        }
+
+        storeEntries.push([row.provider_id, JSON.parse(row.credential_json)]);
+      }
+
+      const store = Object.fromEntries(storeEntries);
+
+      return storeSchema.parse(store);
+    } finally {
+      client.close();
     }
-
-    return storeSchema.parse(store);
   }
 
-  function write(provider: ProviderId, credential: OAuthCredential, storePath = getDefaultPath()) {
-    const store = read(storePath);
-    fs.mkdirSync(path.dirname(storePath), { recursive: true, mode: 0o700 });
-    store[provider] = credential;
-    fs.writeFileSync(storePath, JSON.stringify(store, null, 2), 'utf8');
-    fs.chmodSync(storePath, 0o600);
+  async function write(provider: ProviderId, credential: OAuthCredential, storePath = getDefaultPath()) {
+    const client = createClient({ url: `file:${storePath}` });
+
+    try {
+      await ensureSchema(client);
+      await client.execute({
+        sql: `
+          insert into oauth_credentials (provider_id, credential_json, updated_at)
+          values (?, ?, unixepoch() * 1000)
+          on conflict(provider_id) do update set
+            credential_json = excluded.credential_json,
+            updated_at = excluded.updated_at
+        `,
+        args: [provider, JSON.stringify(credential)],
+      });
+    } finally {
+      client.close();
+    }
   }
 
-  function readCredentialFile(filePath: string) {
-    const raw = fs.readFileSync(filePath, 'utf8').trim();
+  async function readCredentialFile(filePath: string) {
+    const raw = (await fs.readFile(filePath, 'utf8')).trim();
 
     if (!raw.startsWith('{')) {
       return { access: raw } satisfies OAuthCredential;
@@ -92,6 +120,16 @@ export function createOAuthStore() {
     readCredentialFile,
     isExpired,
   };
+}
+
+async function ensureSchema(client: ReturnType<typeof createClient>) {
+  await client.execute(`
+    create table if not exists oauth_credentials (
+      provider_id text primary key,
+      credential_json text not null,
+      updated_at integer not null
+    )
+  `);
 }
 
 export const oauthStore = createOAuthStore();

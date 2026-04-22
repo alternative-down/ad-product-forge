@@ -1,5 +1,4 @@
 import { and, desc, eq, gte, inArray, isNull, like, lte, sql } from 'drizzle-orm';
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { customAlphabet } from 'nanoid';
 
@@ -15,6 +14,7 @@ import {
   internalChatAccounts,
   internalChatConversationMembers,
   internalChatConversations,
+  internalChatMessageAttachments,
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
@@ -106,60 +106,40 @@ function buildAgentAccountDescription(input: {
 
 export function createInternalChatService(
   db: Database,
-  config: {
-    dataRoot: string;
-  },
 ) {
   const handlers = new Map<string, InternalChatHandler>();
-  const attachmentRoot = path.resolve(config.dataRoot, 'internal-chat', 'attachments');
 
   async function storeMessageAttachments(messageId: string, attachments: CommunicationFile[]) {
     if (attachments.length === 0) {
       return;
     }
 
-    const messageDir = path.resolve(attachmentRoot, messageId);
-    await fs.mkdir(messageDir, { recursive: true });
-
-    await Promise.all(
-      attachments.map(async (attachment, index) => {
-        const fileName = `${index}-${sanitizeAttachmentName(attachment.name)}`;
-        await fs.writeFile(path.resolve(messageDir, fileName), attachment.data);
-      }),
+    await db.insert(internalChatMessageAttachments).values(
+      attachments.map((attachment, index) => ({
+        id: createId(),
+        messageId,
+        attachmentIndex: index,
+        name: sanitizeAttachmentName(attachment.name),
+        contentType: attachment.contentType ?? null,
+        sizeBytes: attachment.sizeBytes ?? attachment.data.byteLength,
+        data: Buffer.from(attachment.data),
+        createdAt: Date.now(),
+      })),
     );
   }
 
   async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {
-    const messageDir = path.resolve(attachmentRoot, messageId);
+    const rows = await db.query.internalChatMessageAttachments.findMany({
+      where: eq(internalChatMessageAttachments.messageId, messageId),
+      orderBy: (table, { asc }) => [asc(table.attachmentIndex)],
+    });
 
-    try {
-      const entries = await fs.readdir(messageDir, { withFileTypes: true });
-      const files = entries
-        .filter((entry) => entry.isFile())
-        .sort((left, right) => left.name.localeCompare(right.name));
-
-      return Promise.all(
-        files.map(async (entry) => {
-          const filePath = path.resolve(messageDir, entry.name);
-          const [data, stats] = await Promise.all([fs.readFile(filePath), fs.stat(filePath)]);
-          const [, ...nameParts] = entry.name.split('-');
-          const name = nameParts.join('-') || entry.name;
-
-          return {
-            name,
-            data: new Uint8Array(data),
-            contentType: resolveContentType(name),
-            sizeBytes: stats.size,
-          };
-        }),
-      );
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return [];
-      }
-
-      throw error;
-    }
+    return rows.map((row) => ({
+      name: row.name,
+      data: new Uint8Array(row.data),
+      contentType: row.contentType ?? resolveContentType(row.name),
+      sizeBytes: row.sizeBytes,
+    }));
   }
 
   async function readMessageAttachment(messageId: string, attachmentName: string): Promise<CommunicationFile | null> {

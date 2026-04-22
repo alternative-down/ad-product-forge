@@ -11,7 +11,7 @@
  * - Cada agente tem seu próprio banco de dados (path relativo a workspace)
  */
 
-import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
+import { blob, integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
 import type { CheckpointedOmState, WorkspaceEmbedderId } from '@forge-runtime/core';
@@ -373,6 +373,25 @@ export const internalChatMessageReads = sqliteTable('forge_internal_chat_message
 export type InternalChatMessageRead = typeof internalChatMessageReads.$inferSelect;
 export type NewInternalChatMessageRead = typeof internalChatMessageReads.$inferInsert;
 
+export const internalChatMessageAttachments = sqliteTable('forge_internal_chat_message_attachments', {
+  id: text('id').primaryKey(),
+  messageId: text('message_id')
+    .notNull()
+    .references(() => internalChatMessages.id, { onDelete: 'cascade' }),
+  attachmentIndex: integer('attachment_index').notNull(),
+  name: text('name').notNull(),
+  contentType: text('content_type'),
+  sizeBytes: integer('size_bytes').notNull(),
+  data: blob('data', { mode: 'buffer' }).notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  internalChatMessageAttachmentsMessageIdx: index('forge_internal_chat_message_attachments_message_idx').on(table.messageId),
+  internalChatMessageAttachmentsUniqueIdx: uniqueIndex('forge_internal_chat_message_attachments_unique_idx').on(table.messageId, table.attachmentIndex),
+}));
+
+export type InternalChatMessageAttachment = typeof internalChatMessageAttachments.$inferSelect;
+export type NewInternalChatMessageAttachment = typeof internalChatMessageAttachments.$inferInsert;
+
 export const llmModelPrices = sqliteTable('llm_model_prices', {
   modelKey: text('model_key').primaryKey(),
   inputPerMillionUsd: real('input_per_million_usd').notNull(),
@@ -653,6 +672,7 @@ export const internalChatMessagesRelations = relations(internalChatMessages, ({ 
     fields: [internalChatMessages.authorAccountId],
     references: [internalChatAccounts.id],
   }),
+  attachments: many(internalChatMessageAttachments),
   reads: many(internalChatMessageReads),
 }));
 
@@ -664,6 +684,13 @@ export const internalChatMessageReadsRelations = relations(internalChatMessageRe
   agent: one(agents, {
     fields: [internalChatMessageReads.agentId],
     references: [agents.id],
+  }),
+}));
+
+export const internalChatMessageAttachmentsRelations = relations(internalChatMessageAttachments, ({ one }) => ({
+  message: one(internalChatMessages, {
+    fields: [internalChatMessageAttachments.messageId],
+    references: [internalChatMessages.id],
   }),
 }));
 

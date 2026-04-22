@@ -43,9 +43,7 @@ export async function main() {
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   const integrations = createSystemIntegrationStore(db);
-  const internalChat = createInternalChatService(db, {
-    dataRoot: env.FORGE_DATA_PATH,
-  });
+  const internalChat = createInternalChatService(db);
   const agentContracts = createAgentContractStore(db);
 
   const emailMailboxes = createAgentEmailManager({

@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { z } from 'zod';
@@ -15,17 +14,10 @@ import type {
   CommunicationProviderMessage,
 } from './communication.js';
 
-const CONTACTS_FILE = '.forge-communication-contacts.json';
-
 const contactRecordSchema = z.object({
   slug: z.string().min(1),
   displayName: z.string().min(1),
   description: z.string().optional(),
-});
-
-const contactStateSchema = z.object({
-  version: z.literal(1),
-  contacts: z.array(contactRecordSchema),
 });
 
 type ContactRecord = z.infer<typeof contactRecordSchema>;
@@ -35,12 +27,18 @@ type RuntimeWorkspaceFilesystem = {
   writeFile(path: string, data: Uint8Array | Buffer | string): Promise<void>;
 };
 
+export type CommunicationContactsStore = {
+  listContacts(): Promise<ContactRecord[]>;
+  saveContacts(contacts: ContactRecord[]): Promise<void>;
+};
+
 export async function createCommunicationModule(config: {
   providers: CommunicationProvider[];
   workspace: {
     filesystem: RuntimeWorkspaceFilesystem | null;
   };
   workspaceRoot: string;
+  contactsStore: CommunicationContactsStore;
 }): Promise<CommunicationModule> {
   const providers = new Map(config.providers.map((provider) => [provider.id, provider]));
   const workspaceFilesystem = config.workspace.filesystem;
@@ -88,13 +86,13 @@ export async function createCommunicationModule(config: {
   }
 
   async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
-    const state = await readContactState(config.workspaceRoot);
+    const contacts = await config.contactsStore.listContacts();
     const self = filter === 'others'
       ? []
       : await listSelfContacts(providers);
     const others = filter === 'self'
       ? []
-      : state.contacts.map((contact) => ({
+      : contacts.map((contact) => ({
         targetKey: contact.slug,
         slug: contact.slug,
         displayName: contact.displayName,
@@ -115,16 +113,16 @@ export async function createCommunicationModule(config: {
     displayName: string;
     description?: string;
   }) {
-    const state = await readContactState(config.workspaceRoot);
+    const existingContacts = await config.contactsStore.listContacts();
     const normalized: ContactRecord = {
       slug: input.slug,
       displayName: input.displayName,
       description: input.description,
     };
-    const nextContacts = state.contacts.filter((contact) => contact.slug !== input.slug);
+    const nextContacts = existingContacts.filter((contact) => contact.slug !== input.slug);
     nextContacts.push(normalized);
     nextContacts.sort((left, right) => left.displayName.localeCompare(right.displayName));
-    await writeContactState(config.workspaceRoot, nextContacts);
+    await config.contactsStore.saveContacts(nextContacts);
 
     return {
       slug: normalized.slug,
@@ -485,36 +483,4 @@ function resolveContentType(fileName: string) {
   if (extension === '.mp4') return 'video/mp4';
 
   return undefined;
-}
-
-async function readContactState(workspaceRoot: string) {
-  const filePath = path.join(workspaceRoot, CONTACTS_FILE);
-
-  try {
-    const text = await fs.readFile(filePath, 'utf8');
-    const parsed = contactStateSchema.safeParse(JSON.parse(text));
-
-    if (!parsed.success) {
-      return {
-        version: 1 as const,
-        contacts: [],
-      };
-    }
-
-    return parsed.data;
-  } catch {
-    return {
-      version: 1 as const,
-      contacts: [],
-    };
-  }
-}
-
-async function writeContactState(workspaceRoot: string, contacts: ContactRecord[]) {
-  const filePath = path.join(workspaceRoot, CONTACTS_FILE);
-
-  await fs.writeFile(filePath, JSON.stringify({
-    version: 1,
-    contacts,
-  }, null, 2));
 }
