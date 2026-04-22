@@ -44,6 +44,7 @@ export async function request<TResponse>(path: string, init?: RequestInit) {
   const secret = getStoredAdminSecret();
   const response = await fetch(buildApiUrl(path), {
     ...init,
+    cache: 'no-store',
     headers: {
       'content-type': 'application/json',
       ...(secret ? { [ADMIN_API_KEY_HEADER]: secret } : {}),
@@ -71,6 +72,7 @@ export async function requestBlob(path: string, init?: RequestInit) {
   const secret = getStoredAdminSecret();
   const response = await fetch(buildApiUrl(path), {
     ...init,
+    cache: 'no-store',
     headers: {
       ...(secret ? { [ADMIN_API_KEY_HEADER]: secret } : {}),
       ...(init?.headers ?? {}),
@@ -95,6 +97,7 @@ export async function requestBlob(path: string, init?: RequestInit) {
 
 export async function validateAdminSecret(secret: string) {
   const response = await fetch(buildApiUrl('/admin/overview'), {
+    cache: 'no-store',
     headers: {
       'content-type': 'application/json',
       [ADMIN_API_KEY_HEADER]: secret.trim(),
