@@ -8,15 +8,7 @@ import type {
 import type { CheckpointedOmStateStore } from './checkpointed-om.js';
 import type { CreateForgeAgentRuntimeOptions } from './runtime.js';
 import { type RuntimeWorkingMemoryStore } from './runtime-working-memory.js';
-import {
-  dispatchRuntimeSessionFeedback,
-  dispatchRuntimeSessionMessages,
-} from './runtime-agent-session-messages.js';
-import { dispatchRuntimeSystemInstruction } from './runtime-agent-session-system-plugin.js';
-import {
-  createRuntimeAgentSessionIteration,
-  resolveRuntimeAgentSessionContinuation,
-} from './runtime-agent-session-iteration.js';
+import { runRuntimeAgentSessionGenerate } from './runtime-agent-session-generate.js';
 import { createRuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
 import { type Tool } from './tools.js';
 
@@ -164,85 +156,13 @@ export async function createRuntimeAgentSession(
 
   return {
     async generate(prompt, options = {}) {
-      if (options.system?.trim()) {
-        await dispatchRuntimeSystemInstruction({
-          runtime: runtime.host.runtime,
-          text: options.system.trim(),
-        });
-      }
-
-      const promptMessages = typeof prompt === 'string'
-        ? [{
-          role: 'user' as const,
-          content: prompt,
-        }]
-        : prompt;
-
-      await dispatchRuntimeSessionMessages({
-        bridge: runtime.bridge,
-        threadId: input.threadId,
-        agentId: input.agentId,
-        messages: promptMessages,
+      return runRuntimeAgentSessionGenerate({
+        runtime,
+        runController,
+        session: input,
+        prompt,
+        options,
       });
-
-      let finalText = '';
-      let finalUsage: RuntimeAgentSessionStepResult['usage'];
-
-      await runController.run({
-        maxSteps: options.maxSteps,
-        signal: options.abortSignal,
-        beforeStep: async ({ nextStepNumber }) => {
-          await options.prepareStep?.({
-            stepNumber: nextStepNumber - 1,
-          });
-        },
-        afterStep: async ({ latestStep }) => {
-          const iteration = createRuntimeAgentSessionIteration({
-            record: latestStep,
-            runId: options.runId ?? input.threadId,
-            threadId: input.threadId,
-            resourceId: input.resourceId,
-            agentId: input.agentId,
-            agentName: input.agentName,
-          });
-
-          finalText = iteration.text;
-          finalUsage = latestStep.modelUsage ?? undefined;
-          await options.onStepFinish?.({
-            usage: latestStep.modelUsage ?? undefined,
-          });
-        },
-        continueAfterStep: async ({ latestStep }) => {
-          const iteration = createRuntimeAgentSessionIteration({
-            record: latestStep,
-            runId: options.runId ?? input.threadId,
-            threadId: input.threadId,
-            resourceId: input.resourceId,
-            agentId: input.agentId,
-            agentName: input.agentName,
-          });
-          const result = await resolveRuntimeAgentSessionContinuation({
-            options,
-            iteration,
-          });
-
-          if (result.feedback?.trim()) {
-            await dispatchRuntimeSessionFeedback({
-              bridge: runtime.bridge,
-              threadId: input.threadId,
-              agentId: input.agentId,
-              text: result.feedback.trim(),
-            });
-          }
-
-          return result.continue;
-        },
-      });
-
-      return {
-        text: finalText,
-        usage: finalUsage,
-      };
     },
     hasOwnMemory() {
       return true;
