@@ -79,7 +79,9 @@ export class CheckpointedConversationMemory {
       overflowMessageIds: overflowMessages.map((message) => message.id),
       metrics: {
         recentMessageCount: recentMessages.length,
+        recentTokenCount: messageBands.recentTokenCount,
         overflowMessageCount: overflowMessages.length,
+        overflowTokenCount: messageBands.overflowTokenCount,
         observationCount: previousState.observations.length,
         totalActiveMessageCount: activeMessages.length,
       },
@@ -100,7 +102,9 @@ export class CheckpointedConversationMemory {
       updatedAt: new Date().toISOString(),
       metrics: {
         recentMessageCount: 0,
+        recentTokenCount: 0,
         overflowMessageCount: 0,
+        overflowTokenCount: 0,
         observationCount: currentState.observations.length,
         totalActiveMessageCount: 0,
       },
@@ -223,7 +227,9 @@ export class CheckpointedConversationMemory {
       observations: [],
       metrics: {
         recentMessageCount: 0,
+        recentTokenCount: 0,
         overflowMessageCount: 0,
+        overflowTokenCount: 0,
         observationCount: 0,
         totalActiveMessageCount: 0,
       },
@@ -255,16 +261,20 @@ function partitionMessages(input: {
 }) {
   if (input.recentTokenLimit === null) {
     const recentMessages = input.messages.slice(-input.recentMessageLimit);
+    const overflowMessages = input.messages.slice(0, Math.max(0, input.messages.length - recentMessages.length));
 
     return {
       recentMessages,
-      overflowMessages: input.messages.slice(0, Math.max(0, input.messages.length - recentMessages.length)),
+      recentTokenCount: recentMessages.reduce((total, message) => total + estimateMessageUnits(message), 0),
+      overflowMessages,
+      overflowTokenCount: overflowMessages.reduce((total, message) => total + estimateMessageUnits(message), 0),
     };
   }
 
   const recentMessages: ConversationMessage[] = [];
   const overflowMessages: ConversationMessage[] = [];
   let recentTokenCount = 0;
+  let overflowTokenCount = 0;
 
   for (const message of [...input.messages].reverse()) {
     const messageUnits = estimateMessageUnits(message);
@@ -279,11 +289,14 @@ function partitionMessages(input: {
     }
 
     overflowMessages.unshift(message);
+    overflowTokenCount += messageUnits;
   }
 
   return {
     recentMessages,
+    recentTokenCount,
     overflowMessages,
+    overflowTokenCount,
   };
 }
 

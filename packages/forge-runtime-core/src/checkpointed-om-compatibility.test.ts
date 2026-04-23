@@ -73,7 +73,9 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
       ],
       metrics: {
         recentMessageCount: 2,
+        recentTokenCount: 6,
         overflowMessageCount: 0,
+        overflowTokenCount: 0,
         observationCount: 1,
         totalActiveMessageCount: 2,
       },
@@ -180,8 +182,10 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
       overflowMessageIds: [],
       observations: [],
       metrics: {
-        recentMessageCount: 2,
-        overflowMessageCount: 0,
+        recentMessageCount: 1,
+        recentTokenCount: 5,
+        overflowMessageCount: 1,
+        overflowTokenCount: 5,
         observationCount: 0,
         totalActiveMessageCount: 2,
       },
@@ -279,7 +283,9 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
       ],
       metrics: {
         recentMessageCount: 1,
+        recentTokenCount: 1,
         overflowMessageCount: 0,
+        overflowTokenCount: 0,
         observationCount: 2,
         totalActiveMessageCount: 1,
       },

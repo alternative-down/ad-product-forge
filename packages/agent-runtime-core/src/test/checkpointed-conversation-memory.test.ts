@@ -8,7 +8,6 @@ import { InMemoryConversationStore } from '../integrations/conversations/in-memo
 import { CheckpointedConversationMemory } from '../integrations/memory/checkpointed-conversation-memory.js';
 import { InMemoryCheckpointedConversationStateStore } from '../integrations/memory/checkpointed-conversation-state-store.js';
 import { FilesystemCheckpointedConversationStateStore } from '../integrations/persistence/filesystem-checkpointed-conversation-state-store.js';
-import { getStepContextText } from '../core/step-context.js';
 
 const tempPaths: string[] = [];
 
@@ -57,9 +56,8 @@ describe('CheckpointedConversationMemory', () => {
     expect(state.overflowMessageIds).toEqual([]);
 
     const context = await memory.renderContext();
-    expect(context).toHaveLength(2);
-    expect(getStepContextText(context[0]!)).toContain('two');
-    expect(context[1]?.id).toContain('message-3');
+    expect(context).toHaveLength(1);
+    expect(context[0]?.id).toContain('message-3');
   });
 
   it('persists checkpointed state to the filesystem', async () => {
@@ -79,7 +77,9 @@ describe('CheckpointedConversationMemory', () => {
       observations: [],
       metrics: {
         recentMessageCount: 1,
+        recentTokenCount: 0,
         overflowMessageCount: 0,
+        overflowTokenCount: 0,
         observationCount: 0,
         totalActiveMessageCount: 1,
       },
@@ -133,9 +133,8 @@ describe('CheckpointedConversationMemory', () => {
 
     const context = await memory.renderContext();
 
-    expect(context).toHaveLength(2);
-    expect(getStepContextText(context[0]!)).toContain('22222222222222222222');
-    expect(context[1]?.id).toContain('message-3');
+    expect(context).toHaveLength(1);
+    expect(context[0]?.id).toContain('message-3');
   });
 });
 

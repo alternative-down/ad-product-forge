@@ -8,7 +8,9 @@ export type CheckpointedConversationObservation = {
 
 export type CheckpointedConversationMetrics = {
   recentMessageCount: number;
+  recentTokenCount: number;
   overflowMessageCount: number;
+  overflowTokenCount: number;
   observationCount: number;
   totalActiveMessageCount: number;
 };

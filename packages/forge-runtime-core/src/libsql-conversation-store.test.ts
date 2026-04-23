@@ -80,7 +80,9 @@ describe('LibsqlConversationStore', () => {
         observations: [],
         metrics: {
           recentMessageCount: 1,
+          recentTokenCount: 1,
           overflowMessageCount: 0,
+          overflowTokenCount: 0,
           observationCount: 0,
           totalActiveMessageCount: 1,
         },
@@ -145,7 +147,9 @@ describe('LibsqlConversationStore', () => {
         observations: [],
         metrics: {
           recentMessageCount: 1,
+          recentTokenCount: 1,
           overflowMessageCount: 0,
+          overflowTokenCount: 0,
           observationCount: 0,
           totalActiveMessageCount: 1,
         },
@@ -263,7 +267,9 @@ describe('LibsqlConversationStore', () => {
         observations: [],
         metrics: {
           recentMessageCount: 1,
+          recentTokenCount: 1,
           overflowMessageCount: 0,
+          overflowTokenCount: 0,
           observationCount: 0,
           totalActiveMessageCount: 1,
         },

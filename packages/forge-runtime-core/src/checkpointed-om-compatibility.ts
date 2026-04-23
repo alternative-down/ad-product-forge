@@ -16,53 +16,6 @@ function estimateTokenCount(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
-function extractMessageText(message: {
-  parts: Array<{ type: string; text?: string }>;
-}) {
-  return message.parts
-    .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
-    .map((part) => part.text.trim())
-    .filter(Boolean)
-    .join('\n');
-}
-
-function partitionActiveMessages(input: {
-  messages: Array<{
-    id: string;
-    parts: Array<{ type: string; text?: string }>;
-  }>;
-  recentRawTokenLimit: number;
-}) {
-  const recentRawMessages: typeof input.messages = [];
-  const overflowMessages: typeof input.messages = [];
-  let recentRawTokenCount = 0;
-
-  for (const message of [...input.messages].reverse()) {
-    const messageTokenCount = estimateTokenCount(extractMessageText(message));
-
-    if (
-      recentRawMessages.length === 0
-      || recentRawTokenCount + messageTokenCount <= input.recentRawTokenLimit
-    ) {
-      recentRawMessages.unshift(message);
-      recentRawTokenCount += messageTokenCount;
-      continue;
-    }
-
-    overflowMessages.unshift(message);
-  }
-
-  return {
-    recentRawMessages,
-    overflowMessages,
-    recentRawTokenCount,
-    overflowTokenCount: overflowMessages.reduce(
-      (total, message) => total + estimateTokenCount(extractMessageText(message)),
-      0,
-    ),
-  };
-}
-
 function createEmptyCheckpointedOmState(): CheckpointedOmState {
   return {
     version: 1,
@@ -156,10 +109,6 @@ async function buildCompatibleState(input: {
   const activeMessages = [...input.conversationState.overflowMessageIds, ...input.conversationState.recentMessageIds]
     .map((messageId) => input.messages.find((message) => message.id === messageId))
     .filter((message): message is NonNullable<typeof message> => Boolean(message));
-  const activeMessageBands = partitionActiveMessages({
-    messages: activeMessages,
-    recentRawTokenLimit: input.limits.recentRawTokens,
-  });
   const reflectionBudget = Math.max(
     0,
     input.limits.totalContextTokens
@@ -284,12 +233,12 @@ async function buildCompatibleState(input: {
     observationBlocks: visibleObservationBlocks,
     activeReflectionBlocks,
     latestMetrics: {
-      rawMessageCount: activeMessages.length,
-      recentRawMessageCount: activeMessageBands.recentRawMessages.length,
-      recentRawTokenCount: activeMessageBands.recentRawTokenCount,
+      rawMessageCount: input.conversationState.metrics.totalActiveMessageCount,
+      recentRawMessageCount: input.conversationState.metrics.recentMessageCount,
+      recentRawTokenCount: input.conversationState.metrics.recentTokenCount,
       recentRawTokenLimit: input.limits.recentRawTokens,
-      overflowMessageCount: activeMessageBands.overflowMessages.length,
-      overflowTokenCount: activeMessageBands.overflowTokenCount,
+      overflowMessageCount: input.conversationState.metrics.overflowMessageCount,
+      overflowTokenCount: input.conversationState.metrics.overflowTokenCount,
       observationTriggerTokenLimit: input.limits.rawObservationBatchTokens,
       activeObservationBlockCount: visibleObservationBlocks.filter((block) => block.reflectedGeneration === null).length,
       observationTokenCount: visibleObservationBlocks
