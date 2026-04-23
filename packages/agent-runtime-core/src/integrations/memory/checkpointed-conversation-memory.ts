@@ -157,10 +157,6 @@ export class CheckpointedConversationMemory {
     return this.sync();
   }
 
-  async consolidateOverflow(): Promise<CheckpointedConversationObservation | null> {
-    return this.consolidateOneOverflowBatch();
-  }
-
   async stabilize(): Promise<CheckpointedConversationState> {
     let state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
 

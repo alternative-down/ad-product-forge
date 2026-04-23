@@ -32,7 +32,7 @@ describe('CheckpointedConversationMemory', () => {
       store,
       stateStore: new InMemoryCheckpointedConversationStateStore(),
       recentTokenLimit: 2,
-      overflowObservationTokenLimit: 10,
+      overflowObservationTokenLimit: 1,
       observer: {
         async observe(request) {
           return {
@@ -48,7 +48,7 @@ describe('CheckpointedConversationMemory', () => {
     expect(state.recentMessageIds).toEqual(['message-3']);
     expect(state.overflowMessageIds).toEqual(['message-2']);
 
-    await memory.consolidateOverflow();
+    await memory.stabilize();
 
     state = await memory.getState();
     expect(state.checkpointMessageId).toBe('message-2');

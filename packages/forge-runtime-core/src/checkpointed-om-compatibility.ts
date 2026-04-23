@@ -165,7 +165,7 @@ async function buildCompatibleState(input: {
   const archivedReflections: typeof activeReflectionBlocks = [];
 
   if (input.reflectionModel) {
-    while (sumReflectionTokens(activeReflectionBlocks) > reflectionBudget && activeReflectionBlocks.length > 0) {
+    while (sumReflectionTokens(activeReflectionBlocks) >= reflectionBudget && activeReflectionBlocks.length > 0) {
       const removed = activeReflectionBlocks.shift();
 
       if (!removed) {
