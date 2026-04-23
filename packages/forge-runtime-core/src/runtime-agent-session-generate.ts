@@ -176,10 +176,32 @@ function summarizeGenerateRequest(input: {
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
 }) {
+  const messageBreakdown = input.messages.reduce((total, message) => {
+    const stats = summarizeModelMessage(message);
+
+    total.textChars += stats.textChars;
+    total.toolCallChars += stats.toolCallChars;
+    total.toolResultChars += stats.toolResultChars;
+    total.imageCount += stats.imageCount;
+    total.roles[message.role] = (total.roles[message.role] ?? 0) + 1;
+    return total;
+  }, {
+    textChars: 0,
+    toolCallChars: 0,
+    toolResultChars: 0,
+    imageCount: 0,
+    roles: {} as Record<string, number>,
+  });
+
   return {
     systemChars: input.system?.length ?? 0,
     messageCount: input.messages.length,
-    messageChars: input.messages.reduce((total, message) => total + countModelMessageChars(message), 0),
+    messageChars: messageBreakdown.textChars + messageBreakdown.toolCallChars + messageBreakdown.toolResultChars,
+    messageTextChars: messageBreakdown.textChars,
+    messageToolCallChars: messageBreakdown.toolCallChars,
+    messageToolResultChars: messageBreakdown.toolResultChars,
+    messageImageCount: messageBreakdown.imageCount,
+    messageRoleCounts: messageBreakdown.roles,
     toolCount: input.actions.length,
     toolDescriptionChars: input.actions.reduce((total, action) => total + action.description.length, 0),
     toolSchemaChars: input.actions.reduce(
@@ -189,30 +211,52 @@ function summarizeGenerateRequest(input: {
   };
 }
 
-function countModelMessageChars(message: ModelMessage) {
+function summarizeModelMessage(message: ModelMessage) {
   if (typeof message.content === 'string') {
-    return message.content.length;
+    return {
+      textChars: message.content.length,
+      toolCallChars: 0,
+      toolResultChars: 0,
+      imageCount: 0,
+    };
   }
 
   if (!Array.isArray(message.content)) {
-    return 0;
+    return {
+      textChars: 0,
+      toolCallChars: 0,
+      toolResultChars: 0,
+      imageCount: 0,
+    };
   }
 
   return message.content.reduce((total, part) => {
     if ('text' in part && typeof part.text === 'string') {
-      return total + part.text.length;
+      total.textChars += part.text.length;
+      return total;
     }
 
     if ('input' in part) {
-      return total + JSON.stringify(part.input).length;
+      total.toolCallChars += JSON.stringify(part.input).length;
+      return total;
     }
 
     if ('output' in part) {
-      return total + JSON.stringify(part.output).length;
+      total.toolResultChars += JSON.stringify(part.output).length;
+      return total;
+    }
+
+    if ('image' in part) {
+      total.imageCount += 1;
     }
 
     return total;
-  }, 0);
+  }, {
+    textChars: 0,
+    toolCallChars: 0,
+    toolResultChars: 0,
+    imageCount: 0,
+  });
 }
 
 function appendGenerateDiagnostics(error: unknown, diagnostics: {
