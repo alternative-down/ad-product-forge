@@ -2553,6 +2553,30 @@ async function buildSystemHealthcheck(
     readModel.listAgents(),
   ]);
   const homeAgentMap = new Map(agents.map((agent) => [agent.agentId, agent]));
+  const recentThreadsByAgentId = new Map(await Promise.all(
+    agentSnapshots.map(async (agentSnapshot) => {
+      const [agentThread, ltmThread] = await Promise.all([
+        readModel.listAgentThreadMessages({
+          agentId: agentSnapshot.agentId,
+          page: 0,
+          perPage: 5,
+        }),
+        readModel.listAgentLongTermMemoryThreadMessages({
+          agentId: agentSnapshot.agentId,
+          page: 0,
+          perPage: 5,
+        }),
+      ]);
+
+      return [
+        agentSnapshot.agentId,
+        {
+          agentThread: agentThread.items.map(summarizeHealthcheckThreadMessage),
+          ltmThread: ltmThread.items.map(summarizeHealthcheckThreadMessage),
+        },
+      ] as const;
+    }),
+  ));
 
   return {
     now: new Date().toISOString(),
@@ -2591,6 +2615,10 @@ async function buildSystemHealthcheck(
 
         return {
           ...agentSnapshot,
+          recentExecution: recentThreadsByAgentId.get(agentSnapshot.agentId) ?? {
+            agentThread: [],
+            ltmThread: [],
+          },
           homeAgent: homeAgent
             ? {
                 executionState: homeAgent.executionState,
@@ -2607,6 +2635,44 @@ async function buildSystemHealthcheck(
         };
       }),
     },
+  };
+}
+
+function summarizeHealthcheckThreadMessage(message: {
+  id: string;
+  role: string;
+  createdAt: number;
+  type: string | null;
+  content?: unknown;
+}) {
+  const content = message.content && typeof message.content === 'object'
+    ? message.content as {
+        content?: unknown;
+        reasoning?: unknown;
+        parts?: unknown;
+      }
+    : null;
+  const parts = Array.isArray(content?.parts) ? content.parts : [];
+  const partTypes = parts
+    .flatMap((part) =>
+      part && typeof part === 'object' && 'type' in part && typeof part.type === 'string'
+        ? [part.type]
+        : [])
+    .slice(0, 20);
+  const preview = extractLatestMessagePreview(message.content);
+  const hasReasoning =
+    typeof content?.reasoning === 'string' && content.reasoning.trim().length > 0
+    || parts.some((part) =>
+      part && typeof part === 'object' && 'type' in part && part.type === 'reasoning');
+
+  return {
+    id: message.id,
+    role: message.role,
+    createdAt: message.createdAt,
+    type: message.type,
+    preview,
+    hasReasoning,
+    partTypes,
   };
 }
 
