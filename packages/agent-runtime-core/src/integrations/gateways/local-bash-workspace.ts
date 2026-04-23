@@ -11,11 +11,13 @@ import type {
 export type LocalBashWorkspaceGatewayOptions = {
   fs?: IFileSystem;
   root?: string;
+  pathAliases?: string[];
 };
 
 export class LocalBashWorkspaceGateway implements WorkspaceGateway {
   private readonly bash: Bash;
   private readonly root: string | undefined;
+  private readonly pathAliases: string[];
 
   constructor(options: LocalBashWorkspaceGatewayOptions = {}) {
     const filesystem = options.fs ?? (options.root
@@ -68,6 +70,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       ],
     });
     this.root = options.root ? path.resolve(options.root) : undefined;
+    this.pathAliases = (options.pathAliases ?? []).map((alias) => path.resolve(alias));
   }
 
   async execute(request: WorkspaceCommandRequest): Promise<WorkspaceCommandResult> {
@@ -126,6 +129,19 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     }
 
     const resolvedCwd = path.resolve(cwd);
+
+    for (const aliasRoot of this.pathAliases) {
+      const relativeAliasCwd = path.relative(aliasRoot, resolvedCwd);
+
+      if (!relativeAliasCwd.startsWith('..') && !path.isAbsolute(relativeAliasCwd)) {
+        if (!relativeAliasCwd || relativeAliasCwd === '.') {
+          return '/';
+        }
+
+        return `/${relativeAliasCwd.split(path.sep).join('/')}`;
+      }
+    }
+
     const relativeCwd = path.relative(this.root, resolvedCwd);
 
     if (relativeCwd.startsWith('..') || path.isAbsolute(relativeCwd)) {

@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -41,6 +41,24 @@ describe('LocalBashWorkspaceGateway', () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('hello just bash');
+  });
+
+  it('maps configured alias roots into the workspace sandbox root', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'local-bash-workspace-'));
+    temporaryDirectories.push(root);
+    await mkdir(path.join(root, 'workspace'), { recursive: true });
+
+    const gateway = new LocalBashWorkspaceGateway({
+      root: path.join(root, 'workspace'),
+      pathAliases: [root],
+    });
+    const result = await gateway.execute({
+      command: 'pwd',
+      cwd: root,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe('/');
   });
 
   it('enables curl, python, and node-compatible javascript commands', async () => {

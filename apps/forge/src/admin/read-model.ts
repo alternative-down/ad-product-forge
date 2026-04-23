@@ -1430,9 +1430,12 @@ async function listThreadMessages(
       const pageStart = input.page * input.perPage;
       const pageEnd = pageStart + input.perPage;
       const pagedMessages = messages.slice(pageStart, pageEnd);
+      const mergedMessages = mergeToolLogMessages([...pagedMessages].reverse());
 
       return {
-        items: pagedMessages.map((message) => ({
+        items: mergedMessages
+        .reverse()
+        .map((message) => ({
           id: message.id,
           role: message.role,
           createdAt: new Date(message.createdAt).getTime(),
@@ -1487,6 +1490,43 @@ function parseProviderCredentials(encryptedCredentials: string) {
   } catch {
     return decrypted;
   }
+}
+
+function mergeToolLogMessages(messages: Array<{
+  id: string;
+  role: string;
+  threadId: string;
+  createdAt: string;
+  parts: RuntimeStoredMessagePart[];
+  metadata?: Record<string, unknown>;
+}>) {
+  const merged: typeof messages = [];
+
+  for (const message of messages) {
+    const previousMessage = merged[merged.length - 1];
+
+    if (
+      previousMessage?.role === 'assistant'
+      && message.role === 'tool'
+      && Array.isArray(previousMessage.metadata?.toolInvocations)
+      && previousMessage.metadata.toolInvocations.length > 0
+      && Array.isArray(message.metadata?.toolResults)
+      && message.metadata.toolResults.length > 0
+    ) {
+      merged[merged.length - 1] = {
+        ...previousMessage,
+        metadata: {
+          ...previousMessage.metadata,
+          toolResults: message.metadata.toolResults,
+        },
+      };
+      continue;
+    }
+
+    merged.push(message);
+  }
+
+  return merged;
 }
 
 function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
