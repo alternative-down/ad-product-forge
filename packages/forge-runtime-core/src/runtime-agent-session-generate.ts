@@ -199,23 +199,10 @@ async function buildRuntimeSessionModelMessages(input: {
     afterMessageId: state.checkpointMessageId ?? undefined,
   });
 
-  const modelMessages: ModelMessage[] = [];
-  const pendingToolCallIds: string[] = [];
-
-  for (const message of messages) {
-    const nextMessages = toModelMessages(message, pendingToolCallIds);
-
-    if (nextMessages.length === 0) {
-      continue;
-    }
-
-    modelMessages.push(...nextMessages);
-  }
-
-  return modelMessages;
+  return createReplayMessages(messages);
 }
 
-function toModelMessages(message: {
+function createReplayMessages(messages: Array<{
   id: string;
   role: 'user' | 'assistant' | 'system' | 'tool' | 'external';
   parts: Array<{
@@ -225,103 +212,171 @@ function toModelMessages(message: {
     bytes?: Uint8Array;
   }>;
   metadata?: Record<string, unknown>;
-}, pendingToolCallIds: string[]): ModelMessage[] {
-  const textContent = message.parts
-    .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
-    .map((part) => ({
-      type: 'text' as const,
-      text: part.text,
-    }));
-  const imageContent = message.parts
-    .filter((part): part is { type: string; mimeType: string; bytes: Uint8Array } =>
-      part.type === 'image' && typeof part.mimeType === 'string' && part.bytes instanceof Uint8Array)
-    .map((part) => ({
-      type: 'image' as const,
-      image: toDataUrl(part.mimeType, part.bytes),
-    }));
+}>): ModelMessage[] {
+  const orderedEntries: Array<
+    | ModelMessage
+    | {
+        kind: 'assistant';
+        textContent: Array<{ type: 'text'; text: string }>;
+        imageContent: Array<{ type: 'image'; image: string }>;
+        toolCalls: Array<{
+          type: 'tool-call';
+          toolCallId: string;
+          toolName: string;
+          input: Record<string, unknown>;
+        }>;
+      }
+  > = [];
+  const pendingToolCallIds: string[] = [];
+  const fulfilledToolCallIds = new Set<string>();
 
-  if (message.role === 'assistant') {
-    const toolInvocations = Array.isArray(message.metadata?.toolInvocations)
-      ? message.metadata.toolInvocations
-      : [];
-    const assistantContent = [
-      ...textContent,
-      ...imageContent,
-      ...toolInvocations
+  for (const message of messages) {
+    const textContent = message.parts
+      .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
+      .map((part) => ({
+        type: 'text' as const,
+        text: part.text,
+      }));
+    const imageContent = message.parts
+      .filter((part): part is { type: string; mimeType: string; bytes: Uint8Array } =>
+        part.type === 'image' && typeof part.mimeType === 'string' && part.bytes instanceof Uint8Array)
+      .map((part) => ({
+        type: 'image' as const,
+        image: toDataUrl(part.mimeType, part.bytes),
+      }));
+
+    if (message.role === 'assistant') {
+      const toolInvocations = Array.isArray(message.metadata?.toolInvocations)
+        ? message.metadata.toolInvocations
+        : [];
+      const toolCalls = toolInvocations
         .filter((value): value is { toolCallId?: unknown; toolName?: unknown; args?: unknown } =>
           typeof value === 'object' && value !== null)
-        .map((toolInvocation, index) => {
-          const toolCallId = typeof toolInvocation.toolCallId === 'string'
-            ? toolInvocation.toolCallId
-            : `${message.id}:tool:${index}`;
+        .flatMap((toolInvocation) => {
+          if (typeof toolInvocation.toolCallId !== 'string') {
+            return [];
+          }
 
-          pendingToolCallIds.push(toolCallId);
+          pendingToolCallIds.push(toolInvocation.toolCallId);
 
-          return {
+          return [{
             type: 'tool-call' as const,
-            toolCallId,
+            toolCallId: toolInvocation.toolCallId,
             toolName: typeof toolInvocation.toolName === 'string' ? toolInvocation.toolName : 'unknown',
             input: isRecord(toolInvocation.args) ? toolInvocation.args : {},
-          };
-        }),
-    ];
+          }];
+        });
 
-    if (assistantContent.length === 0) {
-      return [];
+      orderedEntries.push({
+        kind: 'assistant',
+        textContent,
+        imageContent,
+        toolCalls,
+      });
+      continue;
     }
 
-    return [{
-      role: 'assistant',
-      content: assistantContent,
-    } as ModelMessage];
-  }
-
-  if (message.role === 'tool') {
-    const toolResults = Array.isArray(message.metadata?.toolResults)
-      ? message.metadata.toolResults
-      : [];
-
-    if (toolResults.length === 0) {
-      return [];
-    }
-
-    return [{
-      role: 'tool',
-      content: toolResults
+    if (message.role === 'tool') {
+      const toolResults = Array.isArray(message.metadata?.toolResults)
+        ? message.metadata.toolResults
+        : [];
+      const content = toolResults
         .filter((value): value is { toolCallId?: unknown; toolName?: unknown; result?: unknown } =>
           typeof value === 'object' && value !== null)
-        .map((toolResult, index) => ({
-          type: 'tool-result' as const,
-          toolCallId:
-            typeof toolResult.toolCallId === 'string'
-              ? toolResult.toolCallId
-              : pendingToolCallIds.shift() ?? `${message.id}:tool:${index}`,
-          toolName: typeof toolResult.toolName === 'string' ? toolResult.toolName : 'unknown',
-          output: {
-            type: 'json' as const,
-            value: toolResult.result,
-          },
-        })),
-    } as ModelMessage];
+        .flatMap((toolResult) => {
+          const toolCallId = typeof toolResult.toolCallId === 'string'
+            ? toolResult.toolCallId
+            : pendingToolCallIds.shift();
+
+          if (!toolCallId) {
+            return [];
+          }
+
+          fulfilledToolCallIds.add(toolCallId);
+          removePendingToolCallId(pendingToolCallIds, toolCallId);
+
+          return [{
+            type: 'tool-result' as const,
+            toolCallId,
+            toolName: typeof toolResult.toolName === 'string' ? toolResult.toolName : 'unknown',
+            output: {
+              type: 'json' as const,
+              value: toolResult.result,
+            },
+          }];
+        });
+
+      if (content.length > 0) {
+        orderedEntries.push({
+          role: 'tool',
+          content,
+        } as ModelMessage);
+      }
+
+      continue;
+    }
+
+    const content = [...textContent, ...imageContent];
+
+    if (content.length === 0) {
+      continue;
+    }
+
+    if (message.role === 'system') {
+      const systemText = textContent.map((part) => part.text).join('\n').trim();
+
+      if (systemText) {
+        orderedEntries.push({
+          role: 'system',
+          content: systemText,
+        } as ModelMessage);
+      }
+
+      continue;
+    }
+
+    orderedEntries.push({
+      role: 'user',
+      content,
+    } as ModelMessage);
   }
 
-  const content = [...textContent, ...imageContent];
+  const replayMessages: ModelMessage[] = [];
 
-  if (content.length === 0) {
-    return [];
+  for (const entry of orderedEntries) {
+    if ('kind' in entry && entry.kind === 'assistant') {
+      const toolCalls = entry.toolCalls.filter((toolCall) => fulfilledToolCallIds.has(toolCall.toolCallId));
+      const content = [
+        ...entry.textContent,
+        ...entry.imageContent,
+        ...toolCalls,
+      ];
+
+      if (content.length === 0) {
+        continue;
+      }
+
+      replayMessages.push({
+        role: 'assistant',
+        content,
+      } as ModelMessage);
+      continue;
+    }
+
+    replayMessages.push(entry as ModelMessage);
   }
 
-  if (message.role === 'system') {
-    return [{
-      role: 'system',
-      content: textContent.map((part) => part.text).join('\n').trim(),
-    } as ModelMessage].filter((value) => value.content);
+  return replayMessages;
+}
+
+function removePendingToolCallId(pendingToolCallIds: string[], toolCallId: string) {
+  const index = pendingToolCallIds.indexOf(toolCallId);
+
+  if (index === -1) {
+    return;
   }
 
-  return [{
-    role: 'user',
-    content,
-  } as ModelMessage];
+  pendingToolCallIds.splice(index, 1);
 }
 
 function buildAiSdkToolSet(input: {
