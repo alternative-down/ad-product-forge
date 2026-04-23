@@ -1463,9 +1463,9 @@ async function listThreadMessages(
           content: {
             parts: [
               ...message.parts.map((part: RuntimeStoredMessagePart) =>
-                part.type === 'text'
+                part.type === 'text' || part.type === 'reasoning'
                   ? {
-                      type: 'text',
+                      type: part.type,
                       text: part.text,
                     }
                   : part),
