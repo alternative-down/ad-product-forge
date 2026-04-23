@@ -137,6 +137,58 @@ describe('CheckpointedConversationMemory', () => {
     expect(context).toHaveLength(1);
     expect(context[0]?.id).toContain('message-3');
   });
+
+  it('counts tool results in recent and overflow token budgets', async () => {
+    const store = new InMemoryConversationStore();
+
+    await store.appendMessage({
+      id: 'assistant-tool-call',
+      threadId: 'thread-1',
+      role: 'assistant',
+      parts: [],
+      metadata: {
+        toolInvocations: [{
+          toolCallId: 'call-1',
+          toolName: 'workspace_execute_command',
+          args: {
+            command: 'cat README.md',
+          },
+        }],
+      },
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+    await store.appendMessage({
+      id: 'tool-result',
+      threadId: 'thread-1',
+      role: 'tool',
+      parts: [],
+      metadata: {
+        toolResults: [{
+          toolCallId: 'call-1',
+          toolName: 'workspace_execute_command',
+          result: {
+            stdout: 'x'.repeat(200),
+          },
+        }],
+      },
+      createdAt: '2026-01-01T00:00:02.000Z',
+    });
+    await store.appendMessage(createMessage('message-3', 'tail'));
+
+    const memory = new CheckpointedConversationMemory({
+      threadId: 'thread-1',
+      store,
+      stateStore: new InMemoryCheckpointedConversationStateStore(),
+      recentTokenLimit: 20,
+      overflowObservationTokenLimit: 20,
+    });
+
+    const state = await memory.getState();
+
+    expect(state.overflowMessageIds).toContain('tool-result');
+    expect(state.metrics.overflowTokenCount).toBeGreaterThan(20);
+    expect(state.metrics.recentTokenCount).toBeLessThanOrEqual(20);
+  });
 });
 
 function createMessage(id: string, text: string) {

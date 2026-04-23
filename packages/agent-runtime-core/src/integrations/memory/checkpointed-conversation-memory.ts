@@ -43,6 +43,7 @@ type RawConversationUnit = {
   createdAt: Date;
   tokenCount: number;
   promptMessage: ConversationMessage;
+  kind: 'whole' | 'part' | 'tool-invocation' | 'tool-result';
 };
 
 type NormalizedCheckpointedConversationState = Omit<
@@ -325,7 +326,7 @@ function getMaxRawUnitTokens(
 }
 
 function sanitizeRawUnitIds(value: string[] | undefined) {
-  return (value ?? []).filter((item) => typeof item === 'string' && item.includes(':part:'));
+  return (value ?? []).filter((item) => typeof item === 'string' && item.includes(':'));
 }
 
 function estimateTextUnits(text: string) {
@@ -333,7 +334,7 @@ function estimateTextUnits(text: string) {
 }
 
 function estimateMessageUnits(message: ConversationMessage) {
-  const text = getMessageText(message);
+  const text = getMessageBudgetText(message);
 
   if (text) {
     return estimateTextUnits(text);
@@ -348,6 +349,72 @@ function getMessageText(message: ConversationMessage) {
     .map((part) => part.text.trim())
     .filter(Boolean)
     .join('\n');
+}
+
+function getMessageBudgetText(message: ConversationMessage) {
+  return [
+    getMessageText(message),
+    ...getToolInvocationBudgetTexts(message),
+    ...getToolResultBudgetTexts(message),
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function getToolInvocationBudgetTexts(message: ConversationMessage) {
+  const toolInvocations = Array.isArray(message.metadata?.toolInvocations)
+    ? message.metadata.toolInvocations
+    : [];
+
+  return toolInvocations.flatMap((toolInvocation) => {
+    if (typeof toolInvocation !== 'object' || toolInvocation === null) {
+      return [];
+    }
+
+    const toolName = typeof toolInvocation.toolName === 'string'
+      ? toolInvocation.toolName
+      : 'unknown';
+    const args = serializeBudgetValue(toolInvocation.args);
+
+    return [[
+      `Tool call: ${toolName}`,
+      args,
+    ].filter(Boolean).join('\n')];
+  });
+}
+
+function getToolResultBudgetTexts(message: ConversationMessage) {
+  const toolResults = Array.isArray(message.metadata?.toolResults)
+    ? message.metadata.toolResults
+    : [];
+
+  return toolResults.flatMap((toolResult) => {
+    if (typeof toolResult !== 'object' || toolResult === null) {
+      return [];
+    }
+
+    const toolName = typeof toolResult.toolName === 'string'
+      ? toolResult.toolName
+      : 'unknown';
+    const result = serializeBudgetValue(toolResult.result);
+
+    return [[
+      `Tool result: ${toolName}`,
+      result,
+    ].filter(Boolean).join('\n')];
+  });
+}
+
+function serializeBudgetValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return JSON.stringify(value);
 }
 
 function splitTextIntoChunks(text: string, maxChars: number) {
@@ -383,23 +450,42 @@ function cloneMessageWithParts(
   };
 }
 
+function cloneMessageWithContent(input: {
+  message: ConversationMessage;
+  parts: ConversationMessage['parts'];
+  metadata?: Record<string, unknown>;
+}): ConversationMessage {
+  return {
+    ...input.message,
+    parts: input.parts,
+    metadata: input.metadata,
+  };
+}
+
 function splitMessageIntoRawUnits(
   message: ConversationMessage,
   maxUnitTokens: number,
 ): RawConversationUnit[] {
   const maxUnitChars = Math.max(1, maxUnitTokens) * 4;
+  const toolInvocations = Array.isArray(message.metadata?.toolInvocations)
+    ? message.metadata.toolInvocations
+    : [];
+  const toolResults = Array.isArray(message.metadata?.toolResults)
+    ? message.metadata.toolResults
+    : [];
 
-  if (message.parts.length === 0) {
+  if (message.parts.length === 0 && toolInvocations.length === 0 && toolResults.length === 0) {
     return [{
       id: `${message.id}:whole`,
       parentMessageId: message.id,
       createdAt: new Date(message.createdAt),
       tokenCount: estimateMessageUnits(message),
       promptMessage: message,
+      kind: 'whole',
     }];
   }
 
-  return message.parts.flatMap((part, index) => {
+  const partUnits = message.parts.flatMap((part, index) => {
     const partKey = String(index);
     const createdAt = new Date(message.createdAt);
 
@@ -416,6 +502,7 @@ function splitMessageIntoRawUnits(
           createdAt,
           tokenCount: estimateMessageUnits(promptMessage),
           promptMessage,
+          kind: 'part',
         } satisfies RawConversationUnit;
       });
     }
@@ -427,8 +514,63 @@ function splitMessageIntoRawUnits(
       createdAt,
       tokenCount: estimateMessageUnits(promptMessage),
       promptMessage,
+      kind: 'part',
     } satisfies RawConversationUnit];
   });
+
+  const toolInvocationUnits = toolInvocations.flatMap((toolInvocation, index) => {
+    if (typeof toolInvocation !== 'object' || toolInvocation === null) {
+      return [];
+    }
+
+    const promptMessage = cloneMessageWithContent({
+      message,
+      parts: [],
+      metadata: {
+        ...message.metadata,
+        toolInvocations: [toolInvocation],
+      },
+    });
+
+    return [{
+      id: `${message.id}:tool-invocation:${index}`,
+      parentMessageId: message.id,
+      createdAt: new Date(message.createdAt),
+      tokenCount: estimateMessageUnits(promptMessage),
+      promptMessage,
+      kind: 'tool-invocation' as const,
+    }];
+  });
+
+  const toolResultUnits = toolResults.flatMap((toolResult, index) => {
+    if (typeof toolResult !== 'object' || toolResult === null) {
+      return [];
+    }
+
+    const promptMessage = cloneMessageWithContent({
+      message,
+      parts: [],
+      metadata: {
+        ...message.metadata,
+        toolResults: [toolResult],
+      },
+    });
+
+    return [{
+      id: `${message.id}:tool-result:${index}`,
+      parentMessageId: message.id,
+      createdAt: new Date(message.createdAt),
+      tokenCount: estimateMessageUnits(promptMessage),
+      promptMessage,
+      kind: 'tool-result' as const,
+    }];
+  });
+
+  return [
+    ...partUnits,
+    ...toolInvocationUnits,
+    ...toolResultUnits,
+  ];
 }
 
 function sortRawConversationUnitsChronologically(units: RawConversationUnit[]) {
@@ -568,6 +710,16 @@ function getPartIndex(unitId: string) {
   return match ? Number(match[1]) : null;
 }
 
+function getToolInvocationIndex(unitId: string) {
+  const match = unitId.match(/:tool-invocation:(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function getToolResultIndex(unitId: string) {
+  const match = unitId.match(/:tool-result:(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
 function rebuildMessagesFromUnits(input: {
   messages: ConversationMessage[];
   recentUnits: RawConversationUnit[];
@@ -595,11 +747,10 @@ function rebuildMessagesFromUnits(input: {
       return [message];
     }
 
-    if (message.parts.length === 0) {
-      return [message];
-    }
-
     const rebuiltParts: ConversationMessage['parts'] = [];
+    const sourceMetadata = message.metadata && typeof message.metadata === 'object'
+      ? { ...message.metadata }
+      : undefined;
 
     for (const [index, part] of message.parts.entries()) {
       const remainingUnits = units
@@ -633,8 +784,42 @@ function rebuildMessagesFromUnits(input: {
       rebuiltParts.push(part);
     }
 
-    return rebuiltParts.length > 0
-      ? [cloneMessageWithParts(message, rebuiltParts)]
+    const originalToolInvocations = Array.isArray(message.metadata?.toolInvocations)
+      ? message.metadata.toolInvocations
+      : [];
+    const rebuiltToolInvocations = originalToolInvocations.filter((_toolInvocation, index) =>
+      units.some((unit) => getToolInvocationIndex(unit.id) === index));
+    if (sourceMetadata) {
+      if (rebuiltToolInvocations.length > 0) {
+        sourceMetadata.toolInvocations = rebuiltToolInvocations;
+      } else {
+        delete sourceMetadata.toolInvocations;
+      }
+    }
+
+    const originalToolResults = Array.isArray(message.metadata?.toolResults)
+      ? message.metadata.toolResults
+      : [];
+    const rebuiltToolResults = originalToolResults.filter((_toolResult, index) =>
+      units.some((unit) => getToolResultIndex(unit.id) === index));
+    if (sourceMetadata) {
+      if (rebuiltToolResults.length > 0) {
+        sourceMetadata.toolResults = rebuiltToolResults;
+      } else {
+        delete sourceMetadata.toolResults;
+      }
+    }
+
+    const rebuiltMetadata = sourceMetadata && Object.keys(sourceMetadata).length > 0
+      ? sourceMetadata
+      : undefined;
+
+    return rebuiltParts.length > 0 || rebuiltMetadata
+      ? [cloneMessageWithContent({
+          message,
+          parts: rebuiltParts,
+          metadata: rebuiltMetadata,
+        })]
       : [];
   });
 }
@@ -648,19 +833,22 @@ function createNextState(input: {
     overflowTokenCount: number;
   };
 }): NormalizedCheckpointedConversationState {
+  const recentMessageIds = Array.from(new Set(input.rawBands.recentUnits.map((unit) => unit.parentMessageId)));
+  const overflowMessageIds = Array.from(new Set(input.rawBands.overflowUnits.map((unit) => unit.parentMessageId)));
+
   return {
     ...input.previousState,
     recentRawUnitIds: input.rawBands.recentUnits.map((unit) => unit.id),
     overflowRawUnitIds: input.rawBands.overflowUnits.map((unit) => unit.id),
-    recentMessageIds: Array.from(new Set(input.rawBands.recentUnits.map((unit) => unit.parentMessageId))),
-    overflowMessageIds: Array.from(new Set(input.rawBands.overflowUnits.map((unit) => unit.parentMessageId))),
+    recentMessageIds,
+    overflowMessageIds,
     metrics: {
-      recentMessageCount: input.rawBands.recentUnits.length,
+      recentMessageCount: recentMessageIds.length,
       recentTokenCount: input.rawBands.recentTokenCount,
-      overflowMessageCount: input.rawBands.overflowUnits.length,
+      overflowMessageCount: overflowMessageIds.length,
       overflowTokenCount: input.rawBands.overflowTokenCount,
       observationCount: input.previousState.observations.length,
-      totalActiveMessageCount: input.rawBands.recentUnits.length + input.rawBands.overflowUnits.length,
+      totalActiveMessageCount: recentMessageIds.length + overflowMessageIds.length,
     },
     updatedAt: new Date().toISOString(),
   };
