@@ -46,12 +46,12 @@ export async function resolveProfileRuntimeModel(
         ? 'https://api.minimax.io/anthropic/v1'
         : profile.baseUrl || 'https://api.minimax.io/anthropic/v1';
 
-    return wrapAnthropicPromptCacheModel(
-      createAnthropic({
-        authToken: profile.apiKey,
-        baseURL: baseUrl,
-      })(modelId),
-    );
+    const model = createAnthropic({
+      authToken: profile.apiKey,
+      baseURL: baseUrl,
+    })(modelId);
+
+    return wrapAnthropicPromptCacheModel(model);
   }
 
   return {

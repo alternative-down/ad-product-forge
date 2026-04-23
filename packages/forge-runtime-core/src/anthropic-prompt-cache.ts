@@ -5,12 +5,16 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
   transformParams: async ({ params }) => {
     const cacheControl = { type: 'ephemeral' as const, ttl: '1h' as const };
     const prompt = [...params.prompt] as Array<Record<string, unknown>>;
-    const lastIndex = prompt.length - 1;
-    const reversedSystemIndex = [...prompt].reverse().findIndex((message) => message.role === 'system');
-    const indicesToCache =
-      reversedSystemIndex >= 0
-        ? [lastIndex - reversedSystemIndex, lastIndex].filter((value, index, list) => list.indexOf(value) === index)
-        : [lastIndex];
+    const firstSystemIndex = prompt.findIndex((message) => message.role === 'system');
+    const lastUserIndex = findLastPromptIndex(prompt, (message) => message.role === 'user');
+    const lastMessageIndex = prompt.length - 1;
+    const indicesToCache = [
+      firstSystemIndex,
+      lastUserIndex,
+      lastMessageIndex,
+    ].filter((value, index, list) =>
+      value >= 0 && list.indexOf(value) === index,
+    );
 
     for (const index of indicesToCache) {
       if (index < 0) {
@@ -72,4 +76,17 @@ export function wrapAnthropicPromptCacheModel(
     model,
     middleware: promptCacheMiddleware,
   });
+}
+
+function findLastPromptIndex(
+  prompt: Array<Record<string, unknown>>,
+  predicate: (message: Record<string, unknown>) => boolean,
+) {
+  for (let index = prompt.length - 1; index >= 0; index -= 1) {
+    if (predicate(prompt[index])) {
+      return index;
+    }
+  }
+
+  return -1;
 }
