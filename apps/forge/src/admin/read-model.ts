@@ -1432,9 +1432,7 @@ async function listThreadMessages(
       const pagedMessages = messages.slice(pageStart, pageEnd);
 
       return {
-        items: [...pagedMessages]
-        .reverse()
-        .map((message) => ({
+        items: pagedMessages.map((message) => ({
           id: message.id,
           role: message.role,
           createdAt: new Date(message.createdAt).getTime(),
@@ -1442,13 +1440,24 @@ async function listThreadMessages(
           resourceId: mastraAgentId,
           type: null,
           content: {
-            parts: message.parts.map((part: RuntimeStoredMessagePart) =>
-              part.type === 'text'
-                ? {
-                    type: 'text',
-                    text: part.text,
-                  }
-                : part),
+            parts: [
+              ...message.parts.map((part: RuntimeStoredMessagePart) =>
+                part.type === 'text'
+                  ? {
+                      type: 'text',
+                      text: part.text,
+                    }
+                  : part),
+              ...(Array.isArray(message.metadata?.toolResults)
+                ? message.metadata.toolResults.map((toolResult: unknown) => ({
+                    type: 'tool-invocation',
+                    toolInvocation: {
+                      ...(typeof toolResult === 'object' && toolResult !== null ? toolResult : {}),
+                      state: 'result',
+                    },
+                  }))
+                : []),
+            ],
             ...(Array.isArray(message.metadata?.toolInvocations)
               ? {
                   toolInvocations: message.metadata.toolInvocations,

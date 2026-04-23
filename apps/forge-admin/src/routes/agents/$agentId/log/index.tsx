@@ -59,8 +59,8 @@ function AgentLogIndexRoute() {
     .slice()
     .sort((left, right) =>
       left.createdAt === right.createdAt
-        ? left.id.localeCompare(right.id)
-        : left.createdAt - right.createdAt,
+        ? right.id.localeCompare(left.id)
+        : right.createdAt - left.createdAt,
     );
 
   useEffect(() => {
