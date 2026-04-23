@@ -13,7 +13,6 @@ import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 import { loadCheckpointedOmSystemTexts } from './checkpointed-om-context-plugin.js';
 import { createRuntimeAgentSessionIteration, resolveRuntimeAgentSessionContinuation } from './runtime-agent-session-iteration.js';
 import {
-  appendRuntimeSessionFeedback,
   appendRuntimeSessionModelMessages,
   appendRuntimeSessionPromptMessages,
   ensureRuntimeSessionThread,
@@ -60,6 +59,10 @@ export async function runRuntimeAgentSessionGenerate(input: {
   let finalText = '';
   let finalUsage: RuntimeAgentSessionStepResult['usage'];
   const maxSteps = input.options.maxSteps ?? 10_000;
+  let transientMessages: Array<{
+    role: 'assistant' | 'user';
+    content: string;
+  }> = [];
 
   for (let iterationNumber = 1; iterationNumber <= maxSteps; iterationNumber += 1) {
     if (input.options.abortSignal?.aborted) {
@@ -82,6 +85,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
       store: input.runtime.conversationStore,
       conversationMemory: input.runtime.conversationMemory,
       threadId: input.session.threadId,
+      transientMessages,
     });
     const stepId = randomUUID();
     const result = await generateText({
@@ -136,14 +140,12 @@ export async function runRuntimeAgentSessionGenerate(input: {
       iteration: runtimeIteration,
     });
 
-    if (continuation.feedback?.trim()) {
-      await appendRuntimeSessionFeedback({
-        store: input.runtime.conversationStore,
-        threadId: input.session.threadId,
-        text: continuation.feedback.trim(),
-      });
-      await input.runtime.syncState();
-    }
+    transientMessages = continuation.feedback?.trim()
+      ? [{
+        role: 'user',
+        content: continuation.feedback.trim(),
+      }]
+      : [];
 
     if (!continuation.continue) {
       break;
@@ -192,6 +194,10 @@ async function buildRuntimeSessionModelMessages(input: {
   store: RuntimeAgentSessionRuntime['conversationStore'];
   conversationMemory: RuntimeAgentSessionRuntime['conversationMemory'];
   threadId: string;
+  transientMessages: Array<{
+    role: 'assistant' | 'user';
+    content: string;
+  }>;
 }): Promise<ModelMessage[]> {
   const state = await input.conversationMemory.getState();
   const activeMessages = normalizeReplayMessages(await input.store.listMessages({
@@ -205,7 +211,16 @@ async function buildRuntimeSessionModelMessages(input: {
     activeMessageMap,
   });
 
-  return createReplayMessages(recentMessages);
+  return [
+    ...createReplayMessages(recentMessages),
+    ...input.transientMessages.map((message) => ({
+      role: message.role,
+      content: [{
+        type: 'text' as const,
+        text: message.content,
+      }],
+    }) as ModelMessage),
+  ];
 }
 
 function normalizeReplayMessages(messages: Array<{

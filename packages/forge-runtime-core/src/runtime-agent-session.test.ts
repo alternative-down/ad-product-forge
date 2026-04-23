@@ -17,7 +17,7 @@ import type {
 } from './runtime-working-memory.js';
 
 describe('createRuntimeAgentSession', () => {
-  it('persists continued iterations and feedback in one runtime session', async () => {
+  it('uses continued iteration feedback without persisting it into the conversation thread', async () => {
     const conversationStore = new InMemoryConversationStore();
     const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
@@ -155,15 +155,11 @@ describe('createRuntimeAgentSession', () => {
           text: 'First step response.',
         },
         {
-          role: 'user',
-          text: 'Continue from the previous step.',
-        },
-        {
           role: 'assistant',
           text: 'Second step response.',
         },
       ]);
-      expect(checkpointedState?.metrics.recentMessageCount).toBe(4);
+      expect(checkpointedState?.metrics.recentMessageCount).toBe(3);
       expect(checkpointedState?.recentMessageIds).toEqual(messages.map((message) => message.id));
     } finally {
       await session.dispose();

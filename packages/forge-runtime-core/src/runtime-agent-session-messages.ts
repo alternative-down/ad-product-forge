@@ -81,23 +81,6 @@ export async function appendRuntimeSessionPromptMessages(input: {
   }
 }
 
-export async function appendRuntimeSessionFeedback(input: {
-  store: ConversationStore;
-  threadId: string;
-  text: string;
-}) {
-  await input.store.appendMessage({
-    id: randomUUID(),
-    threadId: input.threadId,
-    role: 'user',
-    parts: [{
-      type: 'text',
-      text: input.text,
-    }],
-    createdAt: new Date().toISOString(),
-  });
-}
-
 export async function appendRuntimeSessionModelMessages(input: {
   store: ConversationStore;
   threadId: string;
