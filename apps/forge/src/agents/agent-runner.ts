@@ -912,6 +912,7 @@ export function createAgentRunner(
         const systemPrompt = buildStepSystemPrompt({
           agentContextInstructions,
         });
+        const providerOptions = buildGenerateProviderOptions(currentRuntime.pricingModelKey);
         console.log(`[AgentRunner] ${runtime.id} runtime context ready before generate`);
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await Promise.race([
@@ -928,11 +929,11 @@ export function createAgentRunner(
                 lastMessages: runLastMessages,
               },
             },
-            providerOptions: {
-              anthropic: {
-                thinking: { type: 'enabled', budgetTokens: 2000 },
-              },
-            },
+            ...(providerOptions
+              ? {
+                  providerOptions,
+                }
+              : {}),
             prepareStep: async ({ stepNumber }) => {
               markGenerateProgress(timeout, controller, {
                 stage: 'prepare-step',
@@ -1478,6 +1479,28 @@ function serializeError(error: unknown): Record<string, unknown> {
   };
 }
 
+function buildGenerateProviderOptions(pricingModelKey: string) {
+  if (!supportsAnthropicThinking(pricingModelKey)) {
+    return null;
+  }
+
+  return {
+    anthropic: {
+      thinking: { type: 'enabled' as const, budgetTokens: 2000 },
+    },
+  };
+}
+
+function supportsAnthropicThinking(pricingModelKey: string) {
+  const normalizedKey = pricingModelKey.trim().toLowerCase();
+
+  if (normalizedKey.startsWith('minimax-coding-plan/')) {
+    return false;
+  }
+
+  return normalizedKey.includes('claude');
+}
+
 function serializeUnknown(value: unknown): unknown {
   if (value instanceof Error) {
     return serializeError(value);
@@ -1544,6 +1567,7 @@ function extractAbsentErrorDetails(error: Error) {
     ['responseBody', record.responseBody],
     ['body', record.body],
     ['data', record.data],
+    ['lastError', record.lastError],
     ['value', record.value],
   ] as const;
 
