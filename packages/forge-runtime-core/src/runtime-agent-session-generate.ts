@@ -29,6 +29,9 @@ import type { RuntimeAgentSessionRuntime } from './runtime-agent-session-runtime
 import { truncateToolOutputValue } from './tool-output-truncation.js';
 import { loadWorkingMemoryContextText } from './runtime-working-memory.js';
 
+const AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT =
+  'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.';
+
 export async function runRuntimeAgentSessionGenerate(input: {
   runtime: RuntimeAgentSessionRuntime;
   session: CreateRuntimeAgentSessionOptions;
@@ -362,6 +365,13 @@ async function buildRuntimeSessionModelMessages(input: {
   });
 
   return [
+    {
+      role: 'user',
+      content: [{
+        type: 'text' as const,
+        text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
+      }],
+    } as ModelMessage,
     ...createReplayMessages(replayMessages),
     ...input.transientMessages.map((message) => ({
       role: message.role,
