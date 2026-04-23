@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { Bash, type IFileSystem, ReadWriteFs } from 'just-bash';
+import { Bash, defineCommand, type IFileSystem, ReadWriteFs } from 'just-bash';
 
 import type {
   WorkspaceCommandRequest,
@@ -26,6 +26,46 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
 
     this.bash = new Bash({
       fs: filesystem,
+      network: {
+        dangerouslyAllowFullInternetAccess: true,
+      },
+      python: true,
+      javascript: true,
+      customCommands: [
+        defineCommand('node', async (args, context) => {
+          if (!context.exec) {
+            return {
+              stdout: '',
+              stderr: 'node: command execution is unavailable in this context\n',
+              exitCode: 1,
+            };
+          }
+
+          if (args[0] === '-e' && typeof args[1] === 'string') {
+            return context.exec('js-exec', {
+              cwd: context.cwd,
+              stdin: context.stdin,
+              signal: context.signal,
+              args: ['-c', args[1]],
+            });
+          }
+
+          if (typeof args[0] === 'string') {
+            return context.exec('js-exec', {
+              cwd: context.cwd,
+              stdin: context.stdin,
+              signal: context.signal,
+              args,
+            });
+          }
+
+          return {
+            stdout: '',
+            stderr: 'node: expected a script path or -e\n',
+            exitCode: 1,
+          };
+        }),
+      ],
     });
     this.root = options.root ? path.resolve(options.root) : undefined;
   }

@@ -42,4 +42,16 @@ describe('LocalBashWorkspaceGateway', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('hello just bash');
   });
+
+  it('enables curl, python, and node-compatible javascript commands', async () => {
+    const gateway = new LocalBashWorkspaceGateway();
+    const availabilityResult = await gateway.execute({
+      command: 'which curl && which python3 && which node',
+    });
+
+    expect(availabilityResult.exitCode).toBe(0);
+    expect(availabilityResult.stdout).toContain('/bin/curl');
+    expect(availabilityResult.stdout).toContain('/bin/python3');
+    expect(availabilityResult.stdout).toContain('/bin/node');
+  });
 });
