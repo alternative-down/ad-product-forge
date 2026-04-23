@@ -834,6 +834,7 @@ export function createAdminReadModel(input: {
       page: params.page,
       perPage: params.perPage,
       threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
+      tablePrefix: toMastraSafeIdentifier(params.agentId),
     });
   }
 
@@ -870,6 +871,7 @@ export function createAdminReadModel(input: {
         threadId: mastraAgentId,
         resourceId: mastraAgentId,
       }))?.workingMemory ?? null;
+      const checkpointedConversationState = await conversationStore.load(mastraAgentId);
       const customState = await readCheckpointedOmState(db, agentId);
       const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
       const reflection = customState
@@ -893,7 +895,9 @@ export function createAdminReadModel(input: {
       const settings = await systemSettings.getSettings();
       const metricsSnapshot = customState?.latestMetrics;
       const generationCount = customState?.checkpointGeneration ?? 0;
-      const updatedAt = metricsSnapshot?.updatedAt
+      const updatedAt = checkpointedConversationState?.updatedAt
+        ? Date.parse(checkpointedConversationState.updatedAt)
+        : metricsSnapshot?.updatedAt
         ? Date.parse(metricsSnapshot.updatedAt)
         : null;
       const lastObservedAt = metricsSnapshot?.latestThreadMessageAt
@@ -971,12 +975,12 @@ export function createAdminReadModel(input: {
         : null,
       ltm,
       metrics: {
-        rawMessageCount: metricsSnapshot?.rawMessageCount ?? 0,
-        recentRawMessageCount: metricsSnapshot?.recentRawMessageCount ?? 0,
-        recentRawTokenCount: metricsSnapshot?.recentRawTokenCount ?? 0,
+        rawMessageCount: checkpointedConversationState?.metrics.totalActiveMessageCount ?? metricsSnapshot?.rawMessageCount ?? 0,
+        recentRawMessageCount: checkpointedConversationState?.metrics.recentMessageCount ?? metricsSnapshot?.recentRawMessageCount ?? 0,
+        recentRawTokenCount: checkpointedConversationState?.metrics.recentTokenCount ?? metricsSnapshot?.recentRawTokenCount ?? 0,
         recentRawTokenLimit: settings.checkpointedOmRecentRawTokens,
-        overflowMessageCount: metricsSnapshot?.overflowMessageCount ?? 0,
-        overflowTokenCount: metricsSnapshot?.overflowTokenCount ?? 0,
+        overflowMessageCount: checkpointedConversationState?.metrics.overflowMessageCount ?? metricsSnapshot?.overflowMessageCount ?? 0,
+        overflowTokenCount: checkpointedConversationState?.metrics.overflowTokenCount ?? metricsSnapshot?.overflowTokenCount ?? 0,
         observationTriggerTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
         activeObservationBlockCount: metricsSnapshot?.activeObservationBlockCount
           ?? customState?.observationBlocks.filter((block) => block.reflectedGeneration === null).length
@@ -1417,22 +1421,24 @@ async function listThreadMessages(
     page: number;
     perPage: number;
     threadId?: string;
+    tablePrefix?: string;
   },
 ) {
   try {
-    const mastraAgentId = input.threadId ?? toMastraSafeIdentifier(agentId);
+    const threadId = input.threadId ?? toMastraSafeIdentifier(agentId);
+    const tablePrefix = input.tablePrefix ?? toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
     const client: ClosableLibsqlClient = createClient({
       url: `file:${agentDatabasePath}`,
     });
     const conversationStore = new LibsqlConversationStore({
       client,
-      tablePrefix: mastraAgentId,
+      tablePrefix,
     });
 
     try {
       const messages = await conversationStore.listMessages({
-        threadId: mastraAgentId,
+        threadId,
         limit: (input.perPage * (input.page + 1)) + 1,
         order: 'desc',
       });
@@ -1449,7 +1455,7 @@ async function listThreadMessages(
           role: message.role,
           createdAt: new Date(message.createdAt).getTime(),
           threadId: message.threadId,
-          resourceId: mastraAgentId,
+          resourceId: threadId,
           type: null,
           content: {
             parts: [
