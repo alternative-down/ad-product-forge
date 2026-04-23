@@ -912,7 +912,6 @@ export function createAgentRunner(
         const systemPrompt = buildStepSystemPrompt({
           agentContextInstructions,
         });
-        const providerOptions = buildGenerateProviderOptions(currentRuntime.pricingModelKey);
         console.log(`[AgentRunner] ${runtime.id} runtime context ready before generate`);
         console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
         const result = await Promise.race([
@@ -929,11 +928,11 @@ export function createAgentRunner(
                 lastMessages: runLastMessages,
               },
             },
-            ...(providerOptions
-              ? {
-                  providerOptions,
-                }
-              : {}),
+            providerOptions: {
+              anthropic: {
+                thinking: { type: 'enabled', budgetTokens: 2000 },
+              },
+            },
             prepareStep: async ({ stepNumber }) => {
               markGenerateProgress(timeout, controller, {
                 stage: 'prepare-step',
@@ -1477,28 +1476,6 @@ function serializeError(error: unknown): Record<string, unknown> {
     stack: error.stack,
     ...extra,
   };
-}
-
-function buildGenerateProviderOptions(pricingModelKey: string) {
-  if (!supportsAnthropicThinking(pricingModelKey)) {
-    return null;
-  }
-
-  return {
-    anthropic: {
-      thinking: { type: 'enabled' as const, budgetTokens: 2000 },
-    },
-  };
-}
-
-function supportsAnthropicThinking(pricingModelKey: string) {
-  const normalizedKey = pricingModelKey.trim().toLowerCase();
-
-  if (normalizedKey.startsWith('minimax-coding-plan/')) {
-    return false;
-  }
-
-  return normalizedKey.includes('claude');
 }
 
 function serializeUnknown(value: unknown): unknown {
