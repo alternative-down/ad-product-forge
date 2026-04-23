@@ -420,6 +420,10 @@ function getPartType(part: Record<string, unknown>) {
 }
 
 function getReasoningText(part: Record<string, unknown>) {
+  if (typeof part.text === 'string' && part.text.trim()) {
+    return part.text.trim();
+  }
+
   if (typeof part.reasoning === 'string' && part.reasoning.trim()) {
     return part.reasoning.trim();
   }

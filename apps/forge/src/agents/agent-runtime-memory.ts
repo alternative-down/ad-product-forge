@@ -53,6 +53,7 @@ export async function createAgentRuntimeMemory(input: {
   persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   readRuntimeMemorySettings?: () => Promise<{
     ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+    ltmRecallWorkspaceTopK: number;
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;
     ltmRecallGraphRandomWalkSteps: number;

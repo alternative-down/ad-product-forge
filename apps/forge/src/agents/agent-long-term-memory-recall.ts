@@ -85,6 +85,7 @@ const RECALL_GRAPH_INCLUDE_SOURCES = false;
 
 type RecallConfig = {
   searchMode: 'hybrid' | 'vector' | 'bm25';
+  workspaceTopK: number;
   scoreThreshold: number;
   documentCount: number;
   graphTopK: number;
@@ -155,6 +156,7 @@ export class AgentLongTermMemoryRecall {
   private readonly recallConfig: RecallConfig;
   private readonly readRuntimeMemorySettings?: () => Promise<{
     ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+    ltmRecallWorkspaceTopK: number;
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;
     ltmRecallGraphRandomWalkSteps: number;
@@ -186,6 +188,7 @@ export class AgentLongTermMemoryRecall {
     documentCount?: number;
     readRuntimeMemorySettings?: () => Promise<{
       ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+      ltmRecallWorkspaceTopK: number;
       ltmRecallGraphTopK: number;
       ltmRecallGraphThreshold: number;
       ltmRecallGraphRandomWalkSteps: number;
@@ -209,6 +212,7 @@ export class AgentLongTermMemoryRecall {
     this.workspaceEmbedder = input.workspaceEmbedder ?? 'fastembed';
     this.recallConfig = {
       searchMode: RECALL_SEARCH_MODE,
+      workspaceTopK: RECALL_DOCUMENT_COUNT,
       scoreThreshold: input.scoreThreshold ?? RECALL_SCORE_THRESHOLD,
       documentCount: input.documentCount ?? RECALL_DOCUMENT_COUNT,
       graphTopK: RECALL_GRAPH_TOP_K,
@@ -415,7 +419,7 @@ export class AgentLongTermMemoryRecall {
     if (!query) {
       return {
         query: '',
-        topK: recallConfig.documentCount,
+        topK: recallConfig.workspaceTopK,
         searchMode: recallConfig.searchMode,
         graphTopK: recallConfig.graphTopK,
         graphThreshold: recallConfig.graphThreshold,
@@ -465,7 +469,7 @@ export class AgentLongTermMemoryRecall {
 
     return {
       query,
-      topK: recallConfig.documentCount,
+      topK: recallConfig.workspaceTopK,
       searchMode: recallConfig.searchMode,
       graphTopK: recallConfig.graphTopK,
       graphThreshold: recallConfig.graphThreshold,
@@ -523,7 +527,7 @@ export class AgentLongTermMemoryRecall {
 
   private async runRecallSearch(queryText: string, config: RecallConfig) {
     const workspaceSearch = await this.searchWorkspace(queryText, {
-      topK: Math.max(config.documentCount, config.graphTopK),
+      topK: config.workspaceTopK,
       mode: config.searchMode,
     });
     const filteredWorkspaceResults = this.filterWorkspaceFallbackResults(
@@ -559,6 +563,7 @@ export class AgentLongTermMemoryRecall {
 
     return {
       searchMode: runtimeSettings.ltmRecallSearchMode,
+      workspaceTopK: runtimeSettings.ltmRecallWorkspaceTopK,
       scoreThreshold: runtimeSettings.ltmRecallScoreThreshold,
       documentCount: runtimeSettings.ltmRecallDocumentCount,
       graphTopK: runtimeSettings.ltmRecallGraphTopK,
@@ -1137,6 +1142,7 @@ export function createAgentLongTermMemoryRecall(input: {
   documentCount?: number;
   readRuntimeMemorySettings?: () => Promise<{
     ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+    ltmRecallWorkspaceTopK: number;
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;
     ltmRecallGraphRandomWalkSteps: number;

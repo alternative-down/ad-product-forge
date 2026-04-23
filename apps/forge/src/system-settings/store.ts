@@ -31,6 +31,7 @@ const DEFAULT_SYSTEM_SETTINGS = {
   checkpointedOmObservationSupportTokens: 2000,
   checkpointedOmReflectionSupportTokens: 2000,
   ltmRecallSearchMode: 'hybrid',
+  ltmRecallWorkspaceTopK: 3,
   ltmRecallGraphTopK: 3,
   ltmRecallGraphThreshold: 0.7,
   ltmRecallGraphRandomWalkSteps: 50,
@@ -57,6 +58,7 @@ type SystemSettingsInput = {
   checkpointedOmObservationSupportTokens: number;
   checkpointedOmReflectionSupportTokens: number;
   ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+  ltmRecallWorkspaceTopK: number;
   ltmRecallGraphTopK: number;
   ltmRecallGraphThreshold: number;
   ltmRecallGraphRandomWalkSteps: number;
@@ -114,6 +116,8 @@ export function createSystemSettingsStore(db: Database) {
         ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmReflectionSupportTokens,
       ltmRecallSearchMode:
         resolveRecallSearchMode(row?.ltmRecallSearchMode),
+      ltmRecallWorkspaceTopK:
+        row?.ltmRecallWorkspaceTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallWorkspaceTopK,
       ltmRecallGraphTopK:
         row?.ltmRecallGraphTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphTopK,
       ltmRecallGraphThreshold:
@@ -156,6 +160,7 @@ export function createSystemSettingsStore(db: Database) {
         checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
         checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
         ltmRecallSearchMode: input.ltmRecallSearchMode,
+        ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
         ltmRecallGraphTopK: input.ltmRecallGraphTopK,
         ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
         ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
@@ -185,6 +190,7 @@ export function createSystemSettingsStore(db: Database) {
           checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
           checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
           ltmRecallSearchMode: input.ltmRecallSearchMode,
+          ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
           ltmRecallGraphTopK: input.ltmRecallGraphTopK,
           ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
           ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
@@ -214,6 +220,7 @@ export function createSystemSettingsStore(db: Database) {
       checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
       checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
       ltmRecallSearchMode: input.ltmRecallSearchMode,
+      ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
       ltmRecallGraphTopK: input.ltmRecallGraphTopK,
       ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
       ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,

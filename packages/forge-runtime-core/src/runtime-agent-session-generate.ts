@@ -489,7 +489,7 @@ function createReplayMessages(messages: Array<{
             toolName: typeof toolResult.toolName === 'string' ? toolResult.toolName : 'unknown',
             output: {
               type: 'json' as const,
-              value: truncateToolOutputValue(toolResult.result),
+              value: toolResult.result,
             },
           }];
         });

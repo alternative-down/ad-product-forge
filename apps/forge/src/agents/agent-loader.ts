@@ -61,6 +61,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
         checkpointedOmObservationSupportTokens: settings.checkpointedOmObservationSupportTokens,
         checkpointedOmReflectionSupportTokens: settings.checkpointedOmReflectionSupportTokens,
         ltmRecallSearchMode: settings.ltmRecallSearchMode,
+        ltmRecallWorkspaceTopK: settings.ltmRecallWorkspaceTopK,
         ltmRecallGraphTopK: settings.ltmRecallGraphTopK,
         ltmRecallGraphThreshold: settings.ltmRecallGraphThreshold,
         ltmRecallGraphRandomWalkSteps: settings.ltmRecallGraphRandomWalkSteps,

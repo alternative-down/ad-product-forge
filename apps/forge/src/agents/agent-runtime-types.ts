@@ -66,6 +66,7 @@ export type CreateAgentOptions = {
     checkpointedOmObservationSupportTokens: number;
     checkpointedOmReflectionSupportTokens: number;
     ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+    ltmRecallWorkspaceTopK: number;
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;
     ltmRecallGraphRandomWalkSteps: number;
