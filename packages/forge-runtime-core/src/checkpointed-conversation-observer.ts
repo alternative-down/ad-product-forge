@@ -1,10 +1,29 @@
 import { generateText, type LanguageModel } from 'ai';
+import {
+  buildObserverPrompt,
+  buildObserverSystemPrompt,
+  parseObserverOutput,
+} from '@mastra/memory/processors';
 import type { CheckpointedConversationObserver } from 'agent-runtime-core/integrations';
 
 type CreateCheckpointedConversationObserverOptions = {
   model: LanguageModel;
   agentSystemPrompt?: string;
   loadSupportText?: () => Promise<string | null>;
+};
+
+type ObserverPromptMessage = {
+  id: string;
+  role: 'assistant' | 'system' | 'user';
+  createdAt: Date;
+  content: {
+    content: string;
+    format: 2;
+    parts: Array<{
+      type: 'text';
+      text: string;
+    }>;
+  };
 };
 
 export function createCheckpointedConversationObserver(
@@ -15,20 +34,14 @@ export function createCheckpointedConversationObserver(
       const supportText = await input.loadSupportText?.();
       const result = await generateText({
         model: input.model,
-        system: buildObserverSystemPrompt(input.agentSystemPrompt),
-        prompt: buildObserverPrompt({
-          supportText: supportText ?? undefined,
-          messages: request.messages.map((message) => ({
-            role: message.role,
-            text: message.parts
-              .filter((part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text')
-              .map((part) => part.text.trim())
-              .filter(Boolean)
-              .join('\n'),
-          })),
-        }),
+        system: buildAlignedObserverSystemPrompt(input.agentSystemPrompt),
+        prompt: buildObserverPrompt(
+          supportText ?? undefined,
+          request.messages.map((message) => toObserverPromptMessage(message)),
+        ),
       });
-      const text = parseObservationText(result.text);
+      const parsed = parseObserverOutput(result.text);
+      const text = parsed.observations.trim();
 
       if (!text) {
         throw new Error('Checkpointed conversation observer returned no observation text');
@@ -41,20 +54,15 @@ export function createCheckpointedConversationObserver(
   };
 }
 
-function buildObserverSystemPrompt(agentSystemPrompt?: string) {
-  const sections = [
-    'You compress older conversation turns into a durable operational observation.',
-    'Preserve concrete facts, decisions, active work, blockers, commitments, open questions, and next steps.',
-    'Remove repetition and chatter, but keep continuity-critical detail.',
-    'Return XML with a single <observations>...</observations> block.',
-  ].join('\n');
+function buildAlignedObserverSystemPrompt(agentSystemPrompt?: string) {
+  const observerSystemPrompt = buildObserverSystemPrompt(false);
 
   if (!agentSystemPrompt?.trim()) {
-    return sections;
+    return observerSystemPrompt;
   }
 
   return [
-    sections,
+    observerSystemPrompt,
     '<main_agent_system_prompt>',
     'Use the following main agent system prompt as alignment context. Keep observations aligned with the same role, scope, operating style, and priorities.',
     agentSystemPrompt.trim(),
@@ -62,40 +70,32 @@ function buildObserverSystemPrompt(agentSystemPrompt?: string) {
   ].join('\n\n');
 }
 
-function buildObserverPrompt(input: {
-  supportText?: string;
-  messages: Array<{
-    role: string;
-    text: string;
+function toObserverPromptMessage(message: {
+  id: string;
+  role: 'user' | 'assistant' | 'system' | 'tool' | 'external';
+  parts: Array<{
+    type: string;
+    text?: string;
   }>;
-}) {
-  const sections: string[] = [];
+  createdAt: string;
+}): ObserverPromptMessage {
+  const text = message.parts
+    .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
+    .map((part) => part.text.trim())
+    .filter(Boolean)
+    .join('\n');
 
-  if (input.supportText?.trim()) {
-    sections.push([
-      '<existing_observations>',
-      input.supportText.trim(),
-      '</existing_observations>',
-    ].join('\n'));
-  }
-
-  sections.push('<conversation_batch>');
-
-  for (const message of input.messages) {
-    sections.push([
-      `<message role="${message.role}">`,
-      message.text,
-      '</message>',
-    ].join('\n'));
-  }
-
-  sections.push('</conversation_batch>');
-  sections.push('Return only <observations>...</observations>.');
-
-  return sections.join('\n\n');
-}
-
-function parseObservationText(text: string) {
-  const match = text.match(/<observations>([\s\S]*?)<\/observations>/i);
-  return (match?.[1] ?? text).trim();
+  return {
+    id: message.id,
+    role: message.role === 'assistant' || message.role === 'system' ? message.role : 'user',
+    createdAt: new Date(message.createdAt),
+    content: {
+      content: text,
+      format: 2,
+      parts: [{
+        type: 'text',
+        text,
+      }],
+    },
+  };
 }
