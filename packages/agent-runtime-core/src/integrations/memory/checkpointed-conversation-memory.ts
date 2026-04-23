@@ -515,6 +515,7 @@ function splitMessageIntoRawUnits(
         const promptMessage = cloneMessageWithParts(message, [{
           type: 'reasoning',
           text,
+          providerMetadata: part.providerMetadata,
         }]);
 
         return {
@@ -851,6 +852,9 @@ function rebuildMessagesFromUnits(input: {
         rebuiltParts.push({
           type: part.type,
           text,
+          ...(part.type === 'reasoning' && part.providerMetadata
+            ? { providerMetadata: part.providerMetadata }
+            : {}),
         });
         continue;
       }

@@ -6,6 +6,12 @@ export type ConversationMessagePart =
   | {
     type: 'reasoning';
     text: string;
+    providerMetadata?: {
+      anthropic?: {
+        signature?: string;
+        redactedData?: string;
+      };
+    };
   }
   | {
     type: 'image';

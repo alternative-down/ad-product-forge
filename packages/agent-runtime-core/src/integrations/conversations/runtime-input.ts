@@ -13,6 +13,16 @@ export const conversationRuntimeInputPayloadSchema = z.object({
       text: z.string(),
     }),
     z.object({
+      type: z.literal('reasoning'),
+      text: z.string(),
+      providerMetadata: z.object({
+        anthropic: z.object({
+          signature: z.string().optional(),
+          redactedData: z.string().optional(),
+        }).optional(),
+      }).optional(),
+    }),
+    z.object({
       type: z.literal('image'),
       mimeType: z.string().min(1),
       bytes: z.instanceof(Uint8Array),

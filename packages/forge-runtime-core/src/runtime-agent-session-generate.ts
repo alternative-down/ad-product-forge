@@ -455,7 +455,16 @@ function createReplayMessages(messages: Array<{
         kind: 'assistant';
         textContent: Array<
           | { type: 'text'; text: string }
-          | { type: 'reasoning'; text: string }
+          | {
+              type: 'reasoning';
+              text: string;
+              providerOptions?: {
+                anthropic?: {
+                  signature?: string;
+                  redactedData?: string;
+                };
+              };
+            }
         >;
         imageContent: Array<{ type: 'image'; image: string }>;
         toolCalls: Array<{
@@ -471,11 +480,34 @@ function createReplayMessages(messages: Array<{
 
   for (const message of messages) {
     const textContent = message.parts
-      .filter((part): part is { type: string; text: string } =>
+      .filter((part): part is {
+        type: string;
+        text: string;
+        providerMetadata?: {
+          anthropic?: {
+            signature?: string;
+            redactedData?: string;
+          };
+        };
+      } =>
         (part.type === 'text' || part.type === 'reasoning') && typeof part.text === 'string')
       .map((part) => ({
         type: part.type === 'reasoning' ? 'reasoning' as const : 'text' as const,
         text: part.text,
+        ...(part.type === 'reasoning' && part.providerMetadata?.anthropic
+          ? {
+              providerOptions: {
+                anthropic: {
+                  ...(typeof part.providerMetadata.anthropic.signature === 'string'
+                    ? { signature: part.providerMetadata.anthropic.signature }
+                    : {}),
+                  ...(typeof part.providerMetadata.anthropic.redactedData === 'string'
+                    ? { redactedData: part.providerMetadata.anthropic.redactedData }
+                    : {}),
+                },
+              },
+            }
+          : {}),
       }));
     const imageContent = message.parts
       .filter((part): part is { type: string; mimeType: string; bytes: Uint8Array } =>

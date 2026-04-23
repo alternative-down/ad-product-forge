@@ -13,6 +13,12 @@ export type RuntimeSessionModelMessage =
         | {
             type: 'reasoning';
             text: string;
+            providerMetadata?: {
+              anthropic?: {
+                signature?: string;
+                redactedData?: string;
+              };
+            };
           }
         | {
             type: 'image';
@@ -158,6 +164,18 @@ function toConversationMessage(input: {
         parts.push({
           type: 'reasoning' as const,
           text: part.text,
+          providerMetadata: part.providerMetadata?.anthropic
+            ? {
+                anthropic: {
+                  ...(typeof part.providerMetadata.anthropic.signature === 'string'
+                    ? { signature: part.providerMetadata.anthropic.signature }
+                    : {}),
+                  ...(typeof part.providerMetadata.anthropic.redactedData === 'string'
+                    ? { redactedData: part.providerMetadata.anthropic.redactedData }
+                    : {}),
+                },
+              }
+            : undefined,
         });
         continue;
       }

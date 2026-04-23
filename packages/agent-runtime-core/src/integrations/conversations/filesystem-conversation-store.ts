@@ -22,6 +22,12 @@ type SerializedConversationMessage = Omit<ConversationMessage, 'parts'> & {
     | {
       type: 'reasoning';
       text: string;
+      providerMetadata?: {
+        anthropic?: {
+          signature?: string;
+          redactedData?: string;
+        };
+      };
     }
     | {
       type: 'image';
