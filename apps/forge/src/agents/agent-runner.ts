@@ -59,6 +59,13 @@ export function createAgentRunner(
   let lastWakeStartedAt: number | null = null;
   let lastStepStartedAt: number | null = null;
   let lastStepStage: string | null = null;
+  let lastGenerateProgress:
+    | {
+        stage: string;
+        at: number;
+        detail: Record<string, unknown> | null;
+      }
+    | null = null;
   let lastLoopSignature: string | null = null;
   let repeatedLoopCount = 0;
   let activeRunEpoch = 0;
@@ -621,6 +628,7 @@ export function createAgentRunner(
           modelProfileId: currentRuntime.modelProfileId,
           stepStartedAt: lastStepStartedAt,
           stepStage: lastStepStage,
+          lastGenerateProgress,
           prompt,
           error: serializeError(error),
         }, null, 2),
@@ -628,6 +636,7 @@ export function createAgentRunner(
       await withTimeout(
         store.setExecutionAbsent(runtime.id, formatAbsentExecutionError({
           stage: lastStepStage,
+          lastGenerateProgress,
           error,
         })),
         RUNNER_AWAIT_TIMEOUT_MS,
@@ -639,6 +648,7 @@ export function createAgentRunner(
     } finally {
       lastStepStartedAt = null;
       lastStepStage = null;
+      lastGenerateProgress = null;
       if (activeStepEpoch === runEpoch) {
         activeStepEpoch = 0;
         executing = false;
@@ -887,7 +897,14 @@ export function createAgentRunner(
       const controller = new AbortController();
       const generateToken = startGenerateAttempt(controller);
       const timeout = createGenerateTimeoutGuard(controller);
-      touchGenerateTimeout(timeout, controller);
+      markGenerateProgress(timeout, controller, {
+        stage: 'generate-started',
+        detail: {
+          attempt,
+          runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
+          maxSteps: GENERATE_MAX_STEPS_PER_RUN,
+        },
+      });
 
       try {
         console.log(`[AgentRunner] ${runtime.id} preparing runtime context before generate`);
@@ -917,7 +934,12 @@ export function createAgentRunner(
               },
             },
             prepareStep: async ({ stepNumber }) => {
-              touchGenerateTimeout(timeout, controller);
+              markGenerateProgress(timeout, controller, {
+                stage: 'prepare-step',
+                detail: {
+                  stepNumber,
+                },
+              });
 
               if (stepNumber === 0 || runDelayMs <= 0) {
                 return;
@@ -926,7 +948,12 @@ export function createAgentRunner(
               await delay(runDelayMs);
             },
             onStepFinish: async (stepResult) => {
-              touchGenerateTimeout(timeout, controller);
+              markGenerateProgress(timeout, controller, {
+                stage: 'step-finish',
+                detail: {
+                  usage: stepResult.usage ?? null,
+                },
+              });
               lastStepStage = 'recording-agent-usage';
               const { inputTokens, cachedInputTokens, outputTokens } =
                 usage.getUsageFromResult(stepResult);
@@ -938,7 +965,22 @@ export function createAgentRunner(
               );
             },
             onIterationComplete: async (iteration) => {
-              touchGenerateTimeout(timeout, controller);
+              markGenerateProgress(timeout, controller, {
+                stage: 'iteration-complete',
+                detail: {
+                  iteration: iteration.iteration,
+                  finishReason: iteration.finishReason,
+                  textPreview: iteration.text.trim().slice(0, 300),
+                  toolCalls: iteration.toolCalls.map((toolCall) => ({
+                    name: toolCall.name,
+                    args: toolCall.args,
+                  })),
+                  toolResults: iteration.toolResults.map((toolResult) => ({
+                    name: toolResult.name,
+                    error: toolResult.error?.message ?? null,
+                  })),
+                },
+              });
               lastStepStage = 'processing-runner-control';
 
               console.log(
@@ -1330,9 +1372,32 @@ export function createAgentRunner(
       const timeoutError = new Error(
         `Agent generate timed out after ${GENERATE_TIMEOUT_MS}ms without iteration progress`,
       );
+      (timeoutError as Error & { context?: Record<string, unknown> }).context = {
+        lastStepStage,
+        lastGenerateProgress,
+      };
       controller.abort(timeoutError);
       timeout.rejectTimeout?.(timeoutError);
     }, GENERATE_TIMEOUT_MS);
+  }
+
+  function markGenerateProgress(
+    timeout: {
+      timeoutId: NodeJS.Timeout | null;
+      rejectTimeout: ((error: Error) => void) | null;
+    },
+    controller: AbortController,
+    progress: {
+      stage: string;
+      detail?: Record<string, unknown>;
+    },
+  ) {
+    lastGenerateProgress = {
+      stage: progress.stage,
+      at: Date.now(),
+      detail: progress.detail ?? null,
+    };
+    touchGenerateTimeout(timeout, controller);
   }
 
   function clearGenerateTimeout(timeout: { timeoutId: NodeJS.Timeout | null }) {
@@ -1433,9 +1498,23 @@ function serializeUnknown(value: unknown): unknown {
 
 function formatAbsentExecutionError(input: {
   stage: string | null;
+  lastGenerateProgress?: {
+    stage: string;
+    at: number;
+    detail: Record<string, unknown> | null;
+  } | null;
   error: unknown;
 }) {
   const stage = input.stage ?? 'unknown';
+  const progressLines = input.lastGenerateProgress
+    ? [
+        `Last progress stage: ${input.lastGenerateProgress.stage}`,
+        `Last progress at: ${new Date(input.lastGenerateProgress.at).toISOString()}`,
+        ...(input.lastGenerateProgress.detail
+          ? [`Last progress detail: ${JSON.stringify(input.lastGenerateProgress.detail)}`]
+          : []),
+      ]
+    : [];
 
   if (input.error instanceof Error) {
     const details = extractAbsentErrorDetails(input.error);
@@ -1443,11 +1522,16 @@ function formatAbsentExecutionError(input: {
     return [
       `Stage: ${stage}`,
       `${input.error.name}: ${input.error.message}`,
+      ...progressLines,
       ...details,
     ].join('\n');
   }
 
-  return `Stage: ${stage}\n${String(input.error)}`;
+  return [
+    `Stage: ${stage}`,
+    String(input.error),
+    ...progressLines,
+  ].join('\n');
 }
 
 function extractAbsentErrorDetails(error: Error) {
