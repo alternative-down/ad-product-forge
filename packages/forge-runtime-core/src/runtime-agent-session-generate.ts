@@ -194,12 +194,16 @@ async function buildRuntimeSessionModelMessages(input: {
   threadId: string;
 }): Promise<ModelMessage[]> {
   const state = await input.conversationMemory.getState();
-  const messages = await input.store.listMessages({
+  const activeMessages = await input.store.listMessages({
     threadId: input.threadId,
     afterMessageId: state.checkpointMessageId ?? undefined,
   });
+  const activeMessageMap = new Map(activeMessages.map((message) => [message.id, message]));
+  const recentMessages = state.recentMessageIds
+    .map((messageId) => activeMessageMap.get(messageId))
+    .filter((message): message is NonNullable<typeof message> => Boolean(message));
 
-  return createReplayMessages(messages);
+  return createReplayMessages(recentMessages);
 }
 
 function createReplayMessages(messages: Array<{
