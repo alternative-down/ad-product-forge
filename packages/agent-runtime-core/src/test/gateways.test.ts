@@ -72,4 +72,25 @@ describe('LocalBashWorkspaceGateway', () => {
     expect(availabilityResult.stdout).toContain('/bin/python3');
     expect(availabilityResult.stdout).toContain('/bin/node');
   });
+
+  it('supports background processes with output inspection and kill', async () => {
+    const gateway = new LocalBashWorkspaceGateway();
+    const started = await gateway.startBackground!({
+      command: 'printf "hello\\n"; sleep 5; printf "done\\n"',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const output = await gateway.getProcessOutput!({
+      pid: started.pid,
+      tail: 10,
+    });
+
+    expect(output.pid).toBe(started.pid);
+    expect(output.stdout).toContain('hello');
+    expect(output.running).toBe(true);
+
+    const killed = await gateway.killProcess!(started.pid);
+
+    expect(killed?.pid).toBe(started.pid);
+    expect(killed?.running).toBe(false);
+  });
 });
