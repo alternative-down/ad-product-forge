@@ -2600,6 +2600,8 @@ async function buildSystemHealthcheck(
                 lastStepPreview: homeAgent.overview.lastStepPreview,
                 averageStepIntervalMs: homeAgent.overview.averageStepIntervalMs,
                 om: homeAgent.overview.om,
+                lastExecutionError: homeAgent.lastExecutionError,
+                lastExecutionErrorAt: homeAgent.lastExecutionErrorAt,
               }
             : null,
         };
