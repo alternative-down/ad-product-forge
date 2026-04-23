@@ -37,6 +37,12 @@ describe('createAgentRuntimePlatform', () => {
       });
 
       expect(writeResult.exitCode).toBe(0);
+      const legacyRootResult = await platform.workspaceGateway.execute({
+        command: 'pwd',
+        cwd: platform.agentWorkspacePath,
+      });
+
+      expect(legacyRootResult.exitCode).not.toBe(0);
       expect(platform.workspace.filesystem).not.toBeNull();
       expect(
         Buffer.from(await platform.workspace.filesystem!.readFile('notes/hello.txt')).toString('utf8'),

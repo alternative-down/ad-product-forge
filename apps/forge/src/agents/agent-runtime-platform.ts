@@ -145,7 +145,6 @@ export async function createAgentRuntimePlatform(input: {
     base: new LocalBashWorkspaceGateway({
       fs: workspaceFs,
       root: agentWorkspaceDir,
-      pathAliases: [agentWorkspacePath],
     }),
     cwd: sandboxWorkingDirectory,
   });
