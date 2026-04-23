@@ -278,14 +278,10 @@ function partitionMessages(input: {
 
   for (const message of [...input.messages].reverse()) {
     const messageUnits = estimateMessageUnits(message);
-    const withinRecentMessageLimit = recentMessages.length < input.recentMessageLimit;
-    const withinRecentTokenLimit =
-      recentMessages.length === 0
-      || recentTokenCount + messageUnits <= input.recentTokenLimit;
 
     if (
-      withinRecentMessageLimit
-      && withinRecentTokenLimit
+      recentMessages.length === 0
+      || recentTokenCount + messageUnits <= input.recentTokenLimit
     ) {
       recentMessages.unshift(message);
       recentTokenCount += messageUnits;

@@ -136,38 +136,6 @@ describe('CheckpointedConversationMemory', () => {
     expect(context).toHaveLength(1);
     expect(context[0]?.id).toContain('message-3');
   });
-
-  it('respects recent message limit even when recent token limit is enabled', async () => {
-    const store = new InMemoryConversationStore();
-
-    for (const message of [
-      createMessage('message-1', '1111'),
-      createMessage('message-2', '2222'),
-      createMessage('message-3', '3333'),
-    ]) {
-      await store.appendMessage(message);
-    }
-
-    const memory = new CheckpointedConversationMemory({
-      threadId: 'thread-1',
-      store,
-      stateStore: new InMemoryCheckpointedConversationStateStore(),
-      recentMessageLimit: 2,
-      recentTokenLimit: 1_000,
-      observer: {
-        async observe(request) {
-          return {
-            text: request.messages.map((message) => getText(message)).join(' | '),
-          };
-        },
-      },
-    });
-
-    const state = await memory.getState();
-
-    expect(state.recentMessageIds).toEqual(['message-2', 'message-3']);
-    expect(state.overflowMessageIds).toEqual(['message-1']);
-  });
 });
 
 function createMessage(id: string, text: string) {
