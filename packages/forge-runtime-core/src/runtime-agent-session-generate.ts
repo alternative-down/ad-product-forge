@@ -26,6 +26,7 @@ import type {
   RuntimeAgentSessionStepResult,
 } from './runtime-agent-session.js';
 import type { RuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
+import { truncateToolOutputValue } from './tool-output-truncation.js';
 import { loadWorkingMemoryContextText } from './runtime-working-memory.js';
 
 export async function runRuntimeAgentSessionGenerate(input: {
@@ -557,7 +558,7 @@ function createReplayMessages(messages: Array<{
             toolName: typeof toolResult.toolName === 'string' ? toolResult.toolName : 'unknown',
             output: {
               type: 'json' as const,
-              value: toolResult.result,
+              value: truncateToolOutputValue(toolResult.result),
             },
           }];
         });
@@ -641,12 +642,13 @@ function buildAiSdkToolSet(input: {
         const parsedInput = action.parseInput
           ? action.parseInput(toolInput)
           : action.inputSchema.parse(toolInput);
-
-        return action.execute(parsedInput, {
+        const output = await action.execute(parsedInput, {
           runtimeId: input.runtimeId,
           stepId: input.stepId,
           stepNumber: input.stepNumber,
         });
+
+        return truncateToolOutputValue(output);
       },
     });
   }
