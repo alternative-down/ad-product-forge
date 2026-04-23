@@ -162,13 +162,16 @@ export class CheckpointedConversationMemory {
   }
 
   async stabilize(): Promise<CheckpointedConversationState> {
-    let state = await this.sync();
+    let state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
 
     if (!this.observer) {
       return state;
     }
 
-    while (state.overflowRawUnitIds?.length) {
+    while (shouldObserveOverflow({
+      state,
+      overflowObservationTokenLimit: this.overflowObservationTokenLimit,
+    })) {
       const previousCursorObservedAt = state.cursorObservedAt ?? null;
       const previousCursorObservedRawUnitIds = JSON.stringify(state.cursorObservedRawUnitIds ?? []);
       const observation = await this.consolidateOneOverflowBatch();
@@ -177,7 +180,7 @@ export class CheckpointedConversationMemory {
         break;
       }
 
-      state = await this.sync();
+      state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
 
       if (
         state.cursorObservedAt === previousCursorObservedAt
@@ -852,4 +855,19 @@ function createNextState(input: {
     },
     updatedAt: new Date().toISOString(),
   };
+}
+
+function shouldObserveOverflow(input: {
+  state: NormalizedCheckpointedConversationState;
+  overflowObservationTokenLimit: number | null;
+}) {
+  if ((input.state.overflowRawUnitIds?.length ?? 0) === 0) {
+    return false;
+  }
+
+  if (input.overflowObservationTokenLimit === null) {
+    return true;
+  }
+
+  return input.state.metrics.overflowTokenCount >= input.overflowObservationTokenLimit;
 }

@@ -189,6 +189,41 @@ describe('CheckpointedConversationMemory', () => {
     expect(state.metrics.overflowTokenCount).toBeGreaterThan(20);
     expect(state.metrics.recentTokenCount).toBeLessThanOrEqual(20);
   });
+
+  it('does not observe overflow before the overflow batch limit is reached', async () => {
+    const store = new InMemoryConversationStore();
+
+    for (const message of [
+      createMessage('message-1', '1111'),
+      createMessage('message-2', '2222'),
+      createMessage('message-3', '3333'),
+    ]) {
+      await store.appendMessage(message);
+    }
+
+    const memory = new CheckpointedConversationMemory({
+      threadId: 'thread-1',
+      store,
+      stateStore: new InMemoryCheckpointedConversationStateStore(),
+      recentTokenLimit: 2,
+      overflowObservationTokenLimit: 10,
+      observer: {
+        async observe(request) {
+          return {
+            text: request.messages.map((message) => getText(message)).join(' | '),
+          };
+        },
+      },
+    });
+
+    const stateBefore = await memory.getState();
+    expect(stateBefore.metrics.overflowTokenCount).toBe(1);
+
+    const stateAfter = await memory.stabilize();
+
+    expect(stateAfter.observations).toHaveLength(0);
+    expect(stateAfter.overflowMessageIds).toEqual(['message-1']);
+  });
 });
 
 function createMessage(id: string, text: string) {
