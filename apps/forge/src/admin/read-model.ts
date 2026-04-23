@@ -1460,15 +1460,7 @@ async function listThreadMessages(
                       text: part.text,
                     }
                   : part),
-              ...(Array.isArray(message.metadata?.toolResults)
-                ? message.metadata.toolResults.map((toolResult: unknown) => ({
-                    type: 'tool-invocation',
-                    toolInvocation: {
-                      ...(typeof toolResult === 'object' && toolResult !== null ? toolResult : {}),
-                      state: 'result',
-                    },
-                  }))
-                : []),
+              ...buildThreadToolInvocationParts(message.metadata),
             ],
             ...(Array.isArray(message.metadata?.toolInvocations)
               ? {
@@ -1536,6 +1528,89 @@ function mergeToolLogMessages(messages: Array<{
   }
 
   return merged;
+}
+
+function buildThreadToolInvocationParts(metadata: Record<string, unknown> | undefined) {
+  const toolInvocations = Array.isArray(metadata?.toolInvocations)
+    ? metadata.toolInvocations
+    : [];
+  const toolResults = Array.isArray(metadata?.toolResults)
+    ? metadata.toolResults
+    : [];
+  const resultIndexesByToolCallId = new Map<string, number>();
+  const parts: Array<Record<string, unknown>> = [];
+  const matchedResultIndexes = new Set<number>();
+
+  for (const [index, toolResult] of toolResults.entries()) {
+    if (
+      typeof toolResult !== 'object'
+      || toolResult === null
+      || typeof toolResult.toolCallId !== 'string'
+    ) {
+      continue;
+    }
+
+    resultIndexesByToolCallId.set(toolResult.toolCallId, index);
+  }
+
+  for (const toolInvocation of toolInvocations) {
+    if (
+      typeof toolInvocation !== 'object'
+      || toolInvocation === null
+      || typeof toolInvocation.toolName !== 'string'
+    ) {
+      continue;
+    }
+
+    const toolCallId = typeof toolInvocation.toolCallId === 'string'
+      ? toolInvocation.toolCallId
+      : null;
+    const matchingResultIndex = toolCallId
+      ? resultIndexesByToolCallId.get(toolCallId)
+      : undefined;
+    const matchingResult = matchingResultIndex !== undefined
+      ? toolResults[matchingResultIndex]
+      : null;
+
+    if (matchingResultIndex !== undefined) {
+      matchedResultIndexes.add(matchingResultIndex);
+    }
+
+    parts.push({
+      type: 'tool-invocation',
+      toolInvocation: {
+        ...toolInvocation,
+        ...(typeof matchingResult === 'object' && matchingResult !== null
+          ? {
+              result: matchingResult.result,
+              state: 'result',
+            }
+          : {
+              state: 'call',
+            }),
+      },
+    });
+  }
+
+  for (const [index, toolResult] of toolResults.entries()) {
+    if (
+      matchedResultIndexes.has(index)
+      || typeof toolResult !== 'object'
+      || toolResult === null
+    ) {
+      continue;
+    }
+
+    parts.push({
+      type: 'tool-invocation',
+      toolInvocation: {
+        ...toolResult,
+        state: 'result',
+      },
+    });
+  }
+
+  return parts;
 }
 
 function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {

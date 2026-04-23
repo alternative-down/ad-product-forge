@@ -141,7 +141,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     return {
       cwd,
       env: {
-        PATH: process.env.PATH ?? '',
+        ...buildBaseProcessEnv(this.shellPath),
         ...this.env,
         ...(request.env ?? {}),
       },
@@ -256,6 +256,21 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
 
     return resolvedCwd;
   }
+}
+
+function buildBaseProcessEnv(shellPath: string) {
+  return Object.fromEntries(
+    Object.entries({
+      PATH: process.env.PATH ?? '',
+      HOME: process.env.HOME,
+      USER: process.env.USER,
+      LOGNAME: process.env.LOGNAME,
+      SHELL: process.env.SHELL ?? shellPath,
+      LANG: process.env.LANG,
+      TMPDIR: process.env.TMPDIR,
+      TERM: process.env.TERM,
+    }).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0),
+  );
 }
 
 type BackgroundProcessState = {

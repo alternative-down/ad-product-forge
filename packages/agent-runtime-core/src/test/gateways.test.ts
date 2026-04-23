@@ -73,6 +73,16 @@ describe('LocalBashWorkspaceGateway', () => {
     expect(availabilityResult.stdout).toContain('/bin/node');
   });
 
+  it('inherits HOME from the host environment', async () => {
+    const gateway = new LocalBashWorkspaceGateway();
+    const result = await gateway.execute({
+      command: 'printf %s "$HOME"',
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim().length).toBeGreaterThan(0);
+  });
+
   it('supports background processes with output inspection and kill', async () => {
     const gateway = new LocalBashWorkspaceGateway();
     const started = await gateway.startBackground!({
