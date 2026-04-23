@@ -528,27 +528,24 @@ export class AgentLongTermMemoryRecall {
   private async runRecallSearch(queryText: string, config: RecallConfig) {
     const workspaceSearch = await this.searchWorkspace(queryText, {
       topK: config.workspaceTopK,
+      scoreThreshold: config.scoreThreshold,
+      resultCount: config.documentCount,
       mode: config.searchMode,
     });
-    const filteredWorkspaceResults = this.filterWorkspaceFallbackResults(
-      workspaceSearch.results,
-      config.scoreThreshold,
-      config.documentCount,
-    );
     const graphSearch = await this.searchGraph(queryText, workspaceSearch.results, {
       topK: config.graphTopK,
       threshold: config.graphThreshold,
       randomWalkSteps: config.graphRandomWalkSteps,
       includeSources: config.graphIncludeSources,
-      contextResults: filteredWorkspaceResults,
+      contextResults: workspaceSearch.results,
     });
-    const workspaceFormattedContext = filteredWorkspaceResults
+    const workspaceFormattedContext = workspaceSearch.results
       .map((result) => `${result.id}\n${result.content}`)
       .join('\n\n');
 
     return {
       formatted: graphSearch.hit ? '' : workspaceFormattedContext,
-      results: filteredWorkspaceResults,
+      results: workspaceSearch.results,
       rawWorkspaceResults: workspaceSearch.results,
       graph: graphSearch,
     };
@@ -581,9 +578,13 @@ export class AgentLongTermMemoryRecall {
     queryText: string,
     options: {
       topK: number;
+      resultCount: number;
+      scoreThreshold: number;
       mode: 'hybrid' | 'vector' | 'bm25';
     } = {
       topK: RECALL_DOCUMENT_COUNT,
+      resultCount: RECALL_DOCUMENT_COUNT,
+      scoreThreshold: RECALL_SCORE_THRESHOLD,
       mode: RECALL_SEARCH_MODE,
     },
   ): Promise<{ formatted: string; results: SearchResult[] }> {
@@ -605,6 +606,8 @@ export class AgentLongTermMemoryRecall {
         'retrieval.search',
         this.retrievalWorkspace.search(queryText, {
           topK: options.topK,
+          resultLimit: options.resultCount,
+          scoreThreshold: options.scoreThreshold,
           mode: options.mode,
         }),
         this.recallTimeoutMs,
@@ -820,16 +823,6 @@ export class AgentLongTermMemoryRecall {
       });
       throw error;
     }
-  }
-
-  private filterWorkspaceFallbackResults(
-    results: SearchResult[],
-    scoreThreshold: number,
-    documentCount: number,
-  ) {
-    return results
-      .filter((result) => (result.score ?? 0) >= scoreThreshold)
-      .slice(0, documentCount);
   }
 
   private formatStructuredValue(value: unknown, indentLevel = 0): string {

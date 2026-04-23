@@ -175,6 +175,8 @@ export class SqliteWorkspaceRetrieval {
     query: string,
     options: {
       topK: number;
+      resultLimit?: number;
+      scoreThreshold?: number;
       mode: SearchMode;
     },
   ): Promise<RetrievedDocument[]> {
@@ -186,12 +188,14 @@ export class SqliteWorkspaceRetrieval {
 
     const db = this.getDb();
     const candidates = new Map<number, SearchCandidate>();
+    const scoreThreshold = Math.max(0, Math.min(options.scoreThreshold ?? 0, 1));
+    const resultLimit = Math.max(1, options.resultLimit ?? options.topK);
     const queryVector = options.mode === 'bm25'
       ? []
       : await this.embedQuery(queryText);
 
     if (options.mode !== 'bm25' && queryVector.length > 0 && this.vecReady) {
-      for (const row of this.searchVectorRows(db, queryVector, options.topK)) {
+      for (const row of this.searchVectorRows(db, queryVector, options.topK, scoreThreshold)) {
         const score = distanceToScore(row.distance ?? 1);
         const candidate = candidates.get(row.rowid);
 
@@ -208,7 +212,7 @@ export class SqliteWorkspaceRetrieval {
     }
 
     if (options.mode !== 'vector') {
-      for (const row of this.searchKeywordRows(db, queryText, options.topK)) {
+      for (const row of this.searchKeywordRows(db, queryText, options.topK, scoreThreshold)) {
         const score = keywordRankToScore(row.rank ?? 0);
         const candidate = candidates.get(row.rowid);
         const mergedScore = candidate
@@ -227,7 +231,7 @@ export class SqliteWorkspaceRetrieval {
 
     return [...candidates.values()]
       .sort((left, right) => right.score - left.score)
-      .slice(0, options.topK)
+      .slice(0, resultLimit)
       .map(({ rowid: _rowid, ...result }) => result);
   }
 
@@ -251,7 +255,12 @@ export class SqliteWorkspaceRetrieval {
       return emptyGraphResult();
     }
 
-    const seedRows = this.searchVectorRows(db, queryVector, Math.max(input.topK, this.graphNeighborCount))
+    const seedRows = this.searchVectorRows(
+      db,
+      queryVector,
+      Math.max(input.topK, this.graphNeighborCount),
+      input.threshold,
+    )
       .map((row) => ({
         rowid: row.rowid,
         score: distanceToScore(row.distance ?? 1),
@@ -351,7 +360,7 @@ export class SqliteWorkspaceRetrieval {
       return [];
     }
 
-    return this.searchVectorRows(this.getDb(), queryVector, topK).map((row) => ({
+    return this.searchVectorRows(this.getDb(), queryVector, topK, 0).map((row) => ({
       id: row.document_id,
       text: row.text,
       score: distanceToScore(row.distance ?? 1),
@@ -681,10 +690,17 @@ export class SqliteWorkspaceRetrieval {
     `).all(rowid, this.graphNeighborCount) as GraphEdgeRow[];
   }
 
-  private searchVectorRows(db: SqliteDatabase, queryVector: number[], topK: number) {
+  private searchVectorRows(
+    db: SqliteDatabase,
+    queryVector: number[],
+    topK: number,
+    scoreThreshold: number,
+  ) {
     if (!this.vecReady) {
       return [];
     }
+
+    const maxDistance = Math.max(0, 1 - scoreThreshold);
 
     return db.prepare(`
       select
@@ -697,11 +713,17 @@ export class SqliteWorkspaceRetrieval {
       join retrieval_documents on retrieval_documents.rowid = retrieval_document_embeddings.rowid
       where retrieval_document_embeddings.embedding match ?
         and k = ?
+        and retrieval_document_embeddings.distance <= ?
       order by retrieval_document_embeddings.distance asc
-    `).all(JSON.stringify(queryVector), topK) as SearchResultRow[];
+    `).all(JSON.stringify(queryVector), topK, maxDistance) as SearchResultRow[];
   }
 
-  private searchKeywordRows(db: SqliteDatabase, queryText: string, topK: number) {
+  private searchKeywordRows(
+    db: SqliteDatabase,
+    queryText: string,
+    topK: number,
+    scoreThreshold: number,
+  ) {
     const keywordQuery = buildKeywordMatchQuery(queryText);
 
     if (!keywordQuery) {
@@ -718,9 +740,10 @@ export class SqliteWorkspaceRetrieval {
       from retrieval_documents_fts
       join retrieval_documents on retrieval_documents.rowid = retrieval_documents_fts.rowid
       where retrieval_documents_fts match ?
+        and (1.0 / (1.0 + abs(bm25(retrieval_documents_fts)))) >= ?
       order by rank asc
       limit ?
-    `).all(keywordQuery, topK) as SearchResultRow[];
+    `).all(keywordQuery, scoreThreshold > 0 ? scoreThreshold : 0, topK) as SearchResultRow[];
   }
 
   private async embedQuery(queryText: string) {
