@@ -300,6 +300,17 @@ async function readLongTermMemoryState(db: Database, agentId: string) {
   return state satisfies LongTermMemoryState;
 }
 
+async function readCheckpointedOmState(db: Database, agentId: string) {
+  try {
+    return await createAgentCheckpointedOmStateStore(db, {
+      agentId,
+    }).readState();
+  } catch (error) {
+    console.error(`[AdminReadModel] Failed to load checkpointed OM state for agent ${agentId}:`, error);
+    return null;
+  }
+}
+
 export function createAdminReadModel(input: {
   db: Database;
   workspaceBasePath: string;
@@ -859,9 +870,7 @@ export function createAdminReadModel(input: {
         threadId: mastraAgentId,
         resourceId: mastraAgentId,
       }))?.workingMemory ?? null;
-      const customState = await createAgentCheckpointedOmStateStore(db, {
-        agentId,
-      }).readState();
+      const customState = await readCheckpointedOmState(db, agentId);
       const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
       const reflection = customState
         ? customState.activeReflectionBlocks
