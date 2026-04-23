@@ -2552,7 +2552,7 @@ async function buildSystemHealthcheck(
     readModel.getDashboard(),
     readModel.listAgents(),
   ]);
-  const homeAgentMap = new Map(agents.items.map((agent) => [agent.agentId, agent]));
+  const homeAgentMap = new Map(agents.map((agent) => [agent.agentId, agent]));
 
   return {
     now: new Date().toISOString(),
