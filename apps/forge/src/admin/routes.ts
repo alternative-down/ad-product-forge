@@ -626,7 +626,7 @@ export function registerAdminRoutes(input: {
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/healthcheck',
-    handler: async () => jsonResponse(await buildSystemHealthcheck(registry)),
+    handler: async () => jsonResponse(await buildSystemHealthcheck(registry, readModel)),
   });
 
   input.httpServer.registerRoute({
@@ -2522,6 +2522,7 @@ async function readOauthState() {
 
 async function buildSystemHealthcheck(
   registry: ReturnType<typeof getInternalAgentRegistry>,
+  readModel: ReturnType<typeof createAdminReadModel>,
 ) {
   const processWithDiagnostics = process as NodeJS.Process & {
     _getActiveHandles?: () => unknown[];
@@ -2530,7 +2531,7 @@ async function buildSystemHealthcheck(
   const memoryUsage = process.memoryUsage();
   const activeHandles = processWithDiagnostics._getActiveHandles?.() ?? [];
   const activeRequests = processWithDiagnostics._getActiveRequests?.() ?? [];
-  const [fdSummary, agentSnapshots] = await Promise.all([
+  const [fdSummary, agentSnapshots, overview, agents] = await Promise.all([
     readProcessFileDescriptorSummary(),
     Promise.all(
       registry.list().map(async (entry) => {
@@ -2548,6 +2549,8 @@ async function buildSystemHealthcheck(
         };
       }),
     ),
+    readModel.getDashboard(),
+    readModel.listAgents(),
   ]);
 
   return {
@@ -2576,6 +2579,10 @@ async function buildSystemHealthcheck(
       activeRequests: summarizeActiveItems(activeRequests),
     },
     fileDescriptors: fdSummary,
+    home: {
+      overview,
+      agents,
+    },
     agents: {
       loadedCount: agentSnapshots.length,
       items: agentSnapshots,
