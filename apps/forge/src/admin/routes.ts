@@ -2552,6 +2552,7 @@ async function buildSystemHealthcheck(
     readModel.getDashboard(),
     readModel.listAgents(),
   ]);
+  const homeAgentMap = new Map(agents.items.map((agent) => [agent.agentId, agent]));
 
   return {
     now: new Date().toISOString(),
@@ -2585,7 +2586,24 @@ async function buildSystemHealthcheck(
     },
     agents: {
       loadedCount: agentSnapshots.length,
-      items: agentSnapshots,
+      items: agentSnapshots.map((agentSnapshot) => {
+        const homeAgent = homeAgentMap.get(agentSnapshot.agentId);
+
+        return {
+          ...agentSnapshot,
+          homeAgent: homeAgent
+            ? {
+                executionState: homeAgent.executionState,
+                lastStepAt: homeAgent.overview.lastStepAt,
+                lastStepContextTokens: homeAgent.overview.lastStepContextTokens,
+                lastStepTokens: homeAgent.overview.lastStepTokens,
+                lastStepPreview: homeAgent.overview.lastStepPreview,
+                averageStepIntervalMs: homeAgent.overview.averageStepIntervalMs,
+                om: homeAgent.overview.om,
+              }
+            : null,
+        };
+      }),
     },
   };
 }
