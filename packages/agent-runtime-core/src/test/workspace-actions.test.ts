@@ -88,4 +88,121 @@ describe('createWorkspaceActionDefinitions', () => {
       pid: '123',
     });
   });
+
+  it('creates filesystem workspace actions when a filesystem is provided', async () => {
+    const writes: Array<{ path: string; content: string }> = [];
+    const actions = createWorkspaceActionDefinitions({
+      async execute() {
+        return {
+          exitCode: 0,
+          stdout: '',
+          stderr: '',
+        };
+      },
+    }, {
+      filesystem: {
+        async readFile(targetPath) {
+          return `read:${targetPath}`;
+        },
+        async writeFile(targetPath, content) {
+          writes.push({
+            path: targetPath,
+            content: String(content),
+          });
+        },
+        async listDirectory(targetPath = '.') {
+          if (targetPath === '.') {
+            return [{
+              name: 'src',
+              path: '/workspace/src',
+              isDirectory: true,
+              size: 0,
+            }];
+          }
+
+          return [{
+            name: 'index.ts',
+            path: '/workspace/src/index.ts',
+            isDirectory: false,
+            size: 12,
+          }];
+        },
+      },
+    });
+
+    expect(actions.map((action) => action.name)).toEqual([
+      'workspace_execute_command',
+      'workspace_read_file',
+      'workspace_write_file',
+      'workspace_list_files',
+      'workspace_grep_files',
+    ]);
+
+    const readResult = await actions[1]!.execute({
+      path: 'README.md',
+    }, {
+      runtimeId: 'runtime-1',
+      stepId: 'step-1',
+      stepNumber: 1,
+    });
+    const writeResult = await actions[2]!.execute({
+      path: 'notes/todo.md',
+      content: 'hello',
+    }, {
+      runtimeId: 'runtime-1',
+      stepId: 'step-1',
+      stepNumber: 1,
+    });
+    const listResult = await actions[3]!.execute({
+      recursive: true,
+    }, {
+      runtimeId: 'runtime-1',
+      stepId: 'step-1',
+      stepNumber: 1,
+    });
+    const grepResult = await actions[4]!.execute({
+      pattern: 'read',
+      maxResults: 5,
+    }, {
+      runtimeId: 'runtime-1',
+      stepId: 'step-1',
+      stepNumber: 1,
+    });
+
+    expect(readResult).toEqual({
+      path: 'README.md',
+      content: 'read:README.md',
+    });
+    expect(writeResult).toEqual({
+      path: 'notes/todo.md',
+      written: true,
+    });
+    expect(writes).toEqual([{
+      path: 'notes/todo.md',
+      content: 'hello',
+    }]);
+    expect(listResult).toEqual({
+      entries: [
+        {
+          name: 'src',
+          path: '/workspace/src',
+          isDirectory: true,
+          size: 0,
+        },
+        {
+          name: 'index.ts',
+          path: '/workspace/src/index.ts',
+          isDirectory: false,
+          size: 12,
+        },
+      ],
+    });
+    expect(grepResult).toEqual({
+      matches: [{
+        path: '/workspace/src/index.ts',
+        line: 1,
+        text: 'read:/workspace/src/index.ts',
+      }],
+    });
+  });
 });

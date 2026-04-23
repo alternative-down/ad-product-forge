@@ -253,6 +253,7 @@ function toToolBadge(toolName: string) {
 
   if (
     normalizedToolName.includes('workspace_execute_command') ||
+    normalizedToolName.includes('workspace_grep_files') ||
     normalizedToolName.includes('workspace_read_file') ||
     normalizedToolName.includes('workspace_write_file') ||
     normalizedToolName.includes('workspace_list_files')

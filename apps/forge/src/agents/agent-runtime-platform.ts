@@ -171,7 +171,9 @@ export async function createAgentRuntimePlatform(input: {
     workspace,
     conversationStore,
     workspaceGateway,
-    workspaceActions: createWorkspaceActionDefinitions(workspaceGateway),
+    workspaceActions: createWorkspaceActionDefinitions(workspaceGateway, {
+      filesystem: workspaceFs,
+    }),
     communication,
     agentWorkspacePath,
     agentWorkspaceDir,

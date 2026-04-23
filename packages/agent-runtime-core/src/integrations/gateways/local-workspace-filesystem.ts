@@ -45,6 +45,23 @@ export class LocalWorkspaceFilesystem {
     await fs.writeFile(absolutePath, data);
   }
 
+  async listDirectory(targetPath = '.') {
+    const absolutePath = await this.resolveContainedPath(targetPath, false);
+    const entries = await fs.readdir(absolutePath, { withFileTypes: true });
+
+    return Promise.all(entries.map(async (entry) => {
+      const entryAbsolutePath = path.join(absolutePath, entry.name);
+      const stats = await fs.stat(entryAbsolutePath);
+
+      return {
+        name: entry.name,
+        path: entryAbsolutePath,
+        isDirectory: entry.isDirectory(),
+        size: stats.size,
+      };
+    }));
+  }
+
   resolveAbsolutePath(targetPath: string) {
     return this.resolvePath(targetPath);
   }
