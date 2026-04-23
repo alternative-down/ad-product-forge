@@ -7,6 +7,7 @@ import {
   type ModelMessage,
   type ToolSet,
 } from 'ai';
+import { z } from 'zod';
 
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
@@ -88,20 +89,32 @@ export async function runRuntimeAgentSessionGenerate(input: {
       transientMessages,
     });
     const stepId = randomUUID();
-    const result = await generateText({
-      model: input.runtime.model,
+    const tools = buildAiSdkToolSet({
+      runtimeId: input.session.agentId,
+      stepId,
+      stepNumber: iterationNumber,
+      actions: input.runtime.runtimeActions,
+    });
+    const requestDiagnostics = summarizeGenerateRequest({
       system,
       messages,
-      tools: buildAiSdkToolSet({
-        runtimeId: input.session.agentId,
-        stepId,
-        stepNumber: iterationNumber,
-        actions: input.runtime.runtimeActions,
-      }),
-      providerOptions: input.options.providerOptions as Record<string, never> | undefined,
-      stopWhen: stepCountIs(1),
-      abortSignal: input.options.abortSignal,
+      actions: input.runtime.runtimeActions,
     });
+    let result;
+
+    try {
+      result = await generateText({
+        model: input.runtime.model,
+        system,
+        messages,
+        tools,
+        providerOptions: input.options.providerOptions as Record<string, never> | undefined,
+        stopWhen: stepCountIs(1),
+        abortSignal: input.options.abortSignal,
+      });
+    } catch (error) {
+      throw appendGenerateDiagnostics(error, requestDiagnostics);
+    }
 
     await appendRuntimeSessionModelMessages({
       store: input.runtime.conversationStore,
@@ -156,6 +169,68 @@ export async function runRuntimeAgentSessionGenerate(input: {
     text: finalText,
     usage: finalUsage,
   };
+}
+
+function summarizeGenerateRequest(input: {
+  system?: string;
+  messages: ModelMessage[];
+  actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
+}) {
+  return {
+    systemChars: input.system?.length ?? 0,
+    messageCount: input.messages.length,
+    messageChars: input.messages.reduce((total, message) => total + countModelMessageChars(message), 0),
+    toolCount: input.actions.length,
+    toolDescriptionChars: input.actions.reduce((total, action) => total + action.description.length, 0),
+    toolSchemaChars: input.actions.reduce(
+      (total, action) => total + JSON.stringify(z.toJSONSchema(action.inputSchema)).length,
+      0,
+    ),
+  };
+}
+
+function countModelMessageChars(message: ModelMessage) {
+  if (typeof message.content === 'string') {
+    return message.content.length;
+  }
+
+  if (!Array.isArray(message.content)) {
+    return 0;
+  }
+
+  return message.content.reduce((total, part) => {
+    if ('text' in part && typeof part.text === 'string') {
+      return total + part.text.length;
+    }
+
+    if ('input' in part) {
+      return total + JSON.stringify(part.input).length;
+    }
+
+    if ('output' in part) {
+      return total + JSON.stringify(part.output).length;
+    }
+
+    return total;
+  }, 0);
+}
+
+function appendGenerateDiagnostics(error: unknown, diagnostics: {
+  systemChars: number;
+  messageCount: number;
+  messageChars: number;
+  toolCount: number;
+  toolDescriptionChars: number;
+  toolSchemaChars: number;
+}) {
+  const diagnosticsText = `generateDiagnostics: ${JSON.stringify(diagnostics)}`;
+
+  if (error instanceof Error) {
+    error.message = `${error.message}\n${diagnosticsText}`;
+    return error;
+  }
+
+  return new Error(`${String(error)}\n${diagnosticsText}`);
 }
 
 async function buildRuntimeSessionSystemPrompt(input: {
