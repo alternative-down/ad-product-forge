@@ -647,11 +647,22 @@ function buildAiSdkToolSet(input: {
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
 }): ToolSet {
   const toolSet: ToolSet = {};
+  const lastActionIndex = input.actions.length - 1;
 
-  for (const action of input.actions) {
+  for (const [index, action] of input.actions.entries()) {
     toolSet[action.name] = createAiSdkTool({
       description: action.description,
       inputSchema: action.inputSchema,
+      providerOptions: index === lastActionIndex
+        ? {
+            anthropic: {
+              cacheControl: {
+                type: 'ephemeral',
+                ttl: '1h',
+              },
+            },
+          }
+        : undefined,
       execute: async (toolInput, _options) => {
         const parsedInput = action.parseInput
           ? action.parseInput(toolInput)

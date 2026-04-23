@@ -6,7 +6,7 @@ import type { LanguageModelV3CallOptions } from '@ai-sdk/provider-v6';
 import { wrapAnthropicPromptCacheModel } from './anthropic-prompt-cache.js';
 
 describe('wrapAnthropicPromptCacheModel', () => {
-  it('marks the first system and last user messages for prompt caching', async () => {
+  it('marks the first system message for prompt caching', async () => {
     const model = wrapAnthropicPromptCacheModel(new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
         expect(options.prompt).toEqual([
@@ -36,14 +36,7 @@ describe('wrapAnthropicPromptCacheModel', () => {
             content: [{
               type: 'text',
               text: 'Continue.',
-              providerOptions: {
-                anthropic: {
-                  cacheControl: {
-                    type: 'ephemeral',
-                    ttl: '1h',
-                  },
-                },
-              },
+              providerOptions: undefined,
             }],
             providerOptions: undefined,
           },
@@ -52,14 +45,7 @@ describe('wrapAnthropicPromptCacheModel', () => {
             content: [{
               type: 'text',
               text: 'Latest assistant output.',
-              providerOptions: {
-                anthropic: {
-                  cacheControl: {
-                    type: 'ephemeral',
-                    ttl: '1h',
-                  },
-                },
-              },
+              providerOptions: undefined,
             }],
             providerOptions: undefined,
           },
