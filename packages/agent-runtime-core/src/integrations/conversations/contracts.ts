@@ -4,6 +4,10 @@ export type ConversationMessagePart =
     text: string;
   }
   | {
+    type: 'reasoning';
+    text: string;
+  }
+  | {
     type: 'image';
     mimeType: string;
     bytes: Uint8Array;

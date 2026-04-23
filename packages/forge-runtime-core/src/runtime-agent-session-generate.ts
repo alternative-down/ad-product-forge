@@ -495,7 +495,10 @@ function createReplayMessages(messages: Array<{
     | ModelMessage
     | {
         kind: 'assistant';
-        textContent: Array<{ type: 'text'; text: string }>;
+        textContent: Array<
+          | { type: 'text'; text: string }
+          | { type: 'reasoning'; text: string }
+        >;
         imageContent: Array<{ type: 'image'; image: string }>;
         toolCalls: Array<{
           type: 'tool-call';
@@ -510,9 +513,10 @@ function createReplayMessages(messages: Array<{
 
   for (const message of messages) {
     const textContent = message.parts
-      .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
+      .filter((part): part is { type: string; text: string } =>
+        (part.type === 'text' || part.type === 'reasoning') && typeof part.text === 'string')
       .map((part) => ({
-        type: 'text' as const,
+        type: part.type === 'reasoning' ? 'reasoning' as const : 'text' as const,
         text: part.text,
       }));
     const imageContent = message.parts

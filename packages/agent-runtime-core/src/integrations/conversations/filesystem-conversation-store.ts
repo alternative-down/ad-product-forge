@@ -20,6 +20,10 @@ type SerializedConversationMessage = Omit<ConversationMessage, 'parts'> & {
       text: string;
     }
     | {
+      type: 'reasoning';
+      text: string;
+    }
+    | {
       type: 'image';
       mimeType: string;
       bytesBase64: string;
@@ -124,7 +128,7 @@ function serializeMessage(message: ConversationMessage): SerializedConversationM
   return {
     ...message,
     parts: message.parts.map((part) => {
-      if (part.type === 'text') {
+      if (part.type === 'text' || part.type === 'reasoning') {
         return part;
       }
 
@@ -150,7 +154,7 @@ function deserializeMessage(message: SerializedConversationMessage): Conversatio
   return {
     ...message,
     parts: message.parts.map((part) => {
-      if (part.type === 'text') {
+      if (part.type === 'text' || part.type === 'reasoning') {
         return part;
       }
 

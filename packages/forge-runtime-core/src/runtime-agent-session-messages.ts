@@ -11,6 +11,10 @@ export type RuntimeSessionModelMessage =
             text: string;
           }
         | {
+            type: 'reasoning';
+            text: string;
+          }
+        | {
             type: 'image';
             image: string;
           }
@@ -145,6 +149,14 @@ function toConversationMessage(input: {
       if (part.type === 'text') {
         parts.push({
           type: 'text' as const,
+          text: part.text,
+        });
+        continue;
+      }
+
+      if (part.type === 'reasoning') {
+        parts.push({
+          type: 'reasoning' as const,
           text: part.text,
         });
         continue;
