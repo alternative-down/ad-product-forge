@@ -106,9 +106,6 @@ async function buildCompatibleState(input: {
   reflectionModel?: LanguageModel;
   agentSystemPrompt?: string;
 }) {
-  const activeMessages = [...input.conversationState.overflowMessageIds, ...input.conversationState.recentMessageIds]
-    .map((messageId) => input.messages.find((message) => message.id === messageId))
-    .filter((message): message is NonNullable<typeof message> => Boolean(message));
   const reflectionBudget = Math.max(
     0,
     input.limits.totalContextTokens

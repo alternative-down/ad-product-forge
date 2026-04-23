@@ -31,7 +31,8 @@ describe('CheckpointedConversationMemory', () => {
       threadId: 'thread-1',
       store,
       stateStore: new InMemoryCheckpointedConversationStateStore(),
-      recentMessageLimit: 1,
+      recentTokenLimit: 2,
+      overflowObservationTokenLimit: 10,
       observer: {
         async observe(request) {
           return {

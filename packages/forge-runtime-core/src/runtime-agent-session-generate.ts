@@ -200,19 +200,27 @@ async function buildRuntimeSessionModelMessages(input: {
   }>;
 }): Promise<ModelMessage[]> {
   const state = await input.conversationMemory.getState();
+  const recentMessages = normalizeReplayMessages(
+    await input.conversationMemory.renderRecentMessages(),
+  );
   const activeMessages = normalizeReplayMessages(await input.store.listMessages({
     threadId: input.threadId,
-    afterMessageId: state.checkpointMessageId ?? undefined,
+    order: 'asc',
   }));
-  const activeMessageMap = new Map(activeMessages.map((message) => [message.id, message]));
-  const recentMessages = expandRecentReplayMessages({
+  const replayMessageMap = new Map(activeMessages.map((message) => [message.id, message]));
+
+  for (const message of recentMessages) {
+    replayMessageMap.set(message.id, message);
+  }
+
+  const replayMessages = expandRecentReplayMessages({
     activeMessages,
-    recentMessageIds: state.recentMessageIds,
-    activeMessageMap,
+    recentMessageIds: state.recentMessageIds ?? [],
+    activeMessageMap: replayMessageMap,
   });
 
   return [
-    ...createReplayMessages(recentMessages),
+    ...createReplayMessages(replayMessages),
     ...input.transientMessages.map((message) => ({
       role: message.role,
       content: [{

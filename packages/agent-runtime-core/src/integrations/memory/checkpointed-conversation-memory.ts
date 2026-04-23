@@ -37,13 +37,36 @@ export type CheckpointedConversationMemoryOptions = {
   observer?: CheckpointedConversationObserver;
 };
 
+type RawConversationUnit = {
+  id: string;
+  parentMessageId: string;
+  createdAt: Date;
+  tokenCount: number;
+  promptMessage: ConversationMessage;
+};
+
+type NormalizedCheckpointedConversationState = Omit<
+  CheckpointedConversationState,
+  'cursorObservedAt'
+  | 'cursorObservedRawUnitIds'
+  | 'recentRawUnitIds'
+  | 'overflowRawUnitIds'
+  | 'recentMessageIds'
+  | 'overflowMessageIds'
+> & {
+  cursorObservedAt: string | null;
+  cursorObservedRawUnitIds: string[];
+  recentRawUnitIds: string[];
+  overflowRawUnitIds: string[];
+  recentMessageIds: string[];
+  overflowMessageIds: string[];
+};
+
 export class CheckpointedConversationMemory {
   private readonly threadId: string;
   private readonly store: ConversationStore;
   private readonly stateStore: CheckpointedConversationStateStore;
-  private readonly recentMessageLimit: number;
   private readonly recentTokenLimit: number | null;
-  private readonly observationTokenLimit: number | null;
   private readonly overflowObservationTokenLimit: number | null;
   private readonly maxObservationCount: number;
   private readonly observer: CheckpointedConversationObserver | null;
@@ -52,9 +75,7 @@ export class CheckpointedConversationMemory {
     this.threadId = options.threadId;
     this.store = options.store;
     this.stateStore = options.stateStore;
-    this.recentMessageLimit = options.recentMessageLimit ?? 20;
     this.recentTokenLimit = options.recentTokenLimit ?? null;
-    this.observationTokenLimit = options.observationTokenLimit ?? null;
     this.overflowObservationTokenLimit = options.overflowObservationTokenLimit ?? null;
     this.maxObservationCount = options.maxObservationCount ?? 20;
     this.observer = options.observer ?? null;
@@ -62,31 +83,23 @@ export class CheckpointedConversationMemory {
 
   async sync(): Promise<CheckpointedConversationState> {
     const previousState = await this.loadState();
-    const activeMessages = await this.store.listMessages({
+    const messages = await this.store.listMessages({
       threadId: this.threadId,
-      afterMessageId: previousState.checkpointMessageId ?? undefined,
+      order: 'asc',
     });
-    const messageBands = partitionMessages({
-      messages: activeMessages,
-      recentMessageLimit: this.recentMessageLimit,
+    const rawUnits = getRawUnitsAfterCursor({
+      messages,
+      state: previousState,
+      maxUnitTokens: getMaxRawUnitTokens(this.recentTokenLimit, this.overflowObservationTokenLimit),
+    });
+    const rawBands = splitRawUnitsByRecentReserve({
+      units: rawUnits,
       recentTokenLimit: this.recentTokenLimit,
     });
-    const recentMessages = messageBands.recentMessages;
-    const overflowMessages = messageBands.overflowMessages;
-    const nextState: CheckpointedConversationState = {
-      ...previousState,
-      recentMessageIds: recentMessages.map((message) => message.id),
-      overflowMessageIds: overflowMessages.map((message) => message.id),
-      metrics: {
-        recentMessageCount: recentMessages.length,
-        recentTokenCount: messageBands.recentTokenCount,
-        overflowMessageCount: overflowMessages.length,
-        overflowTokenCount: messageBands.overflowTokenCount,
-        observationCount: previousState.observations.length,
-        totalActiveMessageCount: activeMessages.length,
-      },
-      updatedAt: new Date().toISOString(),
-    };
+    const nextState = createNextState({
+      previousState,
+      rawBands,
+    });
 
     await this.stateStore.save(nextState);
     return nextState;
@@ -94,9 +107,38 @@ export class CheckpointedConversationMemory {
 
   async createCheckpoint(messageId: string): Promise<CheckpointedConversationState> {
     const currentState = await this.loadState();
-    const nextState: CheckpointedConversationState = {
+    const messages = await this.store.listMessages({
+      threadId: this.threadId,
+      order: 'asc',
+    });
+    const messageIndex = messages.findIndex((message) => message.id === messageId);
+
+    if (messageIndex < 0) {
+      await this.stateStore.save(currentState);
+      return this.sync();
+    }
+
+    const observedUnits = sortRawConversationUnitsChronologically(
+      messages
+        .slice(0, messageIndex + 1)
+        .flatMap((message) => splitMessageIntoRawUnits(message, getMaxRawUnitTokens(
+          this.recentTokenLimit,
+          this.overflowObservationTokenLimit,
+        ))),
+    );
+    const cursorObservedAt = observedUnits.at(-1)?.createdAt?.toISOString() ?? null;
+    const cursorObservedRawUnitIds = cursorObservedAt
+      ? observedUnits
+          .filter((unit) => unit.createdAt.toISOString() === cursorObservedAt)
+          .map((unit) => unit.id)
+      : [];
+    const nextState: NormalizedCheckpointedConversationState = {
       ...currentState,
       checkpointMessageId: messageId,
+      cursorObservedAt,
+      cursorObservedRawUnitIds,
+      recentRawUnitIds: [],
+      overflowRawUnitIds: [],
       recentMessageIds: [],
       overflowMessageIds: [],
       updatedAt: new Date().toISOString(),
@@ -125,8 +167,9 @@ export class CheckpointedConversationMemory {
       return state;
     }
 
-    while (state.overflowMessageIds.length > 0) {
-      const previousCheckpointMessageId = state.checkpointMessageId;
+    while (state.overflowRawUnitIds?.length) {
+      const previousCursorObservedAt = state.cursorObservedAt ?? null;
+      const previousCursorObservedRawUnitIds = JSON.stringify(state.cursorObservedRawUnitIds ?? []);
       const observation = await this.consolidateOneOverflowBatch();
 
       if (!observation) {
@@ -135,12 +178,48 @@ export class CheckpointedConversationMemory {
 
       state = await this.sync();
 
-      if (state.checkpointMessageId === previousCheckpointMessageId) {
+      if (
+        state.cursorObservedAt === previousCursorObservedAt
+        && JSON.stringify(state.cursorObservedRawUnitIds ?? []) === previousCursorObservedRawUnitIds
+      ) {
         break;
       }
     }
 
     return state;
+  }
+
+  async renderContext(): Promise<StepContextEntry[]> {
+    const messages = await this.renderRecentMessages();
+
+    return messages.map((message) => createConversationMessageContextEntry(message));
+  }
+
+  async renderRecentMessages(): Promise<ConversationMessage[]> {
+    const state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
+    const messages = await this.store.listMessages({
+      threadId: this.threadId,
+      order: 'asc',
+    });
+    const activeUnits = getRawUnitsAfterCursor({
+      messages,
+      state,
+      maxUnitTokens: getMaxRawUnitTokens(this.recentTokenLimit, this.overflowObservationTokenLimit),
+    });
+    const activeUnitMap = new Map(activeUnits.map((unit) => [unit.id, unit]));
+    const recentUnits = (state.recentRawUnitIds ?? [])
+      .map((unitId) => activeUnitMap.get(unitId))
+      .filter((unit): unit is RawConversationUnit => Boolean(unit));
+
+    return rebuildMessagesFromUnits({
+      messages,
+      recentUnits,
+      maxUnitTokens: getMaxRawUnitTokens(this.recentTokenLimit, this.overflowObservationTokenLimit),
+    });
+  }
+
+  async getState(): Promise<CheckpointedConversationState> {
+    return this.sync();
   }
 
   private async consolidateOneOverflowBatch(): Promise<CheckpointedConversationObservation | null> {
@@ -151,38 +230,50 @@ export class CheckpointedConversationMemory {
 
     const state = await this.sync();
 
-    if (state.overflowMessageIds.length === 0) {
+    if ((state.overflowRawUnitIds?.length ?? 0) === 0) {
       return null;
     }
 
-    const overflowMessages = await this.store.listMessages({
+    const messages = await this.store.listMessages({
       threadId: this.threadId,
-      afterMessageId: state.checkpointMessageId ?? undefined,
-      beforeMessageId: state.recentMessageIds[0],
+      order: 'asc',
     });
-    const observationBatch = selectObservationBatch({
-      messages: overflowMessages,
-      overflowObservationTokenLimit: this.overflowObservationTokenLimit,
+    const activeUnits = getRawUnitsAfterCursor({
+      messages,
+      state: normalizeCheckpointedConversationState(this.threadId, state),
+      maxUnitTokens: getMaxRawUnitTokens(this.recentTokenLimit, this.overflowObservationTokenLimit),
+    });
+    const overflowUnitSet = new Set(state.overflowRawUnitIds ?? []);
+    const overflowUnits = activeUnits.filter((unit) => overflowUnitSet.has(unit.id));
+    const observationBatch = takeRawUnitBatch({
+      units: overflowUnits,
+      tokenLimit: this.overflowObservationTokenLimit,
     });
 
-    if (observationBatch.length === 0) {
+    if (observationBatch.units.length === 0) {
       return null;
     }
 
     const response = await this.observer.observe({
       threadId: this.threadId,
-      messages: observationBatch,
+      messages: rebuildMessagesFromUnits({
+        messages,
+        recentUnits: observationBatch.units,
+        maxUnitTokens: getMaxRawUnitTokens(this.recentTokenLimit, this.overflowObservationTokenLimit),
+      }),
     });
     const observation: CheckpointedConversationObservation = {
       id: `observation:${randomUUID()}`,
       text: response.text,
-      sourceMessageIds: observationBatch.map((message) => message.id),
+      sourceMessageIds: Array.from(new Set(observationBatch.units.map((unit) => unit.parentMessageId))),
       createdAt: new Date().toISOString(),
       units: estimateTextUnits(response.text),
     };
-    const nextState: CheckpointedConversationState = {
-      ...state,
-      checkpointMessageId: observationBatch[observationBatch.length - 1]?.id ?? state.checkpointMessageId,
+    const nextState: NormalizedCheckpointedConversationState = {
+      ...normalizeCheckpointedConversationState(this.threadId, state),
+      checkpointMessageId: observationBatch.units.at(-1)?.parentMessageId ?? state.checkpointMessageId,
+      cursorObservedAt: observationBatch.cursorObservedAt,
+      cursorObservedRawUnitIds: observationBatch.cursorObservedRawUnitIds,
       observations: [...state.observations, observation].slice(-this.maxObservationCount),
       updatedAt: new Date().toISOString(),
     };
@@ -192,50 +283,49 @@ export class CheckpointedConversationMemory {
     return observation;
   }
 
-  async renderContext(): Promise<StepContextEntry[]> {
-    const state = await this.sync();
-    const recentMessages = state.recentMessageIds.length === 0
-      ? []
-      : await this.store.listMessages({
-        threadId: this.threadId,
-        afterMessageId: state.checkpointMessageId ?? undefined,
-    });
-    const recentMessageMap = new Map(recentMessages.map((message) => [message.id, message]));
-    const context: StepContextEntry[] = [];
-
-    for (const messageId of state.recentMessageIds) {
-      const message = recentMessageMap.get(messageId);
-
-      if (message) {
-        context.push(createConversationMessageContextEntry(message));
-      }
-    }
-
-    return context;
+  private async loadState(): Promise<NormalizedCheckpointedConversationState> {
+    return normalizeCheckpointedConversationState(
+      this.threadId,
+      await this.stateStore.load(this.threadId),
+    );
   }
+}
 
-  async getState(): Promise<CheckpointedConversationState> {
-    return this.sync();
-  }
+function normalizeCheckpointedConversationState(
+  threadId: string,
+  state: CheckpointedConversationState | null,
+): NormalizedCheckpointedConversationState {
+  return {
+    threadId,
+    checkpointMessageId: state?.checkpointMessageId ?? null,
+    cursorObservedAt: state?.cursorObservedAt ?? null,
+    cursorObservedRawUnitIds: sanitizeRawUnitIds(state?.cursorObservedRawUnitIds),
+    recentRawUnitIds: sanitizeRawUnitIds(state?.recentRawUnitIds),
+    overflowRawUnitIds: sanitizeRawUnitIds(state?.overflowRawUnitIds),
+    recentMessageIds: state?.recentMessageIds ?? [],
+    overflowMessageIds: state?.overflowMessageIds ?? [],
+    observations: state?.observations ?? [],
+    metrics: state?.metrics ?? {
+      recentMessageCount: 0,
+      recentTokenCount: 0,
+      overflowMessageCount: 0,
+      overflowTokenCount: 0,
+      observationCount: 0,
+      totalActiveMessageCount: 0,
+    },
+    updatedAt: state?.updatedAt ?? new Date(0).toISOString(),
+  };
+}
 
-  private async loadState(): Promise<CheckpointedConversationState> {
-    return (await this.stateStore.load(this.threadId)) ?? {
-      threadId: this.threadId,
-      checkpointMessageId: null,
-      recentMessageIds: [],
-      overflowMessageIds: [],
-      observations: [],
-      metrics: {
-        recentMessageCount: 0,
-        recentTokenCount: 0,
-        overflowMessageCount: 0,
-        overflowTokenCount: 0,
-        observationCount: 0,
-        totalActiveMessageCount: 0,
-      },
-      updatedAt: new Date(0).toISOString(),
-    };
-  }
+function getMaxRawUnitTokens(
+  recentTokenLimit: number | null,
+  overflowObservationTokenLimit: number | null,
+) {
+  return Math.max(1, recentTokenLimit ?? overflowObservationTokenLimit ?? 1_000);
+}
+
+function sanitizeRawUnitIds(value: string[] | undefined) {
+  return (value ?? []).filter((item) => typeof item === 'string' && item.includes(':part:'));
 }
 
 function estimateTextUnits(text: string) {
@@ -243,7 +333,13 @@ function estimateTextUnits(text: string) {
 }
 
 function estimateMessageUnits(message: ConversationMessage) {
-  return estimateTextUnits(getMessageText(message));
+  const text = getMessageText(message);
+
+  if (text) {
+    return estimateTextUnits(text);
+  }
+
+  return 1;
 }
 
 function getMessageText(message: ConversationMessage) {
@@ -254,76 +350,318 @@ function getMessageText(message: ConversationMessage) {
     .join('\n');
 }
 
-function partitionMessages(input: {
-  messages: ConversationMessage[];
-  recentMessageLimit: number;
-  recentTokenLimit: number | null;
-}) {
-  if (input.recentTokenLimit === null) {
-    const recentMessages = input.messages.slice(-input.recentMessageLimit);
-    const overflowMessages = input.messages.slice(0, Math.max(0, input.messages.length - recentMessages.length));
-
-    return {
-      recentMessages,
-      recentTokenCount: recentMessages.reduce((total, message) => total + estimateMessageUnits(message), 0),
-      overflowMessages,
-      overflowTokenCount: overflowMessages.reduce((total, message) => total + estimateMessageUnits(message), 0),
-    };
+function splitTextIntoChunks(text: string, maxChars: number) {
+  if (text.length <= maxChars) {
+    return [text];
   }
 
-  const recentMessages: ConversationMessage[] = [];
-  const overflowMessages: ConversationMessage[] = [];
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < text.length) {
+    let end = Math.min(text.length, start + maxChars);
+    const boundary = text.lastIndexOf('\n', end);
+
+    if (boundary > start + Math.floor(maxChars * 0.5)) {
+      end = boundary;
+    }
+
+    chunks.push(text.slice(start, end).trim());
+    start = end;
+  }
+
+  return chunks.filter(Boolean);
+}
+
+function cloneMessageWithParts(
+  message: ConversationMessage,
+  parts: ConversationMessage['parts'],
+): ConversationMessage {
+  return {
+    ...message,
+    parts,
+  };
+}
+
+function splitMessageIntoRawUnits(
+  message: ConversationMessage,
+  maxUnitTokens: number,
+): RawConversationUnit[] {
+  const maxUnitChars = Math.max(1, maxUnitTokens) * 4;
+
+  if (message.parts.length === 0) {
+    return [{
+      id: `${message.id}:whole`,
+      parentMessageId: message.id,
+      createdAt: new Date(message.createdAt),
+      tokenCount: estimateMessageUnits(message),
+      promptMessage: message,
+    }];
+  }
+
+  return message.parts.flatMap((part, index) => {
+    const partKey = String(index);
+    const createdAt = new Date(message.createdAt);
+
+    if (part.type === 'text') {
+      return splitTextIntoChunks(part.text, maxUnitChars).map((text, chunkIndex) => {
+        const promptMessage = cloneMessageWithParts(message, [{
+          type: 'text',
+          text,
+        }]);
+
+        return {
+          id: `${message.id}:part:${partKey}:chunk:${chunkIndex}`,
+          parentMessageId: message.id,
+          createdAt,
+          tokenCount: estimateMessageUnits(promptMessage),
+          promptMessage,
+        } satisfies RawConversationUnit;
+      });
+    }
+
+    const promptMessage = cloneMessageWithParts(message, [part]);
+    return [{
+      id: `${message.id}:part:${partKey}`,
+      parentMessageId: message.id,
+      createdAt,
+      tokenCount: estimateMessageUnits(promptMessage),
+      promptMessage,
+    } satisfies RawConversationUnit];
+  });
+}
+
+function sortRawConversationUnitsChronologically(units: RawConversationUnit[]) {
+  return units
+    .map((unit, index) => ({ unit, index }))
+    .sort((left, right) => {
+      const timeDifference = left.unit.createdAt.getTime() - right.unit.createdAt.getTime();
+
+      if (timeDifference !== 0) {
+        return timeDifference;
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ unit }) => unit);
+}
+
+function isObservedRawUnit(
+  state: NormalizedCheckpointedConversationState,
+  unit: RawConversationUnit,
+) {
+  if (!state.cursorObservedAt) {
+    return false;
+  }
+
+  const cursorTime = new Date(state.cursorObservedAt).getTime();
+  const unitTime = unit.createdAt.getTime();
+
+  if (unitTime < cursorTime) {
+    return true;
+  }
+
+  if (unitTime > cursorTime) {
+    return false;
+  }
+
+  return state.cursorObservedRawUnitIds.includes(unit.id);
+}
+
+function getRawUnitsAfterCursor(input: {
+  messages: ConversationMessage[];
+  state: NormalizedCheckpointedConversationState;
+  maxUnitTokens: number;
+}) {
+  const units = sortRawConversationUnitsChronologically(
+    input.messages.flatMap((message) => splitMessageIntoRawUnits(message, input.maxUnitTokens)),
+  );
+
+  return units.filter((unit) => !isObservedRawUnit(input.state, unit));
+}
+
+function splitRawUnitsByRecentReserve(input: {
+  units: RawConversationUnit[];
+  recentTokenLimit: number | null;
+}) {
+  const recentUnitIds = new Set<string>();
   let recentTokenCount = 0;
+
+  if (input.recentTokenLimit === null) {
+    for (const unit of input.units) {
+      recentUnitIds.add(unit.id);
+      recentTokenCount += unit.tokenCount;
+    }
+  } else {
+    for (let index = input.units.length - 1; index >= 0; index -= 1) {
+      const unit = input.units[index];
+
+      if (recentTokenCount + unit.tokenCount > input.recentTokenLimit) {
+        break;
+      }
+
+      recentUnitIds.add(unit.id);
+      recentTokenCount += unit.tokenCount;
+    }
+  }
+
+  const recentUnits: RawConversationUnit[] = [];
+  const overflowUnits: RawConversationUnit[] = [];
   let overflowTokenCount = 0;
 
-  for (const message of [...input.messages].reverse()) {
-    const messageUnits = estimateMessageUnits(message);
-
-    if (
-      recentMessages.length === 0
-      || recentTokenCount + messageUnits <= input.recentTokenLimit
-    ) {
-      recentMessages.unshift(message);
-      recentTokenCount += messageUnits;
+  for (const unit of input.units) {
+    if (recentUnitIds.has(unit.id)) {
+      recentUnits.push(unit);
       continue;
     }
 
-    overflowMessages.unshift(message);
-    overflowTokenCount += messageUnits;
+    overflowUnits.push(unit);
+    overflowTokenCount += unit.tokenCount;
   }
 
   return {
-    recentMessages,
+    recentUnits,
     recentTokenCount,
-    overflowMessages,
+    overflowUnits,
     overflowTokenCount,
   };
 }
 
-function selectObservationBatch(input: {
-  messages: ConversationMessage[];
-  overflowObservationTokenLimit: number | null;
+function takeRawUnitBatch(input: {
+  units: RawConversationUnit[];
+  tokenLimit: number | null;
 }) {
-  if (input.overflowObservationTokenLimit === null) {
-    return input.messages;
-  }
-
-  const selected: ConversationMessage[] = [];
+  const units: RawConversationUnit[] = [];
   let tokenCount = 0;
 
-  for (const message of input.messages) {
-    const messageUnits = estimateMessageUnits(message);
+  for (const unit of input.units) {
+    units.push(unit);
+    tokenCount += unit.tokenCount;
 
-    if (
-      selected.length > 0
-      && tokenCount + messageUnits > input.overflowObservationTokenLimit
-    ) {
+    if (input.tokenLimit !== null && tokenCount >= input.tokenLimit) {
       break;
     }
-
-    selected.push(message);
-    tokenCount += messageUnits;
   }
 
-  return selected;
+  const cursorObservedAt = units.at(-1)?.createdAt?.toISOString() ?? null;
+  const cursorObservedRawUnitIds = cursorObservedAt
+    ? units
+        .filter((unit) => unit.createdAt.toISOString() === cursorObservedAt)
+        .map((unit) => unit.id)
+    : [];
+
+  return {
+    units,
+    tokenCount,
+    cursorObservedAt,
+    cursorObservedRawUnitIds,
+  };
+}
+
+function getChunkIndex(unitId: string) {
+  const match = unitId.match(/:chunk:(\d+)$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function getPartIndex(unitId: string) {
+  const match = unitId.match(/:part:(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function rebuildMessagesFromUnits(input: {
+  messages: ConversationMessage[];
+  recentUnits: RawConversationUnit[];
+  maxUnitTokens: number;
+}) {
+  const recentUnitMap = new Map<string, RawConversationUnit[]>();
+
+  for (const unit of input.recentUnits) {
+    const units = recentUnitMap.get(unit.parentMessageId) ?? [];
+
+    units.push(unit);
+    recentUnitMap.set(unit.parentMessageId, units);
+  }
+
+  return input.messages.flatMap((message) => {
+    const units = recentUnitMap.get(message.id);
+
+    if (!units || units.length === 0) {
+      return [];
+    }
+
+    const originalUnits = splitMessageIntoRawUnits(message, input.maxUnitTokens);
+
+    if (units.length === originalUnits.length) {
+      return [message];
+    }
+
+    if (message.parts.length === 0) {
+      return [message];
+    }
+
+    const rebuiltParts: ConversationMessage['parts'] = [];
+
+    for (const [index, part] of message.parts.entries()) {
+      const remainingUnits = units
+        .filter((unit) => getPartIndex(unit.id) === index)
+        .sort((left, right) => getChunkIndex(left.id) - getChunkIndex(right.id));
+
+      if (remainingUnits.length === 0) {
+        continue;
+      }
+
+      if (part.type === 'text') {
+        const text = remainingUnits
+          .map((unit) => unit.promptMessage.parts[0])
+          .filter((unitPart): unitPart is Extract<ConversationMessage['parts'][number], { type: 'text' }> =>
+            Boolean(unitPart) && unitPart.type === 'text')
+          .map((unitPart) => unitPart.text)
+          .join('\n')
+          .trim();
+
+        if (!text) {
+          continue;
+        }
+
+        rebuiltParts.push({
+          type: 'text' as const,
+          text,
+        });
+        continue;
+      }
+
+      rebuiltParts.push(part);
+    }
+
+    return rebuiltParts.length > 0
+      ? [cloneMessageWithParts(message, rebuiltParts)]
+      : [];
+  });
+}
+
+function createNextState(input: {
+  previousState: NormalizedCheckpointedConversationState;
+  rawBands: {
+    recentUnits: RawConversationUnit[];
+    recentTokenCount: number;
+    overflowUnits: RawConversationUnit[];
+    overflowTokenCount: number;
+  };
+}): NormalizedCheckpointedConversationState {
+  return {
+    ...input.previousState,
+    recentRawUnitIds: input.rawBands.recentUnits.map((unit) => unit.id),
+    overflowRawUnitIds: input.rawBands.overflowUnits.map((unit) => unit.id),
+    recentMessageIds: Array.from(new Set(input.rawBands.recentUnits.map((unit) => unit.parentMessageId))),
+    overflowMessageIds: Array.from(new Set(input.rawBands.overflowUnits.map((unit) => unit.parentMessageId))),
+    metrics: {
+      recentMessageCount: input.rawBands.recentUnits.length,
+      recentTokenCount: input.rawBands.recentTokenCount,
+      overflowMessageCount: input.rawBands.overflowUnits.length,
+      overflowTokenCount: input.rawBands.overflowTokenCount,
+      observationCount: input.previousState.observations.length,
+      totalActiveMessageCount: input.rawBands.recentUnits.length + input.rawBands.overflowUnits.length,
+    },
+    updatedAt: new Date().toISOString(),
+  };
 }

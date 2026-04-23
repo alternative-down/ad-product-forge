@@ -18,8 +18,12 @@ export type CheckpointedConversationMetrics = {
 export type CheckpointedConversationState = {
   threadId: string;
   checkpointMessageId: string | null;
-  recentMessageIds: string[];
-  overflowMessageIds: string[];
+  cursorObservedAt?: string | null;
+  cursorObservedRawUnitIds?: string[];
+  recentRawUnitIds?: string[];
+  overflowRawUnitIds?: string[];
+  recentMessageIds?: string[];
+  overflowMessageIds?: string[];
   observations: CheckpointedConversationObservation[];
   metrics: CheckpointedConversationMetrics;
   updatedAt: string;
