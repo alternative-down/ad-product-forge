@@ -426,6 +426,9 @@ function createReplayMessages(messages: Array<{
         }>;
       }
   > = [];
+  const availableToolCallIds = new Set<string>();
+  const fulfilledToolCallIds = new Set<string>();
+
   for (const message of messages) {
     const textContent = message.parts
       .filter((part): part is { type: string; text: string } =>
@@ -453,6 +456,8 @@ function createReplayMessages(messages: Array<{
           if (typeof toolInvocation.toolCallId !== 'string') {
             return [];
           }
+
+          availableToolCallIds.add(toolInvocation.toolCallId);
 
           return [{
             type: 'tool-call' as const,
@@ -482,6 +487,12 @@ function createReplayMessages(messages: Array<{
           if (typeof toolResult.toolCallId !== 'string') {
             return [];
           }
+
+          if (!availableToolCallIds.has(toolResult.toolCallId)) {
+            return [];
+          }
+
+          fulfilledToolCallIds.add(toolResult.toolCallId);
 
           return [{
             type: 'tool-result' as const,
@@ -533,10 +544,11 @@ function createReplayMessages(messages: Array<{
 
   for (const entry of orderedEntries) {
     if ('kind' in entry && entry.kind === 'assistant') {
+      const toolCalls = entry.toolCalls.filter((toolCall) => fulfilledToolCallIds.has(toolCall.toolCallId));
       const content = [
         ...entry.textContent,
         ...entry.imageContent,
-        ...entry.toolCalls,
+        ...toolCalls,
       ];
 
       if (content.length === 0) {
