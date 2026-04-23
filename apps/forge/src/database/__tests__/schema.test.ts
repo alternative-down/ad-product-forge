@@ -4,6 +4,7 @@ import { z } from 'zod';
 // Test the Zod schemas defined in the schema.ts file
 const _WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
+  allowedPaths: z.array(z.string()).optional(),
 });
 
 const _WorkspaceSandboxConfigSchema = z.object({
@@ -22,6 +23,15 @@ describe('WorkspaceFilesystemConfigSchema', () => {
     const config = { basePath: '/app/workspaces/agent1' };
     const parsed = _WorkspaceFilesystemConfigSchema.parse(config);
     expect(parsed.basePath).toBe('/app/workspaces/agent1');
+  });
+
+  it('should accept allowed paths', () => {
+    const config = {
+      basePath: '/app/workspaces/agent1',
+      allowedPaths: ['/app/shared', '../shared-tools'],
+    };
+    const parsed = _WorkspaceFilesystemConfigSchema.parse(config);
+    expect(parsed.allowedPaths).toEqual(['/app/shared', '../shared-tools']);
   });
 
   it('should reject config without basePath', () => {
@@ -95,11 +105,12 @@ describe('Schema type inference', () => {
     type WorkspaceSandboxConfig = z.infer<typeof _WorkspaceSandboxConfigSchema>;
     type WorkspaceSkillsConfig = z.infer<typeof _WorkspaceSkillsConfigSchema>;
     
-    const fsConfig: WorkspaceFilesystemConfig = { basePath: '/test' };
+    const fsConfig: WorkspaceFilesystemConfig = { basePath: '/test', allowedPaths: ['/shared'] };
     const sandboxConfig: WorkspaceSandboxConfig = { workingDirectory: '/test' };
     const skillsConfig: WorkspaceSkillsConfig = ['skill1'];
     
     expect(fsConfig.basePath).toBe('/test');
+    expect(fsConfig.allowedPaths).toEqual(['/shared']);
     expect(sandboxConfig.workingDirectory).toBe('/test');
     expect(skillsConfig[0]).toBe('skill1');
   });

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -80,6 +80,40 @@ describe('createAgentRuntimePlatform', () => {
           text: 'hello runtime',
         },
       ]);
+    } finally {
+      await platform.dispose();
+    }
+  });
+
+  it('allows filesystem reads and cwd access inside configured allowed paths', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-runtime-platform-'));
+    temporaryDirectories.push(workspaceBasePath);
+    const sharedToolsPath = path.join(workspaceBasePath, 'shared-tools');
+    await mkdir(sharedToolsPath, { recursive: true });
+    await writeFile(path.join(sharedToolsPath, 'shared.txt'), 'shared-data', { encoding: 'utf8' });
+
+    const platform = await createAgentRuntimePlatform({
+      agentId: 'agent-2',
+      workspaceBasePath,
+      providers: [],
+      workspaceFilesystem: {
+        basePath: 'workspace',
+        allowedPaths: ['../shared-tools'],
+      },
+    });
+
+    try {
+      expect(
+        Buffer.from(await platform.workspace.filesystem!.readFile(sharedToolsPath + '/shared.txt')).toString('utf8'),
+      ).toBe('shared-data');
+
+      const pwdResult = await platform.workspaceGateway.execute({
+        command: 'pwd',
+        cwd: path.join(workspaceBasePath, 'shared-tools'),
+      });
+
+      expect(pwdResult.exitCode).toBe(0);
+      expect(pwdResult.stdout.trim()).toBe(sharedToolsPath);
     } finally {
       await platform.dispose();
     }

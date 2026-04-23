@@ -27,19 +27,10 @@ type CommunicationWorkspaceFilesystem = {
   writeFile(path: string, data: Uint8Array | Buffer | string): Promise<void>;
 };
 
-function toWorkspaceRelativePath(targetPath: string) {
+function normalizeWorkspaceFilesystemPath(targetPath: string) {
   const normalizedPath = targetPath.split(path.sep).join(path.posix.sep);
-  const relativePath = path.posix.normalize(normalizedPath);
 
-  if (
-    relativePath === '..'
-    || relativePath.startsWith('../')
-    || path.posix.isAbsolute(relativePath)
-  ) {
-    throw new Error(`Workspace path must stay within root: ${targetPath}`);
-  }
-
-  return relativePath;
+  return path.posix.normalize(normalizedPath);
 }
 
 async function pathExists(targetPath: string) {
@@ -85,6 +76,16 @@ async function moveLegacyMemoryDirectory(sourcePath: string, targetPath: string)
   await fs.rm(sourcePath, { recursive: true, force: true });
 }
 
+function resolveAllowedPaths(input: {
+  agentWorkspacePath: string;
+  workspaceFilesystem?: WorkspaceFilesystemConfig;
+}) {
+  return (input.workspaceFilesystem?.allowedPaths ?? []).map((allowedPath) =>
+    path.isAbsolute(allowedPath)
+      ? path.resolve(allowedPath)
+      : path.resolve(input.agentWorkspacePath, allowedPath));
+}
+
 export async function createAgentRuntimePlatform(input: {
   agentId: string;
   workspaceBasePath: string;
@@ -104,6 +105,10 @@ export async function createAgentRuntimePlatform(input: {
     : path.resolve(agentWorkspacePath, 'workspace');
   const agentMemoryPath = path.resolve(agentWorkspaceDir, 'memory');
   const legacyAgentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
+  const allowedPaths = resolveAllowedPaths({
+    agentWorkspacePath,
+    workspaceFilesystem: input.workspaceFilesystem,
+  });
   const sandboxWorkingDirectory = input.workspaceSandbox?.workingDirectory
     ? path.resolve(agentWorkspacePath, input.workspaceSandbox.workingDirectory)
     : agentWorkspaceDir;
@@ -123,21 +128,22 @@ export async function createAgentRuntimePlatform(input: {
   });
   const workspaceFs = new LocalWorkspaceFilesystem({
     root: agentWorkspaceDir,
+    allowedPaths,
   });
   const workspaceFilesystem: RuntimeWorkspace['filesystem'] = {
     async exists(targetPath: string) {
-      return workspaceFs.exists(toWorkspaceRelativePath(targetPath));
+      return workspaceFs.exists(normalizeWorkspaceFilesystemPath(targetPath));
     },
     async readFile(targetPath: string) {
-      return workspaceFs.readFile(toWorkspaceRelativePath(targetPath));
+      return workspaceFs.readFile(normalizeWorkspaceFilesystemPath(targetPath));
     },
   };
   const communicationWorkspaceFilesystem: CommunicationWorkspaceFilesystem = {
     async readFile(targetPath: string) {
-      return workspaceFs.readFile(toWorkspaceRelativePath(targetPath));
+      return workspaceFs.readFile(normalizeWorkspaceFilesystemPath(targetPath));
     },
     async writeFile(targetPath: string, data: Uint8Array | Buffer | string) {
-      await workspaceFs.writeFile(toWorkspaceRelativePath(targetPath), data);
+      await workspaceFs.writeFile(normalizeWorkspaceFilesystemPath(targetPath), data);
     },
   };
   const workspace: RuntimeWorkspace = {
@@ -146,6 +152,7 @@ export async function createAgentRuntimePlatform(input: {
   const workspaceGateway = new ConfiguredWorkspaceGateway({
     base: new LocalBashWorkspaceGateway({
       root: agentWorkspaceDir,
+      pathAliases: allowedPaths,
     }),
     cwd: sandboxWorkingDirectory,
   });

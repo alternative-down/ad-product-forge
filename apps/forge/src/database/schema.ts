@@ -18,6 +18,7 @@ import type { CheckpointedOmState, WorkspaceEmbedderId } from '@forge-runtime/co
 
 const _WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
+  allowedPaths: z.array(z.string()).optional(),
 });
 
 const _WorkspaceSandboxConfigSchema = z.object({
