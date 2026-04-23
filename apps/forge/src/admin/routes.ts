@@ -2659,7 +2659,7 @@ function summarizeHealthcheckThreadMessage(message: {
         ? [part.type]
         : [])
     .slice(0, 20);
-  const preview = extractLatestMessagePreview(message.content);
+  const preview = extractLatestHealthcheckMessagePreview(message.content);
   const hasReasoning =
     typeof content?.reasoning === 'string' && content.reasoning.trim().length > 0
     || parts.some((part) =>
@@ -2674,6 +2674,43 @@ function summarizeHealthcheckThreadMessage(message: {
     hasReasoning,
     partTypes,
   };
+}
+
+function extractLatestHealthcheckMessagePreview(content: unknown) {
+  if (!content || typeof content !== 'object') {
+    return null;
+  }
+
+  const record = content as {
+    content?: unknown;
+    reasoning?: unknown;
+    parts?: unknown;
+  };
+  const parts = Array.isArray(record.parts) ? record.parts : [];
+
+  for (const part of [...parts].reverse()) {
+    if (
+      part
+      && typeof part === 'object'
+      && 'type' in part
+      && 'text' in part
+      && (part.type === 'text' || part.type === 'reasoning')
+      && typeof part.text === 'string'
+      && part.text.trim()
+    ) {
+      return part.text.trim().slice(0, 280);
+    }
+  }
+
+  if (typeof record.content === 'string' && record.content.trim()) {
+    return record.content.trim().slice(0, 280);
+  }
+
+  if (typeof record.reasoning === 'string' && record.reasoning.trim()) {
+    return record.reasoning.trim().slice(0, 280);
+  }
+
+  return null;
 }
 
 async function readProcessFileDescriptorSummary() {
