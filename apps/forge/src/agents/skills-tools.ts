@@ -50,16 +50,12 @@ export function createAgentSkillTools(input: {
       .string()
       .trim()
       .min(1)
-      .describe('Skill directory name inside your local `skills/` folder.'),
+      .describe('Skill directory name inside `skills/`.'),
   });
 
   tools.load_workspace_skill = createTool({
     id: 'load_workspace_skill',
-    description: [
-      'Load one local workspace skill from your `skills/` directory.',
-      'Use this when you need the exact `SKILL.md` instructions or support files for a reusable local skill.',
-      'This reads only your local workspace skill folder.',
-    ].join(' '),
+    description: 'Load one local workspace skill from `skills/`.',
     inputSchema: loadSkillSchema,
     execute: async (inputData) => {
       const agent = await input.db.query.agents.findFirst({
@@ -120,7 +116,7 @@ export function createAgentSkillTools(input: {
           .string()
           .trim()
           .min(1)
-          .describe('Skill directory name inside your local `skills/` folder to publish to the shared catalog.'),
+          .describe('Skill directory name inside `skills/` to publish.'),
       }),
       execute: async (inputData) => {
         const agent = await input.db.query.agents.findFirst({

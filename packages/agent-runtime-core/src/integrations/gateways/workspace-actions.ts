@@ -29,112 +29,83 @@ export function createWorkspaceActionDefinitions(
   options: WorkspaceActionPackOptions = {},
 ): Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> {
   const executeCommandSchema = z.object({
-    command: z.string().min(1).describe(
-      'Shell command text executed by the real host/container shell. '
-      + 'The command runs exactly as written. Prefer using the cwd field instead of prefixing the command with "cd ... &&".',
-    ),
+    command: z.string().min(1).describe('Shell command text.'),
     timeout: z.number().positive().optional().describe(
-      'Maximum execution time in seconds. Omit for the tool default.',
+      'Max execution time in seconds.',
     ),
     cwd: z.string().min(1).optional().describe(
-      'Absolute or workspace-relative working directory. '
-      + 'If omitted, the command starts in the configured workspace root. '
-      + 'Absolute paths outside the workspace only work when that path is explicitly allowed by the agent workspace configuration.',
+      'Working directory. Relative paths use the workspace root. Absolute paths must be allowed.',
     ),
     env: z.record(z.string(), z.string()).optional().describe(
-      'Extra environment variables merged on top of the process environment. '
-      + 'Basic variables such as PATH and HOME are already present.',
+      'Extra environment variables.',
     ),
     headers: z.record(z.string(), z.string()).optional().describe(
-      'Optional request headers for gateways that use them. The local shell gateway ignores this field.',
+      'Optional gateway headers.',
     ),
     background: z.boolean().optional().describe(
-      'Set true to start a long-running command in the background. '
-      + 'Then use workspace_get_process_output and workspace_kill_process with the returned pid.',
+      'Run in background.',
     ),
   });
   const processOutputSchema = z.object({
     pid: z.string().min(1).describe(
-      'Background process id returned by workspace_execute_command when background is true.',
+      'Background process id.',
     ),
     tail: z.number().int().optional().describe(
-      'Optional number of trailing characters to return from stdout and stderr.',
+      'Optional output tail length.',
     ),
     wait: z.boolean().optional().describe(
-      'Set true to wait for the process to finish before returning output.',
+      'Wait for process exit.',
     ),
   });
   const killProcessSchema = z.object({
     pid: z.string().min(1).describe(
-      'Background process id returned by workspace_execute_command when background is true.',
+      'Background process id.',
     ),
   });
   const readFileSchema = z.object({
     path: z.string().min(1).describe(
-      'Workspace-relative or allowed absolute file path to read.',
+      'File path to read.',
     ),
   });
   const writeFileSchema = z.object({
     path: z.string().min(1).describe(
-      'Workspace-relative or allowed absolute file path to write.',
+      'File path to write.',
     ),
     content: z.string().describe(
-      'Full UTF-8 text content to write to the target file.',
+      'Full UTF-8 file content.',
     ),
   });
   const listFilesSchema = z.object({
     path: z.string().min(1).optional().describe(
-      'Directory to list. Omit to use the workspace root.',
+      'Directory to list.',
     ),
     recursive: z.boolean().optional().describe(
-      'Set true to walk subdirectories recursively.',
+      'List recursively.',
     ),
     includeHidden: z.boolean().optional().describe(
-      'Set true to include hidden entries that start with a dot.',
+      'Include hidden entries.',
     ),
   });
   const grepFilesSchema = z.object({
     pattern: z.string().min(1).describe(
-      'Text or regular expression pattern to search for inside readable text files.',
+      'Text or regex pattern.',
     ),
     path: z.string().min(1).optional().describe(
-      'Directory root to search. Omit to search from the workspace root.',
+      'Directory root to search.',
     ),
     caseSensitive: z.boolean().optional().describe(
-      'Set true for case-sensitive search. Default is false.',
+      'Case-sensitive search.',
     ),
     includeHidden: z.boolean().optional().describe(
-      'Set true to include hidden files and directories.',
+      'Include hidden files.',
     ),
     maxResults: z.number().int().positive().max(500).optional().describe(
-      'Maximum number of matching lines to return.',
+      'Max matching lines.',
     ),
   });
   const actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> = [{
     name: options.name ?? 'workspace_execute_command',
-    description: options.description ?? [
-      'Execute a real shell command on the host/container environment.',
-      '',
-      'Path rules:',
-      '  - If cwd is omitted, execution starts in the agent workspace root.',
-      '  - Use cwd to change directories instead of writing "cd ... &&" in the command.',
-      '  - Relative cwd values resolve from the workspace root.',
-      '  - Absolute cwd values outside the workspace only work when that path is explicitly allowed for this agent.',
-      '  - If a path does not exist, the shell command fails normally.',
-      '',
-      'Environment:',
-      '  - This is a real shell, not a virtual wrapper.',
-      '  - It uses the real tools available in the running environment.',
-      '  - Basic variables such as PATH and HOME are already present.',
-      '',
-      'Examples:',
-      '  command: "npm install && npm run build"',
-      '  command: "grep -n \\"TODO\\" src/index.ts", cwd: "/app/workspaces/<agent>/workspace"',
-      '  command: "git status", cwd: "/absolute/allowed/path"',
-      '',
-      'Use timeout in seconds to limit execution time.',
-      'Set background to true for long-running processes and inspect them later with workspace_get_process_output.',
-    ].join('\n'),
+    description: options.description ?? 'Run a real shell command. Use cwd instead of "cd ... &&".',
     inputSchema: executeCommandSchema,
     async execute(input) {
       const request = executeCommandSchema.parse(input);
@@ -166,7 +137,7 @@ export function createWorkspaceActionDefinitions(
   if (gateway.getProcessOutput && gateway.killProcess) {
     actions.push({
       name: 'workspace_get_process_output',
-      description: 'Get stdout, stderr, exit status, and optional tail for a background process previously started with workspace_execute_command(background=true).',
+      description: 'Read output from a background command.',
       inputSchema: processOutputSchema,
       async execute(input) {
         return gateway.getProcessOutput!(processOutputSchema.parse(input) satisfies WorkspaceProcessOutputRequest);
@@ -174,7 +145,7 @@ export function createWorkspaceActionDefinitions(
     });
     actions.push({
       name: 'workspace_kill_process',
-      description: 'Kill a background process previously started with workspace_execute_command(background=true) and return the final collected output.',
+      description: 'Kill a background command and return its output.',
       inputSchema: killProcessSchema,
       async execute(input) {
         return gateway.killProcess!(killProcessSchema.parse(input).pid);
@@ -185,7 +156,7 @@ export function createWorkspaceActionDefinitions(
   if (options.filesystem) {
     actions.push({
       name: 'workspace_read_file',
-      description: 'Read a UTF-8 text file from the workspace or an explicitly allowed absolute path.',
+      description: 'Read a UTF-8 text file.',
       inputSchema: readFileSchema,
       async execute(input) {
         const request = readFileSchema.parse(input);
@@ -199,7 +170,7 @@ export function createWorkspaceActionDefinitions(
     });
     actions.push({
       name: 'workspace_write_file',
-      description: 'Write a UTF-8 text file into the workspace or an explicitly allowed absolute path.',
+      description: 'Write a UTF-8 text file.',
       inputSchema: writeFileSchema,
       async execute(input) {
         const request = writeFileSchema.parse(input);
@@ -214,7 +185,7 @@ export function createWorkspaceActionDefinitions(
     });
     actions.push({
       name: 'workspace_list_files',
-      description: 'List files and directories inside the workspace or another explicitly allowed path.',
+      description: 'List files and directories.',
       inputSchema: listFilesSchema,
       async execute(input) {
         const request = listFilesSchema.parse(input);
@@ -232,7 +203,7 @@ export function createWorkspaceActionDefinitions(
     });
     actions.push({
       name: 'workspace_grep_files',
-      description: 'Search readable text files in the workspace for matching lines.',
+      description: 'Search text files for matching lines.',
       inputSchema: grepFilesSchema,
       async execute(input) {
         const request = grepFilesSchema.parse(input);

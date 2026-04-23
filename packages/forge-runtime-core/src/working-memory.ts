@@ -27,45 +27,43 @@ export const WORKING_MEMORY_SCHEMA = z.object({
   identity: z
     .object({
       roleCore: workingMemoryText(
-        'The essential core of the role: what this agent fundamentally is responsible for and what defines its function.',
+        'Role core.',
       ),
       nonNegotiables: workingMemoryText(
-        'Hard rules, prohibitions, approval boundaries, and things this agent must not violate.',
+        'Hard rules and prohibitions.',
       ),
       operatingPrinciples: workingMemoryText(
-        'Stable principles that define how this agent should behave and operate across runs.',
+        'Stable operating principles.',
       ),
     })
     .optional()
-    .describe('Intrinsic identity of the role: role core, non-negotiables, and stable operating principles.'),
+    .describe('Identity.'),
   domain: z
     .object({
       scope: workingMemoryText(
-        'What this role truly covers in practice, what belongs inside its area, and what operational territory is legitimately its own without drifting into another function.',
+        'Role scope.',
       ),
       activities: workingMemoryText(
-        'Kinds of activities, initiatives, reviews, decisions, and follow-ups that are legitimately part of this role.',
+        'Typical activities.',
       ),
       boundaries: workingMemoryText(
-        'Clarifications about the edges of the role: what is inside scope, what is adjacent, and what should only be handled in a supporting or coordinating way.',
+        'Role boundaries.',
       ),
     })
     .optional()
-    .describe('Intrinsic understanding of the role domain: practical scope, activity types, and boundaries.'),
+    .describe('Domain.'),
   direction: z
     .object({
       currentMission: workingMemoryText(
-        'The current high-level mission, direction, or main outcome this agent is trying to advance now.',
+        'Current mission.',
       ),
       successDefinition: workingMemoryText(
-        'Why the current mission matters and what success looks like at a high level.',
+        'Success definition.',
       ),
     })
     .optional()
-    .describe('Current mission-level direction and definition of success.'),
-}).describe(
-  'Structured working memory for intrinsic identity, domain boundaries, and current direction.',
-);
+    .describe('Direction.'),
+}).describe('Structured working memory.');
 
 export const WORKING_MEMORY_UPDATE_SCHEMA = z.object({
   identity: z.object({
@@ -82,9 +80,7 @@ export const WORKING_MEMORY_UPDATE_SCHEMA = z.object({
     currentMission: z.string().optional(),
     successDefinition: z.string().optional(),
   }).partial().optional(),
-}).describe(
-  'Partial working memory update. Only include properties that changed; omitted properties remain unchanged.',
-);
+}).describe('Partial working memory update.');
 
 export type WorkingMemoryAccess = {
   getWorkingMemory(input: {

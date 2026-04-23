@@ -51,7 +51,7 @@ export function createUpdateWorkingMemoryTool(input: {
 > {
   return createTool({
     id: 'updateWorkingMemory',
-    description: 'Update the structured working memory for the current agent thread.',
+    description: 'Update working memory for this thread.',
     inputSchema: updateWorkingMemoryInputSchema,
     outputSchema: updateWorkingMemoryOutputSchema,
     async execute(value) {

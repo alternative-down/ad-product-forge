@@ -15,99 +15,98 @@ const listContactsInputSchema = z.object({
   filter: z
     .enum(['self', 'others', 'all'])
     .optional()
-    .describe("Which contacts to list. Use 'others' for the contacts you registered, 'self' for your own identities, or 'all' for both."),
+    .describe("Contact set: 'self', 'others', or 'all'."),
 });
 
 const upsertContactInputSchema = z.object({
-  slug: z.string().describe('A stable slug to identify this contact later.'),
-  displayName: z.string().describe('The human-readable name of the contact.'),
-  description: z.string().optional().describe('Optional notes or description about this contact.'),
+  slug: z.string().describe('Stable contact slug.'),
+  displayName: z.string().describe('Contact display name.'),
+  description: z.string().optional().describe('Optional contact note.'),
 });
 
 const listConversationsInputSchema = z.object({
   provider: z
     .string()
     .optional()
-    .describe('Optional provider filter. Leave empty to list conversations from every provider that supports this tool.'),
+    .describe('Optional provider filter.'),
   unread: z
     .boolean()
     .optional()
-    .describe('Set this to true if you only want conversations with unread messages.'),
+    .describe('Only unread conversations.'),
   limit: z
     .number()
     .int()
     .positive()
     .max(100)
     .default(20)
-    .describe('Maximum number of conversations to request from each provider.'),
+    .describe('Max conversations per provider.'),
 });
 
 const getMessagesInputSchema = z.object({
   provider: z
     .string()
     .min(1)
-    .describe('Which provider the conversation belongs to, such as internal-chat, email, or discord.'),
+    .describe('Conversation provider.'),
   targetKey: z
     .string()
     .min(1)
-    .describe('The targetKey of the conversation you want to read. Use the same targetKey returned by list_conversations, or another key that this provider accepts.'),
+    .describe('Conversation target key.'),
   limit: z
     .number()
     .int()
     .positive()
     .max(200)
     .default(100)
-    .describe('Maximum number of recent messages to return.'),
+    .describe('Max messages to return.'),
   offset: z
     .number()
     .int()
     .min(0)
     .default(0)
-    .describe('How many most-recent messages to skip before returning results. Use this to page through older messages.'),
+    .describe('How many recent messages to skip.'),
   query: z
     .string()
     .trim()
     .min(1)
     .optional()
-    .describe('Optional text filter. Only messages containing this text will be returned.'),
+    .describe('Optional text filter.'),
   dateFrom: z
     .string()
     .trim()
     .min(1)
     .optional()
-    .describe('Optional start of the time window. Use an ISO date or date-time, such as 2026-04-01 or 2026-04-01T09:00:00Z.'),
+    .describe('Optional ISO start date/time.'),
   dateTo: z
     .string()
     .trim()
     .min(1)
     .optional()
-    .describe('Optional end of the time window. Use an ISO date or date-time, such as 2026-04-01 or 2026-04-01T18:00:00Z.'),
+    .describe('Optional ISO end date/time.'),
 });
 
 const sendMessageInputSchema = z.object({
   provider: z
     .string()
     .min(1)
-    .describe('Which communication provider to use, such as internal-chat, email, or discord.'),
+    .describe('Message provider.'),
   targetKey: z
     .string()
-    .describe('Who or where to send the message in that provider. Use the targetKey returned by list_contacts or list_conversations. Examples: an internal-chat agentId, slug, or group id, an email address, or a Discord username/channel id.'),
+    .describe('Provider target key.'),
   content: z
     .string()
     .min(1)
-    .describe('The exact message text to actually deliver to the recipient. Writing that text outside this tool does not send anything.'),
+    .describe('Message text to send.'),
   attachments: z
     .array(z.string())
     .optional()
-    .describe('Optional workspace file paths to send with the message. Omit this field entirely when there are no attachments. When sending files, pass an array of string paths.'),
+    .describe('Optional attachment file paths.'),
 });
 
 export function createExternalAccountTools(communication: CommunicationModule): ToolsInput {
   return {
     list_contacts: createTool({
       id: 'list_contacts',
-      description:
-        "List your contacts. Each contact includes the targetKey you should use with send_message, plus a slug in metadata when the provider also exposes a human-friendly identifier.",
+      description: 'List available contacts and their target keys.',
       inputSchema: listContactsInputSchema,
       execute: async (input) => {
         try {
@@ -124,8 +123,7 @@ export function createExternalAccountTools(communication: CommunicationModule): 
     }),
     upsert_contact: createTool({
       id: 'upsert_contact',
-      description:
-        'Create a new contact or update an existing one. Returns the saved slug, display name, and description.',
+      description: 'Create or update one contact.',
       inputSchema: upsertContactInputSchema,
       execute: async (input) => {
         try {
@@ -160,8 +158,7 @@ export function createExternalAccountTools(communication: CommunicationModule): 
     }),
     list_conversations: createTool({
       id: 'list_conversations',
-      description:
-        'List conversations you can continue through the communication tools. Returns the provider and targetKey you need to read messages or send a reply, plus conversation details when available.',
+      description: 'List conversations you can read or reply to.',
       inputSchema: listConversationsInputSchema,
       execute: async (input) => {
         try {
@@ -197,8 +194,7 @@ export function createExternalAccountTools(communication: CommunicationModule): 
     }),
     get_messages: createTool({
       id: 'get_messages',
-      description:
-        'Read recent messages from one conversation. Use the provider and targetKey of the conversation you want to inspect. Returns the messages from that conversation.',
+      description: 'Read recent messages from one conversation.',
       inputSchema: getMessagesInputSchema,
       execute: async (input) => {
         try {
@@ -256,8 +252,7 @@ export function createExternalAccountTools(communication: CommunicationModule): 
     }),
     send_message: createTool({
       id: 'send_message',
-      description:
-        'Actually deliver a message through a provider. Use this both to continue an existing conversation and to start a new one when that provider supports it. Writing plain text in your response does not send anything. A message is only delivered when this tool is called successfully. The result confirms delivery with provider, targetKey, and messageId, and may also include unread messages that were still pending in that conversation.',
+      description: 'Send a message through one provider.',
       inputSchema: sendMessageInputSchema,
       execute: async (input) => {
         try {
