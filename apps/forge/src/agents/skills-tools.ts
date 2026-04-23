@@ -1,9 +1,42 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
 import { createTool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
 import { hasToolPermission } from '../capabilities/catalog';
 import { publishAgentWorkspaceSkillToGlobalCatalog } from './global-skills';
+import { resolveAgentSkillRoot } from './workspace-skill-paths';
+
+async function listSkillFiles(skillRoot: string, prefix = ''): Promise<string[]> {
+  const entries = await fs.readdir(skillRoot, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const relativePath = prefix ? path.posix.join(prefix, entry.name) : entry.name;
+    const entryPath = path.resolve(skillRoot, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...await listSkillFiles(entryPath, relativePath));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      files.push(relativePath);
+    }
+  }
+
+  return files.sort((left, right) => left.localeCompare(right));
+}
+
+async function readTextFileIfPossible(filePath: string) {
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch {
+    return null;
+  }
+}
 
 export function createAgentSkillTools(input: {
   db: Database;
@@ -12,6 +45,67 @@ export function createAgentSkillTools(input: {
   allowedToolIds?: Set<string> | null;
 }) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
+  const loadSkillSchema = z.object({
+    skillName: z
+      .string()
+      .trim()
+      .min(1)
+      .describe('Skill directory name inside your local `skills/` folder.'),
+  });
+
+  tools.load_workspace_skill = createTool({
+    id: 'load_workspace_skill',
+    description: [
+      'Load one local workspace skill from your `skills/` directory.',
+      'Use this when you need the exact `SKILL.md` instructions or support files for a reusable local skill.',
+      'This reads only your local workspace skill folder.',
+    ].join(' '),
+    inputSchema: loadSkillSchema,
+    execute: async (inputData) => {
+      const agent = await input.db.query.agents.findFirst({
+        where: (fields, operators) => operators.eq(fields.id, input.agentId),
+        columns: {
+          id: true,
+          workspaceFilesystem: true,
+        },
+      });
+
+      if (!agent) {
+        throw new Error(`Agent not found: ${input.agentId}`);
+      }
+
+      const { skillsRoot, skillRoot } = resolveAgentSkillRoot({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: inputData.skillName,
+      });
+      const relativePath = path.relative(skillsRoot, skillRoot);
+
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        throw new Error(`Invalid skill name: ${inputData.skillName}`);
+      }
+
+      const skillMarkdownPath = path.resolve(skillRoot, 'SKILL.md');
+      const skillMarkdown = await fs.readFile(skillMarkdownPath, 'utf8');
+      const files = await listSkillFiles(skillRoot);
+      const supportFiles = await Promise.all(
+        files
+          .filter((filePath) => filePath !== 'SKILL.md')
+          .map(async (filePath) => ({
+            path: path.posix.join('skills', inputData.skillName, filePath),
+            content: await readTextFileIfPossible(path.resolve(skillRoot, filePath)),
+          })),
+      );
+
+      return {
+        skillName: inputData.skillName,
+        skillPath: path.posix.join('skills', inputData.skillName),
+        skillMarkdownPath: path.posix.join('skills', inputData.skillName, 'SKILL.md'),
+        skillMarkdown,
+        supportFiles,
+      };
+    },
+  });
 
   if (hasToolPermission(input.allowedToolIds, 'publish_skill_to_catalog')) {
     tools.publish_skill_to_catalog = createTool({

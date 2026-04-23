@@ -74,7 +74,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
 };
 
 const RECALL_AUTO_INDEX_PATHS = [
-  'memory',
+  '.',
 ] as const;
 const RECALL_SEARCH_MODE = 'hybrid' as const;
 const RECALL_DOCUMENT_COUNT = 3;
@@ -223,7 +223,7 @@ export class AgentLongTermMemoryRecall {
       databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
       source: new FilesystemDocumentSource({
         roots: [
-          path.resolve(input.agentMemoryPath, 'memory'),
+          input.agentMemoryPath,
         ],
       }),
       embedder: {

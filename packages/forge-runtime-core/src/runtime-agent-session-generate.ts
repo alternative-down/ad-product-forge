@@ -199,7 +199,20 @@ async function buildRuntimeSessionModelMessages(input: {
     afterMessageId: state.checkpointMessageId ?? undefined,
   });
 
-  return messages.flatMap((message) => toModelMessages(message));
+  const modelMessages: ModelMessage[] = [];
+  const pendingToolCallIds: string[] = [];
+
+  for (const message of messages) {
+    const nextMessages = toModelMessages(message, pendingToolCallIds);
+
+    if (nextMessages.length === 0) {
+      continue;
+    }
+
+    modelMessages.push(...nextMessages);
+  }
+
+  return modelMessages;
 }
 
 function toModelMessages(message: {
@@ -212,7 +225,7 @@ function toModelMessages(message: {
     bytes?: Uint8Array;
   }>;
   metadata?: Record<string, unknown>;
-}): ModelMessage[] {
+}, pendingToolCallIds: string[]): ModelMessage[] {
   const textContent = message.parts
     .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
     .map((part) => ({
@@ -237,15 +250,20 @@ function toModelMessages(message: {
       ...toolInvocations
         .filter((value): value is { toolCallId?: unknown; toolName?: unknown; args?: unknown } =>
           typeof value === 'object' && value !== null)
-        .map((toolInvocation, index) => ({
-          type: 'tool-call' as const,
-          toolCallId:
-            typeof toolInvocation.toolCallId === 'string'
-              ? toolInvocation.toolCallId
-              : `${message.id}:tool:${index}`,
-          toolName: typeof toolInvocation.toolName === 'string' ? toolInvocation.toolName : 'unknown',
-          input: isRecord(toolInvocation.args) ? toolInvocation.args : {},
-        })),
+        .map((toolInvocation, index) => {
+          const toolCallId = typeof toolInvocation.toolCallId === 'string'
+            ? toolInvocation.toolCallId
+            : `${message.id}:tool:${index}`;
+
+          pendingToolCallIds.push(toolCallId);
+
+          return {
+            type: 'tool-call' as const,
+            toolCallId,
+            toolName: typeof toolInvocation.toolName === 'string' ? toolInvocation.toolName : 'unknown',
+            input: isRecord(toolInvocation.args) ? toolInvocation.args : {},
+          };
+        }),
     ];
 
     if (assistantContent.length === 0) {
@@ -277,7 +295,7 @@ function toModelMessages(message: {
           toolCallId:
             typeof toolResult.toolCallId === 'string'
               ? toolResult.toolCallId
-              : `${message.id}:tool:${index}`,
+              : pendingToolCallIds.shift() ?? `${message.id}:tool:${index}`,
           toolName: typeof toolResult.toolName === 'string' ? toolResult.toolName : 'unknown',
           output: {
             type: 'json' as const,
