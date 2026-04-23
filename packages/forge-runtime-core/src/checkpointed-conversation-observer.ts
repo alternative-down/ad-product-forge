@@ -40,8 +40,8 @@ export function createCheckpointedConversationObserver(
           request.messages.map((message) => toObserverPromptMessage(message)),
         ),
       });
-      const parsed = parseObserverOutput(result.text);
-      const text = parsed.observations.trim();
+      const parsed = parseObserverOutput(typeof result.text === 'string' ? result.text : '');
+      const text = typeof parsed.observations === 'string' ? parsed.observations.trim() : '';
 
       if (!text) {
         throw new Error('Checkpointed conversation observer returned no observation text');
@@ -57,7 +57,7 @@ export function createCheckpointedConversationObserver(
 function buildAlignedObserverSystemPrompt(agentSystemPrompt?: string) {
   const observerSystemPrompt = buildObserverSystemPrompt(false);
 
-  if (!agentSystemPrompt?.trim()) {
+  if (typeof agentSystemPrompt !== 'string' || !agentSystemPrompt.trim()) {
     return observerSystemPrompt;
   }
 

@@ -55,7 +55,7 @@ function createStateStore() {
 }
 
 describe('createCheckpointedOmCompatibilityObserver', () => {
-  it('projects checkpointed conversation state into forge OM state', async () => {
+  it('projects checkpointed conversation state into forge OM state without inventing checkpoints', async () => {
     const updatedAt = new Date().toISOString();
     const state = createConversationMemory({
       threadId: 'thread-1',
@@ -157,20 +157,15 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
 
     const savedState = store.getSavedState();
 
-    expect(savedState?.checkpointGeneration).toBe(1);
-    expect(savedState?.checkpointSummary?.text).toBe('The agent confirmed the deployment issue.');
+    expect(savedState?.checkpointGeneration).toBeNull();
+    expect(savedState?.checkpointSummary).toBeNull();
     expect(savedState?.observationBlocks).toHaveLength(1);
     expect(savedState?.latestMetrics?.rawMessageCount).toBe(2);
     expect(savedState?.latestMetrics?.recentRawTokenLimit).toBe(10_000);
     expect(savedState?.latestMetrics?.observationTriggerTokenLimit).toBe(5_000);
     expect(savedState?.latestMetrics?.reflectionTriggerTokenLimit).toBe(5_000);
     expect(savedState?.latestMetrics?.reflectionBudget).toBe(30_000);
-    expect(checkpointPayload).toEqual({
-      toGeneration: 1,
-      checkpointSummary: {
-        text: 'The agent confirmed the deployment issue.',
-      },
-    });
+    expect(checkpointPayload).toBeNull();
   });
 
   it('moves excess raw tokens into overflow metrics when the raw budget is exceeded', async () => {

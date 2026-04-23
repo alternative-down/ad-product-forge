@@ -125,21 +125,6 @@ async function buildCompatibleState(input: {
   let checkpointGeneration = input.previousState.checkpointGeneration;
   let checkpointSummary = input.previousState.checkpointSummary;
 
-  if (
-    checkpointSummary === null
-    && checkpointGeneration === null
-    && input.conversationState.checkpointMessageId
-    && input.conversationState.observations.length > 0
-  ) {
-    checkpointGeneration = input.conversationState.observations.length;
-    checkpointSummary = {
-      text: input.conversationState.observations[input.conversationState.observations.length - 1]!.text,
-      tokenCount: input.conversationState.observations[input.conversationState.observations.length - 1]!.units,
-      upToGeneration: checkpointGeneration,
-      updatedAt: input.conversationState.updatedAt,
-    };
-  }
-
   if (input.reflectionModel) {
     while (sumActiveObservationTokens(observationBlocks) >= input.limits.observationReflectionBatchTokens) {
       const activeObservationTexts = observationBlocks

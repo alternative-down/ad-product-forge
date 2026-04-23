@@ -273,7 +273,6 @@ describe('createRuntimeAgentSession', () => {
       parts: [],
       metadata: {
         toolInvocations: [{
-          toolCallId,
           toolName: 'search_workspace',
           args: {
             query: 'design tokens',
