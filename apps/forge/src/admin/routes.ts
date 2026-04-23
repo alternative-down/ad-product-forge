@@ -2559,12 +2559,12 @@ async function buildSystemHealthcheck(
         readModel.listAgentThreadMessages({
           agentId: agentSnapshot.agentId,
           page: 0,
-          perPage: 5,
+          perPage: 1,
         }),
         readModel.listAgentLongTermMemoryThreadMessages({
           agentId: agentSnapshot.agentId,
           page: 0,
-          perPage: 5,
+          perPage: 1,
         }),
       ]);
 
