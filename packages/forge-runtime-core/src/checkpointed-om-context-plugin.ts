@@ -75,23 +75,23 @@ export async function loadCheckpointedOmSystemTexts(input: {
 }
 
 function buildCheckpointedOmSystemTexts(state: {
-  checkpointSummary: { text: string } | null;
-  activeReflectionBlocks: Array<{ text: string }>;
-  observationBlocks: Array<{ reflectedGeneration: number | null; text: string }>;
+  checkpointSummary: { text?: string | null } | null;
+  activeReflectionBlocks: Array<{ text?: string | null }>;
+  observationBlocks: Array<{ reflectedGeneration: number | null; text?: string | null }>;
 }) {
   const checkpointText = renderCheckpointText(state.checkpointSummary?.text ?? null);
-  const reflectionsText = renderReflectionsText(state.activeReflectionBlocks.map((block) => block.text));
+  const reflectionsText = renderReflectionsText(state.activeReflectionBlocks.map((block) => block.text ?? null));
   const observationsText = renderObservationsText(
     state.observationBlocks
       .filter((block) => block.reflectedGeneration === null)
-      .map((block) => block.text),
+      .map((block) => block.text ?? null),
   );
 
   return [checkpointText, reflectionsText, observationsText] as const;
 }
 
 function renderCheckpointText(text: string | null) {
-  const content = text?.trim();
+  const content = normalizeOmText(text);
 
   if (!content) {
     return '';
@@ -100,9 +100,9 @@ function renderCheckpointText(text: string | null) {
   return ['Checkpoint summary:', content].join('\n');
 }
 
-function renderReflectionsText(reflections: string[]) {
+function renderReflectionsText(reflections: Array<string | null>) {
   const content = reflections
-    .map((value) => value.trim())
+    .map(normalizeOmText)
     .filter(Boolean)
     .join('\n\n');
 
@@ -113,9 +113,9 @@ function renderReflectionsText(reflections: string[]) {
   return ['Active reflections:', content].join('\n');
 }
 
-function renderObservationsText(observations: string[]) {
+function renderObservationsText(observations: Array<string | null>) {
   const content = observations
-    .map((value) => value.trim())
+    .map(normalizeOmText)
     .filter(Boolean)
     .join('\n\n');
 
@@ -124,4 +124,12 @@ function renderObservationsText(observations: string[]) {
   }
 
   return ['Active observations:', content].join('\n');
+}
+
+function normalizeOmText(value: string | null | undefined) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.trim();
 }
