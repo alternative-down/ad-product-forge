@@ -543,6 +543,8 @@ export function createAdminReadModel(input: {
         name: agent.name,
         description: agent.description ?? undefined,
         executionState,
+        lastExecutionError: agent.lastExecutionError ?? null,
+        lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
         roleId: agent.roleId,
         roleName: role?.name ?? null,
         modelProfile: modelProfile ?? null,
