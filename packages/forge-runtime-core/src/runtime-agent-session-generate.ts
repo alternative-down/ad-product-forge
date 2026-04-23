@@ -222,12 +222,52 @@ function summarizeGenerateRequest(input: {
     messageToolResultChars: messageBreakdown.toolResultChars,
     messageImageCount: messageBreakdown.imageCount,
     messageRoleCounts: messageBreakdown.roles,
+    messageOutline: input.messages.slice(0, 12).map(summarizeReplayMessageOutline),
     toolCount: input.actions.length,
     toolDescriptionChars: input.actions.reduce((total, action) => total + action.description.length, 0),
     toolSchemaChars: input.actions.reduce(
       (total, action) => total + JSON.stringify(z.toJSONSchema(action.inputSchema)).length,
       0,
     ),
+  };
+}
+
+function summarizeReplayMessageOutline(message: ModelMessage) {
+  if (typeof message.content === 'string') {
+    return {
+      role: message.role,
+      contentType: 'string',
+      textChars: message.content.length,
+    };
+  }
+
+  if (!Array.isArray(message.content)) {
+    return {
+      role: message.role,
+      contentType: 'empty',
+      textChars: 0,
+    };
+  }
+
+  return {
+    role: message.role,
+    contentType: 'parts',
+    partTypes: message.content.map((part) => part.type),
+    textChars: message.content.reduce((total, part) => {
+      if ('text' in part && typeof part.text === 'string') {
+        return total + part.text.length;
+      }
+
+      if ('input' in part) {
+        return total + JSON.stringify(part.input).length;
+      }
+
+      if ('output' in part) {
+        return total + JSON.stringify(part.output).length;
+      }
+
+      return total;
+    }, 0),
   };
 }
 
