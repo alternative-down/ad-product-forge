@@ -332,6 +332,118 @@ describe('createRuntimeAgentSession', () => {
       await session.dispose();
     }
   });
+
+  it('skips orphan tool results that do not have a matching tool call in replay history', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
+    const workingMemoryStore = createInMemoryWorkingMemoryStore();
+    const toolCallId = 'call_function_orphan_1';
+    const model = new MockLanguageModelV3({
+      doGenerate: async (options: LanguageModelV3CallOptions) => {
+        expect(options.prompt).toEqual([
+          {
+            role: 'system',
+            content: 'Base system.',
+          },
+          {
+            role: 'user',
+            content: [{
+              type: 'text',
+              text: 'Continue.',
+            }],
+          },
+        ]);
+
+        return {
+          content: [{ type: 'text', text: 'Done.' }],
+          finishReason: { raw: 'stop', unified: 'stop' },
+          usage: {
+            inputTokens: {
+              total: 8,
+              noCache: 8,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: {
+              total: 4,
+              text: 4,
+              reasoning: 0,
+            },
+          },
+          warnings: [],
+        };
+      },
+    });
+    const session = await createRuntimeAgentSession({
+      agentId: 'agent-1',
+      agentName: 'Forge Agent',
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      assistantAuthorId: 'agent-1',
+      model,
+      system: 'Base system.',
+      conversationStore,
+      checkpointedStateStore,
+      workingMemoryStore,
+    });
+
+    await conversationStore.upsertThread({
+      id: 'thread-1',
+      participantIds: ['agent-1'],
+      createdAt: '2026-04-23T00:00:00.000Z',
+      updatedAt: '2026-04-23T00:00:02.000Z',
+    });
+    await conversationStore.appendMessage({
+      id: 'orphan-tool-result',
+      threadId: 'thread-1',
+      role: 'tool',
+      parts: [],
+      metadata: {
+        toolResults: [{
+          toolCallId,
+          toolName: 'workspace_execute_command',
+          result: {
+            exitCode: 0,
+          },
+        }],
+      },
+      createdAt: '2026-04-23T00:00:01.000Z',
+    });
+    await conversationStore.appendMessage({
+      id: 'user-follow-up',
+      threadId: 'thread-1',
+      role: 'user',
+      parts: [{
+        type: 'text',
+        text: 'Continue.',
+      }],
+      createdAt: '2026-04-23T00:00:02.000Z',
+    });
+    await checkpointedStateStore.save({
+      threadId: 'thread-1',
+      checkpointMessageId: null,
+      recentMessageIds: ['orphan-tool-result', 'user-follow-up'],
+      overflowMessageIds: [],
+      observations: [],
+      metrics: {
+        recentMessageCount: 2,
+        recentTokenCount: 10,
+        overflowMessageCount: 0,
+        overflowTokenCount: 0,
+        observationCount: 0,
+        totalActiveMessageCount: 2,
+      },
+      updatedAt: '2026-04-23T00:00:02.000Z',
+    });
+
+    try {
+      const result = await session.generate([]);
+
+      expect(result.text).toBe('Done.');
+    } finally {
+      await session.dispose();
+    }
+  });
 });
 
 function createInMemoryWorkingMemoryStore(): RuntimeWorkingMemoryStore {

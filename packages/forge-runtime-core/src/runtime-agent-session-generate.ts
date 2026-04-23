@@ -438,7 +438,7 @@ function createReplayMessages(messages: Array<{
         }>;
       }
   > = [];
-  const pendingToolCallIds: string[] = [];
+  const availableToolCallIds = new Set<string>();
   const fulfilledToolCallIds = new Set<string>();
 
   for (const message of messages) {
@@ -468,7 +468,7 @@ function createReplayMessages(messages: Array<{
             return [];
           }
 
-          pendingToolCallIds.push(toolInvocation.toolCallId);
+          availableToolCallIds.add(toolInvocation.toolCallId);
 
           return [{
             type: 'tool-call' as const,
@@ -495,16 +495,17 @@ function createReplayMessages(messages: Array<{
         .filter((value): value is { toolCallId?: unknown; toolName?: unknown; result?: unknown } =>
           typeof value === 'object' && value !== null)
         .flatMap((toolResult) => {
-          const toolCallId = typeof toolResult.toolCallId === 'string'
-            ? toolResult.toolCallId
-            : pendingToolCallIds.shift();
+          if (typeof toolResult.toolCallId !== 'string') {
+            return [];
+          }
 
-          if (!toolCallId) {
+          const toolCallId = toolResult.toolCallId;
+
+          if (!availableToolCallIds.has(toolCallId)) {
             return [];
           }
 
           fulfilledToolCallIds.add(toolCallId);
-          removePendingToolCallId(pendingToolCallIds, toolCallId);
 
           return [{
             type: 'tool-result' as const,
@@ -578,16 +579,6 @@ function createReplayMessages(messages: Array<{
   }
 
   return replayMessages;
-}
-
-function removePendingToolCallId(pendingToolCallIds: string[], toolCallId: string) {
-  const index = pendingToolCallIds.indexOf(toolCallId);
-
-  if (index === -1) {
-    return;
-  }
-
-  pendingToolCallIds.splice(index, 1);
 }
 
 function buildAiSdkToolSet(input: {
