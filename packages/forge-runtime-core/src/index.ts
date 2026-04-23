@@ -24,13 +24,12 @@ export {
   RuntimeRunController,
   createDefaultContextFormatter,
   LocalBashWorkspaceGateway,
-  ReadWriteFs,
+  LocalWorkspaceFilesystem,
   createRuntimeHost,
   createTextStepContextEntry,
 } from 'agent-runtime-core/integrations';
 export type {
   ConversationStore,
-  IFileSystem,
   RuntimeActionDefinition,
 } from 'agent-runtime-core/integrations';
 export {

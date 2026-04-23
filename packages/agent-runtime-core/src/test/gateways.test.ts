@@ -16,7 +16,7 @@ afterEach(async () => {
 });
 
 describe('LocalBashWorkspaceGateway', () => {
-  it('executes a bash command and captures stdout', async () => {
+  it('executes a real shell command and captures stdout', async () => {
     const gateway = new LocalBashWorkspaceGateway();
     const result = await gateway.execute({
       command: 'printf hello',
@@ -26,7 +26,7 @@ describe('LocalBashWorkspaceGateway', () => {
     expect(result.stdout).toBe('hello');
   });
 
-  it('executes commands inside a rooted just-bash filesystem', async () => {
+  it('executes commands inside a rooted real filesystem', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'local-bash-workspace-'));
     temporaryDirectories.push(root);
     await writeFile(path.join(root, 'hello.txt'), 'hello just bash');
@@ -43,7 +43,7 @@ describe('LocalBashWorkspaceGateway', () => {
     expect(result.stdout).toContain('hello just bash');
   });
 
-  it('maps configured alias roots into the workspace sandbox root', async () => {
+  it('accepts configured alias roots as valid cwd locations', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'local-bash-workspace-'));
     temporaryDirectories.push(root);
     await mkdir(path.join(root, 'workspace'), { recursive: true });
@@ -58,10 +58,10 @@ describe('LocalBashWorkspaceGateway', () => {
     });
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe('/');
+    expect(result.stdout.trim()).toBe(root);
   });
 
-  it('enables curl, python, and node-compatible javascript commands', async () => {
+  it('uses real curl, python, and node from the environment', async () => {
     const gateway = new LocalBashWorkspaceGateway();
     const availabilityResult = await gateway.execute({
       command: 'which curl && which python3 && which node',

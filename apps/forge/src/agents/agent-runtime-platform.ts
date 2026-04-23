@@ -10,10 +10,10 @@ import {
   LibsqlCommunicationContactsStore,
   LibsqlConversationStore,
   LocalBashWorkspaceGateway,
+  LocalWorkspaceFilesystem,
   toMastraSafeIdentifier,
   type CommunicationModule,
 } from '@forge-runtime/core';
-import { ReadWriteFs } from 'just-bash';
 
 import type {
   WorkspaceFilesystemConfig,
@@ -27,15 +27,19 @@ type CommunicationWorkspaceFilesystem = {
   writeFile(path: string, data: Uint8Array | Buffer | string): Promise<void>;
 };
 
-function toVirtualWorkspacePath(targetPath: string) {
+function toWorkspaceRelativePath(targetPath: string) {
   const normalizedPath = targetPath.split(path.sep).join(path.posix.sep);
-  const virtualPath = path.posix.normalize(path.posix.join('/', normalizedPath));
+  const relativePath = path.posix.normalize(normalizedPath);
 
-  if (virtualPath.startsWith('/..')) {
+  if (
+    relativePath === '..'
+    || relativePath.startsWith('../')
+    || path.posix.isAbsolute(relativePath)
+  ) {
     throw new Error(`Workspace path must stay within root: ${targetPath}`);
   }
 
-  return virtualPath;
+  return relativePath;
 }
 
 async function pathExists(targetPath: string) {
@@ -117,25 +121,23 @@ export async function createAgentRuntimePlatform(input: {
     client,
     tablePrefix: mastraId,
   });
-  const workspaceFs = new ReadWriteFs({
+  const workspaceFs = new LocalWorkspaceFilesystem({
     root: agentWorkspaceDir,
   });
   const workspaceFilesystem: RuntimeWorkspace['filesystem'] = {
     async exists(targetPath: string) {
-      return workspaceFs.exists(toVirtualWorkspacePath(targetPath));
+      return workspaceFs.exists(toWorkspaceRelativePath(targetPath));
     },
     async readFile(targetPath: string) {
-      return workspaceFs.readFileBuffer(toVirtualWorkspacePath(targetPath));
+      return workspaceFs.readFile(toWorkspaceRelativePath(targetPath));
     },
   };
   const communicationWorkspaceFilesystem: CommunicationWorkspaceFilesystem = {
     async readFile(targetPath: string) {
-      return workspaceFs.readFileBuffer(toVirtualWorkspacePath(targetPath));
+      return workspaceFs.readFile(toWorkspaceRelativePath(targetPath));
     },
     async writeFile(targetPath: string, data: Uint8Array | Buffer | string) {
-      const virtualPath = toVirtualWorkspacePath(targetPath);
-      await workspaceFs.mkdir(path.posix.dirname(virtualPath), { recursive: true });
-      await workspaceFs.writeFile(virtualPath, data);
+      await workspaceFs.writeFile(toWorkspaceRelativePath(targetPath), data);
     },
   };
   const workspace: RuntimeWorkspace = {
@@ -143,7 +145,6 @@ export async function createAgentRuntimePlatform(input: {
   };
   const workspaceGateway = new ConfiguredWorkspaceGateway({
     base: new LocalBashWorkspaceGateway({
-      fs: workspaceFs,
       root: agentWorkspaceDir,
     }),
     cwd: sandboxWorkingDirectory,

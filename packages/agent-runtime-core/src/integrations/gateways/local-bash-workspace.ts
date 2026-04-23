@@ -1,6 +1,5 @@
+import { spawn } from 'node:child_process';
 import path from 'node:path';
-
-import { Bash, defineCommand, type IFileSystem, ReadWriteFs } from 'just-bash';
 
 import type {
   WorkspaceCommandRequest,
@@ -9,149 +8,138 @@ import type {
 } from './workspace.js';
 
 export type LocalBashWorkspaceGatewayOptions = {
-  fs?: IFileSystem;
   root?: string;
   pathAliases?: string[];
+  shellPath?: string;
+  env?: Record<string, string>;
 };
 
 export class LocalBashWorkspaceGateway implements WorkspaceGateway {
-  private readonly bash: Bash;
   private readonly root: string | undefined;
   private readonly pathAliases: string[];
+  private readonly shellPath: string;
+  private readonly env: Record<string, string>;
 
   constructor(options: LocalBashWorkspaceGatewayOptions = {}) {
-    const filesystem = options.fs ?? (options.root
-      ? new ReadWriteFs({
-        root: path.resolve(options.root),
-      })
-      : undefined);
-
-    this.bash = new Bash({
-      fs: filesystem,
-      network: {
-        dangerouslyAllowFullInternetAccess: true,
-      },
-      python: true,
-      javascript: true,
-      customCommands: [
-        defineCommand('node', async (args, context) => {
-          if (!context.exec) {
-            return {
-              stdout: '',
-              stderr: 'node: command execution is unavailable in this context\n',
-              exitCode: 1,
-            };
-          }
-
-          if (args[0] === '-e' && typeof args[1] === 'string') {
-            return context.exec('js-exec', {
-              cwd: context.cwd,
-              stdin: context.stdin,
-              signal: context.signal,
-              args: ['-c', args[1]],
-            });
-          }
-
-          if (typeof args[0] === 'string') {
-            return context.exec('js-exec', {
-              cwd: context.cwd,
-              stdin: context.stdin,
-              signal: context.signal,
-              args,
-            });
-          }
-
-          return {
-            stdout: '',
-            stderr: 'node: expected a script path or -e\n',
-            exitCode: 1,
-          };
-        }),
-      ],
-    });
     this.root = options.root ? path.resolve(options.root) : undefined;
     this.pathAliases = (options.pathAliases ?? []).map((alias) => path.resolve(alias));
+    this.shellPath = options.shellPath ?? '/bin/bash';
+    this.env = options.env ?? {};
   }
 
   async execute(request: WorkspaceCommandRequest): Promise<WorkspaceCommandResult> {
-    const timeoutController = request.timeoutMs ? new AbortController() : undefined;
-    const timeout = request.timeoutMs
-      ? setTimeout(() => timeoutController?.abort(), request.timeoutMs)
-      : undefined;
+    let cwd: string;
 
     try {
-      const result = await this.bash.exec(request.command, {
-        cwd: this.resolveVirtualCwd(request.cwd),
-        env: request.env,
-        signal: timeoutController?.signal,
-      });
-
-      return {
-        exitCode: result.exitCode,
-        stdout: result.stdout,
-        stderr: result.stderr,
-      };
+      cwd = this.resolveCwd(request.cwd);
     } catch (error) {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-
-      const failed = error as Error & {
-        code?: number | string;
-        stdout?: string;
-        stderr?: string;
-        name?: string;
-      };
-
-      if (failed.name === 'AbortError') {
-        return {
-          exitCode: 124,
-          stdout: failed.stdout ?? '',
-          stderr: failed.stderr ?? 'Command timed out',
-        };
-      }
-
       return {
-        exitCode: typeof failed.code === 'number' ? failed.code : 1,
-        stdout: failed.stdout ?? '',
-        stderr: failed.stderr ?? '',
+        exitCode: 1,
+        stdout: '',
+        stderr: error instanceof Error ? error.message : String(error),
       };
-    } finally {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-    }
-  }
-
-  private resolveVirtualCwd(cwd: string | undefined) {
-    if (!cwd || !this.root) {
-      return cwd;
     }
 
-    const resolvedCwd = path.resolve(cwd);
+    const env = {
+      PATH: process.env.PATH ?? '',
+      ...this.env,
+      ...(request.env ?? {}),
+    };
 
-    for (const aliasRoot of this.pathAliases) {
-      const relativeAliasCwd = path.relative(aliasRoot, resolvedCwd);
+    return new Promise<WorkspaceCommandResult>((resolve) => {
+      const child = spawn(this.shellPath, ['-lc', request.command], {
+        cwd,
+        env,
+        detached: process.platform !== 'win32',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      let stdout = '';
+      let stderr = '';
+      let resolved = false;
+      const timeout = request.timeoutMs
+        ? setTimeout(() => {
+          if (process.platform === 'win32') {
+            child.kill('SIGTERM');
+          } else {
+            try {
+              process.kill(-child.pid!, 'SIGTERM');
+            } catch {
+              child.kill('SIGTERM');
+            }
+          }
+        }, request.timeoutMs)
+        : undefined;
 
-      if (!relativeAliasCwd.startsWith('..') && !path.isAbsolute(relativeAliasCwd)) {
-        if (!relativeAliasCwd || relativeAliasCwd === '.') {
-          return '/';
+      child.stdout.on('data', (chunk: Buffer | string) => {
+        stdout += chunk.toString();
+      });
+      child.stderr.on('data', (chunk: Buffer | string) => {
+        stderr += chunk.toString();
+      });
+      child.on('error', (error) => {
+        if (resolved) {
+          return;
         }
 
-        return `/${relativeAliasCwd.split(path.sep).join('/')}`;
+        resolved = true;
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+
+        resolve({
+          exitCode: 1,
+          stdout,
+          stderr: stderr || error.message,
+        });
+      });
+      child.on('close', (code, signal) => {
+        if (resolved) {
+          return;
+        }
+
+        resolved = true;
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+
+        resolve({
+          exitCode: signal ? 124 : (code ?? 1),
+          stdout,
+          stderr,
+        });
+      });
+    });
+  }
+
+  private resolveCwd(cwd: string | undefined) {
+    if (!cwd) {
+      return this.root ?? process.cwd();
+    }
+
+    const resolvedCwd = path.isAbsolute(cwd)
+      ? path.resolve(cwd)
+      : path.resolve(this.root ?? process.cwd(), cwd);
+
+    for (const aliasRoot of this.pathAliases) {
+      if (isWithinRoot(aliasRoot, resolvedCwd)) {
+        return resolvedCwd;
       }
     }
 
-    const relativeCwd = path.relative(this.root, resolvedCwd);
+    if (!this.root) {
+      return resolvedCwd;
+    }
 
-    if (relativeCwd.startsWith('..') || path.isAbsolute(relativeCwd)) {
+    if (!isWithinRoot(this.root, resolvedCwd)) {
       throw new Error(`Workspace cwd must stay within root: ${resolvedCwd}`);
     }
 
-    if (!relativeCwd || relativeCwd === '.') {
-      return '/';
-    }
-
-    return `/${relativeCwd.split(path.sep).join('/')}`;
+    return resolvedCwd;
   }
+}
+
+function isWithinRoot(root: string, targetPath: string) {
+  const relativePath = path.relative(root, targetPath);
+
+  return !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
 }

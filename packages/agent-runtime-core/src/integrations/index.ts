@@ -154,10 +154,6 @@ export {
   type TimeoutStepModelAdapterOptions,
 } from './adapters/timeout-model.js';
 export {
-  ReadWriteFs,
-  type IFileSystem,
-} from 'just-bash';
-export {
   createContextNotesPlugin,
   type ContextNotesPluginOptions,
 } from './extensions/context-notes.js';
@@ -335,6 +331,10 @@ export {
 export {
   LocalBashWorkspaceGateway,
 } from './gateways/local-bash-workspace.js';
+export {
+  LocalWorkspaceFilesystem,
+  type LocalWorkspaceFilesystemOptions,
+} from './gateways/local-workspace-filesystem.js';
 export {
   InMemoryWorkspaceCommandRecorder,
   RecordingWorkspaceGateway,
