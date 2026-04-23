@@ -86,7 +86,28 @@ export function createAgentCheckpointedOmStateStore(
       return createEmptyCheckpointedOmState();
     }
 
-    return checkpointedOmStateSchema.parse(row.state);
+    const parsedState = checkpointedOmStateSchema.safeParse(row.state);
+
+    if (parsedState.success) {
+      return parsedState.data;
+    }
+
+    const repairedState = createEmptyCheckpointedOmState();
+
+    await db
+      .update(agentCheckpointedOmStates)
+      .set({
+        state: repairedState,
+        updatedAt: Date.now(),
+      })
+      .where(eq(agentCheckpointedOmStates.agentId, input.agentId));
+
+    console.error('[CheckpointedOmStateStore] Repaired invalid persisted OM state', {
+      agentId: input.agentId,
+      issues: parsedState.error.issues,
+    });
+
+    return repairedState;
   }
 
   async function loadState() {
