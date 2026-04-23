@@ -225,6 +225,7 @@ export class AgentLongTermMemoryRecall {
         roots: [
           input.agentMemoryPath,
         ],
+        includeExtensions: ['.txt', '.md'],
       }),
       embedder: {
         embed: async ({ texts }: { texts: string[] }) => ({

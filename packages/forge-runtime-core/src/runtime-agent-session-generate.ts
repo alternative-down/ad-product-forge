@@ -64,10 +64,6 @@ export async function runRuntimeAgentSessionGenerate(input: {
   let finalText = '';
   let finalUsage: RuntimeAgentSessionStepResult['usage'];
   const maxSteps = input.options.maxSteps ?? 10_000;
-  let transientMessages: Array<{
-    role: 'assistant' | 'user';
-    content: string;
-  }> = [];
 
   for (let iterationNumber = 1; iterationNumber <= maxSteps; iterationNumber += 1) {
     if (input.options.abortSignal?.aborted) {
@@ -90,7 +86,6 @@ export async function runRuntimeAgentSessionGenerate(input: {
       store: input.runtime.conversationStore,
       conversationMemory: input.runtime.conversationMemory,
       threadId: input.session.threadId,
-      transientMessages,
     });
     const stepId = randomUUID();
     const tools = buildAiSdkToolSet({
@@ -158,12 +153,20 @@ export async function runRuntimeAgentSessionGenerate(input: {
       iteration: runtimeIteration,
     });
 
-    transientMessages = continuation.feedback?.trim()
-      ? [{
-        role: 'user',
-        content: continuation.feedback.trim(),
-      }]
-      : [];
+    const continuationFeedback = continuation.feedback?.trim() || '';
+
+    if (continuation.continue && continuationFeedback) {
+      await appendRuntimeSessionPromptMessages({
+        store: input.runtime.conversationStore,
+        threadId: input.session.threadId,
+        agentId: input.session.agentId,
+        messages: [{
+          role: 'user',
+          content: continuationFeedback,
+        }],
+      });
+      await input.runtime.syncState();
+    }
 
     if (!continuation.continue) {
       break;
@@ -339,10 +342,6 @@ async function buildRuntimeSessionModelMessages(input: {
   store: RuntimeAgentSessionRuntime['conversationStore'];
   conversationMemory: RuntimeAgentSessionRuntime['conversationMemory'];
   threadId: string;
-  transientMessages: Array<{
-    role: 'assistant' | 'user';
-    content: string;
-  }>;
 }): Promise<ModelMessage[]> {
   const state = await input.conversationMemory.getState();
   const recentMessages = normalizeReplayMessages(
@@ -373,13 +372,6 @@ async function buildRuntimeSessionModelMessages(input: {
       }],
     } as ModelMessage,
     ...createReplayMessages(replayMessages),
-    ...input.transientMessages.map((message) => ({
-      role: message.role,
-      content: [{
-        type: 'text' as const,
-        text: message.content,
-      }],
-    }) as ModelMessage),
   ];
 }
 
