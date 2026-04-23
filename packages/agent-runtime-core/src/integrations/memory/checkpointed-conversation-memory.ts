@@ -39,6 +39,7 @@ export type CheckpointedConversationMemoryOptions = {
 
 type RawConversationUnit = {
   id: string;
+  groupId: string;
   parentMessageId: string;
   createdAt: Date;
   tokenCount: number;
@@ -164,7 +165,7 @@ export class CheckpointedConversationMemory {
       return state;
     }
 
-    while (shouldObserveOverflow({
+    if (shouldObserveOverflow({
       state,
       overflowObservationTokenLimit: this.overflowObservationTokenLimit,
     })) {
@@ -173,7 +174,7 @@ export class CheckpointedConversationMemory {
       const observation = await this.consolidateOneOverflowBatch();
 
       if (!observation) {
-        break;
+        return state;
       }
 
       state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
@@ -182,7 +183,7 @@ export class CheckpointedConversationMemory {
         state.cursorObservedAt === previousCursorObservedAt
         && JSON.stringify(state.cursorObservedRawUnitIds ?? []) === previousCursorObservedRawUnitIds
       ) {
-        break;
+        return state;
       }
     }
 
@@ -344,7 +345,8 @@ function estimateMessageUnits(message: ConversationMessage) {
 
 function getMessageText(message: ConversationMessage) {
   return message.parts
-    .filter((part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text')
+    .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+      part.type === 'text' || part.type === 'reasoning')
     .map((part) => part.text.trim())
     .filter(Boolean)
     .join('\n');
@@ -476,6 +478,7 @@ function splitMessageIntoRawUnits(
   if (message.parts.length === 0 && toolInvocations.length === 0 && toolResults.length === 0) {
     return [{
       id: `${message.id}:whole`,
+      groupId: `${message.id}:whole`,
       parentMessageId: message.id,
       createdAt: new Date(message.createdAt),
       tokenCount: estimateMessageUnits(message),
@@ -497,6 +500,26 @@ function splitMessageIntoRawUnits(
 
         return {
           id: `${message.id}:part:${partKey}:chunk:${chunkIndex}`,
+          groupId: `${message.id}:part:${partKey}`,
+          parentMessageId: message.id,
+          createdAt,
+          tokenCount: estimateMessageUnits(promptMessage),
+          promptMessage,
+          kind: 'part',
+        } satisfies RawConversationUnit;
+      });
+    }
+
+    if (part.type === 'reasoning') {
+      return splitTextIntoChunks(part.text, maxUnitChars).map((text, chunkIndex) => {
+        const promptMessage = cloneMessageWithParts(message, [{
+          type: 'reasoning',
+          text,
+        }]);
+
+        return {
+          id: `${message.id}:part:${partKey}:chunk:${chunkIndex}`,
+          groupId: `${message.id}:part:${partKey}`,
           parentMessageId: message.id,
           createdAt,
           tokenCount: estimateMessageUnits(promptMessage),
@@ -509,6 +532,7 @@ function splitMessageIntoRawUnits(
     const promptMessage = cloneMessageWithParts(message, [part]);
     return [{
       id: `${message.id}:part:${partKey}`,
+      groupId: `${message.id}:part:${partKey}`,
       parentMessageId: message.id,
       createdAt,
       tokenCount: estimateMessageUnits(promptMessage),
@@ -533,6 +557,7 @@ function splitMessageIntoRawUnits(
 
     return [{
       id: `${message.id}:tool-invocation:${index}`,
+      groupId: buildToolConversationGroupId(toolInvocation, `${message.id}:tool-invocation:${index}`),
       parentMessageId: message.id,
       createdAt: new Date(message.createdAt),
       tokenCount: estimateMessageUnits(promptMessage),
@@ -557,6 +582,7 @@ function splitMessageIntoRawUnits(
 
     return [{
       id: `${message.id}:tool-result:${index}`,
+      groupId: buildToolConversationGroupId(toolResult, `${message.id}:tool-result:${index}`),
       parentMessageId: message.id,
       createdAt: new Date(message.createdAt),
       tokenCount: estimateMessageUnits(promptMessage),
@@ -625,24 +651,25 @@ function splitRawUnitsByRecentReserve(input: {
   units: RawConversationUnit[];
   recentTokenLimit: number | null;
 }) {
-  const recentUnitIds = new Set<string>();
+  const groups = groupRawConversationUnits(input.units);
+  const recentGroupIds = new Set<string>();
   let recentTokenCount = 0;
 
   if (input.recentTokenLimit === null) {
-    for (const unit of input.units) {
-      recentUnitIds.add(unit.id);
-      recentTokenCount += unit.tokenCount;
+    for (const group of groups) {
+      recentGroupIds.add(group.groupId);
+      recentTokenCount += group.tokenCount;
     }
   } else {
-    for (let index = input.units.length - 1; index >= 0; index -= 1) {
-      const unit = input.units[index];
+    for (let index = groups.length - 1; index >= 0; index -= 1) {
+      const group = groups[index];
 
-      if (recentTokenCount + unit.tokenCount > input.recentTokenLimit) {
+      if (recentTokenCount + group.tokenCount > input.recentTokenLimit) {
         break;
       }
 
-      recentUnitIds.add(unit.id);
-      recentTokenCount += unit.tokenCount;
+      recentGroupIds.add(group.groupId);
+      recentTokenCount += group.tokenCount;
     }
   }
 
@@ -651,7 +678,7 @@ function splitRawUnitsByRecentReserve(input: {
   let overflowTokenCount = 0;
 
   for (const unit of input.units) {
-    if (recentUnitIds.has(unit.id)) {
+    if (recentGroupIds.has(unit.groupId)) {
       recentUnits.push(unit);
       continue;
     }
@@ -675,9 +702,9 @@ function takeRawUnitBatch(input: {
   const units: RawConversationUnit[] = [];
   let tokenCount = 0;
 
-  for (const unit of input.units) {
-    units.push(unit);
-    tokenCount += unit.tokenCount;
+  for (const group of groupRawConversationUnits(input.units)) {
+    units.push(...group.units);
+    tokenCount += group.tokenCount;
 
     if (input.tokenLimit !== null && tokenCount >= input.tokenLimit) {
       break;
@@ -697,6 +724,54 @@ function takeRawUnitBatch(input: {
     cursorObservedAt,
     cursorObservedRawUnitIds,
   };
+}
+
+function groupRawConversationUnits(units: RawConversationUnit[]) {
+  const orderedGroups: Array<{
+    groupId: string;
+    tokenCount: number;
+    units: RawConversationUnit[];
+  }> = [];
+  const groupMap = new Map<string, {
+    groupId: string;
+    tokenCount: number;
+    units: RawConversationUnit[];
+  }>();
+
+  for (const unit of units) {
+    const existingGroup = groupMap.get(unit.groupId);
+
+    if (existingGroup) {
+      existingGroup.units.push(unit);
+      existingGroup.tokenCount += unit.tokenCount;
+      continue;
+    }
+
+    const nextGroup = {
+      groupId: unit.groupId,
+      tokenCount: unit.tokenCount,
+      units: [unit],
+    };
+
+    groupMap.set(unit.groupId, nextGroup);
+    orderedGroups.push(nextGroup);
+  }
+
+  return orderedGroups;
+}
+
+function buildToolConversationGroupId(value: unknown, fallbackId: string) {
+  if (
+    typeof value === 'object'
+    && value !== null
+    && 'toolCallId' in value
+    && typeof value.toolCallId === 'string'
+    && value.toolCallId.trim()
+  ) {
+    return `tool-call:${value.toolCallId}`;
+  }
+
+  return fallbackId;
 }
 
 function getChunkIndex(unitId: string) {
@@ -760,11 +835,11 @@ function rebuildMessagesFromUnits(input: {
         continue;
       }
 
-      if (part.type === 'text') {
+      if (part.type === 'text' || part.type === 'reasoning') {
         const text = remainingUnits
           .map((unit) => unit.promptMessage.parts[0])
-          .filter((unitPart): unitPart is Extract<ConversationMessage['parts'][number], { type: 'text' }> =>
-            Boolean(unitPart) && unitPart.type === 'text')
+          .filter((unitPart): unitPart is Extract<ConversationMessage['parts'][number], { type: 'text' | 'reasoning' }> =>
+            Boolean(unitPart) && (unitPart.type === 'text' || unitPart.type === 'reasoning'))
           .map((unitPart) => unitPart.text)
           .join('\n')
           .trim();
@@ -774,7 +849,7 @@ function rebuildMessagesFromUnits(input: {
         }
 
         rebuiltParts.push({
-          type: 'text' as const,
+          type: part.type,
           text,
         });
         continue;

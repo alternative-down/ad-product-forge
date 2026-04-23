@@ -344,13 +344,11 @@ async function buildRuntimeSessionModelMessages(input: {
   threadId: string;
 }): Promise<ModelMessage[]> {
   const state = await input.conversationMemory.getState();
-  const recentMessages = normalizeReplayMessages(
-    await input.conversationMemory.renderRecentMessages(),
-  );
-  const activeMessages = normalizeReplayMessages(await input.store.listMessages({
+  const recentMessages = await input.conversationMemory.renderRecentMessages();
+  const activeMessages = await input.store.listMessages({
     threadId: input.threadId,
     order: 'asc',
-  }));
+  });
   const replayMessageMap = new Map(activeMessages.map((message) => [message.id, message]));
 
   for (const message of recentMessages) {
@@ -373,88 +371,6 @@ async function buildRuntimeSessionModelMessages(input: {
     } as ModelMessage,
     ...createReplayMessages(replayMessages),
   ];
-}
-
-function normalizeReplayMessages(messages: Array<{
-  id: string;
-  role: 'user' | 'assistant' | 'system' | 'tool' | 'external';
-  parts: Array<{
-    type: string;
-    text?: string;
-    mimeType?: string;
-    bytes?: Uint8Array;
-  }>;
-  metadata?: Record<string, unknown>;
-}>) {
-  return messages.map((message, index) => {
-    if (message.role !== 'assistant') {
-      return message;
-    }
-
-    const toolInvocations = Array.isArray(message.metadata?.toolInvocations)
-      ? message.metadata.toolInvocations
-      : [];
-    const missingIdIndexes = toolInvocations.flatMap((toolInvocation, toolInvocationIndex) =>
-      typeof toolInvocation === 'object'
-      && toolInvocation !== null
-      && typeof toolInvocation.toolName === 'string'
-      && typeof toolInvocation.toolCallId !== 'string'
-        ? [toolInvocationIndex]
-        : []);
-
-    if (missingIdIndexes.length === 0) {
-      return message;
-    }
-
-    const nextMessage = messages[index + 1];
-
-    if (nextMessage?.role !== 'tool') {
-      return message;
-    }
-
-    const toolResults = Array.isArray(nextMessage.metadata?.toolResults)
-      ? nextMessage.metadata.toolResults
-      : [];
-    const explicitToolCallIds = toolResults.flatMap((toolResult) =>
-      typeof toolResult === 'object'
-      && toolResult !== null
-      && typeof toolResult.toolCallId === 'string'
-        ? [toolResult.toolCallId]
-        : []);
-
-    if (explicitToolCallIds.length === 0 || explicitToolCallIds.length !== missingIdIndexes.length) {
-      return message;
-    }
-
-    const normalizedToolInvocations = [...toolInvocations];
-
-    for (const [normalizedIndex, missingIndex] of missingIdIndexes.entries()) {
-      const toolInvocation = normalizedToolInvocations[missingIndex];
-      const toolCallId = explicitToolCallIds[normalizedIndex];
-
-      if (
-        typeof toolInvocation !== 'object'
-        || toolInvocation === null
-        || typeof toolInvocation.toolName !== 'string'
-        || typeof toolCallId !== 'string'
-      ) {
-        return message;
-      }
-
-      normalizedToolInvocations[missingIndex] = {
-        ...toolInvocation,
-        toolCallId,
-      };
-    }
-
-    return {
-      ...message,
-      metadata: {
-        ...message.metadata,
-        toolInvocations: normalizedToolInvocations,
-      },
-    };
-  });
 }
 
 function expandRecentReplayMessages(input: {
@@ -510,9 +426,6 @@ function createReplayMessages(messages: Array<{
         }>;
       }
   > = [];
-  const availableToolCallIds = new Set<string>();
-  const fulfilledToolCallIds = new Set<string>();
-
   for (const message of messages) {
     const textContent = message.parts
       .filter((part): part is { type: string; text: string } =>
@@ -540,8 +453,6 @@ function createReplayMessages(messages: Array<{
           if (typeof toolInvocation.toolCallId !== 'string') {
             return [];
           }
-
-          availableToolCallIds.add(toolInvocation.toolCallId);
 
           return [{
             type: 'tool-call' as const,
@@ -572,17 +483,9 @@ function createReplayMessages(messages: Array<{
             return [];
           }
 
-          const toolCallId = toolResult.toolCallId;
-
-          if (!availableToolCallIds.has(toolCallId)) {
-            return [];
-          }
-
-          fulfilledToolCallIds.add(toolCallId);
-
           return [{
             type: 'tool-result' as const,
-            toolCallId,
+            toolCallId: toolResult.toolCallId,
             toolName: typeof toolResult.toolName === 'string' ? toolResult.toolName : 'unknown',
             output: {
               type: 'json' as const,
@@ -630,11 +533,10 @@ function createReplayMessages(messages: Array<{
 
   for (const entry of orderedEntries) {
     if ('kind' in entry && entry.kind === 'assistant') {
-      const toolCalls = entry.toolCalls.filter((toolCall) => fulfilledToolCallIds.has(toolCall.toolCallId));
       const content = [
         ...entry.textContent,
         ...entry.imageContent,
-        ...toolCalls,
+        ...entry.toolCalls,
       ];
 
       if (content.length === 0) {

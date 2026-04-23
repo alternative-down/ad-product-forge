@@ -123,7 +123,7 @@ async function buildCompatibleState(input: {
   let checkpointSummary = input.previousState.checkpointSummary;
 
   if (input.reflectionModel) {
-    while (sumActiveObservationTokens(observationBlocks) >= input.limits.observationReflectionBatchTokens) {
+    if (sumActiveObservationTokens(observationBlocks) >= input.limits.observationReflectionBatchTokens) {
       const activeObservationTexts = observationBlocks
         .filter((block) => block.reflectedGeneration === null)
         .map((block) => block.text);
@@ -132,32 +132,30 @@ async function buildCompatibleState(input: {
         tokenLimit: input.limits.observationReflectionBatchTokens,
       });
 
-      if (batch.length === 0) {
-        break;
-      }
+      if (batch.length > 0) {
+        const reflectionText = await generateReflectionText({
+          model: input.reflectionModel,
+          agentSystemPrompt: input.agentSystemPrompt,
+          supportText: takeSupportText(
+            activeObservationTexts.slice(0, Math.max(0, activeObservationTexts.length - batch.length)),
+            input.limits.reflectionSupportTokens ?? 2_000,
+          ),
+          observations: batch.map((block) => block.text),
+        });
+        const generationCount = (activeReflectionBlocks.at(-1)?.generationCount ?? checkpointGeneration ?? 0) + 1;
+        const createdAt = new Date().toISOString();
 
-      const reflectionText = await generateReflectionText({
-        model: input.reflectionModel,
-        agentSystemPrompt: input.agentSystemPrompt,
-        supportText: takeSupportText(
-          activeObservationTexts.slice(0, Math.max(0, activeObservationTexts.length - batch.length)),
-          input.limits.reflectionSupportTokens ?? 2_000,
-        ),
-        observations: batch.map((block) => block.text),
-      });
-      const generationCount = (activeReflectionBlocks.at(-1)?.generationCount ?? checkpointGeneration ?? 0) + 1;
-      const createdAt = new Date().toISOString();
+        activeReflectionBlocks.push({
+          recordId: `reflection:${generationCount}`,
+          generationCount,
+          tokenCount: estimateTokenCount(reflectionText),
+          createdAt,
+          text: reflectionText,
+        });
 
-      activeReflectionBlocks.push({
-        recordId: `reflection:${generationCount}`,
-        generationCount,
-        tokenCount: estimateTokenCount(reflectionText),
-        createdAt,
-        text: reflectionText,
-      });
-
-      for (const observation of batch) {
-        observation.reflectedGeneration = generationCount;
+        for (const observation of batch) {
+          observation.reflectedGeneration = generationCount;
+        }
       }
     }
   }
