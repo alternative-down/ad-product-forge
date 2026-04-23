@@ -97,7 +97,8 @@ export async function runRuntimeAgentSessionGenerate(input: {
       actions: input.runtime.runtimeActions,
     });
     const requestDiagnostics = summarizeGenerateRequest({
-      system,
+      system: system.text,
+      systemSegments: system.segments,
       messages,
       actions: input.runtime.runtimeActions,
     });
@@ -106,7 +107,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
     try {
       result = await generateText({
         model: input.runtime.model,
-        system,
+        system: system.text,
         messages,
         tools,
         providerOptions: input.options.providerOptions as Record<string, never> | undefined,
@@ -174,6 +175,12 @@ export async function runRuntimeAgentSessionGenerate(input: {
 
 function summarizeGenerateRequest(input: {
   system?: string;
+  systemSegments: {
+    baseSystem: string;
+    workingMemory: string;
+    checkpointedOm: string[];
+    stepSystem: string;
+  };
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
 }) {
@@ -196,6 +203,12 @@ function summarizeGenerateRequest(input: {
 
   return {
     systemChars: input.system?.length ?? 0,
+    systemSegmentChars: {
+      baseSystem: input.systemSegments.baseSystem.length,
+      workingMemory: input.systemSegments.workingMemory.length,
+      checkpointedOm: input.systemSegments.checkpointedOm.map((segment) => segment.length),
+      stepSystem: input.systemSegments.stepSystem.length,
+    },
     messageCount: input.messages.length,
     messageChars: messageBreakdown.textChars + messageBreakdown.toolCallChars + messageBreakdown.toolResultChars,
     messageTextChars: messageBreakdown.textChars,
@@ -298,16 +311,25 @@ async function buildRuntimeSessionSystemPrompt(input: {
       stateStore: input.checkpointedOmStateStore,
     })
     : [];
+  const segments = {
+    baseSystem: input.baseSystem?.trim() || '',
+    workingMemory: workingMemoryText?.trim() || '',
+    checkpointedOm: checkpointedOmTexts.filter(Boolean),
+    stepSystem: input.stepSystem?.trim() || '',
+  };
 
-  return [
-    input.baseSystem?.trim(),
-    workingMemoryText?.trim(),
-    ...checkpointedOmTexts,
-    input.stepSystem?.trim(),
-  ]
-    .filter((value): value is string => Boolean(value))
-    .join('\n\n')
-    .trim() || undefined;
+  return {
+    text: [
+      segments.baseSystem,
+      segments.workingMemory,
+      ...segments.checkpointedOm,
+      segments.stepSystem,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join('\n\n')
+      .trim() || undefined,
+    segments,
+  };
 }
 
 async function buildRuntimeSessionModelMessages(input: {
