@@ -127,16 +127,15 @@ describe('CheckpointedConversationMemory', () => {
     await memory.stabilize();
     state = await memory.getState();
 
-    expect(state.checkpointMessageId).toBe('message-1');
+    expect(state.checkpointMessageId).toBe('message-2');
     expect(state.recentMessageIds).toEqual(['message-3']);
-    expect(state.overflowMessageIds).toEqual(['message-2']);
-    expect(state.observations).toHaveLength(1);
+    expect(state.overflowMessageIds).toEqual([]);
+    expect(state.observations).toHaveLength(2);
 
     const context = await memory.renderContext();
 
-    expect(context).toHaveLength(2);
-    expect(context[0]?.id).toContain('message-2');
-    expect(context[1]?.id).toContain('message-3');
+    expect(context).toHaveLength(1);
+    expect(context[0]?.id).toContain('message-3');
   });
 
   it('counts tool results in recent and overflow token budgets', async () => {

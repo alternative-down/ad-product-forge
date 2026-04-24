@@ -160,17 +160,29 @@ export class CheckpointedConversationMemory {
 
   async stabilize(): Promise<CheckpointedConversationState> {
     let state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
+    let previousLoopSignature: string | null = null;
 
     if (!this.observer) {
       return state;
     }
 
-    if (shouldObserveOverflow({
+    while (shouldObserveOverflow({
       state,
       overflowObservationTokenLimit: this.overflowObservationTokenLimit,
     })) {
-      const previousCursorObservedAt = state.cursorObservedAt ?? null;
-      const previousCursorObservedRawUnitIds = JSON.stringify(state.cursorObservedRawUnitIds ?? []);
+      const loopSignature = JSON.stringify({
+        cursorObservedAt: state.cursorObservedAt ?? null,
+        cursorObservedRawUnitIds: state.cursorObservedRawUnitIds ?? [],
+        overflowRawUnitIds: state.overflowRawUnitIds ?? [],
+        overflowTokenCount: state.metrics.overflowTokenCount,
+      });
+
+      if (previousLoopSignature === loopSignature) {
+        throw new Error(`Checkpointed conversation memory made no progress: ${loopSignature}`);
+      }
+
+      previousLoopSignature = loopSignature;
+
       const observation = await this.consolidateOneOverflowBatch();
 
       if (!observation) {
@@ -178,13 +190,6 @@ export class CheckpointedConversationMemory {
       }
 
       state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
-
-      if (
-        state.cursorObservedAt === previousCursorObservedAt
-        && JSON.stringify(state.cursorObservedRawUnitIds ?? []) === previousCursorObservedRawUnitIds
-      ) {
-        return state;
-      }
     }
 
     return state;
