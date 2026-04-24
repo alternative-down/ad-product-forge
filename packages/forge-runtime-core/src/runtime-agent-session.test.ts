@@ -36,10 +36,16 @@ describe('createRuntimeAgentSession', () => {
         const assistantMessages = options.prompt.filter((message) => message.role === 'assistant');
 
         if (assistantMessages.length === 0) {
-          expect(systemMessages).toEqual([{
-            role: 'system',
-            content: 'Base system.\n\nStep system.',
-          }]);
+          expect(systemMessages).toEqual([
+            {
+              role: 'system',
+              content: 'Base system.',
+            },
+            {
+              role: 'system',
+              content: 'Step system.',
+            },
+          ]);
 
           return {
             content: [{ type: 'text', text: 'First step response.' }],
@@ -426,6 +432,162 @@ describe('createRuntimeAgentSession', () => {
 
     try {
       const result = await session.generate([]);
+
+      expect(result.text).toBe('Done.');
+    } finally {
+      await session.dispose();
+    }
+  });
+
+  it('renders checkpoint summary, reflections, and observations as individual model messages', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
+    const workingMemoryStore = createInMemoryWorkingMemoryStore();
+    const checkpointedOmStateStore = {
+      async loadState() {
+        return {
+          version: 1 as const,
+          checkpointGeneration: 2,
+          checkpointSummary: {
+            text: 'checkpoint text',
+            tokenCount: 3,
+            upToGeneration: 2,
+            updatedAt: '2026-04-24T00:00:00.000Z',
+          },
+          activeReflectionBlocks: [
+            {
+              recordId: 'reflection-1',
+              generationCount: 3,
+              tokenCount: 2,
+              createdAt: '2026-04-24T00:00:01.000Z',
+              text: 'reflection one',
+            },
+            {
+              recordId: 'reflection-2',
+              generationCount: 4,
+              tokenCount: 2,
+              createdAt: '2026-04-24T00:00:02.000Z',
+              text: 'reflection two',
+            },
+          ],
+          observationBlocks: [
+            {
+              id: 'observation-1',
+              tokenCount: 2,
+              createdAt: '2026-04-24T00:00:03.000Z',
+              lastObservedAt: '2026-04-24T00:00:03.000Z',
+              reflectedGeneration: null,
+              text: 'observation one',
+            },
+          ],
+          latestMetrics: null,
+        };
+      },
+      async saveState() {
+      },
+    };
+    const model = new MockLanguageModelV3({
+      doGenerate: async (options: LanguageModelV3CallOptions) => {
+        expect(options.prompt).toEqual([
+          {
+            role: 'system',
+            content: 'Base system.',
+          },
+          {
+            role: 'system',
+            content: 'Step system.',
+          },
+          {
+            role: 'system',
+            content: 'Checkpoint summary:\ncheckpoint text',
+          },
+          {
+            role: 'system',
+            content: 'Active reflection:\nreflection one',
+          },
+          {
+            role: 'system',
+            content: 'Active reflection:\nreflection two',
+          },
+          {
+            role: 'system',
+            content: 'Active observation:\nobservation one',
+          },
+          {
+            role: 'user',
+            content: [{
+              type: 'text',
+              text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
+              providerOptions: undefined,
+            }],
+            providerOptions: undefined,
+          },
+          {
+            role: 'user',
+            content: [{
+              type: 'text',
+              text: 'Continue.',
+              providerOptions: undefined,
+            }],
+            providerOptions: undefined,
+          },
+        ]);
+
+        return {
+          content: [{ type: 'text', text: 'Done.' }],
+          finishReason: { raw: 'stop', unified: 'stop' },
+          usage: {
+            inputTokens: {
+              total: 18,
+              noCache: 18,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: {
+              total: 4,
+              text: 4,
+              reasoning: 0,
+            },
+          },
+          warnings: [],
+        };
+      },
+    });
+    const session = await createRuntimeAgentSession({
+      agentId: 'agent-1',
+      agentName: 'Forge Agent',
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      assistantAuthorId: 'agent-1',
+      model,
+      system: 'Base system.',
+      conversationStore,
+      checkpointedStateStore,
+      checkpointedOmStateStore,
+      workingMemoryStore,
+    });
+
+    await conversationStore.upsertThread({
+      id: 'thread-1',
+      participantIds: ['agent-1'],
+      createdAt: '2026-04-24T00:00:00.000Z',
+      updatedAt: '2026-04-24T00:00:01.000Z',
+    });
+    await conversationStore.appendMessage({
+      id: 'user-follow-up',
+      threadId: 'thread-1',
+      role: 'user',
+      parts: [{
+        type: 'text',
+        text: 'Continue.',
+      }],
+      createdAt: '2026-04-24T00:00:01.000Z',
+    });
+
+    try {
+      const result = await session.generate([], {
+        system: 'Step system.',
+      });
 
       expect(result.text).toBe('Done.');
     } finally {

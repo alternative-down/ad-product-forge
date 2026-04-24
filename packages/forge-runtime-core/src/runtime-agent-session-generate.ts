@@ -11,7 +11,6 @@ import { z } from 'zod';
 
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
-import { loadCheckpointedOmSystemTexts } from './checkpointed-om-context-plugin.js';
 import { createRuntimeAgentSessionIteration, resolveRuntimeAgentSessionContinuation } from './runtime-agent-session-iteration.js';
 import {
   appendRuntimeSessionModelMessages,
@@ -76,16 +75,16 @@ export async function runRuntimeAgentSessionGenerate(input: {
 
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
-      stepSystem: iterationNumber === 1 ? input.options.system : undefined,
       threadId: input.session.threadId,
       resourceId: input.session.resourceId,
       workingMemoryStore: input.runtime.workingMemoryStore,
-      checkpointedOmStateStore: input.runtime.checkpointedOmStateStore,
     });
     const messages = await buildRuntimeSessionModelMessages({
-      store: input.runtime.conversationStore,
       conversationMemory: input.runtime.conversationMemory,
+      checkpointedOmStateStore: input.runtime.checkpointedOmStateStore,
       threadId: input.session.threadId,
+      resourceId: input.session.resourceId,
+      stepSystem: iterationNumber === 1 ? input.options.system : undefined,
     });
     const runtimeActions = await input.runtime.getRuntimeActions();
     const stepId = randomUUID();
@@ -193,8 +192,6 @@ function summarizeGenerateRequest(input: {
   systemSegments: {
     baseSystem: string;
     workingMemory: string;
-    checkpointedOm: string[];
-    stepSystem: string;
   };
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
@@ -221,8 +218,6 @@ function summarizeGenerateRequest(input: {
     systemSegmentChars: {
       baseSystem: input.systemSegments.baseSystem.length,
       workingMemory: input.systemSegments.workingMemory.length,
-      checkpointedOm: input.systemSegments.checkpointedOm.map((segment) => segment.length),
-      stepSystem: input.systemSegments.stepSystem.length,
     },
     messageCount: input.messages.length,
     messageChars: messageBreakdown.textChars + messageBreakdown.toolCallChars + messageBreakdown.toolResultChars,
@@ -348,37 +343,24 @@ function appendGenerateDiagnostics(error: unknown, diagnostics: {
 
 async function buildRuntimeSessionSystemPrompt(input: {
   baseSystem?: string;
-  stepSystem?: string;
   threadId: string;
   resourceId: string;
   workingMemoryStore: RuntimeAgentSessionRuntime['workingMemoryStore'];
-  checkpointedOmStateStore?: RuntimeAgentSessionRuntime['checkpointedOmStateStore'];
 }) {
   const workingMemoryText = await loadWorkingMemoryContextText({
     threadId: input.threadId,
     resourceId: input.resourceId,
     store: input.workingMemoryStore,
   });
-  const checkpointedOmTexts = input.checkpointedOmStateStore
-    ? await loadCheckpointedOmSystemTexts({
-      threadId: input.threadId,
-      resourceId: input.resourceId,
-      stateStore: input.checkpointedOmStateStore,
-    })
-    : [];
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
     workingMemory: workingMemoryText?.trim() || '',
-    checkpointedOm: checkpointedOmTexts.filter(Boolean),
-    stepSystem: input.stepSystem?.trim() || '',
   };
 
   return {
     text: [
       segments.baseSystem,
       segments.workingMemory,
-      ...segments.checkpointedOm,
-      segments.stepSystem,
     ]
       .filter((value): value is string => Boolean(value))
       .join('\n\n')
@@ -388,13 +370,21 @@ async function buildRuntimeSessionSystemPrompt(input: {
 }
 
 async function buildRuntimeSessionModelMessages(input: {
-  store: RuntimeAgentSessionRuntime['conversationStore'];
   conversationMemory: RuntimeAgentSessionRuntime['conversationMemory'];
+  checkpointedOmStateStore?: RuntimeAgentSessionRuntime['checkpointedOmStateStore'];
   threadId: string;
+  resourceId: string;
+  stepSystem?: string;
 }): Promise<ModelMessage[]> {
-  const replayMessages = await input.conversationMemory.renderActiveMessages();
+  const activeMessages = await input.conversationMemory.renderActiveMessages();
 
   return [
+    ...buildStepSystemMessages(input.stepSystem),
+    ...await loadCheckpointedOmModelMessages({
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+      stateStore: input.checkpointedOmStateStore,
+    }),
     {
       role: 'user',
       content: [{
@@ -402,8 +392,90 @@ async function buildRuntimeSessionModelMessages(input: {
         text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
       }],
     } as ModelMessage,
-    ...createReplayMessages(replayMessages),
+    ...createReplayMessages(activeMessages),
   ];
+}
+
+function buildStepSystemMessages(stepSystem: string | undefined): ModelMessage[] {
+  const content = stepSystem?.trim();
+
+  if (!content) {
+    return [];
+  }
+
+  return [{
+    role: 'system',
+    content,
+  } satisfies ModelMessage];
+}
+
+async function loadCheckpointedOmModelMessages(input: {
+  threadId: string;
+  resourceId: string;
+  stateStore?: RuntimeAgentSessionRuntime['checkpointedOmStateStore'];
+}): Promise<ModelMessage[]> {
+  if (!input.stateStore) {
+    return [];
+  }
+
+  const state = await input.stateStore.loadState({
+    threadId: input.threadId,
+    resourceId: input.resourceId,
+  });
+
+  if (!state) {
+    return [];
+  }
+
+  const messages: ModelMessage[] = [];
+  const checkpointText = normalizeOmText(state.checkpointSummary?.text);
+
+  if (checkpointText) {
+    messages.push({
+      role: 'system',
+      content: ['Checkpoint summary:', checkpointText].join('\n'),
+    });
+  }
+
+  for (const reflection of state.activeReflectionBlocks) {
+    const text = normalizeOmText(reflection.text);
+
+    if (!text) {
+      continue;
+    }
+
+    messages.push({
+      role: 'system',
+      content: ['Active reflection:', text].join('\n'),
+    });
+  }
+
+  for (const observation of state.observationBlocks) {
+    if (observation.reflectedGeneration !== null) {
+      continue;
+    }
+
+    const text = normalizeOmText(observation.text);
+
+    if (!text) {
+      continue;
+    }
+
+    messages.push({
+      role: 'system',
+      content: ['Active observation:', text].join('\n'),
+    });
+  }
+
+  return messages;
+}
+
+function normalizeOmText(value: string | null | undefined) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.trim();
 }
 
 function createReplayMessages(messages: Array<{
