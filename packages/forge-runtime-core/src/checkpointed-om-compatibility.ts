@@ -123,7 +123,7 @@ async function buildCompatibleState(input: {
   let checkpointSummary = input.previousState.checkpointSummary;
 
   if (input.reflectionModel) {
-    if (sumActiveObservationTokens(observationBlocks) >= input.limits.observationReflectionBatchTokens) {
+    while (sumActiveObservationTokens(observationBlocks) >= input.limits.observationReflectionBatchTokens) {
       const activeObservationTexts = observationBlocks
         .filter((block) => block.reflectedGeneration === null)
         .map((block) => block.text);
