@@ -418,29 +418,6 @@ function serializeBudgetValue(value: unknown) {
   return JSON.stringify(value);
 }
 
-function splitTextIntoChunks(text: string, maxChars: number) {
-  if (text.length <= maxChars) {
-    return [text];
-  }
-
-  const chunks: string[] = [];
-  let start = 0;
-
-  while (start < text.length) {
-    let end = Math.min(text.length, start + maxChars);
-    const boundary = text.lastIndexOf('\n', end);
-
-    if (boundary > start + Math.floor(maxChars * 0.5)) {
-      end = boundary;
-    }
-
-    chunks.push(text.slice(start, end).trim());
-    start = end;
-  }
-
-  return chunks.filter(Boolean);
-}
-
 function cloneMessageWithParts(
   message: ConversationMessage,
   parts: ConversationMessage['parts'],
@@ -465,9 +442,8 @@ function cloneMessageWithContent(input: {
 
 function splitMessageIntoRawUnits(
   message: ConversationMessage,
-  maxUnitTokens: number,
+  _maxUnitTokens: number,
 ): RawConversationUnit[] {
-  const maxUnitChars = Math.max(1, maxUnitTokens) * 4;
   const toolInvocations = Array.isArray(message.metadata?.toolInvocations)
     ? message.metadata.toolInvocations
     : [];
@@ -492,42 +468,38 @@ function splitMessageIntoRawUnits(
     const createdAt = new Date(message.createdAt);
 
     if (part.type === 'text') {
-      return splitTextIntoChunks(part.text, maxUnitChars).map((text, chunkIndex) => {
-        const promptMessage = cloneMessageWithParts(message, [{
-          type: 'text',
-          text,
-        }]);
+      const promptMessage = cloneMessageWithParts(message, [{
+        type: 'text',
+        text: part.text,
+      }]);
 
-        return {
-          id: `${message.id}:part:${partKey}:chunk:${chunkIndex}`,
-          groupId: `${message.id}:part:${partKey}`,
-          parentMessageId: message.id,
-          createdAt,
-          tokenCount: estimateMessageUnits(promptMessage),
-          promptMessage,
-          kind: 'part',
-        } satisfies RawConversationUnit;
-      });
+      return [{
+        id: `${message.id}:part:${partKey}`,
+        groupId: `${message.id}:part:${partKey}`,
+        parentMessageId: message.id,
+        createdAt,
+        tokenCount: estimateMessageUnits(promptMessage),
+        promptMessage,
+        kind: 'part',
+      } satisfies RawConversationUnit];
     }
 
     if (part.type === 'reasoning') {
-      return splitTextIntoChunks(part.text, maxUnitChars).map((text, chunkIndex) => {
-        const promptMessage = cloneMessageWithParts(message, [{
-          type: 'reasoning',
-          text,
-          providerMetadata: part.providerMetadata,
-        }]);
+      const promptMessage = cloneMessageWithParts(message, [{
+        type: 'reasoning',
+        text: part.text,
+        providerMetadata: part.providerMetadata,
+      }]);
 
-        return {
-          id: `${message.id}:part:${partKey}:chunk:${chunkIndex}`,
-          groupId: `${message.id}:part:${partKey}`,
-          parentMessageId: message.id,
-          createdAt,
-          tokenCount: estimateMessageUnits(promptMessage),
-          promptMessage,
-          kind: 'part',
-        } satisfies RawConversationUnit;
-      });
+      return [{
+        id: `${message.id}:part:${partKey}`,
+        groupId: `${message.id}:part:${partKey}`,
+        parentMessageId: message.id,
+        createdAt,
+        tokenCount: estimateMessageUnits(promptMessage),
+        promptMessage,
+        kind: 'part',
+      } satisfies RawConversationUnit];
     }
 
     const promptMessage = cloneMessageWithParts(message, [part]);
@@ -775,11 +747,6 @@ function buildToolConversationGroupId(value: unknown, fallbackId: string) {
   return fallbackId;
 }
 
-function getChunkIndex(unitId: string) {
-  const match = unitId.match(/:chunk:(\d+)$/);
-  return match ? Number(match[1]) : 0;
-}
-
 function getPartIndex(unitId: string) {
   const match = unitId.match(/:part:(\d+)/);
   return match ? Number(match[1]) : null;
@@ -829,8 +796,7 @@ function rebuildMessagesFromUnits(input: {
 
     for (const [index, part] of message.parts.entries()) {
       const remainingUnits = units
-        .filter((unit) => getPartIndex(unit.id) === index)
-        .sort((left, right) => getChunkIndex(left.id) - getChunkIndex(right.id));
+        .filter((unit) => getPartIndex(unit.id) === index);
 
       if (remainingUnits.length === 0) {
         continue;
