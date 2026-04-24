@@ -20,6 +20,41 @@ import type {
   RuntimeAgent,
 } from './agent-runtime-types';
 
+function requireCheckpointedOmLimits(config: CreateAgentConfig) {
+  if (config.checkpointedOmTotalContextTokens === undefined) {
+    throw new Error('checkpointedOmTotalContextTokens is required in agent runtime config.');
+  }
+
+  if (config.checkpointedOmRecentRawTokens === undefined) {
+    throw new Error('checkpointedOmRecentRawTokens is required in agent runtime config.');
+  }
+
+  if (config.checkpointedOmRawObservationBatchTokens === undefined) {
+    throw new Error('checkpointedOmRawObservationBatchTokens is required in agent runtime config.');
+  }
+
+  if (config.checkpointedOmObservationReflectionBatchTokens === undefined) {
+    throw new Error('checkpointedOmObservationReflectionBatchTokens is required in agent runtime config.');
+  }
+
+  if (config.checkpointedOmObservationSupportTokens === undefined) {
+    throw new Error('checkpointedOmObservationSupportTokens is required in agent runtime config.');
+  }
+
+  if (config.checkpointedOmReflectionSupportTokens === undefined) {
+    throw new Error('checkpointedOmReflectionSupportTokens is required in agent runtime config.');
+  }
+
+  return {
+    totalContextTokens: config.checkpointedOmTotalContextTokens,
+    recentRawTokens: config.checkpointedOmRecentRawTokens,
+    rawObservationBatchTokens: config.checkpointedOmRawObservationBatchTokens,
+    observationReflectionBatchTokens: config.checkpointedOmObservationReflectionBatchTokens,
+    observationSupportTokens: config.checkpointedOmObservationSupportTokens,
+    reflectionSupportTokens: config.checkpointedOmReflectionSupportTokens,
+  };
+}
+
 export async function createAgent<
   TAgentId extends string = string,
   TTools extends Record<string, unknown> = Record<string, unknown>,
@@ -126,6 +161,7 @@ export async function createInternalAgentRuntime<
   );
 
   mcpRuntimeActionSource.start();
+  const checkpointedOmLimits = requireCheckpointedOmLimits(config);
 
   const agent = await createRuntimeAgentSession({
     agentId: config.id,
@@ -139,15 +175,7 @@ export async function createInternalAgentRuntime<
     checkpointedStateStore: platform.conversationStore,
     workingMemoryStore: platform.conversationStore,
     checkpointedOmStateStore,
-    checkpointedOmLimits: {
-      totalContextTokens: config.checkpointedOmTotalContextTokens ?? 50_000,
-      recentRawTokens: config.checkpointedOmRecentRawTokens ?? 10_000,
-      rawObservationBatchTokens: config.checkpointedOmRawObservationBatchTokens ?? 5_000,
-      observationReflectionBatchTokens:
-        config.checkpointedOmObservationReflectionBatchTokens ?? 5_000,
-      observationSupportTokens: config.checkpointedOmObservationSupportTokens ?? 2_000,
-      reflectionSupportTokens: config.checkpointedOmReflectionSupportTokens ?? 2_000,
-    },
+    checkpointedOmLimits,
     checkpointedOmModel: (config.omModel ?? config.model) as never,
     checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
@@ -156,7 +184,7 @@ export async function createInternalAgentRuntime<
       ...toolsToRuntimeActions(allAgentTools),
     ],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
-    consolidateConversationOverflow: config.checkpointedOmEnabled,
+    consolidateConversationOverflow: config.checkpointedOmEnabled === true,
   });
 
   await longTermMemory?.start();

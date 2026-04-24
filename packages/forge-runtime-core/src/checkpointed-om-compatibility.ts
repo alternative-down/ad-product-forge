@@ -38,8 +38,8 @@ export type CheckpointedOmCompatibilityObserverOptions = {
     recentRawTokens: number;
     rawObservationBatchTokens: number;
     observationReflectionBatchTokens: number;
-    observationSupportTokens?: number;
-    reflectionSupportTokens?: number;
+    observationSupportTokens: number;
+    reflectionSupportTokens: number;
   };
   reflectionModel?: LanguageModel;
   agentSystemPrompt?: string;
@@ -141,7 +141,7 @@ async function buildCompatibleState(input: {
           agentSystemPrompt: input.agentSystemPrompt,
           supportText: takeSupportText(
             activeObservationTexts.slice(0, Math.max(0, activeObservationTexts.length - batch.length)),
-            input.limits.reflectionSupportTokens ?? 2_000,
+            input.limits.reflectionSupportTokens,
           ),
           observations: batch.map((block) => block.text),
         });

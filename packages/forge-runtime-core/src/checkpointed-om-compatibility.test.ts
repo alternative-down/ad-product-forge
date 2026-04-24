@@ -120,6 +120,8 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
         recentRawTokens: 10_000,
         rawObservationBatchTokens: 5_000,
         observationReflectionBatchTokens: 5_000,
+        observationSupportTokens: 2_000,
+        reflectionSupportTokens: 2_000,
       },
       async onCheckpointAdvanced(input) {
         checkpointPayload = {
@@ -218,6 +220,8 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
         recentRawTokens: 5,
         rawObservationBatchTokens: 5_000,
         observationReflectionBatchTokens: 5_000,
+        observationSupportTokens: 2_000,
+        reflectionSupportTokens: 2_000,
       },
     });
 
@@ -313,6 +317,8 @@ describe('createCheckpointedOmCompatibilityObserver', () => {
         recentRawTokens: 10,
         rawObservationBatchTokens: 5,
         observationReflectionBatchTokens: 6,
+        observationSupportTokens: 2_000,
+        reflectionSupportTokens: 2_000,
       },
       reflectionModel: new MockLanguageModelV3({
         doGenerate: async () => ({

@@ -11,15 +11,6 @@ import {
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
 import { toolToRuntimeAction } from './tools.js';
 
-const DEFAULT_CHECKPOINTED_OM_LIMITS = {
-  totalContextTokens: 50_000,
-  recentRawTokens: 10_000,
-  rawObservationBatchTokens: 5_000,
-  observationReflectionBatchTokens: 5_000,
-  observationSupportTokens: 2_000,
-  reflectionSupportTokens: 2_000,
-};
-
 export type RuntimeAgentSessionRuntime = {
   model: CreateRuntimeAgentSessionOptions['model'];
   assistantAuthorId?: string;
@@ -31,6 +22,16 @@ export type RuntimeAgentSessionRuntime = {
   syncState(): Promise<void>;
 };
 
+function requireCheckpointedOmLimits(
+  input: CreateRuntimeAgentSessionOptions,
+) {
+  if (!input.checkpointedOmLimits) {
+    throw new Error('Checkpointed OM limits are required when conversation overflow consolidation is enabled.');
+  }
+
+  return input.checkpointedOmLimits;
+}
+
 export async function createRuntimeAgentSessionRuntime(
   input: CreateRuntimeAgentSessionOptions,
 ): Promise<RuntimeAgentSessionRuntime> {
@@ -39,8 +40,9 @@ export async function createRuntimeAgentSessionRuntime(
     resourceId: input.resourceId,
     store: input.workingMemoryStore,
   });
-  const checkpointedOmLimits = input.checkpointedOmLimits ?? DEFAULT_CHECKPOINTED_OM_LIMITS;
-  const checkpointedOmEnabled = input.consolidateConversationOverflow ?? true;
+  const checkpointedOmEnabled = input.consolidateConversationOverflow === true;
+  const checkpointedOmLimits = checkpointedOmEnabled ? requireCheckpointedOmLimits(input) : undefined;
+
   const conversationMemory = createForgeConversationMemory({
     threadId: input.threadId,
     conversationStore: input.conversationStore,
@@ -65,15 +67,15 @@ export async function createRuntimeAgentSessionRuntime(
               state.observationBlocks
                 .filter((block) => block.reflectedGeneration === null)
                 .map((block) => block.text),
-              checkpointedOmLimits.observationSupportTokens ?? DEFAULT_CHECKPOINTED_OM_LIMITS.observationSupportTokens,
+              checkpointedOmLimits!.observationSupportTokens,
             );
           }
           : undefined,
       })
       : undefined,
-    recentTokenLimit: checkpointedOmEnabled ? checkpointedOmLimits.recentRawTokens : undefined,
+    recentTokenLimit: checkpointedOmEnabled ? checkpointedOmLimits!.recentRawTokens : undefined,
     overflowObservationTokenLimit:
-      checkpointedOmEnabled ? checkpointedOmLimits.rawObservationBatchTokens : undefined,
+      checkpointedOmEnabled ? checkpointedOmLimits!.rawObservationBatchTokens : undefined,
     consolidateOverflow: checkpointedOmEnabled,
   });
   const staticRuntimeActions = [
@@ -111,7 +113,7 @@ export async function createRuntimeAgentSessionRuntime(
         await conversationMemory.memory.sync();
       }
 
-      if (!input.checkpointedOmStateStore) {
+      if (!input.checkpointedOmStateStore || !checkpointedOmLimits) {
         return;
       }
 

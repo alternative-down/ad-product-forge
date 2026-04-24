@@ -130,8 +130,8 @@ export type CreateRuntimeAgentSessionOptions = {
     recentRawTokens: number;
     rawObservationBatchTokens: number;
     observationReflectionBatchTokens: number;
-    observationSupportTokens?: number;
-    reflectionSupportTokens?: number;
+    observationSupportTokens: number;
+    reflectionSupportTokens: number;
   };
   checkpointedOmModel?: LanguageModel;
   checkpointedOmSystemPrompt?: string;
