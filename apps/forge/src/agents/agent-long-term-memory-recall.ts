@@ -77,9 +77,6 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
 const RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
-const RECALL_SEARCH_MODE = 'hybrid' as const;
-const RECALL_GRAPH_RANDOM_WALK_STEPS = 100;
-const RECALL_GRAPH_INCLUDE_SOURCES = false;
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
 type RecallConfig = {
@@ -149,7 +146,6 @@ export class AgentLongTermMemoryRecall {
   private readonly agentMemoryPath: string;
   private readonly agentWorkspacePath: string;
   private readonly workspaceEmbedder: WorkspaceEmbedderId;
-  private readonly recallConfig: RecallConfig;
   private readonly readRuntimeMemorySettings?: () => Promise<{
     ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
     ltmRecallWorkspaceTopK: number;
@@ -208,13 +204,6 @@ export class AgentLongTermMemoryRecall {
     this.agentMemoryPath = input.agentMemoryPath;
     this.agentWorkspacePath = input.agentWorkspacePath;
     this.workspaceEmbedder = input.workspaceEmbedder ?? 'fastembed';
-    this.recallConfig = {
-      searchMode: RECALL_SEARCH_MODE,
-      scoreThreshold: input.scoreThreshold ?? 0,
-      documentCount: input.documentCount ?? 1,
-      graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
-      graphIncludeSources: RECALL_GRAPH_INCLUDE_SOURCES,
-    };
     this.readRuntimeMemorySettings = input.readRuntimeMemorySettings;
     this.checkpointedOmStateStore = input.checkpointedOmStateStore;
     this.persistenceStore = input.persistenceStore;
@@ -568,7 +557,7 @@ export class AgentLongTermMemoryRecall {
     const runtimeSettings = await this.readRuntimeMemorySettings?.();
 
     if (!runtimeSettings) {
-      return this.recallConfig;
+      throw new Error('LTM recall requires runtime memory settings');
     }
 
     return {
@@ -595,7 +584,7 @@ export class AgentLongTermMemoryRecall {
       topK: 1,
       resultCount: 1,
       scoreThreshold: 0,
-      mode: RECALL_SEARCH_MODE,
+      mode: 'hybrid',
     },
   ): Promise<{ formatted: string; results: SearchResult[] }> {
     const stageStartedAt = Date.now();
@@ -667,8 +656,8 @@ export class AgentLongTermMemoryRecall {
     } = {
       topK: 1,
       threshold: 0,
-      randomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
-      includeSources: RECALL_GRAPH_INCLUDE_SOURCES,
+      randomWalkSteps: 0,
+      includeSources: false,
       contextResults: [],
     },
   ): Promise<{

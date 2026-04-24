@@ -124,6 +124,16 @@ describe('AgentLongTermMemoryRecall', () => {
 
     await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
     await mkdir(agentMemoryPath, { recursive: true });
+    const readRuntimeMemorySettings = vi.fn(async () => ({
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.7,
+      ltmRecallDocumentCount: 3,
+    }));
     const checkpointedOmStateStore = {
       readState: vi.fn(async () => ({
         latestMetrics: {
@@ -166,6 +176,7 @@ describe('AgentLongTermMemoryRecall', () => {
       agentWorkspacePath,
       agentMemoryPath,
       mastraId: 'agent_1',
+      readRuntimeMemorySettings,
       checkpointedOmStateStore,
       persistenceStore,
     });
