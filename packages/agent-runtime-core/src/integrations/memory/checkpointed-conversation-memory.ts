@@ -458,6 +458,7 @@ function cloneMessageWithParts(
   return {
     ...message,
     parts,
+    metadata: omitToolMetadata(message.metadata),
   };
 }
 
@@ -471,6 +472,19 @@ function cloneMessageWithContent(input: {
     parts: input.parts,
     metadata: input.metadata,
   };
+}
+
+function omitToolMetadata(metadata: Record<string, unknown> | undefined) {
+  if (!metadata) {
+    return undefined;
+  }
+
+  const nextMetadata = { ...metadata };
+
+  delete nextMetadata.toolInvocations;
+  delete nextMetadata.toolResults;
+
+  return Object.keys(nextMetadata).length > 0 ? nextMetadata : undefined;
 }
 
 function splitMessageIntoRawUnits(
@@ -556,7 +570,7 @@ function splitMessageIntoRawUnits(
       message,
       parts: [],
       metadata: {
-        ...message.metadata,
+        ...omitToolMetadata(message.metadata),
         toolInvocations: [toolInvocation],
       },
     });
@@ -581,7 +595,7 @@ function splitMessageIntoRawUnits(
       message,
       parts: [],
       metadata: {
-        ...message.metadata,
+        ...omitToolMetadata(message.metadata),
         toolResults: [toolResult],
       },
     });

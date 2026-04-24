@@ -190,6 +190,52 @@ describe('CheckpointedConversationMemory', () => {
     expect(state.metrics.recentTokenCount).toBeLessThanOrEqual(20);
   });
 
+  it('does not double count tool metadata when a message also has text parts', async () => {
+    const store = new InMemoryConversationStore();
+
+    await store.appendMessage({
+      id: 'assistant-mixed',
+      threadId: 'thread-1',
+      role: 'assistant',
+      parts: [{
+        type: 'text',
+        text: 'brief note',
+      }],
+      metadata: {
+        toolInvocations: [{
+          toolCallId: 'call-1',
+          toolName: 'workspace_execute_command',
+          args: {
+            command: 'cat README.md',
+          },
+        }],
+        toolResults: [{
+          toolCallId: 'call-1',
+          toolName: 'workspace_execute_command',
+          result: {
+            stdout: 'x'.repeat(120),
+          },
+        }],
+      },
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+    await store.appendMessage(createMessage('message-2', 'tail'));
+
+    const memory = new CheckpointedConversationMemory({
+      threadId: 'thread-1',
+      store,
+      stateStore: new InMemoryCheckpointedConversationStateStore(),
+      recentTokenLimit: 63,
+      overflowObservationTokenLimit: 63,
+    });
+
+    const state = await memory.getState();
+
+    expect(state.recentMessageIds).toEqual(['assistant-mixed', 'message-2']);
+    expect(state.overflowMessageIds).toEqual([]);
+    expect(state.metrics.recentTokenCount).toBeLessThanOrEqual(63);
+  });
+
   it('does not observe overflow before the overflow batch limit is reached', async () => {
     const store = new InMemoryConversationStore();
 
