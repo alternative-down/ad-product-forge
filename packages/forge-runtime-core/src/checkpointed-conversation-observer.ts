@@ -79,11 +79,7 @@ function toObserverPromptMessage(message: {
   }>;
   createdAt: string;
 }): ObserverPromptMessage {
-  const text = message.parts
-    .filter((part): part is { type: string; text: string } => part.type === 'text' && typeof part.text === 'string')
-    .map((part) => part.text.trim())
-    .filter(Boolean)
-    .join('\n');
+  const text = buildObserverMessageText(message);
 
   return {
     id: message.id,
@@ -98,4 +94,78 @@ function toObserverPromptMessage(message: {
       }],
     },
   };
+}
+
+function buildObserverMessageText(message: {
+  parts: Array<{
+    type: string;
+    text?: string;
+  }>;
+  metadata?: Record<string, unknown>;
+}) {
+  return [
+    ...message.parts
+      .filter((part): part is { type: string; text: string } =>
+        (part.type === 'text' || part.type === 'reasoning') && typeof part.text === 'string')
+      .map((part) => part.text.trim())
+      .filter(Boolean),
+    ...getObserverToolInvocationTexts(message.metadata),
+    ...getObserverToolResultTexts(message.metadata),
+  ].join('\n');
+}
+
+function getObserverToolInvocationTexts(metadata: Record<string, unknown> | undefined) {
+  const toolInvocations = Array.isArray(metadata?.toolInvocations)
+    ? metadata.toolInvocations
+    : [];
+
+  return toolInvocations.flatMap((toolInvocation) => {
+    if (typeof toolInvocation !== 'object' || toolInvocation === null) {
+      return [];
+    }
+
+    const toolName = typeof toolInvocation.toolName === 'string'
+      ? toolInvocation.toolName
+      : 'unknown';
+    const args = serializeObserverValue('args' in toolInvocation ? toolInvocation.args : undefined);
+
+    return [[
+      `Tool call: ${toolName}`,
+      args,
+    ].filter(Boolean).join('\n')];
+  });
+}
+
+function getObserverToolResultTexts(metadata: Record<string, unknown> | undefined) {
+  const toolResults = Array.isArray(metadata?.toolResults)
+    ? metadata.toolResults
+    : [];
+
+  return toolResults.flatMap((toolResult) => {
+    if (typeof toolResult !== 'object' || toolResult === null) {
+      return [];
+    }
+
+    const toolName = typeof toolResult.toolName === 'string'
+      ? toolResult.toolName
+      : 'unknown';
+    const result = serializeObserverValue('result' in toolResult ? toolResult.result : undefined);
+
+    return [[
+      `Tool result: ${toolName}`,
+      result,
+    ].filter(Boolean).join('\n')];
+  });
+}
+
+function serializeObserverValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return JSON.stringify(value);
 }
