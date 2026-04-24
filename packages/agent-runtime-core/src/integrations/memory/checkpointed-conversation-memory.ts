@@ -183,7 +183,14 @@ export class CheckpointedConversationMemory {
 
       previousLoopSignature = loopSignature;
 
-      const observation = await this.consolidateOneOverflowBatch();
+      let observation: CheckpointedConversationObservation | null;
+
+      try {
+        observation = await this.consolidateOneOverflowBatch();
+      } catch (error) {
+        console.warn('[CheckpointedConversationMemory] Observation batch failed; preserving prior progress and stopping OM drain for this cycle.', error);
+        return normalizeCheckpointedConversationState(this.threadId, await this.sync());
+      }
 
       if (!observation) {
         return state;

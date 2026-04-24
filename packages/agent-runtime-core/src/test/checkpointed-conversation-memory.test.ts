@@ -224,6 +224,46 @@ describe('CheckpointedConversationMemory', () => {
     expect(stateAfter.observations).toHaveLength(0);
     expect(stateAfter.overflowMessageIds).toEqual(['message-1']);
   });
+
+  it('keeps prior observation progress when a later overflow batch fails', async () => {
+    const store = new InMemoryConversationStore();
+
+    for (const message of [
+      createMessage('message-1', '11111111111111111111'),
+      createMessage('message-2', '22222222222222222222'),
+      createMessage('message-3', '33333333333333333333'),
+    ]) {
+      await store.appendMessage(message);
+    }
+
+    let attempt = 0;
+    const memory = new CheckpointedConversationMemory({
+      threadId: 'thread-1',
+      store,
+      stateStore: new InMemoryCheckpointedConversationStateStore(),
+      recentTokenLimit: 5,
+      overflowObservationTokenLimit: 5,
+      observer: {
+        async observe(request) {
+          attempt += 1;
+
+          if (attempt === 2) {
+            throw new Error('observer failed');
+          }
+
+          return {
+            text: request.messages.map((message) => getText(message)).join(' | '),
+          };
+        },
+      },
+    });
+
+    const state = await memory.stabilize();
+
+    expect(state.checkpointMessageId).toBe('message-1');
+    expect(state.observations).toHaveLength(1);
+    expect(state.overflowMessageIds).toEqual(['message-2']);
+  });
 });
 
 function createMessage(id: string, text: string) {
