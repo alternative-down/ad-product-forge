@@ -349,7 +349,6 @@ export function createAgentLongTermMemory(input: {
       checkpointedStateStore: input.conversationStore,
       workingMemoryStore: input.conversationStore,
       runtimeActions: input.workspaceActions,
-      maxConversationMessages: 20,
       consolidateConversationOverflow: false,
     });
     initialized = true;

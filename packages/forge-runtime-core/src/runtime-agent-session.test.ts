@@ -177,7 +177,7 @@ describe('createRuntimeAgentSession', () => {
     }
   });
 
-  it('adds the autonomous bootstrap user message before replayed recent messages', async () => {
+  it('adds the autonomous bootstrap user message before active raw messages', async () => {
     const conversationStore = new InMemoryConversationStore();
     const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
@@ -318,7 +318,7 @@ describe('createRuntimeAgentSession', () => {
     }
   });
 
-  it('keeps the autonomous bootstrap user message ahead of regular user replay', async () => {
+  it('keeps the autonomous bootstrap user message ahead of regular user raw messages', async () => {
     const conversationStore = new InMemoryConversationStore();
     const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();

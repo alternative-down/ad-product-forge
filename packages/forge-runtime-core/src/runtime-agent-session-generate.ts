@@ -76,10 +76,9 @@ export async function runRuntimeAgentSessionGenerate(input: {
       resourceId: input.session.resourceId,
       workingMemoryStore: input.runtime.workingMemoryStore,
     });
-    const messages = await buildRuntimeSessionModelMessages({
-      conversationMemory: input.runtime.conversationMemory,
-      checkpointedOmStateStore: input.runtime.checkpointedOmStateStore,
+    const messages = await input.runtime.conversationMemory.renderModelMessages({
       resourceId: input.session.resourceId,
+      checkpointedOmStateStore: input.runtime.checkpointedOmStateStore,
       stepSystem: iterationNumber === 1 ? input.options.system : undefined,
     });
     const runtimeActions = await input.runtime.getRuntimeActions();
@@ -363,19 +362,6 @@ async function buildRuntimeSessionSystemPrompt(input: {
       .trim() || undefined,
     segments,
   };
-}
-
-async function buildRuntimeSessionModelMessages(input: {
-  conversationMemory: RuntimeAgentSessionRuntime['conversationMemory'];
-  checkpointedOmStateStore?: RuntimeAgentSessionRuntime['checkpointedOmStateStore'];
-  resourceId: string;
-  stepSystem?: string;
-}): Promise<ModelMessage[]> {
-  return input.conversationMemory.renderModelMessages({
-    resourceId: input.resourceId,
-    checkpointedOmStateStore: input.checkpointedOmStateStore,
-    stepSystem: input.stepSystem,
-  });
 }
 
 function buildAiSdkToolSet(input: {

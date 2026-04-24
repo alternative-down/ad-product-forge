@@ -156,9 +156,6 @@ export async function createInternalAgentRuntime<
       ...toolsToRuntimeActions(allAgentTools),
     ],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
-    maxConversationMessages: config.memoryLastMessagesFullEnabled
-      ? Number.MAX_SAFE_INTEGER
-      : config.memoryLastMessagesCount,
     consolidateConversationOverflow: config.checkpointedOmEnabled,
   });
 
