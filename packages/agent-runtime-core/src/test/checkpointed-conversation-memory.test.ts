@@ -134,8 +134,9 @@ describe('CheckpointedConversationMemory', () => {
 
     const context = await memory.renderContext();
 
-    expect(context).toHaveLength(1);
-    expect(context[0]?.id).toContain('message-3');
+    expect(context).toHaveLength(2);
+    expect(context[0]?.id).toContain('message-2');
+    expect(context[1]?.id).toContain('message-3');
   });
 
   it('counts tool results in recent and overflow token budgets', async () => {

@@ -392,23 +392,7 @@ async function buildRuntimeSessionModelMessages(input: {
   conversationMemory: RuntimeAgentSessionRuntime['conversationMemory'];
   threadId: string;
 }): Promise<ModelMessage[]> {
-  const state = await input.conversationMemory.getState();
-  const recentMessages = await input.conversationMemory.renderRecentMessages();
-  const activeMessages = await input.store.listMessages({
-    threadId: input.threadId,
-    order: 'asc',
-  });
-  const replayMessageMap = new Map(activeMessages.map((message) => [message.id, message]));
-
-  for (const message of recentMessages) {
-    replayMessageMap.set(message.id, message);
-  }
-
-  const replayMessages = expandRecentReplayMessages({
-    activeMessages,
-    recentMessageIds: state.recentMessageIds ?? [],
-    activeMessageMap: replayMessageMap,
-  });
+  const replayMessages = await input.conversationMemory.renderActiveMessages();
 
   return [
     {
@@ -420,31 +404,6 @@ async function buildRuntimeSessionModelMessages(input: {
     } as ModelMessage,
     ...createReplayMessages(replayMessages),
   ];
-}
-
-function expandRecentReplayMessages(input: {
-  activeMessages: Array<{
-    id: string;
-    role: 'user' | 'assistant' | 'system' | 'tool' | 'external';
-    metadata?: Record<string, unknown>;
-  }>;
-  recentMessageIds: string[];
-  activeMessageMap: Map<string, {
-    id: string;
-    role: 'user' | 'assistant' | 'system' | 'tool' | 'external';
-    parts: Array<{
-      type: string;
-      text?: string;
-      mimeType?: string;
-      bytes?: Uint8Array;
-    }>;
-    metadata?: Record<string, unknown>;
-  }>;
-}) {
-  return input.activeMessages
-    .filter((message) => input.recentMessageIds.includes(message.id))
-    .map((message) => input.activeMessageMap.get(message.id))
-    .filter((message): message is NonNullable<typeof message> => Boolean(message));
 }
 
 function createReplayMessages(messages: Array<{

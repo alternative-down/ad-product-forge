@@ -191,12 +191,33 @@ export class CheckpointedConversationMemory {
   }
 
   async renderContext(): Promise<StepContextEntry[]> {
-    const messages = await this.renderRecentMessages();
+    const messages = await this.renderActiveMessages();
 
     return messages.map((message) => createConversationMessageContextEntry(message));
   }
 
   async renderRecentMessages(): Promise<ConversationMessage[]> {
+    return this.renderMessagesForRawUnitIds({
+      unitIdsSelector(state) {
+        return state.recentRawUnitIds ?? [];
+      },
+    });
+  }
+
+  async renderActiveMessages(): Promise<ConversationMessage[]> {
+    return this.renderMessagesForRawUnitIds({
+      unitIdsSelector(state) {
+        return [
+          ...(state.overflowRawUnitIds ?? []),
+          ...(state.recentRawUnitIds ?? []),
+        ];
+      },
+    });
+  }
+
+  private async renderMessagesForRawUnitIds(input: {
+    unitIdsSelector(state: NormalizedCheckpointedConversationState): string[];
+  }): Promise<ConversationMessage[]> {
     const state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
     const messages = await this.store.listMessages({
       threadId: this.threadId,
@@ -208,13 +229,13 @@ export class CheckpointedConversationMemory {
       maxUnitTokens: getMaxRawUnitTokens(this.recentTokenLimit, this.overflowObservationTokenLimit),
     });
     const activeUnitMap = new Map(activeUnits.map((unit) => [unit.id, unit]));
-    const recentUnits = (state.recentRawUnitIds ?? [])
+    const selectedUnits = input.unitIdsSelector(state)
       .map((unitId) => activeUnitMap.get(unitId))
       .filter((unit): unit is RawConversationUnit => Boolean(unit));
 
     return rebuildMessagesFromUnits({
       messages,
-      recentUnits,
+      recentUnits: selectedUnits,
       maxUnitTokens: getMaxRawUnitTokens(this.recentTokenLimit, this.overflowObservationTokenLimit),
     });
   }
