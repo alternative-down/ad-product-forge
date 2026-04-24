@@ -16,7 +16,7 @@ afterEach(async () => {
 });
 
 describe('AgentLongTermMemoryRecall', () => {
-  it('clears persisted recall state and skips config reads when recall query is empty', async () => {
+  it('preserves recall history and skips config reads when recall query is empty', async () => {
     const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-recall-test-'));
     temporaryDirectories.push(workspaceBasePath);
 
@@ -88,7 +88,6 @@ describe('AgentLongTermMemoryRecall', () => {
         },
       })),
       writeRecallState: vi.fn(),
-      clearRecallState: vi.fn(),
     };
 
     const recall = new AgentLongTermMemoryRecall({
@@ -110,9 +109,9 @@ describe('AgentLongTermMemoryRecall', () => {
 
     expect(result).toBeNull();
     expect(readRuntimeMemorySettings).not.toHaveBeenCalled();
-    expect(checkpointedOmStateStore.readState).not.toHaveBeenCalled();
-    expect(persistenceStore.clearRecallState).toHaveBeenCalledTimes(1);
-    expect(persistenceStore.readRecallState).not.toHaveBeenCalled();
+    expect(checkpointedOmStateStore.readState).toHaveBeenCalledTimes(1);
+    expect(persistenceStore.readRecallState).toHaveBeenCalledTimes(1);
+    expect(persistenceStore.writeRecallState).toHaveBeenCalledTimes(1);
   });
 
   it('skips recall injection when recall volume already occupies a relevant share of raw and overflow context', async () => {
@@ -168,7 +167,6 @@ describe('AgentLongTermMemoryRecall', () => {
         },
       })),
       writeRecallState: vi.fn(),
-      clearRecallState: vi.fn(),
     };
 
     const recall = new AgentLongTermMemoryRecall({
@@ -223,7 +221,6 @@ describe('AgentLongTermMemoryRecall', () => {
     });
 
     expect(result).toBeNull();
-    expect(persistenceStore.clearRecallState).toHaveBeenCalledTimes(1);
-    expect(persistenceStore.writeRecallState).not.toHaveBeenCalled();
+    expect(persistenceStore.writeRecallState).toHaveBeenCalledTimes(1);
   });
 });

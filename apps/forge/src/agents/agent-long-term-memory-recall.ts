@@ -251,27 +251,82 @@ export class AgentLongTermMemoryRecall {
         resourceId: input.resourceId ?? null,
       });
       const queryText = this.buildRecallQueryFromStep(input.step);
+      const recallThreadState = await this.readRecallThreadState(input.threadId);
 
       if (!queryText) {
-        await this.clearPersistedRecallState();
+        await this.persistRecallSnapshot({
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+        }, {
+          status: 'miss',
+          query: '',
+          resultIds: [],
+          resultCount: 0,
+          resultScores: [],
+          graphHit: false,
+          stepsJson: safeSerializeRecallSteps(input.steps),
+          updatedAt: new Date().toISOString(),
+          lastInitAt: this.lastInitAt,
+          searchMode: 'unknown',
+          topK: 0,
+          graphTopK: 0,
+          graphThreshold: 0,
+          graphRandomWalkSteps: 0,
+          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+          workspaceFileCount: 0,
+          memoryFileCount: 0,
+          checkpointFileCount: 0,
+          error: null,
+        }, {
+          recentFingerprints: recallThreadState.recentFingerprints,
+          updatedAt: new Date().toISOString(),
+        });
         return null;
       }
 
       const recallConfig = await this.resolveRecallConfig();
-      const recallThreadState = await this.readRecallThreadState(input.threadId);
       const recallSearch = await this.runRecallSearch(queryText, recallConfig);
-      const { results, graph, candidateFingerprints } = this.dedupeRecallResults({
+      const { results, graph, historyFingerprints } = this.partitionRecallResults({
         graph: recallSearch.graph,
         results: recallSearch.results,
         recentFingerprints: recallThreadState.recentFingerprints,
       });
+      const nextHistory = this.buildNextRecallHistory({
+        recentFingerprints: recallThreadState.recentFingerprints,
+        candidateFingerprints: historyFingerprints,
+        windowSize: recallThreadState.windowSize,
+      });
+      const indexStats = await this.getIndexStats();
 
       if (this.shouldSkipRecallInjection({
         graph,
         results,
         rawWindowMessageCount: recallThreadState.rawWindowMessageCount,
       })) {
-        await this.clearPersistedRecallState();
+        await this.persistRecallSnapshot({
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+        }, {
+          status: 'hit',
+          query: queryText,
+          resultIds: recallSearch.results.map((result) => result.id),
+          resultCount: recallSearch.results.length,
+          resultScores: recallSearch.results.map((result) => result.score ?? 0),
+          graphHit: recallSearch.graph.hit,
+          stepsJson: safeSerializeRecallSteps(input.steps),
+          updatedAt: new Date().toISOString(),
+          lastInitAt: this.lastInitAt,
+          searchMode: recallConfig.searchMode,
+          topK: recallConfig.documentCount,
+          graphTopK: recallSearch.effectiveGraphTopK,
+          graphThreshold: recallSearch.effectiveGraphThreshold,
+          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
+          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+          workspaceFileCount: indexStats.workspaceFileCount,
+          memoryFileCount: indexStats.memoryFileCount,
+          checkpointFileCount: indexStats.checkpointFileCount,
+          error: null,
+        }, nextHistory);
         return null;
       }
 
@@ -284,11 +339,33 @@ export class AgentLongTermMemoryRecall {
       });
 
       if (!recallText) {
-        await this.clearPersistedRecallState();
+        await this.persistRecallSnapshot({
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+        }, {
+          status: 'hit',
+          query: queryText,
+          resultIds: recallSearch.results.map((result) => result.id),
+          resultCount: recallSearch.results.length,
+          resultScores: recallSearch.results.map((result) => result.score ?? 0),
+          graphHit: recallSearch.graph.hit,
+          stepsJson: safeSerializeRecallSteps(input.steps),
+          updatedAt: new Date().toISOString(),
+          lastInitAt: this.lastInitAt,
+          searchMode: recallConfig.searchMode,
+          topK: recallConfig.documentCount,
+          graphTopK: recallSearch.effectiveGraphTopK,
+          graphThreshold: recallSearch.effectiveGraphThreshold,
+          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
+          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+          workspaceFileCount: indexStats.workspaceFileCount,
+          memoryFileCount: indexStats.memoryFileCount,
+          checkpointFileCount: indexStats.checkpointFileCount,
+          error: null,
+        }, nextHistory);
         return null;
       }
 
-      const indexStats = await this.getIndexStats();
       await this.persistRecallSnapshot({
         threadId: input.threadId,
         resourceId: input.resourceId,
@@ -312,11 +389,7 @@ export class AgentLongTermMemoryRecall {
         memoryFileCount: indexStats.memoryFileCount,
         checkpointFileCount: indexStats.checkpointFileCount,
         error: null,
-      }, this.buildNextRecallHistory({
-        recentFingerprints: recallThreadState.recentFingerprints,
-        candidateFingerprints,
-        windowSize: recallThreadState.windowSize,
-      }));
+      }, nextHistory);
 
       forgeDebug('ltm', 'ltm recall step complete', {
         agentId: this.agentId,
@@ -335,7 +408,31 @@ export class AgentLongTermMemoryRecall {
         durationMs: Date.now() - recallStartedAt,
         error: error instanceof Error ? error.message : String(error),
       });
-      await this.clearPersistedRecallState();
+      const persistedState = await this.persistenceStore.readRecallState();
+      await this.persistRecallSnapshot({
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+      }, {
+        status: 'error',
+        query: '',
+        resultIds: [],
+        resultCount: 0,
+        resultScores: [],
+        graphHit: false,
+        stepsJson: safeSerializeRecallSteps(input.steps),
+        updatedAt: new Date().toISOString(),
+        lastInitAt: this.lastInitAt,
+        searchMode: 'unknown',
+        topK: 0,
+        graphTopK: 0,
+        graphThreshold: 0,
+        graphRandomWalkSteps: 0,
+        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+        workspaceFileCount: 0,
+        memoryFileCount: 0,
+        checkpointFileCount: 0,
+        error: error instanceof Error ? error.message : String(error),
+      }, persistedState.history ?? undefined);
       return null;
     }
   }
@@ -982,11 +1079,7 @@ export class AgentLongTermMemoryRecall {
     });
   }
 
-  private async clearPersistedRecallState() {
-    await this.persistenceStore.clearRecallState();
-  }
-
-  private dedupeRecallResults(input: {
+  private partitionRecallResults(input: {
     graph: {
       hit: boolean;
       score: number | null;
@@ -1004,16 +1097,21 @@ export class AgentLongTermMemoryRecall {
     recentFingerprints: string[];
   }) {
     const seenFingerprints = new Set(input.recentFingerprints);
-    const workspaceResults = input.results.filter(
-      (result) => !seenFingerprints.has(this.buildWorkspaceFingerprint(result)),
-    );
+    const workspaceFingerprints = input.results.map((result) => ({
+      result,
+      fingerprint: this.buildWorkspaceFingerprint(result),
+    }));
+    const workspaceResults = workspaceFingerprints
+      .filter((entry) => !seenFingerprints.has(entry.fingerprint))
+      .map((entry) => entry.result);
     const graphFingerprint = input.graph.hit && input.graph.context.trim()
       ? this.buildGraphFingerprint(input.graph.context)
       : null;
     const graphAllowed = graphFingerprint !== null && !seenFingerprints.has(graphFingerprint);
-    const candidateFingerprints = graphFingerprint
-      ? [graphFingerprint]
-      : input.results.map((result) => this.buildWorkspaceFingerprint(result));
+    const historyFingerprints = [
+      ...(graphFingerprint ? [graphFingerprint] : []),
+      ...workspaceFingerprints.map((entry) => entry.fingerprint),
+    ];
 
     return {
       graph: graphAllowed
@@ -1024,10 +1122,7 @@ export class AgentLongTermMemoryRecall {
           context: '',
         },
       results: graphAllowed ? input.results : workspaceResults,
-      candidateFingerprints,
-      usedFingerprints: graphAllowed
-        ? (graphFingerprint ? [graphFingerprint] : [])
-        : workspaceResults.map((result) => this.buildWorkspaceFingerprint(result)),
+      historyFingerprints,
     };
   }
 
