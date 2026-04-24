@@ -118,6 +118,40 @@ describe('SqliteWorkspaceRetrieval', () => {
     expect(result.sourcesJson).toContain('alpha.md');
   });
 
+  it('does not pull unrelated sibling documents into graph results only because they share a directory', async () => {
+    const rootPath = await mkdtemp(path.join(tmpdir(), 'forge-sqlite-graph-siblings-'));
+    temporaryDirectories.push(rootPath);
+    const docsPath = path.join(rootPath, 'docs');
+    const databasePath = path.join(rootPath, 'retrieval.db');
+
+    await mkdir(path.join(docsPath, 'memory'), { recursive: true });
+    await writeFile(path.join(docsPath, 'memory', 'alpha.md'), 'alpha rendering pipeline and lighting');
+    await writeFile(path.join(docsPath, 'memory', 'unrelated.md'), 'zeta payroll onboarding and hr policy');
+
+    const retrieval = new SqliteWorkspaceRetrieval({
+      databasePath,
+      source: new FilesystemDocumentSource({
+        roots: [docsPath],
+      }),
+      embedder: createTestEmbedder(),
+    });
+
+    await retrieval.refresh();
+
+    const result = await retrieval.searchGraph({
+      query: 'alpha rendering',
+      topK: 2,
+      threshold: 0.7,
+      randomWalkSteps: 20,
+      includeSources: true,
+    });
+
+    expect(result.hit).toBe(true);
+    expect(result.context).toContain('alpha.md');
+    expect(result.context).not.toContain('unrelated.md');
+    expect(result.sourcesJson).not.toContain('unrelated.md');
+  });
+
   it('sanitizes keyword queries before sending them to fts', async () => {
     const rootPath = await mkdtemp(path.join(tmpdir(), 'forge-sqlite-retrieval-'));
     temporaryDirectories.push(rootPath);
@@ -178,6 +212,10 @@ function embedText(text: string) {
 
   if (normalized.includes('delta')) {
     return [0, 0.95, 0.05];
+  }
+
+  if (normalized.includes('zeta')) {
+    return [0, 0, 1];
   }
 
   return [0, 0, 1];

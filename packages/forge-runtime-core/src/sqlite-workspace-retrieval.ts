@@ -608,33 +608,6 @@ export class SqliteWorkspaceRetrieval {
       return;
     }
 
-    const documentsByDirectory = new Map<string, StoredDocumentRow[]>();
-
-    for (const document of documents) {
-      const separatorIndex = Math.max(document.path.lastIndexOf('/'), document.path.lastIndexOf('\\'));
-      const directory = separatorIndex >= 0 ? document.path.slice(0, separatorIndex) : '';
-      const current = documentsByDirectory.get(directory) ?? [];
-      current.push(document);
-      documentsByDirectory.set(directory, current);
-    }
-
-    for (const directoryDocuments of documentsByDirectory.values()) {
-      const orderedDocuments = [...directoryDocuments].sort((left, right) =>
-        left.path.localeCompare(right.path));
-
-      for (let index = 0; index < orderedDocuments.length - 1; index += 1) {
-        const current = orderedDocuments[index];
-        const next = orderedDocuments[index + 1];
-
-        if (!current || !next) {
-          continue;
-        }
-
-        this.insertGraphEdge(db, current.rowid, next.rowid, 0.98, 'directory');
-        this.insertGraphEdge(db, next.rowid, current.rowid, 0.98, 'directory');
-      }
-    }
-
     for (const document of documents) {
       const embeddingJson = document.embedding_json;
 
