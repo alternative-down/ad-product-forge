@@ -478,6 +478,7 @@ describe('createRuntimeAgentSession', () => {
               lastObservedAt: '2026-04-24T00:00:03.000Z',
               reflectedGeneration: null,
               text: 'observation one',
+              sourceMessageIds: ['message-1'],
             },
           ],
           latestMetrics: null,

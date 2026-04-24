@@ -25,6 +25,7 @@ describe('createCheckpointedOmContextPlugin', () => {
               createdAt: '2026-04-22T00:00:00.000Z',
               lastObservedAt: '2026-04-22T00:00:00.000Z',
               reflectedGeneration: null,
+              sourceMessageIds: ['message-1'],
             }],
             activeReflectionBlocks: [{
               recordId: 'reflection-1',
@@ -92,6 +93,7 @@ describe('createCheckpointedOmContextPlugin', () => {
               createdAt: '2026-04-22T00:00:00.000Z',
               lastObservedAt: '2026-04-22T00:00:00.000Z',
               reflectedGeneration: null,
+              sourceMessageIds: ['message-1'],
             }],
             activeReflectionBlocks: [{
               recordId: 'reflection-1',
@@ -138,6 +140,7 @@ type PluginStateLoadStateShape = {
     createdAt: string;
     lastObservedAt: string;
     reflectedGeneration: number | null;
+    sourceMessageIds: string[];
   }>;
   activeReflectionBlocks: Array<{
     recordId: string;

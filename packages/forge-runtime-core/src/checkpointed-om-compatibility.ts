@@ -65,13 +65,15 @@ export async function syncCheckpointedOmCompatibility(
     threadId: input.threadId,
     resourceId: input.resourceId,
   }) ?? createEmptyCheckpointedOmState();
-  const messages = await input.conversationStore.listMessages({
+  const latestMessages = await input.conversationStore.listMessages({
     threadId: input.threadId,
+    order: 'desc',
+    limit: 1,
   });
   const result = await buildCompatibleState({
     previousState,
     conversationState,
-    messages,
+    latestThreadMessageAt: latestMessages[0]?.createdAt ?? null,
     limits: input.limits,
     reflectionModel: input.reflectionModel,
     agentSystemPrompt: input.agentSystemPrompt,
@@ -82,6 +84,10 @@ export async function syncCheckpointedOmCompatibility(
     resourceId: input.resourceId,
     state: result.state,
   });
+
+  if (result.checkpointMessageId) {
+    await input.conversationMemory.createCheckpoint(result.checkpointMessageId);
+  }
 
   if (!input.onCheckpointAdvanced || !result.checkpointPayload) {
     return;
@@ -97,11 +103,7 @@ export async function syncCheckpointedOmCompatibility(
 async function buildCompatibleState(input: {
   previousState: CheckpointedOmState;
   conversationState: CheckpointedConversationState;
-  messages: Array<{
-    id: string;
-    parts: Array<{ type: string; text?: string }>;
-    createdAt: string;
-  }>;
+  latestThreadMessageAt: string | null;
   limits: CheckpointedOmCompatibilityObserverOptions['limits'];
   reflectionModel?: LanguageModel;
   agentSystemPrompt?: string;
@@ -121,6 +123,7 @@ async function buildCompatibleState(input: {
   const previousCheckpointGeneration = input.previousState.checkpointGeneration;
   let checkpointGeneration = input.previousState.checkpointGeneration;
   let checkpointSummary = input.previousState.checkpointSummary;
+  let checkpointMessageId: string | null = null;
 
   if (input.reflectionModel) {
     while (sumActiveObservationTokens(observationBlocks) >= input.limits.observationReflectionBatchTokens) {
@@ -161,6 +164,16 @@ async function buildCompatibleState(input: {
   }
 
   const archivedReflections: typeof activeReflectionBlocks = [];
+  let archivedObservations = checkpointGeneration === null
+    ? []
+    : observationBlocks.filter((block) =>
+      block.reflectedGeneration !== null
+      && block.reflectedGeneration <= (checkpointGeneration ?? 0)
+      && (
+        previousCheckpointGeneration === null
+        || block.reflectedGeneration > previousCheckpointGeneration
+      ),
+    );
 
   if (input.reflectionModel) {
     while (sumReflectionTokens(activeReflectionBlocks) >= reflectionBudget && activeReflectionBlocks.length > 0) {
@@ -187,19 +200,20 @@ async function buildCompatibleState(input: {
         updatedAt: new Date().toISOString(),
       };
       checkpointSummary.tokenCount = estimateTokenCount(checkpointSummary.text);
+      archivedObservations = checkpointGeneration === null
+        ? []
+        : observationBlocks.filter((block) =>
+          block.reflectedGeneration !== null
+          && block.reflectedGeneration <= (checkpointGeneration ?? 0)
+          && (
+            previousCheckpointGeneration === null
+            || block.reflectedGeneration > previousCheckpointGeneration
+          ),
+        );
+      checkpointMessageId = getLatestArchivedObservationMessageId(archivedObservations);
     }
   }
 
-  const archivedObservations = checkpointGeneration === null
-    ? []
-    : observationBlocks.filter((block) =>
-      block.reflectedGeneration !== null
-      && block.reflectedGeneration <= checkpointGeneration
-      && (
-        previousCheckpointGeneration === null
-        || block.reflectedGeneration > previousCheckpointGeneration
-      ),
-    );
   const visibleObservationBlocks = checkpointGeneration === null
     ? observationBlocks
     : observationBlocks.filter((block) =>
@@ -230,13 +244,14 @@ async function buildCompatibleState(input: {
       reflectionBudget,
       checkpointTokenCount: checkpointSummary?.tokenCount ?? 0,
       checkpointSummaryUpToGeneration: checkpointSummary?.upToGeneration ?? null,
-      latestThreadMessageAt: input.messages[input.messages.length - 1]?.createdAt ?? null,
+      latestThreadMessageAt: input.latestThreadMessageAt,
       updatedAt: input.conversationState.updatedAt,
     },
   };
 
   return {
     state,
+    checkpointMessageId,
     checkpointPayload:
       checkpointGeneration !== null
       && checkpointGeneration !== previousCheckpointGeneration
@@ -278,7 +293,23 @@ function reconcileObservationBlocks(input: {
     lastObservedAt: observation.createdAt,
     reflectedGeneration: previousBlockMap.get(observation.id)?.reflectedGeneration ?? null,
     text: observation.text,
+    sourceMessageIds: observation.sourceMessageIds,
   }));
+}
+
+function getLatestArchivedObservationMessageId(
+  archivedObservations: Array<{ sourceMessageIds: string[] }>,
+) {
+  for (let index = archivedObservations.length - 1; index >= 0; index -= 1) {
+    const sourceMessageIds = archivedObservations[index]?.sourceMessageIds ?? [];
+    const latestMessageId = sourceMessageIds[sourceMessageIds.length - 1];
+
+    if (typeof latestMessageId === 'string' && latestMessageId.length > 0) {
+      return latestMessageId;
+    }
+  }
+
+  return null;
 }
 
 function takeActiveObservationBatch(input: {

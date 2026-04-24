@@ -51,7 +51,7 @@ describe('CheckpointedConversationMemory', () => {
     await memory.stabilize();
 
     state = await memory.getState();
-    expect(state.checkpointMessageId).toBe('message-2');
+    expect(state.checkpointMessageId).toBe('message-1');
     expect(state.observations).toHaveLength(1);
     expect(state.recentMessageIds).toEqual(['message-3']);
     expect(state.overflowMessageIds).toEqual([]);
@@ -127,7 +127,7 @@ describe('CheckpointedConversationMemory', () => {
     await memory.stabilize();
     state = await memory.getState();
 
-    expect(state.checkpointMessageId).toBe('message-2');
+    expect(state.checkpointMessageId).toBeNull();
     expect(state.recentMessageIds).toEqual(['message-3']);
     expect(state.overflowMessageIds).toEqual([]);
     expect(state.observations).toHaveLength(2);
@@ -306,7 +306,7 @@ describe('CheckpointedConversationMemory', () => {
 
     const state = await memory.stabilize();
 
-    expect(state.checkpointMessageId).toBe('message-1');
+    expect(state.checkpointMessageId).toBeNull();
     expect(state.observations).toHaveLength(1);
     expect(state.overflowMessageIds).toEqual(['message-2']);
   });

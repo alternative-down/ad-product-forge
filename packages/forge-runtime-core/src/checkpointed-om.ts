@@ -39,6 +39,7 @@ export type CheckpointedOmObservationBlock = {
   lastObservedAt: string;
   reflectedGeneration: number | null;
   text: string;
+  sourceMessageIds: string[];
 };
 
 export type CheckpointedOmMetricsSnapshot = {

@@ -31,7 +31,10 @@ function createConversationMemory(state: CheckpointedConversationState): Checkpo
     async getState() {
       return state;
     },
-  } as CheckpointedConversationMemory;
+    async createCheckpoint() {
+      return state;
+    },
+  } as unknown as CheckpointedConversationMemory;
 }
 
 function createStateStore() {

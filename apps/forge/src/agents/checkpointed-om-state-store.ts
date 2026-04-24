@@ -19,6 +19,7 @@ const checkpointedOmObservationBlockSchema = z.object({
   lastObservedAt: z.string().min(1),
   reflectedGeneration: z.number().int().nonnegative().nullable(),
   text: z.string().min(1),
+  sourceMessageIds: z.array(z.string().min(1)),
 });
 
 const checkpointedOmReflectionBlockSchema = z.object({
