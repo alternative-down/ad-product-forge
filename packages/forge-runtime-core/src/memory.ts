@@ -55,7 +55,7 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
 
       return [
         ...buildStepSystemMessages(renderInput.stepSystem),
-        ...await loadCheckpointedOmModelMessages({
+        ...await loadOmModelMessages({
           threadId: input.threadId,
           resourceId: renderInput.resourceId,
           stateStore: renderInput.checkpointedOmStateStore,
@@ -67,7 +67,7 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
             text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
           }],
         } as ModelMessage,
-        ...createPersistedModelMessages(activeMessages),
+        ...createRawModelMessages(activeMessages),
       ];
     },
     plugins: [
@@ -101,7 +101,7 @@ function buildStepSystemMessages(stepSystem: string | undefined): ModelMessage[]
   } satisfies ModelMessage];
 }
 
-async function loadCheckpointedOmModelMessages(input: {
+async function loadOmModelMessages(input: {
   threadId: string;
   resourceId: string;
   stateStore?: CheckpointedOmStateStore;
@@ -170,7 +170,7 @@ function normalizeOmText(value: string | null | undefined) {
   return value.trim();
 }
 
-function createPersistedModelMessages(messages: Array<{
+function createRawModelMessages(messages: Array<{
   id: string;
   role: 'user' | 'assistant' | 'system' | 'tool' | 'external';
   parts: Array<{

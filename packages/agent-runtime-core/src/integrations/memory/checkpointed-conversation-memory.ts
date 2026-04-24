@@ -160,10 +160,6 @@ export class CheckpointedConversationMemory {
     return messages.map((message) => createConversationMessageContextEntry(message));
   }
 
-  async renderRecentMessages(): Promise<ConversationMessage[]> {
-    return this.renderMessagesByIds((state) => state.recentMessageIds);
-  }
-
   async renderActiveMessages(): Promise<ConversationMessage[]> {
     return this.renderMessagesByIds((state) => [
       ...state.overflowMessageIds,
