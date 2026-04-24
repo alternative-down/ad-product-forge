@@ -321,7 +321,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
-        with checkpoint as (
+        with recursive checkpoint as (
           select rowid as checkpoint_rowid
           from ${escapeIdentifier(this.messageTableName)}
           where thread_id = ?
@@ -350,7 +350,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
               or rowid >= (select checkpoint_rowid from checkpoint)
             )
         ),
-        recursive replacement_chain(root_id, current_id) as (
+        replacement_chain(root_id, current_id) as (
           select id, id
           from seed
           union all
