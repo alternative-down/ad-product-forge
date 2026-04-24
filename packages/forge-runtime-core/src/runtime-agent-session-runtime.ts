@@ -25,9 +25,9 @@ export type RuntimeAgentSessionRuntime = {
   assistantAuthorId?: string;
   conversationStore: CreateRuntimeAgentSessionOptions['conversationStore'];
   conversationMemory: ReturnType<typeof createForgeConversationMemory>['memory'];
-  runtimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   checkpointedOmStateStore?: CreateRuntimeAgentSessionOptions['checkpointedOmStateStore'];
   workingMemoryStore: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
+  getRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
   syncState(): Promise<void>;
 };
 
@@ -79,7 +79,7 @@ export async function createRuntimeAgentSessionRuntime(
       checkpointedOmEnabled ? checkpointedOmLimits.rawObservationBatchTokens : undefined,
     consolidateOverflow: checkpointedOmEnabled,
   });
-  const runtimeActions = [
+  const staticRuntimeActions = [
     toolToRuntimeAction(workingMemoryTool),
     ...(input.runtimeActions ?? []),
   ];
@@ -89,9 +89,24 @@ export async function createRuntimeAgentSessionRuntime(
     assistantAuthorId: input.assistantAuthorId,
     conversationStore: input.conversationStore,
     conversationMemory: conversationMemory.memory,
-    runtimeActions,
     checkpointedOmStateStore: input.checkpointedOmStateStore,
     workingMemoryStore: input.workingMemoryStore,
+    async getRuntimeActions() {
+      let dynamicRuntimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> = [];
+
+      if (input.loadRuntimeActions) {
+        try {
+          dynamicRuntimeActions = await input.loadRuntimeActions();
+        } catch (error) {
+          console.warn('[RuntimeAgentSession] Failed to load dynamic runtime actions:', error);
+        }
+      }
+
+      return [
+        ...staticRuntimeActions,
+        ...dynamicRuntimeActions,
+      ];
+    },
     async syncState() {
       if (checkpointedOmEnabled) {
         await conversationMemory.memory.stabilize();

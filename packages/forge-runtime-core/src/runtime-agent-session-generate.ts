@@ -87,18 +87,19 @@ export async function runRuntimeAgentSessionGenerate(input: {
       conversationMemory: input.runtime.conversationMemory,
       threadId: input.session.threadId,
     });
+    const runtimeActions = await input.runtime.getRuntimeActions();
     const stepId = randomUUID();
     const tools = buildAiSdkToolSet({
       runtimeId: input.session.agentId,
       stepId,
       stepNumber: iterationNumber,
-      actions: input.runtime.runtimeActions,
+      actions: runtimeActions,
     });
     const requestDiagnostics = summarizeGenerateRequest({
       system: system.text,
       systemSegments: system.segments,
       messages,
-      actions: input.runtime.runtimeActions,
+      actions: runtimeActions,
     });
     let result;
 

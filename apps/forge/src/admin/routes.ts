@@ -56,7 +56,6 @@ import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 import { renewAgentContract } from '../agents/renew-agent-contract';
 import { createSystemSettingsStore } from '../system-settings/store';
-import { clearAgentMCPClient } from '../agents/mcp/client-manager';
 import { createAgentContractStore } from '../agents/agent-contract-store';
 import {
   deleteAgentWorkspaceSkill,
@@ -2385,7 +2384,6 @@ export function registerAdminRoutes(input: {
 }
 
 async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
-  await clearAgentMCPClient(agentId);
   await reloadAgentIfLoaded(db, loaderConfig, agentId);
 }
 

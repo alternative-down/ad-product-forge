@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MockLanguageModelV3 } from 'ai/test';
 import type { LanguageModelV3CallOptions } from '@ai-sdk/provider-v6';
+import { z } from 'zod';
 
 import {
   InMemoryCheckpointedConversationStateStore,
@@ -17,7 +18,7 @@ import type {
 } from './runtime-working-memory.js';
 
 describe('createRuntimeAgentSession', () => {
-  it('uses continued iteration feedback without persisting it into the conversation thread', async () => {
+  it('persists continued iteration feedback into the conversation thread before the next step', async () => {
     const conversationStore = new InMemoryConversationStore();
     const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
@@ -155,25 +156,28 @@ describe('createRuntimeAgentSession', () => {
           text: 'First step response.',
         },
         {
+          role: 'user',
+          text: 'Continue from the previous step.',
+        },
+        {
           role: 'assistant',
           text: 'Second step response.',
         },
       ]);
-      expect(checkpointedState?.metrics.recentMessageCount).toBe(3);
+      expect(checkpointedState?.metrics.recentMessageCount).toBe(4);
       expect(checkpointedState?.recentMessageIds).toEqual(messages.map((message) => message.id));
     } finally {
       await session.dispose();
     }
   });
 
-  it('replays complete tool call and tool result pairs when recent window splits them', async () => {
+  it('adds the autonomous bootstrap user message before replayed recent messages', async () => {
     const conversationStore = new InMemoryConversationStore();
     const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const assistantMessageId = 'assistant-tool-call';
     const toolMessageId = 'tool-result';
     const userMessageId = 'user-follow-up';
-    const toolCallId = 'call_function_vhsx8981e6sk_1';
     const model = new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
         expect(options.prompt).toEqual([
@@ -182,31 +186,10 @@ describe('createRuntimeAgentSession', () => {
             content: 'Base system.',
           },
           {
-            role: 'assistant',
+            role: 'user',
             content: [{
-              type: 'tool-call',
-              toolCallId,
-              toolName: 'search_workspace',
-              input: {
-                query: 'design tokens',
-              },
-              providerExecuted: undefined,
-              providerOptions: undefined,
-            }],
-            providerOptions: undefined,
-          },
-          {
-            role: 'tool',
-            content: [{
-              type: 'tool-result',
-              toolCallId,
-              toolName: 'search_workspace',
-              output: {
-                type: 'json',
-                value: {
-                  hits: ['tokens.md'],
-                },
-              },
+              type: 'text',
+              text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
               providerOptions: undefined,
             }],
             providerOptions: undefined,
@@ -284,7 +267,7 @@ describe('createRuntimeAgentSession', () => {
       parts: [],
       metadata: {
         toolResults: [{
-          toolCallId,
+          toolCallId: 'call_function_vhsx8981e6sk_1',
           toolName: 'search_workspace',
           result: {
             hits: ['tokens.md'],
@@ -329,7 +312,7 @@ describe('createRuntimeAgentSession', () => {
     }
   });
 
-  it('skips orphan tool results that do not have a matching tool call in replay history', async () => {
+  it('keeps the autonomous bootstrap user message ahead of regular user replay', async () => {
     const conversationStore = new InMemoryConversationStore();
     const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
@@ -340,6 +323,15 @@ describe('createRuntimeAgentSession', () => {
           {
             role: 'system',
             content: 'Base system.',
+          },
+          {
+            role: 'user',
+            content: [{
+              type: 'text',
+              text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
+              providerOptions: undefined,
+            }],
+            providerOptions: undefined,
           },
           {
             role: 'user',
@@ -436,6 +428,93 @@ describe('createRuntimeAgentSession', () => {
       const result = await session.generate([]);
 
       expect(result.text).toBe('Done.');
+    } finally {
+      await session.dispose();
+    }
+  });
+
+  it('loads dynamic runtime actions on each iteration without rebuilding the session', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
+    const workingMemoryStore = createInMemoryWorkingMemoryStore();
+    const loadedActionNames: string[][] = [];
+    let loadCount = 0;
+    const model = new MockLanguageModelV3({
+      doGenerate: async () => {
+        loadCount += 1;
+
+        return {
+          content: [{
+            type: 'text',
+            text: loadCount === 1 ? 'First step response.' : 'Second step response.',
+          }],
+          finishReason: { raw: 'stop', unified: 'stop' },
+          usage: {
+            inputTokens: {
+              total: 12,
+              noCache: 12,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: {
+              total: 6,
+              text: 6,
+              reasoning: 0,
+            },
+          },
+          warnings: [],
+        };
+      },
+    });
+    const session = await createRuntimeAgentSession({
+      agentId: 'agent-1',
+      agentName: 'Forge Agent',
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      assistantAuthorId: 'agent-1',
+      model,
+      system: 'Base system.',
+      conversationStore,
+      checkpointedStateStore,
+      workingMemoryStore,
+      loadRuntimeActions: async () => {
+        const actions = loadCount === 0
+          ? []
+          : [{
+            name: `mcp_tool_${loadCount}`,
+            description: 'MCP tool.',
+            inputSchema: z.object({}).passthrough(),
+            async execute() {
+              return { ok: true };
+            },
+          }];
+
+        loadedActionNames.push(actions.map((action) => action.name));
+        return actions;
+      },
+    });
+
+    try {
+      const result = await session.generate('Initial prompt.', {
+        onIterationComplete(iteration) {
+          if (iteration.iteration === 1) {
+            return {
+              continue: true,
+              feedback: 'Continue.',
+            };
+          }
+
+          return {
+            continue: false,
+          };
+        },
+      });
+
+      expect(result.text).toBe('Second step response.');
+      expect(loadedActionNames).toEqual([
+        [],
+        ['mcp_tool_1'],
+      ]);
     } finally {
       await session.dispose();
     }

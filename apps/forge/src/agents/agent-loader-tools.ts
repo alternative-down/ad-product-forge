@@ -1,4 +1,4 @@
-import type { ToolsInput, Tool } from '@forge-runtime/core';
+import type { ToolsInput } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import type { AgentLoaderConfig } from './agent-loader-types';
@@ -10,7 +10,6 @@ import { createAgentScheduleTools } from '../schedules/tools';
 import { createCapabilityTools } from '../capabilities/tools';
 import { createInternalChatTools } from '../communication/internal-chat-tools';
 import { createMiniMaxTools } from '../minimax/tools';
-import { getMCPToolsForAgent } from './mcp/client-manager';
 import { createAgentSkillTools } from './skills-tools';
 import { createInternalAgentTools } from './internal-agent-tools';
 
@@ -62,8 +61,6 @@ export async function loadAgentToolset(input: {
     schedules: input.loaderConfig.schedules,
     internalChat: input.loaderConfig.internalChat,
   });
-  const mcpTools = await loadMCPToolsForAgent(input.agentId);
-
   const tools: ToolsInput = {
     ...microErpTools,
     ...notificationTools,
@@ -75,7 +72,6 @@ export async function loadAgentToolset(input: {
     ...minimaxTools,
     ...skillTools,
     ...internalAgentTools,
-    ...mcpTools,
   };
 
   return {
@@ -91,26 +87,8 @@ export async function loadAgentToolset(input: {
       minimax: Object.keys(minimaxTools).length,
       skills: Object.keys(skillTools).length,
       internalAgents: Object.keys(internalAgentTools).length,
-      mcp: Object.keys(mcpTools).length,
+      mcp: 0,
       total: Object.keys(tools).length,
     },
   };
-}
-
-async function loadMCPToolsForAgent(
-  agentId: string,
-): Promise<Record<string, Tool<unknown, unknown>>> {
-  try {
-    const mcpTools = await getMCPToolsForAgent(agentId);
-
-    if (Object.keys(mcpTools).length === 0) {
-      return {};
-    }
-
-    console.log(`[AgentLoader] Loaded ${Object.keys(mcpTools).length} MCP tool(s) for agent ${agentId}`);
-    return mcpTools;
-  } catch (error) {
-    console.warn(`[AgentLoader] Failed to load MCP tools for agent ${agentId}:`, error);
-    return {};
-  }
 }

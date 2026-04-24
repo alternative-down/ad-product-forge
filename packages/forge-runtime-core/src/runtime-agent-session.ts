@@ -147,6 +147,7 @@ export type CreateRuntimeAgentSessionOptions = {
     }>;
   }) => Promise<void>;
   runtimeActions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
+  loadRuntimeActions?: () => Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
   runtimeObservers?: RuntimeObserver[];
   workingMemoryTool?: Tool<{ workingMemory: string }, { updated: true }>;
   maxConversationMessages?: number;

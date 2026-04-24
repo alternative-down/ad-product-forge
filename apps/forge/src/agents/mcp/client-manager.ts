@@ -1,70 +1,226 @@
-import { ForgeMcpToolset, type ForgeMcpServerConfig, type Tool } from '@forge-runtime/core';
+import {
+  ForgeMcpToolset,
+  type ForgeMcpServerConfig,
+  type RuntimeActionDefinition,
+} from '@forge-runtime/core';
+
 import { getAgentMcpServers } from './store';
 
-// Cache for MCP clients per agent
-const agentMCPClients = new Map<string, ForgeMcpToolset>();
+type AgentMcpRuntimeActionSource = {
+  start(): void;
+  getActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
+  dispose(): Promise<void>;
+};
 
-/**
- * Get MCP tools for an agent by connecting to all configured MCP servers
- * 
- * @param agentId - The agent ID
- * @returns Record of tool name to tool definition
- */
-export async function getMCPToolsForAgent(
-  agentId: string,
-): Promise<Record<string, Tool<unknown, unknown>>> {
-  try {
-    const mcpServers = await getAgentMcpServers(agentId);
+type ManagedMcpServer = {
+  fingerprint: string;
+  toolset: ForgeMcpToolset | null;
+  actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
+};
 
-    if (mcpServers.length === 0) {
-      return {};
+const MCP_RETRY_BASE_DELAY_MS = 5_000;
+const MCP_RETRY_MAX_DELAY_MS = 60_000;
+
+export function createAgentMcpRuntimeActionSource(agentId: string): AgentMcpRuntimeActionSource {
+  return new AgentMcpRuntimeActionSourceManager(agentId);
+}
+
+class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource {
+  private readonly agentId: string;
+  private readonly servers = new Map<string, ManagedMcpServer>();
+
+  private actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> = [];
+  private refreshPromise: Promise<void> | null = null;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryAttempt = 0;
+  private disposed = false;
+
+  constructor(agentId: string) {
+    this.agentId = agentId;
+  }
+
+  start() {
+    void this.refresh();
+  }
+
+  async getActions() {
+    return this.actions;
+  }
+
+  async dispose() {
+    this.disposed = true;
+
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
     }
 
-    console.log(`[MCP] Found ${mcpServers.length} MCP server(s) for agent ${agentId}`);
+    const entries = Array.from(this.servers.values());
+    this.servers.clear();
+    this.actions = [];
 
-    const cachedClient = agentMCPClients.get(agentId);
+    await Promise.all(entries.map(async (entry) => {
+      await entry.toolset?.dispose();
+    }));
+  }
 
-    if (cachedClient) {
+  private async refresh() {
+    if (this.disposed) {
+      return;
+    }
+
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = this.refreshNow()
+      .finally(() => {
+        this.refreshPromise = null;
+      });
+
+    return this.refreshPromise;
+  }
+
+  private async refreshNow() {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+
+    const linkedServers = await getAgentMcpServers(this.agentId);
+    const nextServerIds = new Set(linkedServers.map(({ server }) => server.id));
+    const staleServerIds = Array.from(this.servers.keys()).filter((serverId) => !nextServerIds.has(serverId));
+
+    for (const serverId of staleServerIds) {
+      await this.disposeServer(serverId);
+    }
+
+    let hasConnectionFailure = false;
+
+    for (const linkedServer of linkedServers) {
+      const serverConfig = mapServerConfig(linkedServer.server);
+      const fingerprint = fingerprintServerConfig(serverConfig);
+      const current = this.servers.get(serverConfig.id);
+
+      if (current && current.fingerprint === fingerprint && current.actions.length > 0) {
+        continue;
+      }
+
       try {
-        const tools = await cachedClient.createTools();
-        console.log(`[MCP] Loaded ${Object.keys(tools).length} tool(s) for agent ${agentId}`);
-        return tools as Record<string, Tool<unknown, unknown>>;
+        const nextServer = await this.connectServer(serverConfig, fingerprint);
+        const previous = this.servers.get(serverConfig.id);
+
+        this.servers.set(serverConfig.id, nextServer);
+        await previous?.toolset?.dispose();
       } catch (error) {
-        console.warn(`[MCP] Cached client failed for agent ${agentId}, rebuilding client:`, error);
-        await clearAgentMCPClient(agentId);
+        hasConnectionFailure = true;
+        console.warn(`[MCP] Failed to refresh server ${serverConfig.name} for agent ${this.agentId}:`, error);
       }
     }
 
-    const mcpClient = createAgentMCPClient(agentId, mcpServers);
-    const tools = await mcpClient.createTools();
+    this.rebuildActionSnapshot();
 
-    agentMCPClients.set(agentId, mcpClient);
-    console.log(`[MCP] Loaded ${Object.keys(tools).length} tool(s) for agent ${agentId}`);
-    return tools as Record<string, Tool<unknown, unknown>>;
-  } catch (error) {
-    await clearAgentMCPClient(agentId);
-    console.warn(`[MCP] Failed to get tools for agent ${agentId}:`, error);
-    return {};
+    if (hasConnectionFailure) {
+      this.scheduleRetry();
+      return;
+    }
+
+    this.retryAttempt = 0;
   }
-}
 
-function createAgentMCPClient(
-  agentId: string,
-  mcpServers: Awaited<ReturnType<typeof getAgentMcpServers>>,
-) {
-  return new ForgeMcpToolset({
-    servers: mcpServers.map(({ server }) => mapServerConfig(server)),
-  });
-}
+  private async connectServer(serverConfig: ForgeMcpServerConfig, fingerprint: string) {
+    const toolset = new ForgeMcpToolset({
+      servers: [serverConfig],
+    });
+    const actions = await toolset.createRuntimeActions();
 
-/**
- * Clear MCP client cache for an agent
- */
-export async function clearAgentMCPClient(agentId: string): Promise<void> {
-  const client = agentMCPClients.get(agentId);
-  if (client) {
-    await client.dispose();
-    agentMCPClients.delete(agentId);
+    return {
+      fingerprint,
+      toolset,
+      actions: actions.map((action) => this.wrapAction(serverConfig.id, action)),
+    } satisfies ManagedMcpServer;
+  }
+
+  private wrapAction(
+    serverId: string,
+    action: RuntimeActionDefinition<Record<string, unknown>, unknown>,
+  ): RuntimeActionDefinition<Record<string, unknown>, unknown> {
+    const manager = this;
+
+    return {
+      ...action,
+      async execute(input, context) {
+        try {
+          return await action.execute(input, context);
+        } catch (error) {
+          void manager.handleServerDisconnect(serverId, error);
+          throw error;
+        }
+      },
+    };
+  }
+
+  private async handleServerDisconnect(serverId: string, error: unknown) {
+    const server = this.servers.get(serverId);
+
+    if (!server) {
+      return;
+    }
+
+    console.warn(`[MCP] Server disconnected for agent ${this.agentId}:`, error);
+    this.servers.set(serverId, {
+      ...server,
+      toolset: null,
+      actions: [],
+    });
+    this.rebuildActionSnapshot();
+    await server.toolset?.dispose();
+    this.scheduleRefresh(0);
+  }
+
+  private rebuildActionSnapshot() {
+    this.actions = Array.from(this.servers.values()).flatMap((server) => server.actions);
+  }
+
+  private scheduleRetry() {
+    const delayMs = Math.min(
+      MCP_RETRY_BASE_DELAY_MS * (2 ** Math.min(this.retryAttempt, 4)),
+      MCP_RETRY_MAX_DELAY_MS,
+    );
+
+    this.retryAttempt += 1;
+    this.scheduleRefresh(delayMs);
+  }
+
+  private scheduleRefresh(delayMs: number) {
+    if (this.disposed) {
+      return;
+    }
+
+    if (this.retryTimer && delayMs === 0) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+
+    if (this.retryTimer) {
+      return;
+    }
+
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.refresh();
+    }, delayMs);
+  }
+
+  private async disposeServer(serverId: string) {
+    const existing = this.servers.get(serverId);
+
+    if (!existing) {
+      return;
+    }
+
+    this.servers.delete(serverId);
+    await existing.toolset?.dispose();
   }
 }
 
@@ -89,4 +245,8 @@ function mapServerConfig(
     url: server.url || 'http://localhost:3000/mcp',
     headers: server.headers ? JSON.parse(server.headers) : undefined,
   };
+}
+
+function fingerprintServerConfig(server: ForgeMcpServerConfig) {
+  return JSON.stringify(server);
 }

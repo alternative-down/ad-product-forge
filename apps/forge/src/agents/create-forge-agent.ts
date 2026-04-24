@@ -12,6 +12,7 @@ import { createAgentRuntimePlatform } from './agent-runtime-platform';
 import { createAgentLongTermMemory } from './agent-long-term-memory';
 import { createAgentRuntimeMemory } from './agent-runtime-memory';
 import { buildAgentSystemPrompt } from './agent-runtime-prompt';
+import { createAgentMcpRuntimeActionSource } from './mcp/client-manager';
 import type {
   CreateAgentConfig,
   CreateAgentOptions,
@@ -53,6 +54,7 @@ export async function createInternalAgentRuntime<
     communicationGroupFlushingEnabled: config.communicationGroupFlushingEnabled,
   });
   const configuredTools = (config.tools ?? {}) as ToolsInput;
+  const mcpRuntimeActionSource = createAgentMcpRuntimeActionSource(config.id);
   const allAgentTools: ToolsInput = {
     ...createExternalAccountTools(platform.communication as CommunicationModule),
     ...configuredTools,
@@ -123,6 +125,8 @@ export async function createInternalAgentRuntime<
       : null,
   );
 
+  mcpRuntimeActionSource.start();
+
   const agent = await createRuntimeAgentSession({
     agentId: config.id,
     agentName: config.name,
@@ -151,6 +155,7 @@ export async function createInternalAgentRuntime<
       ...platform.workspaceActions,
       ...toolsToRuntimeActions(allAgentTools),
     ],
+    loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
     maxConversationMessages: config.memoryLastMessagesFullEnabled
       ? Number.MAX_SAFE_INTEGER
       : config.memoryLastMessagesCount,
@@ -176,6 +181,7 @@ export async function createInternalAgentRuntime<
       const cleanupResults = await Promise.allSettled([
         runtimeMemory.longTermMemoryRecall?.dispose?.(),
         longTermMemory?.dispose(),
+        mcpRuntimeActionSource.dispose(),
         platform.communication.dispose(),
         platform.dispose(),
       ]);
