@@ -29,7 +29,6 @@ export const forgeAgentRuntimeConfigSchema = z.object({
   runtimeId: z.string().optional(),
   threadId: z.string().min(1),
   assistantAuthorId: z.string().optional(),
-  maxConversationMessages: z.number().int().positive().default(20),
   consolidateConversationOverflow: z.boolean().default(true),
 });
 

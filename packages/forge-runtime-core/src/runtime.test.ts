@@ -19,7 +19,6 @@ describe('createForgeAgentRuntime', () => {
       config: {
         agentId: 'agent-1',
         threadId: 'thread-1',
-        maxConversationMessages: 20,
         consolidateConversationOverflow: true,
       },
       model: new FakeStepModelAdapter(() => ({
@@ -97,7 +96,6 @@ describe('createForgeAgentRuntime', () => {
       config: {
         agentId: 'agent-1',
         threadId: 'thread-1',
-        maxConversationMessages: 20,
         consolidateConversationOverflow: true,
       },
       model: new FakeStepModelAdapter((request) => {
