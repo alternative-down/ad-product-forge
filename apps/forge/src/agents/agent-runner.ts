@@ -1047,13 +1047,19 @@ export function createAgentRunner(
                 };
               }
 
-              const feedbackParts: string[] = [];
+              const feedbackMessages: Array<{
+                role: 'assistant' | 'user';
+                content: string;
+              }> = [];
               const flushedPrompt = flushPendingRunMessages({
                 allowOriginIdleOnly: true,
               });
 
               if (flushedPrompt) {
-                feedbackParts.push(flushedPrompt);
+                feedbackMessages.push({
+                  role: 'user',
+                  content: flushedPrompt,
+                });
               }
 
               if (
@@ -1061,7 +1067,10 @@ export function createAgentRunner(
                 !stopRequested &&
                 !suppressNoToolCallReminderForRun
               ) {
-                feedbackParts.push(RUN_STOP_REMINDER);
+                feedbackMessages.push({
+                  role: 'user',
+                  content: RUN_STOP_REMINDER,
+                });
               }
 
               const recallStep = buildRecallStepFromIteration(iteration);
@@ -1073,13 +1082,16 @@ export function createAgentRunner(
               }) ?? null;
 
               if (recallFeedback?.trim()) {
-                feedbackParts.push(recallFeedback.trim());
+                feedbackMessages.push({
+                  role: 'assistant',
+                  content: recallFeedback.trim(),
+                });
               }
 
-              if (feedbackParts.length > 0) {
+              if (feedbackMessages.length > 0) {
                 return {
                   continue: true,
-                  feedback: feedbackParts.join('\n\n'),
+                  feedbackMessages,
                 };
               }
 

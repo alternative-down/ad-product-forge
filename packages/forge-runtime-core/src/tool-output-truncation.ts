@@ -52,7 +52,9 @@ export function truncateToolOutputValue(value: unknown): unknown {
 }
 
 function truncateToolOutputText(text: string) {
-  const limitedLines = text.split('\n').slice(0, MAX_TOOL_OUTPUT_LINES).join('\n');
+  const allLines = text.split('\n');
+  const limitedLinesArray = allLines.slice(0, MAX_TOOL_OUTPUT_LINES);
+  const limitedLines = limitedLinesArray.join('\n');
   const limitedChars = limitedLines.length > MAX_TOOL_OUTPUT_CHARS
     ? limitedLines.slice(0, MAX_TOOL_OUTPUT_CHARS)
     : limitedLines;
@@ -61,7 +63,14 @@ function truncateToolOutputText(text: string) {
     return text;
   }
 
-  return `${limitedChars}\n\n[truncated tool output]`;
+  const removedChars = Math.max(text.length - limitedChars.length, 0);
+  const removedLines = Math.max(allLines.length - limitedLinesArray.length, 0);
+
+  return [
+    limitedChars,
+    '',
+    `[truncated tool output: omitted ${removedChars} chars and ${removedLines} lines from the returned result. The full output was still produced outside the model context. Re-read the source with a narrower range using offset/limit or line ranges.]`,
+  ].join('\n');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

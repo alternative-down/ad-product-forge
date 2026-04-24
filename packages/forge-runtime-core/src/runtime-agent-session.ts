@@ -71,7 +71,23 @@ export type RuntimeAgentSessionGenerateOptions = {
   onStepFinish?: (result: RuntimeAgentSessionStepResult) => Promise<void> | void;
   onIterationComplete?: (
     iteration: RuntimeAgentSessionIteration,
-  ) => Promise<{ continue?: boolean; feedback?: string } | void> | { continue?: boolean; feedback?: string } | void;
+  ) => Promise<{
+      continue?: boolean;
+      feedback?: string;
+      feedbackMessages?: Array<{
+        role: 'assistant' | 'user';
+        content: string;
+      }>;
+    } | void>
+    | {
+      continue?: boolean;
+      feedback?: string;
+      feedbackMessages?: Array<{
+        role: 'assistant' | 'user';
+        content: string;
+      }>;
+    }
+    | void;
 };
 
 export type RuntimeAgentSession = {

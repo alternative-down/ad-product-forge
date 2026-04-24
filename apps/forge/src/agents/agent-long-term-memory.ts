@@ -4,7 +4,6 @@ import path from 'node:path';
 
 import {
   type CheckpointedOmCheckpointPackageInput,
-  type CheckpointedOmArchivedObservation,
   CheckpointedOmStateStore,
   WorkspaceEmbedderId,
   createRuntimeAgentSession,
@@ -265,38 +264,6 @@ function renderObservationFile(observation: CheckpointedOmCheckpointPackageInput
   ].join('\n');
 }
 
-function buildBootstrapCheckpointPackage(input: {
-  threadId: string;
-  resourceId: string;
-  checkpointGeneration: number;
-  checkpointSummary: CustomCheckpointSummary;
-  observationBlocks: CustomObservationBlock[];
-}): CheckpointedOmCheckpointPackageInput {
-  const observations: CheckpointedOmArchivedObservation[] = input.observationBlocks
-    .filter((block) =>
-      typeof block.reflectedGeneration === 'number' &&
-      block.reflectedGeneration <= input.checkpointGeneration,
-    )
-    .map((block) => ({
-      blockId: block.id,
-      tokenCount: block.tokenCount,
-      createdAt: block.createdAt,
-      lastObservedAt: block.lastObservedAt,
-      reflectedGeneration: block.reflectedGeneration as number,
-      text: block.text,
-    }));
-
-  return {
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-    fromGeneration: null,
-    toGeneration: input.checkpointGeneration,
-    checkpointSummary: input.checkpointSummary,
-    reflections: [],
-    observations,
-  };
-}
-
 export function createAgentLongTermMemory(input: {
   agentId: string;
   agentName: string;
@@ -346,31 +313,6 @@ export function createAgentLongTermMemory(input: {
     lastWrittenAt: null,
     packageCount: 0,
   };
-
-  async function backfillCheckpointPackages() {
-    const state = await readState();
-    const customState = await input.checkpointedOmStateStore.readState();
-    const checkpointGeneration = customState?.checkpointGeneration ?? null;
-    const checkpointSummary = customState?.checkpointSummary ?? null;
-
-    if (!checkpointSummary || checkpointGeneration === null) {
-      return;
-    }
-
-    if (state.packages.some((entry) => entry.checkpointGeneration === checkpointGeneration)) {
-      return;
-    }
-
-    const payload = buildBootstrapCheckpointPackage({
-      threadId: input.threadId,
-      resourceId: input.resourceId,
-      checkpointGeneration,
-      checkpointSummary,
-      observationBlocks: customState?.observationBlocks ?? [],
-    });
-
-    await writeCheckpointPackage(payload);
-  }
 
   function clearTimer() {
     if (!timer) {
@@ -788,7 +730,6 @@ export function createAgentLongTermMemory(input: {
       await ensureInitialized();
       const state = await readState();
       await writeState(state);
-      await backfillCheckpointPackages();
     },
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {

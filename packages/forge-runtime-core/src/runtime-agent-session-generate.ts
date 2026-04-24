@@ -154,17 +154,25 @@ export async function runRuntimeAgentSessionGenerate(input: {
       iteration: runtimeIteration,
     });
 
-    const continuationFeedback = continuation.feedback?.trim() || '';
+    const continuationMessages = [
+      ...((continuation.feedbackMessages ?? []).map((message) => ({
+        role: message.role,
+        content: message.content.trim(),
+      })).filter((message) => message.content)),
+      ...(continuation.feedback?.trim()
+        ? [{
+            role: 'user' as const,
+            content: continuation.feedback.trim(),
+          }]
+        : []),
+    ];
 
-    if (continuation.continue && continuationFeedback) {
+    if (continuation.continue && continuationMessages.length > 0) {
       await appendRuntimeSessionPromptMessages({
         store: input.runtime.conversationStore,
         threadId: input.session.threadId,
         agentId: input.session.agentId,
-        messages: [{
-          role: 'user',
-          content: continuationFeedback,
-        }],
+        messages: continuationMessages,
       });
       await input.runtime.syncState();
     }
