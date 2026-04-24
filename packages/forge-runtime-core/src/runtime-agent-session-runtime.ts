@@ -4,7 +4,7 @@ import type {
 
 import { createCheckpointedConversationObserver } from './checkpointed-conversation-observer.js';
 import { syncCheckpointedOmCompatibility } from './checkpointed-om-compatibility.js';
-import { createForgeConversationMemory } from './memory.js';
+import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import {
   createUpdateWorkingMemoryTool,
 } from './runtime-working-memory.js';
@@ -24,7 +24,7 @@ export type RuntimeAgentSessionRuntime = {
   model: CreateRuntimeAgentSessionOptions['model'];
   assistantAuthorId?: string;
   conversationStore: CreateRuntimeAgentSessionOptions['conversationStore'];
-  conversationMemory: ReturnType<typeof createForgeConversationMemory>['memory'];
+  conversationMemory: ForgeConversationMemory;
   checkpointedOmStateStore?: CreateRuntimeAgentSessionOptions['checkpointedOmStateStore'];
   workingMemoryStore: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
   getRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
@@ -88,7 +88,7 @@ export async function createRuntimeAgentSessionRuntime(
     model: input.model,
     assistantAuthorId: input.assistantAuthorId,
     conversationStore: input.conversationStore,
-    conversationMemory: conversationMemory.memory,
+    conversationMemory,
     checkpointedOmStateStore: input.checkpointedOmStateStore,
     workingMemoryStore: input.workingMemoryStore,
     async getRuntimeActions() {

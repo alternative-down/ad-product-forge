@@ -13,7 +13,11 @@ import {
 
 import { createConversationRuntimeContextFormatter } from './conversation-runtime-context-formatter.js';
 import { forgeAgentRuntimeConfigSchema, type ForgeAgentRuntimeConfig, type ForgeMcpServerConfig } from './contracts.js';
-import { createForgeConversationMemory, type ForgeConversationMemoryOptions } from './memory.js';
+import {
+  createForgeConversationMemory,
+  type ForgeConversationMemory,
+  type ForgeConversationMemoryOptions,
+} from './memory.js';
 import { ForgeMcpToolset } from './mcp.js';
 import { createForgeUsageObserver, type ForgeUsageSink } from './usage.js';
 
@@ -33,7 +37,7 @@ export type CreateForgeAgentRuntimeOptions = {
 export type ForgeAgentRuntime = {
   host: RuntimeHost;
   bridge: ConversationRuntimeBridge;
-  memory: ReturnType<typeof createForgeConversationMemory>['memory'];
+  memory: ForgeConversationMemory['memory'];
   mcpToolset: ForgeMcpToolset | null;
   dispose(): Promise<void>;
 };
