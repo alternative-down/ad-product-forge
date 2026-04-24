@@ -57,5 +57,10 @@ export interface ConversationStore {
   getThread(threadId: string): Promise<ConversationThread | null>;
   listThreads(): Promise<ConversationThread[]>;
   appendMessage(message: ConversationMessage): Promise<void>;
+  updateMessageMetadata(input: {
+    threadId: string;
+    messageId: string;
+    metadata: Record<string, unknown> | undefined;
+  }): Promise<void>;
   listMessages(query: ConversationMessageListQuery): Promise<ConversationMessage[]>;
 }

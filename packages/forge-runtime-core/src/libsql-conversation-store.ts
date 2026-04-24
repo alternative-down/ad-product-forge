@@ -190,6 +190,26 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     ], 'write');
   }
 
+  async updateMessageMetadata(input: {
+    threadId: string;
+    messageId: string;
+    metadata: Record<string, unknown> | undefined;
+  }): Promise<void> {
+    await this.ensureSchema();
+    await this.client.execute({
+      sql: `
+        update ${escapeIdentifier(this.messageTableName)}
+        set metadata_json = ?
+        where thread_id = ? and id = ?
+      `,
+      args: [
+        serializeJson(input.metadata ?? null),
+        input.threadId,
+        input.messageId,
+      ],
+    });
+  }
+
   async listMessages(query: {
     threadId: string;
     limit?: number;

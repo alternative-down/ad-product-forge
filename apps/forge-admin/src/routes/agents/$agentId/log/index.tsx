@@ -106,6 +106,7 @@ function AgentLogIndexRoute() {
         generationCount={runtimeMemoryQuery.data?.generationCount ?? null}
         updatedAt={runtimeMemoryQuery.data?.updatedAt ?? null}
         lastObservedAt={runtimeMemoryQuery.data?.lastObservedAt ?? null}
+        checkpointMessageId={runtimeMemoryQuery.data?.checkpointMessageId ?? null}
         checkpointGeneration={runtimeMemoryQuery.data?.checkpointGeneration ?? null}
         checkpointSummary={runtimeMemoryQuery.data?.checkpointSummary ?? null}
         checkpointUpdatedAt={runtimeMemoryQuery.data?.checkpointUpdatedAt ?? null}
@@ -141,6 +142,7 @@ function AgentRuntimeMemorySection(input: {
   generationCount: number | null;
   updatedAt: number | null;
   lastObservedAt: number | null;
+  checkpointMessageId: string | null;
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
@@ -187,6 +189,7 @@ function AgentRuntimeMemorySection(input: {
           {input.generationCount !== null ? <span>OM generation: {input.generationCount}</span> : null}
           {input.updatedAt ? <span>Atualizada: {formatDateTime(input.updatedAt)}</span> : null}
           {input.lastObservedAt ? <span>Última observação: {formatDateTime(input.lastObservedAt)}</span> : null}
+          {input.checkpointMessageId ? <span>Checkpoint message: {input.checkpointMessageId}</span> : null}
           {input.checkpointGeneration !== null ? <span>Checkpoint: {input.checkpointGeneration}</span> : null}
           {input.checkpointUpdatedAt ? <span>Checkpoint atualizado: {formatDateTime(input.checkpointUpdatedAt)}</span> : null}
         </div>
@@ -228,15 +231,15 @@ function AgentRuntimeMemorySection(input: {
             }
           />
           <MetricTile
-            label="Thread após cursor"
-            current={input.lastObservedAt ? input.metrics.rawMessageCount : 0}
+            label="RAW ativo após checkpoint"
+            current={input.metrics.rawMessageCount}
             unit="itens"
             detail={
-              !input.lastObservedAt
-                ? 'sem cursor ativo'
-                : input.metrics.latestThreadMessageAt
+              input.metrics.latestThreadMessageAt
                 ? `última mensagem ${formatDateTime(input.metrics.latestThreadMessageAt)}`
-                : 'sem mensagens após cursor'
+                : input.checkpointMessageId
+                ? 'sem mensagens após checkpoint'
+                : 'sem checkpoint ativo'
             }
           />
         </div>

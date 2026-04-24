@@ -189,6 +189,36 @@ describe('CheckpointedConversationMemory', () => {
     expect(state.metrics.recentTokenCount).toBeLessThanOrEqual(20);
   });
 
+  it('keeps observations beyond twenty blocks so reflections can be triggered later', async () => {
+    const store = new InMemoryConversationStore();
+
+    for (let index = 1; index <= 25; index += 1) {
+      await store.appendMessage(createMessage(`message-${index}`, `${index}`.repeat(20)));
+    }
+
+    const memory = new CheckpointedConversationMemory({
+      threadId: 'thread-1',
+      store,
+      stateStore: new InMemoryCheckpointedConversationStateStore(),
+      recentTokenLimit: 5,
+      overflowObservationTokenLimit: 5,
+      observer: {
+        async observe(request) {
+          return {
+            text: request.messages.map((message) => getText(message)).join(' | '),
+          };
+        },
+      },
+    });
+
+    await memory.stabilize();
+
+    const state = await memory.getState();
+
+    expect(state.observations).toHaveLength(25);
+    expect(state.overflowMessageIds).toEqual([]);
+  });
+
   it('does not double count tool metadata when a message also has text parts', async () => {
     const store = new InMemoryConversationStore();
 

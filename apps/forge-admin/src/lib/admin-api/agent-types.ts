@@ -234,6 +234,7 @@ export type AgentRuntimeMemorySnapshot = {
   generationCount: number;
   updatedAt: number;
   lastObservedAt: number | null;
+  checkpointMessageId: string | null;
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;

@@ -903,8 +903,12 @@ export function createAdminReadModel(input: {
         : metricsSnapshot?.updatedAt
         ? Date.parse(metricsSnapshot.updatedAt)
         : null;
-      const lastObservedAt = metricsSnapshot?.latestThreadMessageAt
-        ? Date.parse(metricsSnapshot.latestThreadMessageAt)
+      const lastObservedAt = customState?.observationBlocks.length
+        ? Date.parse(
+          [...customState.observationBlocks]
+            .sort((left, right) => right.lastObservedAt.localeCompare(left.lastObservedAt))[0]?.lastObservedAt
+            ?? '',
+        ) || null
         : null;
       const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
         ? await withTimeout(
@@ -948,6 +952,7 @@ export function createAdminReadModel(input: {
         generationCount,
         updatedAt,
         lastObservedAt,
+        checkpointMessageId: checkpointedConversationState?.checkpointMessageId ?? null,
         checkpointGeneration: customState?.checkpointGeneration ?? null,
         checkpointSummary: customState?.checkpointSummary?.text ?? null,
         checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt

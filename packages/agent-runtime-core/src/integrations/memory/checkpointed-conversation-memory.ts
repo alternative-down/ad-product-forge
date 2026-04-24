@@ -31,7 +31,6 @@ export type CheckpointedConversationMemoryOptions = {
   stateStore: CheckpointedConversationStateStore;
   recentTokenLimit?: number;
   overflowObservationTokenLimit?: number;
-  maxObservationCount?: number;
   observer?: CheckpointedConversationObserver;
 };
 
@@ -54,7 +53,6 @@ export class CheckpointedConversationMemory {
   private readonly stateStore: CheckpointedConversationStateStore;
   private readonly recentTokenLimit: number | null;
   private readonly overflowObservationTokenLimit: number | null;
-  private readonly maxObservationCount: number;
   private readonly observer: CheckpointedConversationObserver | null;
 
   constructor(options: CheckpointedConversationMemoryOptions) {
@@ -63,7 +61,6 @@ export class CheckpointedConversationMemory {
     this.stateStore = options.stateStore;
     this.recentTokenLimit = options.recentTokenLimit ?? null;
     this.overflowObservationTokenLimit = options.overflowObservationTokenLimit ?? null;
-    this.maxObservationCount = options.maxObservationCount ?? 20;
     this.observer = options.observer ?? null;
   }
 
@@ -220,11 +217,20 @@ export class CheckpointedConversationMemory {
     };
     const nextState: NormalizedCheckpointedConversationState = {
       ...state,
-      observations: [...state.observations, observation].slice(-this.maxObservationCount),
+      observations: [...state.observations, observation],
       updatedAt: new Date().toISOString(),
     };
 
     await this.stateStore.save(nextState);
+    await Promise.all(observation.sourceMessageIds.map((messageId) =>
+      this.store.updateMessageMetadata({
+        threadId: this.threadId,
+        messageId,
+        metadata: mergeMessageMetadata(
+          observationBatch.messages.find((entry) => entry.id === messageId)?.message.metadata,
+          observation.id,
+        ),
+      })));
     await this.sync();
     return observation;
   }
@@ -233,12 +239,9 @@ export class CheckpointedConversationMemory {
     state: NormalizedCheckpointedConversationState,
   ): Promise<RawConversationMessage[]> {
     const messages = await this.listMessagesAfterCheckpoint(state.checkpointMessageId);
-    const replacedMessageIds = new Set(
-      state.observations.flatMap((observation) => observation.sourceMessageIds),
-    );
 
     return buildRawConversationMessages(
-      messages.filter((message) => !replacedMessageIds.has(message.id)),
+      messages.filter((message) => !isMessageReplacedByObservation(message, state.observations)),
     );
   }
 
@@ -256,6 +259,59 @@ export class CheckpointedConversationMemory {
       await this.stateStore.load(this.threadId),
     );
   }
+}
+
+function mergeMessageMetadata(
+  metadata: Record<string, unknown> | undefined,
+  observationId: string,
+): Record<string, unknown> {
+  const operationalMemory = (
+    metadata
+    && typeof metadata === 'object'
+    && metadata.operationalMemory
+    && typeof metadata.operationalMemory === 'object'
+  )
+    ? metadata.operationalMemory as Record<string, unknown>
+    : {};
+
+  return {
+    ...(metadata ?? {}),
+    operationalMemory: {
+      ...operationalMemory,
+      replacedBy: observationId,
+    },
+  };
+}
+
+function isMessageReplacedByObservation(
+  message: ConversationMessage,
+  observations: CheckpointedConversationObservation[],
+) {
+  const replacedBy = getMessageReplacedBy(message);
+
+  if (replacedBy) {
+    return true;
+  }
+
+  return observations.some((observation) => observation.sourceMessageIds.includes(message.id));
+}
+
+function getMessageReplacedBy(message: ConversationMessage) {
+  if (!message.metadata || typeof message.metadata !== 'object') {
+    return null;
+  }
+
+  const operationalMemory = 'operationalMemory' in message.metadata
+    ? message.metadata.operationalMemory
+    : null;
+
+  if (!operationalMemory || typeof operationalMemory !== 'object') {
+    return null;
+  }
+
+  return 'replacedBy' in operationalMemory && typeof operationalMemory.replacedBy === 'string'
+    ? operationalMemory.replacedBy
+    : null;
 }
 
 function normalizeCheckpointedConversationState(

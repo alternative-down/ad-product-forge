@@ -20,6 +20,7 @@ function createConversationStore(messages: ConversationMessage[]): ConversationS
       return [];
     },
     async appendMessage() {},
+    async updateMessageMetadata() {},
     async listMessages() {
       return messages;
     },

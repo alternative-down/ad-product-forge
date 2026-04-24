@@ -30,6 +30,27 @@ export class InMemoryConversationStore implements ConversationStore {
     this.messagesByThread.set(message.threadId, currentMessages);
   }
 
+  async updateMessageMetadata(input: {
+    threadId: string;
+    messageId: string;
+    metadata: Record<string, unknown> | undefined;
+  }): Promise<void> {
+    const currentMessages = this.messagesByThread.get(input.threadId) ?? [];
+    const messageIndex = currentMessages.findIndex((message) => message.id === input.messageId);
+
+    if (messageIndex < 0) {
+      return;
+    }
+
+    const currentMessage = currentMessages[messageIndex];
+
+    currentMessages[messageIndex] = {
+      ...currentMessage,
+      metadata: input.metadata,
+    };
+    this.messagesByThread.set(input.threadId, currentMessages);
+  }
+
   async listMessages(query: ConversationMessageListQuery): Promise<ConversationMessage[]> {
     const currentMessages = this.messagesByThread.get(query.threadId) ?? [];
     const startIndex = query.afterMessageId

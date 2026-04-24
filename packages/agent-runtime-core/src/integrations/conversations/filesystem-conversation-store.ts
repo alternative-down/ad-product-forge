@@ -86,6 +86,26 @@ export class FilesystemConversationStore implements ConversationStore {
     await this.writeStoreFile(storeFile);
   }
 
+  async updateMessageMetadata(input: {
+    threadId: string;
+    messageId: string;
+    metadata: Record<string, unknown> | undefined;
+  }): Promise<void> {
+    const storeFile = await this.readStoreFile();
+    const messageIndex = storeFile.messages.findIndex((message) =>
+      message.threadId === input.threadId && message.id === input.messageId);
+
+    if (messageIndex < 0) {
+      return;
+    }
+
+    storeFile.messages[messageIndex] = {
+      ...storeFile.messages[messageIndex],
+      metadata: input.metadata,
+    };
+    await this.writeStoreFile(storeFile);
+  }
+
   async listMessages(query: ConversationMessageListQuery): Promise<ConversationMessage[]> {
     const storeFile = await this.readStoreFile();
     const threadMessages = storeFile.messages
