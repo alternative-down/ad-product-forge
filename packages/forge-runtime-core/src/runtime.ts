@@ -51,7 +51,6 @@ export async function createForgeAgentRuntime(
     threadId: config.threadId,
     conversationStore: options.conversationStore,
     assistantAuthorId: config.assistantAuthorId,
-    recentMessageLimit: config.maxConversationMessages,
     consolidateOverflow: config.consolidateConversationOverflow,
   });
   const mcpToolset = options.mcpServers?.length

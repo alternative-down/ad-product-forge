@@ -110,7 +110,6 @@ describe('CheckpointedConversationMemory', () => {
       stateStore: new InMemoryCheckpointedConversationStateStore(),
       recentTokenLimit: 5,
       overflowObservationTokenLimit: 5,
-      observationTokenLimit: 5,
       observer: {
         async observe(request) {
           return {

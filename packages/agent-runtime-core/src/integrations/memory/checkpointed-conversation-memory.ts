@@ -29,9 +29,7 @@ export type CheckpointedConversationMemoryOptions = {
   threadId: string;
   store: ConversationStore;
   stateStore: CheckpointedConversationStateStore;
-  recentMessageLimit?: number;
   recentTokenLimit?: number;
-  observationTokenLimit?: number;
   overflowObservationTokenLimit?: number;
   maxObservationCount?: number;
   observer?: CheckpointedConversationObserver;
@@ -45,19 +43,7 @@ type RawConversationMessage = {
   message: ConversationMessage;
 };
 
-type NormalizedCheckpointedConversationState = Omit<
-  CheckpointedConversationState,
-  'cursorObservedAt'
-  | 'cursorObservedRawUnitIds'
-  | 'recentRawUnitIds'
-  | 'overflowRawUnitIds'
-  | 'recentMessageIds'
-  | 'overflowMessageIds'
-> & {
-  cursorObservedAt: string | null;
-  cursorObservedRawUnitIds: string[];
-  recentRawUnitIds: string[];
-  overflowRawUnitIds: string[];
+type NormalizedCheckpointedConversationState = CheckpointedConversationState & {
   recentMessageIds: string[];
   overflowMessageIds: string[];
 };
@@ -104,10 +90,6 @@ export class CheckpointedConversationMemory {
     const nextState: NormalizedCheckpointedConversationState = {
       ...currentState,
       checkpointMessageId: messageId,
-      cursorObservedAt: null,
-      cursorObservedRawUnitIds: [],
-      recentRawUnitIds: [],
-      overflowRawUnitIds: [],
       recentMessageIds: [],
       overflowMessageIds: [],
       observations: currentState.observations.filter((observation) =>
@@ -287,10 +269,6 @@ function normalizeCheckpointedConversationState(
   return {
     threadId,
     checkpointMessageId: state?.checkpointMessageId ?? null,
-    cursorObservedAt: null,
-    cursorObservedRawUnitIds: [],
-    recentRawUnitIds: sanitizeMessageIds(state?.recentRawUnitIds),
-    overflowRawUnitIds: sanitizeMessageIds(state?.overflowRawUnitIds),
     recentMessageIds: sanitizeMessageIds(state?.recentMessageIds),
     overflowMessageIds: sanitizeMessageIds(state?.overflowMessageIds),
     observations: state?.observations ?? [],
@@ -561,8 +539,6 @@ function createNextState(input: {
 
   return {
     ...input.previousState,
-    recentRawUnitIds: recentMessageIds,
-    overflowRawUnitIds: overflowMessageIds,
     recentMessageIds,
     overflowMessageIds,
     metrics: {

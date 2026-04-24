@@ -71,10 +71,7 @@ export async function createRuntimeAgentSessionRuntime(
           : undefined,
       })
       : undefined,
-    recentMessageLimit: input.maxConversationMessages ?? 20,
     recentTokenLimit: checkpointedOmEnabled ? checkpointedOmLimits.recentRawTokens : undefined,
-    observationTokenLimit:
-      checkpointedOmEnabled ? checkpointedOmLimits.observationReflectionBatchTokens : undefined,
     overflowObservationTokenLimit:
       checkpointedOmEnabled ? checkpointedOmLimits.rawObservationBatchTokens : undefined,
     consolidateOverflow: checkpointedOmEnabled,
