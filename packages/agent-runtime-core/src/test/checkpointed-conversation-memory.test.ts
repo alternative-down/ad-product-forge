@@ -42,7 +42,7 @@ describe('CheckpointedConversationMemory', () => {
       },
     });
 
-    await memory.createCheckpoint('message-1');
+    await memory.advanceCheckpoint('message-1');
 
     let state = await memory.getState();
     expect(state.recentMessageIds).toEqual(['message-3']);

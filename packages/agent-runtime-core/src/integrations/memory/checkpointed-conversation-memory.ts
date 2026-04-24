@@ -83,7 +83,7 @@ export class CheckpointedConversationMemory {
     return nextState;
   }
 
-  async createCheckpoint(messageId: string): Promise<CheckpointedConversationState> {
+  async advanceCheckpoint(messageId: string): Promise<CheckpointedConversationState> {
     const currentState = await this.loadState();
     const messagesAfterCheckpoint = await this.listMessagesAfterCheckpoint(messageId);
     const activeMessageIds = new Set(messagesAfterCheckpoint.map((message) => message.id));

@@ -85,8 +85,8 @@ export async function syncCheckpointedOmCompatibility(
     state: result.state,
   });
 
-  if (result.checkpointMessageId) {
-    await input.conversationMemory.createCheckpoint(result.checkpointMessageId);
+  if (result.checkpointPayload && result.checkpointMessageId) {
+    await input.conversationMemory.advanceCheckpoint(result.checkpointMessageId);
   }
 
   if (!input.onCheckpointAdvanced || !result.checkpointPayload) {
